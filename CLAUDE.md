@@ -1117,6 +1117,51 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `Transparent` zurueckgesetzt werden.
   Tests: `ThemeHighContrastCoverageTests` (zweiter Scan-Weg, per Sabotageprobe gegen echten
   Bug belegt), Build 0/0, `AuswertungPro.Next.UI.Tests` erneut vollstaendig gruen.
+- **Aufgabe 13, Fix-Runde 4 (29.09.2026): Farbpaare je Zustand statt Attributpaare.**
+  **Gefuellte Knoepfe tragen keine Hover-Toenung mehr.** Die Vorlage des impliziten Button-Stils
+  stellt `MainBorder` unter der Maus per TargetName auf eine 4-%/8-%-Akzenttoenung - PrimaryButton,
+  SuccessButton und die SeverityXButton erbten das: weisse Schrift auf fast weisser Flaeche (helles
+  Theme), unter Hochkontrast HighlightText auf Window. Sie verwenden jetzt `FilledButtonTemplate`
+  (Theme-Dateien, gleiche Form ohne Toenung); den Hover-/Druckton setzt der Style ueber
+  `Style.Triggers` in VOLLER Farbe (Primary: AccentHover/AccentPressed, Success: neue
+  `SuccessFillBrush`/`-HoverBrush`/`-PressedBrush`). ToolbarButtonAccent (beide Themes) nutzt
+  `ToolbarAccentFillBrush` (hell: der bisherige Verlauf, dunkel: Akzent), AccentHover/AccentPressed
+  (hell neu `#FF1E40AF`, vorher hart kodiert) und OnAccentBrush.
+  **Ein eigener TextBlock im Knopfinhalt sucht seinen impliziten Stil im LOGISCHEN Baum** (Knopf,
+  Fenster, App) - der B7-Block in `ContentPresenter.Resources` erreicht nur Text-Inhalt (String).
+  Zur Laufzeit belegt: `<Button Style=PrimaryButton><StackPanel><TextBlock/></StackPanel></Button>`
+  war TextBrush (#FF14213A auf Akzentblau). Deshalb tragen die gefuellten Stile und
+  `CompactToggleButton`, `MarkToolPopupButton` (Player), `ActionBtn` (Fotofenster) und der
+  Start-Knopf der Videoanalyse den Durchreich-Stil in `Style.Resources`/`Button.Resources` (gilt
+  auch ueber BasedOn). Nie wieder nur ContentPresenter.Resources fuer eigenen Inhalt.
+  **OnAccentBrush nur auf einer Flaeche, die unter Hochkontrast Highlight wird** (sonst ist sie in
+  den normalen Themes Weiss auf beliebigem Grund). **Hochkontrast-only-Darstellung ueber
+  transparente Tokens:** `HcAuswahlRahmenBrush` (normal Transparent, HC Highlight) auf einer eigenen,
+  layoutneutralen Rahmenebene (TreeViewItem `HcAuswahlRahmen`, Zeilen der Sanierungsmatrix) - die
+  Runde-3-Rahmen verschoben Knoten/Zeilen um 1 px und sind zurueckgebaut; `ChipZaehlerAktivBrush`
+  (normal MutedBrush-Wert, HC HighlightText) fuer den Zaehler im gewaehlten Spalten-Chip.
+  `AccentTextBrush` faellt unter Hochkontrast auf **HotTrack** (nicht HighlightText: das ist Schrift
+  AUF Highlight, AccentTextBrush steht auf normalen Flaechen). Das Fotomessfenster (Video-Datei mit
+  festen Farben) nutzt `FotoAkzentBrush` (roher `ColorAccent`, von Hochkontrast nicht ueberlagert)
+  fuer gewaehlte Werkzeuge/Voreinstellungen, damit die festen weissen/farbigen Beschriftungen ihr
+  Paar behalten. Sanierungsmatrix: der Zebra-Trigger las `ItemsControl.AlternationIndex` an der
+  Border statt am Item-Container und griff nie - jetzt DataTrigger ueber `TemplatedParent`.
+  **Waechter `ThemeHighContrastFarbpaarTests`** mit dem Zustandsmodell `XamlFarbpaarModell` (Tests):
+  je Style/Vorlage/Ansicht/DataTemplate und je Zustand (Grundzustand, jede Trigger-Bedingung,
+  IsPressed schliesst IsMouseOver ein, DataTrigger an Vorfahr-Eigenschaften als "^IsChecked=True")
+  das wirksame Paar aus Flaeche und Schrift, mit WPF-Rangfolge (lokal > Style-Trigger >
+  Template-Trigger > Setter; TargetName > Vorlagenattribut; TemplateBinding; BasedOn;
+  Style.Resources; impliziter TextBlock-Stil; Knopfinhalt am ContentPresenter), fuer Hell UND
+  Dunkel. Regeln: R1 Highlight-Flaeche nur mit HighlightText, andere Systemflaeche nie mit literaler
+  oder HighlightText-Schrift; R2 OnAccent/SelectionText/NavSelectedText nur auf Highlight-Flaeche.
+  Sieben dauerhafte Fundweg-Proben im Test, sieben Sabotageproben an echten Dateien (alle rot).
+  Zwei begruendete Ausnahmen (geschuetzte WebGisHolenWindow, Legendenfarbe DeepSkyBlue); eine
+  verwaiste Ausnahme macht den Waechter rot. Grenzen: Item-Container werden nicht mit ihrem
+  ItemTemplate verbunden, Kombinationen unabhaengiger Trigger nur ueber IsPressed.
+  `FuellknopfFarbenIsolatedSmokeTests` prueft dieselben Zustaende zur Laufzeit (echte Ressourcen,
+  IsPressed per geschuetztem Setter, Hochkontrast eingeschaltet). **Solche Tests muessen die
+  Elemente in ein echtes Fenster legen**: eine Aenderung der App-Ressourcen erreicht lose Elemente
+  nicht, der Test waere blind (so beim ersten Lauf passiert).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

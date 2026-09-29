@@ -75,7 +75,11 @@
          wird neutral" Regel wie bei Success-/Warning-/DangerSubtleBrush unten (SchachtUebersichtPanel.xaml
          legt z. B. normalen TextBrush-Text direkt auf diese Flaeche). -->
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
-    <SolidColorBrush x:Key="AccentTextBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
+    <!-- Fix-Runde 4: war HighlightTextColor - das ist die Schrift AUF Highlight, AccentTextBrush ist
+         aber akzentfarbige Schrift auf NORMALEN Flaechen (Card/AccentSubtle/Window): dort war sie in
+         Schemata wie "Nachthimmel" (#2B2B2B auf #000000) unlesbar. HotTrack ist die Hyperlink-Farbe
+         der Hochkontrast-Schemata, von Windows fuer Schrift auf Window vorgesehen. -->
+    <SolidColorBrush x:Key="AccentTextBrush" Color="{DynamicResource {x:Static SystemColors.HotTrackColorKey}}"/>
     <!-- Fix-Runde 3: dieselbe Regel wie AccentSubtleBrush - Hover-/Druck-Toenung des Basis-Buttons
          und von ActionCardButton traegt normalen TextBrush-Text (WindowText unter Hochkontrast). -->
     <SolidColorBrush x:Key="AccentHoverTintBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
@@ -89,6 +93,17 @@
          seine Schrift mit diesem eigenen, dediziert benannten Text-Token (nicht mit dem generischen
          OnAccentBrush) - beide sind derselbe Weiss-auf-Highlight-Fall, deshalb dieselbe Zuordnung. -->
     <SolidColorBrush x:Key="NavSelectedTextBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
+    <!-- Fix-Runde 4: die gefuellten Knoepfe mit Schrift OnAccentBrush - Ruheflaeche von
+         ToolbarButtonAccent (normal: Verlauf bzw. Akzent) und die drei SuccessButton-Zustaende. Auf
+         Highlight, damit Flaeche und Schrift (HighlightText) in jedem Zustand ein Windows-Paar bilden. -->
+    <SolidColorBrush x:Key="ToolbarAccentFillBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="SuccessFillBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="SuccessFillHoverBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="SuccessFillPressedBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <!-- Fix-Runde 4 (Befund D): Auswahlrahmen nur unter Hochkontrast (normal transparent) - die
+         Auswahlfuellung AccentSubtleBrush faellt hier auf Window, der Rahmen macht die Auswahl sichtbar. -->
+    <SolidColorBrush x:Key="HcAuswahlRahmenBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="ChipZaehlerAktivBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
 
     <!-- Auswahl -->
     <SolidColorBrush x:Key="SelectionBackgroundBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>

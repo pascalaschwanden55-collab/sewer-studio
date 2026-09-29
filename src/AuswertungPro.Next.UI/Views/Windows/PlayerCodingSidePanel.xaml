@@ -693,7 +693,7 @@
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatHumanAccepted"
                                                        Text="0" FontSize="{DynamicResource TextXL}" FontWeight="Bold"
-                                                       Foreground="#2563EB"/>
+                                                       Foreground="{DynamicResource AccentBrush}"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="2" Grid.Column="0" Style="{DynamicResource StatTile}">

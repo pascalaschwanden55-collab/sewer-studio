@@ -91,7 +91,7 @@
                    Grid.Column="1"
                    Grid.ColumnSpan="2"
                    Margin="0,0,0,8"
-                   Foreground="DarkCyan"
+                   Foreground="{DynamicResource AccentTextBrush}"
                    TextWrapping="Wrap" />
 
         <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="MeterStart" />

@@ -357,10 +357,20 @@
                                         Margin="8,0,0,0"
                                         FontSize="{DynamicResource TextXS}"
                                         FontWeight="SemiBold"
-                                        Foreground="White"
+                                        Foreground="{DynamicResource OnAccentBrush}"
                                         Padding="12,2"
                                         Cursor="Hand"
                                         Click="Start_Click">
+                                    <!-- Fix-Runde 4 (Aufgabe 13): Weiss -> OnAccentBrush (Flaeche AccentBrush, unter
+                                         Hochkontrast Highlight). Der TextBlock-Durchreich-Stil steht jetzt am Knopf
+                                         (Button.Resources): der eigene "Start"-TextBlock sucht seinen impliziten Stil
+                                         im logischen Baum und erreichte den Block im ContentPresenter nicht (zur Laufzeit
+                                         belegt - er war TextBrush statt Knopfschrift). -->
+                                    <Button.Resources>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                            <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                        </Style>
+                                    </Button.Resources>
                                     <StackPanel Orientation="Horizontal">
                                         <ui:FluentIcon Glyph="&#xE768;" FontSize="{DynamicResource TextXS}" Margin="0,0,5,0"/>
                                         <TextBlock Text="Start"/>

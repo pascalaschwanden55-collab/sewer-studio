@@ -41,11 +41,10 @@ namespace AuswertungPro.Next.UI.Tests;
 /// AccentTextBrush, SelectionTextBrush, Muted/Faint), MUSS mitgehen - das war der Fehler in Runde 1
 /// bei SuccessSubtleBrush/WarningSubtleBrush/DangerSubtleBrush/InputWarmBrush/VsaInputHighlightBrush.
 ///
-/// Rueckwaerts (Fix-Runde 3, IMPORTANT): eine Flaeche, die UNTER Hochkontrast auf
-/// SystemColors.Highlight faellt (AccentBrush &amp; Co.), gepaart mit hartcodiertem Text/Symbol
-/// ("White" oder einer Farbe, die selbst nicht auf HighlightText faellt) - genau der PrimaryButton-
-/// Befund dieser Runde (AccentBrush kann in manchen Hochkontrast-Schemata SEHR HELL sein, hartes
-/// Weiss ergibt dort ~1,3-1,5:1).
+/// Die Gegenrichtung (passt die Schrift zu einer Flaeche, die unter Hochkontrast zur Systemfarbe
+/// wird?) prueft seit Fix-Runde 4 <see cref="ThemeHighContrastFarbpaarTests"/> mit einem
+/// Zustandsmodell; die Paarsuche der Runde 3 war fuer Vorlage+Style, Kind-TextBlocks und
+/// TargetName-Trigger blind.
 /// </summary>
 public sealed class ThemeHighContrastCoverageTests
 {
@@ -104,10 +103,9 @@ public sealed class ThemeHighContrastCoverageTests
         "GateOkBrush", "GateReviewBrush", "GateFailBrush",
         "ConfidenceHighBrush", "ConfidenceMidBrush", "ConfidenceLowBrush",
         "SuccessBrush", "DangerBrush", "WarningBrush", "InfoBrush",
+        // AccentBarBrush: Balken/Unterstreichungen. ToolbarButtonAccent fuellt sich seit Fix-Runde 4
+        // mit dem eigenen, ueberlagerten ToolbarAccentFillBrush (gleiche Verlaufswerte).
         "AccentBarBrush",
-        // ToolbarButtonAccent (ThemeLight.xaml) fuellt sich mit AccentBarBrush, nicht mit AccentBrush -
-        // ein eigener, hier bewusst NICHT ueberlagerter Verlauf (siehe AccentBarBrush oben); sein
-        // Weiss-Text bleibt deshalb ein sicheres, unveraendertes Paar wie KiSubtleBrush/KiTextBrush.
         // Zustandsklassen-Chips (Z0..Z4) und Schadensgruppen: eigene, ausserhalb dieser
         // Ueberlagerung geprüfte Farbregel (siehe ZustandsklasseInkPolicy in CLAUDE.md); die
         // konkreten Werte kommen nicht aus einem *Brush-Token, sondern aus Code, deshalb hier
@@ -118,6 +116,11 @@ public sealed class ThemeHighContrastCoverageTests
         // SystemColors-Zuordnung wuerde der bestehenden, bewusst pixelgenauen Ausnahme
         // widersprechen.
         "VideoScrimBlackSoftBrush", "VideoScrimStrongBrush",
+        // FotoAkzentBrush (PhotoMeasurementWindow, Fix-Runde 4): Akzent des Messfensters ueber den
+        // rohen ColorAccent - bewusst NICHT ueberlagert, weil die Werkzeugbeschriftungen darauf fest
+        // Weiss bzw. farbig sind (Video-Datei mit festen Farben). Beide Seiten bleiben unter
+        // Hochkontrast unveraendert, das Paar behaelt seinen normalen Kontrast.
+        "FotoAkzentBrush",
     };
 
     [Fact]
@@ -161,110 +164,6 @@ public sealed class ThemeHighContrastCoverageTests
         var overlayKeys = LiesUeberlagerungsSchluessel();
         Assert.NotEmpty(BewusstAusgenommen);
         Assert.Empty(BewusstAusgenommen.Intersect(overlayKeys));
-    }
-
-    /// <summary>
-    /// Fix-Runde 3 (Aufgabe 13, IMPORTANT): Gegenrichtung zum Haupttest. Ein Hintergrund-Schluessel,
-    /// der in ThemeHighContrast.xaml auf SystemColors.Highlight faellt (AccentBrush,
-    /// AccentHoverBrush, AccentPressedBrush, SelectionBackgroundBrush, SelectionBorderBrush), darf
-    /// nie mit einem hartcodierten Vordergrund (Foreground/Stroke="White" o. Ae., oder einem
-    /// DynamicResource-Token, der SELBST nicht auf HighlightText faellt) im selben Element bzw.
-    /// derselben Style-/Trigger-Ebene auftreten - Highlight kann unter Hochkontrast SEHR HELL sein
-    /// (der reale PrimaryButton-Befund: ~1,3-1,5:1 fuer Weiss auf einem hellen Highlight-Ton).
-    /// </summary>
-    [Fact]
-    public void Keine_akzentgefuellte_Flaeche_traegt_hartcodiertes_Weiss()
-    {
-        var (highlightHintergrundSchluessel, highlightTextSchluessel) = LiesHighlightZuordnung();
-        var verstoesse = new List<string>();
-
-        foreach (var datei in XamlDateien())
-        {
-            var root = LadeRoot(datei);
-            if (root is null)
-                continue;
-
-            var dateiname = Path.GetFileName(datei);
-
-            // A) Attribut-Paare am selben Element: Background/Foreground und Fill/Stroke.
-            foreach (var element in root.DescendantsAndSelf())
-            {
-                PruefeAttributPaar(element, "Background", "Foreground", highlightHintergrundSchluessel, highlightTextSchluessel, dateiname, verstoesse);
-                PruefeAttributPaar(element, "Fill", "Stroke", highlightHintergrundSchluessel, highlightTextSchluessel, dateiname, verstoesse);
-            }
-
-            // B) Setter-Paare im selben Style-/Trigger-Zustand (inkl. DataTemplate.Triggers).
-            foreach (var setter in root.Descendants().Where(e => e.Name.LocalName == "Setter"))
-            {
-                var prop = setter.Attribute("Property")?.Value;
-                if (prop != "Background" && prop != "Fill")
-                    continue;
-
-                var bgSchluessel = ExtrahiereBeliebigenSchluessel(setter.Attribute("Value")?.Value);
-                if (bgSchluessel is null || !highlightHintergrundSchluessel.Contains(bgSchluessel))
-                    continue;
-
-                var fgProp = prop == "Background" ? "Foreground" : "Stroke";
-                var fgWert = FindeGeerbtenSetterWert(setter, fgProp);
-
-                if (fgWert is null)
-                    continue; // kein expliziter Vordergrund in Reichweite - nichts zu pruefen (siehe Klassendoku)
-
-                if (IstUnsicheresVordergrund(fgWert, highlightTextSchluessel))
-                {
-                    verstoesse.Add(
-                        $"{dateiname}: Setter Property=\"{prop}\" Value=\"{bgSchluessel}\" mit "
-                        + $"{fgProp}=\"{fgWert}\"");
-                }
-            }
-        }
-
-        Assert.True(
-            verstoesse.Count == 0,
-            "Diese Stellen fuellen eine unter Hochkontrast auf SystemColors.Highlight fallende "
-            + "Flaeche, tragen aber einen hartcodierten oder nicht auf HighlightText ueberlagerten "
-            + "Vordergrund: " + string.Join(" | ", verstoesse));
-    }
-
-    private static void PruefeAttributPaar(
-        XElement element,
-        string bgAttribut,
-        string fgAttribut,
-        HashSet<string> highlightHintergrundSchluessel,
-        HashSet<string> highlightTextSchluessel,
-        string dateiname,
-        List<string> verstoesse)
-    {
-        var bgWert = element.Attribute(bgAttribut)?.Value;
-        var bgSchluessel = ExtrahiereBeliebigenSchluessel(bgWert);
-        if (bgSchluessel is null || !highlightHintergrundSchluessel.Contains(bgSchluessel))
-            return;
-
-        var fgWert = element.Attribute(fgAttribut)?.Value;
-        if (fgWert is null)
-            return; // kein expliziter Vordergrund an diesem Element - nichts zu pruefen
-
-        if (IstUnsicheresVordergrund(fgWert, highlightTextSchluessel))
-        {
-            verstoesse.Add(
-                $"{dateiname}: <{element.Name.LocalName} {bgAttribut}=\"{bgSchluessel}\" "
-                + $"{fgAttribut}=\"{fgWert}\">");
-        }
-    }
-
-    /// <summary>Ein Vordergrund ist unsicher, wenn er entweder gar keine Ressourcen-Referenz ist
-    /// (literales "White", ein Hex-Code, ...) oder auf einen Schluessel verweist, der selbst NICHT
-    /// in der Hochkontrast-Ueberlagerung auf HighlightText faellt.</summary>
-    private static bool IstUnsicheresVordergrund(string? fgWert, HashSet<string> highlightTextSchluessel)
-    {
-        if (string.IsNullOrEmpty(fgWert))
-            return false;
-
-        var fgSchluessel = ExtrahiereBeliebigenSchluessel(fgWert);
-        if (fgSchluessel is null)
-            return true; // kein {DynamicResource ...}/{StaticResource ...} - ein literaler Wert wie "White"
-
-        return !highlightTextSchluessel.Contains(fgSchluessel);
     }
 
     // ── Weg 1: Background="..." als Attribut ──────────────────────────────────────────────
@@ -487,41 +386,6 @@ public sealed class ThemeHighContrastCoverageTests
             .Where(k => k is not null)
             .Select(k => k!)
             .ToHashSet(System.StringComparer.Ordinal);
-    }
-
-    /// <summary>
-    /// Fix-Runde 3: liest ThemeHighContrast.xaml ein zweites Mal aus, dieses Mal nicht nur nach
-    /// Schluesselnamen, sondern danach, WELCHES SystemColors-Ziel jeder Schluessel hat. Liefert die
-    /// Menge der Hintergrund-Schluessel, die auf HighlightColorKey faellt (AccentBrush &amp; Co.),
-    /// und die Menge der Vordergrund-Schluessel, die auf HighlightTextColorKey faellt (OnAccentBrush,
-    /// AccentTextBrush, SelectionTextBrush, NavSelectedTextBrush) - beide direkt aus der Datei
-    /// abgeleitet, damit ein spaeter dort ergaenzter Schluessel automatisch erfasst wird, ohne diese
-    /// Liste von Hand nachzufuehren.
-    /// </summary>
-    private static (HashSet<string> HighlightHintergrund, HashSet<string> HighlightText) LiesHighlightZuordnung()
-    {
-        var doc = LiesUeberlagerungsDokument();
-        var xamlNs = doc.Root!.GetNamespaceOfPrefix("x")!;
-
-        var highlightHintergrund = new HashSet<string>(System.StringComparer.Ordinal);
-        var highlightText = new HashSet<string>(System.StringComparer.Ordinal);
-
-        foreach (var element in doc.Root.Elements())
-        {
-            var key = element.Attribute(xamlNs + "Key")?.Value;
-            var colorWert = element.Attribute("Color")?.Value;
-            if (key is null || colorWert is null)
-                continue;
-
-            // "HighlightColorKey" ist KEIN Teilstring von "HighlightTextColorKey" (dazwischen
-            // steht "Text"), die beiden Contains-Pruefungen sind deshalb trennscharf.
-            if (colorWert.Contains("HighlightTextColorKey", System.StringComparison.Ordinal))
-                highlightText.Add(key);
-            else if (colorWert.Contains("HighlightColorKey", System.StringComparison.Ordinal))
-                highlightHintergrund.Add(key);
-        }
-
-        return (highlightHintergrund, highlightText);
     }
 
     private static XDocument LiesUeberlagerungsDokument()

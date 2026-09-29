@@ -400,7 +400,20 @@
                                   Click="ColumnViewChip_Click" ToolTip="{Binding Titel}" AutomationProperties.Name="{Binding Titel}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding Titel}"/>
-                            <TextBlock x:Name="ChipZaehler" Margin="6,0,0,0" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock x:Name="ChipZaehler" Margin="6,0,0,0" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}">
+                                <!-- Fix-Runde 4 (Aufgabe 13): im gewaehlten Chip (SelectionBackgroundBrush, unter Hochkontrast
+                                     Highlight) ein eigener Ton - normal unveraendert MutedBrush-Wert, unter Hochkontrast HighlightText. -->
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource ChipZaehlerAktivBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </ToggleButton>
                 </DataTemplate>

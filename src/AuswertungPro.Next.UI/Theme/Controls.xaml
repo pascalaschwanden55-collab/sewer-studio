@@ -527,16 +527,9 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <!-- Fix-Runde 3 (Aufgabe 13, MINOR): BorderThickness/BorderBrush neu, damit die
-                             IsSelected-Markierung unter Hochkontrast sichtbar bleibt - AccentSubtleBrush
-                             (Fuellung) faellt dort auf WindowColor, wie es die umgebende Flaeche meist
-                             auch tut; ohne eigenen Rand waere "ausgewaehlt" von "nicht ausgewaehlt" nicht
-                             mehr zu unterscheiden. -->
                         <Border x:Name="ItemBorder"
                                 Grid.Row="0"
                                 Background="Transparent"
-                                BorderBrush="Transparent"
-                                BorderThickness="1"
                                 CornerRadius="6"
                                 Padding="6,4">
                             <Grid>
@@ -593,6 +586,16 @@
                                 <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
+                        <!-- Fix-Runde 4 (Aufgabe 13, Befund D): Auswahlrahmen auf einer eigenen Ebene ueber
+                             ItemBorder - nimmt keinen Platz ein (nichts verschiebt sich), in den normalen
+                             Themes transparent (HcAuswahlRahmenBrush), nur unter Hochkontrast Highlight: dort
+                             faellt die Auswahlfuellung AccentSubtleBrush auf Window wie die Umgebung. -->
+                        <Border x:Name="HcAuswahlRahmen"
+                                Grid.Row="0"
+                                CornerRadius="6"
+                                BorderThickness="1"
+                                BorderBrush="Transparent"
+                                IsHitTestVisible="False"/>
                         <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Margin="18,2,0,0"/>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -604,7 +607,7 @@
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="HcAuswahlRahmen" Property="BorderBrush" Value="{DynamicResource HcAuswahlRahmenBrush}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource HoverBrush}"/>
@@ -1891,22 +1894,31 @@
          verschoben), zaehlt aber NICHT als "Hauptknopf" im Sinn von Knopfregel/
          DesignAuditKnopfleistenTests (a) - nur PrimaryButton/SuccessButton zaehlen dort. -->
     <Style x:Key="SeverityButtonBase" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-        <Setter Property="Foreground" Value="White"/>
         <Setter Property="FontWeight" Value="Bold"/>
+        <!-- Fix-Runde 4 (Aufgabe 13): gefuellte Vorlage ohne die Hover-/Druck-Toenung des impliziten
+             Button-Stils - die legte eine 4-%/8-%-Akzenttoenung unter die weisse Schrift (unter der
+             Maus unlesbar). Die Flaeche bleibt die Stufenfarbe, Rueckmeldung gibt die Skalierung.
+             Die weisse Schrift steht deshalb erst an den Stufenstilen, wo auch die Flaeche steht. -->
+        <Setter Property="Template" Value="{DynamicResource FilledButtonTemplate}"/>
     </Style>
     <Style x:Key="Severity1Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
         <Setter Property="Background" Value="{DynamicResource Severity1Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
     </Style>
     <Style x:Key="Severity2Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
         <Setter Property="Background" Value="{DynamicResource Severity2Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
     </Style>
     <Style x:Key="Severity3Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
         <Setter Property="Background" Value="{DynamicResource Severity3Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
     </Style>
     <Style x:Key="Severity4Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
         <Setter Property="Background" Value="{DynamicResource Severity4Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
     </Style>
     <Style x:Key="Severity5Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
         <Setter Property="Background" Value="{DynamicResource Severity5Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
     </Style>
 </ResourceDictionary>

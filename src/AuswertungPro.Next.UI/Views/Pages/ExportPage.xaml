@@ -541,7 +541,7 @@
                             <Button Command="{Binding WebGis.UebertragenCommand}" Style="{StaticResource ToolbarButtonAccent}" Padding="14,6" Margin="0,0,8,0"
                                     ToolTip="Liest jedes Objekt frisch aus dem WebGIS, zeigt die Änderungen und schreibt erst nach deiner Bestätigung. Bericht landet unter __WebGIS_Export im Projektordner.">
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:FluentIcon Glyph="&#xE898;" Margin="0,0,8,0" Foreground="White"/>
+                                    <ui:FluentIcon Glyph="&#xE898;" Margin="0,0,8,0" Foreground="{DynamicResource OnAccentBrush}"/>
                                     <TextBlock Text="Prüfen und ins WebGIS schreiben" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>

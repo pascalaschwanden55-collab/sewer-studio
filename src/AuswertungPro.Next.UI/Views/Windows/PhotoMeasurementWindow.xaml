@@ -11,6 +11,14 @@
         KeyDown="Window_KeyDown">
 
     <Window.Resources>
+        <!-- Fix-Runde 4 (Aufgabe 13): Akzent dieses Messfensters (gewaehltes Werkzeug, Hover der
+             Voreinstellungen). Derselbe Wert wie AccentBrush im jeweiligen Theme, aber ueber den ROHEN
+             Farbschluessel - Hochkontrast ueberlagert ColorAccent nicht. Das Fenster ist eine der
+             Video-Dateien mit festen Farben: weisse und farbige Werkzeugsymbole sitzen auf dieser Flaeche
+             und bilden mit ihr auch unter Hochkontrast ein festes, gleich lesbares Paar. Mit AccentBrush
+             (Runde 3) wurde die Flaeche dort Highlight, die festen Symbolfarben blieben. -->
+        <SolidColorBrush x:Key="FotoAkzentBrush" Color="{DynamicResource ColorAccent}"/>
+
         <!-- ToggleButton fuer Werkzeuge -->
         <Style x:Key="PhotoToolBtn" TargetType="ToggleButton">
             <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
@@ -32,16 +40,23 @@
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="{DynamicResource RadiusM}" Padding="6,3"
                                 ToolTip="{TemplateBinding ToolTip}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <!-- Fix-Runde 4 (Aufgabe 13): B7 - Text-Inhalt bekommt sonst den impliziten
+                                     TextBlock-Stil (TextBrush) statt der weissen Knopfschrift. -->
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): AccentBrush faellt unter
-                                 Hochkontrast auf SystemColors.Highlight, hartes Weiss war dort
-                                 potenziell unlesbar (von ThemeHighContrastCoverageTests gefunden). -->
+                            <!-- Fix-Runde 4 (Aufgabe 13): FotoAkzentBrush statt AccentBrush (siehe dort) -
+                                 die Werkzeugbeschriftungen sind fest Weiss bzw. farbig. -->
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource OnAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource FotoAkzentBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="White"/>
                             </Trigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
@@ -59,6 +74,13 @@
 
         <!-- Action-Button (OK / Abbrechen) -->
         <Style x:Key="ActionBtn" TargetType="Button">
+            <!-- Fix-Runde 4 (Aufgabe 13): eigene TextBlocks im Inhalt ("OK", "Rückgängig") suchen ihren
+                 impliziten Stil im logischen Baum und waren TextBrush statt Knopfschrift. -->
+            <Style.Resources>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                </Style>
+            </Style.Resources>
             <Setter Property="MinWidth" Value="80"/>
             <Setter Property="Height" Value="34"/>
             <Setter Property="Margin" Value="0,4"/>
@@ -72,7 +94,15 @@
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
                                 CornerRadius="{DynamicResource RadiusM}" Padding="12,4"
                                 BorderThickness="1" BorderBrush="#44FFFFFF">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <!-- Fix-Runde 4 (Aufgabe 13): B7 - Text-Inhalt bekommt sonst den impliziten
+                                     TextBlock-Stil (TextBrush) statt der weissen Knopfschrift. -->
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -113,19 +143,21 @@
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
                                 CornerRadius="{DynamicResource RadiusS}" Padding="4,2"
                                 BorderThickness="1" BorderBrush="#44FFFFFF">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <!-- Fix-Runde 4 (Aufgabe 13): B7 - Text-Inhalt bekommt sonst den impliziten
+                                     TextBlock-Stil (TextBrush) statt der weissen Knopfschrift. -->
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): der Grundzustand-Vordergrund
-                                 "White" (siehe Style oben) passt zur normalen dunklen Literalfarbe,
-                                 aber nicht mehr, sobald dieser Trigger die Flaeche auf AccentBrush
-                                 umstellt - unter Hochkontrast faellt das auf SystemColors.Highlight
-                                 (von ThemeHighContrastCoverageTests gefunden). Eigener
-                                 Foreground-Setter nur fuer DIESEN Zustand, der Grundzustand bleibt
-                                 unveraendert Weiss auf der dunklen Literalfarbe. -->
+                            <!-- Fix-Runde 4 (Aufgabe 13): FotoAkzentBrush statt AccentBrush (siehe dort) -
+                                 die Schrift bleibt in jedem Zustand das feste Weiss dieses Fensters. -->
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource FotoAkzentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -412,10 +444,11 @@
 
                     <!-- Undo -->
                     <Button x:Name="BtnUndo" Style="{StaticResource ActionBtn}"
-                            Background="{DynamicResource AccentBrush}" Click="BtnUndo_Click" Margin="0,8,0,0"
+                            Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource OnAccentBrush}"
+                            Click="BtnUndo_Click" Margin="0,8,0,0"
                             Visibility="Collapsed">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <ui:FluentIcon Glyph="&#xE7A7;" FontSize="{DynamicResource TextL}" Foreground="White" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE7A7;" FontSize="{DynamicResource TextL}" Foreground="{DynamicResource OnAccentBrush}" Margin="0,0,6,0"/>
                             <TextBlock Text="Rückgängig"/>
                         </StackPanel>
                     </Button>
@@ -477,7 +510,7 @@
                             Margin="0,6,0,0"
                             ValueChanged="SliderPosition_ValueChanged"/>
                     <TextBlock x:Name="TxtPosition" Text="0°" FontSize="{DynamicResource TextXS}"
-                               Foreground="White" HorizontalAlignment="Center"/>
+                               Foreground="{DynamicResource TextBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Winkel -->
@@ -505,7 +538,7 @@
                             Margin="0,6,0,0"
                             ValueChanged="SliderAngle_ValueChanged"/>
                     <TextBlock x:Name="TxtAngle" Text="45°" FontSize="{DynamicResource TextXS}"
-                               Foreground="White" HorizontalAlignment="Center"/>
+                               Foreground="{DynamicResource TextBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>
         </Border>

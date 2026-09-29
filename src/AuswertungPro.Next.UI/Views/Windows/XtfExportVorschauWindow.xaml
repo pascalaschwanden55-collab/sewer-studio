@@ -102,7 +102,7 @@
                     ToolTip="Schreibt die Datei in den Zielordner. Die Originale werden nur gelesen."
                     Click="OnSchreiben">
                 <StackPanel Orientation="Horizontal">
-                    <ui:FluentIcon Glyph="&#xE74E;" Foreground="White" Margin="0,0,8,0"/>
+                    <ui:FluentIcon Glyph="&#xE74E;" Foreground="{DynamicResource OnAccentBrush}" Margin="0,0,8,0"/>
                     <TextBlock Text="Jetzt schreiben" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>

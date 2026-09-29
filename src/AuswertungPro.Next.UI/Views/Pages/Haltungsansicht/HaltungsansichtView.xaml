@@ -250,7 +250,7 @@
                                                    Text="{Binding Converter={StaticResource SchadenMeterConv}}"/>
                                         <Border Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Padding="6,2"
                                                 CornerRadius="{DynamicResource RadiusS}" Background="{DynamicResource AccentBrush}">
-                                            <TextBlock Text="{Binding Code}" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="White"/>
+                                            <TextBlock Text="{Binding Code}" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" Foreground="{DynamicResource OnAccentBrush}"/>
                                         </Border>
                                         <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="6,0" FontWeight="SemiBold"
                                                    TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}"

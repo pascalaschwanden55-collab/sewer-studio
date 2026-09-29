@@ -306,7 +306,7 @@
                     ToolTip="Verteilt genau die gewählte Quelle über den bisherigen Verteilweg."
                     Command="{Binding VerteilenCommand}">
                 <StackPanel Orientation="Horizontal">
-                    <ui:FluentIcon Glyph="&#xE72D;" Foreground="White" Margin="0,0,8,0"/>
+                    <ui:FluentIcon Glyph="&#xE72D;" Foreground="{DynamicResource OnAccentBrush}" Margin="0,0,8,0"/>
                     <TextBlock Text="{Binding VerteilenText}" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
