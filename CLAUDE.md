@@ -1162,6 +1162,42 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   IsPressed per geschuetztem Setter, Hochkontrast eingeschaltet). **Solche Tests muessen die
   Elemente in ein echtes Fenster legen**: eine Aenderung der App-Ressourcen erreicht lose Elemente
   nicht, der Test waere blind (so beim ersten Lauf passiert).
+- **Aufgabe 14 — Befehle in der Strg+K-Suche.** `GlobaleSucheRegel` (Application, weiterhin
+  WPF-frei) sucht jetzt neben Haltung/Schacht/Strasse auch Befehle: `GlobaleSucheBefehlEintrag`
+  (Schluessel, Anzeigename, Glyph, `Verfuegbar`, `Ausfuehren`-Action) ist der reine Vertrag; die
+  Regel filtert nach `Verfuegbar`, matcht umlaut-tolerant und liefert hoechstens 6 Befehlstreffer
+  neben den bisherigen hoechstens 12 Datentreffern. **Reihenfolge:** Enthaelt der Suchtext eine
+  Ziffer (wirkt wie eine Haltungs-/Objektnummer), bleiben Datentreffer zuerst wie bisher; sonst
+  gehen gut treffende Befehle voran (Wortsuchen wie «neu», «einstellungen» meinen meist einen
+  Befehl). Die Umlautfaltung liegt seit dieser Aufgabe zentral in `Application/Common/
+  SucheTextFaltung` (`Falte`/`PasstAlle`) — `SettingsSearchMatcher` (Einstellungssuche) delegiert
+  dorthin, damit es nur eine Faltung im ganzen Programm gibt.
+  `GlobaleSucheViewModel.BaueBefehle()` baut den Katalog bei jeder Eingabe frisch aus dem
+  aktuellen `ShellViewModel`: alle Seiten der Leiste als «Gehe zu: `<Anzeigename>`» (Glyph und
+  `Verfuegbar` direkt vom jeweiligen `NavItem.Icon`/`IsAvailable`) sowie die Hauptbefehle Neues
+  Projekt, Projekt oeffnen, Speichern, Speichern unter, Einstellungen, Handbuch, Tastenkuerzel,
+  Ueber SewerStudio und Fokusmodus — `Verfuegbar` kommt dort vom echten `IRelayCommand.
+  CanExecute(...)`. **Ein Befehl ohne offenes Projekt ist deshalb kein deaktivierter, sondern ein
+  UNSICHTBARER Treffer** (Entscheid: einfacher als ein zweiter IsEnabled-Zustand je Zeile, und
+  konsistent mit «Gehe zu: Haltungen» vor dem Projektwechsel). «Import starten» ist bewusst ein
+  ZWEITER Weg zur Import-Seite neben «Gehe zu: Import» (derselbe `NavigateTo("Import")`), damit
+  der Suchtext «start» unabhaengig vom Wort «Gehe» trifft. Ausgefuehrt wird ausschliesslich ueber
+  bestehende `ShellViewModel`-Befehle/-Methoden (`NavigateTo`, `IRelayCommand.Execute`) — keine
+  Fachlogik verdoppelt.
+  **Gruppenkopf «Befehle» ist reine UI-Deko, nie Teil der Regel:** `GlobaleSucheArt.Gruppenkopf`
+  wird ausschliesslich von `GlobaleSucheViewModel.OnTextChanged` vor den ersten Befehlstreffer
+  eingefuegt (Domain-/Application-Layer kennt keine Darstellungsfragen). Er ist nie auswaehlbar:
+  `Waehle(...)` ignoriert ihn, `MarkiereNaechsten`/`MarkiereVorherigen` springen ueber ihn hinweg
+  (`NaechsterAuswaehlbarerAufwaerts`/`…Abwaerts`), und im Popup (`MainWindow.xaml`) setzt
+  `ListBox.ItemContainerStyle` bei `Art=Gruppenkopf` `IsHitTestVisible=False`/`Focusable=False`,
+  damit ein Klick ihn nicht selektiert. Ein Befehlstreffer zeigt sein `Glyph` als `ui:FluentIcon`
+  (dieselben Codepunkte wie im Menue Datei/Hilfe), Datentreffer bleiben ohne Icon. Der
+  Suchfeld-Platzhalter heisst jetzt «Suchen oder Befehl eingeben…».
+  Tests: `GlobaleSucheRegelTests` (Befehl gefunden, Umlautfaltung, Reihenfolge bei Zahl/Wort,
+  Sperre ohne `Verfuegbar`, Obergrenze 6, Ruecksicherung ohne Katalog) und
+  `GlobaleSucheBefehleTests` (echtes `ShellViewModel`, kein Fake: Befehl fuehrt wirklich aus,
+  Navigation trifft die echte Seite, «Speichern» ist ohne offenes Projekt kein Treffer, Gruppenkopf
+  nur bei Befehlstreffer, Pfeiltasten ueberspringen ihn).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

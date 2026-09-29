@@ -60,7 +60,7 @@ public partial class TastenkuerzelWindow : Window
                 new("Strg+N", "Neues Projekt"),
                 new("Strg+O", "Projekt öffnen"),
                 new("Strg+S", "Projekt speichern"),
-                new("Strg+K", "Suche fokussieren"),
+                new("Strg+K", "Suche fokussieren (Haltungen, Schächte, Strassen, Befehle)"),
                 new("F1", "Handbuch öffnen (Abschnitt der aktuellen Seite)"),
                 new("Strg+F1", "Diese Tastenkürzel-Übersicht öffnen"),
             ]),

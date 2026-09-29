@@ -92,8 +92,9 @@
                                      MinHeight="0" Padding="0" VerticalContentAlignment="Center"
                                      Text="{Binding GlobaleSuche.Text, UpdateSourceTrigger=PropertyChanged}"
                                      KeyDown="GlobaleSucheBox_KeyDown"
-                                     ToolTip="Haltung, Schacht oder Strasse suchen" AutomationProperties.Name="Haltung, Schacht oder Strasse suchen"/>
-                            <TextBlock Text="Haltung, Schacht oder Strasse suchen" IsHitTestVisible="False"
+                                     ToolTip="Haltung, Schacht, Strasse oder Befehl suchen" AutomationProperties.Name="Haltung, Schacht, Strasse oder Befehl suchen"/>
+                            <!-- Aufgabe 14 (Befehle in der Strg+K-Suche): Platzhalter nennt jetzt auch Befehle. -->
+                            <TextBlock Text="Suchen oder Befehl eingeben…" IsHitTestVisible="False"
                                        VerticalAlignment="Center" Margin="2,0,0,0"
                                        FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}">
                                 <TextBlock.Style>
@@ -117,10 +118,59 @@
                         <StackPanel>
                             <!-- Fokus bleibt im Textfeld: Markierung laeuft ueber MarkiertIndex/Pfeiltasten,
                                  nicht ueber SelectedItem (sonst wuerden Pfeiltasten die Liste nie erreichen). -->
+                            <!-- Aufgabe 14 (Befehle in der Strg+K-Suche): Befehle zeigen ein Symbol
+                                 (GlobaleSucheTreffer.Glyph), davor steht ein nicht auswaehlbarer
+                                 Gruppenkopf «Befehle» (Art=Gruppenkopf, von der ViewModel eingefuegt). -->
                             <ListBox ItemsSource="{Binding GlobaleSuche.Treffer}" SelectedIndex="{Binding GlobaleSuche.MarkiertIndex, Mode=TwoWay}"
-                                     DisplayMemberPath="Text" BorderThickness="0" Focusable="False"
+                                     BorderThickness="0" Focusable="False"
                                      PreviewMouseLeftButtonUp="GlobaleSucheTreffer_Click"
-                                     AutomationProperties.Name="Suchtreffer"/>
+                                     AutomationProperties.Name="Suchtreffer">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Art}" Value="Gruppenkopf">
+                                                <Setter Property="IsHitTestVisible" Value="False"/>
+                                                <Setter Property="Focusable" Value="False"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:FluentIcon Glyph="{Binding Glyph}" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource MutedBrush}">
+                                                <ui:FluentIcon.Style>
+                                                    <Style TargetType="ui:FluentIcon">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Art}" Value="Befehl">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ui:FluentIcon.Style>
+                                            </ui:FluentIcon>
+                                            <TextBlock Text="{Binding Text}" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Art}" Value="Gruppenkopf">
+                                                                <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                                                <Setter Property="Margin" Value="0,4,0,2"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
                             <TextBlock Text="{Binding GlobaleSuche.LeerText}" Margin="8,4" Foreground="{DynamicResource MutedBrush}"
                                        FontSize="{DynamicResource TextS}"/>
                         </StackPanel>
