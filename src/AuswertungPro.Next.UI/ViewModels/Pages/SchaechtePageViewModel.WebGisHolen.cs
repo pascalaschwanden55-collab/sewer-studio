@@ -19,7 +19,7 @@ public sealed partial class SchaechtePageViewModel
         await _webGisHolen.OeffneAsync(_shell, () => Settings.LastProjectPath, () =>
         {
             ScheduleAutoSave();
-            FelderExternErgaenzt?.Invoke();
+            MeldeUebernahme();
         });
     }
 }

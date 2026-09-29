@@ -38,7 +38,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     /// </summary>
     public event Action? FelderExternErgaenzt;
 
-    private void MeldeFelderExternErgaenzt() => FelderExternErgaenzt?.Invoke();
+    private void MeldeFelderExternErgaenzt() { Verlauf.Leere(AuswertungPro.Next.Application.UseCases.Datenaenderungen.DatenaenderungsVerlauf.GrundUebernahme); FelderExternErgaenzt?.Invoke(); }
 
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
@@ -235,10 +235,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _webGisHolen = services.WebGisHolen;
         ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("haltung", () => _shell.Project, Settings,
             () => _shell.IsProjectReady, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
         ObjektakteCommand = Services.ObjektaktenDialog.Befehl("haltung", () => _shell.Project, () => Selected?.Id,
             Settings, () => _shell.IsProjectReady, () => _shell.MarkProjectDirty(), Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
         _timers = new DataPageTimerController(
             value => SaveStatus = value,
             value => IsSaveStatusVisible = value,

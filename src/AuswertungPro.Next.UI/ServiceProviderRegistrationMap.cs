@@ -94,6 +94,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(ISettingsMigrationService)] = services.SettingsMigration,
             [typeof(IExplorerRevealService)] = services.ExplorerReveal,
             [typeof(ITaskbarFortschritt)] = services.Taskbar,
+            [typeof(AuswertungPro.Next.Application.UseCases.Datenaenderungen.IDatenaenderungsVerlauf)] = services.DatenaenderungsVerlauf,
             [typeof(AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilberichtAblage)] = services.Verteilberichte,
             [typeof(IXtfExportVorschauDialog)] = services.XtfExportVorschau,
             [typeof(AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilVorschau)] = services.VerteilVorschau,

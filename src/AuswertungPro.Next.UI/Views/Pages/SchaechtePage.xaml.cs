@@ -99,7 +99,7 @@ public partial class SchaechtePage : UserControl
         _recordDetailsBuilder = new SchaechteRecordDetailsBuilder(
             ResolveOptions,
             ResolveViewModelCommand,
-            CommitSchachtDetailKonsolidiert,
+            CommitSchachtDetailMitVerlauf,
             () => _vm is not null,
             BaueNachschlagBefehl,
             BaueStrassenBefehl);
@@ -205,8 +205,8 @@ public partial class SchaechtePage : UserControl
                         col,
                         spec.ItemsSourcePath,
                         tag: new ComboBindingTag(col, spec.OptionField),
-                        lostKeyboardFocus: ComboBox_LostKeyboardFocus,
-                        selectionChanged: ComboBox_SelectionChanged,
+                        lostKeyboardFocus: ComboBox_LostKeyboardFocusMitVerlauf,
+                        selectionChanged: ComboBox_SelectionChangedMitVerlauf,
                         allowFreeText: spec.AllowFreeText,
                         bindIsProjectReady: false,
                         menuCommands: spec.Managed
@@ -883,7 +883,7 @@ public partial class SchaechtePage : UserControl
         switch (ergebnis.Action)
         {
             case DataPageRightClickAction.ClearColumn when ergebnis.FieldName is { } feld:
-                ClearColumn(feld, ergebnis.DisplayName ?? feld);
+                ClearColumnMitVerlauf(feld, ergebnis.DisplayName ?? feld);
                 e.Handled = true;
                 break;
             case DataPageRightClickAction.SelectRow:

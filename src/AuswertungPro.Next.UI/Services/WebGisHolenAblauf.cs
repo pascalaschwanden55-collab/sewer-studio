@@ -81,6 +81,9 @@ public sealed class WebGisHolenAblauf
                 var uebernommen = WebGisImportUseCase.Uebernimm(plan, projekt);
                 if (uebernommen > 0)
                 {
+                    // Optik Aufgabe 16: Eine Uebernahme leert Rueckgaengig/Wiederholen - hier und nicht im
+                    // Rueckruf, weil der Einstieg der Export-Seite keinen eigenen Rueckruf dafuer hat.
+                    shell.DatenVerlauf.Leere(AuswertungPro.Next.Application.UseCases.Datenaenderungen.DatenaenderungsVerlauf.GrundUebernahme);
                     shell.MarkProjectDirty();
                     _geaendert?.Invoke();
                 }

@@ -68,6 +68,13 @@ public partial class TastenkuerzelWindow : Window
             [
                 new("F3", "Sucheingabe der Haltungstabelle fokussieren"),
             ]),
+            // Optik Aufgabe 16: gilt auf beiden Datenseiten, solange kein Textfeld den Fokus hat.
+            new("Haltungen und Schächte",
+            [
+                new("Strg+Z", "Letzte Datenänderung rückgängig machen (im Textfeld: Texteingabe rückgängig)"),
+                new("Strg+Y", "Rückgängig gemachte Änderung wiederholen"),
+                new("Strg+Umschalt+Z", "Rückgängig gemachte Änderung wiederholen"),
+            ]),
         };
 
         // Player-Kürzel: eine Gruppe je Kategorie aus PlayerKeyboardShortcutPolicy, in deren

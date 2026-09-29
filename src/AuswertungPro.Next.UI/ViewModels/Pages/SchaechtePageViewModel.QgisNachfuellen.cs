@@ -22,11 +22,14 @@ public sealed partial class SchaechtePageViewModel
         if (QgisBestand is null || !CanMutateShaftData)
             return;
 
-        QgisNachfuellWorkflow.Fuehre(
+        var ergebnis = QgisNachfuellWorkflow.Fuehre(
             BauteilArt.Schacht,
             QgisBestand,
             _dialogs,
             bestand => LeereFelderPlanBuilder.BaueFuerSchaechte(Records, bestand),
             plan => LeereFelderAnwender.WendeAnAufSchaechte(Records, plan));
+        // Optik Aufgabe 16: Eine Uebernahme leert Rueckgaengig/Wiederholen (wie bei den Haltungen).
+        if (ergebnis.Ausgefuehrt)
+            Verlauf.Leere(AuswertungPro.Next.Application.UseCases.Datenaenderungen.DatenaenderungsVerlauf.GrundUebernahme);
     }
 }

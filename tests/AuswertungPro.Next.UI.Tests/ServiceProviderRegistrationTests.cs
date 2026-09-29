@@ -140,9 +140,11 @@ public sealed class ServiceProviderRegistrationTests
         // in der Windows-Taskleiste (Aufgabe 13, Windows-Integration, 28.09.2026).
         // 175 -> 176: IBerichtsMarke liefert den Logo-Pfad fuer PDF-/Excel-Export
         // und Dossier aus einer gemeinsamen Quelle (Aufgabe 15, Optikanalyse 28.09.2026).
+        // 176 -> 177: IDatenaenderungsVerlauf haelt Rueckgaengig/Wiederholen fuer Haltungs- und
+        // Schachtdaten (Aufgabe 16, 29.09.2026).
         Assert.True(
-            registrations.Count == 176,
-            $"Erwartet 176 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 177,
+            $"Erwartet 177 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergänzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(services.XtfLieferungen,

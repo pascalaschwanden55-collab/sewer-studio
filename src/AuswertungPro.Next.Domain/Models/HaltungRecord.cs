@@ -234,4 +234,25 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
 
     public void RaiseAllFieldsChanged()
         => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Fields)));
+
+    /// <summary>
+    /// Rueckgaengig/Wiederholen (Optik Aufgabe 16): setzt Wert UND Herkunftsdaten eines Feldes
+    /// zeichengenau auf einen frueheren Zustand dieses Datensatzes zurueck. Keine WebGIS-Umwandlung,
+    /// keine neue Handmarke, kein Zeitstempel von jetzt: Wiederhergestellt wird genau, was vorher
+    /// dastand (<c>null</c> heisst: Feld bzw. Metadaten gab es nicht). Den Schutz der normalen
+    /// Schreibwege ersetzt der Verlauf durch seine Vorbedingung - er ruft dies nur auf, wenn das Feld
+    /// noch exakt den eigenen Eintrag traegt, und nie mit einem Wert, den der Datensatz nicht hatte.
+    /// </summary>
+    public void StelleFeldzustandWiederHer(string fieldName, string? value, FieldMetadata? meta)
+    {
+        VirtuelleSpalte.WeiseAb(fieldName, nameof(fieldName));
+        if (value is null) Fields.Remove(fieldName);
+        else Fields[fieldName] = value;
+        if (meta is null) FieldMeta.Remove(fieldName);
+        else FieldMeta[fieldName] = FieldMetadataKopie.Von(meta);
+        ModifiedAtUtc = DateTime.UtcNow;
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Fields)));
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs($"Fields[{fieldName}]"));
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ModifiedAtUtc)));
+    }
 }

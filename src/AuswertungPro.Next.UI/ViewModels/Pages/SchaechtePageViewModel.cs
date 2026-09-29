@@ -150,10 +150,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         _webGisHolen = services.WebGisHolen;
         ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("schacht", () => _shell.Project, Settings,
             () => CanMutateShaftData, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
         ObjektakteCommand = Services.ObjektaktenDialog.Befehl("schacht", () => _shell.Project, () => Selected?.Id,
             Settings, () => CanMutateShaftData, () => _shell.MarkProjectDirty(), Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
         CodeCatalog = services.CodeCatalog;
     }
 
