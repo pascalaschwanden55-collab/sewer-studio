@@ -119,6 +119,7 @@
                                         </Button>
                                     </StackPanel>
 
+                                    <Grid>
                                     <ListBox x:Name="LstCodingEvents"
                                              behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
                                              behaviors:CodingEventDragDropBehavior.Enabled="True"
@@ -284,6 +285,23 @@
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
+
+                                    <ctrl:EmptyStateControl IsHitTestVisible="False"
+                                                            Icon="&#xE721;"
+                                                            Title="Keine KI-Befunde"
+                                                            Message="Noch keine Codierereignisse in dieser Haltung.">
+                                        <ctrl:EmptyStateControl.Style>
+                                            <Style TargetType="ctrl:EmptyStateControl">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasItems, ElementName=LstCodingEvents}" Value="False">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ctrl:EmptyStateControl.Style>
+                                    </ctrl:EmptyStateControl>
+                                    </Grid>
                                 </DockPanel>
                             </Border>
 
@@ -395,6 +413,7 @@
                                             </TextBlock>
                                         </DockPanel>
 
+                                        <Grid>
                                         <ListBox x:Name="LstImportEvents"
                                                  behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
                                                  behaviors:CodingEventDragDropBehavior.Enabled="True"
@@ -508,6 +527,23 @@
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>
+
+                                        <ctrl:EmptyStateControl IsHitTestVisible="False"
+                                                                Icon="&#xE721;"
+                                                                Title="Kein Import"
+                                                                Message="Zu dieser Haltung liegt kein importiertes Referenzprotokoll vor.">
+                                            <ctrl:EmptyStateControl.Style>
+                                                <Style TargetType="ctrl:EmptyStateControl">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasItems, ElementName=LstImportEvents}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ctrl:EmptyStateControl.Style>
+                                        </ctrl:EmptyStateControl>
+                                        </Grid>
                                     </DockPanel>
                                 </Border>
                                 <Border Grid.Row="1" Style="{DynamicResource PlayerCard}" Margin="0,4,0,0">

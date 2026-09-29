@@ -273,6 +273,7 @@
                 </Grid>
             </Border>
 
+            <Grid>
             <ListBox x:Name="Liste"
                      ItemsSource="{Binding ItemsSource, ElementName=Root}"
                      SelectedItem="{Binding SelectedItem, ElementName=Root, Mode=TwoWay}"
@@ -421,6 +422,23 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+
+            <uc:EmptyStateControl IsHitTestVisible="False"
+                                  Icon="&#xE8A5;"
+                                  Title="Noch keine Schächte"
+                                  Message="Importiere Schachtinspektionen, damit sie hier als Liste erscheinen.">
+                <uc:EmptyStateControl.Style>
+                    <Style TargetType="uc:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems, ElementName=Liste}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </uc:EmptyStateControl.Style>
+            </uc:EmptyStateControl>
+            </Grid>
         </DockPanel>
     </Border>
 </UserControl>

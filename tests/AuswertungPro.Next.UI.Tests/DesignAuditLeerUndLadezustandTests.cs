@@ -209,45 +209,23 @@ public sealed class DesignAuditLeerUndLadezustandTests
         (["Views", "Pages", "Schachtansicht", "SchachtansichtView.xaml"], "Abgedockte Schachtansicht (Liste + Schadenliste)"),
         (["Views", "Windows", "DossierAreaWindow.xaml"], "Gebietsangaben (Themenliste)"),
         (["Views", "Windows", "DossierBatchWindow.xaml"], "Dossiers aus dem Projekt erzeugen (Vorschlagsliste)"),
-    ];
 
-    /// <summary>
-    /// Fix-Runde 1: drei Dateien haben vorbestehende, bare-construction Unit-Tests
-    /// (<c>new HaltungAufklappListe()</c>/<c>new SchachtAufklappListe()</c>/
-    /// <c>new PlayerCodingSidePanel()</c> auf einem blossen STA-Thread ohne <c>Application</c>-
-    /// Ressourcen, z. B. <see cref="DataPageAnsichtUmschalterTests"/>,
-    /// <see cref="NovaListenWiederverbindenTests"/>,
-    /// <see cref="PlayerCodingSidePanelControllerInitializerTests"/>). Das gemeinsame
-    /// <c>EmptyStateControl</c> setzt seinen optionalen Aktionsknopf mit
-    /// <c>Style="{StaticResource SecondaryButton}"</c> — diese Ressource kommt nur aus den per
-    /// <c>Application</c> gemergten Theme-Woerterbuechern und wird beim BAML-Laden (nicht erst bei
-    /// Sichtbarkeit) aufgeloest. Ohne <c>Application</c>-Kontext wirft das eine
-    /// <c>XamlParseException</c> ("Ressource SecondaryButton kann nicht gefunden werden") — real
-    /// gemessen, kein Verdacht. Diese drei Dateien bleiben deshalb bewusst OHNE EmptyStateControl;
-    /// eine Aenderung am gemeinsamen Control selbst waere ausserhalb dieser Aufgabe.
-    /// </summary>
-    private static readonly string[] EmptyStateAusnahmenBareConstruction =
-    [
-        "HaltungAufklappListe.xaml",
-        "SchachtAufklappListe.xaml",
-        "PlayerCodingSidePanel.xaml",
+        // Fix-Runde 2 (Koordinator-Rueckmeldung): EmptyStateControl.xaml:67 setzte den optionalen
+        // Aktionsknopf mit Style="{StaticResource SecondaryButton}" - das loeste beim BAML-Laden
+        // (nicht erst bei Sichtbarkeit) auf und warf ohne Application-Kontext eine
+        // XamlParseException in bare-construction Unit-Tests (new HaltungAufklappListe()/
+        // new SchachtAufklappListe()/new PlayerCodingSidePanel() auf blossem STA-Thread, z. B.
+        // DataPageAnsichtUmschalterTests, NovaListenWiederverbindenTests,
+        // PlayerCodingSidePanelControllerInitializerTests,
+        // PlayerCodingSidePanelEventBinderTests, HaltungAufklappListeFokusTests). Umgestellt auf
+        // Style="{DynamicResource SecondaryButton}" (loest lazy zur Laufzeit auf, faellt ohne
+        // Application-Ressourcen einfach auf unstyled zurueck statt zu werfen) - danach liefen alle
+        // 19 vorher roten Tests wieder gruen, und diese drei Dateien tragen jetzt ganz normal ein
+        // EmptyStateControl wie jede andere Datei dieser Liste.
+        (["Views", "Pages", "Haltungsansicht", "HaltungAufklappListe.xaml"], "Haltungs-Aufklappliste"),
+        (["Views", "Pages", "Schachtansicht", "SchachtAufklappListe.xaml"], "Schacht-Aufklappliste"),
+        (["Views", "Windows", "PlayerCodingSidePanel.xaml"], "Player-Seitenpanel (KI-Befunde + Import)"),
     ];
-
-    [Fact]
-    public void Ausnahmen_ohne_EmptyStateControl_sind_real_bare_construction_Dateien()
-    {
-        // Schuetzt die Begruendung: keine der drei Dateien darf zufaellig doch ein
-        // EmptyStateControl bekommen haben (sonst waere die Ausnahme hier veraltet).
-        foreach (var datei in EmptyStateAusnahmenBareConstruction)
-        {
-            var treffer = Directory.EnumerateFiles(UiRoot, datei, SearchOption.AllDirectories)
-                .Where(p => !p.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-                .ToList();
-            Assert.True(treffer.Count == 1, $"{datei}: erwartet genau eine Datei, gefunden {treffer.Count}.");
-            var xaml = File.ReadAllText(treffer[0]);
-            Assert.DoesNotContain("EmptyStateControl", xaml, StringComparison.Ordinal);
-        }
-    }
 
     [Fact]
     public void Jede_versorgte_Liste_traegt_ein_EmptyStateControl()

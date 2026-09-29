@@ -777,24 +777,29 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   die abgedockten Voll-Ansichten `HaltungsansichtView`/`SchachtansichtView` (Haupt- UND Schadenliste),
   `DossierAreaWindow` (Themenliste) und `DossierBatchWindow` (Vorschlagsliste) — alle in
   `DesignAuditLeerUndLadezustandTests.EmptyStateDateien` gefuehrt.
-  **Drei Dateien bleiben bewusst OHNE `EmptyStateControl`**, mit real gemessenem Grund (nicht nur
-  Verdacht): `HaltungAufklappListe.xaml`, `SchachtAufklappListe.xaml` und `PlayerCodingSidePanel.xaml`
-  haben vorbestehende Unit-Tests, die sie per `new HaltungAufklappListe()` &c. auf einem blossen
-  STA-Thread OHNE `Application`-Ressourcen bauen (`DataPageAnsichtUmschalterTests`,
-  `NovaListenWiederverbindenTests`, `PlayerCodingSidePanelControllerInitializerTests`,
-  `PlayerCodingSidePanelEventBinderTests`, `HaltungAufklappListeFokusTests`). `EmptyStateControl`s
-  optionaler Aktionsknopf setzt `Style="{StaticResource SecondaryButton}"` — eine Ressource aus den
-  per `Application` gemergten Theme-Woerterbuechern, die beim BAML-Laden (nicht erst bei Sichtbarkeit)
-  aufgeloest wird; ohne `Application`-Kontext wirft das eine `XamlParseException`. Fuenf bestehende
-  Tests sind so tatsaechlich fehlgeschlagen (real gemessen, dann repariert durch Ruecknahme statt
-  Anpassung der Tests). Zwei weitere DossierEditWindow-Tabellen (Eigentuemer/Themen/Aenderungswesen,
-  Hoehe 110-170 px) sind ebenfalls bewusst NICHT versorgt: `EmptyStateControl`s minimaler
-  Platzbedarf (72-px-Icon + Titel + Nachricht + 24-px-Rand, real ueber 180 px) wuerde die absichtlich
-  kurze feste Tabellenhoehe ueberragen und die direkt darunterstehenden „+ Zeile"/„Zeile
+  **Fix-Runde 2: die drei bare-construction-Ausnahmen sind behoben, nicht mehr ausgenommen.**
+  Ursache war `EmptyStateControl.xaml:67` selbst, nicht die drei Dateien: der optionale
+  Aktionsknopf setzte `Style="{StaticResource SecondaryButton}"` — eine Ressource aus den per
+  `Application` gemergten Theme-Woerterbuechern, die beim BAML-Laden (nicht erst bei Sichtbarkeit)
+  aufgeloest wird und ohne `Application`-Kontext eine `XamlParseException` wirft. Umgestellt auf
+  `Style="{DynamicResource SecondaryButton}"` (loest lazy zur Laufzeit ueber den Baum auf,
+  faellt ohne `Application`-Ressourcen auf ungestylt zurueck statt zu werfen; die einzige weitere
+  `StaticResource` im Control, `NullToCollapsed`, ist ein lokal im selben `UserControl.Resources`
+  definierter Konverter und bleibt unveraendert, weil er immer im Dateiscope aufloest). `HaltungAufklappListe.xaml`, `SchachtAufklappListe.xaml` und `PlayerCodingSidePanel.xaml`
+  (beide Listen: `LstCodingEvents`, `LstImportEvents`) tragen seither ganz normal ein
+  `EmptyStateControl` wie jede andere Datei der Liste; die fuenf vorher betroffenen Tests
+  (`DataPageAnsichtUmschalterTests`, `NovaListenWiederverbindenTests`,
+  `PlayerCodingSidePanelControllerInitializerTests`, `PlayerCodingSidePanelEventBinderTests`,
+  `HaltungAufklappListeFokusTests`) laufen wieder gruen. Der Ausnahme-Waechter
+  `Ausnahmen_ohne_EmptyStateControl_sind_real_bare_construction_Dateien` ist entfernt, die drei
+  Dateien stehen jetzt in `DesignAuditLeerUndLadezustandTests.EmptyStateDateien`.
+  Zwei weitere DossierEditWindow-Tabellen (Eigentuemer/Themen/Aenderungswesen, Hoehe 110-170 px)
+  bleiben weiterhin bewusst NICHT versorgt (unveraendert seit Fix-Runde 1): `EmptyStateControl`s
+  minimaler Platzbedarf (72-px-Icon + Titel + Nachricht + 24-px-Rand, real ueber 180 px) wuerde die
+  absichtlich kurze feste Tabellenhoehe ueberragen und die direkt darunterstehenden „+ Zeile"/„Zeile
   entfernen"-Knoepfe ueberlappen (der umgebende Grid clippt nicht). `HandbuchWindow`s
   Inhaltsverzeichnis ist eine feste, im Programm eingebaute Liste und kann nie leer sein — ebenfalls
-  ausgenommen. Neuer Waechter `Ausnahmen_ohne_EmptyStateControl_sind_real_bare_construction_Dateien`
-  haelt die drei bare-construction-Ausnahmen fest, damit sie nicht versehentlich doch versorgt werden.
+  weiterhin ausgenommen (kein eigener Waechter noetig, da keine bare-construction-Falle).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 
