@@ -256,6 +256,66 @@ public sealed class UserErrorTests
         }
     }
 
+    // Fix-Runde 1 zu 10c2 (A1): Eine eigene Meldung, die den englischen Text ihrer inneren
+    // Framework-Ausnahme einbettet, wird an dieser Stelle abgeschnitten — der deutsche Vorspann
+    // bleibt, der Fremdtext (und alles danach, hier die Rohantwort) nicht.
+    [Fact]
+    public async Task Describe_schneidet_eingebetteten_Fremdtext_der_inneren_Ausnahme_ab()
+    {
+        using var http = new HttpClient(new FesteOllamaAntwort("{\"message\":{\"content\":\"kein json {\"}}"));
+        using var client = new AuswertungPro.Next.Infrastructure.Ai.OllamaClient(new Uri("http://localhost:11434"), http);
+        using var schema = JsonDocument.Parse("{}");
+
+        var geworfen = await Assert.ThrowsAsync<InvalidOperationException>(() => client.ChatStructuredAsync<int[]>(
+            "modell",
+            [new AuswertungPro.Next.Infrastructure.Ai.OllamaClient.ChatMessage("user", "x")],
+            schema.RootElement,
+            CancellationToken.None));
+
+        Assert.NotNull(geworfen.InnerException);
+        Assert.Contains(geworfen.InnerException!.Message, geworfen.Message, StringComparison.Ordinal);
+
+        var message = UserError.Describe(geworfen);
+
+        Assert.Equal(
+            "Die strukturierte JSON-Antwort des Modells konnte nicht gelesen werden. Technische Details stehen im Programmlog.",
+            message);
+        Assert.DoesNotContain("kein json", message, StringComparison.Ordinal);
+    }
+
+    // Fix-Runde 1 zu 10c2: Einfache Eingabehinweise tragen keinen Log-Zusatz und schreiben
+    // keinen Stacktrace ins Log; eine fremde Ausnahme bleibt generisch und wird protokolliert.
+    [Fact]
+    public void DescribeInputHint_zeigt_eigene_Meldung_ohne_Loghinweis_und_ohne_Log()
+    {
+        string? logged = null;
+        BestEffort.ConfigureDefaultErrorSink(message => logged = message);
+        try
+        {
+            var geworfen = Assert.Throws<IOException>(
+                () => ProjectPathResolver.EnsureWritableProjectPath("Beilage.pdf", null));
+
+            Assert.Equal(
+                "Ohne gespeichertes Projekt dürfen Dateipfade nicht geändert werden.",
+                UserError.DescribeInputHint(geworfen, "Eingabe"));
+            Assert.Null(logged);
+
+            var fremd = UserError.DescribeInputHint(new InvalidOperationException("INTERN-GEHEIM"), "Eingabe");
+            Assert.DoesNotContain("INTERN-GEHEIM", fremd, StringComparison.Ordinal);
+            Assert.Contains("INTERN-GEHEIM", logged, StringComparison.Ordinal);
+        }
+        finally
+        {
+            BestEffort.ConfigureDefaultErrorSink(null);
+        }
+    }
+
+    private sealed class FesteOllamaAntwort(string body) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) });
+    }
+
     [Fact]
     public void Describe_zeigt_bei_IOException_aus_dem_Framework_die_generische_Meldung()
     {

@@ -304,9 +304,10 @@ public static class KnowledgeBackupEngine
         {
             // Ohne sauberen Checkpoint ist kein konsistenter Stand garantiert.
             // Der Export wird deshalb abgebrochen statt ein unsicheres Archiv zu erzeugen.
+            BestEffort.ReportWarning($"[KnowledgeBackup] SQLite WAL-Checkpoint fehlgeschlagen: {ex}");
             throw new UserFacingException(
                 "SQLite WAL-Checkpoint fehlgeschlagen; der Export wurde abgebrochen. " +
-                $"Technischer Hinweis: {ex.Message}");
+                "Technische Details stehen im Programmlog.");
         }
     }
 

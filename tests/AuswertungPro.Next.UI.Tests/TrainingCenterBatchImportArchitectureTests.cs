@@ -211,7 +211,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
         var workflowSource = source;
 
         Assert.False(File.Exists(controllerPath), "Triviale Batch-Import-Fehlerbehandlung soll inline in der VM stehen.");
-        Assert.Contains("runtimeSetup.RunSummary.RecordError(UserError.Describe(ex));", workflowSource, StringComparison.Ordinal);
+        Assert.Contains("runtimeSetup.RunSummary.RecordError(UserError.DescribeAndReport(ex, \"Trainings-Stapelimport\"));", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.BatchUi.Log($\"  FEHLER: {ex.Message}\");", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.BatchUi.Log(\"Batch-Import abgebrochen durch Benutzer.\");", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.BatchUi.SetStatusText(\"Batch-Import abgebrochen.\");", workflowSource, StringComparison.Ordinal);

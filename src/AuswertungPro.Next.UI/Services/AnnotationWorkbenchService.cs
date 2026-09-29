@@ -863,7 +863,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 .ExportAsync(storedFramePath, bbox, finalCode, classId, $"wb_{annotation.AnnotationId}", ct)
                 .ConfigureAwait(false);
             if (!export.Success)
-                throw new InvalidOperationException(export.Error ?? "Teacher-Export meldete keinen Erfolg.");
+                throw new UserFacingException(export.Error ?? "Teacher-Export meldete keinen Erfolg.");
 
             annotation.FullFramePath = export.FullFramePath;
             annotation.CroppedRegionPath = export.CroppedRegionPath;
@@ -902,7 +902,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 var added = await _sampleStore.TryAddNewAsync(sample).ConfigureAwait(false);
                 if (!added)
                 {
-                    throw new InvalidOperationException(
+                    throw new UserFacingException(
                         "Die Signatur gehört bereits zu einem anderen Gold-Datensatz.");
                 }
             }

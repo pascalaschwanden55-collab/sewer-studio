@@ -48,7 +48,8 @@ internal sealed class SchachtProArchiveReader : IDisposable
         {
             throw new SchachtProArchiveException(
                 "INVALID_ARCHIVE",
-                $"Die Datei ist kein gültiges ZIP-Archiv: {Path.GetFileName(sproPath)} ({ex.Message})");
+                $"Die Datei ist kein gültiges ZIP-Archiv: {Path.GetFileName(sproPath)}",
+                ex);
         }
 
         try
@@ -133,7 +134,8 @@ internal sealed class SchachtProArchiveReader : IDisposable
         {
             throw new SchachtProArchiveException(
                 "MANIFEST_INVALID",
-                $"manifest.json ist beschädigt ({ex.Message})");
+                "manifest.json ist beschädigt.",
+                ex);
         }
 
         if (manifest is null || manifest.Projects is null || manifest.AppVersionName is null)
@@ -309,6 +311,12 @@ internal sealed class SchachtProArchiveException : Exception
 {
     internal SchachtProArchiveException(string code, string message)
         : base(message)
+    {
+        Code = code;
+    }
+
+    internal SchachtProArchiveException(string code, string message, Exception innerException)
+        : base(message, innerException)
     {
         Code = code;
     }

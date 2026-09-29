@@ -54,7 +54,7 @@ public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService di
                     bestand = GeoShopEigentuemerErgaenzung.Ergaenze(bestand, leser.LiesEigentuemer(eigentuemerdatei), eigentuemerdatei);
                 if (abbruch.IsCancellationRequested) return;
                 if (!darfSchreiben() || vorLesen.Any(z => z.Ziel.Stand() != z.Stand || z.Ziel.Aktenstand != z.Akten))
-                    throw new InvalidOperationException("Das Projekt wurde während des Lesens geändert. Bitte erneut abgleichen.");
+                    throw new UserFacingException("Das Projekt wurde während des Lesens geändert. Bitte erneut abgleichen.");
                 plan = GeoShopAbgleichPlanBuilder.Baue(original, bestand, mitVergleich: true);
                 fenster.Zeige(plan);
             }
@@ -68,7 +68,7 @@ public sealed class GeoShopAbgleichDialog(IGeoShopLeser leser, IDialogService di
         if (fenster.ShowDialog() != true || plan is null || !darfSchreiben()) return 0;
         try
         {
-            if (sicherung is null) throw new InvalidOperationException("Die Projektsicherung ist nicht angebunden. Es wird nichts übernommen.");
+            if (sicherung is null) throw new UserFacingException("Die Projektsicherung ist nicht angebunden. Es wird nichts übernommen.");
             return GeoShopGesicherteUebernahme.WendeAn(plan, ziele(), sicherung);
         }
         catch (Exception ex) { dialogs.Error(UserError.DescribeAndReport(ex, "GeoShop-Abgleich"), "GeoShop-Abgleich"); return 0; }

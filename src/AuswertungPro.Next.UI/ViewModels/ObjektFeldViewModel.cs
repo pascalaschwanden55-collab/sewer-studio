@@ -175,13 +175,18 @@ public sealed class ObjektFeldViewModel : ObservableObject
     {
         try
         {
-            if (!_darfSchreiben()) throw new InvalidOperationException("Das Projekt ist derzeit nicht bearbeitbar.");
+            if (!_darfSchreiben())
+            {
+                _fehler("Das Projekt ist derzeit nicht bearbeitbar.");
+                OnPropertyChanged(nameof(Text));
+                return;
+            }
             _bearbeitung.Schreibe(_akte, Feld, _erwartet, text, auswahl);
             _akte = _bearbeitung.Projekt.Objektakten.Single(a => a.Id == _akte.Id);
             _erwartet = _bearbeitung.Lies(_akte, Feld);
             SetProperty(ref _text, text, nameof(Text));
             _geaendert(); AktualisiereAuswahl();
         }
-        catch (InvalidOperationException ex) { _fehler(UserError.DescribeAndReport(ex, "Objektaktenfeld schreiben")); OnPropertyChanged(nameof(Text)); }
+        catch (InvalidOperationException ex) { _fehler(UserError.DescribeInputHint(ex, "Objektaktenfeld schreiben")); OnPropertyChanged(nameof(Text)); }
     }
 }

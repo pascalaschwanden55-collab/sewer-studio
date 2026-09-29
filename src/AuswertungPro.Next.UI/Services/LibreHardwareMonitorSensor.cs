@@ -126,7 +126,7 @@ internal sealed class LibreHardwareMonitorSensor : IDisposable
             BestEffortClose(openedComputer);
             var reason = _isHvciEnabled
                 ? "HVCI blockiert Sensor-Treiber"
-                : $"Sensor-Fehler: {UserError.Describe(ex)}";
+                : $"Sensor-Fehler: {UserError.DescribeAndReport(ex, "Hardware-Sensoren starten")}";
             messages.Add($"LHM: EXCEPTION — {ex.GetType().Name}: {ex.Message}");
             return new LibreHardwareInitializationResult(
                 false,

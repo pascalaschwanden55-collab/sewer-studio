@@ -47,7 +47,7 @@ public static class UserError
         var relevant = Unwrap(exception);
 
         if (relevant is not UserFacingException && IstEigeneVorsaetzlicheMeldung(relevant))
-            return $"{relevant.Message} Technische Details stehen im Programmlog.";
+            return $"{OhneFremdtext(relevant)} Technische Details stehen im Programmlog.";
 
         return relevant switch
         {
@@ -79,12 +79,87 @@ public static class UserError
         };
     }
 
+    /// <summary>
+    /// Fix-Runde 1 zu Aufgabe 10c2: Fuer einfache Eingabehinweise (Pflichtfeld, Zahlformat,
+    /// Listeneintrag schon vorhanden). Eine eigene Meldung erscheint OHNE den Zusatz
+    /// "Technische Details stehen im Programmlog." und ohne Stacktrace im Log — es ist kein
+    /// technischer Fehler. Alles andere (fremde Ausnahme) laeuft wie <see cref="DescribeAndReport"/>.
+    /// </summary>
+    public static string DescribeInputHint(Exception exception, string context)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        var relevant = Unwrap(exception);
+        if (relevant is UserFacingException)
+            return relevant.Message;
+        if (IstEigeneVorsaetzlicheMeldung(relevant))
+            return OhneFremdtext(relevant);
+        return DescribeAndReport(exception, context);
+    }
+
     public static string DescribeAndReport(Exception exception, string context)
     {
         ArgumentNullException.ThrowIfNull(exception);
         var safeContext = string.IsNullOrWhiteSpace(context) ? "Vorgang" : context.Trim();
         BestEffort.ReportWarning($"[{safeContext}] {exception}");
         return Describe(exception);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 zu Aufgabe 10c2: Eine eigene Meldung bettet oft den Text der aufgefangenen
+    /// Ausnahme ein ("… nicht verfügbar: {ex.Message}"). Ist diese innere Ausnahme KEINE eigene
+    /// Meldung (englischer HTTP-/ZIP-/JSON-/SQLite-Text), wird die eigene Meldung an der Stelle
+    /// abgeschnitten, an der der Fremdtext beginnt; der deutsche Vorspann bleibt, Trennzeichen am
+    /// Ende (": ", " – ", " (") fallen weg. Eine eingebettete EIGENE Meldung (z. B.
+    /// TrainingYoloClassMapException in TrainingExportPlanException) bleibt stehen. Der volle Text
+    /// samt innerer Ausnahme geht ueber <see cref="DescribeAndReport"/> ins Programmlog.
+    /// </summary>
+    private static string OhneFremdtext(Exception exception)
+    {
+        var text = exception.Message;
+        var schnitt = text.Length;
+        foreach (var innere in InnereAusnahmen(exception))
+        {
+            if (IstEigeneVorsaetzlicheMeldung(innere) || innere is UserFacingException)
+                continue;
+            var fremd = innere.Message;
+            if (string.IsNullOrWhiteSpace(fremd))
+                continue;
+            var stelle = text.IndexOf(fremd, StringComparison.Ordinal);
+            if (stelle > 0 && stelle < schnitt)
+                schnitt = stelle;
+        }
+
+        if (schnitt == text.Length)
+            return text;
+
+        var vorspann = text[..schnitt].TrimEnd(' ', ':', ';', ',', '(', '-', '–', '—');
+        if (vorspann.Length == 0)
+            return text;
+        return vorspann.EndsWith('.') || vorspann.EndsWith('!') || vorspann.EndsWith('?')
+            ? vorspann
+            : vorspann + ".";
+    }
+
+    private static IEnumerable<Exception> InnereAusnahmen(Exception exception)
+    {
+        var offen = new Stack<Exception>();
+        if (exception.InnerException is { } erste)
+            offen.Push(erste);
+        var gesehen = 0;
+        while (offen.Count > 0 && gesehen++ < 32)
+        {
+            var aktuell = offen.Pop();
+            yield return aktuell;
+            if (aktuell is AggregateException aggregat)
+            {
+                foreach (var kind in aggregat.InnerExceptions)
+                    offen.Push(kind);
+            }
+            else if (aktuell.InnerException is { } weiter)
+            {
+                offen.Push(weiter);
+            }
+        }
     }
 
     private static Exception Unwrap(Exception exception)

@@ -142,7 +142,7 @@ public sealed class TeacherAnnotationFileStore : ITeacherAnnotationStore
             throw new InvalidOperationException(
                 $"Die Lehrer-Annotationen sind beschädigt ({path}); der Bestand wurde "
                 + $"NICHT verändert — eine Sicherungskopie liegt als .corrupt daneben, "
-                + $"und es wird nichts gespeichert. {ex.Message}", ex);
+                + "und es wird nichts gespeichert.", ex);
         }
         catch (Exception ex)
         {
@@ -153,7 +153,7 @@ public sealed class TeacherAnnotationFileStore : ITeacherAnnotationStore
             throw new InvalidOperationException(
                 $"Die Lehrer-Annotationen sind nicht lesbar ({path}). Der vorhandene "
                 + $"Bestand wurde NICHT verändert — es wird nichts gespeichert. "
-                + $"{ex.GetType().Name}: {ex.Message}", ex);
+                + "Die Ursache steht im Programmlog.", ex);
         }
     }
 

@@ -104,7 +104,7 @@ public sealed class AiOptimizationSessionFileStore : IAiOptimizationSessionStore
             throw new InvalidOperationException(
                 $"Die KI-Sanierungssitzungen sind nicht lesbar ({path}). Der "
                 + $"vorhandene Bestand wurde NICHT verändert — es wird nichts "
-                + $"gespeichert. {ex.GetType().Name}: {ex.Message}", ex);
+                + "gespeichert.", ex);
         }
     }
 }

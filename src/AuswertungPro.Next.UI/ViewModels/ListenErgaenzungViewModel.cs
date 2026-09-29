@@ -49,8 +49,8 @@ public sealed class ListenErgaenzungViewModel : ObservableObject
     internal void Melde(Action aktion)
     {
         try { aktion(); Fehler = ""; }
-        catch (ArgumentException ex) { Fehler = UserError.DescribeAndReport(ex, "Listeneintrag ergänzen"); }
-        catch (InvalidOperationException ex) { Fehler = UserError.DescribeAndReport(ex, "Listeneintrag ergänzen"); }
+        catch (ArgumentException ex) { Fehler = UserError.DescribeInputHint(ex, "Listeneintrag ergänzen"); }
+        catch (InvalidOperationException ex) { Fehler = UserError.DescribeInputHint(ex, "Listeneintrag ergänzen"); }
     }
 
     internal void Entferne(ListenErgaenzungZeileViewModel zeile)

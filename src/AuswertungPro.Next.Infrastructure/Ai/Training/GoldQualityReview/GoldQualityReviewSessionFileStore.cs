@@ -57,7 +57,7 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             throw new InvalidDataException(
-                $"Goldprüfungs-Sitzung '{path}' ist nicht sicher lesbar: {ex.Message}",
+                $"Goldprüfungs-Sitzung '{path}' ist nicht sicher lesbar.",
                 ex);
         }
     }
@@ -214,7 +214,7 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             throw new InvalidDataException(
-                $"Goldprüfungs-Abschlussbeleg '{path}' ist nicht sicher lesbar: {ex.Message}",
+                $"Goldprüfungs-Abschlussbeleg '{path}' ist nicht sicher lesbar.",
                 ex);
         }
     }

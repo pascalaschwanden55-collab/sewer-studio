@@ -392,7 +392,7 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         throw new InvalidOperationException(
             $"Die Trainingsdaten sind nicht lesbar, und keine Sicherungskopie ist "
             + $"lesbar ({path}). Der vorhandene Bestand wurde NICHT verändert — "
-            + $"es wird nichts gespeichert. Letzter Lesefehler: {error.Message}",
+            + "es wird nichts gespeichert.",
             error);
     }
 

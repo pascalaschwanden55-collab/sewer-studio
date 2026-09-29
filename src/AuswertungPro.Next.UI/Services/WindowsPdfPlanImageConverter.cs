@@ -133,7 +133,7 @@ public sealed class WindowsPdfPlanImageConverter : IPlanImageConverter
             .ConfigureAwait(true);
 
         if (dokument.PageCount == 0)
-            throw new InvalidDataException("Die Plandatei enthält keine Seite.");
+            throw new UserFacingException("Die Plandatei enthält keine Seite.");
 
         using var seite = dokument.GetPage(0);
         var einstellungen = new global::Windows.Data.Pdf.PdfPageRenderOptions
@@ -167,7 +167,7 @@ public sealed class WindowsPdfPlanImageConverter : IPlanImageConverter
                 BitmapCacheOption.OnLoad);
 
             if (decoder.Frames.Count == 0)
-                throw new InvalidDataException("Die Bilddatei enthält kein Bild.");
+                throw new UserFacingException("Die Bilddatei enthält kein Bild.");
 
             bild = BitmapFrame.Create(decoder.Frames[0]);
             bild.Freeze();

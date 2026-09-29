@@ -233,7 +233,9 @@ public sealed class OllamaClient : IDisposable
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Structured JSON konnte nicht geparst werden: " + ex.Message + "\nRaw:\n" + content);
+            // Rohtext der Modellantwort bleibt fuer die Diagnose in der Meldung; UserError schneidet
+            // ab dem eingebetteten Fremdtext der inneren Ausnahme ab (Aufgabe 10c2, Fix-Runde 1).
+            throw new InvalidOperationException("Die strukturierte JSON-Antwort des Modells konnte nicht gelesen werden: " + ex.Message + "\nRaw:\n" + content, ex);
         }
     }
 
