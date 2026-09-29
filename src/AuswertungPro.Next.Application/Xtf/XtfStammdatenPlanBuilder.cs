@@ -686,7 +686,7 @@ public static class XtfStammdatenPlanBuilder
         {
             hinweise.Add(
                 $"{name}: das Rohrprofil {tid} wird von {anzahl} Haltungen gemeinsam benutzt — " +
-                "der Profiltyp wird nicht geändert, weil das die uebrigen mit umschreiben würde.");
+                "der Profiltyp wird nicht geändert, weil das die übrigen mit umschreiben würde.");
             return null;
         }
 

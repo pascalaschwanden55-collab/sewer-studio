@@ -528,7 +528,7 @@ public sealed class ProjectImportOrchestratorTests
                 exportDetector: new FixedWinCanDetector(),
                 shaftDistribution: new RecordingShaftDistributor(() => { }, new ShaftDistributionResult(
                 [
-                    new(false, "Parse failed: PDF enthaelt keine lesbare Textebene", "scan.pdf", null, null, null),
+                    new(false, "Parse failed: PDF enthält keine lesbare Textebene", "scan.pdf", null, null, null),
                     new(false, "Parse failed: Datum nicht gefunden", "ohne_datum.pdf", null, null, null),
                     new(false, "Parse failed: Schachtnummer und Datum nicht gefunden", "fremd.pdf", null, null, null)
                 ], false)))

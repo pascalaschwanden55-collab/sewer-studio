@@ -334,7 +334,7 @@ public static class AiFieldQualityReportAnalyzer
             ErrorRate: reviewed == 0 ? 0 : (double)errors / reviewed,
             ErrorRateUpper95: upper,
             ReleaseCriterionMet: releaseReady,
-            Criterion: $"Mindestens {options.RequiredGreenFindings} geprüfte, deduplizierte gruene Befunde "
+            Criterion: $"Mindestens {options.RequiredGreenFindings} geprüfte, deduplizierte grüne Befunde "
                        + $"aus {options.RequiredHoldings} Haltungen; höchstens {options.AllowedGreenErrors} Fehler; "
                        + $"obere 95%-Fehlergrenze unter {options.MaximumUpperErrorRate:P0}.");
     }
@@ -720,7 +720,7 @@ public static class AiFieldQualityReportWriter
         sb.AppendLine($"| Falsche Code-Familie | {d.WrongCodeFamily} |");
         sb.AppendLine($"| Abgelehnte Fehlalarme | {d.RejectedFalsePositive} |");
         sb.AppendLine($"| Quantifizierung/Detail korrigiert | {d.QuantificationCorrections} |");
-        sb.AppendLine($"| Mögliche verpasste Schaeden | {d.PossibleMisses} |");
+        sb.AppendLine($"| Mögliche verpasste Schäden | {d.PossibleMisses} |");
         sb.AppendLine($"| Mögliche Meterfehler | {d.PossibleMeterMismatches} |");
         sb.AppendLine($"| Exakte Code-Genauigkeit | {d.ExactCodeAccuracy:P1} |");
         sb.AppendLine($"| Erkennungs-Recall gegen manuelle Befunde | {d.DetectionRecall:P1} |");

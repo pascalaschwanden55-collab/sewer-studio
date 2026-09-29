@@ -92,7 +92,7 @@ public sealed class GrundbuchFeldNachschlag : IFeldWertNachschlag
             if (eintrag is null || eintrag.NoOwnerRegistered)
             {
                 return new FeldNachschlagErgebnis.NichtGefunden(
-                    $"Für Parzelle {parzelle.Number} ist kein Eigentuemer eingetragen.");
+                    $"Für Parzelle {parzelle.Number} ist kein Eigentümer eingetragen.");
             }
 
             _log?.Invoke("Grundbuchabfrage erfolgreich.");

@@ -42,7 +42,7 @@ public sealed class DistributionReconciliationService : IDistributionReconciliat
             return new DistributionReconciliationPlan(
                 Array.Empty<DistributionReconciliationEntry>(),
                 Array.Empty<string>(),
-                "Im Projekt sind weder Haltungen noch Schaechte geladen. Der Abgleich würde "
+                "Im Projekt sind weder Haltungen noch Schächte geladen. Der Abgleich würde "
                 + "die Verteilordner vollständig leeren und wird deshalb nicht ausgeführt.");
         }
 

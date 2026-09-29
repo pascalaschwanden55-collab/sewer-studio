@@ -694,6 +694,18 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `DesignAuditLaufzeittexteSchichtenTests` (UI.Tests) prueft alle Literale mit Leerzeichen der drei
   Schichten gegen die bereinigten Wortformen; Log-Anweisungen (ueber mehrere Zeilen zusammengesetzt),
   `AusgenommeneDateien` und `GeschuetzteGanzeZeichenketten` sind mit Grund aufgefuehrt.
+  **Fix-Runde 1:** (1) `UserError.OhneFremdtext` schneidet eine eigene Meldung dort ab, wo der Text
+  einer INNEREN, nicht-eigenen Ausnahme eingebettet ist (englische HTTP/ZIP/JSON/SQLite-Texte, auch in
+  `AggregateException`), der deutsche Vorspann bleibt; eine eingebettete EIGENE Meldung bleibt stehen.
+  Wo der Vorspann allein reicht, ist `{ex.Message}` an der Quelle entfernt und die Ausnahme als
+  `innerException` uebergeben. (2) `UserErrorEigeneMeldungenSpracheTests` leitet die Typliste per
+  Quelltextsuche ab (alle `class X : …Exception` der drei Schichten + fuenf Standardtypen), erkennt
+  Code-vor-Meldung-Konstruktoren (`SchachtProArchiveException("CODE", "…")`) und hat die zweite Regel
+  «keine `.Message` einer anderen Ausnahme in eine eigene Meldung einbauen» mit begruendeter Liste
+  `MessageEinbettungErlaubt`. (3) Fachliche deutsche Meldungen, die in der UI-Assembly (SewerStudio)
+  geworfen werden, sind `UserFacingException` (UserError zeigt nur die drei unteren Schichten als eigen).
+  (4) Einfache Eingabehinweise (`ObjektFeldViewModel`, `ListenErgaenzungViewModel`) laufen ueber
+  `UserError.DescribeInputHint`: eigene Meldung ohne Log-Zusatz und ohne Protokolleintrag.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

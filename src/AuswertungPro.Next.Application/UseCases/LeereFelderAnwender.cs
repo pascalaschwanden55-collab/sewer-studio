@@ -152,7 +152,7 @@ public static class LeereFelderBericht
         }
 
         text.AppendLine();
-        text.AppendLine("Gefuellte Felder werden nie überschrieben.");
+        text.AppendLine("Gefüllte Felder werden nie überschrieben.");
 
         return text.ToString().TrimEnd();
     }

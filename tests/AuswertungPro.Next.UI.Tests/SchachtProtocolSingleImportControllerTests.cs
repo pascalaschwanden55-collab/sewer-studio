@@ -259,7 +259,7 @@ public sealed class SchachtProtocolSingleImportControllerTests
         Assert.Contains(
             harness.Warnings,
             warning => warning.Message.Contains(
-                "nicht wieder eingefuegt",
+                "nicht wieder eingefügt",
                 StringComparison.OrdinalIgnoreCase));
     }
 

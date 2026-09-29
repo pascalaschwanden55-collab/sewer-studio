@@ -79,7 +79,7 @@ public sealed class XtfOrganisationsbuch
             if (!_fuehrtOrganisationen)
             {
                 hinweise.Add(
-                    $"{name}: die XTF führt keine Organisationen — der Eigentuemer " +
+                    $"{name}: die XTF führt keine Organisationen — der Eigentümer " +
                     $"\"{bezeichnung}\" bleibt aussen vor.");
                 return null;
             }
@@ -88,7 +88,7 @@ public sealed class XtfOrganisationsbuch
             if (typ is null)
             {
                 hinweise.Add(
-                    $"{name}: für den Eigentuemer \"{bezeichnung}\" ist kein " +
+                    $"{name}: für den Eigentümer \"{bezeichnung}\" ist kein " +
                     "Organisationstyp nach SIA405 bekannt — nicht geschrieben.");
                 return null;
             }

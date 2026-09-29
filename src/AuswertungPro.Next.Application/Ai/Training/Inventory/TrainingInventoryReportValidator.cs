@@ -75,7 +75,7 @@ public static class TrainingInventoryReportValidator
             if (source.ParseState == TrainingInventoryParseState.Parsed)
             {
                 Require(IsSha256(source.Sha256), $"{source.Path}: Quellen-SHA-256 fehlt.");
-                Require(source.Bytes is >= 0, $"{source.Path}: Qüllengrösse fehlt.");
+                Require(source.Bytes is >= 0, $"{source.Path}: Quellengrösse fehlt.");
                 Require(source.LastWriteUtc.HasValue, $"{source.Path}: Aenderungszeit fehlt.");
                 Require(source.RecordCount is >= 0, $"{source.Path}: Datensatzanzahl fehlt.");
                 Require(string.IsNullOrWhiteSpace(source.Error), $"{source.Path}: geparste Quelle enthält einen Fehler.");

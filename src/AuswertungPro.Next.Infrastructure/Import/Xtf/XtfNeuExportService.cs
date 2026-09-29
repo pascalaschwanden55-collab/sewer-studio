@@ -67,7 +67,7 @@ public sealed class XtfNeuExportService : IXtfNeuExportService
         {
             return new XtfNeuExportResult(
                 false, bericht,
-                request.NurAenderungen ? "Keine lieferbaren Handänderungen vorhanden. Leere Angaben und reine Dateipfadaenderungen werden nicht geliefert." : "Es gibt nichts zu exportieren — kein Objekt erfüllt die Pflichtangaben.",
+                request.NurAenderungen ? "Keine lieferbaren Handänderungen vorhanden. Leere Angaben und reine Dateipfadänderungen werden nicht geliefert." : "Es gibt nichts zu exportieren — kein Objekt erfüllt die Pflichtangaben.",
                 null);
         }
 

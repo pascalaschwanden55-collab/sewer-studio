@@ -94,7 +94,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
 
             if (elemente.Count == 0 && stammdaten.Count == 0)
             {
-                bericht.AppendLine($"{name}: weder Kanalschaeden noch Stammdaten — übersprungen.");
+                bericht.AppendLine($"{name}: weder Kanalschäden noch Stammdaten — übersprungen.");
                 continue;
             }
 

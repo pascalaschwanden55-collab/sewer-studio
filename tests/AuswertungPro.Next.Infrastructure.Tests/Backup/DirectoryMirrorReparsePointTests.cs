@@ -73,7 +73,7 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
         // damit nur eine Warnung. Im ZIEL bleibt sie ein blockierender Fehler —
         // das prueft RemoveOrphans_Junction_im_spiegel_loescht_keine_fremden_dateien.
         Assert.Empty(stats.Errors);
-        Assert.Contains(stats.Warnings, e => e.Contains("verknuepfung", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(stats.Warnings, e => e.Contains("Verknüpfung", StringComparison.Ordinal)); // 10c2: Meldungstext, nicht Ordnername
     }
 
     [JunctionFact]
@@ -132,7 +132,7 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
 
         Assert.True(File.Exists(foreignFile));   // fremder Inhalt unangetastet
         Assert.True(Directory.Exists(junction)); // Junction selbst bleibt ebenfalls stehen
-        Assert.Contains(stats.Errors, e => e.Contains("verknuepfung", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(stats.Errors, e => e.Contains("Verknüpfung", StringComparison.Ordinal)); // 10c2: Meldungstext, nicht Ordnername
     }
 
     [JunctionFact]

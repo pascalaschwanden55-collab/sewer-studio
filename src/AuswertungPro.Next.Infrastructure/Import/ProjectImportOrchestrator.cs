@@ -709,7 +709,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
 
             case KanalExportFormat.Ibak:
                 messages.Add("Hauptquelle: IBAK/KIAS Daten.txt (Arizona.fdb/PDF werden archiviert und ergänzend genutzt, falls Service es unterstützt).");
-                messages.Add("PDF: archiviert; TV-Protokoll nur für Verteilung, Plan-PDF nur für den Ordner Plaene.");
+                messages.Add("PDF: archiviert; TV-Protokoll nur für Verteilung, Plan-PDF nur für den Ordner Pläne.");
                 break;
 
             case KanalExportFormat.Kins:
@@ -717,7 +717,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                     messages.Add($"Hauptquelle: KINS VSA_KEK-XTF ({Path.GetFileName(det.VsaKekXtfPath)}).");
                 else
                     messages.Add($"Hauptquelle: KINS kiDVDaten.txt ({Path.GetFileName(det.KinsDataTxtPath ?? "")}).");
-                messages.Add("KINS-Zusatzquellen: kiDVDaten.txt/DBF nur für Timecodes, Längen, Schaechte und Whitelist-Felder.");
+                messages.Add("KINS-Zusatzquellen: kiDVDaten.txt/DBF nur für Timecodes, Längen, Schächte und Whitelist-Felder.");
                 break;
         }
 

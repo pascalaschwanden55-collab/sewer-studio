@@ -52,7 +52,7 @@ internal static class DossierAttachmentOwnershipManifest
             document = JsonSerializer.Deserialize<DossierAttachmentOwnershipDocument>(
                     json,
                     JsonOptions)
-                ?? throw new InvalidDataException("Das Beilagen-Eigentuemermanifest ist leer.");
+                ?? throw new InvalidDataException("Das Beilagen-Eigentümermanifest ist leer.");
         }
         catch (InvalidDataException)
         {
@@ -61,7 +61,7 @@ internal static class DossierAttachmentOwnershipManifest
         catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
             throw new InvalidDataException(
-                "Das Beilagen-Eigentuemermanifest ist unlesbar. "
+                "Das Beilagen-Eigentümermanifest ist unlesbar. "
                 + "Zur Sicherheit wurden keine Beilagen verändert.",
                 ex);
         }
@@ -71,7 +71,7 @@ internal static class DossierAttachmentOwnershipManifest
             || document.Files is null)
         {
             throw new InvalidDataException(
-                "Das Beilagen-Eigentuemermanifest hat ein unbekanntes Format. "
+                "Das Beilagen-Eigentümermanifest hat ein unbekanntes Format. "
                 + "Zur Sicherheit wurden keine Beilagen verändert.");
         }
 
@@ -87,7 +87,7 @@ internal static class DossierAttachmentOwnershipManifest
             if (!entryNames.Add(entry.FileName))
             {
                 throw new InvalidDataException(
-                    $"Das Beilagen-Eigentuemermanifest nennt '{entry.FileName}' mehrfach.");
+                    $"Das Beilagen-Eigentümermanifest nennt '{entry.FileName}' mehrfach.");
             }
 
             var path = ResolveDirectChild(safeFolder, entry.FileName, guard);
@@ -505,7 +505,7 @@ internal static class DossierAttachmentOwnershipManifest
                 or DossierAttachmentKind.GeneratedProtocol))
         {
             throw new InvalidDataException(
-                "Das Beilagen-Eigentuemermanifest enthält einen ungültigen Eintrag.");
+                "Das Beilagen-Eigentümermanifest enthält einen ungültigen Eintrag.");
         }
 
         _ = ResolveDirectChild(folder, entry.FileName, guard);
@@ -520,7 +520,7 @@ internal static class DossierAttachmentOwnershipManifest
             || !string.Equals(Path.GetFileName(fileName), fileName, StringComparison.Ordinal))
         {
             throw new InvalidDataException(
-                "Ein Pfad im Beilagen-Eigentuemermanifest verlässt den Beilagenordner.");
+                "Ein Pfad im Beilagen-Eigentümermanifest verlässt den Beilagenordner.");
         }
 
         var safeFolder = guard.EnsureSafeDirectoryTarget(folder);
@@ -531,7 +531,7 @@ internal static class DossierAttachmentOwnershipManifest
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                "Ein Pfad im Beilagen-Eigentuemermanifest verlässt den Beilagenordner.");
+                "Ein Pfad im Beilagen-Eigentümermanifest verlässt den Beilagenordner.");
         }
 
         return path;

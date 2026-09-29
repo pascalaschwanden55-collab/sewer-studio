@@ -54,7 +54,7 @@ internal static class SchachtStammdatenResultApplier
                 changedShafts++;
         }
 
-        var summary = $"Ergänzt: {changedShafts} Schaechte / {addedFields} Felder. " +
+        var summary = $"Ergänzt: {changedShafts} Schächte / {addedFields} Felder. " +
                       $"PDF gefunden: {result.PdfGefunden}, ohne PDF: {result.PdfNichtGefunden}, " +
                       $"kein passendes Schachtprotokoll: {result.NichtLesbar}, " +
                       $"bereits vollständig: {result.BereitsVollstaendig}.";

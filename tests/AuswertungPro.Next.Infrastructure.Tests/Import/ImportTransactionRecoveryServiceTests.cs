@@ -537,7 +537,7 @@ public sealed class ImportTransactionRecoveryServiceTests
             Assert.Equal("importierter-inhalt", File.ReadAllText(published));
             Assert.Equal("rest", File.ReadAllText(Path.Combine(stagingRoot, "behalten.stage")));
             Assert.Equal("schreibgeschuetzter-rest", File.ReadAllText(readOnlyStagingFile));
-            Assert.Contains("schreibgeschuetzt", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("schreibgeschützt", result.Message, StringComparison.Ordinal); // 10c2: Meldungstext, nicht Dateiname
             Assert.NotNull(journal.TryRead(dir.Path));
         }
         finally

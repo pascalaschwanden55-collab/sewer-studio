@@ -96,7 +96,7 @@ public sealed partial class SchaechtePageViewModel
         }
 
         ReportBlockedShaftDataMutation(
-            $"{operationName} nicht ausgefuehrt: Der Schacht gehört nicht mehr zum aktuellen Projekt.");
+            $"{operationName} nicht ausgeführt: Der Schacht gehört nicht mehr zum aktuellen Projekt.");
         return false;
     }
 

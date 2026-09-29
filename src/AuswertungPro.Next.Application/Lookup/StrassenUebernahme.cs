@@ -120,7 +120,7 @@ public sealed class StrassenUebernahme : IStrassenUebernahme
 
         return Ergebnis(
             quellen.Select(s => (Wert: Sauber(s.Strasse), Quelle: $"Schacht {Sauber(s.Nummer)}")),
-            "Die Schaechte dieser Haltung führen selbst keine Strasse.");
+            "Die Schächte dieser Haltung führen selbst keine Strasse.");
     }
 
     public IReadOnlyList<StrassenUebernahmeZeile> AlleSchaechte(

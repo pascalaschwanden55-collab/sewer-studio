@@ -147,7 +147,7 @@ public static class XtfQuellenklassifikation
         {
             XtfQuellenart.Inspektion =>
                 $"Inspektionsdaten ({merkmale.Untersuchungen} Untersuchungen, "
-                + $"{merkmale.Kanalschaeden} Kanalschaeden, {merkmale.Normschachtschaeden} Schachtschaeden) — {modelle}",
+                + $"{merkmale.Kanalschaeden} Kanalschäden, {merkmale.Normschachtschaeden} Schachtschäden) — {modelle}",
             XtfQuellenart.InspektionUndKataster =>
                 $"Inspektions- und Katasterdaten ({merkmale.Untersuchungen} Untersuchungen, "
                 + $"{merkmale.Stammdatenobjekte} Bauwerke) — {modelle}",

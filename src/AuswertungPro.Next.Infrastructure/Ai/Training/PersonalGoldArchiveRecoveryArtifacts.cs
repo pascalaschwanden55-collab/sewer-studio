@@ -281,7 +281,7 @@ internal sealed class PersonalGoldArchiveRecoveryArtifacts(
             if (Directory.Exists(targetPath))
             {
                 throw new InvalidDataException(
-                    $"Ruecksetz-Ziel ist unerwartet ein Ordner: {targetPath}");
+                    $"Rücksetz-Ziel ist unerwartet ein Ordner: {targetPath}");
             }
             PersonalGoldBrainFileService.DeleteFileSafe(safetyRoot, targetPath);
             return;
@@ -313,14 +313,14 @@ internal sealed class PersonalGoldArchiveRecoveryArtifacts(
     {
         var directory = Path.GetDirectoryName(targetPath)
                         ?? throw new InvalidDataException(
-                            $"Ruecksetz-Ziel besitzt keinen Ordner: {targetPath}");
+                            $"Rücksetz-Ziel besitzt keinen Ordner: {targetPath}");
         PersonalGoldBrainFileService.CreateDirectorySafe(safetyRoot, directory);
         PersonalGoldBrainFileService.EnsureMutationPathIsSafe(safetyRoot, targetPath);
         var temporaryPath = targetPath + ".archive-recovery.tmp";
         PersonalGoldBrainFileService.EnsureMutationPathIsSafe(safetyRoot, temporaryPath);
         if (File.Exists(temporaryPath) || Directory.Exists(temporaryPath))
             throw new InvalidDataException(
-                $"Ruecksetz-Temporärpfad ist bereits belegt: {temporaryPath}");
+                $"Rücksetz-Temporärpfad ist bereits belegt: {temporaryPath}");
         try
         {
             await using (var stream = new FileStream(

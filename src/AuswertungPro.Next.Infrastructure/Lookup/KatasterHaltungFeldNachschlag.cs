@@ -73,7 +73,7 @@ public sealed class KatasterHaltungFeldNachschlag : IFeldWertNachschlag
             {
                 return new FeldNachschlagErgebnis.NichtGefunden(
                     $"Haltung {anfrage.Bauteilnummer} steht nicht im Abwasserkataster. "
-                    + "Private Hausanschluesse führt der Kanton nicht.");
+                    + "Private Hausanschlüsse führt der Kanton nicht.");
             }
 
             var werte = treffer

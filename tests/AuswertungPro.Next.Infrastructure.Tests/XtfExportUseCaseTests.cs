@@ -14,7 +14,7 @@ public sealed class XtfExportUseCaseTests
     [Fact]
     public void Gescheiterte_Pruefung_zeigt_den_Fehler_und_fragt_nicht_nach_Bestaetigung()
     {
-        var dienst = new RevisionFake { Pruefung = new XtfRevisionExportResult(false, "Bericht mit offen:", "q.xtf: offene Faelle — die Pruefung ist nicht bestanden.", []) };
+        var dienst = new RevisionFake { Pruefung = new XtfRevisionExportResult(false, "Bericht mit offen:", "q.xtf: offene Fälle — die Prüfung ist nicht bestanden.", []) };
         var aktionen = new AktionenFake { Bestaetigung = true };
 
         var ergebnis = XtfAktualisierenUseCase.Execute(dienst, Anfrage(), aktionen.Actions);
@@ -23,7 +23,7 @@ public sealed class XtfExportUseCaseTests
         Assert.Null(aktionen.Vorschau);
         Assert.NotNull(aktionen.Fehler);
         Assert.True(aktionen.Fehler!.IstFehler);
-        Assert.Equal("q.xtf: offene Faelle — die Pruefung ist nicht bestanden.", aktionen.Fehler.Zusammenfassung);
+        Assert.Equal("q.xtf: offene Fälle — die Prüfung ist nicht bestanden.", aktionen.Fehler.Zusammenfassung);
         Assert.Equal("Bericht mit offen:", aktionen.Fehler.Details);
         Assert.All(dienst.Requests, r => Assert.True(r.NurPruefen));
     }

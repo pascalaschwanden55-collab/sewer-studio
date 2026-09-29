@@ -50,7 +50,7 @@ public sealed class NetzFeldNachschlag : IFeldWertNachschlag
             {
                 return new FeldNachschlagErgebnis.NichtGefunden(
                     $"Haltung {name} steht nicht im Abwassernetz des Kantons. "
-                    + "Private Hausanschluesse führt er nicht.");
+                    + "Private Hausanschlüsse führt er nicht.");
             }
 
             var werte = treffer

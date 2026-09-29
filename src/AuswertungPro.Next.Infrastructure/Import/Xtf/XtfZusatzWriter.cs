@@ -23,7 +23,7 @@ internal static class XtfZusatzWriter
                     || !felder.TryGetValue("GeaendertAm", out var zeit)
                     || !DateTimeOffset.TryParseExact(zeit, "O", System.Globalization.CultureInfo.InvariantCulture,
                         System.Globalization.DateTimeStyles.None, out _))
-                    throw new InvalidDataException("Ein Aenderungsauftrag hat kein gültiges Ziel oder Aenderungsdatum.");
+                    throw new InvalidDataException("Ein Änderungsauftrag hat kein gültiges Ziel oder Änderungsdatum.");
                 basket.Add(new XElement(ns + (XtfZusatzangaben.Topic + ".Aenderung"), new XAttribute("TID", objekt.Tid),
                     new XElement(ns + "ObjektTid", ziel), new XElement(ns + "Feld", zielFeld), new XElement(ns + "GeaendertAm", zeit)));
                 continue;

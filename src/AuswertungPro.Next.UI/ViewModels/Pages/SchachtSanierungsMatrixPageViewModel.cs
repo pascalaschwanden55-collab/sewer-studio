@@ -195,7 +195,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         SelectedRow = Rows.FirstOrDefault();
 
         Status = Rows.Count == 0
-            ? "Keine Schaechte geladen (Projekt mit importierten Schacht-Protokollen öffnen)."
+            ? "Keine Schächte geladen (Projekt mit importierten Schacht-Protokollen öffnen)."
             : $"{Rows.Count} Schaechte geladen.";
 
         var calculationLoadError = BuildCalculationLoadError();

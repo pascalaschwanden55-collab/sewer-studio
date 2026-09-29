@@ -88,7 +88,7 @@ public static class SchachtFeldnamenReparaturLauf
         ArgumentNullException.ThrowIfNull(plan);
 
         var text = new StringBuilder();
-        text.AppendLine($"Geprüft: {plan.GeprueteSchaechte} Schaechte im Projekt.");
+        text.AppendLine($"Geprüft: {plan.GeprueteSchaechte} Schächte im Projekt.");
         text.AppendLine();
 
         if (plan.OhneAenderung)
@@ -99,7 +99,7 @@ public static class SchachtFeldnamenReparaturLauf
         {
             text.AppendLine(
                 $"{plan.ZusammenzufuehrendeSchreibweisen} doppelte Schreibweisen auf " +
-                $"{plan.BetroffeneSchaechte} Schaechten würden zusammengeführt:");
+                $"{plan.BetroffeneSchaechte} Schächten würden zusammengeführt:");
             foreach (var (ziel, anzahl) in plan.JeZiel)
                 text.AppendLine($"    {anzahl,6}x  ->  {Einzeilig(ziel)}");
         }

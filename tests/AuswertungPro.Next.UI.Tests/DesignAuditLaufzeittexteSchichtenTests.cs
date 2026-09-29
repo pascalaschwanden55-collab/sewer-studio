@@ -89,6 +89,10 @@ public sealed class DesignAuditLaufzeittexteSchichtenTests
         "waere", "widerspruechlich", "widerspruechliche", "widerspruechlichen", "wuerde", "wuerden", "zaehlen",
         "zurueck", "zurueckgenommen", "zurueckgenommene", "zurueckgerollt", "zurueckgesetzt", "zuruecklegen", "zuruecknehmen",
         "zurueckverschoben", "zusaetzlich", "zusaetzlichen", "zusammengefuehrt", "zusammengefuehrte", "zusammenzufuehren",
+        // Fix-Runde 1: Mischschreibweisen im selben Satz.
+        "Exportbestaetigung", "Gefuellte", "Hausanschluesse", "Dateipfadaenderungen", "Eigentuemermanifest",
+        "Kanalschaeden", "uebrigen", "Zaehler", "Aenderungsauftrag", "Aenderungsdatum", "Ruecksetz", "gruene",
+        "Quellengroesse", "Qüllengrösse",
     ];
 
     /// <summary>Dateien, deren Zeichenketten bewusst unveraendert bleiben (Grund je Eintrag).</summary>
