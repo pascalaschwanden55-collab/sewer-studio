@@ -854,7 +854,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         CostByExecutorHint = totalCost <= 0m
             ? "Keine Kosten in der aktuellen Filterauswahl."
-            : $"Kostenverteilung nach 'Ausgefuehrt durch' (Basis: {filtered.Count} gefilterte Haltungen).";
+            : $"Kostenverteilung nach 'Ausgeführt durch' (Basis: {filtered.Count} gefilterte Haltungen).";
     }
 
     private string BuildFilterSummaryText()

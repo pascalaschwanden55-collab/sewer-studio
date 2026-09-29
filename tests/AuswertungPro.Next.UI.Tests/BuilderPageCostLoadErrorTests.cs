@@ -40,7 +40,7 @@ public sealed class BuilderPageCostLoadErrorTests
             Assert.NotNull(dialogs.LastError);
             Assert.Equal("Druckcenter", dialogs.LastError!.Value.Title);
             Assert.Contains("costs.json", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("beschaedigt", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("beschädigt", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("Kostendaten konnten nicht geladen werden", vm.LastResult);
             Assert.Null(dialogs.LastWarn); // Katalog ist in diesem Szenario sauber
 

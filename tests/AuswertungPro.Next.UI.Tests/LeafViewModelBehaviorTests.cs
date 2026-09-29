@@ -110,7 +110,7 @@ public sealed class LeafViewModelBehaviorTests
 
         Assert.False(viewModel.Validate(out var invalidError));
         Assert.Contains("Material", invalidError, StringComparison.Ordinal);
-        Assert.Contains("ungueltig", invalidError, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ungültig", invalidError, StringComparison.OrdinalIgnoreCase);
 
         viewModel.Value = "Steinzeug";
 

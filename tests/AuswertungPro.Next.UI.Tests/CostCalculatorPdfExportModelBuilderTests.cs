@@ -39,7 +39,7 @@ public sealed class CostCalculatorPdfExportModelBuilderTests
         Assert.Equal("Auswertung (1 Haltung(en))", result.Model.VariantTitle);
         Assert.Equal("Eigentümer: Alle", result.Model.FilterSummaryText);
         Assert.Equal("100.00 CHF", result.Model.Totals.NetText);
-        Assert.Equal("Haltung: 06.1-2\nDN: 300 mm\nLaenge: 45.30 m\nInspektionsdatum: 08.02.2026", result.Model.ObjectBlock);
+        Assert.Equal("Haltung: 06.1-2\nDN: 300 mm\nLänge: 45.30 m\nInspektionsdatum: 08.02.2026", result.Model.ObjectBlock);
         Assert.Equal(3, result.Model.TextBlocks.Count);
     }
 

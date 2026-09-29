@@ -116,7 +116,7 @@ public sealed class ImportQuellenwahlArchitectureTests
         var tor = Lies("src", "AuswertungPro.Next.Application", "UseCases", "Import", "Quellen", "ImportPlausibilitaetsTor.cs");
 
         Assert.Contains(
-            "Keine Projektdaten und keine Importdateien uebernommen.",
+            "Keine Projektdaten und keine Importdateien übernommen.",
             tor,
             StringComparison.Ordinal);
     }

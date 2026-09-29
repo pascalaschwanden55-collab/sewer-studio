@@ -86,7 +86,7 @@ public sealed class ProtocolEntryEditorValidationViewModelTests
         });
 
         Assert.False(result.Q1Ok);
-        Assert.Contains("VSA: Quantifizierung 1 ist fuer diesen Code nicht vorgesehen.", result.Errors);
+        Assert.Contains("VSA: Quantifizierung 1 ist für diesen Code nicht vorgesehen.", result.Errors);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class ProtocolEntryEditorValidationViewModelTests
 
         Assert.True(result.Q1Ok);
         Assert.DoesNotContain(
-            "VSA: Quantifizierung 1 ist fuer diesen Code nicht vorgesehen.",
+            "VSA: Quantifizierung 1 ist für diesen Code nicht vorgesehen.",
             result.Errors);
     }
 

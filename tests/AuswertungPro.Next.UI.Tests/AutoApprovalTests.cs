@@ -108,8 +108,8 @@ public sealed class AutoApprovalTests
     }
 
     [Theory] // Review 11.07., Empfehlung 2: Urteil + Grund als sichtbarer Hinweis fuer die Vollanalyse.
-    [InlineData(true, "Zentrale Freigabe: KI-Kriterien erfuellt —")]
-    [InlineData(false, "Zentrale Freigabe: pruefen —")]
+    [InlineData(true, "Zentrale Freigabe: KI-Kriterien erfüllt —")]
+    [InlineData(false, "Zentrale Freigabe: prüfen —")]
     public void AlsHinweis_FormatiertUrteilUndGrund(bool approved, string erwarteterPrefix)
     {
         var result = approved

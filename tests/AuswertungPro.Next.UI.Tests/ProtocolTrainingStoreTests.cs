@@ -98,7 +98,7 @@ public sealed class ProtocolTrainingStoreTests
             var error = Assert.Throws<InvalidOperationException>(
                 () => ProtocolTrainingStore.LoadRecent(10));
 
-            Assert.Contains("NICHT veraendert", error.Message, StringComparison.Ordinal);
+            Assert.Contains("NICHT verändert", error.Message, StringComparison.Ordinal);
             Assert.Equal(corruptJson, File.ReadAllText(path));
         });
     }

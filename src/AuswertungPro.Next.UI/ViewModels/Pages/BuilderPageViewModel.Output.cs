@@ -148,7 +148,7 @@ public sealed partial class BuilderPageViewModel
             {
                 qualityHint,
                 "Die Statistik für Inliner/Manschetten basiert auf vorhandenen Positionsdetails.",
-                "Kostenzusammenstellung nach Eigentuemer und Gesamtpositionen ist im Ausdruck enthalten."
+                "Kostenzusammenstellung nach Eigentümer und Gesamtpositionen ist im Ausdruck enthalten."
             };
             var vatMismatchHint = BuildVatMismatchHint(entries, _vatRate);
             if (vatMismatchHint.Length > 0)

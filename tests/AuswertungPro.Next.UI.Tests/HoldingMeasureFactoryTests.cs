@@ -171,7 +171,7 @@ public sealed class HoldingMeasureFactoryTests
         Assert.NotNull(cost);
         var liner = cost!.Measures[0].Lines.First(l => l.ItemKey == "SCHLAUCHLINER_NADELFILZ");
         Assert.Equal(300m, liner.UnitPrice);
-        Assert.Equal("Preis von DN 250 uebernommen", liner.PriceHint);
+        Assert.Equal("Preis von DN 250 übernommen", liner.PriceHint);
         Assert.False(liner.IsPriceOverridden);
     }
 
