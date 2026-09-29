@@ -46,8 +46,10 @@ public static class UserError
         ArgumentNullException.ThrowIfNull(exception);
         var relevant = Unwrap(exception);
 
-        if (relevant is not UserFacingException && IstEigeneVorsaetzlicheMeldung(relevant))
-            return $"{OhneFremdtext(relevant)} Technische Details stehen im Programmlog.";
+        if (relevant is not UserFacingException
+            && IstEigeneVorsaetzlicheMeldung(relevant)
+            && OhneFremdtext(relevant) is { } eigeneMeldung)
+            return $"{eigeneMeldung} Technische Details stehen im Programmlog.";
 
         return relevant switch
         {
@@ -91,8 +93,8 @@ public static class UserError
         var relevant = Unwrap(exception);
         if (relevant is UserFacingException)
             return relevant.Message;
-        if (IstEigeneVorsaetzlicheMeldung(relevant))
-            return OhneFremdtext(relevant);
+        if (IstEigeneVorsaetzlicheMeldung(relevant) && OhneFremdtext(relevant) is { } eigeneMeldung)
+            return eigeneMeldung;
         return DescribeAndReport(exception, context);
     }
 
@@ -113,18 +115,54 @@ public static class UserError
     /// TrainingYoloClassMapException in TrainingExportPlanException) bleibt stehen. Der volle Text
     /// samt innerer Ausnahme geht ueber <see cref="DescribeAndReport"/> ins Programmlog.
     /// </summary>
-    private static string OhneFremdtext(Exception exception)
+    internal static string? OhneFremdtext(Exception exception)
     {
-        var text = exception.Message;
-        var schnitt = text.Length;
+        var fremdtexte = new List<string>();
         foreach (var innere in InnereAusnahmen(exception))
         {
             if (IstEigeneVorsaetzlicheMeldung(innere) || innere is UserFacingException)
                 continue;
-            var fremd = innere.Message;
-            if (string.IsNullOrWhiteSpace(fremd))
+            fremdtexte.Add(innere.Message);
+        }
+
+        return SchneideFremdtext(exception.Message, fremdtexte);
+    }
+
+    /// <summary>
+    /// Mindestlaenge eines eingebetteten Fremdtexts, ab der geschnitten wird (Fix-Runde 2).
+    /// Kurze innere Meldungen ("Fehler", "Timeout", ein Dateiname) kommen zu leicht zufaellig
+    /// schon im deutschen Vorspann vor; ein Schnitt dort wuerde die eigene Meldung zerstoeren.
+    /// </summary>
+    internal const int FremdtextMindestlaenge = 12;
+
+    private static readonly string[] Trenner = [": ", " – ", " — ", " - ", " (", "; "];
+
+    /// <summary>
+    /// Reine Schnittregel zu <see cref="OhneFremdtext"/>. Liefert den deutschen Vorspann vor dem
+    /// ersten eingebetteten Fremdtext, den unveraenderten Text, wenn nichts Eingebettetes gefunden
+    /// wird, und <c>null</c>, wenn die Meldung MIT dem Fremdtext beginnt — dann ist sie keine
+    /// eigene Formulierung, und der Aufrufer faellt auf den Satz fuer den Ausnahmetyp zurueck.
+    /// Bevorzugt wird ein Vorkommen direkt hinter einem Trenner («: », « – », « (» …), weil die
+    /// eigenen Meldungen den Fremdtext genau so anhaengen; erst ohne ein solches zaehlt das
+    /// frueheste Vorkommen.
+    /// </summary>
+    internal static string? SchneideFremdtext(string text, IEnumerable<string> fremdtexte)
+    {
+        var schnitt = text.Length;
+        foreach (var roh in fremdtexte)
+        {
+            if (string.IsNullOrWhiteSpace(roh))
                 continue;
-            var stelle = text.IndexOf(fremd, StringComparison.Ordinal);
+            var fremd = roh.Trim();
+            if (fremd.Length < FremdtextMindestlaenge)
+                continue;
+
+            if (text.StartsWith(fremd, StringComparison.Ordinal))
+                return null;
+
+            var stelle = StelleHinterTrenner(text, fremd);
+            if (stelle < 0)
+                stelle = text.IndexOf(fremd, StringComparison.Ordinal);
             if (stelle > 0 && stelle < schnitt)
                 schnitt = stelle;
         }
@@ -134,10 +172,29 @@ public static class UserError
 
         var vorspann = text[..schnitt].TrimEnd(' ', ':', ';', ',', '(', '-', '–', '—');
         if (vorspann.Length == 0)
-            return text;
+            return null;
         return vorspann.EndsWith('.') || vorspann.EndsWith('!') || vorspann.EndsWith('?')
             ? vorspann
             : vorspann + ".";
+    }
+
+    private static int StelleHinterTrenner(string text, string fremd)
+    {
+        var suche = 0;
+        while (suche < text.Length)
+        {
+            var stelle = text.IndexOf(fremd, suche, StringComparison.Ordinal);
+            if (stelle < 0)
+                return -1;
+            foreach (var trenner in Trenner)
+            {
+                if (stelle >= trenner.Length
+                    && string.CompareOrdinal(text, stelle - trenner.Length, trenner, 0, trenner.Length) == 0)
+                    return stelle;
+            }
+            suche = stelle + 1;
+        }
+        return -1;
     }
 
     private static IEnumerable<Exception> InnereAusnahmen(Exception exception)

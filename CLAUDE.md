@@ -684,11 +684,10 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `PlaywrightInstallService`, die KI-Vorschlagsdurchlaeufe (`BendSuggestionScanWorkflow`,
   `PipeEndSuggestionScanWorkflow`, `CodingSuggestionScanUseCase`, `BendSuggestionListViewModel`,
   `PlayerWindow.Coding.Suggestions` — bewusste Entscheidung «technischer Fehler woertlich, nie glaetten»,
-  z. B. «ffmpeg ist fehlgeschlagen: moov atom not found», per Test festgehalten), die Dossier-Abfragen
-  (`DossierParcelLookupUseCase`, `OwnerDirectoryLookupUseCase`, `DossierBatchProposalUseCase` — der Dienstgrund
-  kommt schon als deutscher `GeoUrRequestFailedException`-Text und ist per Test festgehalten), der Quellenbefund
-  der Importquellenwahl (`Quellenwahl`, Diagnose im Importbericht), gezielt gefangene eigene Validierungsmeldungen (`ProjektPruefregeln`,
-  `XtfLieferungsNorm`, `GeoShopAbgleichPlanBuilder`) und alle WebGIS-Dateien. `UserErrorEigeneMeldungenSpracheTests`
+  z. B. «ffmpeg ist fehlgeschlagen: moov atom not found», per Test festgehalten), das technische Laufprotokoll
+  des Trainings-Stapelimports (`TrainingBatchImportWorkflow`, die Zusammenfassung ist deutsch), die
+  Sensor-Diagnoseliste (`LibreHardwareMonitorSensor`), die gezielt gefangene eigene Validierungsmeldung in
+  `XtfLieferungsNorm` (InvalidOperationException) und alle WebGIS-Dateien. `UserErrorEigeneMeldungenSpracheTests`
   prueft seither auch `IOException`/`InvalidDataException`/`JsonException` auf englische Texte (zwei gefunden
   und uebersetzt: «Kein freier Dateiname für … gefunden.»). **Neuer Waechter**
   `DesignAuditLaufzeittexteSchichtenTests` (UI.Tests) prueft alle Literale mit Leerzeichen der drei
@@ -706,6 +705,18 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   geworfen werden, sind `UserFacingException` (UserError zeigt nur die drei unteren Schichten als eigen).
   (4) Einfache Eingabehinweise (`ObjektFeldViewModel`, `ListenErgaenzungViewModel`) laufen ueber
   `UserError.DescribeInputHint`: eigene Meldung ohne Log-Zusatz und ohne Protokolleintrag.
+  **Fix-Runde 2:** (1) `TrainingAnnotationResult.Error` ist deutsch (`UserError.DescribeAndReport`), die Ausnahme
+  steht in `Failure`; `AnnotationWorkbenchService.TeacherExportGrund` zeigt nie `Error` woertlich (ein fremder
+  Exporteur koennte Rohtext liefern), sondern `Describe(Failure)` oder einen festen Satz und protokolliert den
+  Rest. (2) `UserError.SchneideFremdtext` (rein, testbar) schneidet erst ab 12 Zeichen Fremdtext, bevorzugt ein
+  Vorkommen hinter «: », « – », « (» usw. und gibt `null` zurueck, wenn die Meldung MIT dem Fremdtext beginnt —
+  dann gilt sie als fremd und bekommt den Satz fuer ihren Typ. (3) Der Waechter erkennt Ausnahmeklassen mit
+  Primaerkonstruktor, voll qualifizierte `new System.IO.IOException(`, `?.Message`, `).Message`, `].Message`,
+  und neu: eine eigene Ausnahme (ausser `UserFacingException`) nennt den Programmlog nie selbst (der Zusatz
+  kaeme doppelt). (4) Dossier-Abfragen (`DossierParcelLookupUseCase`, `OwnerDirectoryLookupUseCase`,
+  `DossierBatchProposalUseCase`), `Quellenwahl`, `XtfRevisionExportService` (4 Stellen) und die XmlException
+  in `XtfLieferungsNorm` melden deutsch und protokollieren den Rohtext; `ProjektPruefregeln` und
+  `GeoShopAbgleichPlanBuilder` laufen ueber `DescribeInputHint` (eigene Meldung bleibt, fremde wird generisch).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

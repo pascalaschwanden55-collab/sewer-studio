@@ -1260,6 +1260,43 @@ public sealed class AnnotationWorkbenchServiceTests
     }
 
     [Fact]
+    public async Task SaveAsync_TeacherExport_ohne_Erfolg_zeigt_keinen_englischen_Rohtext()
+    {
+        // Aufgabe 10c2, Fix-Runde 2: TrainingAnnotationResult.Error war der rohe ex.Message
+        // (File.Copy, BitmapImage …) und erschien woertlich hinter "Teacher-Kandidat nicht
+        // gespeichert:". Angezeigt wird jetzt nur ein deutscher Grund.
+        const string roh = "The process cannot access the file 'C:\\teacher\\images\\wb.png' because it is being used by another process.";
+        var export = new FakeExportService { Result = new TrainingAnnotationResult { Success = false, Error = roh } };
+        var service = CreateService(
+            sampleStore: new FakeSampleStore(), indexer: new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll },
+            teacherStore: new FakeTeacherStore(), exportFactory: () => export, isCodeKnown: _ => true);
+
+        var result = await service.SaveAsync(
+            new WorkbenchItem(@"C:\frames\f.jpg", "case1", 1, 1, null, null, 300), TestBox, GueltigeMaske,
+            new WorkbenchDecision("BAB", false, "Riss quer im Scheitel", null, null, "Pascal"));
+
+        Assert.True(result.Saved);
+        Assert.NotNull(result.RefusalReason);
+        Assert.StartsWith("Teacher-Kandidat nicht gespeichert:", result.RefusalReason);
+        Assert.DoesNotContain("process cannot access", result.RefusalReason);
+        Assert.Contains("Teacher-Export ist fehlgeschlagen", result.RefusalReason);
+    }
+
+    [Fact]
+    public void TeacherExportGrund_ordnet_eine_mitgelieferte_Framework_Ausnahme_deutsch_ein()
+    {
+        var grund = AnnotationWorkbenchService.TeacherExportGrund(new TrainingAnnotationResult
+        {
+            Success = false,
+            Error = "Access to the path is denied.",
+            Failure = new UnauthorizedAccessException("Access to the path is denied."),
+        });
+
+        Assert.DoesNotContain("Access to the path", grund);
+        Assert.False(string.IsNullOrWhiteSpace(grund));
+    }
+
+    [Fact]
     public async Task SaveAsync_KbIndexOperationCanceledException_nach_Sample_wird_als_Warnung_behandelt()
     {
         // Ist-Verhalten (Charakterisierung, keine Semantikaenderung): Der KB-Schritt faengt

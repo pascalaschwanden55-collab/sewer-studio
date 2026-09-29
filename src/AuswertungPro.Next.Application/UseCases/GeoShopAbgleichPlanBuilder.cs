@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Application.Lookup;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.UseCases;
@@ -90,7 +91,7 @@ public static class GeoShopAbgleichPlanBuilder
             {
                 try { vergleich = GeoShopImportVergleich.Baue(ziel, quelle, werte, gedreht); }
                 catch (Exception ex) when (ex is InvalidOperationException or System.Text.Json.JsonException)
-                { Hinweis($"{ex.Message} – ausgelassen."); continue; }
+                { Hinweis($"{UserError.DescribeInputHint(ex, "GeoShop-Vergleich")} – ausgelassen."); continue; }
                 felder.RemoveAll(f => !f.IstKennung);
                 neueAktenwerte = vergleich.HatNeueAkten;
             }

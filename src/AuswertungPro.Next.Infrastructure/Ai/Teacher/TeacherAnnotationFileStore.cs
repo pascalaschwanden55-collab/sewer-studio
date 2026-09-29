@@ -152,8 +152,7 @@ public sealed class TeacherAnnotationFileStore : ITeacherAnnotationStore
             // fehlend = leer, unlesbar = Fehler.
             throw new InvalidOperationException(
                 $"Die Lehrer-Annotationen sind nicht lesbar ({path}). Der vorhandene "
-                + $"Bestand wurde NICHT verändert — es wird nichts gespeichert. "
-                + "Die Ursache steht im Programmlog.", ex);
+                + $"Bestand wurde NICHT verändert — es wird nichts gespeichert.", ex);
         }
     }
 

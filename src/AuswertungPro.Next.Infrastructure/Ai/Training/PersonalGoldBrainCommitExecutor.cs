@@ -82,7 +82,7 @@ internal sealed class PersonalGoldBrainCommitExecutor(
             {
                 throw new IOException(
                     "Gold-Gehirn-Umschaltung ist fehlgeschlagen und konnte nicht sicher " +
-                    "zurückgerollt werden. Umschalt- und Rücknahmefehler stehen als innere Ausnahmen im Programmlog.",
+                    "zurückgerollt werden.",
                     new AggregateException(commitError, recoveryError));
             }
 

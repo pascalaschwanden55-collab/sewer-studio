@@ -75,7 +75,9 @@ public sealed class QuellenwahlTests
         Assert.EndsWith("gut.db3", ergebnis.Gewinner!.Pfad, StringComparison.Ordinal);
         var kaputt = ergebnis.AlleVersuche.Single(v => v.Pfad.Contains("kaputt"));
         Assert.Equal(QuellenTauglichkeit.Untauglich, kaputt.Befund.Tauglichkeit);
-        Assert.Contains("Datei gesperrt", kaputt.Befund.Grund, StringComparison.Ordinal);
+        // Fix-Runde 2 zu 10c2: Der Fehler wird deutsch gemeldet; der rohe Ausnahmetext geht ins Programmlog.
+        Assert.StartsWith("Prüfung fehlgeschlagen:", kaputt.Befund.Grund, StringComparison.Ordinal);
+        Assert.DoesNotContain("Datei gesperrt", kaputt.Befund.Grund, StringComparison.Ordinal);
     }
 
     [Fact]

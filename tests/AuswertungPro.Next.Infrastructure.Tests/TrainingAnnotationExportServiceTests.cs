@@ -49,6 +49,35 @@ public sealed class TrainingAnnotationExportServiceTests
         }
     }
 
+    [Fact]
+    public async Task ExportAsync_FehlendeQuelle_meldet_deutschen_Grund_und_behaelt_die_Ausnahme()
+    {
+        // Aufgabe 10c2, Fix-Runde 2: Error wird im Pruefplatz angezeigt und war der
+        // englische File.Copy-Text ("Could not find file …").
+        var root = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var service = new TrainingAnnotationExportService(
+                Path.Combine(root, "teacher_images"), Path.Combine(root, "teacher_labels"), new CopyCropper());
+
+            var result = await service.ExportAsync(
+                Path.Combine(root, "fehlt.png"),
+                new NormalizedBoundingBox { XCenter = 0.5, YCenter = 0.5, Width = 1.0, Height = 1.0 },
+                "BAA", classId: 7, baseName: "sample");
+
+            Assert.False(result.Success);
+            Assert.IsType<FileNotFoundException>(result.Failure);
+            Assert.False(string.IsNullOrWhiteSpace(result.Error));
+            Assert.DoesNotContain("Could not find", result.Error);
+            Assert.DoesNotContain(result.Failure!.Message, result.Error);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
     private sealed class CopyCropper : ITrainingImageCropper
     {
         public void CropAndSave(string sourceFramePath, NormalizedBoundingBox bbox, string outputPath)

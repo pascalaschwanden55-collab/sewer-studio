@@ -664,6 +664,24 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
     private static WorkbenchSaveResult Rejected(string message) =>
         new(false, message, null, "-", null);
 
+    /// <summary>
+    /// Deutscher Grund fuer einen gescheiterten Teacher-Export (Aufgabe 10c2, Fix-Runde 2).
+    /// <see cref="TrainingAnnotationResult.Error"/> kann je nach Exporteur ein roher
+    /// Framework-Text sein ("The process cannot access the file …") und wird deshalb nie
+    /// angezeigt, sondern nur protokolliert. Angezeigt wird die Einordnung der Ausnahme
+    /// ueber <see cref="UserError"/> oder ein fester deutscher Satz.
+    /// </summary>
+    internal static string TeacherExportGrund(TrainingAnnotationResult export)
+    {
+        if (export.Failure is { } fehler)
+            return UserError.Describe(fehler);
+
+        BestEffort.ReportWarning(
+            "[AnnotationWorkbenchService.TeacherExport] Teacher-Export ohne Erfolg: "
+            + (string.IsNullOrWhiteSpace(export.Error) ? "(kein Grund gemeldet)" : export.Error));
+        return "Der Teacher-Export ist fehlgeschlagen. Technische Details stehen im Programmlog.";
+    }
+
     private sealed record StoredGoldImage(string FramePath, string Sha256);
 
     /// <summary>
@@ -863,7 +881,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 .ExportAsync(storedFramePath, bbox, finalCode, classId, $"wb_{annotation.AnnotationId}", ct)
                 .ConfigureAwait(false);
             if (!export.Success)
-                throw new UserFacingException(export.Error ?? "Teacher-Export meldete keinen Erfolg.");
+                throw new UserFacingException(TeacherExportGrund(export));
 
             annotation.FullFramePath = export.FullFramePath;
             annotation.CroppedRegionPath = export.CroppedRegionPath;

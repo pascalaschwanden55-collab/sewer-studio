@@ -310,6 +310,87 @@ public sealed class UserErrorTests
         }
     }
 
+    // Fix-Runde 2 zu 10c2: Randfaelle der Schnittregel.
+    [Fact]
+    public void SchneideFremdtext_laesst_bei_leerem_Fremdtext_alles_stehen()
+    {
+        const string text = "Die Datei konnte nicht gelesen werden: ";
+        Assert.Equal(text, UserError.SchneideFremdtext(text, ["", "   "]));
+    }
+
+    [Fact]
+    public void SchneideFremdtext_meldet_eine_Meldung_die_mit_dem_Fremdtext_beginnt_als_fremd()
+    {
+        const string fremd = "The process cannot access the file 'x.png'.";
+        Assert.Null(UserError.SchneideFremdtext(fremd, [fremd]));
+        Assert.Null(UserError.SchneideFremdtext(fremd + " (Lauf 3)", [fremd]));
+    }
+
+    [Fact]
+    public void SchneideFremdtext_schneidet_bei_kurzem_Fremdtext_nicht()
+    {
+        // "Timeout" (7 Zeichen) steht hier zufaellig im deutschen Text; ein Schnitt zerstoerte ihn.
+        const string text = "Der Timeout des Dienstes wurde erreicht: Timeout";
+        Assert.Equal(text, UserError.SchneideFremdtext(text, ["Timeout"]));
+    }
+
+    [Fact]
+    public void SchneideFremdtext_bevorzugt_das_Vorkommen_hinter_einem_Trenner()
+    {
+        // Der Fremdtext kommt zweimal vor: frueh im deutschen Satz (ohne Trenner) und am Ende
+        // hinter ": ". Geschnitten wird am angehaengten Fremdtext.
+        const string fremd = "Datei gesperrt durch Prozess";
+        var text = $"Die Meldung {fremd}er wurde gemeldet, Export abgebrochen: {fremd}";
+        Assert.Equal($"Die Meldung {fremd}er wurde gemeldet, Export abgebrochen.", UserError.SchneideFremdtext(text, [fremd]));
+    }
+
+    [Fact]
+    public void OhneFremdtext_behaelt_eine_eingebettete_eigene_deutsche_Meldung()
+    {
+        var eigene = Assert.Throws<IOException>(
+            () => ProjectPathResolver.EnsureWritableProjectPath("Beilage.pdf", null));
+        var aussen = new InvalidOperationException($"Speichern gesperrt: {eigene.Message}", eigene);
+
+        Assert.Equal(aussen.Message, UserError.OhneFremdtext(aussen));
+    }
+
+    [Fact]
+    public void OhneFremdtext_schneidet_in_der_Kette_eigen_nach_fremd_nur_den_Fremdtext()
+    {
+        // Echte Kette: TrainingYoloClassMapFileStore (eigene Meldung) bettet den englischen
+        // Sperr-Text der IOException ein (Klassenkarte exklusiv geoeffnet); aussen haengt eine
+        // weitere eigene Meldung daran.
+        var wurzel = Path.Combine(Path.GetTempPath(), $"usererror-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(wurzel);
+        var karte = Path.Combine(wurzel, "class_map.json");
+        File.WriteAllText(karte, "{}");
+        try
+        {
+            AuswertungPro.Next.Application.Ai.Training.ClassMaps.TrainingYoloClassMapException eigene;
+            using (new FileStream(karte, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                var store = new AuswertungPro.Next.Infrastructure.Ai.Training.ClassMaps.TrainingYoloClassMapFileStore(
+                    karte, Path.Combine(wurzel, "migration.json"), Path.Combine(wurzel, "manifest.json"));
+                eigene = Assert.Throws<AuswertungPro.Next.Application.Ai.Training.ClassMaps.TrainingYoloClassMapException>(
+                    () => store.ReadSnapshot());
+            }
+            Assert.IsAssignableFrom<IOException>(eigene.InnerException);
+            Assert.Contains(eigene.InnerException!.Message, eigene.Message, StringComparison.Ordinal);
+            var aussen = new InvalidOperationException($"Export gesperrt: {eigene.Message}", eigene);
+
+            var ergebnis = UserError.OhneFremdtext(aussen);
+
+            Assert.Equal("Export gesperrt: Die YOLO-Detect-Klassenkonfiguration konnte nicht sicher gelesen werden.", ergebnis);
+            Assert.Equal(
+                "Die YOLO-Detect-Klassenkonfiguration konnte nicht sicher gelesen werden. Technische Details stehen im Programmlog.",
+                UserError.Describe(eigene));
+        }
+        finally
+        {
+            Directory.Delete(wurzel, recursive: true);
+        }
+    }
+
     private sealed class FesteOllamaAntwort(string body) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

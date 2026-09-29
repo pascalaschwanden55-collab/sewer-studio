@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using AuswertungPro.Next.Application.Xtf;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
@@ -47,7 +48,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             }
             catch (Exception ex)
             {
-                return Fehler($"Die XTF-Quellen im Projekt konnten nicht gelesen werden: {ex.Message}");
+                return Fehler($"Die XTF-Quellen im Projekt konnten nicht gelesen werden: {UserError.DescribeAndReport(ex, "XTF-Quellen suchen")}");
             }
         }
 
@@ -77,7 +78,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             }
             catch (Exception ex)
             {
-                fehler.Add($"{name}: nicht lesbar ({ex.Message})");
+                fehler.Add($"{name}: nicht lesbar ({UserError.DescribeAndReport(ex, "XTF-Befunde lesen")})");
                 continue;
             }
 
@@ -88,7 +89,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             }
             catch (Exception ex)
             {
-                fehler.Add($"{name}: Stammdaten nicht lesbar ({ex.Message})");
+                fehler.Add($"{name}: Stammdaten nicht lesbar ({UserError.DescribeAndReport(ex, "XTF-Stammdaten lesen")})");
                 continue;
             }
 
@@ -292,7 +293,7 @@ public sealed class XtfRevisionExportService : IXtfRevisionExportService
             }
             catch (Exception ex)
             {
-                return ([], $"Der Pfad der XTF-Quelldatei ist ungültig: {ex.Message}");
+                return ([], $"Der Pfad der XTF-Quelldatei ist ungültig: {UserError.DescribeAndReport(ex, "XTF-Quellpfad")}");
             }
 
             if (!string.Equals(Path.GetExtension(pfad), ".xtf", StringComparison.OrdinalIgnoreCase))

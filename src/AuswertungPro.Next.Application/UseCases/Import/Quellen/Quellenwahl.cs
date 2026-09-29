@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.UseCases.Import.Quellen;
 
@@ -140,7 +141,7 @@ public static class Quellenwahl
             catch (Exception ex)
             {
                 // Ein einzelner kaputter Kandidat darf die uebrigen nie blockieren.
-                befund = QuellenBefund.NichtLesbar($"Prüfung fehlgeschlagen: {ex.Message}");
+                befund = QuellenBefund.NichtLesbar($"Prüfung fehlgeschlagen: {UserError.DescribeAndReport(ex, "Importquelle prüfen")}");
             }
 
             versuche.Add(new QuellenVersuch(pfad, befund));

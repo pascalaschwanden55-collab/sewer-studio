@@ -127,7 +127,9 @@ public sealed class DossierParcelLookupUseCaseTests
         var ergebnis = await fall.RunAsync(1208, "30");
 
         Assert.False(ergebnis.Found);
-        Assert.Contains(ergebnis.Warnings, w => w.Contains("Dienst weg", StringComparison.Ordinal));
+        // Fix-Runde 2 zu 10c2: Der Fehler wird deutsch gemeldet; der rohe Ausnahmetext geht ins Programmlog.
+        Assert.Contains(ergebnis.Warnings, w => w.StartsWith("Die Parzelle konnte nicht abgefragt werden:", StringComparison.Ordinal));
+        Assert.DoesNotContain(ergebnis.Warnings, w => w.Contains("Dienst weg", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -143,7 +145,9 @@ public sealed class DossierParcelLookupUseCaseTests
         Assert.True(ergebnis.Found);
         Assert.Equal("77", ergebnis.Dossier!.ParcelNumbers);
         Assert.Empty(ergebnis.Dossier.Owners);
-        Assert.Contains(ergebnis.Warnings, w => w.Contains("Seite kaputt", StringComparison.Ordinal));
+        // Fix-Runde 2 zu 10c2: Der Fehler wird deutsch gemeldet; der rohe Ausnahmetext geht ins Programmlog.
+        Assert.Contains(ergebnis.Warnings, w => w.StartsWith("Die Grundbuchauskunft konnte nicht gelesen werden:", StringComparison.Ordinal));
+        Assert.DoesNotContain(ergebnis.Warnings, w => w.Contains("Seite kaputt", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -178,7 +182,9 @@ public sealed class DossierParcelLookupUseCaseTests
 
         Assert.True(ergebnis.Found);
         Assert.Empty(ergebnis.Holdings);
-        Assert.Contains(ergebnis.Warnings, w => w.Contains("Netz weg", StringComparison.Ordinal));
+        // Fix-Runde 2 zu 10c2: Der Fehler wird deutsch gemeldet; der rohe Ausnahmetext geht ins Programmlog.
+        Assert.Contains(ergebnis.Warnings, w => w.StartsWith("Die Leitungen konnten nicht abgefragt werden:", StringComparison.Ordinal));
+        Assert.DoesNotContain(ergebnis.Warnings, w => w.Contains("Netz weg", StringComparison.Ordinal));
     }
 
     [Fact]

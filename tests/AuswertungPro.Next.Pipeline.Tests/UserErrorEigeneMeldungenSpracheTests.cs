@@ -55,11 +55,12 @@ public sealed class UserErrorEigeneMeldungenSpracheTests
         ["InvalidOperationException", "ArgumentException", "IOException", "InvalidDataException", "JsonException"];
 
     private static readonly Regex AusnahmeKlasse = new(
-        @"\bclass\s+(\w+Exception)\s*:\s*[\w.]*Exception\b",
+        @"\bclass\s+(\w+Exception)\s*(?:\([^)]*\))?\s*:\s*[\w.]*Exception\b",
         RegexOptions.Compiled);
 
     private static Regex NeueEigeneAusnahme(IEnumerable<string> typen) => new(
-        @"new\s+(" + string.Join("|", typen.Distinct().Select(Regex.Escape)) + @")\s*\(",
+        // Fix-Runde 2: auch voll qualifiziert ("new System.IO.IOException(").
+        @"new\s+(?:\w+\.)*(" + string.Join("|", typen.Distinct().Select(Regex.Escape)) + @")\s*\(",
         RegexOptions.Compiled);
 
     internal static IReadOnlyList<string> EigeneAusnahmeTypen(string wurzel)
@@ -93,6 +94,9 @@ public sealed class UserErrorEigeneMeldungenSpracheTests
         var typen = EigeneAusnahmeTypen(wurzel);
         Assert.Contains("SidecarInsufficientVramException", typen);
         Assert.Contains("SchachtProArchiveException", typen);
+        // Fix-Runde 2: Klassen mit Primaerkonstruktor ("class X(string message) : …Exception").
+        Assert.Contains("XtfQuelleFehltException", typen);
+        Assert.Contains("CommitProcessInterruptedException", typen);
         var neueAusnahme = NeueEigeneAusnahme(typen);
 
         foreach (var schicht in EigeneSchichten)
@@ -187,7 +191,8 @@ public sealed class UserErrorEigeneMeldungenSpracheTests
             "Reicht bewusst die eigene deutsche Validierungsmeldung als UserFacingException weiter (RunUserVisibleValidation).",
     };
 
-    private static readonly Regex FremdeMessage = new(@"\b(?!this\b)\w+\.Message\b", RegexOptions.Compiled);
+    // Fix-Runde 2: auch "ex?.Message", "Holen(x).Message" und "fehler[0].Message".
+    private static readonly Regex FremdeMessage = new(@"(?:\b(?!this\b)\w+|[)\]])\??\.Message\b", RegexOptions.Compiled);
 
     [Fact]
     public void Eigene_Ausnahmen_betten_keinen_fremden_Message_Text_ein()
@@ -232,6 +237,41 @@ public sealed class UserErrorEigeneMeldungenSpracheTests
         Assert.True(genutzt.Count == MessageEinbettungErlaubt.Count,
             "Tote Eintraege in MessageEinbettungErlaubt: " +
             string.Join(", ", MessageEinbettungErlaubt.Keys.Where(k => !genutzt.Contains(k)).Select(k => k.Datei)));
+    }
+
+    /// <summary>
+    /// Fix-Runde 2 zu 10c2: <c>UserError.Describe</c> haengt an jede eigene Meldung selbst
+    /// "Technische Details stehen im Programmlog." an. Eine eigene Ausnahme, deren Text den
+    /// Programmlog schon nennt, erschiene deshalb mit doppeltem Hinweis. Nur eine
+    /// <c>UserFacingException</c> (woertlich, ohne Zusatz) darf ihn selbst tragen.
+    /// </summary>
+    [Fact]
+    public void Eigene_Ausnahmen_nennen_den_Programmlog_nicht_selbst()
+    {
+        var wurzel = FindRepositoryRoot();
+        var neueAusnahme = NeueEigeneAusnahme(EigeneAusnahmeTypen(wurzel).Where(t => t != "UserFacingException"));
+        var funde = new List<string>();
+
+        foreach (var schicht in EigeneSchichten)
+        {
+            foreach (var datei in Directory.EnumerateFiles(Path.Combine(wurzel, "src", schicht), "*.cs", SearchOption.AllDirectories))
+            {
+                var text = File.ReadAllText(datei);
+                var relativ = Path.GetRelativePath(wurzel, datei).Replace('\\', '/');
+                if (relativ.Contains("WebGis", StringComparison.Ordinal))
+                    continue;
+                foreach (Match treffer in neueAusnahme.Matches(text))
+                {
+                    if (!Argumente(text, treffer.Index + treffer.Length).Contains("Programmlog", StringComparison.Ordinal))
+                        continue;
+                    funde.Add($"{relativ}:{text[..treffer.Index].Count(c => c == '\n') + 1}");
+                }
+            }
+        }
+
+        Assert.True(funde.Count == 0,
+            "Eigene Ausnahme nennt den Programmlog selbst (UserError haengt den Hinweis an, er stuende doppelt):\n"
+            + string.Join("\n", funde));
     }
 
     /// <summary>Argumentliste bis zur passenden schliessenden Klammer (Zeichenketten uebersprungen).</summary>

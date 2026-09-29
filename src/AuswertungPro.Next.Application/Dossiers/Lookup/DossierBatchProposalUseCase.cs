@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Dossiers.Lookup;
 
@@ -180,7 +181,7 @@ public sealed class DossierBatchProposalUseCase
         }
         catch (Exception ex)
         {
-            warnungen.Add($"{was}: {ex.Message}");
+            warnungen.Add($"{was}: {UserError.DescribeAndReport(ex, was)}");
             return null;
         }
     }

@@ -2,6 +2,7 @@ using System.Globalization;
 using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.Application.Xtf.Dss;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Xtf.Lieferung;
 
@@ -47,7 +48,12 @@ public static class XtfLieferungsNorm
             return null;
         }
         catch (InvalidOperationException e) { return e.Message; }
-        catch (System.Xml.XmlException e) { return "Ungültige Geometrie: " + e.Message; }
+        catch (System.Xml.XmlException e)
+        {
+            // Fix-Runde 2 zu 10c2: Der XmlException-Text ist englisch; er geht ins Programmlog.
+            BestEffort.ReportWarning($"[XTF-Lieferung Geometrie] {e}");
+            return "Ungültige Geometrie: Das Geometrie-XML ist nicht lesbar.";
+        }
     }
 
     public static string? Namensschluessel(ObjektQuellbeleg q)
