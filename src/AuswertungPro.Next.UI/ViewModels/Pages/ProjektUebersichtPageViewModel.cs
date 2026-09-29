@@ -57,7 +57,9 @@ public sealed partial class ProjektUebersichtPageViewModel : ObservableObject, I
         ProjektPruefung = new(sp.ProjektPruefung, () => (_shell.Project, sp.Settings.LastProjectPath),
             sp.Projects.DeepCopy, sp.ProjectContentSignature.Compute,
             () => _shell.IsProjectReady && _shell.SaveCommand.CanExecute(null),
-            punkt => ProjektPruefpunktNavigation.Oeffne(_shell, sp, punkt));
+            punkt => ProjektPruefpunktNavigation.Oeffne(_shell, sp, punkt),
+            (punkt, istAktuell, rueckkehr, ct) => ProjektPruefpunktNavigation.OeffneAsync(
+                _shell, sp, punkt, istAktuell, rueckkehr, ct));
         _pruefBeobachter = new(_shell.Project, PruefstandGeaendert);
         _register = sp.CodingSuggestionRegistry;
         _register.Geaendert += OnRegisterGeaendert;

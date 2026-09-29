@@ -34,11 +34,11 @@ public sealed class ProjektPruefungViewModelTests
         await vm.PruefenCommand.ExecuteAsync(null);
         Assert.True(vm.IstAktuell);
         var punkt = Assert.Single(vm.Punkte);
-        vm.OeffnenCommand.Execute(punkt);
+        await vm.OeffnenCommand.ExecuteAsync(punkt);
         Assert.Equal(h.Protocol.Current.Entries[0].EntryId, ziel!.EintragId);
         // Protokolleintraege melden keine PropertyChanged-Ereignisse: die Signatur muss schuetzen.
         h.Protocol.Current.Entries[0].Ai!.Accepted = true; ziel = null;
-        vm.OeffnenCommand.Execute(punkt);
+        await vm.OeffnenCommand.ExecuteAsync(punkt);
         Assert.Null(ziel); Assert.False(vm.IstAktuell); Assert.Empty(vm.Punkte);
     }
 
@@ -86,9 +86,40 @@ public sealed class ProjektPruefungViewModelTests
         await vm.PruefenCommand.ExecuteAsync(null);
         var punkt = Assert.Single(vm.Punkte);
         h.Protocol.Current.Entries[0].MeterStart = double.NaN;
-        vm.OeffnenCommand.Execute(punkt);
+        await vm.OeffnenCommand.ExecuteAsync(punkt);
         Assert.False(geoeffnet); Assert.False(vm.IstAktuell); Assert.Empty(vm.Punkte);
-        Assert.Contains("Stelle konnte nicht", vm.Meldung);
+        Assert.Contains("Projektstand geändert", vm.Meldung);
+    }
+
+    [Fact]
+    public async Task Stille_Aenderung_einer_fruehen_Zeile_waehrend_der_Erfassung_verwirft_den_Lauf()
+    {
+        var p = new Project();
+        var h = new HaltungRecord { Protocol = new() { Current = new() } };
+        p.Data.Add(h);
+        for (var i = 0; i < 128; i++) h.Protocol.Current.Entries.Add(new() { Ai = new() });
+        var erfassungen = 0;
+        var pausen = 0;
+        Task<Project> Erfasse(Project live, CancellationToken ct)
+        {
+            erfassungen++;
+            return ProjektPruefdatenKopie.ErfasseAsync(live, () =>
+            {
+                if (erfassungen == 1 && ++pausen == 1)
+                    h.Protocol.Current.Entries[0].Ai!.Accepted = true;
+                return Task.CompletedTask;
+            }, ct);
+        }
+        using var vm = new ProjektPruefungViewModel(new Dienst((kopie, ct) =>
+            ProjektPruefregeln.Pruefe(kopie, _ => null, ct)), () => (p, null),
+            new JsonProjectRepository().DeepCopy, new JsonProjectContentSignature().Compute,
+            () => true, _ => { }, erfassen: Erfasse);
+
+        await vm.PruefenCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IstAktuell);
+        Assert.Empty(vm.Punkte);
+        Assert.Equal(1, erfassungen);
     }
 
     [Fact]

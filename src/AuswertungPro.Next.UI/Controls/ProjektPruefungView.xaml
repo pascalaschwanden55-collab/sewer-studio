@@ -1,47 +1,123 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Controls.ProjektPruefungView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Border Style="{StaticResource Card}">
-        <StackPanel>
-            <DockPanel Margin="0,0,0,8">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Content="Projekt prüfen" Command="{Binding PruefenCommand}" Style="{StaticResource ToolbarButtonAccent}"
-                            ToolTip="Dateiverweise, offene KI-Befunde, Meterangaben, Schachthöhen und Eingabefelder prüfen"/>
-                    <Button Content="Abbrechen" Command="{Binding AbbrechenCommand}" Style="{StaticResource ToolbarButton}" Margin="8,0,0,0"
-                            ToolTip="Laufende Projektprüfung abbrechen"/>
-                </StackPanel>
-                <TextBlock Text="Projektprüfung" FontSize="{DynamicResource TextL}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            </DockPanel>
-            <TextBlock Text="Dateiverweise · KI-Befunde der Haltungen · Meterangaben · Schachthöhen · Eingabefelder"
-                       TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextS}"/>
-            <TextBlock Text="{Binding Meldung}" TextWrapping="Wrap" Margin="0,8,0,6"/>
-            <TextBlock Text="Hinweise zur Bearbeitung. Die vollständige XTF-Normprüfung erfolgt weiterhin beim Export."
-                       FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/>
-            <DataGrid ItemsSource="{Binding Punkte}" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False"
-                      MaxHeight="320" Margin="0,10,0,0" HeadersVisibility="Column" IsEnabled="{Binding IstAktuell}"
-                      RowHeight="NaN" MinRowHeight="34"
-                      AlternatingRowBackground="{DynamicResource HeaderBrush}"
-                      EnableRowVirtualization="True" ScrollViewer.CanContentScroll="True" SelectionMode="Single">
-                <DataGrid.Style>
-                    <Style TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
-                        <Style.Triggers><DataTrigger Binding="{Binding Punkte.Count}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
-                    </Style>
-                </DataGrid.Style>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:system="clr-namespace:System.Windows;assembly=PresentationFramework"
+             AutomationProperties.Name="Projektprüfung"
+             KeyboardNavigation.TabNavigation="Continue">
+    <UserControl.Resources>
+        <!-- Im Windows-Kontrastdesign ersetzt die zentrale Ueberlagerung ThemeHighContrast.xaml
+             alle Farb-Tokens paarweise; eigene Systemfarben-Ausloeser hier wuerden diese Paare
+             brechen (ThemeHighContrastFarbpaarTests). -->
+        <Style x:Key="ProjektPruefungCard" TargetType="Border" BasedOn="{StaticResource Card}"/>
+        <Style x:Key="ProjektPruefungText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        </Style>
+        <Style x:Key="ProjektPruefungNebenText" TargetType="TextBlock" BasedOn="{StaticResource ProjektPruefungText}">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+        <Style x:Key="ProjektPruefungHinweisText" TargetType="TextBlock" BasedOn="{StaticResource ProjektPruefungText}">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+        </Style>
+        <Style x:Key="ProjektPruefungButton" TargetType="Button" BasedOn="{StaticResource ToolbarButton}"/>
+        <!-- Gefuellter Hauptknopf einfarbig (der Verlauf von ToolbarButtonAccent faellt im hellen
+             Theme mit Weiss unter 4,5:1). Schrift OnAccentBrush statt festem Weiss, damit das
+             Kontrastdesign Highlight/HighlightText paart; FilledButtonTemplate ohne Hover-Toenung
+             unter der Schrift. -->
+        <Style x:Key="ProjektPruefungPrimaryButton" TargetType="Button" BasedOn="{StaticResource ProjektPruefungButton}">
+            <Setter Property="Template" Value="{DynamicResource FilledButtonTemplate}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
+        </Style>
+        <Style x:Key="ProjektPruefungGrid" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+            <Setter Property="RowHeight" Value="NaN"/>
+            <Setter Property="MinRowHeight" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource HeaderBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Punkte.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ProjektPruefungZellenText" TargetType="TextBlock" BasedOn="{StaticResource ProjektPruefungText}">
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="4"/>
+        </Style>
+    </UserControl.Resources>
+
+    <UserControl.InputBindings>
+        <KeyBinding Key="P" Modifiers="Alt" Command="{Binding PruefenCommand}"/>
+        <KeyBinding Key="Escape" Command="{Binding AbbrechenCommand}"/>
+    </UserControl.InputBindings>
+
+    <Border Style="{StaticResource ProjektPruefungCard}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <WrapPanel Grid.Row="0" Margin="0,0,0,8">
+                <TextBlock Text="Projektprüfung" Style="{StaticResource ProjektPruefungText}"
+                           FontSize="{DynamicResource TextL}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <Button Content="Projekt prüfen" Command="{Binding PruefenCommand}" Style="{StaticResource ProjektPruefungPrimaryButton}"
+                        TabIndex="0" AutomationProperties.Name="Projektprüfung starten"
+                        AutomationProperties.HelpText="Prüft Dateiverweise, offene KI-Befunde, Meterangaben, Schachthöhen und Eingabefelder. Tastenkürzel Alt+P."
+                        ToolTip="Dateiverweise, offene KI-Befunde, Meterangaben, Schachthöhen und Eingabefelder prüfen (Alt+P)"/>
+                <Button Content="Abbrechen" Command="{Binding AbbrechenCommand}" Style="{StaticResource ProjektPruefungButton}"
+                        TabIndex="1" Margin="8,0,0,0" AutomationProperties.Name="Projektprüfung abbrechen"
+                        AutomationProperties.HelpText="Bricht die laufende Projektprüfung ab. Tastenkürzel Escape."
+                        ToolTip="Laufende Projektprüfung abbrechen (Escape)"/>
+            </WrapPanel>
+
+            <TextBlock Grid.Row="1" Style="{StaticResource ProjektPruefungNebenText}"
+                       Text="Dateiverweise · KI-Befunde der Haltungen · Meterangaben · Schachthöhen · Eingabefelder"
+                       TextWrapping="Wrap" FontSize="{DynamicResource TextS}"/>
+            <TextBlock Grid.Row="2" Style="{StaticResource ProjektPruefungText}" Text="{Binding Meldung}"
+                       TextWrapping="Wrap" Margin="0,8,0,6" AutomationProperties.Name="Status der Projektprüfung"
+                       AutomationProperties.LiveSetting="Polite"/>
+            <TextBlock Grid.Row="3" Style="{StaticResource ProjektPruefungHinweisText}"
+                       Text="Hinweise zur Bearbeitung. Die vollständige XTF-Normprüfung erfolgt weiterhin beim Export."
+                       FontSize="{DynamicResource TextS}" TextWrapping="Wrap"/>
+
+            <DataGrid x:Name="PruefpunkteGrid" Grid.Row="4" ItemsSource="{Binding Punkte}" IsReadOnly="True" AutoGenerateColumns="False"
+                      CanUserAddRows="False" HeadersVisibility="Column" IsEnabled="{Binding IstAktuell}"
+                      Margin="0,10,0,0" Style="{StaticResource ProjektPruefungGrid}"
+                      MaxHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}"
+                      EnableRowVirtualization="True"
+                      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                      ScrollViewer.CanContentScroll="True" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                      SelectionMode="Single" SelectionUnit="FullRow" IsTabStop="True" TabIndex="2"
+                      AutomationProperties.Name="Hinweise der Projektprüfung"
+                      AutomationProperties.HelpText="Mit den Pfeiltasten einen Hinweis wählen und mit Enter zur betroffenen Stelle wechseln.">
+                <DataGrid.InputBindings>
+                    <KeyBinding Key="Enter" Command="{Binding OeffnenCommand}"
+                                CommandParameter="{Binding SelectedItem, ElementName=PruefpunkteGrid}"/>
+                </DataGrid.InputBindings>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Bereich" Binding="{Binding BereichText}" Width="150"/>
-                    <DataGridTextColumn Header="Objekt" Binding="{Binding ObjektText}" Width="160"/>
-                    <DataGridTextColumn Header="Hinweis" Binding="{Binding Meldung}" Width="*" MinWidth="200">
-                        <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="4"/></Style></DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-                    <DataGridTemplateColumn Header="Aktion" Width="110">
-                        <DataGridTemplateColumn.CellTemplate><DataTemplate>
-                            <Button Content="Zur Stelle" Style="{StaticResource ToolbarButton}" Margin="2"
-                                    Command="{Binding DataContext.OeffnenCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                    CommandParameter="{Binding}" ToolTip="Das betroffene Feld oder den Befund öffnen"/>
-                        </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                    <DataGridTextColumn Header="Bereich" Binding="{Binding BereichText}" Width="1.2*"
+                                        ElementStyle="{StaticResource ProjektPruefungZellenText}"/>
+                    <DataGridTextColumn Header="Objekt" Binding="{Binding ObjektText}" Width="1.4*"
+                                        ElementStyle="{StaticResource ProjektPruefungZellenText}"/>
+                    <DataGridTextColumn Header="Hinweis" Binding="{Binding Meldung}" Width="2.4*"
+                                        ElementStyle="{StaticResource ProjektPruefungZellenText}"/>
+                    <DataGridTemplateColumn Header="Aktion" Width="Auto">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="Zur Stelle" Style="{StaticResource ProjektPruefungButton}" Margin="2" VerticalAlignment="Top"
+                                        Command="{Binding DataContext.OeffnenCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding}" AutomationProperties.Name="Hinweis öffnen"
+                                        AutomationProperties.HelpText="Öffnet das betroffene Feld oder den Befund."
+                                        ToolTip="Das betroffene Feld oder den Befund öffnen"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
-        </StackPanel>
+        </Grid>
     </Border>
 </UserControl>

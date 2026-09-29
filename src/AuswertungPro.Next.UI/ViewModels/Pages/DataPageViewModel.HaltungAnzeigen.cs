@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -15,6 +17,12 @@ public sealed partial class DataPageViewModel
         if (!_disposed && _shell.IsProjectReady && _shell.Project.Data.Contains(record))
             _protocolWindowController.Open(record, eintragId);
     }
+
+    internal Task<bool> ZeigeProtokolleintragAsync(HaltungRecord record, Guid eintragId, CancellationToken ct,
+        Func<bool>? istAktuell = null)
+        => !_disposed && _shell.IsProjectReady && _shell.Project.Data.Contains(record)
+            ? _protocolWindowController.OpenAsync(record, eintragId, ct, istAktuell)
+            : Task.FromResult(false);
 
     /// <summary>Eine Haltung soll ausdruecklich gezeigt werden; die Seite entscheidet, wie.</summary>
     public event Action<HaltungRecord>? HaltungAnzeigen;

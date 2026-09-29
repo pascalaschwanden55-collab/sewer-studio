@@ -1,40 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Optikanalyse 28.09.2026, Aufgabe 13 (Windows-Integration): Ohne dieses Manifest bettet der
-  .NET-SDK-Standardweg nur ein leeres Manifest ohne DPI-Angabe ein (geprueft am gebauten
-  SewerStudio.exe ueber LoadLibraryEx/FindResource(RT_MANIFEST) - keine dpiAware-/dpiAwareness-
-  Elemente vorhanden). Windows behandelt einen Prozess ohne DPI-Erklaerung dann NICHT als
-  Per-Monitor-V2-faehig; auf einem zweiten Bildschirm mit anderer Skalierung skaliert Windows
-  das Fenster als Bitmap (unscharf) statt es neu zu zeichnen. Dieses Manifest ist das einzige
-  sanktionierte Mittel dafuer bei WPF - ein spaeter Aufruf aus Code kaeme zu spaet.
--->
-<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="1.0.0.0" name="SewerStudio.app"/>
-  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
+  <assemblyIdentity version="5.0.0.0" name="SewerStudio" type="win32" />
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security>
-      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+      <requestedPrivileges>
         <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>
-
-  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
-    <application>
-      <!-- Windows 10 und Windows 11 -->
-      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
-    </application>
-  </compatibility>
-
-  <application xmlns="urn:schemas-microsoft-com:asm.v3">
-    <windowsSettings>
-      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
-      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/PM</dpiAware>
-      <!-- Fix-Runde 1: gdiScaling absichtlich WEGGELASSEN. Es skaliert nur klassisches
-           GDI-Rendering (System.Drawing/WinForms-Interop) automatisch mit; SewerStudio hat
-           keine einzige solche Stelle (grep ueber src/AuswertungPro.Next.UI nach
-           System.Windows.Forms/System.Drawing: keine Treffer). WPF zeichnet ueber DirectX und
-           braucht diesen Kompatibilitaetsschalter nicht - ein unbelegtes Element wieder
-           reinzunehmen waere geraten, kein Befund. -->
-    </windowsSettings>
-  </application>
+  <asmv3:application>
+    <asmv3:windowsSettings>
+      <!-- Windows 10 1607+: erst Per-Monitor-V2, dann Per-Monitor als Rueckfall. -->
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2,PerMonitor</dpiAwareness>
+      <!-- Aeltere Windows verstehen nur diese Angabe. -->
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+    </asmv3:windowsSettings>
+  </asmv3:application>
 </assembly>
