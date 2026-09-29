@@ -563,6 +563,36 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   eingesetzt → Wächter meldet exakt Datei, Zeile und Text; danach zurückgesetzt.
   **Nie wieder ein rein zeilenbasierter `grep`-Audit für diese Fehlerklasse** — der Wächter
   läuft bei jedem Testlauf automatisch mit und ersetzt die einmalige Stichprobe dauerhaft.
+- **Aufgabe 10b Fix-Runde 3 — `IstEigeneVorsaetzlicheMeldung` prüfte den Ausnahmetyp per
+  `is`-Muster (`exception is (InvalidOperationException or ArgumentException)`), das auch
+  UNTERKLASSEN trifft** (`ArgumentNullException`, `ArgumentOutOfRangeException`,
+  `ObjectDisposedException : InvalidOperationException`, …) — genau wie ein
+  `catch (ArgumentException ex)`-Block auch `ArgumentNullException` fängt. Diese Unterklassen
+  sind Programmierfehler-Schutzklauseln mit Framework- oder knapp-englischem Text, keine von uns
+  für Nutzer verfassten Sätze: `BestEffort.Try(null!, …)` (Application) wirft
+  `ArgumentNullException` mit dem BCL-Text „Value cannot be null. (Parameter 'action')";
+  `PhotoMeasurementAnglePlanBuilder.BuildAngleGeometry` (Application, `internal`) wirft bei einem
+  nicht unterstützten `OverlayToolType` eine `ArgumentOutOfRangeException` mit dem selbst
+  geschriebenen, aber englischen Text „Only LateralCircle and PipeBend are supported." — beide
+  wären mit der alten `is`-Prüfung fälschlich als „eigene Meldung" durchgereicht worden.
+  **Behoben durch exakten Laufzeittyp-Vergleich** statt Musterabgleich:
+  `exception.GetType() == typeof(InvalidOperationException) ||
+  exception.GetType() == typeof(ArgumentException)` — `GetType()` liefert immer den Laufzeittyp,
+  der `==`-Vergleich mit `typeof(...)` lässt bewusst keine Unterklassen zu. Der Sprachwächter
+  `UserErrorEigeneMeldungenSpracheTests` (Fix-Runde 2) brauchte dabei KEINE Änderung: sein Regex
+  sucht ohnehin nur nach den exakten Klassennamen als Text und konnte eine Unterklasse wie
+  `ArgumentNullException` schon aus Textgründen nie treffen — nur die Produktionslogik in
+  `UserError.cs` war zuvor weiter gefasst als das, was der Wächter tatsächlich verifizierte. Seit
+  der Korrektur sind beide deckungsgleich (eine frühere Angabe im Fix-Runde-2-Bericht, die dies
+  schon vorher behauptete, war ungenau und wurde im Bericht richtiggestellt). Neue Tests
+  `UserErrorTests`: eigene `ArgumentNullException`/`ArgumentOutOfRangeException` (echt geworfen
+  aus Application-Code) zeigen weiterhin den generischen Satz, nicht ihren Rohtext.
+  Sabotageprobe bestanden: mit der alten `is`-Prüfung schlugen beide neuen Tests exakt mit dem
+  vom Review vorhergesagten Leck fehl („Value cannot be null…" bzw. „Only LateralCircle…").
+  **Fazit: `is`-Musterabgleich und `GetType() == typeof(...)` sind bei Ausnahmetypen NICHT
+  austauschbar** — `is` ist die richtige Wahl, wenn Unterklassen fachlich dazugehören sollen
+  (z. B. „irgendein Argumentfehler"), `GetType() ==` die richtige Wahl, wenn nur die exakt
+  konstruierten Basistypen gemeint sind, deren Text wir selbst verfasst haben.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

@@ -95,18 +95,30 @@ public static class UserError
     }
 
     /// <summary>
-    /// Erkennt eine im eigenen Code bewusst formulierte deutsche Meldung: eine
-    /// <see cref="InvalidOperationException"/> oder <see cref="ArgumentException"/>, die
-    /// nachweislich in einer eigenen SewerStudio-Assembly geworfen wurde (nicht im .NET-Framework
-    /// oder in einer Drittbibliothek). Nur dort ist der Ausnahmetext selbst der Nutzertext -
-    /// anderswo (z. B. <c>ArgumentNullException.ThrowIfNull</c>, das im Framework wirft, oder ein
-    /// von einer fremden Bibliothek geworfener Fehler) bleibt es beim generischen Satz.
+    /// Erkennt eine im eigenen Code bewusst formulierte deutsche Meldung: eine Ausnahme, deren
+    /// LAUFZEITTYP EXAKT <see cref="InvalidOperationException"/> oder <see cref="ArgumentException"/>
+    /// ist (nicht per <c>is</c>-Mustervergleich, der auch Unterklassen traefe), geworfen
+    /// nachweislich in einer eigenen SewerStudio-Assembly (nicht im .NET-Framework oder in einer
+    /// Drittbibliothek). Nur dort ist der Ausnahmetext selbst der Nutzertext.
+    /// <c>exception.GetType() == typeof(...)</c> statt <c>is</c> ist hier BEWUSST gewaehlt: Unterklassen
+    /// wie <see cref="ArgumentNullException"/>, <see cref="ArgumentOutOfRangeException"/> oder
+    /// <see cref="ObjectDisposedException"/> (: <see cref="InvalidOperationException"/>) sind
+    /// Programmierfehler-Schutzklauseln mit Framework- oder knapp-englischem Text (z. B.
+    /// "Value cannot be null. (Parameter 'x')" oder, real im Code gefunden,
+    /// <c>PhotoMeasurementAnglePlanBuilder.cs</c>: "Only LateralCircle and PipeBend are
+    /// supported." als <see cref="ArgumentOutOfRangeException"/>) - kein von uns fuer Nutzer
+    /// verfasster Satz. Mit blossem <c>is (InvalidOperationException or ArgumentException)</c>
+    /// waeren solche Unterklassen faelschlich als "eigene Meldung" durchgereicht worden (real
+    /// gefundener Fehler in Fix-Runde 3, hier korrigiert). Anderswo (z. B.
+    /// <c>ArgumentNullException.ThrowIfNull</c>, das im Framework wirft, oder ein von einer
+    /// fremden Bibliothek geworfener Fehler) bleibt es ohnehin beim generischen Satz.
     /// <see cref="Exception.TargetSite"/> zeigt die Methode, in der tatsaechlich geworfen wurde;
     /// fehlt sie (kein Stacktrace), bleibt die Erkennung fail-safe beim generischen Satz.
     /// </summary>
     private static bool IstEigeneVorsaetzlicheMeldung(Exception exception)
     {
-        if (exception is not (InvalidOperationException or ArgumentException))
+        var typ = exception.GetType();
+        if (typ != typeof(InvalidOperationException) && typ != typeof(ArgumentException))
             return false;
 
         var assemblyName = exception.TargetSite?.DeclaringType?.Assembly.GetName().Name;

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
@@ -108,6 +109,64 @@ public sealed class UserErrorTests
             "Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
             message);
         Assert.DoesNotContain("Sequence contains no elements", message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Describe_zeigt_bei_ArgumentNullException_aus_eigener_Assembly_die_generische_Meldung()
+    {
+        // BestEffort.Try (AuswertungPro.Next.Application) wirft eine ArgumentNullException -
+        // eine Unterklasse von ArgumentException, kein exakter Treffer. Fix-Runde 3: Vorher
+        // fing die Erkennung per "is (InvalidOperationException or ArgumentException)" auch
+        // Unterklassen und haette hier faelschlich "Value cannot be null. (Parameter 'action')"
+        // (Framework-Text der Unterklasse selbst, nicht von uns formuliert) direkt gezeigt.
+        ArgumentNullException geworfen;
+        try
+        {
+            BestEffort.Try(null!, "Testkontext");
+            throw new InvalidOperationException("Testaufbau fehlerhaft: keine Ausnahme geworfen.");
+        }
+        catch (ArgumentNullException ex)
+        {
+            geworfen = ex;
+        }
+
+        var message = UserError.Describe(geworfen);
+
+        Assert.Equal(
+            "Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
+            message);
+        Assert.DoesNotContain("cannot be null", message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Describe_zeigt_bei_ArgumentOutOfRangeException_aus_eigener_Assembly_die_generische_Meldung()
+    {
+        // PhotoMeasurementAnglePlanBuilder.BuildAngleGeometry (AuswertungPro.Next.Application)
+        // wirft eine ArgumentOutOfRangeException mit dem englischen Text "Only LateralCircle
+        // and PipeBend are supported." - ebenfalls eine ArgumentException-Unterklasse, real im
+        // Code gefunden und der Auslöser dieser Fix-Runde.
+        ArgumentOutOfRangeException geworfen;
+        try
+        {
+            PhotoMeasurementAnglePlanBuilder.BuildAngleGeometry(
+                OverlayToolType.Line,
+                new NormalizedPoint(0, 0),
+                normalizedDiameter: 1.0,
+                positionDeg: 0.0,
+                angleDeg: 0.0);
+            throw new InvalidOperationException("Testaufbau fehlerhaft: keine Ausnahme geworfen.");
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            geworfen = ex;
+        }
+
+        var message = UserError.Describe(geworfen);
+
+        Assert.Equal(
+            "Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
+            message);
+        Assert.DoesNotContain("LateralCircle", message, StringComparison.Ordinal);
     }
 
     [Fact]
