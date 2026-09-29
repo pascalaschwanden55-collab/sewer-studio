@@ -342,7 +342,15 @@
                                 <!-- Aufgabe 13 (Windows-Integration): dritte Wahl "Wie Windows" neben Hell/Dunkel.
                                      Jede Auswahl wendet sich sofort an und speichert sofort (SettingsThemeWorkflow.ApplyTheme
                                      ueber OnUiThemeChanged) - kein getrennter "Anwenden"-Knopf und kein Neustart-Hinweis mehr:
-                                     Das Design wird ueber DynamicResource in allen offenen Fenstern sofort neu gezeichnet. -->
+                                     Das Design wird ueber DynamicResource in allen offenen Fenstern sofort neu gezeichnet.
+                                     Fix-Runde 2 (29.09.2026): geprueft, nicht nur behauptet - eine repo-weite Suche nach
+                                     verbliebenem "StaticResource ...Brush" ausserhalb der Theme-Definitionsdateien selbst
+                                     findet nur noch eine einzige, bewusst belassene Stelle (MeasureTemplateEditorWindow.xaml,
+                                     Wasserzeichen-Text in einer VisualBrush ohne normale Vererbungskette - siehe Kommentar
+                                     dort). Alle uebrigen Treffer eines aehnlichen Suchmusters sind Value-Converter mit dem
+                                     Namensmuster "*Brush"/"*BrushConv" (z. B. ZkBrushConv, ZustandsklasseBrush), keine
+                                     Theme-Farbtoken. -->
+
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Design" Style="{StaticResource SettingsFieldLabel}"/>
                                 <StackPanel Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2"
                                             Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">

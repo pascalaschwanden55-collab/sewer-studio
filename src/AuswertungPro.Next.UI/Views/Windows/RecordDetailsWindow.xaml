@@ -33,7 +33,7 @@
         <Border Grid.Row="2" Style="{StaticResource DialogButtonBar}" Margin="0,14,0,0">
             <Grid>
                 <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center"
-                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
                            Text="Doppelklick oder Kontextmenü auf der Zeile öffnet diese Detailansicht."/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Width="120" Command="{Binding CloseCommand, ElementName=Root}"

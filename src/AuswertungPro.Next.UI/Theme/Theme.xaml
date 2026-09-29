@@ -92,6 +92,14 @@
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ColorDanger}"/>
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
     <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource ColorInfo}"/>
+    <!-- Fix-Runde 2 (Aufgabe 13, 29.09.2026): ersetzt die fruehere rohe
+         "<SolidColorBrush Color="{DynamicResource ColorWarning}" Opacity="0.15"/>" im VSA-Explorer
+         (Q2-„OPTIONAL"-Abzeichen). Ein roher Color-Schluessel kann in einer ResourceDictionary NICHT
+         per DynamicResource ueberlagert werden (Color ist kein Freezable/DependencyObject - anders
+         als SolidColorBrush.Color oben, das ueber eine DependencyProperty dynamisch nachgezogen
+         werden kann). Die Deckkraft steckt deshalb jetzt in der Brush selbst, damit die Ueberlagerung
+         in ThemeHighContrast.xaml einen normalen Brush-Schluessel ueberschreiben kann. -->
+    <SolidColorBrush x:Key="WarningTintBrush" Color="{StaticResource ColorWarning}" Opacity="0.15"/>
 
     <!-- Textfarben sind von den kraeftigeren Flaechenfarben getrennt. -->
     <SolidColorBrush x:Key="SuccessTextBrush" Color="#FF56D364"/>
@@ -373,11 +381,12 @@
 
     <!-- Primary Button — Blue filled -->
     <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-        <Setter Property="Background">
-            <Setter.Value>
-                <SolidColorBrush Color="{StaticResource ColorAccent}"/>
-            </Setter.Value>
-        </Setter>
+        <!-- Fix-Runde 2 (Aufgabe 13, MINOR): war "SolidColorBrush Color="{StaticResource ColorAccent}""
+             - ColorAccent hat je Theme einen anderen Wert, ein StaticResource-Snapshot ueberlebte
+             einen Designwechsel zur Laufzeit deshalb nicht (der Knopf blieb bis zum Neuaufbau der
+             Vorlage auf der Farbe des Themes, in dem das Fenster geoeffnet wurde). AccentBrush ist
+             exakt derselbe Wert, aber ein normaler DynamicResource-Token wie ueberall sonst. -->
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontWeight" Value="SemiBold"/>

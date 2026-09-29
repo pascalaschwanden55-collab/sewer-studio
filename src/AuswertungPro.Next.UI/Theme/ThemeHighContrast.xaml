@@ -48,6 +48,15 @@
     <SolidColorBrush x:Key="RowHoverBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
     <SolidColorBrush x:Key="SurfaceBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
 
+    <!-- Eingabefelder (Fix-Runde 2, IMPORTANT 2): TextBrush wird oben auf WindowTextColor gezwungen,
+         diese beiden Hintergruende blieben in Runde 1 faelschlich auf ihrer normalen warmen
+         Themefarbe stehen (WarmTextBox/VsaInputHighlightBrush-Felder, z. B.
+         ProtocolEntryEditorDialog.xaml/ObservationCatalogWindow.xaml) - potenziell unlesbar.
+         WindowColor ist die von Windows selbst fuer Texteingabefelder vorgesehene Hochkontrast-
+         Flaeche (dieselbe Kombination wie eine normale TextBox). -->
+    <SolidColorBrush x:Key="InputWarmBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="VsaInputHighlightBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+
     <!-- Rand -->
     <SolidColorBrush x:Key="BorderBrush" Color="{DynamicResource {x:Static SystemColors.WindowFrameColorKey}}"/>
     <SolidColorBrush x:Key="BorderLightBrush" Color="{DynamicResource {x:Static SystemColors.ActiveBorderColorKey}}"/>
@@ -57,7 +66,10 @@
     <!-- Akzent -->
     <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
     <SolidColorBrush x:Key="AccentHoverBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
-    <SolidColorBrush x:Key="AccentSubtleBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <!-- Fix-Runde 2: von ControlColor auf WindowColor umgestellt - dieselbe "subtile Statusflaeche
+         wird neutral" Regel wie bei Success-/Warning-/DangerSubtleBrush unten (SchachtUebersichtPanel.xaml
+         legt z. B. normalen TextBrush-Text direkt auf diese Flaeche). -->
+    <SolidColorBrush x:Key="AccentSubtleBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
     <SolidColorBrush x:Key="AccentTextBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
 
     <!-- Auswahl -->
@@ -69,4 +81,22 @@
     <SolidColorBrush x:Key="SuccessTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
     <SolidColorBrush x:Key="WarningTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
     <SolidColorBrush x:Key="DangerTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+
+    <!-- Subtile Status-Abzeichen (Fix-Runde 2, IMPORTANT 2): Genau weil SuccessTextBrush/
+         WarningTextBrush/DangerTextBrush oben schon auf WindowText gezwungen werden, darf ihr
+         Hintergrund NICHT laenger die normale gruene/gelbe/rote Theme-Toenung behalten - das war
+         der eigentliche Fehler in Runde 1 (diese vier Schluessel standen faelschlich in
+         BewusstAusgenommen, als traegen sie eine eigene, unangetastete Bedeutung wie KiSubtleBrush;
+         tatsaechlich verliert ihr Text die Farbe bereits oben). Bedeutung bleibt ueber Rand/Symbol
+         erhalten (BorderBrush="{DynamicResource SuccessBrush}" o. Ae. daneben, SuccessBrush selbst
+         bleibt unten bewusst unveraendert). -->
+    <SolidColorBrush x:Key="SuccessSubtleBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="WarningSubtleBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="DangerSubtleBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <!-- Ersetzt die fruehere rohe "ColorWarning"-Color-Referenz im VSA-Explorer (Q2-„OPTIONAL"-
+         Badge; siehe Theme.xaml-Kommentar bei WarningTintBrush, warum ein roher Color-Schluessel
+         hier technisch nicht ueberlagerbar war). Dieselbe Regel wie bei den drei SubtleBrush oben:
+         Text (WarningBrush, hier bewusst unten NICHT ueberschrieben) bekommt eine neutrale statt
+         einer gelb getoenten Flaeche. -->
+    <SolidColorBrush x:Key="WarningTintBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
 </ResourceDictionary>

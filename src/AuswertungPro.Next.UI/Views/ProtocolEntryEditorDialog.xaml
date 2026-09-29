@@ -176,7 +176,7 @@
                                        Text="{Binding UnitSuffix}"
                                        Margin="8,0,0,0"
                                        VerticalAlignment="Center"
-                                       Foreground="{StaticResource MutedBrush}" />
+                                       Foreground="{DynamicResource MutedBrush}" />
                         </Grid>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

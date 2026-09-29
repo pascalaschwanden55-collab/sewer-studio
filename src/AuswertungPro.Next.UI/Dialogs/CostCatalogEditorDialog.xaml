@@ -65,7 +65,7 @@
 
                     <!-- Hinweis, wenn die Position KEIN ByDN ist -->
                     <TextBlock Visibility="{Binding DnHintVisibility}" TextWrapping="Wrap"
-                               Foreground="{StaticResource MutedBrush}"
+                               Foreground="{DynamicResource MutedBrush}"
                                Text="Wähle links eine Position vom Typ „ByDN&#x201C; (z. B. Schlauchliner GFK / Nadelfilz, Manschette), um die Preise je Durchmesser zu bearbeiten. Fixpreise trägst du in der Spalte „Preis&#x201C; ein."/>
 
                     <!-- DN-Preis-Tabelle, wenn ByDN -->
@@ -100,7 +100,7 @@
                         </StackPanel>
 
                         <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" FontSize="{DynamicResource TextXS}"
-                                   Foreground="{StaticResource MutedBrush}"
+                                   Foreground="{DynamicResource MutedBrush}"
                                    Text="Der Preis richtet sich nach der DN der Haltung. Fehlt eine DN in der Liste, wird automatisch die nächstgelegene genommen. „DN von/bis&#x201C; gleich = genau diese Nennweite."/>
                     </StackPanel>
                 </StackPanel>

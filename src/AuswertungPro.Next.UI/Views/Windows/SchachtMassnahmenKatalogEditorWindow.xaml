@@ -8,7 +8,7 @@
         Width="560" Height="520"
         MinWidth="440" MinHeight="360"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource BgBrush}">
+        Background="{DynamicResource BgBrush}">
 
     <Grid Margin="14">
         <Grid.RowDefinitions>
@@ -25,7 +25,7 @@
         <DataGrid x:Name="ZeilenGrid" ItemsSource="{Binding Zeilen}" SelectedItem="{Binding Selected, Mode=TwoWay}"
                   AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                   HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                  Background="Transparent" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                  Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Massnahme" Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" Width="*"/>
                 <DataGridTextColumn Header="Preis" Binding="{Binding Preis, UpdateSourceTrigger=LostFocus}" Width="90"/>

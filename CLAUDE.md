@@ -1011,7 +1011,7 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   in `ThemeHighContrast.xaml` steht oder in einer begruendeten, im Test selbst dokumentierten
   Ausschlussliste (Farbe TRAEGT dort Bedeutung: Success-/Warning-/Danger-Untergrund,
   Zustandsstufen, Markierungsfarben, Code-Gruppen, Video-Scrims). Der Scanner fand dabei
-  nebenbei einen ECHTEN, unabhaengigen Bug: **`SurfaceBrush` war in sechs XAML-Stellen
+  nebenbei einen ECHTEN, unabhaengigen Bug: **`SurfaceBrush` war in sieben XAML-Stellen
   referenziert (ExportPage, vier Dossier-Fenster), aber NIE definiert** — `DynamicResource` auf
   einen fehlenden Schluessel wirft nicht, laesst die Flaeche aber unsichtbar/durchsichtig statt
   zu werfen. Behoben (gleiche Farbe wie `CardBrush` in beiden Themes) und in die Ueberlagerung
@@ -1054,6 +1054,69 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   (echter XAML-Scanner), `WindowsThemeFollowPolicyTests`, `HighContrastFollowServiceTests`
   (kein WPF-Kindprozess noetig — `ThemeManager`s pack-URI ist seit diesem Fix von einer
   laufenden `Application` unabhaengig).
+- **Aufgabe 13, Fix-Runde 2 (29.09.2026, Re-Review).** IMPORTANT 2 war unvollstaendig, drei MINOR
+  Nacharbeiten.
+  **Der Scanner sah nur `Background="..."` als Attribut, nicht `<Setter Property="Background"
+  Value="..."/>` in einem `Style`/`ControlTemplate`.** `ThemeHighContrastCoverageTests` bekam
+  einen zweiten Fundweg: fuer jeden Background-`Setter` in einem `Style`/`ControlTemplate` mit
+  textfaehigem `TargetType` (Button, ListBoxItem, ...) wird der Foreground im selben Trigger-
+  Zustand bzw. dem Style-Grundzustand geprueft. Das fand echte, bis dahin uebersehene Faelle:
+  `RecordDetailsView.xaml`s `DataTrigger`-Paar `Background=SuccessSubtleBrush`/
+  `Foreground=SuccessTextBrush` und `Controls.xaml`s `BearbeitungErledigtKnopf`-Style. Per
+  Sabotageprobe belegt: Mit nur diesem zweiten Fundweg (erster Weg testweise abgeschaltet)
+  schlaegt der Test bei einem entfernten `SuccessSubtleBrush`-Eintrag weiterhin an.
+  **Die eigentliche Ursache: `SuccessTextBrush`/`WarningTextBrush`/`DangerTextBrush` werden in
+  `ThemeHighContrast.xaml` bereits auf `WindowText` gezwungen** (bewusst, siehe Runde 1) — ihr
+  Hintergrund `SuccessSubtleBrush`/`WarningSubtleBrush`/`DangerSubtleBrush` durfte deshalb NICHT
+  laenger in der Ausschlussliste stehen (Runde-1-Fehler: als traege er dieselbe unangetastete
+  Bedeutung wie z. B. `KiSubtleBrush`/`KiTextBrush` — dieses Paar bleibt zu Recht ausgenommen,
+  weil BEIDE Seiten unveraendert bleiben und deshalb weiterhin denselben, bereits geprueften
+  Kontrast wie ausserhalb von Hochkontrast haben). Jetzt auf `WindowColor` abgebildet, dazu
+  `AccentSubtleBrush` (war in Runde 1 bereits auf `ControlColor` gesetzt, aber `SchachtUebersichtPanel.xaml`
+  legt normalen `TextBrush`-Text direkt darauf — auf `WindowColor` vereinheitlicht) und
+  `InputWarmBrush`/`VsaInputHighlightBrush` (Eingabefelder wie `WarmTextBox`,
+  `ProtocolEntryEditorDialog.xaml`/`ObservationCatalogWindow.xaml` — dieselbe Flaeche, die eine
+  normale `TextBox` in Hochkontrast bekaeme).
+  **`ColorHeader`/`ColorWarning` sind rohe `Color`-Schluessel, keine Brush-Schluessel** — `Color`
+  ist kein Freezable/DependencyObject, ein `DynamicResource` kann deshalb NICHT als Inhalt eines
+  blossen `<Color x:Key="...">`-Ressourceneintrags stehen (anders als `SolidColorBrush.Color`,
+  das ueber die DependencyProperty-Vererbungskette dynamisch bindet — das war die Grundlage der
+  Runde-1-Loesung fuer `TextBrush` & Co.). `VsaCodeExplorerWindow.xaml` nutzte `ColorHeader` an
+  sechs Stellen ueber den Umweg `<Border.Background><SolidColorBrush Color="{DynamicResource
+  ColorHeader}"/></Border.Background>` — architektonisch bereinigt zu `Background="{DynamicResource
+  HeaderBrush}"` (HeaderBrush ist exakt derselbe Wert, bereits korrekt ueberlagert). Fuer
+  `ColorWarning` (ein 15-%-Opazitaets-Tupfer hinter dem „OPTIONAL"-Abzeichen) traegt die neue
+  `WarningTintBrush` (Theme.xaml/ThemeLight.xaml, Opazitaet in der Brush selbst statt am
+  Verwendungsort) jetzt die Farbe; in Hochkontrast ebenfalls auf `WindowColor`.
+  **Drei weitere Dateien konvertiert:** `RecordDetailsWindow.xaml`,
+  `SchachtMassnahmenKatalogEditorWindow.xaml`, `CostCatalogEditorDialog.xaml`,
+  `PositionTemplateEditorDialog.xaml`, `ProtocolEntryEditorDialog.xaml`,
+  `ObservationCatalogWindow.xaml`, `PlayerWindow.xaml`, `MeasureTemplateEditorWindow.xaml` (2 von
+  3 Stellen). **Eine Stelle bewusst NICHT konvertiert** (`MeasureTemplateEditorWindow.xaml`,
+  Wasserzeichen-Text „Suchen..." in einer `VisualBrush.Visual`): genau der von der Runde-1-
+  Warnung genannte Risikofall (Freezable-Teilbaum ohne die normale FrameworkElement-
+  Vererbungskette) — ohne echten WPF-Kindprozess-Test fuer dieses sehr kleine, rein kosmetische
+  Detail ist ein blinder Wechsel ein ungeprueftes Risiko. **Damit ist der Sweep jetzt vollstaendig
+  statt Stichprobe:** eine repo-weite Suche nach `StaticResource [A-Za-z0-9]*Brush` ausserhalb der
+  Theme-Definitionsdateien selbst findet nur noch diese eine dokumentierte Ausnahme; alle anderen
+  Treffer eines aehnlichen Musters sind Value-Converter (`ZkBrushConv`, `ZustandsklasseBrush`,
+  `CodeGroupBrush`), keine Theme-Farbtoken. `SettingsPage.xaml`s Kommentar „in allen offenen
+  Fenstern" ist jetzt GEPRUEFT statt behauptet (Kommentar nennt die eine Ausnahme).
+  **`PrimaryButton`** (`Theme.xaml`/`ThemeLight.xaml`) fror `ColorAccent` ueber
+  `<SolidColorBrush Color="{StaticResource ColorAccent}"/>` beim Laden ein — derselbe Fehler wie
+  bei `ColorHeader`, nur mit Brush statt rohem Color; ersetzt durch `Value="{DynamicResource
+  AccentBrush}"` (exakt derselbe Wert, kein Umweg).
+  **`SurfaceBrush` je Fundstelle geprueft** (sieben Stellen, nicht sechs — Runde-1-Zaehlfehler
+  korrigiert): ExportPage (2x, Pattern-Chips — Fuellung ist die offensichtlich beabsichtigte
+  Pillenoptik), drei Dossier-Listenpanels (Blaetterliste, Suchergebnisse, Kapitelkopf — normale
+  Panelflaechen) und zwei „Papier auf Arbeitsflaeche"-Stellen (`DossierPlanWindow`,
+  `DossierPreviewWindow`): dort ist die eigentliche Papierseite ein separates inneres `Border`
+  mit fest codiertem `Background="White"` (Schatten-Effekt, eigene Flaeche) — `SurfaceBrush`
+  faerbt nur die umgebende Bildlauf-Arbeitsflaeche dahinter, das ist die beabsichtigte
+  "Blatt auf farbigem Untergrund"-Optik, keine Regression. Keine der sieben Stellen musste auf
+  `Transparent` zurueckgesetzt werden.
+  Tests: `ThemeHighContrastCoverageTests` (zweiter Scan-Weg, per Sabotageprobe gegen echten
+  Bug belegt), Build 0/0, `AuswertungPro.Next.UI.Tests` erneut vollstaendig gruen.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

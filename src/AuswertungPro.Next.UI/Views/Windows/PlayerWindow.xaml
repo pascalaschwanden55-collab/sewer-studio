@@ -72,7 +72,7 @@
                                     <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource SurfaceSubtleBrush}"/>
+                                    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

@@ -89,6 +89,9 @@
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ColorDanger}"/>
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
     <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource ColorInfo}"/>
+    <!-- Fix-Runde 2 (Aufgabe 13, 29.09.2026): siehe Kommentar in Theme.xaml - roher Color-Schluessel
+         durch eine ueberlagerbare Brush ersetzt. -->
+    <SolidColorBrush x:Key="WarningTintBrush" Color="{StaticResource ColorWarning}" Opacity="0.15"/>
 
     <!-- Textfarben sind von den kraeftigeren Flaechenfarben getrennt. -->
     <SolidColorBrush x:Key="SuccessTextBrush" Color="#FF15803D"/>
@@ -365,11 +368,9 @@
 
     <!-- Primary Button — Blue filled -->
     <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-        <Setter Property="Background">
-            <Setter.Value>
-                <SolidColorBrush Color="{StaticResource ColorAccent}"/>
-            </Setter.Value>
-        </Setter>
+        <!-- Fix-Runde 2: siehe Kommentar in Theme.xaml - StaticResource-Snapshot durch das normale
+             DynamicResource-Token AccentBrush ersetzt (exakt derselbe Wert). -->
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontWeight" Value="SemiBold"/>

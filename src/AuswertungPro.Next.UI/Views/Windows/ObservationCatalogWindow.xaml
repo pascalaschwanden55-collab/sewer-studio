@@ -213,7 +213,7 @@
                                     </Border>
                                 </StackPanel>
 
-                                <TextBlock Text="{Binding UnitSuffix}" Foreground="{StaticResource MutedBrush}" />
+                                <TextBlock Text="{Binding UnitSuffix}" Foreground="{DynamicResource MutedBrush}" />
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
