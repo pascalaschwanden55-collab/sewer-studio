@@ -881,7 +881,12 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   genau feuert ist nicht belegt, deshalb beide) und wendet bei aktiver "System"-Wahl sofort neu
   an; da dieses Ereignis nicht sicher auf dem UI-Thread feuert, marshallt es ueber den
   uebergebenen `Dispatcher` (`Dispatcher.Invoke`, wie das bestehende
-  `ThemeManager.ThemeChanged`-Abonnement in `HydraulikPanelWindow`).
+  `ThemeManager.ThemeChanged`-Abonnement in `HydraulikPanelWindow`). **Die Entscheidung selbst
+  steckt in `WindowsThemeFollowPolicy.SollNeuAnwenden`** (reine, ohne SystemEvents/Dispatcher
+  testbare Funktion, Fix-Runde 1): relevante Kategorie? Wahl = "System"? UND das aufgeloeste
+  Theme WEICHT vom aktuell angewendeten ab (`ThemeManager.CurrentTheme`) — bei einer
+  Windows-Einstellung, die Hell/Dunkel gar nicht betrifft (z. B. nur die Akzentfarbe), wird nicht
+  neu gezeichnet.
   **Ein Weg statt zwei:** Der fruehere Hell/Dunkel-Umschalter (`IsDarkTheme`, bi-state) samt
   eigenem "Anwenden"-Knopf und `SettingsThemeWorkflow.SyncUiThemeChanged`/
   `SyncIsDarkThemeChanged` ist entfernt — ein bi-state-Umschalter kann keine drei Zustaende
@@ -925,9 +930,16 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `LoadLibraryEx(..., LOAD_LIBRARY_AS_DATAFILE)` + `FindResource(RT_MANIFEST)` (keine Ausfuehrung
   des Programms): Der .NET-SDK-Standardweg bettet ohne `app.manifest` nur ein leeres
   Platzhaltermanifest ein. Neues `src/AuswertungPro.Next.UI/app.manifest`
-  (`<dpiAwareness>PerMonitorV2</dpiAwareness>` + `dpiAware=true/PM` + `gdiScaling=true`,
-  Windows-10/11-`supportedOS`) + `<ApplicationManifest>app.manifest</ApplicationManifest>` im
-  csproj; nach dem Build zeigt derselbe Auslesevorgang das Element korrekt eingebettet.
+  (`<dpiAwareness>PerMonitorV2</dpiAwareness>` + `dpiAware=true/PM`, Windows-10/11-`supportedOS`;
+  `gdiScaling` bewusst NICHT gesetzt — skaliert nur klassisches GDI-Rendering mit, SewerStudio hat
+  keine einzige `System.Drawing`-/WinForms-Stelle, siehe Fix-Runde 1) +
+  `<ApplicationManifest>app.manifest</ApplicationManifest>` im csproj; nach dem Build zeigt
+  derselbe Auslesevorgang das Element korrekt eingebettet. Fix-Runde 1 hat das zusaetzlich zur
+  Laufzeit bewiesen (nicht nur am Manifest-Byte-Inhalt): ein eigenstaendiges Test-EXE mit
+  demselben `app.manifest` meldet per `GetThreadDpiAwarenessContext`/
+  `AreDpiAwarenessContextsEqual` echtes `DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2`; dieselbe
+  EXE ohne das Manifest meldet `Unaware` — Gegenprobe bestanden. Das echte `SewerStudio.exe` wird
+  dafuer nie gestartet.
   **Taskleistenfortschritt:** `ITaskbarFortschritt` (`UI/Services`, 175. ServiceProvider-
   Registrierung) mit vier Methoden (`SetzeFortschritt(0..1)`, `SetzeUnbestimmt`, `Fehler` =
   roter Zustand, `Beenden`). `TaskbarFortschritt` traegt `Window.TaskbarItemInfo` erst bei
@@ -937,9 +949,9 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   Taskbar` ist wie `Dialogs` `{ get; internal set; }` mit Feldinitialisierer, damit Tests einen
   Fake einsetzen koennen (`new ServiceProvider(...) { Taskbar = fake }`). Angebunden: Vollsicherung
   (`SettingsFullBackupWorkflowRequest.Taskbar`, optional; unbestimmt waehrend der Groessenanalyse,
-  dann Fortschritt aus dem Kopiervorgang; bei Fehlschlag/Ausnahme `Fehler()` OHNE anschliessendes
-  `Beenden()` — der rote Zustand bleibt sichtbar stehen, sonst saehe der Benutzer den
-  Fehlschlag am Symbol nicht mehr; bei Erfolg/Abbruch `Beenden()`), Ein-Knopf-Import
+  dann Fortschritt aus dem Kopiervorgang; bei Fehlschlag/Ausnahme `Fehler()`, dann — NACH dem
+  Fehlerdialog, den der Benutzer noch mit rotem Symbol sehen soll — `Beenden()`, siehe
+  Fix-Runde 1; bei Erfolg/Abbruch sofort `Beenden()`), Ein-Knopf-Import
   (`ImportPageViewModel`: `AktualisiereTaskbarFortschritt()` liest `IsImportInProgress`/
   `ImportIsIndeterminate`/`ImportProgressPercent` bei JEDEM der drei zugehoerigen
   `OnXChanged`-Ereignisse frisch neu, statt Werte durchzureichen — die drei Ereignisse koennen in
@@ -956,6 +968,92 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `ImportPageViewModelTaskbarTests`. `ProjektEroeffnungSettingsGuardTests.
   SettingsPageViewModel_delegates_theme_workflow` ist an die neue Architektur angepasst
   (`Sync*`-Methoden existieren nicht mehr).
+- **Aufgabe 13, Fix-Runde 1 (29.09.2026, Coordinator-Rueckmeldung).** Acht Befunde behoben.
+  **CRITICAL — Taskleiste liess jede echte Datensicherung scheitern:** Der
+  Fortschritts-Callback von `FullBackupService.RunAsync` laeuft in `Task.Run` auf einem
+  Threadpool-Thread (kein `System.Progress<T>` mit eigenem Marshalling); `TaskbarFortschritt`
+  griff dort direkt auf `Window.TaskbarItemInfo` zu -> `InvalidOperationException` -> vom
+  `catch` als Sicherungsfehlschlag gewertet, der ganze Lauf rollte zurueck (real reproduziert).
+  `TaskbarFortschritt.Anwenden` marshallt jetzt selbst (`Application.Current?.Dispatcher`,
+  `CheckAccess`/`BeginInvoke` — NIE `Invoke`, ein Anzeige-Aufruf darf einen Hintergrundthread
+  nie blockieren) und faengt JEDE Ausnahme intern ab (`BestEffort.ReportWarning`, nie werfen).
+  Zusaetzliche Verteidigungslinie in `SettingsFullBackupWorkflow.SicherTaskbar`: jeder
+  `taskbar?.X()`-Aufruf ist einzeln try/catch-geschuetzt, unabhaengig davon, welche
+  `ITaskbarFortschritt`-Implementierung injiziert wurde. Import und Videoanalyse-Fenster
+  geprueft: beide konstruieren ihr `System.Progress<T>` auf dem UI-Thread (Button-Klick-Handler)
+  und sind dadurch bereits von Haus aus threadsicher; `TaskbarFortschritt`s eigener Schutz greift
+  dort zusaetzlich, aendert aber nichts am bestehenden Verhalten.
+  Beweis mit der ECHTEN Klasse (nicht nur einem Fake): `TaskbarFortschrittThreadSafetyIsolatedSmokeTests`
+  (echter WPF-Kindprozess) startet einen echten `Thread`, ruft `SetzeFortschritt` auf, prueft
+  dass der Aufruf sofort zurueckkehrt (kein blockierendes `Invoke`) und keine Ausnahme wirft,
+  pumpt den UI-Dispatcher (`Dispatcher.PushFrame`, `StaTestRunner` pumpt selbst nicht) und
+  prueft danach den tatsaechlich gesetzten `TaskbarItemInfo`-Zustand.
+  **Roter Zustand bleibt bis zur Bestaetigung, dann zurueckgesetzt:** `Fehler()` steht VOR dem
+  Fehlerdialog (der Benutzer soll den Fehlschlag am Symbol sehen), `Beenden()` NACH dem Dialog
+  (modal/blockierend) — nicht mehr dauerhaft rot. Bewiesen ueber eine GETEILTE Ereignisliste
+  zwischen `FakeTaskbarFortschritt` und dem Dialog-Fake (`fehler` -> `dialog:error` ->
+  `beenden`), nicht nur ueber die letzte Zeile.
+  **Abbruch ist kein Fehler:** `VideoAnalysisPipelineWindow` setzt bei `OperationCanceledException`
+  weiterhin `Vm.HasError=true` (die BESTEHENDE Fehlerbanner-Anzeige bleibt unveraendert), aber ein
+  neues privates `_abgebrochen`-Flag (VOR `Vm.SetError("Abgebrochen.")` gesetzt) laesst die
+  Taskleiste in diesem Fall `Beenden()` statt `Fehler()` zeigen.
+  **Hochkontrast deckt jetzt auch Hintergrundflaechen ab.** `BgBrush` (Hauptfenster-Hintergrund,
+  im normalen Theme ein `LinearGradientBrush` — Farbverlaeufe widersprechen Hochkontrast, hier
+  bewusst flach auf `WindowColor`), `SurfaceSubtleBrush`, `HoverBrush`, `RowHoverBrush`,
+  `OverlayBrush`, `NavPanelBrush` sind ergaenzt (alle per XAML-Fundstelle verifiziert: Text
+  sitzt direkt darauf, z. B. "Strg K"-Chip auf `SurfaceSubtleBrush`, Navigationstext auf
+  `NavPanelBrush`, "Bitte zuerst ein Projekt speichern" auf `OverlayBrush`).
+  **`ThemeHighContrastCoverageTests` ist ein echter Scanner, keine Behauptung:** parst ALLE
+  XAML-Dateien (`XDocument`), sammelt jedes `Background="{DynamicResource XBrush}"`, auf dem
+  direkt (nicht hinter einer eigenen verschachtelten Flaeche) normaler Text sitzt (Foreground
+  Text/TextSecondary/Header/Muted/Faint ODER ein `TextBlock`/`TextBox`/`Run`/`AccessText`/
+  `Label` ohne eigene Foreground-Angabe), und verlangt, dass jeder gefundene Schluessel entweder
+  in `ThemeHighContrast.xaml` steht oder in einer begruendeten, im Test selbst dokumentierten
+  Ausschlussliste (Farbe TRAEGT dort Bedeutung: Success-/Warning-/Danger-Untergrund,
+  Zustandsstufen, Markierungsfarben, Code-Gruppen, Video-Scrims). Der Scanner fand dabei
+  nebenbei einen ECHTEN, unabhaengigen Bug: **`SurfaceBrush` war in sechs XAML-Stellen
+  referenziert (ExportPage, vier Dossier-Fenster), aber NIE definiert** — `DynamicResource` auf
+  einen fehlenden Schluessel wirft nicht, laesst die Flaeche aber unsichtbar/durchsichtig statt
+  zu werfen. Behoben (gleiche Farbe wie `CardBrush` in beiden Themes) und in die Ueberlagerung
+  aufgenommen.
+  **`ThemeManager.ComponentUri` braucht zwei zusaetzliche einmalige Registrierungen**, damit
+  `pack://application:,,,/...`-URIs auch OHNE je instanziierte `System.Windows.Application`
+  funktionieren (real in einem isolierten Testlauf aufgetreten): `PackUriHelper.UriSchemePack`
+  lesen (registriert das "pack:"-Schema beim generischen .NET-Uri-Parser — ohne das wirft
+  `new Uri("pack://application:,,,/...")` faelschlich "Invalid port specified", das Komma-Tripel
+  sieht dem Parser wie ein Portanteil aus) und `Application.Current` lesen (blosses Lesen der
+  statischen Eigenschaft, KEIN neues Application-Objekt, `Current` bleibt `null` — registriert
+  den WebRequest-Praefix fuer "pack", den `ResourceDictionary.Source` beim tatsaechlichen Laden
+  braucht, sonst "The URI prefix is not recognized."). Beide stehen jetzt im statischen
+  Konstruktor von `ThemeManager`. Achtung Namenskollision: `ThemeManager.System` (die
+  Design-Konstante) verdeckt den Namespace `System` innerhalb der Klasse — deshalb
+  `global::System....` statt `System....`.
+  **StaticResource friert Theme-Farben beim Laden ein, DynamicResource nicht:** Fuenf Dateien mit
+  ~150 `{StaticResource *Brush}`-Stellen liessen ein bereits offenes Fenster beim Design-Wechsel
+  farblich zurueck (die urspruengliche Behauptung "kein Neustart noetig" war fuer diese Dateien
+  falsch). Mechanisch auf `DynamicResource` umgestellt (nur Farb-/Brush-Token, Styles/Konverter/
+  Templates blieben `StaticResource`): `Views/Controls/RecordDetailsView.xaml` (lebt in den
+  Datenseiten, dauerhaft offen), `Views/Windows/VsaCodeExplorerWindow.xaml`,
+  `SanierungsmassnahmenWindow.xaml`, `SchachtMassnahmenWindow.xaml`, `ImportPreviewWindow.xaml`.
+  Keine `DataGridColumn`-Direktattribute betroffen (gezielt geprueft — dort haette
+  `DynamicResource` ohne Vererbungskontext nicht zuverlaessig aktualisiert). **Diese fuenf
+  Dateien sind eine gezielte Stichprobe, kein vollstaendiger Codebase-Sweep** — andere
+  `StaticResource`-Farbstellen ausserhalb dieser fuenf Dateien wurden in dieser Runde nicht
+  systematisch gesucht.
+  **DPI:** `gdiScaling` aus dem Manifest entfernt (skaliert nur klassisches GDI-Rendering,
+  SewerStudio hat keine `System.Drawing`-/WinForms-Stelle — unbelegter Schalter). Zusaetzlich
+  zur statischen Manifest-Pruefung jetzt ein echter LAUFZEIT-Beleg: ein eigenstaendiges,
+  minimales Test-EXE mit demselben `app.manifest` meldet per
+  `GetThreadDpiAwarenessContext`/`AreDpiAwarenessContextsEqual` echtes
+  `DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2`; dieselbe EXE ohne das Manifest meldet
+  `Unaware` (Gegenprobe). Das echte `SewerStudio.exe` wurde dafuer nie gestartet.
+  Tests: `TaskbarFortschrittThreadSafetyIsolatedSmokeTests`, vier neue Faelle in
+  `SettingsFullBackupWorkflowTests` (inkl. `ThrowingTaskbarFortschritt` — die Sicherung
+  schliesst erfolgreich ab, selbst wenn die Taskleiste bei JEDEM Aufruf wirft),
+  `PipelineCompletionWindowTests.Kindprozess_prueft_Abbruch`, `ThemeHighContrastCoverageTests`
+  (echter XAML-Scanner), `WindowsThemeFollowPolicyTests`, `HighContrastFollowServiceTests`
+  (kein WPF-Kindprozess noetig — `ThemeManager`s pack-URI ist seit diesem Fix von einer
+  laufenden `Application` unabhaengig).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

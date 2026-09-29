@@ -43,9 +43,8 @@ public sealed class SettingsThemeWorkflowTests
     {
         // "System" ist keine ladbare Ressource - gespeichert wird trotzdem "System" (Aufgabe 13:
         // die Wahl "Wie Windows" muss den Neustart der App ueberleben), angewendet wird das
-        // aufgeloeste Theme. Ohne echten Registry-Zugriff loest ResolveEffectiveTheme "System"
-        // hier auf den Standard (Light) auf, weil kein Leser injiziert wurde - das ist nicht Teil
-        // dieses Tests (siehe ThemeManagerResolveEffectiveThemeTests), nur dass "System" GESPEICHERT bleibt.
+        // aufgeloeste Theme. Fix-Runde 1, MINOR 7: ein injizierter Leser statt des echten
+        // Registry-Zugriffs macht das aufgeloeste Theme deterministisch pruefbar.
         var settings = new AppSettings { UiTheme = ThemeManager.Dark };
         var calls = new List<string>();
 
@@ -53,10 +52,27 @@ public sealed class SettingsThemeWorkflowTests
             settings,
             ThemeManager.System,
             saveSettingsImmediate: () => calls.Add("save"),
-            applyToResources: theme => calls.Add("apply:" + theme));
+            applyToResources: theme => calls.Add("apply:" + theme),
+            readWindowsAppsUseLightTheme: () => 0); // AppsUseLightTheme=0 -> Dunkel
 
         Assert.Equal(ThemeManager.System, settings.UiTheme);
-        Assert.Equal("save", calls[0]);
-        Assert.StartsWith("apply:", calls[1]);
+        Assert.Equal(["save", "apply:Dark"], calls);
+    }
+
+    [Fact]
+    public void ApplyTheme_system_resolves_to_light_when_the_registry_says_so()
+    {
+        var settings = new AppSettings { UiTheme = ThemeManager.Light };
+        var calls = new List<string>();
+
+        SettingsThemeWorkflow.ApplyTheme(
+            settings,
+            ThemeManager.System,
+            saveSettingsImmediate: () => calls.Add("save"),
+            applyToResources: theme => calls.Add("apply:" + theme),
+            readWindowsAppsUseLightTheme: () => 1); // AppsUseLightTheme=1 -> Hell
+
+        Assert.Equal(ThemeManager.System, settings.UiTheme);
+        Assert.Equal(["save", "apply:Light"], calls);
     }
 }

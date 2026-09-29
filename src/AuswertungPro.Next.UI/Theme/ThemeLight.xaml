@@ -57,6 +57,10 @@
     <!-- ── SOLID BRUSHES ── -->
     <SolidColorBrush x:Key="BgLightBrush" Color="{StaticResource ColorBgLight}"/>
     <SolidColorBrush x:Key="CardBrush" Color="{StaticResource ColorCard}"/>
+    <!-- Fix-Runde 1 (Aufgabe 13, 29.09.2026): siehe Kommentar in Theme.xaml - "SurfaceBrush"
+         war eine tote Referenz (fehlender Schluessel, DynamicResource liess die Flaeche einfach
+         unsichtbar). Vom automatisierten Hochkontrast-Abdeckungstest gefunden. -->
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource ColorCard}"/>
     <SolidColorBrush x:Key="CardGlassBrush" Color="{StaticResource ColorCardGlass}"/>
     <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource ColorBorder}"/>
     <SolidColorBrush x:Key="HeaderBrush" Color="{StaticResource ColorHeader}"/>

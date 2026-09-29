@@ -256,8 +256,12 @@ public sealed class SettingsFullBackupWorkflowTests
     }
 
     [Fact]
-    public async Task RunAsync_failed_result_sets_taskbar_to_error_and_does_not_reset()
+    public async Task RunAsync_failed_result_shows_error_while_the_dialog_is_open_then_resets()
     {
+        // Fix-Runde 1, MINOR 4: der rote Zustand bleibt sichtbar, WAEHREND der Fehlerdialog
+        // offen ist (der Benutzer soll den Fehlschlag am Symbol bemerken); erst NACH dem
+        // Wegklicken wird zurueckgesetzt. Ein geteilter Ereignisprotokoll beweist die Reihenfolge
+        // ueber Taskleiste UND Dialog hinweg.
         var backup = new FullBackupFake
         {
             AnalyzeReport = Report(),
@@ -272,33 +276,34 @@ public sealed class SettingsFullBackupWorkflowTests
                 SkippedFiles: [],
                 Duration: TimeSpan.Zero)
         };
-        var dialogs = new DialogFake { SelectedFolder = @"E:\Backup", ConfirmResult = true };
-        var taskbar = new FakeTaskbarFortschritt();
+        var ereignisse = new List<string>();
+        var dialogs = new DialogFake { SelectedFolder = @"E:\Backup", ConfirmResult = true, GeteilteAufrufe = ereignisse };
+        var taskbar = new FakeTaskbarFortschritt(ereignisse);
 
         await SettingsFullBackupWorkflow.RunAsync(
             Request(new AppSettings(), backup, dialogs, new ToastFake(), new FullBackupOperationState(),
                 new List<string>(), DateTime.UtcNow, taskbar: taskbar),
             CancellationToken.None);
 
-        // Der rote Fehlerzustand bleibt sichtbar stehen - kein "beenden" danach, sonst wuerde
-        // der Benutzer den Fehlschlag am Symbol nicht mehr sehen.
-        Assert.Equal("fehler", taskbar.Aufrufe[^1]);
-        Assert.DoesNotContain("beenden", taskbar.Aufrufe);
+        var relevante = ereignisse.Where(e => e is "fehler" or "dialog:error" or "beenden").ToArray();
+        Assert.Equal(new[] { "fehler", "dialog:error", "beenden" }, relevante);
     }
 
     [Fact]
-    public async Task RunAsync_exception_sets_taskbar_to_error()
+    public async Task RunAsync_exception_shows_error_while_the_dialog_is_open_then_resets()
     {
         var backup = new FullBackupFake { AnalyzeReport = Report() };
-        var dialogs = new ThrowingConfirmDialogFake { SelectedFolder = @"E:\Backup" };
-        var taskbar = new FakeTaskbarFortschritt();
+        var ereignisse = new List<string>();
+        var dialogs = new ThrowingConfirmDialogFake { SelectedFolder = @"E:\Backup", GeteilteAufrufe = ereignisse };
+        var taskbar = new FakeTaskbarFortschritt(ereignisse);
 
         await SettingsFullBackupWorkflow.RunAsync(
             Request(new AppSettings(), backup, dialogs, new ToastFake(), new FullBackupOperationState(),
                 new List<string>(), DateTime.UtcNow, taskbar: taskbar),
             CancellationToken.None);
 
-        Assert.Equal("fehler", taskbar.Aufrufe[^1]);
+        var relevante = ereignisse.Where(e => e is "fehler" or "dialog:error" or "beenden").ToArray();
+        Assert.Equal(new[] { "fehler", "dialog:error", "beenden" }, relevante);
     }
 
     [Fact]
@@ -313,6 +318,40 @@ public sealed class SettingsFullBackupWorkflowTests
             CancellationToken.None);
 
         Assert.Empty(taskbar.Aufrufe);
+    }
+
+    [Fact]
+    public async Task RunAsync_succeeds_even_when_the_injected_taskbar_throws_on_every_call()
+    {
+        // CRITICAL 1, Fix-Runde 1: eine Anzeige darf einen Sicherungslauf NIE zum Scheitern
+        // bringen - auch nicht, wenn die injizierte ITaskbarFortschritt-Implementierung (egal
+        // welche) bei jedem Aufruf wirft. Die Sicherung selbst muss trotzdem erfolgreich
+        // abschliessen.
+        var settings = new AppSettings();
+        var backup = new FullBackupFake
+        {
+            AnalyzeReport = Report(),
+            RunResult = new FullBackupResult(
+                Success: true,
+                Error: null,
+                TargetRoot: @"E:\Backup",
+                TotalBytes: 10,
+                FilesCopied: 1,
+                FilesUnchanged: 0,
+                FilesDeleted: 0,
+                SkippedFiles: [],
+                Duration: TimeSpan.FromSeconds(1))
+        };
+        var dialogs = new DialogFake { SelectedFolder = @"E:\Backup", ConfirmResult = true };
+        var toasts = new ToastFake();
+
+        await SettingsFullBackupWorkflow.RunAsync(
+            Request(settings, backup, dialogs, toasts, new FullBackupOperationState(),
+                new List<string>(), DateTime.UtcNow, taskbar: new ThrowingTaskbarFortschritt()),
+            CancellationToken.None);
+
+        Assert.Equal(@"E:\Backup", settings.LastFullBackupPath);
+        Assert.Equal(["success:Datensicherung abgeschlossen."], toasts.Messages);
     }
 
     private static SettingsFullBackupWorkflowRequest Request(
@@ -387,6 +426,10 @@ public sealed class SettingsFullBackupWorkflowTests
         public List<string> Errors { get; } = new();
         public List<string> Warnings { get; } = new();
 
+        /// <summary>Optional: dieselbe geteilte Liste wie ein FakeTaskbarFortschritt, um die
+        /// Reihenfolge "rot -> Dialog -> zurueckgesetzt" (MINOR 4) zu beweisen.</summary>
+        public List<string>? GeteilteAufrufe { get; set; }
+
         public string? OpenFile(string title, string filter, string? initialDirectory = null) => null;
         public string? SaveFile(string title, string filter, string? defaultExt = null, string? defaultFileName = null) => null;
         public string[] OpenFiles(string title, string filter) => [];
@@ -398,7 +441,11 @@ public sealed class SettingsFullBackupWorkflowTests
 
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") => Warnings.Add(message);
-        public void Error(string message, string title = "Fehler") => Errors.Add(message);
+        public void Error(string message, string title = "Fehler")
+        {
+            Errors.Add(message);
+            GeteilteAufrufe?.Add("dialog:error");
+        }
         public bool Confirm(string message, string title = "Bestätigung") => ConfirmResult;
         public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
         public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Cancel;
@@ -409,6 +456,7 @@ public sealed class SettingsFullBackupWorkflowTests
     private sealed class ThrowingConfirmDialogFake : IDialogService
     {
         public string? SelectedFolder { get; set; }
+        public List<string>? GeteilteAufrufe { get; set; }
 
         public string? OpenFile(string title, string filter, string? initialDirectory = null) => null;
         public string? SaveFile(string title, string filter, string? defaultExt = null, string? defaultFileName = null) => null;
@@ -416,11 +464,22 @@ public sealed class SettingsFullBackupWorkflowTests
         public string? SelectFolder(string title, string? initialPath = null) => SelectedFolder;
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") { }
-        public void Error(string message, string title = "Fehler") { }
+        public void Error(string message, string title = "Fehler") => GeteilteAufrufe?.Add("dialog:error");
         public bool Confirm(string message, string title = "Bestätigung")
             => throw new InvalidOperationException("Absichtlich fuer den Test.");
         public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
         public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Cancel;
+    }
+
+    /// <summary>CRITICAL 1, Fix-Runde 1: wirft bei JEDEM Aufruf, um zu beweisen, dass der
+    /// Sicherungslauf trotzdem erfolgreich durchlaeuft (SicherTaskbar in
+    /// SettingsFullBackupWorkflow faengt das ab).</summary>
+    private sealed class ThrowingTaskbarFortschritt : ITaskbarFortschritt
+    {
+        public void SetzeFortschritt(double anteil) => throw new InvalidOperationException("Absichtlich fuer den Test.");
+        public void SetzeUnbestimmt() => throw new InvalidOperationException("Absichtlich fuer den Test.");
+        public void Fehler() => throw new InvalidOperationException("Absichtlich fuer den Test.");
+        public void Beenden() => throw new InvalidOperationException("Absichtlich fuer den Test.");
     }
 
     private sealed class ToastFake : IToastService

@@ -299,8 +299,8 @@
                 <Style TargetType="Border">
                     <Setter Property="Margin" Value="0,0,0,14"/>
                     <Setter Property="Padding" Value="18,16"/>
-                    <Setter Property="Background" Value="{StaticResource HeaderBrush}"/>
-                    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                    <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                     <Setter Property="BorderThickness" Value="1"/>
                     <Setter Property="CornerRadius" Value="12"/>
                     <Style.Triggers>
@@ -348,7 +348,7 @@
                 </StackPanel>
                 <StackPanel>
                 <TextBlock Text="{Binding Header, ElementName=Root}"
-                           FontWeight="SemiBold" Foreground="{StaticResource TextBrush}">
+                           FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="FontSize" Value="{DynamicResource TextDisplay}"/>
@@ -361,7 +361,7 @@
                     </TextBlock.Style>
                 </TextBlock>
                 <TextBlock Text="{Binding SubHeader, ElementName=Root}"
-                           Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap">
+                           Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Margin" Value="0,6,0,0"/>
@@ -403,8 +403,8 @@
                                 <Style TargetType="Border">
                                     <Setter Property="Margin" Value="0,0,0,16"/>
                                     <Setter Property="Padding" Value="16"/>
-                                    <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-                                    <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                                    <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
                                     <Setter Property="BorderThickness" Value="1"/>
                                     <Setter Property="CornerRadius" Value="12"/>
                                     <Style.Triggers>
@@ -419,7 +419,7 @@
                             </Border.Style>
                             <StackPanel>
                                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
-                                           Foreground="{StaticResource TextBrush}"
+                                           Foreground="{DynamicResource TextBrush}"
                                            PreviewMouseLeftButtonDown="ColumnHandle_PreviewMouseLeftButtonDown"
                                            PreviewMouseMove="ColumnHandle_PreviewMouseMove">
                                     <TextBlock.Style>
@@ -441,7 +441,7 @@
                                     </TextBlock.Style>
                                 </TextBlock>
                                 <TextBlock Text="{Binding Description}"
-                                           Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap">
+                                           Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Margin" Value="0,4,0,12"/>
@@ -526,7 +526,7 @@
                                                             Visibility="{Binding IsCustomizing, RelativeSource={RelativeSource AncestorType={x:Type local:RecordDetailsView}}, Converter={StaticResource BoolToVis}}">
                                                         <ui:FluentIcon Glyph="&#xE711;" FontSize="{DynamicResource TextXS}"/>
                                                     </Button>
-                                                    <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextSecondaryBrush}"
+                                                    <TextBlock Text="{Binding Label}" Foreground="{DynamicResource TextSecondaryBrush}"
                                                                FontWeight="SemiBold" TextWrapping="Wrap"
                                                                PreviewMouseLeftButtonDown="FieldHandle_PreviewMouseLeftButtonDown"
                                                                PreviewMouseMove="FieldHandle_PreviewMouseMove">
@@ -595,9 +595,9 @@
                 Visibility="{Binding IsCustomizing, ElementName=Root, Converter={StaticResource BoolToVis}}">
             <StackPanel>
                 <TextBlock Text="Ausgeblendete Felder" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
                 <TextBlock Text="Nichts ausgeblendet." FontSize="{DynamicResource TextXS}" Margin="0,4,0,0"
-                           Foreground="{StaticResource TextSecondaryBrush}">
+                           Foreground="{DynamicResource TextSecondaryBrush}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Visibility" Value="Collapsed"/>

@@ -41,12 +41,12 @@
 
                     <!-- CARD 1: Haltungskontext -->
                     <Border Margin="0,0,0,10" Padding="12,10"
-                            BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
-                            Background="{StaticResource CardBrush}" CornerRadius="{DynamicResource RadiusL}">
+                            BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                            Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusL}">
                         <StackPanel>
                             <TextBlock Text="HALTUNGSKONTEXT"
                                        FontSize="{DynamicResource TextXS}" FontWeight="Bold"
-                                       Foreground="{StaticResource AccentBrush}"
+                                       Foreground="{DynamicResource AccentBrush}"
                                        Margin="0,0,0,8"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -60,34 +60,34 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="DN:"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,4"/>
                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Dn}"
-                                           Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
+                                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Material:"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,4"/>
                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Material}"
-                                           Foreground="{StaticResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                           Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Länge:"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,4"/>
                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Laenge}"
-                                           Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
+                                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="Zustandsklasse:"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,0"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0"/>
                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Zustandsklasse}"
-                                           Foreground="{StaticResource TextBrush}" FontWeight="SemiBold"/>
+                                           Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold"/>
                             </Grid>
                         </StackPanel>
                     </Border>
 
                     <!-- CARD 2: Regelbasierte Empfehlung -->
                     <Border Margin="0,0,0,10" Padding="12,10"
-                            BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
-                            Background="{StaticResource CardBrush}" CornerRadius="{DynamicResource RadiusL}"
+                            BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                            Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusL}"
                             Visibility="{Binding HasAi, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="REGELBASIERTE EMPFEHLUNG"
                                        FontSize="{DynamicResource TextXS}" FontWeight="Bold"
-                                       Foreground="{StaticResource AccentBrush}"
+                                       Foreground="{DynamicResource AccentBrush}"
                                        Margin="0,0,0,8"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -99,13 +99,13 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Massnahmen:"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,4"/>
                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding OptimizationVm.RuleMeasures}"
-                                           Foreground="{StaticResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                           Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Gesch. Kosten:"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,0"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0"/>
                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding OptimizationVm.RuleEstimatedCost}"
-                                           Foreground="{StaticResource TextBrush}"/>
+                                           Foreground="{DynamicResource TextBrush}"/>
                             </Grid>
                             <Button Command="{Binding ApplyRuleToCalcCommand}"
                                     Height="28" Margin="0,8,0,0"
@@ -121,15 +121,15 @@
 
                     <!-- CARD 3: KI-Optimierung -->
                     <Border Margin="0,0,0,10" Padding="12,10"
-                            BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
-                            Background="{StaticResource CardBrush}" CornerRadius="{DynamicResource RadiusL}"
+                            BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                            Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusL}"
                             Visibility="{Binding HasAi, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel Margin="0,0,0,8">
                                 <TextBlock DockPanel.Dock="Left"
                                            Text="KI-OPTIMIERUNG"
                                            FontSize="{DynamicResource TextXS}" FontWeight="Bold"
-                                           Foreground="{StaticResource AccentBrush}"
+                                           Foreground="{DynamicResource AccentBrush}"
                                            VerticalAlignment="Center"/>
                                 <Button DockPanel.Dock="Right"
                                         Content="Optimieren"
@@ -140,7 +140,7 @@
                             </DockPanel>
 
                             <TextBlock Text="{Binding OptimizationVm.StatusText}"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
                                        FontSize="{DynamicResource TextXS}" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
                             <!-- AI Result (visible when HasResult) -->
@@ -168,13 +168,13 @@
                                 </Grid.ColumnDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Empfehlung:"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,6"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,6"/>
                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding OptimizationVm.AiMeasure}"
-                                           Foreground="{StaticResource TextBrush}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold"
                                            TextWrapping="Wrap" Margin="0,0,0,6"/>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Konfidenz:"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,6"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,6"
                                            VerticalAlignment="Center"/>
                                 <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,6">
                                     <ProgressBar Style="{StaticResource ProgressBarStandard}" Value="{Binding OptimizationVm.AiConfidence, Mode=OneWay}"
@@ -182,29 +182,29 @@
                                                  Width="120"
                                                  VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <TextBlock Text="{Binding OptimizationVm.AiConfidence, StringFormat=P0}"
-                                               Foreground="{StaticResource TextBrush}"
+                                               Foreground="{DynamicResource TextBrush}"
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
 
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Kosten:"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,6"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,6"/>
                                 <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,0,0,6"
-                                           Foreground="{StaticResource TextBrush}" TextWrapping="Wrap" FontSize="{DynamicResource TextXS}">
+                                           Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" FontSize="{DynamicResource TextXS}">
                                     <Run Text="Min "/>
                                     <Run Text="{Binding OptimizationVm.CostMin, Mode=OneWay}" FontWeight="SemiBold"/>
                                     <Run Text=" | Erw. "/>
                                     <Run Text="{Binding OptimizationVm.CostExpected, Mode=OneWay}" FontWeight="Bold"
-                                         Foreground="{StaticResource AccentBrush}"/>
+                                         Foreground="{DynamicResource AccentBrush}"/>
                                     <Run Text=" | Max "/>
                                     <Run Text="{Binding OptimizationVm.CostMax, Mode=OneWay}" FontWeight="SemiBold"/>
                                     <Run Text=" CHF"/>
                                 </TextBlock>
 
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="Begründung:"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,4"
                                            VerticalAlignment="Top"/>
                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding OptimizationVm.AiReasoning}"
-                                           Foreground="{StaticResource TextBrush}"
+                                           Foreground="{DynamicResource TextBrush}"
                                            TextWrapping="Wrap" FontSize="{DynamicResource TextXS}" Margin="0,0,0,6"/>
 
                                 <Button Grid.Row="4" Grid.ColumnSpan="2"
@@ -222,8 +222,8 @@
 
                     <!-- CARD 4: Risiken (conditional) -->
                     <Border Padding="12,10"
-                            BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
-                            Background="{StaticResource CardBrush}" CornerRadius="{DynamicResource RadiusL}">
+                            BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                            Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusL}">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -237,13 +237,13 @@
                         <StackPanel>
                             <TextBlock Text="RISIKEN &amp; EINSCHRÄNKUNGEN"
                                        FontSize="{DynamicResource TextXS}" FontWeight="Bold"
-                                       Foreground="{StaticResource AccentBrush}"
+                                       Foreground="{DynamicResource AccentBrush}"
                                        Margin="0,0,0,8"/>
                             <TextBlock Text="{Binding OptimizationVm.RiskText}"
                                        TextWrapping="Wrap" FontSize="{DynamicResource TextXS}">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding OptimizationVm.RiskText}" Value="">
                                                 <Setter Property="Text" Value="Keine Risiken oder Verletzungen erkannt."/>
@@ -265,15 +265,15 @@
 
                     <!-- CARD 5: Konsistenz-Kontrolle -->
                     <Border Margin="0,10,0,0" Padding="12,10"
-                            BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
-                            Background="{StaticResource CardBrush}" CornerRadius="{DynamicResource RadiusL}"
+                            BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                            Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusL}"
                             Visibility="{Binding HasWarnings, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <DockPanel Margin="0,0,0,8">
                                 <TextBlock DockPanel.Dock="Left"
                                            Text="KONSISTENZ-KONTROLLE"
                                            FontSize="{DynamicResource TextXS}" FontWeight="Bold"
-                                           Foreground="{StaticResource AccentBrush}"
+                                           Foreground="{DynamicResource AccentBrush}"
                                            VerticalAlignment="Center"/>
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                                     <!-- Error badge -->
@@ -336,10 +336,10 @@
                                                            FontSize="{DynamicResource TextXS}" FontWeight="Bold" Width="32">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding Severity}" Value="Error">
-                                                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding Severity}" Value="Warning">
                                                                     <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}"/>
@@ -350,7 +350,7 @@
                                                     <Run Text="{Binding RuleId, Mode=OneWay}"/>
                                                 </TextBlock>
                                                 <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="{DynamicResource TextXS}"
-                                                           Foreground="{StaticResource TextBrush}"/>
+                                                           Foreground="{DynamicResource TextBrush}"/>
                                             </DockPanel>
                                         </Button>
                                     </DataTemplate>
@@ -359,7 +359,7 @@
 
                             <TextBlock Margin="0,4,0,0" HorizontalAlignment="Right"
                                        FontSize="{DynamicResource TextXS}" Cursor="Hand"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
                                        MouseLeftButtonUp="ResetSuppressedWarnings_Click"
                                        ToolTip="Alle unterdrückten Warnungen wieder anzeigen">
                                 <TextBlock.Style>
@@ -367,7 +367,7 @@
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter Property="TextDecorations" Value="Underline"/>
-                                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>
@@ -442,7 +442,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Margin="0,0,0,12" Padding="8" BorderThickness="1"
-                                                BorderBrush="{StaticResource BorderBrush}" Background="Transparent">
+                                                BorderBrush="{DynamicResource BorderBrush}" Background="Transparent">
                                             <StackPanel>
                                                 <DockPanel>
                                                     <Button DockPanel.Dock="Right" Width="28" Height="28"
@@ -482,7 +482,7 @@
                                                     <TextBox Width="120" Text="{Binding LengthText, UpdateSourceTrigger=PropertyChanged}"/>
                                                     <TextBlock Text="Anschlüsse (Stk):" VerticalAlignment="Center" Margin="14,0,6,0"/>
                                                     <TextBox Width="90" Text="{Binding ConnectionsText, UpdateSourceTrigger=PropertyChanged}"/>
-                                                    <TextBlock Text="{Binding PriceHint}" Foreground="{StaticResource DangerBrush}"
+                                                    <TextBlock Text="{Binding PriceHint}" Foreground="{DynamicResource DangerBrush}"
                                                                Margin="12,0,0,0" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                                 <DataGrid ItemsSource="{Binding Lines}" AutoGenerateColumns="False"
@@ -590,8 +590,8 @@
 
         <!-- ═══ FOOTER ═══ -->
         <Border Grid.Row="2" Padding="10,8"
-                BorderThickness="0,1,0,0" BorderBrush="{StaticResource BorderBrush}"
-                Background="{StaticResource CardBrush}">
+                BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderBrush}"
+                Background="{DynamicResource CardBrush}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

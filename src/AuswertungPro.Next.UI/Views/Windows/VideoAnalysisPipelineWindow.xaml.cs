@@ -32,6 +32,14 @@ public partial class VideoAnalysisPipelineWindow : Window
     /// </summary>
     private readonly ITaskbarFortschritt? _taskbar;
 
+    /// <summary>
+    /// Fix-Runde 1, MINOR 5: Vm.SetError("Abgebrochen.") setzt HasError=true wie ein echter
+    /// Fehler (bestehendes, unveraendertes Verhalten der Fehleranzeige im Fenster - siehe
+    /// Vm.HasError-Bindungen in der XAML). Ein Benutzerabbruch ist aber KEIN Fehler; dieses Flag
+    /// haelt das nur fuer die Taskleiste fest, ohne die Fehlerbanner-Anzeige selbst anzufassen.
+    /// </summary>
+    private bool _abgebrochen;
+
     private PipelineResult? _result;
     public PipelineResult? Result => _result;
 
@@ -75,7 +83,12 @@ public partial class VideoAnalysisPipelineWindow : Window
 
         if (Vm.HasError)
         {
-            _taskbar.Fehler();
+            // Ein Abbruch ist kein Fehler (MINOR 5, Fix-Runde 1) - Taskleiste zurueck auf
+            // "keine Anzeige" statt rot.
+            if (_abgebrochen)
+                _taskbar.Beenden();
+            else
+                _taskbar.Fehler();
             return;
         }
 
@@ -111,6 +124,7 @@ public partial class VideoAnalysisPipelineWindow : Window
     {
         using var _aiToken = Services.AiActivityTracker.Begin("Videoanalyse-Pipeline");
         Vm.Reset();
+        _abgebrochen = false;
         _liveFrameFindings.Clear();
 
         // Speed mode from ComboBox
@@ -154,6 +168,7 @@ public partial class VideoAnalysisPipelineWindow : Window
         }
         catch (OperationCanceledException)
         {
+            _abgebrochen = true;
             Vm.SetError("Abgebrochen.");
         }
         catch (Exception ex)

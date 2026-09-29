@@ -59,7 +59,7 @@ public static class SettingsFullBackupWorkflow
         }
 
         var taskbar = request.Taskbar;
-        taskbar?.SetzeUnbestimmt();
+        SicherTaskbar(() => taskbar?.SetzeUnbestimmt());
 
         try
         {
@@ -72,7 +72,7 @@ public static class SettingsFullBackupWorkflow
             if (!request.Dialogs.Confirm(confirmText, "Datensicherung erstellen"))
             {
                 request.Operation.SetStatus("Datensicherung nicht gestartet.");
-                taskbar?.Beenden();
+                SicherTaskbar(() => taskbar?.Beenden());
                 return;
             }
 
@@ -86,7 +86,11 @@ public static class SettingsFullBackupWorkflow
                     presentation.Percent,
                     presentation.CurrentFileName,
                     presentation.StatusText);
-                taskbar?.SetzeFortschritt(presentation.Percent / 100d);
+                // Dieser Callback laeuft auf dem Threadpool-Thread der Datensicherung (kein
+                // Progress<T> mit eigenem Marshalling) - SicherTaskbar faengt zusaetzlich zu
+                // ITaskbarFortschritt.Anwenden(...) selbst jede Ausnahme ab: eine Anzeige darf
+                // den Lauf nie abbrechen, egal welche Implementierung injiziert wurde.
+                SicherTaskbar(() => taskbar?.SetzeFortschritt(presentation.Percent / 100d));
             });
 
             var result = await Task.Run(
@@ -102,8 +106,12 @@ public static class SettingsFullBackupWorkflow
                     $"{result.Error ?? "ohne Angabe"}");
                 request.Operation.SetStatus($"Fehler: {result.Error}");
                 request.Toasts.Error("Datensicherung fehlgeschlagen.");
-                taskbar?.Fehler();
+                SicherTaskbar(() => taskbar?.Fehler());
                 request.Dialogs.Error(result.Error ?? "Datensicherung fehlgeschlagen.", "Datensicherung");
+                // Der rote Zustand bleibt WAEHREND der Dialog offen ist sichtbar stehen (der
+                // Benutzer soll den Fehlschlag am Symbol bemerken); erst nach dem Wegklicken
+                // (Dialogs.Error ist modal/blockierend) wird zurueckgesetzt (MINOR 4, Fix-Runde 1).
+                SicherTaskbar(() => taskbar?.Beenden());
                 return;
             }
 
@@ -151,7 +159,7 @@ public static class SettingsFullBackupWorkflow
                     "Datensicherung");
             }
 
-            taskbar?.Beenden();
+            SicherTaskbar(() => taskbar?.Beenden());
         }
         catch (OperationCanceledException)
         {
@@ -160,19 +168,46 @@ public static class SettingsFullBackupWorkflow
                 string.Empty,
                 "Abgebrochen - vorheriger Sicherungsstand wiederhergestellt.");
             request.Toasts.Info("Datensicherung abgebrochen.");
-            taskbar?.Beenden();
+            // Ein Abbruch durch den Benutzer ist kein Fehler (MINOR 5-Prinzip, hier bereits
+            // vorher korrekt): sofort zurueck auf "keine Anzeige", kein roter Zustand.
+            SicherTaskbar(() => taskbar?.Beenden());
         }
         catch (Exception ex)
         {
             var userMessage = UserError.DescribeAndReport(ex, "Datensicherung");
             request.Operation.SetStatus($"Fehler: {userMessage}");
             request.Toasts.Error("Datensicherung fehlgeschlagen.");
-            taskbar?.Fehler();
+            SicherTaskbar(() => taskbar?.Fehler());
             request.Dialogs.Error($"Datensicherung fehlgeschlagen:\n{userMessage}", "Datensicherung");
+            // Wie beim Ergebnis-Fehlschlag oben: rot bleibt sichtbar, bis der Dialog
+            // bestaetigt ist, dann zurueckgesetzt (MINOR 4, Fix-Runde 1).
+            SicherTaskbar(() => taskbar?.Beenden());
         }
         finally
         {
             request.Operation.Finish();
+        }
+    }
+
+    /// <summary>
+    /// Eine Taskleisten-Anzeige darf einen Sicherungslauf NIE abbrechen (CRITICAL 1, Fix-Runde 1
+    /// - real reproduziert: ein auf dem Threadpool-Thread geworfener Zugriff auf
+    /// Window.TaskbarItemInfo liess den kompletten Lauf als Fehlschlag werten). Diese Sperre gilt
+    /// zusaetzlich zu <see cref="TaskbarFortschritt"/>s eigenem Schutz - unabhaengig davon, welche
+    /// ITaskbarFortschritt-Implementierung injiziert wurde.
+    /// </summary>
+    private static void SicherTaskbar(Action? aufruf)
+    {
+        if (aufruf is null)
+            return;
+
+        try
+        {
+            aufruf();
+        }
+        catch (Exception ex)
+        {
+            BestEffort.ReportWarning($"Taskleisten-Fortschritt konnte nicht ausgefuehrt werden: {ex.Message}");
         }
     }
 

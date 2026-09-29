@@ -33,10 +33,20 @@
     <SolidColorBrush x:Key="FaintBrush" Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
 
     <!-- Hintergrund / Karte / Kopf -->
+    <!-- BgBrush ist im normalen Theme ein LinearGradientBrush (das ganze Fenster). Ein
+         Farbverlauf widerspricht Hochkontrast (flache, eindeutige Flaechen); hier bewusst eine
+         flache SolidColorBrush auf WindowColor statt eines nachgebauten Verlaufs. -->
+    <SolidColorBrush x:Key="BgBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
     <SolidColorBrush x:Key="BgLightBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
     <SolidColorBrush x:Key="CardBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
     <SolidColorBrush x:Key="CardGlassBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
     <SolidColorBrush x:Key="HeaderBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="NavPanelBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="OverlayBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="HoverBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="RowHoverBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
 
     <!-- Rand -->
     <SolidColorBrush x:Key="BorderBrush" Color="{DynamicResource {x:Static SystemColors.WindowFrameColorKey}}"/>

@@ -9,6 +9,15 @@ namespace AuswertungPro.Next.UI.Tests;
 /// </summary>
 internal sealed class FakeTaskbarFortschritt : ITaskbarFortschritt
 {
+    public FakeTaskbarFortschritt()
+    {
+    }
+
+    /// <summary>Ereignisse in eine von aussen mitgegebene, GEMEINSAME Liste schreiben - so laesst
+    /// sich die Reihenfolge gegen andere Fakes (z. B. einen Dialog-Fake) beweisen, nicht nur
+    /// die Taskleisten-Aufrufe fuer sich allein.</summary>
+    public FakeTaskbarFortschritt(List<string> geteilteAufrufe) => Aufrufe = geteilteAufrufe;
+
     public List<string> Aufrufe { get; } = new();
 
     public void SetzeFortschritt(double anteil)

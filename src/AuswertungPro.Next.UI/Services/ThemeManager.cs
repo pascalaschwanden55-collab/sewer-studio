@@ -6,6 +6,26 @@ namespace AuswertungPro.Next.UI.Services;
 
 public static class ThemeManager
 {
+    static ThemeManager()
+    {
+        // Fix-Runde 1 (29.09.2026): zwei getrennte, WPF-interne Registrierungen sind noetig,
+        // damit new Uri("pack://application:,,,/...") UND das tatsaechliche Laden darueber
+        // funktionieren, bevor je eine echte System.Windows.Application existiert hat (real
+        // reproduziert in einem isolierten Testlauf):
+        //  1) PackUriHelper registriert das "pack:"-URI-SCHEMA beim generischen .NET-Uri-Parser.
+        //     Fehlt das, wirft new Uri(...) faelschlich "Invalid port specified" (das
+        //     Komma-Tripel nach dem Doppelpunkt sieht dem Parser wie ein Portanteil aus).
+        //  2) Application.Current (blosses LESEN der statischen Eigenschaft, KEIN neues
+        //     Application-Objekt und Current bleibt null) registriert den WebRequest-Praefix
+        //     fuer "pack", den ResourceDictionary.Source beim tatsaechlichen Laden braucht -
+        //     sonst "The URI prefix is not recognized." trotz gueltiger URI.
+        // Im echten SewerStudio.exe erledigt der Application-Konstruktor (App.OnStartup laeuft
+        // danach) beides laengst selbst; dieser Zugriff macht ComponentUri() nur unabhaengig
+        // von dieser Reihenfolge.
+        _ = global::System.IO.Packaging.PackUriHelper.UriSchemePack;
+        _ = global::System.Windows.Application.Current;
+    }
+
     public const string Light = "Light";
     public const string Dark = "Dark";
 

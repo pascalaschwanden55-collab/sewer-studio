@@ -23,7 +23,12 @@ public static class SettingsThemeWorkflow
         AppSettings settings,
         string? uiTheme,
         Action saveSettingsImmediate,
-        Action<string> applyToResources)
+        Action<string> applyToResources,
+        // Fix-Runde 1, MINOR 7: injizierbarer Registry-Leser fuer die Aufloesung von "System" -
+        // null verwendet den echten Registry-Zugriff (Produktionsweg unveraendert). Tests fuer
+        // die "System"-Wahl koennen so das konkrete aufgeloeste Theme deterministisch pruefen,
+        // statt den echten Registry-Stand des Testrechners zu lesen.
+        Func<int?>? readWindowsAppsUseLightTheme = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(saveSettingsImmediate);
@@ -34,7 +39,7 @@ public static class SettingsThemeWorkflow
         var preference = ThemeManager.NormalizePreference(uiTheme);
         settings.UiTheme = preference;
         saveSettingsImmediate();
-        applyToResources(ThemeManager.ResolveEffectiveTheme(preference));
+        applyToResources(ThemeManager.ResolveEffectiveTheme(preference, readWindowsAppsUseLightTheme));
     }
 
     private static void ApplyToApplicationResources(string theme)

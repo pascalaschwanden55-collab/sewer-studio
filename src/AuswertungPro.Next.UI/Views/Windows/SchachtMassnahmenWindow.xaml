@@ -9,7 +9,7 @@
         Width="920" Height="640"
         MinWidth="720" MinHeight="480"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource BgBrush}">
+        Background="{DynamicResource BgBrush}">
 
     <Grid Margin="0">
         <Grid.RowDefinitions>
@@ -32,11 +32,11 @@
             </Grid.ColumnDefinitions>
 
             <!-- Deine Liste (klickbar) -->
-            <Border Grid.Column="0" Background="{StaticResource CardBrush}"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="10">
+            <Border Grid.Column="0" Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="10">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="DEINE LISTE"
-                               FontSize="{DynamicResource TextXS}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
+                               FontSize="{DynamicResource TextXS}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
                                Margin="2,0,0,8"/>
                     <Grid>
                     <ListBox x:Name="KatalogList" ItemsSource="{Binding Katalog}"
@@ -58,10 +58,10 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis" Foreground="{StaticResource TextBrush}"/>
+                                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}"/>
                                     <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0,10,0"
                                                Text="{Binding Preis, StringFormat={}{0:N2}}"
-                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
                                     <Button Grid.Column="2" Width="26" Height="24" Padding="0"
                                             ToolTip="In Auswahl übernehmen"
                                             AutomationProperties.Name="In Auswahl übernehmen"
@@ -94,14 +94,14 @@
             </Border>
 
             <!-- Gewaehlte Positionen -->
-            <Border Grid.Column="2" Background="{StaticResource CardBrush}"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="10">
+            <Border Grid.Column="2" Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="10">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="GEWÄHLT FÜR DIESEN SCHACHT"
-                               FontSize="{DynamicResource TextXS}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
+                               FontSize="{DynamicResource TextXS}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
                                Margin="2,0,0,8"/>
                     <TextBlock DockPanel.Dock="Bottom" Margin="2,8,0,0" FontSize="{DynamicResource TextXS}"
-                               Foreground="{StaticResource MutedBrush}"
+                               Foreground="{DynamicResource MutedBrush}"
                                Text="Menge und Preis kannst du pro Schacht anpassen — die Liste bleibt unverändert."
                                TextWrapping="Wrap"/>
                     <DataGrid ItemsSource="{Binding Positionen}" AutoGenerateColumns="False"
@@ -118,7 +118,7 @@
                                     <DataTemplate>
                                         <Button Width="24" Height="24" Padding="0" Margin="2,0"
                                                 ToolTip="Entfernen" AutomationProperties.Name="Entfernen"
-                                                Foreground="{StaticResource DangerBrush}"
+                                                Foreground="{DynamicResource DangerBrush}"
                                                 Command="{Binding DataContext.EntfernenCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}">
                                             <ui:FluentIcon Glyph="&#xE74D;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource DangerBrush}"/>
@@ -133,8 +133,8 @@
         </Grid>
 
         <!-- Footer -->
-        <Border Grid.Row="2" Background="{StaticResource CardBrush}"
-                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="12,10">
+        <Border Grid.Row="2" Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="12,10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -146,7 +146,7 @@
                         Command="{Binding ListeBearbeitenCommand}"/>
                 <TextBlock Grid.Column="1" Text="{Binding TotalText}" HorizontalAlignment="Right"
                            VerticalAlignment="Center" Margin="0,0,16,0"
-                           FontSize="{DynamicResource TextL}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
+                           FontSize="{DynamicResource TextL}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <Button Content="Abbrechen" Padding="12,6" Margin="0,0,8,0"
                             Style="{StaticResource SecondaryButton}"

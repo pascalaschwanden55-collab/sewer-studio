@@ -29,7 +29,12 @@
     <windowsSettings>
       <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
       <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/PM</dpiAware>
-      <gdiScaling xmlns="http://schemas.microsoft.com/SMI/2017/WindowsSettings">true</gdiScaling>
+      <!-- Fix-Runde 1: gdiScaling absichtlich WEGGELASSEN. Es skaliert nur klassisches
+           GDI-Rendering (System.Drawing/WinForms-Interop) automatisch mit; SewerStudio hat
+           keine einzige solche Stelle (grep ueber src/AuswertungPro.Next.UI nach
+           System.Windows.Forms/System.Drawing: keine Treffer). WPF zeichnet ueber DirectX und
+           braucht diesen Kompatibilitaetsschalter nicht - ein unbelegtes Element wieder
+           reinzunehmen waere geraten, kein Befund. -->
     </windowsSettings>
   </application>
 </assembly>

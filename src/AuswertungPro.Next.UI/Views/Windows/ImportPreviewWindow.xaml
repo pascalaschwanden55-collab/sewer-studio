@@ -26,11 +26,11 @@
                       AutoGenerateColumns="False" IsReadOnly="True"
                       CanUserSortColumns="True" CanUserReorderColumns="False"
                       HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                      BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
-                      Background="{StaticResource CardBrush}"
-                      RowBackground="{StaticResource CardBrush}"
+                      BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                      Background="{DynamicResource CardBrush}"
+                      RowBackground="{DynamicResource CardBrush}"
                       AlternatingRowBackground="{DynamicResource BgLightBrush}"
-                      Foreground="{StaticResource TextBrush}">
+                      Foreground="{DynamicResource TextBrush}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Haltung" Binding="{Binding RecordKey}" Width="180"/>
                     <DataGridTextColumn Header="Aktion" Binding="{Binding Action}" Width="80"/>
@@ -63,11 +63,11 @@
                       MaxHeight="200"
                       CanUserSortColumns="True" CanUserReorderColumns="False"
                       HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                      BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
-                      Background="{StaticResource CardBrush}"
-                      RowBackground="{StaticResource CardBrush}"
+                      BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                      Background="{DynamicResource CardBrush}"
+                      RowBackground="{DynamicResource CardBrush}"
                       AlternatingRowBackground="{DynamicResource BgLightBrush}"
-                      Foreground="{StaticResource TextBrush}">
+                      Foreground="{DynamicResource TextBrush}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Haltung" Binding="{Binding RecordKey}" Width="180"/>
                     <DataGridTextColumn Header="Feld" Binding="{Binding Field}" Width="160"/>

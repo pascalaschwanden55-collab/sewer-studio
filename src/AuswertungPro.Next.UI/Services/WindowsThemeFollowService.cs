@@ -44,17 +44,20 @@ public sealed class WindowsThemeFollowService : IDisposable
 
     private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
     {
-        // Der Windows-Hell/Dunkel-Umschalter meldet sich ueber General ODER Color - beide
-        // zulassen statt zu raten, welche genau feuert. Andere Kategorien (Schriftgroesse,
-        // Sprache, ...) gehen SewerStudio hier nichts an.
-        if (e.Category != UserPreferenceCategory.General && e.Category != UserPreferenceCategory.Color)
+        // Entscheidungslogik liegt in WindowsThemeFollowPolicy (pure, ohne SystemEvents/
+        // Dispatcher testbar). Fix-Runde 1, MINOR 6: kein Neuanwenden, wenn das aufgeloeste
+        // Theme bereits ThemeManager.CurrentTheme entspricht - unnoetiges Neuzeichnen aller
+        // offenen Fenster bei einer Windows-Einstellung, die Hell/Dunkel gar nicht betrifft.
+        if (!WindowsThemeFollowPolicy.SollNeuAnwenden(
+                e.Category,
+                _readPreference(),
+                ThemeManager.CurrentTheme,
+                WindowsThemeRegistry.ReadAppsUseLightTheme,
+                out var resolved))
+        {
             return;
+        }
 
-        var preference = _readPreference();
-        if (!string.Equals(ThemeManager.NormalizePreference(preference), ThemeManager.System, StringComparison.Ordinal))
-            return;
-
-        var resolved = ThemeManager.ResolveEffectiveTheme(preference);
         if (_dispatcher.CheckAccess())
             _applyResolvedTheme(resolved);
         else
