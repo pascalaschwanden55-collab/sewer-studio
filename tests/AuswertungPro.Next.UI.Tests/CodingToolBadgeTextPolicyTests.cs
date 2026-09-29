@@ -10,7 +10,7 @@ public sealed class CodingToolBadgeTextPolicyTests
     [Theory]
     [InlineData(OverlayToolType.Line, "Linie")]
     [InlineData(OverlayToolType.Arc, "Bogen")]
-    [InlineData(OverlayToolType.Rectangle, "Flaeche")]
+    [InlineData(OverlayToolType.Rectangle, "Fläche")]
     [InlineData(OverlayToolType.Point, "Punkt")]
     [InlineData(OverlayToolType.Stretch, "Strecke")]
     [InlineData(OverlayToolType.PipeBend, "Bogen")]

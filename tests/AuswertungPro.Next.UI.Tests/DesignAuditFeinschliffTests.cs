@@ -56,7 +56,7 @@ public sealed class DesignAuditFeinschliffTests
 
         Assert.True(
             treffer.Count == 0,
-            "Sichtbare Texte schreiben Umlaute als ae/oe/ue. Die Konvention gilt nur fuer den Quellcode, nicht fuer das, was der Nutzer liest:\n"
+            "Sichtbare Texte schreiben Umlaute als ae/oe/ue. Die Konvention gilt nur für den Quellcode, nicht für das, was der Nutzer liest:\n"
             + string.Join("\n", treffer));
     }
 
@@ -231,7 +231,7 @@ public sealed class DesignAuditFeinschliffTests
         foreach (var stil in stile)
         {
             var start = controls.IndexOf($"<Style TargetType=\"{{x:Type {stil}}}\"", StringComparison.Ordinal);
-            Assert.True(start >= 0, $"Impliziter Stil fuer {stil} nicht gefunden.");
+            Assert.True(start >= 0, $"Impliziter Stil für {stil} nicht gefunden.");
 
             // Nur die Setter auf oberster Ebene des Stils zaehlen (bis zum ersten Template/Trigger-Block).
             var ende = controls.IndexOf("<Setter Property=\"Template\">", start, StringComparison.Ordinal);

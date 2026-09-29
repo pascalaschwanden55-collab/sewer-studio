@@ -365,7 +365,7 @@ public sealed class DataPagePrintControllerTests
         var dialogs = new CapturingDialogService();
         var costs = new RecordingProjectCostStoreRepository
         {
-            LoadError = "costs.json ist beschaedigt: invalid json"
+            LoadError = "costs.json ist beschädigt: invalid json"
         };
         var optionsDialogCalled = false;
         var controller = CreateController(
@@ -387,7 +387,7 @@ public sealed class DataPagePrintControllerTests
         Assert.Null(dialogs.LastInfo);
         Assert.NotNull(dialogs.LastError);
         Assert.Equal("Dossier", dialogs.LastError.Value.Title);
-        Assert.Contains("costs.json ist beschaedigt", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("costs.json ist beschädigt", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -844,16 +844,16 @@ public sealed class DataPagePrintControllerTests
         public void Error(string message, string title = "Fehler")
             => LastError = (message, title);
 
-        public bool Confirm(string message, string title = "Bestaetigung")
+        public bool Confirm(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
 
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true)
         {
             ConfirmWarnCalls.Add((message, title, defaultNo));
             return ConfirmWarnResult;
         }
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
     }
 

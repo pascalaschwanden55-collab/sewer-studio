@@ -113,7 +113,7 @@ public sealed class AutoApprovalTests
     public void AlsHinweis_FormatiertUrteilUndGrund(bool approved, string erwarteterPrefix)
     {
         var result = approved
-            ? AutoApprovalResult.Approved("Alle Belege bestaetigt.")
+            ? AutoApprovalResult.Approved("Alle Belege bestätigt.")
             : AutoApprovalResult.Rejected("Datenbank-Abgleich fehlt.");
 
         var hinweis = AutoApprovalService.AlsHinweis(result);

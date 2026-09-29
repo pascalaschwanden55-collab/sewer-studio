@@ -36,7 +36,7 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
         Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
         Assert.True(File.Exists(correctionSelectionPath), "LiveDetection-Korrektur-Codeauswahl soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(correctionSelectionFactoryPath), "LiveDetection-Korrektur-Codeauswahl soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(correctionSelectionFactoryPath), "LiveDetection-Korrektur-Codeauswahl soll über Factory verdrahtet werden.");
         Assert.True(File.Exists(correctionSelectionWorkflowPath), "LiveDetection-Korrektur-Codeauswahl-Serviceaufruf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(displayWorkflowPath), "LiveDetection-Bestaetigungsanzeige und Resume-Entscheidung sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(frameExporterPath), "Detection-Training-Frame-Export soll ausserhalb der PlayerWindow-Partials gekapselt sein.");

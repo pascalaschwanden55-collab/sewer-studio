@@ -92,7 +92,7 @@ public sealed class MeasureTemplateEditorViewModelTests
         var viewModel = CreateViewModel(temp.Path, store, dialogs);
         viewModel.NewTemplateCommand.Execute(null);
         viewModel.TemplateId = "MENGE_UNGUELTIG";
-        viewModel.TemplateName = "Ungueltige Menge";
+        viewModel.TemplateName = "Ungültige Menge";
         viewModel.AddLineCommand.Execute(new CatalogItemRow(new CostCatalogItem
         {
             Key = "ROBOTER_ST",
@@ -208,7 +208,7 @@ public sealed class MeasureTemplateEditorViewModelTests
                 Assert.Equal("NEW", added.Id);
                 Assert.Equal("Neue Vorlage", added.Name);
             });
-        Assert.Contains("uebernommen", dialogs.LastInfo, StringComparison.Ordinal);
+        Assert.Contains("übernommen", dialogs.LastInfo, StringComparison.Ordinal);
         Assert.Null(dialogs.LastError);
     }
 
@@ -242,9 +242,9 @@ public sealed class MeasureTemplateEditorViewModelTests
         public void Info(string message, string title = "Hinweis") => LastInfo = message;
         public void Warn(string message, string title = "Warnung") { }
         public void Error(string message, string title = "Fehler") => LastError = message;
-        public bool Confirm(string message, string title = "Bestaetigung") => true;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => true;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Yes;
+        public bool Confirm(string message, string title = "Bestätigung") => true;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => true;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Yes;
     }
 
     private sealed class ToastFake : IToastService

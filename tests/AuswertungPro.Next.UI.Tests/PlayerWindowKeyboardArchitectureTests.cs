@@ -73,13 +73,13 @@ public sealed class PlayerWindowKeyboardArchitectureTests
             StringComparison.Ordinal);
         Assert.True(
             textInputGuard >= 0 && textInputGuard < overlayKeyHandling,
-            "Texteingaben muessen vor allen Player-Fensterkuerzeln einschliesslich Overlay geschuetzt sein.");
+            "Texteingaben müssen vor allen Player-Fensterkuerzeln einschliesslich Overlay geschützt sein.");
         Assert.Contains("PlayerKeyboardShortcutPolicy.IsAllowedDuringTextInput", keyboard, StringComparison.Ordinal);
         var textInputExit = keyboard.IndexOf("if (textInputFocused)", StringComparison.Ordinal);
         var shortcutResolve = keyboard.IndexOf("PlayerKeyboardShortcutPolicy.Resolve", StringComparison.Ordinal);
         Assert.True(
             textInputExit >= 0 && shortcutResolve >= 0 && textInputExit < shortcutResolve,
-            "Ausser der F1-Ausnahme darf waehrend einer Texteingabe kein Player-Kuerzel aufgeloest werden.");
+            "Ausser der F1-Ausnahme darf während einer Texteingabe kein Player-Kuerzel aufgelöst werden.");
         Assert.Contains("_shortcutOverlayController.Show", keyboard);
         Assert.Contains("_shortcutOverlayController.Hide", keyboard);
         Assert.DoesNotContain("ShortcutOverlay.Visibility", keyboard, StringComparison.Ordinal);
@@ -130,7 +130,7 @@ public sealed class PlayerWindowKeyboardArchitectureTests
 
         Assert.True(
             actionOffenders.Length == 0,
-            "PlayerWindow.Keyboard soll Action-Erzeugung/Ausfuehrung ueber Owner, Factory und Controller kapseln:\n"
+            "PlayerWindow.Keyboard soll Action-Erzeugung/Ausfuehrung über Owner, Factory und Controller kapseln:\n"
             + string.Join("\n", actionOffenders));
 
         var shortcutOffenders = FindFileTokenOffenders(
@@ -152,7 +152,7 @@ public sealed class PlayerWindowKeyboardArchitectureTests
 
         Assert.True(
             shortcutOffenders.Length == 0,
-            "PlayerWindow.Keyboard soll Shortcut-UI-Details ueber spezialisierte Workflows/Controls kapseln:\n"
+            "PlayerWindow.Keyboard soll Shortcut-UI-Details über spezialisierte Workflows/Controls kapseln:\n"
             + string.Join("\n", shortcutOffenders));
     }
 }

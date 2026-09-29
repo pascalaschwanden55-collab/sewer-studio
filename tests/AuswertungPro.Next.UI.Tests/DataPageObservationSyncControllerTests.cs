@@ -141,7 +141,7 @@ public sealed class DataPageObservationSyncControllerTests
                     Entries =
                     {
                         new ProtocolEntry { Code = "", Beschreibung = "ignorieren" },
-                        new ProtocolEntry { Code = "BAA", Beschreibung = "geloescht", IsDeleted = true }
+                        new ProtocolEntry { Code = "BAA", Beschreibung = "gelöscht", IsDeleted = true }
                     }
                 }
             },

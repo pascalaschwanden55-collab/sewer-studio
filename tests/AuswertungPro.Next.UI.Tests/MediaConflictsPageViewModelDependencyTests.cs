@@ -41,7 +41,7 @@ public sealed class MediaConflictsPageViewModelDependencyTests
 
         Assert.Empty(vm.Conflicts);
         Assert.Equal(0, vm.OpenConflictCount);
-        Assert.Equal("Projektordner nicht verfuegbar. Bitte Projekt zuerst speichern.", vm.SummaryText);
+        Assert.Equal("Projektordner nicht verfügbar. Bitte Projekt zuerst speichern.", vm.SummaryText);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class MediaConflictsPageViewModelDependencyTests
         var vm = CreateViewModel(new Project(), getProjectFolder: () => null, playVideo: _ => { });
 
         Assert.Equal(StatusHostState.Error, vm.ConflictsState);
-        Assert.Equal("Projektordner nicht verfuegbar. Bitte Projekt zuerst speichern.", vm.ConflictsError);
+        Assert.Equal("Projektordner nicht verfügbar. Bitte Projekt zuerst speichern.", vm.ConflictsError);
     }
 
     [Fact]
@@ -249,8 +249,8 @@ public sealed class MediaConflictsPageViewModelDependencyTests
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") { }
         public void Error(string message, string title = "Fehler") { }
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Cancel;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Cancel;
     }
 }

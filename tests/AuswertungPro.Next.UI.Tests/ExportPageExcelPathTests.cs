@@ -163,7 +163,7 @@ public sealed class ExportPageExcelPathTests
         };
 
         var snapshot = ExportPageViewModel.SnapshotDistributionTree(cfg);
-        cfg.OrdnerPattern = "geaendert";
+        cfg.OrdnerPattern = "geändert";
 
         Assert.NotNull(snapshot);
         Assert.Equal("{Gemeinde}", snapshot.OrdnerPattern);

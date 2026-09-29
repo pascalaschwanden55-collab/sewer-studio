@@ -55,35 +55,35 @@ public sealed class DesignAuditKnopfleistenTests
     private static readonly (string Datei, Regel Ausgenommen, string Grund)[] Ausnahmen =
     [
         ("PlayerWindow.xaml", Regel.Alle,
-            "Video-Fenster mit eigenem Vollbild-Bedienkonzept (Zeitleiste/Playback); laut Aufgabe 4 ausdruecklich ausgenommen."),
+            "Video-Fenster mit eigenem Vollbild-Bedienkonzept (Zeitleiste/Playback); laut Aufgabe 4 ausdrücklich ausgenommen."),
         ("LiveFrameWindow.xaml", Regel.Alle,
             "Video-Fenster (Live-Ring-Overlay); wie PlayerWindow ausgenommen."),
         ("StartupSplashWindow.xaml", Regel.Alle,
-            "Startanimation, kein Dialogfenster; laut Aufgabe 4 ausdruecklich ausgenommen."),
+            "Startanimation, kein Dialogfenster; laut Aufgabe 4 ausdrücklich ausgenommen."),
         ("PhotoMeasurementWindow.xaml", Regel.Alle,
-            "Video-/Messfenster mit eigenem Werkzeugkasten (Foto-Overlay-Messwerkzeuge); laut Aufgabe 4 ausdruecklich ausgenommen."),
+            "Video-/Messfenster mit eigenem Werkzeugkasten (Foto-Overlay-Messwerkzeuge); laut Aufgabe 4 ausdrücklich ausgenommen."),
         ("WebGisVorschauWindow.xaml", Regel.Alle,
-            "Geschuetzte WebGIS-Datei (Global Constraints Punkt 2) - nicht Teil dieses Auftrags, wird spaeter angepasst."),
+            "Geschuetzte WebGIS-Datei (Global Constraints Punkt 2) - nicht Teil dieses Auftrags, wird später angepasst."),
         ("WebGisSchreibBestaetigungWindow.xaml", Regel.Alle,
-            "Geschuetzte WebGIS-Datei (Global Constraints Punkt 2) - nicht Teil dieses Auftrags, wird spaeter angepasst."),
+            "Geschuetzte WebGIS-Datei (Global Constraints Punkt 2) - nicht Teil dieses Auftrags, wird später angepasst."),
         ("WebGisHolenWindow.xaml", Regel.Alle,
-            "Geschuetzte WebGIS-Datei (Global Constraints Punkt 2) - nicht Teil dieses Auftrags, wird spaeter angepasst."),
+            "Geschuetzte WebGIS-Datei (Global Constraints Punkt 2) - nicht Teil dieses Auftrags, wird später angepasst."),
         ("NovaDialogWindow.xaml", Regel.C_KeinLokalerButtonStyle,
             "NUR Regel (c): der lokale Style \"NovaDialogDangerButton\" (Aufgabe 1) ist die danger-" +
-            "gestylte Ja-Variante fuer ConfirmWarn(defaultNo) - optisch identisch mit dem programmweiten " +
+            "gestylte Ja-Variante für ConfirmWarn(defaultNo) - optisch identisch mit dem programmweiten " +
             "DangerButton, aber laut CLAUDE.md-Entscheid Aufgabe 1 bewusst NICHT dorthin verschoben " +
-            "(\"Aufgabe 1 bleibt unangetastet\"). IsDefault/IsCancel werden hier vollstaendig im " +
+            "(\"Aufgabe 1 bleibt unangetastet\"). IsDefault/IsCancel werden hier vollständig im " +
             "Code-Behind gesetzt (ConfirmCancel/ConfirmWarn), nicht in XAML - Regel (b) hat dadurch " +
-            "nichts zu pruefen und ist real erfuellt. Regeln (a) und (d) sind ebenfalls sauber " +
-            "(genau 1 literales PrimaryButton, kein Background= an einem Button) - keine Ausnahme noetig."),
+            "nichts zu prüfen und ist real erfuellt. Regeln (a) und (d) sind ebenfalls sauber " +
+            "(genau 1 literales PrimaryButton, kein Background= an einem Button) - keine Ausnahme nötig."),
         ("TrainingStudioWindow.xaml", Regel.A_HoechstensEinPrimaerknopf,
             "NUR Regel (a): 2 primaerklassige Knoepfe sind in der \"2 - Fachliche Codierung\"-Spalte " +
-            "echt gleichzeitig noetig - \"Akzeptieren (A)\" (SuccessButton) und \"Korrektur speichern (K)\" " +
+            "echt gleichzeitig nötig - \"Akzeptieren (A)\" (SuccessButton) und \"Korrektur speichern (K)\" " +
             "(PrimaryButton) sind zwei gleichwertige Abschluesse DESSELBEN Codierschritts (KI-Vorschlag " +
             "war richtig vs. KI-Vorschlag wurde korrigiert), immer gemeinsam sichtbar/aktiviert " +
             "(IsEnabled={Binding IsAnnotationEntryEnabled} auf dem gemeinsamen Elternpanel), kein " +
             "Rang zwischen beiden. Alle anderen frueher primaerklassigen Knoepfe des Fensters " +
-            "(Durchgang starten / Foto mit gewaehltem Modell pruefen / Codieren...(Katalog) / " +
+            "(Durchgang starten / Foto mit gewaehltem Modell prüfen / Codieren...(Katalog) / " +
             "Weiteres Ereignis / Bild fertig) sind auf ToolbarButtonAccent/SecondaryButton " +
             "zurueckgestuft, die 5 Schadensstufen-Knoepfe tragen jetzt die geteilten Severity1..5Button-" +
             "Stile statt lokalem Background= - Regeln (b)/(c)/(d) sind dadurch real sauber."),
@@ -159,7 +159,7 @@ public sealed class DesignAuditKnopfleistenTests
         // Schuetzt davor, dass ein Tippfehler im Ordnerpfad den Waechter leerlaufen laesst
         // (ein Test ueber 0 Dateien waere immer gruen und wuerde nichts pruefen).
         var anzahl = GeprueftePfade(Regel.A_HoechstensEinPrimaerknopf).Count();
-        Assert.True(anzahl >= 40, $"Nur {anzahl} Fenster im Pruefumfang - Pfade/Ausnahmeliste pruefen.");
+        Assert.True(anzahl >= 40, $"Nur {anzahl} Fenster im Pruefumfang - Pfade/Ausnahmeliste prüfen.");
     }
 
     [Fact]

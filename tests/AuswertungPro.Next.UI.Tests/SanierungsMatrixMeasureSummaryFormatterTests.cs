@@ -58,7 +58,7 @@ public sealed class SanierungsMatrixMeasureSummaryFormatterTests
                         {
                             Group = "Option",
                             ItemKey = "NICHT",
-                            Text = "Nicht gewaehlt",
+                            Text = "Nicht gewählt",
                             Unit = "Stk",
                             Qty = 1m,
                             UnitPrice = 99m,

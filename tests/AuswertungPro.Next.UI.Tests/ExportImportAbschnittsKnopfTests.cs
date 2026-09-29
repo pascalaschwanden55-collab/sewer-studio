@@ -43,7 +43,7 @@ public sealed class ExportImportAbschnittsKnopfTests
         ("ExportPage.xaml", "AbschnittKatasterXtf",
             "Zwei gleichrangige XTF-Wege (Bestehende Katasterdaten aktualisieren / XTF erstellen), " +
             "je mit eigenem \"empfohlen\"-Chip als Fuehrung — kein Rang zwischen beiden, ein " +
-            "Akzentknopf waere eine erfundene Praeferenz fuer den jeweils NICHT empfohlenen Weg."),
+            "Akzentknopf waere eine erfundene Praeferenz für den jeweils NICHT empfohlenen Weg."),
         ("ImportPage.xaml", "AbschnittEinzelneQuellen",
             "Sieben gleichrangige Importquellen (PDF-Protokolle, XTF/M150/MDB, WinCan-, IBAK-, " +
             "KINS-Projekt, SchachtPro-Archiv, SchachtPro-QR) ohne jede Empfehlung — keine davon ist " +
@@ -247,7 +247,7 @@ public sealed class ExportImportAbschnittsKnopfTests
                 <StackPanel>
                     <TextBlock Text="Das ist eine SIA405-Datei mit Zusatzmodell."/>
                     <Expander Header="Technische Details">
-                        <TextBlock Text="FME und .ili duerfen hier stehen."/>
+                        <TextBlock Text="FME und .ili dürfen hier stehen."/>
                     </Expander>
                     <Button Content="X" ToolTip="Auch FME im ToolTip ist erlaubt"/>
                 </StackPanel>
@@ -299,7 +299,7 @@ public sealed class ExportImportAbschnittsKnopfTests
                 foreach (var begriff in FachbegriffJargon)
                 {
                     if (wert.Contains(begriff, System.StringComparison.Ordinal))
-                        treffer.Add($"{element.Name.LocalName}@{attributName}=\"{wert}\" enthaelt \"{begriff}\"");
+                        treffer.Add($"{element.Name.LocalName}@{attributName}=\"{wert}\" enthält \"{begriff}\"");
                 }
             }
         }

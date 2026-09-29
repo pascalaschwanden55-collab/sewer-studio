@@ -16,7 +16,7 @@ public sealed class CodingCalibrationTogglePolicyTests
         Assert.Equal("BtnCodingCalibrate", state.ActiveToolName);
         Assert.Equal("Kalibrieren", state.ToolLabel);
         Assert.True(state.ShowHint);
-        Assert.Equal("Linie ueber den sichtbaren Rohrdurchmesser zeichnen", state.HintText);
+        Assert.Equal("Linie über den sichtbaren Rohrdurchmesser zeichnen", state.HintText);
     }
 
     [Fact]
@@ -29,6 +29,6 @@ public sealed class CodingCalibrationTogglePolicyTests
         Assert.Null(state.ActiveToolName);
         Assert.Equal("", state.ToolLabel);
         Assert.False(state.ShowHint);
-        Assert.Equal("Linie ueber den sichtbaren Rohrdurchmesser zeichnen", state.HintText);
+        Assert.Equal("Linie über den sichtbaren Rohrdurchmesser zeichnen", state.HintText);
     }
 }

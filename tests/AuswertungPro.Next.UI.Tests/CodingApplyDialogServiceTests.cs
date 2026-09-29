@@ -39,11 +39,11 @@ public sealed class CodingApplyDialogServiceTests
         var result = service.ConfirmEmptyProtocol(
             new CodingApplyEmptyProtocolGuardResult(
                 RequiresConfirmation: true,
-                Message: "Befunde wirklich loeschen?",
+                Message: "Befunde wirklich löschen?",
                 Title: "Leere Codierung"));
 
         Assert.False(result);
-        Assert.Equal("Befunde wirklich loeschen?", capturedMessage);
+        Assert.Equal("Befunde wirklich löschen?", capturedMessage);
         Assert.Equal("Leere Codierung", capturedTitle);
     }
 

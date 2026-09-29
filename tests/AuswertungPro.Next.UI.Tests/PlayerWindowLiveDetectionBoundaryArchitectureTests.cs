@@ -16,7 +16,7 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Partials sollen Live-KI-Runtime/Timer ueber Factory-/Controller-Schichten erzeugen:\n"
+            "PlayerWindow-Partials sollen Live-KI-Runtime/Timer über Factory-/Controller-Schichten erzeugen:\n"
             + string.Join("\n", offenders));
     }
 
@@ -33,7 +33,7 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Partials sollen LiveDetection-Lifecycle ueber Controller/Lifecycle-Helfer kapseln:\n"
+            "PlayerWindow-Partials sollen LiveDetection-Lifecycle über Controller/Lifecycle-Helfer kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -51,7 +51,7 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow.LiveDetection-Partials sollen Status-Control-Updates ueber LiveDetectionStatusControls/Workflows kapseln:\n"
+            "PlayerWindow.LiveDetection-Partials sollen Status-Control-Updates über LiveDetectionStatusControls/Workflows kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -157,7 +157,7 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow.LiveDetection-Partials sollen Live-KI-Dialoge ueber Dialog-/Display-Services kapseln:\n"
+            "PlayerWindow.LiveDetection-Partials sollen Live-KI-Dialoge über Dialog-/Display-Services kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -173,7 +173,7 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow.LiveDetection.Snapshot soll Datei-IO und Service-Erzeugung ueber Capture-Workflow/Service kapseln:\n"
+            "PlayerWindow.LiveDetection.Snapshot soll Datei-IO und Service-Erzeugung über Capture-Workflow/Service kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -190,7 +190,7 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow.LiveDetection-Partials sollen Overlay-Rendering ueber Overlay-Partial und Controller kapseln:\n"
+            "PlayerWindow.LiveDetection-Partials sollen Overlay-Rendering über Overlay-Partial und Controller kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -246,7 +246,7 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Partials sollen den LiveDetection-Toggle ueber LiveDetectionToggleControls setzen:\n"
+            "PlayerWindow-Partials sollen den LiveDetection-Toggle über LiveDetectionToggleControls setzen:\n"
             + string.Join("\n", offenders));
     }
 
@@ -278,7 +278,7 @@ public sealed class PlayerWindowLiveDetectionBoundaryArchitectureTests
             "Der LiveDetection-Stop darf nicht als PlayerWindow-Partial zurueckkehren.");
         Assert.True(
             offenders.Length == 0,
-            "LiveDetectionStopController soll Playback-Pause und Hide-Timer ueber Workflows kapseln:\n"
+            "LiveDetectionStopController soll Playback-Pause und Hide-Timer über Workflows kapseln:\n"
             + string.Join("\n", offenders));
     }
 

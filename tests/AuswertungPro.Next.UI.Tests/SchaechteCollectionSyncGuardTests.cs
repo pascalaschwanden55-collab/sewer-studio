@@ -85,7 +85,7 @@ public sealed class SchaechteCollectionSyncGuardTests
             }
         }
 
-        Assert.True(mutationCount > 0, "Der ViewModel-Lock-Guard darf nicht leer-gruen werden.");
+        Assert.True(mutationCount > 0, "Der ViewModel-Lock-Guard darf nicht leer-grün werden.");
         Assert.True(
             violations.Count == 0,
             "Direkte Schacht-Mutationen ohne CollectionLock gefunden:\n" + string.Join("\n", violations));

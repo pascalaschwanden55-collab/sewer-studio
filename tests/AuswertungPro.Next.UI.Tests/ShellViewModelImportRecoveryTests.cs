@@ -162,15 +162,15 @@ public sealed class ShellViewModelImportRecoveryTests
         Assert.Equal("nach-import-bearbeitet", File.ReadAllText(blockedTarget));
         Assert.NotNull(journal.TryRead(projectRoot));
         Assert.Contains(
-            "Im Projektordner wurde bereits etwas veraendert",
+            "Im Projektordner wurde bereits etwas verändert",
             dialogs.LastErrorMessage,
             StringComparison.Ordinal);
         Assert.DoesNotContain(
-            "Das Projekt wurde nicht geoeffnet und nicht veraendert.",
+            "Das Projekt wurde nicht geöffnet und nicht verändert.",
             dialogs.LastErrorMessage,
             StringComparison.Ordinal);
         Assert.DoesNotContain(
-            "nichts veraendert",
+            "nichts verändert",
             dialogs.LastErrorMessage,
             StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(
@@ -226,18 +226,18 @@ public sealed class ShellViewModelImportRecoveryTests
         if (projektOrdnerVeraendert)
         {
             Assert.Contains(
-                "Im Projektordner wurde bereits etwas veraendert",
+                "Im Projektordner wurde bereits etwas verändert",
                 dialogs.LastErrorMessage,
                 StringComparison.Ordinal);
             Assert.DoesNotContain(
-                "und nicht veraendert",
+                "und nicht verändert",
                 dialogs.LastErrorMessage,
                 StringComparison.Ordinal);
         }
         else
         {
             Assert.Contains(
-                "Das Projekt wurde nicht geoeffnet und nicht veraendert.",
+                "Das Projekt wurde nicht geöffnet und nicht verändert.",
                 dialogs.LastErrorMessage,
                 StringComparison.Ordinal);
         }
@@ -410,8 +410,8 @@ public sealed class ShellViewModelImportRecoveryTests
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") => WarningCount++;
         public void Error(string message, string title = "Fehler") => LastErrorMessage = message;
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.No;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.No;
     }
 }

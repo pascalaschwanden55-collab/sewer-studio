@@ -32,15 +32,15 @@ public sealed class DossierRevisionRowFocusTests
             panel.Baue(ChangePage(), [ChangeField()]);
 
             Assert.Single(dossier.Changes);
-            Assert.True(panel.Kennt(DossierPreviewTarget.Row("Aenderungen", 0)));
+            Assert.True(panel.Kennt(DossierPreviewTarget.Row("Änderungen", 0)));
             Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(
-                "Aenderungen", 0, "Version")));
+                "Änderungen", 0, "Version")));
             Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(
-                "Aenderungen", 0, "Datum")));
+                "Änderungen", 0, "Datum")));
             Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(
-                "Aenderungen", 0, "Visum")));
+                "Änderungen", 0, "Visum")));
             Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(
-                "Aenderungen", 0, "Aenderung")));
+                "Änderungen", 0, "Änderung")));
             Assert.Equal(4, Nachfahren(host).OfType<RichTextBox>().Count());
             var entfernen = Assert.Single(Nachfahren(host)
                 .OfType<Button>()
@@ -92,7 +92,7 @@ public sealed class DossierRevisionRowFocusTests
                 window.Show();
 
                 Assert.True(panel.SpringeZu(DossierPreviewTarget.RowCell(
-                    "Aenderungen", 0, "Datum")));
+                    "Änderungen", 0, "Datum")));
                 PumpDispatcherFor(TimeSpan.FromMilliseconds(300));
 
                 Assert.All(editors.Take(4), editor =>
@@ -310,7 +310,7 @@ public sealed class DossierRevisionRowFocusTests
 
     private static DossierPreviewField ChangeField()
         => new(
-            "Aenderungen",
+            "Änderungen",
             "Änderungswesen",
             DossierPreviewFieldKind.Rows,
             () => string.Empty,
@@ -322,7 +322,7 @@ public sealed class DossierRevisionRowFocusTests
             "Deckblatt",
             new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.Zero),
             [],
-            ["Aenderungen"]);
+            ["Änderungen"]);
 
     private static DossierPreviewField TopicField()
         => new(

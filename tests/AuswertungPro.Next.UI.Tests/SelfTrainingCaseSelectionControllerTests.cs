@@ -33,7 +33,7 @@ public sealed class SelfTrainingCaseSelectionControllerTests
 
         Assert.True(result.ShouldStop);
         Assert.Same(selected, result.Case);
-        Assert.Equal("Der ausgewaehlte Fall hat kein Protokoll (PDF).", result.StatusText);
+        Assert.Equal("Der ausgewählte Fall hat kein Protokoll (PDF).", result.StatusText);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class SelfTrainingCaseSelectionControllerTests
 
         Assert.True(result.ShouldStop);
         Assert.Null(result.Case);
-        Assert.Equal("Alle 2 Faelle bereits verarbeitet. Waehle manuell fuer erneutes Training.", result.StatusText);
+        Assert.Equal("Alle 2 Fälle bereits verarbeitet. Wähle manuell für erneutes Training.", result.StatusText);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public sealed class SelfTrainingCaseSelectionControllerTests
 
         Assert.True(result.ShouldStop);
         Assert.Null(result.Case);
-        Assert.Equal("Keine Faelle mit Protokoll vorhanden. Bitte zuerst Ordner waehlen und scannen.", result.StatusText);
+        Assert.Equal("Keine Fälle mit Protokoll vorhanden. Bitte zuerst Ordner wählen und scannen.", result.StatusText);
     }
 
     private static TrainingCase Case(string caseId, string protocolPath)

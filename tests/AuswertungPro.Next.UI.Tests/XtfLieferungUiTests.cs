@@ -135,8 +135,8 @@ public sealed class XtfLieferungUiTests
         public void Info(string m, string title = "Hinweis") { }
         public void Warn(string m, string title = "Warnung") { }
         public void Error(string m, string title = "Fehler") { }
-        public bool Confirm(string m, string title = "Bestaetigung") => false;
-        public bool ConfirmWarn(string m, string title = "Bestaetigung", bool defaultNo = true) => false;
-        public DialogConfirm ConfirmCancel(string m, string title = "Bestaetigung") => DialogConfirm.Cancel;
+        public bool Confirm(string m, string title = "Bestätigung") => false;
+        public bool ConfirmWarn(string m, string title = "Bestätigung", bool defaultNo = true) => false;
+        public DialogConfirm ConfirmCancel(string m, string title = "Bestätigung") => DialogConfirm.Cancel;
     }
 }

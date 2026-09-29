@@ -83,8 +83,8 @@ public sealed class DataGridComboColumnFactoryTests
             Assert.Equal(5, contextMenu.Items.Count);
             AssertMenuItem(contextMenu, 0, "Liste bearbeiten...", "EditCommand", hasPlacementTargetParameter: false);
             AssertMenuItem(contextMenu, 1, "Vorschau", "PreviewCommand", hasPlacementTargetParameter: false);
-            AssertMenuItem(contextMenu, 2, "Zuruecksetzen auf Standard", "ResetCommand", hasPlacementTargetParameter: false);
-            AssertMenuItem(contextMenu, 3, "Wert hinzufuegen", "AddCommand", hasPlacementTargetParameter: true);
+            AssertMenuItem(contextMenu, 2, "Zurücksetzen auf Standard", "ResetCommand", hasPlacementTargetParameter: false);
+            AssertMenuItem(contextMenu, 3, "Wert hinzufügen", "AddCommand", hasPlacementTargetParameter: true);
             AssertMenuItem(contextMenu, 4, "Wert entfernen", "RemoveCommand", hasPlacementTargetParameter: true);
         });
     }

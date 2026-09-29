@@ -26,8 +26,8 @@ public sealed class PlayerWindowCodingApplyArchitectureTests
         var dialogServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingApplyDialogService.cs");
         var dialogServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingApplyDialogServiceFactory.cs");
 
-        Assert.False(File.Exists(applyPath), "Der uebernommene Codierungsablauf darf nicht wieder als PlayerWindow-Partial erscheinen.");
-        Assert.True(File.Exists(controllerPath), "Uebernehmen und Schliessschutz brauchen einen eigenen Controller.");
+        Assert.False(File.Exists(applyPath), "Der übernommene Codierungsablauf darf nicht wieder als PlayerWindow-Partial erscheinen.");
+        Assert.True(File.Exists(controllerPath), "Übernehmen und Schliessschutz brauchen einen eigenen Controller.");
         Assert.True(File.Exists(policyPath), "Protokoll-Revision-Update muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(updateBuilderPath), "Protokoll-Dokumentvorbereitung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(emptyGuardPath), "Leere-Codierung-Schutzlogik muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -35,8 +35,8 @@ public sealed class PlayerWindowCodingApplyArchitectureTests
         Assert.True(File.Exists(closeWorkflowPath), "Unuebernommene-Codierungen-Schliessen-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(emptyDialogWorkflowPath), "Leere-Codierung-Dialog soll ausserhalb der PlayerWindow-Partials ausgefuehrt werden.");
         Assert.True(File.Exists(closeDialogWorkflowPath), "Unuebernommene-Codierungen-Schliessen-Dialog soll ausserhalb der PlayerWindow-Partials ausgefuehrt werden.");
-        Assert.True(File.Exists(closePolicyPath), "Schliessen-Entscheidung fuer unuebernommene Codierungen muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(dialogServicePath), "Apply-Dialogtexte und DialogHost-Zugriff muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(closePolicyPath), "Schliessen-Entscheidung für unuebernommene Codierungen muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogServicePath), "Apply-Dialogtexte und DialogHost-Zugriff müssen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServiceFactoryPath), "Apply-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var controller = File.ReadAllText(controllerPath);

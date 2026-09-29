@@ -32,14 +32,14 @@ public sealed class VsaCodeExplorerResultPanelPresenterTests
             finalCode: "BAB",
             finalLabel: "Riss",
             finalSublabel: "Laengsriss",
-            warnMessage: "Pruefen");
+            warnMessage: "Prüfen");
 
         Assert.True(presentation.ShowResultPanel);
         Assert.False(presentation.ShowCodeHintPanel);
         Assert.True(presentation.ShouldUpdateDetailPanels);
         Assert.Equal("BAB", presentation.FinalCodeText);
         Assert.Equal("Riss \u2014 Laengsriss", presentation.FinalLabelText);
-        Assert.Equal("Pruefen", presentation.WarnText);
+        Assert.Equal("Prüfen", presentation.WarnText);
         Assert.True(presentation.ShowWarn);
     }
 

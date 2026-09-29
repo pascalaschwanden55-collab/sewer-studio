@@ -129,7 +129,7 @@ public sealed class DossierPreviewRowMarkTests
         var marken = Marken(new[]
         {
             Zeile("Ansprechpartner", "Abwasser Uri"),
-            Zeile("Schaeden", "Leitung undicht")
+            Zeile("Schäden", "Leitung undicht")
         });
 
         Assert.Single(marken[DossierPreviewTarget.RowCell("Themen", 0, "Thema")]);

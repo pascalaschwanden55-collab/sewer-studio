@@ -140,7 +140,7 @@ public sealed class NovaProjektwechselTests : IDisposable
     [Fact]
     public async Task Erledigt_und_offene_KI_aktualisieren_Uebersicht_Aufgabe_und_Pruefergebnis()
     {
-        var p = Projekt("Pruefung", "1-2"); var h = p.Data[0];
+        var p = Projekt("Prüfung", "1-2"); var h = p.Data[0];
         _shell.ReplaceProject(p); _shell.MarkProjectReady();
         _shell.EnterWorkspaceOn("Uebersicht");
         using var vm = new ProjektUebersichtPageViewModel(_shell, _services);

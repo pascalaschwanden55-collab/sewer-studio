@@ -6,6 +6,6 @@ internal sealed class IsolatedWpfFactAttribute : FactAttribute
     public IsolatedWpfFactAttribute()
     {
         if (!WpfIsolatedTestProcess.IsChildProcess)
-            Skip = "Dieses Szenario laeuft nur im isolierten WPF-Kindprozess.";
+            Skip = "Dieses Szenario läuft nur im isolierten WPF-Kindprozess.";
     }
 }

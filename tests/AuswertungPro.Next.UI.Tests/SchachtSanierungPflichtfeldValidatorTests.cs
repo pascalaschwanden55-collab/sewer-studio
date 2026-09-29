@@ -12,7 +12,7 @@ public sealed class SchachtSanierungPflichtfeldValidatorTests
 
         var missing = SchachtSanierungPflichtfeldValidator.MissingFields(record);
 
-        Assert.Equal(new[] { "Sanieren Ja/Nein", "Ausgefuehrt durch" }, missing);
+        Assert.Equal(new[] { "Sanieren Ja/Nein", "Ausgeführt durch" }, missing);
     }
 
     [Fact]

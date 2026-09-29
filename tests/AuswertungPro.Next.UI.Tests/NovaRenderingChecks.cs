@@ -90,7 +90,7 @@ internal static class NovaRenderingChecks
             menu.Items.Add(new MenuItem { Header = $"Aktion {i + 1}" });
         Arrange(menu, 360, 240);
         var scroll = Assert.IsType<ScrollViewer>(menu.Template.FindName("MenuScrollViewer", menu));
-        Assert.True(scroll.ScrollableHeight > 0, "Ein langes Menue braucht erreichbare untere Eintraege.");
+        Assert.True(scroll.ScrollableHeight > 0, "Ein langes Menue braucht erreichbare untere Einträge.");
         scroll.ScrollToEnd();
         menu.UpdateLayout();
         Assert.True(scroll.VerticalOffset > 0);

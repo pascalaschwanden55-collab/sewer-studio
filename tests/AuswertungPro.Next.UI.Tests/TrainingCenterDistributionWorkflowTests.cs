@@ -94,7 +94,7 @@ public sealed class TrainingCenterDistributionWorkflowTests
         Assert.Contains("Output: D:\\Projekt\\Uri_Training", state.Logs);
         Assert.Contains("  Haltung A: ok", state.Logs);
         Assert.Contains("--- Fertig: 2 Haltungen verteilt, 1 Videos zugeordnet ---", state.Logs);
-        Assert.Contains("  1 Chunks ohne Haltungs-ID uebersprungen.", state.Logs);
+        Assert.Contains("  1 Chunks ohne Haltungs-ID übersprungen.", state.Logs);
         Assert.Contains("Output-Ordner als Trainings-Ordner hinzugefügt. Klicke 'Scannen' zum Laden.", state.Logs);
     }
 

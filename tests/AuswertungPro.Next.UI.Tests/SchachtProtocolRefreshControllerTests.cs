@@ -70,7 +70,7 @@ public sealed class SchachtProtocolRefreshControllerTests
             {
                 "project-folder",
                 "project-context",
-                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geaenderte Felder bleiben erhalten; alle uebrigen werden ersetzt. Fortfahren?"
+                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geänderte Felder bleiben erhalten; alle übrigen werden ersetzt. Fortfahren?"
             },
             harness.Calls);
     }
@@ -88,9 +88,9 @@ public sealed class SchachtProtocolRefreshControllerTests
             {
                 "project-folder",
                 "project-context",
-                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geaenderte Felder bleiben erhalten; alle uebrigen werden ersetzt. Fortfahren?",
+                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geänderte Felder bleiben erhalten; alle übrigen werden ersetzt. Fortfahren?",
                 "locate|Schaechte_Verteilt/S-1/protokoll.pdf|C:\\Projekt",
-                "warn|Aktualisieren|Die verknuepfte Protokoll-Datei wurde nicht gefunden."
+                "warn|Aktualisieren|Die verknüpfte Protokoll-Datei wurde nicht gefunden."
             },
             harness.Calls);
     }
@@ -129,8 +129,8 @@ public sealed class SchachtProtocolRefreshControllerTests
     }
 
     [Theory]
-    [InlineData(false, "S-1", null, "Das verknuepfte PDF ist kein lesbares Schachtprotokoll.")]
-    [InlineData(true, "   ", "", "Das verknuepfte PDF ist kein lesbares Schachtprotokoll.")]
+    [InlineData(false, "S-1", null, "Das verknüpfte PDF ist kein lesbares Schachtprotokoll.")]
+    [InlineData(true, "   ", "", "Das verknüpfte PDF ist kein lesbares Schachtprotokoll.")]
     [InlineData(true, null, "Parser-Hinweis", "Parser-Hinweis")]
     public async Task ExecuteAsync_warns_for_invalid_protocol_result(
         bool isProtocol,
@@ -172,7 +172,7 @@ public sealed class SchachtProtocolRefreshControllerTests
             {
                 "project-folder",
                 "project-context",
-                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geaenderte Felder bleiben erhalten; alle uebrigen werden ersetzt. Fortfahren?",
+                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geänderte Felder bleiben erhalten; alle übrigen werden ersetzt. Fortfahren?",
                 "locate|Schaechte_Verteilt/S-1/protokoll.pdf|C:\\Projekt",
                 "read|C:\\Projekt\\protokoll.pdf|Aktualisieren",
                 "project-still-open|C:\\Projekt\\projekt.json|Aktualisieren|impact=None",
@@ -225,8 +225,8 @@ public sealed class SchachtProtocolRefreshControllerTests
 
         Assert.Equal(SchachtProtocolRefreshOutcome.ForeignShaftNumber, outcome);
         Assert.Equal(
-            "confirm|Aktualisieren|defaultNo=True|Die verknuepfte Datei fehlt. Im Ordner dieses "
-            + "Schachts wurde stattdessen \"fremd.pdf\" gefunden, sie gehoert laut Protokoll aber "
+            "confirm|Aktualisieren|defaultNo=True|Die verknüpfte Datei fehlt. Im Ordner dieses "
+            + "Schachts wurde stattdessen \"fremd.pdf\" gefunden, sie gehört laut Protokoll aber "
             + "zu Schacht S-9. Trotzdem übernehmen?",
             harness.Calls[^1]);
         Assert.DoesNotContain(harness.Calls, call => call.StartsWith("apply|", StringComparison.Ordinal));
@@ -474,15 +474,15 @@ public sealed class SchachtProtocolRefreshControllerTests
         public void Info(string message, string title = "Hinweis") => _calls.Add($"info|{title}|{message}");
         public void Warn(string message, string title = "Warnung") => _calls.Add($"warn|{title}|{message}");
         public void Error(string message, string title = "Fehler") => _calls.Add($"error|{title}|{message}");
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
 
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true)
         {
             _calls.Add($"confirm|{title}|defaultNo={defaultNo}|{message}");
             return _confirmWarn();
         }
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
             => DialogConfirm.Cancel;
     }
 }

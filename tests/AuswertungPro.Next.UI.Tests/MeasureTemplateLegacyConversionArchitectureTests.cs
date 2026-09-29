@@ -63,6 +63,6 @@ public sealed class MeasureTemplateLegacyConversionArchitectureTests
             deserializeIndex >= 0
             && deserializeIndex < convertIndex
             && convertIndex < loadOverridesIndex,
-            "Einlesen, Umwandeln und Laden der Zieldatei muessen in dieser Reihenfolge bleiben.");
+            "Einlesen, Umwandeln und Laden der Zieldatei müssen in dieser Reihenfolge bleiben.");
     }
 }

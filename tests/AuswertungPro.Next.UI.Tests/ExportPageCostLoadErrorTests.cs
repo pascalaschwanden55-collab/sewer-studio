@@ -163,7 +163,7 @@ public sealed class ExportPageCostLoadErrorTests
         Assert.NotSame(shell.Project, sync.Project);
         Assert.Same(sync.Project, excel.LastHoldingProject);
         Assert.Equal(settings.LastProjectPath, excel.LastHoldingProjectPath);
-        Assert.Equal("nur fuer Excel", excel.LastHoldingProject!.Data.Single().GetFieldValue(FieldKeys.Cost));
+        Assert.Equal("nur für Excel", excel.LastHoldingProject!.Data.Single().GetFieldValue(FieldKeys.Cost));
         Assert.Same(sourceRecord, shell.Project.Data.Single());
         Assert.Equal("alter Projektwert", sourceRecord.GetFieldValue(FieldKeys.Cost));
         Assert.Same(originalCostMeta, sourceRecord.FieldMeta[FieldKeys.Cost]);
@@ -200,7 +200,7 @@ public sealed class ExportPageCostLoadErrorTests
         var excel = new ExcelExportFake();
         var toasts = new ToastFake();
         var sync = new CostSyncFake();
-        var costs = new CostStoreFake("costs.json ist beschaedigt");
+        var costs = new CostStoreFake("costs.json ist beschädigt");
         var vm = new ExportPageViewModel(
             shell,
             settings,
@@ -220,7 +220,7 @@ public sealed class ExportPageCostLoadErrorTests
         Assert.Equal(0, excel.HoldingExportCalls);
         Assert.Equal(0, sync.Calls);
         Assert.Contains("Kostendaten", vm.LastResult, StringComparison.Ordinal);
-        Assert.Contains("beschaedigt", vm.LastResult, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("beschädigt", vm.LastResult, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(toasts.LastError);
         Assert.Contains("Kostendaten", dialogs.LastError, StringComparison.Ordinal);
         Assert.False(File.Exists(dialogs.SaveFileResult));
@@ -302,7 +302,7 @@ public sealed class ExportPageCostLoadErrorTests
             Project = project;
             project.Data.Single().SetFieldValue(
                 FieldKeys.Cost,
-                "nur fuer Excel",
+                "nur für Excel",
                 FieldSource.Manual,
                 userEdited: true);
             return 1;
@@ -366,9 +366,9 @@ public sealed class ExportPageCostLoadErrorTests
             LastError = message;
             LastErrorTitle = title;
         }
-        public bool Confirm(string message, string title = "Bestaetigung") => true;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => true;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Yes;
+        public bool Confirm(string message, string title = "Bestätigung") => true;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => true;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Yes;
     }
 
     private sealed class TempDir : IDisposable

@@ -37,7 +37,7 @@ public sealed class CodingProtocolMatchBucketBuilderTests
     public void Build_ignores_invalid_reference_ids()
     {
         var routing = Routing(
-            green: [new BefundMatchPair(Finding("bad"), Finding("also-bad"), 0.0, "gruen")],
+            green: [new BefundMatchPair(Finding("bad"), Finding("also-bad"), 0.0, "grün")],
             yellow: [],
             wrong: [],
             missed: [Finding("not-a-guid")],
@@ -78,7 +78,7 @@ public sealed class CodingProtocolMatchBucketBuilderTests
         => new(new BefundMatchResult(), green, yellow, wrong, missed, extra);
 
     private static BefundMatchPair Pair(Guid gt, Guid ki)
-        => new(Finding(gt), Finding(ki), 0.0, "gruen");
+        => new(Finding(gt), Finding(ki), 0.0, "grün");
 
     private static BefundMatchFinding Finding(Guid refId)
         => Finding(refId.ToString());

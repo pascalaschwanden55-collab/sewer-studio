@@ -79,7 +79,7 @@ public sealed class TrainingKnowledgeBaseIndexWorkflowTests
         => new()
         {
             SampleId = sampleId,
-            Beschreibung = "Beschreibung fuer KB"
+            Beschreibung = "Beschreibung für KB"
         };
 
     private static OllamaConfig Config()

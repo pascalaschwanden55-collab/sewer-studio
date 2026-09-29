@@ -20,7 +20,7 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge", workflow);
         AssertNoForbiddenTokens(
             training,
-            "bestaetigt",
+            "bestätigt",
             "Interval = TimeSpan.FromSeconds(3)");
         Assert.Contains("public static CodingImportConfirmationBadgeState BuildImportConfirmationBadge", policy);
     }
@@ -40,7 +40,7 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         AssertNoForbiddenTokens(
             training,
             "CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay",
-            "gruene Treffer als Training uebernommen",
+            "grüne Treffer als Training übernommen",
             "ShowOverlay($\"{accepted}");
         Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay", runner);
         Assert.Contains("public static CodingProtocolMatchOverlayState BuildAcceptedGreenMatchesOverlay", policy);
@@ -121,7 +121,7 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         Assert.True(File.Exists(confirmWorkflowPath), "Import-Confirm-Serviceaufruf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(importTrainingResultWorkflowPath), "Import-Training-Ergebnisbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "ProtocolMatch-Trainingsworkflow soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(workflowFactoryPath), "ProtocolMatch-Trainingsworkflow soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(workflowFactoryPath), "ProtocolMatch-Trainingsworkflow soll über Factory verdrahtet werden.");
 
         Assert.False(File.Exists(protocolMatchPath), "Der alte Match-Partial muss entfernt bleiben.");
         var controller = File.ReadAllText(controllerPath);

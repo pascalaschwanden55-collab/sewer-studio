@@ -67,7 +67,7 @@ public sealed class ObservationCatalogViewModelInputNormalizationTests
         var viewModel = CreateViewModel(entry);
         viewModel.MeterStartText = string.Empty;
         viewModel.MeterEndText = string.Empty;
-        viewModel.VsaDistanz = "ungueltig";
+        viewModel.VsaDistanz = "ungültig";
 
         var applied = viewModel.ApplyToEntry();
 
@@ -77,9 +77,9 @@ public sealed class ObservationCatalogViewModelInputNormalizationTests
     }
 
     [Theory]
-    [InlineData("ungueltig", "2", "03:04", "MeterStart ist ungueltig.")]
-    [InlineData("1", "ungueltig", "03:04", "MeterEnd ist ungueltig.")]
-    [InlineData("1", "2", "ungueltig", "Zeit ist ungueltig.")]
+    [InlineData("ungültig", "2", "03:04", "MeterStart ist ungültig.")]
+    [InlineData("1", "ungültig", "03:04", "MeterEnd ist ungültig.")]
+    [InlineData("1", "2", "ungültig", "Zeit ist ungültig.")]
     public void ApplyToEntry_behaelt_die_bisherige_erste_Fehlermeldung(
         string meterStart,
         string meterEnd,

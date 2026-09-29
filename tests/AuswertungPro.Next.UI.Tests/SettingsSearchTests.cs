@@ -107,7 +107,7 @@ public sealed class SettingsSearchTests
             var technischeGruppe = new GroupBox
             {
                 Header = "Werkzeuge (Fachleute)",
-                Content = new TextBlock { Text = "pdftotext.exe auswaehlen" }
+                Content = new TextBlock { Text = "pdftotext.exe auswählen" }
             };
             var erweitert = new Expander
             {

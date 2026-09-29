@@ -35,7 +35,7 @@ public sealed class TrainingBatchImportSamplePersistenceControllerTests
         Assert.Equal(1, countWhenSaved);
         Assert.Equal(3, result.SampleCount);
         Assert.Equal(2, result.CodesCovered);
-        Assert.Equal("2 Samples als Kandidaten gespeichert (Status: Neu). Freigabe ueber Review (Modul I) - KEIN Auto-Index.", result.CandidateLogMessage);
+        Assert.Equal("2 Samples als Kandidaten gespeichert (Status: Neu). Freigabe über Review (Modul I) - KEIN Auto-Index.", result.CandidateLogMessage);
         Assert.Equal("  Gespeichert | Gesamt: 3 Samples, 2 Codes", result.StoredLogMessage);
     }
 }

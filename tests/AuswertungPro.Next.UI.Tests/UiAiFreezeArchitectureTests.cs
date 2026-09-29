@@ -33,7 +33,7 @@ public sealed class UiAiFreezeArchitectureTests
             "Neue Dateien unter src/AuswertungPro.Next.UI/Ai sind nicht erlaubt. "
             + "Neue Workflow-/Orchestrierungsklassen gehoeren nach "
             + "src/AuswertungPro.Next.Application/UseCases/ (siehe AGENTS.md). "
-            + "Bewusst UI-nahe Dateien muessen in tests/AuswertungPro.Next.UI.Tests/UiAiFreezeAllowlist.txt "
+            + "Bewusst UI-nahe Dateien müssen in tests/AuswertungPro.Next.UI.Tests/UiAiFreezeAllowlist.txt "
             + "eingetragen werden:\n" + string.Join("\n", unknown));
     }
 
@@ -59,8 +59,8 @@ public sealed class UiAiFreezeArchitectureTests
         Assert.True(
             stale.Length == 0 && duplicates.Length == 0,
             "UiAiFreezeAllowlist.txt bitte aufraeumen."
-            + (stale.Length > 0 ? "\nVerwaiste Eintraege ohne Datei:\n" + string.Join("\n", stale) : string.Empty)
-            + (duplicates.Length > 0 ? "\nDoppelte Eintraege:\n" + string.Join("\n", duplicates) : string.Empty));
+            + (stale.Length > 0 ? "\nVerwaiste Einträge ohne Datei:\n" + string.Join("\n", stale) : string.Empty)
+            + (duplicates.Length > 0 ? "\nDoppelte Einträge:\n" + string.Join("\n", duplicates) : string.Empty));
     }
 
     private static HashSet<string> LoadAllowlist()

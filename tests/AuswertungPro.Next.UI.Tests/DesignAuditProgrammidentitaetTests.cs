@@ -48,7 +48,7 @@ public sealed class DesignAuditProgrammidentitaetTests
                     if (wert.Contains(begriff, StringComparison.Ordinal))
                     {
                         verstoesse.Add(
-                            $"{Path.GetRelativePath(UiRoot, pfad)}: Attributwert \"{wert}\" enthaelt \"{begriff}\"");
+                            $"{Path.GetRelativePath(UiRoot, pfad)}: Attributwert \"{wert}\" enthält \"{begriff}\"");
                     }
                 }
             }

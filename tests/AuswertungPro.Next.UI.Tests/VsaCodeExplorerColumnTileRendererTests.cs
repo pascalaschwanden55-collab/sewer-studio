@@ -103,14 +103,14 @@ public sealed class VsaCodeExplorerColumnTileRendererTests
                     Badges: [],
                     ShowSelectedChrome: false,
                     ShowInvalidChrome: true,
-                    InvalidTooltip: "ungueltig"),
+                    InvalidTooltip: "ungültig"),
                 new TileItem { Label = "BC" },
                 new Style(typeof(Button)),
                 CreateResources(),
                 () => { });
 
             Assert.Equal(0.7, button.Opacity, precision: 2);
-            Assert.Equal("ungueltig", button.ToolTip);
+            Assert.Equal("ungültig", button.ToolTip);
             var content = Assert.IsType<DockPanel>(button.Content);
             Assert.Contains(
                 FindText(content, "BC").TextDecorations,

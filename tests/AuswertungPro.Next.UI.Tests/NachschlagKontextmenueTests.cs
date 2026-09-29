@@ -111,7 +111,7 @@ public sealed class NachschlagKontextmenueTests
             if (strasse is null
                 || !Punkte(strasse).Any(t => t.Contains("übernehmen", StringComparison.OrdinalIgnoreCase)))
             {
-                befunde.Add("leeres Strassenfeld: die Uebernahme vom Nachbarbauteil fehlt im Menue.");
+                befunde.Add("leeres Strassenfeld: die Übernahme vom Nachbarbauteil fehlt im Menue.");
             }
 
             // 5b. Dasselbe im Menue der verwalteten Auswahlfelder. Beide
@@ -122,12 +122,12 @@ public sealed class NachschlagKontextmenueTests
             if (strasseVerwaltet is null
                 || !Punkte(strasseVerwaltet).Any(t => t.Contains("übernehmen", StringComparison.OrdinalIgnoreCase)))
             {
-                befunde.Add("verwaltetes Strassenfeld: die Uebernahme vom Nachbarbauteil fehlt im Menue.");
+                befunde.Add("verwaltetes Strassenfeld: die Übernahme vom Nachbarbauteil fehlt im Menue.");
             }
 
             // 6. Ein gefuelltes Strassenfeld traegt gar kein eigenes Menue.
             if (ComboMenue(Strassenfeld("Linden")) is not null)
-                befunde.Add("gefuelltes Strassenfeld: traegt ein Menue, obwohl nichts zu uebernehmen ist.");
+                befunde.Add("gefuelltes Strassenfeld: traegt ein Menue, obwohl nichts zu übernehmen ist.");
 
             // 7. Leeres Textfeld mit Quelle: Nachschlag vorhanden.
             Pruefe(befunde, "leeres Textfeld mit Quelle",
@@ -149,7 +149,7 @@ public sealed class NachschlagKontextmenueTests
             if (box.ContextMenu is null)
             {
                 befunde.Add(
-                    "geleertes Feld: kein Kontextmenue - nach dem Loeschen muss der "
+                    "geleertes Feld: kein Kontextmenue - nach dem Löschen muss der "
                     + "Nachschlag sofort wieder erscheinen.");
             }
             else if (!Punkte(box.ContextMenu).Any(t => t.Contains("nachschlagen", StringComparison.OrdinalIgnoreCase)))
@@ -177,11 +177,11 @@ public sealed class NachschlagKontextmenueTests
                 stapel.Measure(new Size(700, 600));
 
                 if (stapel.Gewaehlt.Count != 0)
-                    befunde.Add("Stapelfenster: liefert eine Auswahl, bevor bestaetigt wurde.");
+                    befunde.Add("Stapelfenster: liefert eine Auswahl, bevor bestätigt wurde.");
             }
             catch (Exception ex)
             {
-                befunde.Add($"Stapelfenster laesst sich nicht laden: {ex.GetType().Name}: {ex.Message}");
+                befunde.Add($"Stapelfenster lässt sich nicht laden: {ex.GetType().Name}: {ex.Message}");
             }
 
             Assert.True(befunde.Count == 0,

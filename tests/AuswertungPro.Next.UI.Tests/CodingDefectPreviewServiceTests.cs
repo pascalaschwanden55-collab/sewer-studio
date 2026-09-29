@@ -162,7 +162,7 @@ public sealed class CodingDefectPreviewServiceTests
 
                     Assert.NotNull(previewPath);
                     var center = ReadPixel(previewPath!, 30, 30);
-                    Assert.True(center.G > center.R && center.G > center.B, $"Maskenpixel muss gruen markiert sein: R={center.R} G={center.G} B={center.B}");
+                    Assert.True(center.G > center.R && center.G > center.B, $"Maskenpixel muss grün markiert sein: R={center.R} G={center.G} B={center.B}");
                 }
                 finally
                 {

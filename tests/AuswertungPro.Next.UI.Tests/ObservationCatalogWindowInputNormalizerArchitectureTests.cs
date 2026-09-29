@@ -109,11 +109,11 @@ public sealed class ObservationCatalogWindowInputNormalizerArchitectureTests
         AssertInOrder(
             apply,
             "ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterStartText, out var meterStart)",
-            "ValidationMessage = \"MeterStart ist ungueltig.\";",
+            "ValidationMessage = \"MeterStart ist ungültig.\";",
             "ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterEndText, out var meterEnd)",
-            "ValidationMessage = \"MeterEnd ist ungueltig.\";",
+            "ValidationMessage = \"MeterEnd ist ungültig.\";",
             "ProtocolEntryInputNormalizer.TryParseOptionalTimeSpan(ZeitText, out var zeit)",
-            "ValidationMessage = \"Zeit ist ungueltig.\";",
+            "ValidationMessage = \"Zeit ist ungültig.\";",
             "ProtocolEntryInputNormalizer.TryParseOptionalDouble(",
             "VsaDistanz ?? string.Empty,",
             "out var vsaDistanz)");

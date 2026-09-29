@@ -101,7 +101,7 @@ public sealed class NovaDialogWindowIsolatedSmokeTests
             Assert.Same(primaryButtonStyle, jaConfirm.Style);
             Assert.False(neinConfirm.IsDefault);
             Assert.True(neinConfirm.IsCancel, "Nein schliesst bei Esc.");
-            Assert.True(jaConfirm.IsDefault, "Ja ist bei einer normalen Bestaetigung der Standardknopf.");
+            Assert.True(jaConfirm.IsDefault, "Ja ist bei einer normalen Bestätigung der Standardknopf.");
             PruefeReihenfolgeVorDemHaupt(confirmJa, neinConfirm);
             Klicke(jaConfirm, confirmJa);
             Assert.Equal(DialogConfirm.Yes, confirmJa.Ergebnis);
@@ -192,7 +192,7 @@ public sealed class NovaDialogWindowIsolatedSmokeTests
                 var pruefText = Assert.IsType<TextBox>(pruefFenster.FindName("TextInhalt"));
                 Assert.False(
                     pruefText.AcceptsReturn,
-                    "AcceptsReturn wuerde ein fokussiertes Enter im auswaehlbaren Text verschlucken " +
+                    "AcceptsReturn würde ein fokussiertes Enter im auswaehlbaren Text verschlucken " +
                     "und den Standardknopf (Enter) unerreichbar machen.");
             }
 

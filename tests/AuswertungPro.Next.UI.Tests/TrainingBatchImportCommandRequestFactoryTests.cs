@@ -184,9 +184,9 @@ public sealed class TrainingBatchImportCommandRequestFactoryTests
 
         public void Error(string message, string title = "Fehler") { }
 
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
 
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true)
         {
             ConfirmWarnCalls++;
             LastMessage = message;
@@ -194,6 +194,6 @@ public sealed class TrainingBatchImportCommandRequestFactoryTests
             return confirmWarnResult;
         }
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Cancel;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Cancel;
     }
 }

@@ -21,13 +21,13 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var dialogWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOpenStretchDamageDialogWorkflow.cs");
         var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOpenStretchDamagePromptCommandWorkflow.cs");
 
-        Assert.True(File.Exists(closePromptPath), "Dialog fuer offene Streckenschaeden soll aus dem Boundary-Partial heraus.");
-        Assert.True(File.Exists(policyPath), "Dialogtext fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(closePolicyPath), "Filter- und Schliessmeterlogik fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(closeApplierPath), "Schliessanwendung fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(dialogServicePath), "Dialogentscheidung fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(dialogServiceFactoryPath), "DialogHost-Verdrahtung fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(dialogWorkflowPath), "Dialogaufruf fuer offene Streckenschaeden soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(closePromptPath), "Dialog für offene Streckenschaeden soll aus dem Boundary-Partial heraus.");
+        Assert.True(File.Exists(policyPath), "Dialogtext für offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(closePolicyPath), "Filter- und Schliessmeterlogik für offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(closeApplierPath), "Schliessanwendung für offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogServicePath), "Dialogentscheidung für offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogServiceFactoryPath), "DialogHost-Verdrahtung für offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogWorkflowPath), "Dialogaufruf für offene Streckenschaeden soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(commandWorkflowPath), "Offene-Streckenschaden-Dialogfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var boundaryContext = File.ReadAllText(boundaryContextPath);
@@ -90,7 +90,7 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var builderPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStreckenschadenActionInputBuilder.cs");
         var applierPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStreckenschadenActionApplier.cs");
 
-        Assert.True(File.Exists(builderPath), "Mapper-Eingabe fuer Streckenschaden-Aktionen muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(builderPath), "Mapper-Eingabe für Streckenschaden-Aktionen muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(applierPath), "Streckenschaden-Aktionsausfuehrung muss den Action-Input-Builder nutzen.");
 
         var playerWindowSource = ReadPlayerWindowSource(uiRoot);
@@ -116,7 +116,7 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var applierPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingStreckenschadenActionApplier.cs");
 
         Assert.True(File.Exists(workflowPath), "Streckenschaden-Aktions-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(applierPath), "Streckenschaden-Aktionen muessen ausserhalb der PlayerWindow-Partials angewendet werden.");
+        Assert.True(File.Exists(applierPath), "Streckenschaden-Aktionen müssen ausserhalb der PlayerWindow-Partials angewendet werden.");
 
         var playerWindowSource = ReadPlayerWindowSource(uiRoot);
         var controller = File.ReadAllText(controllerPath);
@@ -258,7 +258,7 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionen sollen in einem eigenen Partial liegen.");
         Assert.True(File.Exists(applierPath), "Manuelles Streckenschaden-Schliessen soll ausserhalb der PlayerWindow-Partials angewendet werden.");
-        Assert.True(File.Exists(workflowPath), "Streckenschaden-Schliessen soll ueber den Coding-Event-Listenworkflow laufen.");
+        Assert.True(File.Exists(workflowPath), "Streckenschaden-Schliessen soll über den Coding-Event-Listenworkflow laufen.");
 
         var events = File.ReadAllText(eventsPath);
         var actions = File.ReadAllText(actionsPath);

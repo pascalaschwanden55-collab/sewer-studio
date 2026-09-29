@@ -63,6 +63,6 @@ public sealed class VsaCodeExplorerColumnTilePresenterTests
         Assert.Equal(VsaCodeExplorerColumnTileBrushRole.Invalid, presentation.DescriptionBrushRole);
         Assert.Equal([new VsaCodeExplorerColumnTileBadge("End", "#16A34A")], presentation.Badges);
         Assert.True(presentation.ShowInvalidChrome);
-        Assert.Equal("Als ungueltig markiert - Auswahl ist trotzdem erlaubt.", presentation.InvalidTooltip);
+        Assert.Equal("Als ungültig markiert - Auswahl ist trotzdem erlaubt.", presentation.InvalidTooltip);
     }
 }

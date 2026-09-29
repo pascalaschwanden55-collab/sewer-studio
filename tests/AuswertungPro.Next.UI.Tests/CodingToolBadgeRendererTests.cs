@@ -25,7 +25,7 @@ public sealed class CodingToolBadgeRendererTests
                 var other = new Border { Tag = OverlayTags.BendMarker };
                 canvas.Children.Add(other);
 
-                CodingToolBadgeRenderer.Update(canvas, "Flaeche");
+                CodingToolBadgeRenderer.Update(canvas, "Fläche");
 
                 childCount = canvas.Children.Count;
                 otherTag = canvas.Children[0] is Border kept ? kept.Tag : null;
@@ -46,7 +46,7 @@ public sealed class CodingToolBadgeRendererTests
         Assert.Null(threadError);
         Assert.Equal(2, childCount);
         Assert.Equal(OverlayTags.BendMarker, otherTag);
-        Assert.Equal("Flaeche", badgeText);
+        Assert.Equal("Fläche", badgeText);
         Assert.Equal(10, badgeLeft);
         Assert.Equal(10, badgeTop);
     }

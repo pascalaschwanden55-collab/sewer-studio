@@ -98,7 +98,7 @@ public sealed class TrainingBatchImportGeneratedCaseControllerTests
         Assert.Equal(
             new[]
             {
-                "  -> 2 Samples (Status: Neu, Freigabe ueber Review):",
+                "  -> 2 Samples (Status: Neu, Freigabe über Review):",
                 "     BAA @ 1.25m [New] - Riss",
                 "     BBB @ 3.00m [New] - Ablagerung"
             },

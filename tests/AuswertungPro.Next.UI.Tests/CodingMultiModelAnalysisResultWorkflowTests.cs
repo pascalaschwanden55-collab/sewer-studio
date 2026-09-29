@@ -77,7 +77,7 @@ public sealed partial class CodingMultiModelAnalysisResultWorkflowTests
                     SamTimeMs: 0,
                     Error: null,
                     Degraded: true,
-                    DegradedReason: "YOLO nicht qualifiziert; DINO/SAM manuell pruefen.",
+                    DegradedReason: "YOLO nicht qualifiziert; DINO/SAM manuell prüfen.",
                     DetectorQualified: false),
                 ActivityText: "Analysiere"),
             Actions(
@@ -90,7 +90,7 @@ public sealed partial class CodingMultiModelAnalysisResultWorkflowTests
                 buildSegmentedFindings: _ => throw new InvalidOperationException("No segmentation should run.")));
 
         Assert.Equal(CodingMultiModelAnalysisResultWorkflowOutcome.ReviewRequired, result.Outcome);
-        Assert.Contains("manuell pruefen", calls[0]);
+        Assert.Contains("manuell prüfen", calls[0]);
         Assert.Equal("clear-masks", calls[1]);
     }
 

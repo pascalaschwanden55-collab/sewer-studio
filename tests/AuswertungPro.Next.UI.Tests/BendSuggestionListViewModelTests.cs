@@ -122,7 +122,7 @@ public sealed class BendSuggestionListViewModelTests
         vm.SetVideo(VideoPfad);
         scan.Ergebnis = new BendSuggestionScanResult(
             false,
-            "Fuer diesen Kandidaten ist kein gemessener Arbeitspunkt hinterlegt.",
+            "Für diesen Kandidaten ist kein gemessener Arbeitspunkt hinterlegt.",
             Array.Empty<BendSuggestion>(), 0, 0, TimeSpan.Zero,
             BendSuggestionListViewModel.KandidatId, "sha", 0.0, 0.0);
 
@@ -278,7 +278,7 @@ public sealed class BendSuggestionListViewModelTests
         vm.SetVideo(VideoPfad);
         scan.Ergebnis = new BendSuggestionScanResult(
             false,
-            "Fuer diesen Kandidaten ist kein gemessener Arbeitspunkt hinterlegt.",
+            "Für diesen Kandidaten ist kein gemessener Arbeitspunkt hinterlegt.",
             Array.Empty<BendSuggestion>(), 0, 0, TimeSpan.Zero,
             BendSuggestionListViewModel.KandidatId, "sha", 0.0, 0.0);
         anfangEnde.Ergebnis = AnfangEnde(

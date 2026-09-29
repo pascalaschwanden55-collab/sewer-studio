@@ -98,7 +98,7 @@ public sealed class DataPageBeobachtungenControllerTests
         var controller = new DataPageBeobachtungenController(
             (_, _) => throw new InvalidOperationException("Keine Info erwartet."),
             (message, title) => warnings.Add((message, title)),
-            _ => new DataPageBeobachtungenVsaResult(Ok: false, ErrorMessage: "ungueltig"));
+            _ => new DataPageBeobachtungenVsaResult(Ok: false, ErrorMessage: "ungültig"));
 
         var request = controller.BuildOpenRequest(
             record,
@@ -111,7 +111,7 @@ public sealed class DataPageBeobachtungenControllerTests
         request!.VsaUpdateAction();
 
         Assert.Equal(0, refreshed);
-        Assert.Equal(("VSA Fehler: ungueltig", "VSA"), Assert.Single(warnings));
+        Assert.Equal(("VSA Fehler: ungültig", "VSA"), Assert.Single(warnings));
     }
 
     [Fact]

@@ -158,4 +158,188 @@ public sealed class DesignAuditLaufzeittexteTests
         foreach (var (datei, _) in BehobeneEinzeltexte)
             Assert.True(File.Exists(RepoFile(datei)), $"{RepoFile(datei)} fehlt");
     }
+
+    /// <summary>
+    /// Aufgabe 10c1 (Sprachbereinigung restlicher C#-Laufzeittexte im UI-Projekt): waehrend
+    /// dieser Aufgabe bereinigte Woerter (Ersatzschreibweise -&gt; echter Umlaut) duerfen im
+    /// GANZEN UI-Projekt nicht zurueckfallen — nicht nur in den einzelnen oben gelisteten
+    /// Dateien. Anders als <see cref="Sichtbare_Laufzeittexte_tragen_echte_Umlaute"/> (feste
+    /// Dateiliste, JEDE Zeichenkette muss sauber sein) durchsucht dieser Test ALLE C#-Dateien
+    /// des UI-Projekts (ausser den laut Auftrag geschuetzten WebGIS-Dateien) nach genau diesen
+    /// Wortformen als GANZES Wort (Wortgrenze) — Feldschluessel mit Unterstrich
+    /// (<c>Ausgefuehrt_durch</c>, <c>Nova_Pruefung</c>, <c>Primaere_Schaeden</c>) bleiben davon
+    /// unberuehrt, weil der Unterstrich selbst ein Wortzeichen ist und die Wortgrenze direkt
+    /// davor/danach aufhebt.
+    ///
+    /// WICHTIG fuer diesen Waechter selbst: <see cref="Aufgabe10c1BereinigteWoerter"/> MUSS die
+    /// ALTE Ersatzschreibweise (ASCII) enthalten, nicht die neue Umlautschreibweise — der Test
+    /// prueft ja, dass die ASCII-Form NICHT mehr vorkommt. Ein automatisches Bereinigungsskript
+    /// darf diese Liste (und <see cref="BehobeneEinzeltexte"/> weiter oben) deshalb nie anfassen.
+    ///
+    /// Ausgenommen sind: Kommentarzeilen (<c>//</c>), <c>[Obsolete(...)]</c>-Hinweise
+    /// (Entwicklertext), der Inhalt von Interpolations-/Formatausdruecken <c>{...}</c>
+    /// (C#-Code wie <c>{result.BereitsVollstaendig}</c>, keine Beschriftung) sowie die drei
+    /// Excel-Farbregel-Werte in <see cref="GeschuetzteGanzeZeichenketten"/>, die absichtlich
+    /// „Pruefung" statt „Prüfung" schreiben, weil <c>ExcelReportStyle.Farbregeln</c> exakt
+    /// diese Zeichenketten matcht.
+    ///
+    /// Bewusst NICHT in der Wortliste (bleiben ASCII, kein Rueckfall zu pruefen): „Ausgefuehrt"/
+    /// „ausgefuehrt" (Feldschluessel-Alias auch ohne Unterstrich, siehe
+    /// <c>SchachtSanierungPflichtfeldValidator.AusgefuehrtDurchAliases</c>), „Schaechte"/
+    /// „Uebersicht" (ASCII-Navigationsschluessel, <see cref="AuswertungPro.Next.UI.ViewModels.ShellNavigationTitles"/>),
+    /// „Eigentuemer" (dokumentierter ASCII-Feldname, siehe <c>SchaechtePageViewModel.cs</c>
+    /// Kommentar „das Feld heisst Eigentuemer — beides ist dieselbe Spalte"), „Pruefungsresultat"/
+    /// „Referenzpruefung" (Feldschluessel), „geschaetzt"/„Gefuellt" (interne Datenwerte,
+    /// keine Beschriftung), „Massnahme(n)" (schon ohne Umlaut korrekt geschrieben), „gruen"/
+    /// „gruene" (bleibt ASCII als Eingabe-Alias-Schluessel in
+    /// <c>LiveControlColorParser.NamedColors</c>, dieselbe Ausnahme wie das dort dokumentierte
+    /// „weiss"/„weiß"-Paar — echte Fliesstextfaelle wie „gruene Treffer" sind bereits einzeln
+    /// bereinigt und brauchen keinen dauerhaften Waechter).
+    /// </summary>
+    private static readonly string[] Aufgabe10c1BereinigteWoerter =
+    [
+        "waehlen", "Waehlen", "waehle", "Waehle", "fuer", "Fuer",
+        "verfuegbar", "pruefen", "Pruefen", "pruefe", "Pruefe", "Schaeden",
+        "ungueltig", "Ungueltig", "ungueltige", "Ungueltige", "ungueltigen", "ungueltiges",
+        "Aenderungen", "Aenderung", "aendern", "Aendern", "geaendert", "Geaendert",
+        "geaenderte", "veraendert", "unveraendert", "unveraenderlich", "uebernommen", "uebernommene",
+        "Uebernommen", "uebernehmen", "Uebernehmen", "uebergeben", "Uebernahme", "Goldpruefung",
+        "Goldpruefungs", "Goldfaelle", "Pruefung", "laeuft", "loeschen", "Loeschen",
+        "geloescht", "Haltungslaenge", "geoeffnet", "geoeffneten", "Oeffner", "oeffnen",
+        "Oeffnen", "geprueft", "gepruefte", "ueber", "uebersprungen", "Uebersprungen",
+        "Uebersprungene", "Eintraege", "Protokolleintraege", "Laenge", "bestaetigt", "bestaetigen",
+        "Bestaetigen", "Bestaetigung", "bestaetigte", "auswaehlen", "auswaehlbar", "Ausgewaehlte",
+        "ausgewaehlt", "ausgewaehlte", "groesser", "waehrend", "Waehrend", "Faelle",
+        "Faellen", "beschaedigt", "Beschaedigte", "gehoert", "ueberschrieben", "ueberschreibt",
+        "Unvollstaendige", "unvollstaendig", "gewaehlt", "gewaehlten", "ergaenzen", "ergaenzt",
+        "Ergaenzt", "verknuepfte", "verknuepfen", "gezaehlt",
+        "gueltig", "gueltige", "gueltigen", "gueltiges", "hinzufuegen", "moeglich",
+        "moegliche", "naeherung", "Naeherung", "noetig", "persoenliches", "Persoenliche",
+        "spaetere", "spaeter", "uebrigen", "uebrige", "vollstaendig", "zusaetzlichen",
+        "Zusaetzliche", "Abhaengigkeitspaket", "Bildflaeche", "Bildgroesse", "Dichtheitspruefung", "Flaeche",
+        "Geraetesicherheit", "hashgeprueften", "hoehe", "klaeren", "Kostenuebersicht", "Maskenflaeche",
+        "Nettobetraege", "Preisaenderungen", "Pruefplatz", "Pruefspur", "Pruefungsfortschritt", "Qualitaetspruefung",
+        "Vorschlaege", "Zugehoerige", "zugehoerige", "zugehoerigen", "Zuruecksetzen", "ausdruecklich",
+        "ausgefuellt", "gehaengt", "geschuetzt", "geschuetzte", "geschuetzten", "rueckgaengig",
+        "temporaere", "temporaeren", "unterstuetzt", "verstaendlich", "wuerde", "zurueckgegeben",
+        "zurueckgehaltene", "zuruecknehmen", "naechsten", "Naechstes", "naeher", "benoetigt",
+        "enthaelt", "muessen", "laesst", "koennen", "Schaerfe", "trainingsfaehig",
+        "Anschluesse", "Fuellung", "laedt", "Laeufe", "Qualitaet", "Aufraeumen",
+        "nachgeruestet", "aufloesbar", "Eigentuemerdossiers", "Saetze", "Saetzen", "Verfuegung",
+        "aufgeloest", "schlaegt", "Zeitueberschreitung", "duerfen", "Schaetzung",
+    ];
+
+    /// <summary>
+    /// Excel-Farbregel-Werte (<c>ExcelReportStyle.Farbregeln</c>,
+    /// <c>DataPageDropdownOptionGroupFactory.cs</c>/<c>SchaechteDropdownCommandFactory.cs</c>):
+    /// bleiben absichtlich in Ersatzschreibweise, weil der exakte Text verglichen wird.
+    /// </summary>
+    private static readonly string[] GeschuetzteGanzeZeichenketten =
+    [
+        "Pruefung bestanden",
+        "Pruefung knapp nicht bestanden",
+        "Pruefung nicht bestanden (grob undicht)",
+    ];
+
+    private static readonly Regex Aufgabe10c1ZeichenkettenLiteral = new("\"([^\"\\n]*)\"", RegexOptions.Compiled);
+
+    private static readonly Regex Aufgabe10c1WortRegex = new(
+        @"\b(" + string.Join("|", Aufgabe10c1BereinigteWoerter.Distinct().Select(Regex.Escape)) + @")\b",
+        RegexOptions.Compiled);
+
+    [Fact]
+    public void Aufgabe10c1_Bereinigte_Ersatzschreibweisen_fallen_im_gesamten_UI_Projekt_nicht_zurueck()
+    {
+        var uiRoot = RepoFile("src", "AuswertungPro.Next.UI");
+        var treffer = new System.Collections.Generic.List<string>();
+        var durchsuchteDateien = 0;
+
+        foreach (var datei in Directory.EnumerateFiles(uiRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            if (Aufgabe10c1IstAusgenommeneDatei(datei))
+                continue;
+
+            durchsuchteDateien++;
+            var zeilen = File.ReadAllLines(datei);
+            for (var i = 0; i < zeilen.Length; i++)
+            {
+                var getrimmt = zeilen[i].TrimStart();
+                if (getrimmt.StartsWith("//", System.StringComparison.Ordinal) ||
+                    getrimmt.StartsWith("[Obsolete(", System.StringComparison.Ordinal))
+                    continue;
+
+                foreach (Match m in Aufgabe10c1ZeichenkettenLiteral.Matches(zeilen[i]))
+                {
+                    var inhalt = m.Groups[1].Value;
+                    if (GeschuetzteGanzeZeichenketten.Contains(inhalt))
+                        continue;
+
+                    var pruefbar = Aufgabe10c1OhneAusdruecke(inhalt);
+                    foreach (Match wort in Aufgabe10c1WortRegex.Matches(pruefbar))
+                        treffer.Add($"{Path.GetFileName(datei)}:{i + 1}: \"{wort.Value}\" in \"{inhalt}\"");
+                }
+            }
+        }
+
+        Assert.True(durchsuchteDateien > 200,
+            $"Nur {durchsuchteDateien} Dateien durchsucht — Pfad/Ausschluss pruefen (Waechter darf nicht leerlaufen).");
+        Assert.True(treffer.Count == 0,
+            "Ersatzschreibweise im UI-Projekt zurueckgefallen (Aufgabe 10c1):\n" + string.Join("\n", treffer));
+    }
+
+    private static bool Aufgabe10c1IstAusgenommeneDatei(string pfad)
+        => pfad.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", System.StringComparison.OrdinalIgnoreCase)
+        || pfad.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", System.StringComparison.OrdinalIgnoreCase)
+        || Path.GetFileName(pfad).Contains("WebGis", System.StringComparison.Ordinal)
+        || Path.GetFileName(pfad) == "ExportWebGisBereich.cs";
+
+    /// <summary>
+    /// Ersetzt jeden Interpolations-/Formatausdruck <c>{...}</c> (samt verschachtelter Klammern)
+    /// durch gleich viele Leerzeichen, damit ein Eigenschafts-/Variablenname wie
+    /// <c>{result.BereitsVollstaendig}</c> nie als Beschriftungstext geprueft wird. Escapte
+    /// doppelte Klammern <c>{{</c>/<c>}}</c> (literales einzelnes Zeichen) zaehlen nicht als
+    /// Ausdrucksanfang.
+    /// </summary>
+    private static string Aufgabe10c1OhneAusdruecke(string inhalt)
+    {
+        var ergebnis = new System.Text.StringBuilder(inhalt.Length);
+        var i = 0;
+        while (i < inhalt.Length)
+        {
+            if (inhalt[i] == '{' && i + 1 < inhalt.Length && inhalt[i + 1] == '{')
+            {
+                ergebnis.Append("  ");
+                i += 2;
+                continue;
+            }
+
+            if (inhalt[i] == '}' && i + 1 < inhalt.Length && inhalt[i + 1] == '}')
+            {
+                ergebnis.Append("  ");
+                i += 2;
+                continue;
+            }
+
+            if (inhalt[i] == '{')
+            {
+                var tiefe = 1;
+                var j = i + 1;
+                while (j < inhalt.Length && tiefe > 0)
+                {
+                    if (inhalt[j] == '{') tiefe++;
+                    else if (inhalt[j] == '}') tiefe--;
+                    j++;
+                }
+
+                ergebnis.Append(' ', j - i);
+                i = j;
+                continue;
+            }
+
+            ergebnis.Append(inhalt[i]);
+            i++;
+        }
+
+        return ergebnis.ToString();
+    }
 }

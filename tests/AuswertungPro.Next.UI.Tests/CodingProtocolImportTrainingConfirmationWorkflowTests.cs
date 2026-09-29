@@ -83,7 +83,7 @@ public sealed class CodingProtocolImportTrainingConfirmationWorkflowTests
                 }));
 
         Assert.True(result.Accepted);
-        Assert.Equal("? BAG @ 12.3m bestaetigt", result.Badge.Text);
+        Assert.Equal("? BAG @ 12.3m bestätigt", result.Badge.Text);
         Assert.Equal(["service", "seek", "capture", "copy", "append", "delete"], calls);
     }
 
@@ -97,11 +97,11 @@ public sealed class CodingProtocolImportTrainingConfirmationWorkflowTests
             MeterAtCapture = 12.34
         };
         var verification = new CodingProtocolVerificationResult(
-            ConfirmationLevel: "bestaetigt",
+            ConfirmationLevel: "bestätigt",
             DamageVisible: true,
             ActualCode: "BAG",
             MeterReading: 12.3,
-            Explanation: "Qwen bestaetigt den Importeintrag.");
+            Explanation: "Qwen bestätigt den Importeintrag.");
         Func<string, CodingEvent, Task<CodingProtocolVerificationResult?>> verify =
             (framePath, actualEvent) =>
             {

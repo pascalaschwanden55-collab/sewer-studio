@@ -91,7 +91,7 @@ public sealed class TrainingKnowledgeBaseRefreshWorkflowTests
         Assert.Equal("read-quality", calls[0]);
         Assert.Equal("load-runs", calls[1]);
         Assert.Contains("apply-quality:2:", calls);
-        Assert.Contains("log:KB-Qualitaet: 2 veraltete Samples erkannt (manuell pruefen im Tab 'Samples')", calls);
+        Assert.Contains("log:KB-Qualität: 2 veraltete Samples erkannt (manuell prüfen im Tab 'Samples')", calls);
     }
 
     [Fact]

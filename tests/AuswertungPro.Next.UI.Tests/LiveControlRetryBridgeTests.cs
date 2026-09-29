@@ -37,7 +37,7 @@ public sealed class LiveControlRetryBridgeTests : IDisposable
         LiveControlRetryBridge.Register(name =>
         {
             gesehen = name;
-            return new LiveControlRetryResult(true, $"Analyse fuer '{name}' gestartet.");
+            return new LiveControlRetryResult(true, $"Analyse für '{name}' gestartet.");
         });
 
         var result = LiveControlRetryBridge.Invoke("06.24341-35625");

@@ -46,8 +46,8 @@ public sealed class SchachtStammdatenResultApplierTests
         Assert.Equal(1, result.ChangedShaftCount);
         Assert.Equal(3, result.AddedFieldCount);
         Assert.Equal(
-            "Ergaenzt: 1 Schaechte / 3 Felder. PDF gefunden: 4, ohne PDF: 2, " +
-            "kein passendes Schachtprotokoll: 1, bereits vollstaendig: 3.",
+            "Ergänzt: 1 Schaechte / 3 Felder. PDF gefunden: 4, ohne PDF: 2, " +
+            "kein passendes Schachtprotokoll: 1, bereits vollständig: 3.",
             result.Summary);
         Assert.Empty(result.Details);
         Assert.Equal(result.Summary, result.DialogText);
@@ -131,7 +131,7 @@ public sealed class SchachtStammdatenResultApplierTests
         Assert.Equal("2.00", record.GetFieldValue("Schachttiefe"));
         Assert.Equal(0, result.ChangedShaftCount);
         Assert.Equal(0, result.AddedFieldCount);
-        Assert.StartsWith("Ergaenzt: 0 Schaechte / 0 Felder.", result.Summary, StringComparison.Ordinal);
+        Assert.StartsWith("Ergänzt: 0 Schaechte / 0 Felder.", result.Summary, StringComparison.Ordinal);
     }
 
     [Fact]

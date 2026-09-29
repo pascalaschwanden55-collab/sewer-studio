@@ -149,7 +149,7 @@ public sealed class SchaechteRecordDetailsBuilderTests
         Directory.CreateDirectory(root);
         var projectPath = Path.Combine(root, "projekt.json");
         var pdfPath = Path.Combine(root, "a.pdf");
-        File.WriteAllText(pdfPath, "Testdatei fuer Pfadauflösung");
+        File.WriteAllText(pdfPath, "Testdatei für Pfadauflösung");
         var record = new SchachtRecord();
         record.SetFieldValue("Schachtnummer", "A-1");
         record.SetFieldValue(FieldKeys.PdfPath, "a.pdf;a.pdf");

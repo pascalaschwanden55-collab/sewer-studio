@@ -38,8 +38,8 @@ public sealed class ObjektaktenListenTests
         // Beide fuehren Sanierungen, Unterhalt, Dichtheitspruefungen und Bauwerksteile.
         foreach (var art in new[] { "sanierung", "unterhalt", "dichtheitspruefung", "bauwerksteil", "massnahme" })
         {
-            Assert.True(haltung.DarfAnlegen(art), $"Haltung sollte '{art}' anlegen duerfen.");
-            Assert.True(schacht.DarfAnlegen(art), $"Schacht sollte '{art}' anlegen duerfen.");
+            Assert.True(haltung.DarfAnlegen(art), $"Haltung sollte '{art}' anlegen dürfen.");
+            Assert.True(schacht.DarfAnlegen(art), $"Schacht sollte '{art}' anlegen dürfen.");
         }
 
         // Inspektionen sind je Objekt eine eigene Tabelle im Kataster.

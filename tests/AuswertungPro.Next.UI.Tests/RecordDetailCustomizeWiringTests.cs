@@ -194,7 +194,7 @@ public sealed class RecordDetailCustomizeWiringTests
         var handler = Regex.Match(
             code,
             @"private void Detail_LayoutResetRequested\(object\? sender, EventArgs e\)[\s\S]*?\n    \}");
-        Assert.True(handler.Success, $"Zuruecksetzen-Handler in {file} nicht gefunden.");
+        Assert.True(handler.Success, $"Zurücksetzen-Handler in {file} nicht gefunden.");
         Assert.Contains($"_settings?.{layoutProperty}", handler.Value);
         Assert.Contains("new DetailLayoutSettings()", handler.Value);
         Assert.Contains(".Save();", handler.Value);

@@ -139,7 +139,7 @@ public sealed class ServiceProviderRegistrationTests
         Assert.True(
             registrations.Count == 174,
             $"Erwartet 174 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
-            "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
+            "Dienst die Registrierung in ServiceProviderRegistrationMap ergänzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(services.XtfLieferungen,
             registrations[typeof(AuswertungPro.Next.Application.Xtf.Lieferung.IXtfLieferungsAblage)]);

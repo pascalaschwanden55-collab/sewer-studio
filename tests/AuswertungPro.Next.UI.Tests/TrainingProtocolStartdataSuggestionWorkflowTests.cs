@@ -64,7 +64,7 @@ public sealed class TrainingProtocolStartdataSuggestionWorkflowTests
                 Log: value => calls.Add("log:" + value)));
 
         Assert.Equal(
-            ["ui-before", "status:Kein Code-Katalog verfuegbar.", "ui-after"],
+            ["ui-before", "status:Kein Code-Katalog verfügbar.", "ui-after"],
             calls);
     }
 
@@ -107,7 +107,7 @@ public sealed class TrainingProtocolStartdataSuggestionWorkflowTests
         Assert.DoesNotContain("fallback", calls);
         Assert.Contains("load", calls);
         Assert.Contains("reload", calls);
-        Assert.Contains("status:2 Protokoll-Startdaten als Kandidaten eingereiht (Freigabe ueber Review).", calls);
+        Assert.Contains("status:2 Protokoll-Startdaten als Kandidaten eingereiht (Freigabe über Review).", calls);
         Assert.Contains("log:Protokoll-Startdaten: 2 Kandidaten eingereiht (von 2 gefiltert).", calls);
     }
 

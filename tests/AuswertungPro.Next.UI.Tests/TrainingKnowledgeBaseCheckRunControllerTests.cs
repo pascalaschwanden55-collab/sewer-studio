@@ -30,7 +30,7 @@ public sealed class TrainingKnowledgeBaseCheckRunControllerTests
         var logs = new List<string>();
         string? status = null;
         var presentation = new TrainingKnowledgeBaseCheckPresentation(
-            "KB geprueft.",
+            "KB geprüft.",
             ["Zeile 1", "Zeile 2"]);
 
         TrainingKnowledgeBaseCheckRunController.ApplySuccess(
@@ -39,7 +39,7 @@ public sealed class TrainingKnowledgeBaseCheckRunControllerTests
             value => status = value);
 
         Assert.Equal(["Zeile 1", "Zeile 2"], logs);
-        Assert.Equal("KB geprueft.", status);
+        Assert.Equal("KB geprüft.", status);
     }
 
     [Fact]

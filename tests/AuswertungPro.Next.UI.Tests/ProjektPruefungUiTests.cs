@@ -79,7 +79,7 @@ public sealed class ProjektPruefungUiTests
                     Assert.Equal(5, buttons.Count(b => Equals(b.Content, "Zur Stelle") && b.Command == vm.OeffnenCommand));
                     foreach (var row in VisualTreeSafe.FindDescendants<DataGridRow>(grid))
                     foreach (var text in VisualTreeSafe.FindDescendants<TextBlock>(row).Where(t => t.TextWrapping == TextWrapping.Wrap))
-                        Assert.True(text.DesiredSize.Height <= row.ActualHeight, "Der Hinweis muss vollstaendig in die Zeile passen.");
+                        Assert.True(text.DesiredSize.Height <= row.ActualHeight, "Der Hinweis muss vollständig in die Zeile passen.");
                     Zeichne(view, window.Background, $"projektpruefung-{theme}-{width}");
                 }
             }

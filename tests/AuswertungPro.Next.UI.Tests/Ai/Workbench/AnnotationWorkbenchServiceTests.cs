@@ -59,7 +59,7 @@ public sealed class AnnotationWorkbenchServiceTests
         Assert.Equal(0.9, seg.Confidence);
         Assert.Equal("BAB", seg.Label);
         Assert.True(seg.Degraded);
-        Assert.Contains("pruefen", seg.StatusText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("prüfen", seg.StatusText, StringComparison.OrdinalIgnoreCase);
         // Frame-Pfad, Code-Hinweis und Rohrdurchmesser werden durchgereicht.
         Assert.Equal(@"C:\frames\f.jpg", sam.LastFramePath);
         Assert.Equal("BAB", sam.LastCode);
@@ -572,7 +572,7 @@ public sealed class AnnotationWorkbenchServiceTests
             SourceType = SourceTypeNames.PdfPhoto,
             SourceReferenceCode = "BAB",
             SourceReferenceDescription = "Riss quer im Scheitel",
-            Notes = "defekte PDF-Pruefspur",
+            Notes = "defekte PDF-Prüfspur",
             Status = TrainingSampleStatus.Draft,
         });
         var frameStore = new FakeTrainingFrameStore();
@@ -585,7 +585,7 @@ public sealed class AnnotationWorkbenchServiceTests
             ExistingSampleId = "pdf-alt",
             ExistingCode = "BAB",
             ExistingSourceType = SourceTypeNames.PdfPhoto,
-            ExistingNotes = "defekte PDF-Pruefspur",
+            ExistingNotes = "defekte PDF-Prüfspur",
         };
 
         var result = await service.SaveAsync(
@@ -601,7 +601,7 @@ public sealed class AnnotationWorkbenchServiceTests
                 "Pascal"));
 
         Assert.False(result.Saved);
-        Assert.Contains("PDF-Pruefspur", result.RefusalReason);
+        Assert.Contains("PDF-Prüfspur", result.RefusalReason);
         Assert.Empty(sampleStore.TryAddCalls);
         Assert.Equal(0, frameStore.StoreCalls);
     }
@@ -629,7 +629,7 @@ public sealed class AnnotationWorkbenchServiceTests
                 "   "));
 
         Assert.False(result.Saved);
-        Assert.Contains("Bestaetigung", result.RefusalReason);
+        Assert.Contains("Bestätigung", result.RefusalReason);
         Assert.Empty(sampleStore.TryAddCalls);
         Assert.Empty(sampleStore.ReplaceCalls);
         Assert.Equal(0, frameStore.StoreCalls);
@@ -700,7 +700,7 @@ public sealed class AnnotationWorkbenchServiceTests
                 "Pascal"));
 
         Assert.False(result.Saved);
-        Assert.Contains("PDF-Pruefspur", result.RefusalReason);
+        Assert.Contains("PDF-Prüfspur", result.RefusalReason);
         Assert.Empty(sampleStore.TryAddCalls);
         Assert.Equal(0, frameStore.StoreCalls);
     }
@@ -867,7 +867,7 @@ public sealed class AnnotationWorkbenchServiceTests
             new WorkbenchDecision(
                 "BAB",
                 false,
-                "Laengsriss ueber mehrere Meter",
+                "Laengsriss über mehrere Meter",
                 null,
                 null,
                 "Pascal"));
@@ -1106,7 +1106,7 @@ public sealed class AnnotationWorkbenchServiceTests
             new WorkbenchDecision("BAB", false, "Riss quer im Scheitel", null, null, "Pascal"));
 
         Assert.False(result.Saved);
-        Assert.Contains("Goldbild konnte nach dem Speichern nicht bytegenau geprueft werden", result.RefusalReason);
+        Assert.Contains("Goldbild konnte nach dem Speichern nicht bytegenau geprüft werden", result.RefusalReason);
         Assert.Equal(1, frameStore.StoreCalls);
         Assert.Equal(0, frameStore.StoreBytesCalls);
         Assert.Empty(sampleStore.TryAddCalls);
@@ -1267,7 +1267,7 @@ public sealed class AnnotationWorkbenchServiceTests
         // wirft diese Ausnahme nach Schritt 6, ohne den Token abzubrechen. Das Ergebnis ist
         // eine sichtbare Warnung bei Saved=true; der Teacher-Schritt laeuft weiter.
         var sampleStore = new FakeSampleStore();
-        var indexer = new FakeIndexer { ThrowOnIndex = new OperationCanceledException("Abbruch waehrend KB-Index (Test).") };
+        var indexer = new FakeIndexer { ThrowOnIndex = new OperationCanceledException("Abbruch während KB-Index (Test).") };
         var service = CreateService(
             sampleStore: sampleStore, indexer: indexer,
             exportFactory: () => new FakeExportService(), isCodeKnown: _ => true);
@@ -1324,7 +1324,7 @@ public sealed class AnnotationWorkbenchServiceTests
         var sampleStore = new FakeSampleStore();
         var indexer = new FakeIndexer { Mode = FakeIndexer.ResultKind.IndexAll };
         var teacherStore = new FakeTeacherStore();
-        var export = new FakeExportService { ThrowOnExport = new OperationCanceledException("Abbruch waehrend Teacher-Export (Test).") };
+        var export = new FakeExportService { ThrowOnExport = new OperationCanceledException("Abbruch während Teacher-Export (Test).") };
         var service = CreateService(
             sampleStore: sampleStore, indexer: indexer, teacherStore: teacherStore,
             exportFactory: () => export, isCodeKnown: _ => true);
@@ -1363,7 +1363,7 @@ public sealed class AnnotationWorkbenchServiceTests
         Assert.Null(result.TeacherAnnotationId);
         Assert.NotNull(result.RefusalReason);
         Assert.Contains("Entwurf", result.RefusalReason);
-        Assert.Contains("Unvollstaendige Goldframes", result.RefusalReason);
+        Assert.Contains("Unvollständige Goldframes", result.RefusalReason);
 
         // Sample ist gespeichert, aber als ENTWURF (Status=Draft), nicht Green; Pending bleibt.
         var sample = Assert.Single(sampleStore.TryAddCalls);
@@ -1510,7 +1510,7 @@ public sealed class AnnotationWorkbenchServiceTests
 
         var item = new WorkbenchItem(@"C:\frames\f.jpg", "case1", 1, 1, null, null, 300);
         var decision = new WorkbenchDecision(
-            "BAB", false, "Riss — Lage und Ausmass ergaenzen", null, null, "Pascal");
+            "BAB", false, "Riss — Lage und Ausmass ergänzen", null, null, "Pascal");
 
         var result = await service.SaveAsync(item, TestBox, GueltigeMaske, decision);
 

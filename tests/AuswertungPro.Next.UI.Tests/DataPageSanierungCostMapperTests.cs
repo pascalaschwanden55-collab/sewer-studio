@@ -245,7 +245,7 @@ public sealed class DataPageSanierungCostMapperTests
                     {
                         new CostLine { ItemKey = "MANSCHETTE_PER_ST", Text = "Manschette", Qty = 2m, Selected = true },
                         new CostLine { ItemKey = "MANSCHETTE_EDELSTAHL", Text = "Edelstahl", Qty = 1m, Selected = true },
-                        new CostLine { ItemKey = "MANSCHETTE_PER_ST", Text = "nicht gewaehlt", Qty = 5m, Selected = false },
+                        new CostLine { ItemKey = "MANSCHETTE_PER_ST", Text = "nicht gewählt", Qty = 5m, Selected = false },
                     },
                 },
             },

@@ -106,6 +106,6 @@ public sealed class SchaechteDropdownCommandFactoryTests
         => new(
             new ObservableCollection<string> { "Sanieren alt" },
             new ObservableCollection<string> { "Eigentuemer alt" },
-            new ObservableCollection<string> { "Pruefung alt" },
+            new ObservableCollection<string> { "Prüfung alt" },
             new ObservableCollection<string> { "Referenz alt" });
 }

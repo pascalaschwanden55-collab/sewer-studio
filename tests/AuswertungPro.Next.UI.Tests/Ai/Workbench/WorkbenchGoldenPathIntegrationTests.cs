@@ -89,7 +89,7 @@ public sealed class WorkbenchGoldenPathIntegrationTests : IDisposable
         Assert.False(sample.Corrected);
         Assert.StartsWith(Path.Combine(_root, "gold_frames"), sample.FramePath);
         Assert.True(File.Exists(sample.FramePath), "Gesicherte Goldbildkopie fehlt.");
-        Assert.True(File.Exists(framePath), "Das Originalfoto wurde veraendert oder entfernt.");
+        Assert.True(File.Exists(framePath), "Das Originalfoto wurde verändert oder entfernt.");
         Assert.Equal(
             TrainingSample.BuildCanonicalSignature("287425-81162", "BAB", 12.5, 12.5, 0.5, 0.5, 0.3, 0.3),
             sample.Signature);

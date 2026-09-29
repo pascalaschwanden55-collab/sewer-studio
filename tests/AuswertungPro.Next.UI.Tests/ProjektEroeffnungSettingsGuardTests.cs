@@ -119,7 +119,7 @@ public sealed class ProjektEroeffnungSettingsGuardTests
         var vm = Vm();
 
         Assert.Contains("SettingsFullBackupWorkflow.RunAsync", vm);
-        Assert.DoesNotContain("Zielordner fuer die Datensicherung waehlen", vm);
+        Assert.DoesNotContain("Zielordner für die Datensicherung wählen", vm);
         Assert.DoesNotContain("_sp.FullBackup.AnalyzeAsync", vm);
         Assert.DoesNotContain("_sp.FullBackup.RunAsync", vm);
         Assert.DoesNotContain("BackupPlanBuilder.TargetFolderName", vm);
@@ -159,9 +159,9 @@ public sealed class ProjektEroeffnungSettingsGuardTests
         Assert.Contains("SettingsPathWorkflow", vm);
         Assert.DoesNotContain("Directory.CreateDirectory", vm);
         Assert.DoesNotContain("SafeShellOpen.TryOpen", vm);
-        Assert.DoesNotContain("pdftotext.exe waehlen", vm);
-        Assert.DoesNotContain("Projektpfad waehlen", vm);
-        Assert.DoesNotContain("XTF-Ordner Kanton Uri waehlen", vm);
+        Assert.DoesNotContain("pdftotext.exe wählen", vm);
+        Assert.DoesNotContain("Projektpfad wählen", vm);
+        Assert.DoesNotContain("XTF-Ordner Kanton Uri wählen", vm);
     }
 
     [Fact]

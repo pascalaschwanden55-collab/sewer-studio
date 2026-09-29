@@ -62,7 +62,7 @@ public sealed class CodingProtocolImportTrainingWorkflowServiceTests
         Assert.Equal("abc123", appended.AnnotationId);
         Assert.Equal("BAG", appended.VsaCode);
         Assert.Equal(@"C:\teacher\images\mark_abc123.png", appended.FullFramePath);
-        Assert.Equal("? BAG @ 12.3m bestaetigt", result.Badge.Text);
+        Assert.Equal("? BAG @ 12.3m bestätigt", result.Badge.Text);
         Assert.Equal(TimeSpan.FromSeconds(3), result.Badge.AutoHideDelay);
     }
 
@@ -78,7 +78,7 @@ public sealed class CodingProtocolImportTrainingWorkflowServiceTests
         };
         TeacherAnnotation? appended = null;
         var verification = new CodingProtocolVerificationResult(
-            ConfirmationLevel: "bestaetigt",
+            ConfirmationLevel: "bestätigt",
             DamageVisible: true,
             ActualCode: "BAG",
             MeterReading: 12.3,
@@ -126,7 +126,7 @@ public sealed class CodingProtocolImportTrainingWorkflowServiceTests
         Assert.True(result.Accepted);
         Assert.Same(verification, result.Verification);
         Assert.NotNull(appended);
-        Assert.Equal("bestaetigt", appended.ProtocolVerificationLevel);
+        Assert.Equal("bestätigt", appended.ProtocolVerificationLevel);
         Assert.True(appended.ProtocolDamageVisible);
         Assert.Equal("BAG", appended.ProtocolVerificationCode);
         Assert.Equal(12.3, appended.ProtocolVerificationMeter);

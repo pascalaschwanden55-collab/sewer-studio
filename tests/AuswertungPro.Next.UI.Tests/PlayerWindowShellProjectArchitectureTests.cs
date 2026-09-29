@@ -23,10 +23,10 @@ public sealed class PlayerWindowShellProjectArchitectureTests
         var shellPath = Path.Combine(uiRoot, "ViewModels", "ShellViewModel.cs");
 
         Assert.True(File.Exists(servicePath), "Shell-Projektzugriff soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(factoryPath), "PlayerWindow soll Shell-Projektzugriff ueber eine Factory beziehen.");
+        Assert.True(File.Exists(factoryPath), "PlayerWindow soll Shell-Projektzugriff über eine Factory beziehen.");
         Assert.True(File.Exists(codingProjectPersistencePath), "Coding-Projektpersistenz soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(codingProjectPersistenceWorkflowPath), "Coding-Projektpersistenz-Aufrufe sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
-        Assert.True(File.Exists(codingProjectPersistenceFactoryPath), "Coding-Projektpersistenz soll ueber eine Factory verdrahtet werden.");
+        Assert.True(File.Exists(codingProjectPersistenceFactoryPath), "Coding-Projektpersistenz soll über eine Factory verdrahtet werden.");
 
         var protocol = File.ReadAllText(protocolPath);
         var applyController = File.ReadAllText(applyControllerPath);
@@ -62,7 +62,7 @@ public sealed class PlayerWindowShellProjectArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Coding-Partials sollen Projektzugriff ueber PlayerShellProjectService kapseln:\n"
+            "PlayerWindow-Coding-Partials sollen Projektzugriff über PlayerShellProjectService kapseln:\n"
             + string.Join("\n", offenders));
     }
 }

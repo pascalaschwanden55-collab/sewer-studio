@@ -68,7 +68,7 @@ public sealed class CodingAiResultWorkflowTests
                 selectReadyResult: _ => throw new InvalidOperationException("Warmup must not select a ready result.")));
 
         Assert.Equal(
-            ["update-readiness", "store-warmup", "state:Dateneinblendung erkannt - uebersprungen|Warte auf Videobild... (Bild 2 von 3)", "clear-findings-canvas"],
+            ["update-readiness", "store-warmup", "state:Dateneinblendung erkannt - übersprungen|Warte auf Videobild... (Bild 2 von 3)", "clear-findings-canvas"],
             calls);
         Assert.Equal(CodingAiResultWorkflowOutcome.Warmup, result.Outcome);
     }

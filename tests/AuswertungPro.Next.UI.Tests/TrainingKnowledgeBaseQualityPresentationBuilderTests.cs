@@ -54,9 +54,9 @@ public sealed class TrainingKnowledgeBaseQualityPresentationBuilderTests
 
         var result = TrainingKnowledgeBaseQualityPresentationBuilder.Build(quality, []);
 
-        Assert.Equal("Noch keine Selbsttraining-Laeufe", result.TrendText);
+        Assert.Equal("Noch keine Selbsttraining-Läufe", result.TrendText);
         Assert.Equal("", result.TrendDirection);
-        Assert.Equal(["KB-Qualitaet: 3 veraltete Samples erkannt (manuell pruefen im Tab 'Samples')"], result.LogLines);
+        Assert.Equal(["KB-Qualität: 3 veraltete Samples erkannt (manuell prüfen im Tab 'Samples')"], result.LogLines);
     }
 
     private static KnowledgeBaseQualityReport Quality(int staleSampleCount = 0)

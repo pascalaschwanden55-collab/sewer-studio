@@ -139,7 +139,7 @@ public sealed class SettingsFullBackupWorkflowTests
             AnalyzeReport = Report(),
             RunResult = new FullBackupResult(
                 Success: false,
-                Error: "Zielordner enthaelt bereits Daten",
+                Error: "Zielordner enthält bereits Daten",
                 TargetRoot: "",
                 TotalBytes: 0,
                 FilesCopied: 0,
@@ -158,7 +158,7 @@ public sealed class SettingsFullBackupWorkflowTests
 
         // Ohne diese Zeile war der Grund nur im weggeklickten Dialog sichtbar.
         Assert.Contains(log, eintrag =>
-            eintrag.Contains("Zielordner enthaelt bereits Daten", StringComparison.Ordinal));
+            eintrag.Contains("Zielordner enthält bereits Daten", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -304,9 +304,9 @@ public sealed class SettingsFullBackupWorkflowTests
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") => Warnings.Add(message);
         public void Error(string message, string title = "Fehler") => Errors.Add(message);
-        public bool Confirm(string message, string title = "Bestaetigung") => ConfirmResult;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Cancel;
+        public bool Confirm(string message, string title = "Bestätigung") => ConfirmResult;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Cancel;
     }
 
     private sealed class ToastFake : IToastService

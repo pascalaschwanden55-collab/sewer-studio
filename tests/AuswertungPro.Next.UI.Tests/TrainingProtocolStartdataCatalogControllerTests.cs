@@ -51,7 +51,7 @@ public sealed class TrainingProtocolStartdataCatalogControllerTests
             setReviewStatusText: value => calls.Add("status:" + value));
 
         Assert.False(available);
-        Assert.Equal(["ui-before", "status:Kein Code-Katalog verfuegbar.", "ui-after"], calls);
+        Assert.Equal(["ui-before", "status:Kein Code-Katalog verfügbar.", "ui-after"], calls);
     }
 
     [Fact]

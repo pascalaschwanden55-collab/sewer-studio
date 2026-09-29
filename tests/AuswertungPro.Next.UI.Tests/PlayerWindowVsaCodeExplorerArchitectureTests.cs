@@ -22,7 +22,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         Assert.True(File.Exists(servicePath), "VSA-Code-Explorer-Dialoggrenze muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "VSA-Code-Explorer-Fenstererzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Coding-Code-Explorer-Workflow muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(workflowFactoryPath), "Coding-Code-Explorer-Workflow muss ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(workflowFactoryPath), "Coding-Code-Explorer-Workflow muss über Factory verdrahtet werden.");
         Assert.True(File.Exists(serviceCreationWorkflowPath), "Coding-Code-Explorer-Serviceerstellung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playerWindowText = string.Join(
@@ -308,7 +308,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
         var rendererPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerInitialFieldsRenderer.cs");
 
-        Assert.True(File.Exists(rendererPath), "Initiale Formularfeld-Werte muessen ausserhalb der Window-Code-behind gerendert werden.");
+        Assert.True(File.Exists(rendererPath), "Initiale Formularfeld-Werte müssen ausserhalb der Window-Code-behind gerendert werden.");
 
         var windowSource = File.ReadAllText(windowPath);
         var ctorSource = ExtractMethodBody(windowSource, "public VsaCodeExplorerWindow(VsaCodeExplorerViewModel vm,");
@@ -633,7 +633,7 @@ public sealed class PlayerWindowVsaCodeExplorerArchitectureTests
         var windowPath = Path.Combine(uiRoot, "Views", "Windows", "VsaCodeExplorerWindow.xaml.cs");
         var presenterPath = Path.Combine(uiRoot, "Ai", "Vsa", "VsaCodeExplorerResultPanelPresenter.cs");
 
-        Assert.True(File.Exists(presenterPath), "Finalcode/Label/Warnung sollen ueber Ergebnis-Presenter aktualisiert werden.");
+        Assert.True(File.Exists(presenterPath), "Finalcode/Label/Warnung sollen über Ergebnis-Presenter aktualisiert werden.");
 
         var windowSource = File.ReadAllText(windowPath);
         var applySource = ExtractMethodBody(windowSource, "private void ApplyViewModelPropertyChanged(");

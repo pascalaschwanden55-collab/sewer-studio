@@ -64,7 +64,7 @@ public sealed class CodingBoundaryClassifierResultWorkflowTests
                 clearMasks: () => calls.Add("clear-masks"),
                 showPossibleBoundary: (code, label) => calls.Add($"possible:{code}:{label}"),
                 ensureStartExistsAsync: (_, _, _) => throw new InvalidOperationException("Rohranfang darf nicht angelegt werden."),
-                closeTrackedStretchDamages: _ => throw new InvalidOperationException("Streckenschaeden duerfen nicht geschlossen werden."),
+                closeTrackedStretchDamages: _ => throw new InvalidOperationException("Streckenschaeden dürfen nicht geschlossen werden."),
                 ensureEndExists: (_, _, _) => throw new InvalidOperationException("Rohrende darf noch nicht angelegt werden."),
                 setAiState: (status, color, detail) =>
                 {

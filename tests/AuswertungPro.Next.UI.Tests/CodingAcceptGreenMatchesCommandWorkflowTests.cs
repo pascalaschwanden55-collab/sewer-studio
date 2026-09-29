@@ -48,7 +48,7 @@ public sealed class CodingAcceptGreenMatchesCommandWorkflowTests
     public async Task ExecuteAsync_accepts_green_matches_and_shows_overlay()
     {
         var routing = Routing();
-        var overlay = new CodingProtocolMatchOverlayState("2 uebernommen", TimeSpan.FromSeconds(4));
+        var overlay = new CodingProtocolMatchOverlayState("2 übernommen", TimeSpan.FromSeconds(4));
         var calls = new List<string>();
         CodingProtocolMatchOverlayState? shown = null;
 

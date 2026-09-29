@@ -53,5 +53,5 @@ public sealed class CodingProtocolTrainingCandidateResolverTests
             new BefundMatchFinding("BAB", 1.0, 1.0, "Riss", gtRefId),
             new BefundMatchFinding("BAB", 1.0, 1.0, "Riss"),
             0.0,
-            "gruen");
+            "grün");
 }

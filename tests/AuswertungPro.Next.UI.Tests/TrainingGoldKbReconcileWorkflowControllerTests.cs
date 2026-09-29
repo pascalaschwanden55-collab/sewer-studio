@@ -68,11 +68,11 @@ public sealed class TrainingGoldKbReconcileWorkflowControllerTests
         Assert.Equal(
             new[]
             {
-                "log:KB-Nachholen: 1 bestaetigte Gold-Samples warten (davon 1 trainingsfaehig markiert).",
+                "log:KB-Nachholen: 1 bestätigte Gold-Samples warten (davon 1 trainingsfähig markiert).",
                 @"mkdir:C:\kb\kb_backups",
                 "status:KB-Nachholen: Backup wird erstellt\u2026",
                 @"backup:C:\kb\kb_backups\vor_kb_nachholen_2026-06-29_134455.zip",
-                "log:KB-Nachholen ABGEBROCHEN: Backup fehlgeschlagen (zip kaputt). Keine Aenderung vorgenommen.",
+                "log:KB-Nachholen ABGEBROCHEN: Backup fehlgeschlagen (zip kaputt). Keine Änderung vorgenommen.",
                 "status:KB-Nachholen: Backup fehlgeschlagen"
             },
             calls);
@@ -137,7 +137,7 @@ public sealed class TrainingGoldKbReconcileWorkflowControllerTests
         Assert.Contains(@"backup:C:\kb\kb_backups\vor_kb_nachholen_2026-06-29_134455.zip", calls);
         Assert.Contains("index:indexed,skipped,failed", calls);
         Assert.Contains("status:KB-Nachholen: 3/3", calls);
-        Assert.Contains("log:KB-Nachholen fertig: 1 indexiert, 2 uebersprungen/fehlgeschlagen (von 3).", calls);
+        Assert.Contains("log:KB-Nachholen fertig: 1 indexiert, 2 übersprungen/fehlgeschlagen (von 3).", calls);
     }
 
     private static TrainingSample Sample(string id, KbIndexState kbIndexState)

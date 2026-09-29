@@ -38,7 +38,7 @@ public sealed class SelfTrainingReviewQueueControllerTests
         Assert.Equal(2, update.EnqueuedCount);
         Assert.True(update.ShouldReloadQueue);
         Assert.Equal(
-            "2 Samples in Review Queue eingereiht (Partial/Mismatch + zurueckgehaltene ExactMatches)",
+            "2 Samples in Review Queue eingereiht (Partial/Mismatch + zurückgehaltene ExactMatches)",
             update.LogMessage);
 
         var queued = queue.GetAll();

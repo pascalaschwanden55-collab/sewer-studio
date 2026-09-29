@@ -19,7 +19,7 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
 
-        Assert.True(File.Exists(hostPath), "Player-Zeit/Dauer soll ueber einen PlayerTimelineHost gelesen werden.");
+        Assert.True(File.Exists(hostPath), "Player-Zeit/Dauer soll über einen PlayerTimelineHost gelesen werden.");
         Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
 
         var host = File.ReadAllText(hostPath);
@@ -166,7 +166,7 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Timeline-Leser sollen Zeit/Dauer ueber PlayerTimelineHost statt roh ueber _player lesen:\n"
+            "PlayerWindow-Timeline-Leser sollen Zeit/Dauer über PlayerTimelineHost statt roh über _player lesen:\n"
             + string.Join("\n", offenders));
     }
 
@@ -211,7 +211,7 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "Timeline-Overlay-Controller sollen ueber PlayerTimelineHost/PlayerPlaybackControlHost statt MediaPlayer arbeiten:\n"
+            "Timeline-Overlay-Controller sollen über PlayerTimelineHost/PlayerPlaybackControlHost statt MediaPlayer arbeiten:\n"
             + string.Join("\n", offenders));
     }
 }

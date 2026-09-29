@@ -307,7 +307,7 @@ public sealed class DesignAuditThemeResourceTests
             var xaml = ReadUiFile("Views", "Windows", $"{dialog}.xaml");
             Assert.True(
                 xaml.Contains("ui:WindowFx.Entrance=\"True\"", StringComparison.Ordinal),
-                $"{dialog} soll beim Oeffnen sanft auftreten.");
+                $"{dialog} soll beim Öffnen sanft auftreten.");
             Assert.Contains("xmlns:ui=\"clr-namespace:AuswertungPro.Next.UI\"", xaml);
         }
 

@@ -750,10 +750,10 @@ public sealed class SchachtProtocolSingleImportControllerTests
         }
 
         public void Error(string message, string title = "Fehler") { }
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
         {
             _harness.Calls.Add("confirm-cancel");
             _harness.ConfirmCancelCalls.Add((message, title));

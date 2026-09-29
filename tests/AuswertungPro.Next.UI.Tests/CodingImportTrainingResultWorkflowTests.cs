@@ -43,7 +43,7 @@ public sealed class CodingImportTrainingResultWorkflowTests
     {
         var calls = new List<string>();
         var delay = TimeSpan.FromSeconds(3);
-        var badge = new CodingImportConfirmationBadgeState("? BAB @ 1.2m bestaetigt", delay);
+        var badge = new CodingImportConfirmationBadgeState("? BAB @ 1.2m bestätigt", delay);
 
         var result = CodingImportTrainingResultWorkflow.Execute(
             new CodingProtocolImportTrainingResult(Accepted: true, badge),
@@ -53,6 +53,6 @@ public sealed class CodingImportTrainingResultWorkflowTests
 
         Assert.Equal(CodingImportTrainingResultOutcome.Accepted, result.Outcome);
         Assert.True(result.Accepted);
-        Assert.Equal(["show:? BAB @ 1.2m bestaetigt", "hide:3"], calls);
+        Assert.Equal(["show:? BAB @ 1.2m bestätigt", "hide:3"], calls);
     }
 }

@@ -34,9 +34,9 @@ public sealed class ShellProjektladeSperreTests
 
         using (shell.BeginProjectLoadOperation())
         {
-            Assert.False(shell.NewProjectCommand.CanExecute(null), "Neu muss waehrend des Ladens gesperrt sein.");
+            Assert.False(shell.NewProjectCommand.CanExecute(null), "Neu muss während des Ladens gesperrt sein.");
             Assert.False(shell.SwitchProjectCommand.CanExecute(null), "Projektwechsel muss gesperrt sein.");
-            Assert.False(shell.OpenProjectCommand.CanExecute(null), "Oeffnen muss gesperrt sein.");
+            Assert.False(shell.OpenProjectCommand.CanExecute(null), "Öffnen muss gesperrt sein.");
         }
 
         Assert.True(shell.NewProjectCommand.CanExecute(null), "Nach dem Laden wieder frei.");

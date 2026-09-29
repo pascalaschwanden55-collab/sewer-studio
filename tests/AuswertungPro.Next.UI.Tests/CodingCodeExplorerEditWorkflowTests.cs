@@ -21,7 +21,7 @@ public sealed class CodingCodeExplorerEditWorkflowTests
         var selected = new ProtocolEntry
         {
             Code = "NEW",
-            Beschreibung = "Geaendert",
+            Beschreibung = "Geändert",
             MeterStart = 5.5,
             Zeit = TimeSpan.FromSeconds(20)
         };
@@ -71,7 +71,7 @@ public sealed class CodingCodeExplorerEditWorkflowTests
         Assert.True(result);
         Assert.Equal(["suspend-start", "service", "snapshot-provider", "viewmodel", "dialog:live.png", "suspend-end"], calls);
         Assert.Equal("NEW", entry.Code);
-        Assert.Equal("Geaendert", entry.Beschreibung);
+        Assert.Equal("Geändert", entry.Beschreibung);
         Assert.Equal(5.5, entry.MeterStart);
         Assert.Equal(TimeSpan.FromSeconds(20), entry.Zeit);
     }

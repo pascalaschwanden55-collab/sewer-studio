@@ -87,7 +87,7 @@ public sealed class DesignAuditDossierFensterTests
             var hauptknopf = Regex.Match(xaml, @"<Button\b[^>]*?IsDefault=""True""[^>]*?/>", RegexOptions.Singleline);
             if (!hauptknopf.Success)
             {
-                verstoesse.Add($"{datei}: IsDefault=\"True\" steht nicht in einem einzeiligen Button-Tag (Test unvollstaendig)");
+                verstoesse.Add($"{datei}: IsDefault=\"True\" steht nicht in einem einzeiligen Button-Tag (Test unvollständig)");
                 continue;
             }
 

@@ -41,7 +41,7 @@ public sealed class TrainingBatchImportRunCompletionControllerTests
         Assert.True(result.ShouldStop);
         Assert.Single(samples);
         Assert.Equal("new", samples[0].SampleId);
-        Assert.Equal("0 neue Samples aus 2 Faellen.", statusText);
+        Assert.Equal("0 neue Samples aus 2 Fällen.", statusText);
         Assert.Single(logLines, statusText);
         Assert.Equal(0, refreshCalls);
         Assert.Equal(0, saveCalls);

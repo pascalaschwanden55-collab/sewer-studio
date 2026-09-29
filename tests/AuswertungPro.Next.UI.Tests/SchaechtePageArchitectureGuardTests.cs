@@ -466,7 +466,7 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("LastResult=applyResult.Summary;", compactViewModelPartial);
         Assert.Contains("StammdatenErgaenzungText=applyResult.Summary;", compactViewModelPartial);
         Assert.Contains(
-            "conststringdialogTitle=\"PDF-Stammdatenergaenzen\";",
+            "conststringdialogTitle=\"PDF-Stammdatenergänzen\";",
             compactViewModelPartial);
         Assert.Contains(
             "_dialogs.Info(applyResult.DialogText,dialogTitle)",

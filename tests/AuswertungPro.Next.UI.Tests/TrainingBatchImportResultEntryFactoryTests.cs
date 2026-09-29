@@ -12,13 +12,13 @@ public sealed class TrainingBatchImportResultEntryFactoryTests
         var entry = TrainingBatchImportResultEntryFactory.CreateSkippedCase(
             index: 7,
             caseId: "101.1-102.1",
-            summary: "keine Eintraege");
+            summary: "keine Einträge");
 
         Assert.Equal(7, entry.Index);
         Assert.Equal("101.1-102.1", entry.VsaCode);
         Assert.Equal(0, entry.Meter);
         Assert.Equal(MatchLevel.NoFindings, entry.Level);
-        Assert.Equal("keine Eintraege", entry.Summary);
+        Assert.Equal("keine Einträge", entry.Summary);
     }
 
     [Fact]

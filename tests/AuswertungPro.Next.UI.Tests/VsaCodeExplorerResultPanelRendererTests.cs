@@ -56,7 +56,7 @@ public sealed class VsaCodeExplorerResultPanelRendererTests
                     ShouldUpdateDetailPanels: true,
                     FinalCodeText: "BAB",
                     FinalLabelText: "Riss - laengs",
-                    WarnText: "Pruefen",
+                    WarnText: "Prüfen",
                     ShowWarn: true),
                 harness.Targets);
 
@@ -64,7 +64,7 @@ public sealed class VsaCodeExplorerResultPanelRendererTests
             Assert.Equal(Visibility.Collapsed, harness.CodeHintPanel.Visibility);
             Assert.Equal("BAB", harness.FinalCodeText);
             Assert.Equal("Riss - laengs", harness.FinalLabelText);
-            Assert.Equal("Pruefen", harness.WarnText);
+            Assert.Equal("Prüfen", harness.WarnText);
             Assert.Equal(Visibility.Visible, harness.WarnVisibility);
         });
     }

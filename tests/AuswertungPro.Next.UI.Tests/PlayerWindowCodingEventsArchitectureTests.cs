@@ -69,8 +69,8 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
             RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs")
         };
 
-        Assert.True(File.Exists(eventsControlsPath), "Coding-Event-Listenoberflaeche soll ueber CodingEventsListControls laufen.");
-        Assert.True(File.Exists(importControlsPath), "Import-Referenzliste soll ueber CodingImportReferenceControls laufen.");
+        Assert.True(File.Exists(eventsControlsPath), "Coding-Event-Listenoberflaeche soll über CodingEventsListControls laufen.");
+        Assert.True(File.Exists(importControlsPath), "Import-Referenzliste soll über CodingImportReferenceControls laufen.");
 
         var joinedPartials = string.Join(
             Environment.NewLine,

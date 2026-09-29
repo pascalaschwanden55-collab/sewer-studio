@@ -11,12 +11,12 @@ public sealed class TrainingBatchImportGeneratedCaseUiControllerTests
         var summary = new TrainingBatchImportRunSummary();
         var skip = new TrainingCenterBatchSkipInfo(
             TrainingCenterBatchSkipKind.EmptyProtocol,
-            "keine Eintraege",
+            "keine Einträge",
             "  -> 0 Samples",
             "-",
-            "keine Eintraege");
+            "keine Einträge");
         var result = Result("skip-code", MatchLevel.NoFindings);
-        var preview = new TrainingBatchImportLivePreview("case-1", "-", "keine Eintraege", "frame.jpg");
+        var preview = new TrainingBatchImportLivePreview("case-1", "-", "keine Einträge", "frame.jpg");
         var plan = new TrainingBatchImportGeneratedCasePlan(
             TrainingBatchImportGeneratedCaseKind.Skipped,
             skip,
@@ -43,12 +43,12 @@ public sealed class TrainingBatchImportGeneratedCaseUiControllerTests
                 calls.Add));
 
         Assert.True(applyResult.ShouldContinueWithNextCase);
-        Assert.Contains("1 ohne Eintraege.", summary.BuildNoNewStatus(processedCaseCount: 1));
+        Assert.Contains("1 ohne Einträge.", summary.BuildNoNewStatus(processedCaseCount: 1));
         Assert.Equal(
             new[]
             {
                 "  -> 0 Samples",
-                "preview:case-1:-:keine Eintraege:frame.jpg",
+                "preview:case-1:-:keine Einträge:frame.jpg",
                 "on-ui",
                 "add-result:skip-code"
             },

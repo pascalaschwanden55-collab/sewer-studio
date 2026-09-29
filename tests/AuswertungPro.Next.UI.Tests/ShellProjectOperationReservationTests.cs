@@ -251,28 +251,28 @@ public sealed class ShellProjectOperationReservationTests
             if (ReleaseInfo is not null
                 && !ReleaseInfo.Wait(TimeSpan.FromSeconds(5)))
             {
-                throw new TimeoutException("Testfreigabe fuer Hinweis fehlt.");
+                throw new TimeoutException("Testfreigabe für Hinweis fehlt.");
             }
         }
 
         public void Warn(string message, string title = "Warnung") { }
         public void Error(string message, string title = "Fehler") { }
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
 
         public bool ConfirmWarn(
             string message,
-            string title = "Bestaetigung",
+            string title = "Bestätigung",
             bool defaultNo = true)
             => false;
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
         {
             Interlocked.Increment(ref _confirmCancelCalls);
             ConfirmCancelEntered?.Set();
             if (ReleaseConfirmCancel is not null
                 && !ReleaseConfirmCancel.Wait(TimeSpan.FromSeconds(5)))
             {
-                throw new TimeoutException("Testfreigabe fuer Auswahl fehlt.");
+                throw new TimeoutException("Testfreigabe für Auswahl fehlt.");
             }
 
             return DialogConfirm.Cancel;

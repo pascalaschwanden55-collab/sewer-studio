@@ -87,7 +87,7 @@ public sealed class PlayerWindowLiveDetectionControllerSetFactoryTests
             var controls = CreateControls();
             controls.DetectionCanvas.Children.Add(new Rectangle());
             controls.DetectionOverlay.Visibility = Visibility.Visible;
-            controls.DetectionStatusText.Text = "unveraendert";
+            controls.DetectionStatusText.Text = "unverändert";
             var controllers = PlayerWindowLiveDetectionControllerSetFactory.Create(
                 Dependencies(
                     runtimeController,
@@ -108,7 +108,7 @@ public sealed class PlayerWindowLiveDetectionControllerSetFactoryTests
             Assert.False(runtimeController.IsDetecting);
             Assert.Single(controls.DetectionCanvas.Children);
             Assert.Equal(Visibility.Visible, controls.DetectionOverlay.Visibility);
-            Assert.Equal("unveraendert", controls.DetectionStatusText.Text);
+            Assert.Equal("unverändert", controls.DetectionStatusText.Text);
             Assert.Empty(calls);
         });
     }
@@ -208,7 +208,7 @@ public sealed class PlayerWindowLiveDetectionControllerSetFactoryTests
             var controls = CreateControls();
             controls.LiveDetectionToggle.IsChecked = true;
             controls.DetectionOverlay.Visibility = Visibility.Collapsed;
-            controls.DetectionStatusText.Text = "unveraendert";
+            controls.DetectionStatusText.Text = "unverändert";
             var statusController = new RecordingStatusController(calls);
             var controllers = PlayerWindowLiveDetectionControllerSetFactory.Create(
                 Dependencies(
@@ -235,7 +235,7 @@ public sealed class PlayerWindowLiveDetectionControllerSetFactoryTests
             Assert.False(runtimeController.IsDetecting);
             Assert.False(runtimeController.IsDetectionTimerRunning);
             Assert.Equal(Visibility.Collapsed, controls.DetectionOverlay.Visibility);
-            Assert.Equal("unveraendert", controls.DetectionStatusText.Text);
+            Assert.Equal("unverändert", controls.DetectionStatusText.Text);
             Assert.Empty(statusController.BadgeStates);
             Assert.Empty(statusController.YoloStates);
             Assert.Equal(["display"], calls);

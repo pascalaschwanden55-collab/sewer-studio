@@ -274,7 +274,7 @@ public sealed class CodingTrainingSamplePersistenceCoordinatorTests
 
         Assert.NotNull(saved);
         Assert.Empty(saved.FramePath);
-        Assert.Equal("kein Frame verfuegbar", saved.SnapshotError);
+        Assert.Equal("kein Frame verfügbar", saved.SnapshotError);
         Assert.Equal(
             ManualGoldTrainingPolicy.GoldFrameRequiredReason,
             ManualGoldTrainingPolicy.EvaluateForExport(saved, "tester").Reason);

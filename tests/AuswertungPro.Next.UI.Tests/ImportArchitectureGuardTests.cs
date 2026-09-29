@@ -143,12 +143,12 @@ public sealed class ImportArchitectureGuardTests
         var providerPath = RepoFile("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
         var registrationPath = RepoFile("src", "AuswertungPro.Next.UI", "ServiceProviderRegistrationMap.cs");
 
-        Assert.True(File.Exists(registryPath), "Stored Import-Dateien muessen ausserhalb der ImportPageViewModel registriert werden.");
+        Assert.True(File.Exists(registryPath), "Stored Import-Dateien müssen ausserhalb der ImportPageViewModel registriert werden.");
         Assert.True(File.Exists(contractPath), "Stored Import-Dateien brauchen einen Application-Vertrag.");
-        Assert.True(File.Exists(servicePath), "Stored Import-Dateien muessen in Infrastructure geschrieben werden.");
+        Assert.True(File.Exists(servicePath), "Stored Import-Dateien müssen in Infrastructure geschrieben werden.");
         Assert.True(File.Exists(compatibilityPath), "Die bisherige oeffentliche Importdatei-Fassade muss kompatibel bleiben.");
-        Assert.True(File.Exists(stagingContractPath), "Importkopien brauchen einen Application-Vertrag fuer Staging und Ruecknahme.");
-        Assert.True(File.Exists(stagingServicePath), "Importkopien muessen in Infrastructure vorbereitet werden.");
+        Assert.True(File.Exists(stagingContractPath), "Importkopien brauchen einen Application-Vertrag für Staging und Ruecknahme.");
+        Assert.True(File.Exists(stagingServicePath), "Importkopien müssen in Infrastructure vorbereitet werden.");
         Assert.True(File.Exists(mediaContractPath), "Medienverteilung braucht einen Application-Vertrag.");
 
         Assert.True(File.Exists(manualControllerPath), "Die manuellen Importwege brauchen einen eigenen kleinen Controller.");
@@ -245,7 +245,7 @@ public sealed class ImportArchitectureGuardTests
         var manualControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Services", "ImportManualWorkflowController.cs");
 
         Assert.True(File.Exists(controllerPath), "Import-Lauf-Orchestrierung muss ausserhalb der ImportPageViewModel liegen.");
-        Assert.True(File.Exists(manualControllerPath), "Die manuellen Importwege muessen ausserhalb der ImportPageViewModel liegen.");
+        Assert.True(File.Exists(manualControllerPath), "Die manuellen Importwege müssen ausserhalb der ImportPageViewModel liegen.");
 
         var viewModel = File.ReadAllText(viewModelPath);
         var manualController = File.ReadAllText(manualControllerPath);
