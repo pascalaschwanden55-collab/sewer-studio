@@ -74,6 +74,29 @@
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource ColorAccent}"/>
     <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource ColorAccentHover}"/>
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="{StaticResource ColorAccentSubtle}"/>
+    <!-- Fix-Runde 3 (Aufgabe 13, MINOR/IMPORTANT): Farbe fuer Text/Symbole, die DIREKT auf einer
+         akzentgefuellten Flaeche sitzen (PrimaryButton, ToolbarButtonAccent, Haken-/Griff-Umriss).
+         Weiss in beiden normalen Themes (unveraenderte Optik); unter Hochkontrast auf
+         HighlightTextColor ueberlagert (ThemeHighContrast.xaml), weil AccentBrush selbst dort auf
+         SystemColors.Highlight faellt - ein je nach Hochkontrast-Schema helles/farbiges Highlight,
+         auf dem hartcodiertes Weiss unlesbar werden kann (Befund Fix-Runde 3). -->
+    <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFFFF"/>
+    <!-- ToolbarButtonAccent-Druckzustand: bisher ein hartcodiertes "#FF3570C6" direkt in der
+         ControlTemplate.Triggers-Vorlage (folgte weder einem Themewechsel noch Hochkontrast, weil
+         nicht einmal auf AccentBrush verwiesen wurde). Gleicher Wert, jetzt als eigener Schluessel;
+         Hochkontrast bildet ihn wie AccentBrush/AccentHoverBrush auf Highlight ab. -->
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#FF3570C6"/>
+    <!-- Hover-/Druck-Tönung des impliziten Button-Stils und von ActionCardButton: bisher je ein
+         "<SolidColorBrush Color="{StaticResource ColorAccent}" Opacity="…"/>" direkt im
+         Setter.Value - ein StaticResource-Schnappschuss, der weder einem Designwechsel zur
+         Laufzeit noch Hochkontrast folgte (derselbe Fehlertyp wie ColorHeader/ColorWarning in
+         Fix-Runde 2). Beide Fundstellen in diesem Theme nutzen dieselben zwei Werte (0,08/0,15),
+         deshalb genuegt je ein gemeinsamer Schluessel. Unter Hochkontrast auf WindowColor
+         (dieselbe "subtile Flaeche wird neutral"-Regel wie bei SuccessSubtleBrush &amp; Co. in
+         Fix-Runde 2), weil normaler TextBrush-Text (WindowText unter Hochkontrast) auf dieser
+         Flaeche liegt. -->
+    <SolidColorBrush x:Key="AccentHoverTintBrush" Color="{StaticResource ColorAccent}" Opacity="0.08"/>
+    <SolidColorBrush x:Key="AccentPressedTintBrush" Color="{StaticResource ColorAccent}" Opacity="0.15"/>
     <SolidColorBrush x:Key="BorderLightBrush" Color="{StaticResource ColorBorderLight}"/>
     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource ColorInputBorder}"/>
     <SolidColorBrush x:Key="AccentTextBrush" Color="{StaticResource ColorAccentText}"/>
@@ -325,11 +348,9 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="MainBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                            <Setter TargetName="MainBorder" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorAccent}" Opacity="0.08"/>
-                                </Setter.Value>
-                            </Setter>
+                            <!-- Fix-Runde 3 (Aufgabe 13, MINOR): war ein StaticResource-Schnappschuss
+                                 (ColorAccent), folgte weder Designwechsel noch Hochkontrast. -->
+                            <Setter TargetName="MainBorder" Property="Background" Value="{DynamicResource AccentHoverTintBrush}"/>
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
@@ -348,11 +369,7 @@
                             </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="MainBorder" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorAccent}" Opacity="0.15"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="MainBorder" Property="Background" Value="{DynamicResource AccentPressedTintBrush}"/>
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
@@ -387,7 +404,12 @@
              Vorlage auf der Farbe des Themes, in dem das Fenster geoeffnet wurde). AccentBrush ist
              exakt derselbe Wert, aber ein normaler DynamicResource-Token wie ueberall sonst. -->
         <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-        <Setter Property="Foreground" Value="White"/>
+        <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): war hartcodiert "White" - AccentBrush faellt unter
+             Hochkontrast auf SystemColors.Highlight, das in manchen Hochkontrast-Schemata hell ist
+             (z. B. Cyan); hartes Weiss ergab dort ~1,3-1,5:1 statt lesbar. OnAccentBrush ist in
+             beiden normalen Themes Weiss (keine sichtbare Aenderung), unter Hochkontrast
+             HighlightTextColor. -->
+        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
@@ -480,20 +502,26 @@
         <Setter Property="Padding" Value="12,5"/>
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="Foreground" Value="White"/>
+        <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): siehe PrimaryButton-Kommentar - AccentBrush faellt
+             unter Hochkontrast auf ein moeglicherweise helles Highlight, hartes Weiss war dort
+             potenziell unlesbar. -->
+        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
+                    <!-- Fix-Runde 3 (Aufgabe 13, MINOR): Background war ein
+                         "SolidColorBrush Color="{StaticResource ColorAccent}"" direkt im
+                         Property-Element - ein Schnappschuss, der weder Designwechsel noch
+                         Hochkontrast folgte (AccentBrush wurde dabei gar nicht nachgeschlagen).
+                         Jetzt ein normales DynamicResource-Attribut wie ueberall sonst. -->
                     <Border Name="bd"
+                            Background="{DynamicResource AccentBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="15"
                             Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
-                        <Border.Background>
-                            <SolidColorBrush Color="{StaticResource ColorAccent}"/>
-                        </Border.Background>
                         <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                           RecognizesAccessKey="True">
@@ -510,18 +538,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="bd" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorAccentHover}"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="bd" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="#FF3570C6"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.35"/>
@@ -564,20 +584,14 @@
                                           RecognizesAccessKey="True"/>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <!-- Fix-Runde 3 (Aufgabe 13, MINOR): beide Toenungen waren StaticResource-
+                             Schnappschuesse, siehe Kommentar bei AccentHoverTintBrush oben. -->
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="bd" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorAccent}" Opacity="0.08"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentHoverTintBrush}"/>
                             <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="bd" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorAccent}" Opacity="0.15"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentPressedTintBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.35"/>
@@ -946,12 +960,13 @@
                         <ContentPresenter/>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <!-- Fix-Runde 3 (Aufgabe 13, MINOR): war ein StaticResource-Schnappschuss,
+                             folgte weder Designwechsel noch Hochkontrast; AccentSubtleBrush ist der
+                             seit Fix-Runde 2 korrekt ueberlagerte Schluessel dafuer. Foreground bleibt
+                             in diesem Style unveraendert TextBrush (kein eigener Setter hier), das
+                             passt zu AccentSubtleBrush -> WindowColor unter Hochkontrast. -->
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="bd" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorAccentSubtle}"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="bd" Property="Background">

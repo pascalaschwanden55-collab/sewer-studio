@@ -66,11 +66,29 @@
     <!-- Akzent -->
     <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
     <SolidColorBrush x:Key="AccentHoverBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <!-- Fix-Runde 3: derselbe Pressed-Zustand wie AccentBrush/AccentHoverBrush - ohne diese Zeile
+         bliebe ToolbarButtonAccent beim Druecken auf der normalen Theme-Farbe #FF3570C6 stehen,
+         waehrend Ruhe-/Hover-Zustand schon Highlight zeigen (inkonsistent zwischen den drei
+         Zustaenden desselben Knopfs). -->
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
     <!-- Fix-Runde 2: von ControlColor auf WindowColor umgestellt - dieselbe "subtile Statusflaeche
          wird neutral" Regel wie bei Success-/Warning-/DangerSubtleBrush unten (SchachtUebersichtPanel.xaml
          legt z. B. normalen TextBrush-Text direkt auf diese Flaeche). -->
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
     <SolidColorBrush x:Key="AccentTextBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
+    <!-- Fix-Runde 3: dieselbe Regel wie AccentSubtleBrush - Hover-/Druck-Toenung des Basis-Buttons
+         und von ActionCardButton traegt normalen TextBrush-Text (WindowText unter Hochkontrast). -->
+    <SolidColorBrush x:Key="AccentHoverTintBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="AccentPressedTintBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <!-- Fix-Runde 3 (IMPORTANT): Text/Symbole DIREKT auf einer akzentgefuellten Flaeche (PrimaryButton,
+         ToolbarButtonAccent, CheckBox-Haken, Slider-Griffring) - siehe OnAccentBrush-Kommentar in
+         Theme.xaml. HighlightTextColor ist die von Windows selbst fuer Text auf Highlight vorgesehene
+         Farbe. -->
+    <SolidColorBrush x:Key="OnAccentBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
+    <!-- MainWindow.xaml's Hauptnavigation faerbt den ausgewaehlten Eintrag mit AccentBrush und
+         seine Schrift mit diesem eigenen, dediziert benannten Text-Token (nicht mit dem generischen
+         OnAccentBrush) - beide sind derselbe Weiss-auf-Highlight-Fall, deshalb dieselbe Zuordnung. -->
+    <SolidColorBrush x:Key="NavSelectedTextBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
 
     <!-- Auswahl -->
     <SolidColorBrush x:Key="SelectionBackgroundBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>

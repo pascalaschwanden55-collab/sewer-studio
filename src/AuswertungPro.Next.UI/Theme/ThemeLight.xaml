@@ -71,6 +71,13 @@
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource ColorAccent}"/>
     <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource ColorAccentHover}"/>
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="{StaticResource ColorAccentSubtle}"/>
+    <!-- Fix-Runde 3: siehe Kommentar in Theme.xaml. -->
+    <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFFFF"/>
+    <!-- Fix-Runde 3: harmonisiert die beiden bisherigen Druck-Toenungen dieses Themes (Basis-Button
+         0,04/0,1 vs. ActionCardButton 0,04/0,08 - Rundungsrauschen, keine erkennbare Absicht) auf
+         EINEN Wert je Zustand statt vier StaticResource-Schnappschuss-Stellen zu pflegen. -->
+    <SolidColorBrush x:Key="AccentHoverTintBrush" Color="{StaticResource ColorAccent}" Opacity="0.04"/>
+    <SolidColorBrush x:Key="AccentPressedTintBrush" Color="{StaticResource ColorAccent}" Opacity="0.1"/>
     <SolidColorBrush x:Key="BorderLightBrush" Color="{StaticResource ColorBorderLight}"/>
     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource ColorInputBorder}"/>
     <SolidColorBrush x:Key="AccentTextBrush" Color="{StaticResource ColorAccentText}"/>
@@ -312,11 +319,8 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="MainBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                            <Setter TargetName="MainBorder" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorAccent}" Opacity="0.04"/>
-                                </Setter.Value>
-                            </Setter>
+                            <!-- Fix-Runde 3: siehe Kommentar in Theme.xaml (AccentHoverTintBrush). -->
+                            <Setter TargetName="MainBorder" Property="Background" Value="{DynamicResource AccentHoverTintBrush}"/>
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
@@ -335,11 +339,7 @@
                             </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="MainBorder" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorAccent}" Opacity="0.1"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="MainBorder" Property="Background" Value="{DynamicResource AccentPressedTintBrush}"/>
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
@@ -371,7 +371,8 @@
         <!-- Fix-Runde 2: siehe Kommentar in Theme.xaml - StaticResource-Snapshot durch das normale
              DynamicResource-Token AccentBrush ersetzt (exakt derselbe Wert). -->
         <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-        <Setter Property="Foreground" Value="White"/>
+        <!-- Fix-Runde 3: siehe Kommentar in Theme.xaml (OnAccentBrush). -->
+        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
@@ -546,20 +547,15 @@
                                           RecognizesAccessKey="True"/>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <!-- Fix-Runde 3: siehe Kommentar in Theme.xaml (AccentHoverTintBrush/
+                             AccentPressedTintBrush) - die Druck-Toenung wird dabei mit der des
+                             Basis-Buttons harmonisiert (0,08 -> 0,1, kaum wahrnehmbar). -->
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="bd" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorAccent}" Opacity="0.04"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentHoverTintBrush}"/>
                             <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="bd" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorAccent}" Opacity="0.08"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentPressedTintBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.35"/>
@@ -928,12 +924,9 @@
                         <ContentPresenter/>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <!-- Fix-Runde 3: siehe Kommentar in Theme.xaml (AccentSubtleBrush). -->
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="bd" Property="Background">
-                                <Setter.Value>
-                                    <SolidColorBrush Color="{StaticResource ColorAccentSubtle}"/>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="bd" Property="Background">

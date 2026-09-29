@@ -8,19 +8,26 @@ using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 namespace AuswertungPro.Next.UI.Tests;
 
 /// <summary>
-/// Optikanalyse 28.09.2026, Aufgabe 13, Fix-Runde 1 (IMPORTANT 2), erweitert in Fix-Runde 2:
-/// scannt alle XAML-Dateien nach Background-Tokens, auf denen tatsaechlich normaler Text sitzt.
-/// Zwei Fundwege:
+/// Optikanalyse 28.09.2026, Aufgabe 13, Fix-Runde 1 (IMPORTANT 2), erweitert in Fix-Runde 2 und
+/// Fix-Runde 3: scannt alle XAML-Dateien nach Background-Tokens, auf denen tatsaechlich normaler
+/// Text sitzt, UND in die Gegenrichtung nach akzentgefuellten Flaechen mit hartcodiertem Weiss.
 ///
+/// Vorwaerts (Hintergrund ohne passende Ueberlagerung):
 /// 1) <c>Background="{...Resource XyzBrush}"</c> als normales Attribut (Foreground
 ///    Text/TextSecondary/Header/Muted/Faint direkt am Element, oder ein TextBlock/TextBox/Run/
 ///    AccessText/Label-Kind ohne eigene Foreground-Angabe - das erbt die normale Textfarbe).
 /// 2) <c>&lt;Setter Property="Background" Value="{...Resource XyzBrush}"/&gt;</c> innerhalb eines
-///    Style/ControlTemplate fuer einen textfaehigen Bedienelement-Typ (Button, ListBoxItem, ...),
-///    gepaart mit einem Foreground-Setter im selben Trigger-Zustand bzw. dem Style-Grundzustand
-///    (Fix-Runde 2, IMPORTANT 2: Runde 1 sah nur Attribute und uebersah damit z. B.
-///    RecordDetailsView.xaml's <c>DataTrigger</c>-Paar Background=SuccessSubtleBrush/
-///    Foreground=SuccessTextBrush und Controls.xaml's <c>BearbeitungErledigtKnopf</c>-Style).
+///    Style/ControlTemplate/DataTemplate fuer einen textfaehigen Bedienelement-Typ (Button,
+///    ListBoxItem, ...), gepaart mit einem Foreground-Setter im selben Trigger-Zustand bzw. dem
+///    Style-Grundzustand (Fix-Runde 2: RecordDetailsView.xaml's <c>DataTrigger</c>-Paar
+///    Background=SuccessSubtleBrush/Foreground=SuccessTextBrush und Controls.xaml's
+///    <c>BearbeitungErledigtKnopf</c>-Style; Fix-Runde 3: auch <c>DataTemplate.Triggers</c>).
+/// 3) <c>&lt;X.Background&gt;&lt;SolidColorBrush Color="{...Resource Y}"/&gt;&lt;/X.Background&gt;</c>
+///    als Property-Element-Form (Fix-Runde 3) - fand dabei erneut den bereits in Runde 2 behobenen
+///    Fehlertyp: ein roher <c>Color</c>-Schluessel (nicht "...Brush") in dieser Form kann technisch
+///    NIE per <c>DynamicResource</c> ueberlagert werden (Color ist kein Freezable), muss also immer
+///    zur Attribut-Form umgebaut werden - die Regel gilt unabhaengig vom konkreten Schluesselnamen,
+///    deshalb prueft dieser dritte Weg JEDEN referenzierten Schluessel, nicht nur "...Brush".
 ///
 /// Jeder so gefundene Hintergrund-Schluessel muss in <c>Theme/ThemeHighContrast.xaml</c>
 /// vorkommen, sonst waere Text in Windows-Hochkontrast auf diesem Hintergrund potenziell
@@ -33,6 +40,12 @@ namespace AuswertungPro.Next.UI.Tests;
 /// dagegen auf WindowText/HighlightText gezwungen wird (TextBrush, Success-/Warning-/DangerTextBrush,
 /// AccentTextBrush, SelectionTextBrush, Muted/Faint), MUSS mitgehen - das war der Fehler in Runde 1
 /// bei SuccessSubtleBrush/WarningSubtleBrush/DangerSubtleBrush/InputWarmBrush/VsaInputHighlightBrush.
+///
+/// Rueckwaerts (Fix-Runde 3, IMPORTANT): eine Flaeche, die UNTER Hochkontrast auf
+/// SystemColors.Highlight faellt (AccentBrush &amp; Co.), gepaart mit hartcodiertem Text/Symbol
+/// ("White" oder einer Farbe, die selbst nicht auf HighlightText faellt) - genau der PrimaryButton-
+/// Befund dieser Runde (AccentBrush kann in manchen Hochkontrast-Schemata SEHR HELL sein, hartes
+/// Weiss ergibt dort ~1,3-1,5:1).
 /// </summary>
 public sealed class ThemeHighContrastCoverageTests
 {
@@ -92,6 +105,9 @@ public sealed class ThemeHighContrastCoverageTests
         "ConfidenceHighBrush", "ConfidenceMidBrush", "ConfidenceLowBrush",
         "SuccessBrush", "DangerBrush", "WarningBrush", "InfoBrush",
         "AccentBarBrush",
+        // ToolbarButtonAccent (ThemeLight.xaml) fuellt sich mit AccentBarBrush, nicht mit AccentBrush -
+        // ein eigener, hier bewusst NICHT ueberlagerter Verlauf (siehe AccentBarBrush oben); sein
+        // Weiss-Text bleibt deshalb ein sicheres, unveraendertes Paar wie KiSubtleBrush/KiTextBrush.
         // Zustandsklassen-Chips (Z0..Z4) und Schadensgruppen: eigene, ausserhalb dieser
         // Ueberlagerung geprüfte Farbregel (siehe ZustandsklasseInkPolicy in CLAUDE.md); die
         // konkreten Werte kommen nicht aus einem *Brush-Token, sondern aus Code, deshalb hier
@@ -112,22 +128,15 @@ public sealed class ThemeHighContrastCoverageTests
 
         foreach (var datei in XamlDateien())
         {
-            XDocument doc;
-            try
-            {
-                doc = XDocument.Load(datei);
-            }
-            catch (System.Xml.XmlException)
-            {
-                continue; // keine XML-Wohlgeformtheit (kommt in diesem Bestand nicht vor, aber fail-safe statt Testfehler durch eine fremde Datei)
-            }
-
-            var root = doc.Root;
+            var root = LadeRoot(datei);
             if (root is null)
                 continue;
 
             foreach (var element in root.DescendantsAndSelf())
+            {
                 SammleHintergrundMitText(element, gefunden);
+                SammlePropertyElementHintergrundMitText(element, gefunden);
+            }
 
             SammleSetterHintergrundMitText(root, gefunden);
         }
@@ -154,6 +163,110 @@ public sealed class ThemeHighContrastCoverageTests
         Assert.Empty(BewusstAusgenommen.Intersect(overlayKeys));
     }
 
+    /// <summary>
+    /// Fix-Runde 3 (Aufgabe 13, IMPORTANT): Gegenrichtung zum Haupttest. Ein Hintergrund-Schluessel,
+    /// der in ThemeHighContrast.xaml auf SystemColors.Highlight faellt (AccentBrush,
+    /// AccentHoverBrush, AccentPressedBrush, SelectionBackgroundBrush, SelectionBorderBrush), darf
+    /// nie mit einem hartcodierten Vordergrund (Foreground/Stroke="White" o. Ae., oder einem
+    /// DynamicResource-Token, der SELBST nicht auf HighlightText faellt) im selben Element bzw.
+    /// derselben Style-/Trigger-Ebene auftreten - Highlight kann unter Hochkontrast SEHR HELL sein
+    /// (der reale PrimaryButton-Befund: ~1,3-1,5:1 fuer Weiss auf einem hellen Highlight-Ton).
+    /// </summary>
+    [Fact]
+    public void Keine_akzentgefuellte_Flaeche_traegt_hartcodiertes_Weiss()
+    {
+        var (highlightHintergrundSchluessel, highlightTextSchluessel) = LiesHighlightZuordnung();
+        var verstoesse = new List<string>();
+
+        foreach (var datei in XamlDateien())
+        {
+            var root = LadeRoot(datei);
+            if (root is null)
+                continue;
+
+            var dateiname = Path.GetFileName(datei);
+
+            // A) Attribut-Paare am selben Element: Background/Foreground und Fill/Stroke.
+            foreach (var element in root.DescendantsAndSelf())
+            {
+                PruefeAttributPaar(element, "Background", "Foreground", highlightHintergrundSchluessel, highlightTextSchluessel, dateiname, verstoesse);
+                PruefeAttributPaar(element, "Fill", "Stroke", highlightHintergrundSchluessel, highlightTextSchluessel, dateiname, verstoesse);
+            }
+
+            // B) Setter-Paare im selben Style-/Trigger-Zustand (inkl. DataTemplate.Triggers).
+            foreach (var setter in root.Descendants().Where(e => e.Name.LocalName == "Setter"))
+            {
+                var prop = setter.Attribute("Property")?.Value;
+                if (prop != "Background" && prop != "Fill")
+                    continue;
+
+                var bgSchluessel = ExtrahiereBeliebigenSchluessel(setter.Attribute("Value")?.Value);
+                if (bgSchluessel is null || !highlightHintergrundSchluessel.Contains(bgSchluessel))
+                    continue;
+
+                var fgProp = prop == "Background" ? "Foreground" : "Stroke";
+                var fgWert = FindeGeerbtenSetterWert(setter, fgProp);
+
+                if (fgWert is null)
+                    continue; // kein expliziter Vordergrund in Reichweite - nichts zu pruefen (siehe Klassendoku)
+
+                if (IstUnsicheresVordergrund(fgWert, highlightTextSchluessel))
+                {
+                    verstoesse.Add(
+                        $"{dateiname}: Setter Property=\"{prop}\" Value=\"{bgSchluessel}\" mit "
+                        + $"{fgProp}=\"{fgWert}\"");
+                }
+            }
+        }
+
+        Assert.True(
+            verstoesse.Count == 0,
+            "Diese Stellen fuellen eine unter Hochkontrast auf SystemColors.Highlight fallende "
+            + "Flaeche, tragen aber einen hartcodierten oder nicht auf HighlightText ueberlagerten "
+            + "Vordergrund: " + string.Join(" | ", verstoesse));
+    }
+
+    private static void PruefeAttributPaar(
+        XElement element,
+        string bgAttribut,
+        string fgAttribut,
+        HashSet<string> highlightHintergrundSchluessel,
+        HashSet<string> highlightTextSchluessel,
+        string dateiname,
+        List<string> verstoesse)
+    {
+        var bgWert = element.Attribute(bgAttribut)?.Value;
+        var bgSchluessel = ExtrahiereBeliebigenSchluessel(bgWert);
+        if (bgSchluessel is null || !highlightHintergrundSchluessel.Contains(bgSchluessel))
+            return;
+
+        var fgWert = element.Attribute(fgAttribut)?.Value;
+        if (fgWert is null)
+            return; // kein expliziter Vordergrund an diesem Element - nichts zu pruefen
+
+        if (IstUnsicheresVordergrund(fgWert, highlightTextSchluessel))
+        {
+            verstoesse.Add(
+                $"{dateiname}: <{element.Name.LocalName} {bgAttribut}=\"{bgSchluessel}\" "
+                + $"{fgAttribut}=\"{fgWert}\">");
+        }
+    }
+
+    /// <summary>Ein Vordergrund ist unsicher, wenn er entweder gar keine Ressourcen-Referenz ist
+    /// (literales "White", ein Hex-Code, ...) oder auf einen Schluessel verweist, der selbst NICHT
+    /// in der Hochkontrast-Ueberlagerung auf HighlightText faellt.</summary>
+    private static bool IstUnsicheresVordergrund(string? fgWert, HashSet<string> highlightTextSchluessel)
+    {
+        if (string.IsNullOrEmpty(fgWert))
+            return false;
+
+        var fgSchluessel = ExtrahiereBeliebigenSchluessel(fgWert);
+        if (fgSchluessel is null)
+            return true; // kein {DynamicResource ...}/{StaticResource ...} - ein literaler Wert wie "White"
+
+        return !highlightTextSchluessel.Contains(fgSchluessel);
+    }
+
     // ── Weg 1: Background="..." als Attribut ──────────────────────────────────────────────
 
     private static void SammleHintergrundMitText(XElement element, SortedSet<string> gefunden)
@@ -164,10 +277,35 @@ public sealed class ThemeHighContrastCoverageTests
             gefunden.Add(key);
     }
 
+    /// <summary>
+    /// Fix-Runde 3: Property-Element-Form "&lt;X.Background&gt;&lt;SolidColorBrush Color="..."/&gt;
+    /// &lt;/X.Background&gt;" - genau das Muster, in dem Fix-Runde 2 den rohen ColorHeader/
+    /// ColorWarning-Umweg fand (ein Color-Schluessel dort kann NIE per DynamicResource ueberlagert
+    /// werden, siehe Klassendoku). Prueft deshalb JEDEN referenzierten Schluessel, nicht nur
+    /// "...Brush" - fehlt er im Ueberlagerungswoerterbuch, verlangt der Haupttest entweder die
+    /// Umstellung auf die Attribut-Form (wie in Runde 2/3 geschehen) oder eine begruendete
+    /// Ausnahme, niemals eine stille Luecke.
+    /// </summary>
+    private static void SammlePropertyElementHintergrundMitText(XElement element, SortedSet<string> gefunden)
+    {
+        var backgroundElement = element.Elements()
+            .FirstOrDefault(e => e.Name.LocalName.EndsWith(".Background", System.StringComparison.Ordinal));
+        if (backgroundElement is null)
+            return;
+
+        var brush = backgroundElement.Elements().FirstOrDefault(e => e.Name.LocalName == "SolidColorBrush");
+        var key = ExtrahiereBeliebigenSchluessel(brush?.Attribute("Color")?.Value);
+        if (key is not null && TraegtText(element, istWurzel: true))
+            gefunden.Add(key);
+    }
+
     private static bool TraegtText(XElement element, bool istWurzel)
     {
-        if (!istWurzel && element.Attribute("Background") is not null)
+        if (!istWurzel && (element.Attribute("Background") is not null
+                            || element.Elements().Any(e => e.Name.LocalName.EndsWith(".Background", System.StringComparison.Ordinal))))
+        {
             return false; // eigene Flaeche - ihr Text zaehlt dort, nicht bei der uebergeordneten
+        }
 
         var vg = element.Attribute("Foreground")?.Value;
         if (vg is not null)
@@ -196,7 +334,7 @@ public sealed class ThemeHighContrastCoverageTests
         return false;
     }
 
-    // ── Weg 2: <Setter Property="Background" Value="..."/> in Style/ControlTemplate ───────
+    // ── Weg 2: <Setter Property="Background" Value="..."/> in Style/ControlTemplate/DataTemplate ──
 
     private static void SammleSetterHintergrundMitText(XElement wurzel, SortedSet<string> gefunden)
     {
@@ -216,39 +354,89 @@ public sealed class ThemeHighContrastCoverageTests
 
     private static bool SetterHintergrundTraegtText(XElement backgroundSetter)
     {
+        // Fix-Runde 3: DataTemplate.Triggers ergaenzt - ein Setter dort (z. B. innerhalb eines
+        // DataTrigger) hat als Container-Vorfahre "DataTemplate", nicht "Style"/"ControlTemplate";
+        // vorher stoppte der Scan hier fail-silent statt fail-safe.
         var container = backgroundSetter.Ancestors()
-            .FirstOrDefault(a => a.Name.LocalName is "Style" or "ControlTemplate");
+            .FirstOrDefault(a => a.Name.LocalName is "Style" or "ControlTemplate" or "DataTemplate");
         if (container is null)
             return false; // kein Style/Template-Kontext (kommt bei Property="Background" nicht vor)
 
-        var targetType = (container.Attribute("TargetType")?.Value ?? string.Empty)
-            .Replace("{x:Type ", string.Empty).TrimEnd('}');
-        var typKurzname = targetType.Contains(':') ? targetType[(targetType.IndexOf(':') + 1)..] : targetType;
-        if (!TextBearingStyleTargetTypes.Contains(typKurzname))
-            return false; // Border/Grid/... rendern selbst keinen Text - siehe Klassendoku Weg 2
-
-        // 1) Foreground-Setter im selben Zustand (direktes Geschwister, z. B. selber DataTrigger)
-        var geschwisterForeground = backgroundSetter.Parent?.Elements()
-            .FirstOrDefault(e => e.Name.LocalName == "Setter" && e.Attribute("Property")?.Value == "Foreground");
-        if (geschwisterForeground is not null)
+        if (container.Name.LocalName == "DataTemplate")
         {
-            var fgKey = ExtrahiereBrushSchluessel(geschwisterForeground.Attribute("Value")?.Value);
-            return fgKey is not null && PlaintextForegroundTokens.Contains(fgKey);
+            // Ein DataTemplate hat keinen TargetType - stattdessen gilt es als textfaehig, wenn es
+            // irgendwo einen der bekannten Klartext-Elementnamen enthaelt (dieselbe Liste wie Weg 1).
+            var traegtIrgendwoText = container.Descendants().Any(e => PlaintextElementNames.Contains(e.Name.LocalName));
+            if (!traegtIrgendwoText)
+                return false;
+        }
+        else
+        {
+            var targetType = (container.Attribute("TargetType")?.Value ?? string.Empty)
+                .Replace("{x:Type ", string.Empty).TrimEnd('}');
+            var typKurzname = targetType.Contains(':') ? targetType[(targetType.IndexOf(':') + 1)..] : targetType;
+            if (!TextBearingStyleTargetTypes.Contains(typKurzname))
+                return false; // Border/Grid/... rendern selbst keinen Text - siehe Klassendoku Weg 2
         }
 
-        // 2) Kein Foreground im selben Trigger-Zustand: der Grundzustand des Style/Templates gilt.
-        var basisForeground = container.Elements()
-            .FirstOrDefault(e => e.Name.LocalName == "Setter" && e.Attribute("Property")?.Value == "Foreground");
-        if (basisForeground is not null)
+        // 1) Foreground-Setter im selben Trigger-Zustand, sonst 2) im Grundzustand irgendeines
+        // umschliessenden Style/ControlTemplate/DataTemplate (nicht nur des naechsten - siehe
+        // FindeGeerbtenSetterWert-Klassendoku).
+        var fgWert = FindeGeerbtenSetterWert(backgroundSetter, "Foreground");
+        if (fgWert is null)
         {
-            var fgKey = ExtrahiereBrushSchluessel(basisForeground.Attribute("Value")?.Value);
-            return fgKey is not null && PlaintextForegroundTokens.Contains(fgKey);
+            // 3) Nirgends ein Foreground-Setter: das Element erbt die normale Fenstertextfarbe
+            // (dieselbe Annahme wie bei PlaintextElementNames in Weg 1) - konservativ als "traegt
+            // Text" werten, statt eine stille Luecke zu riskieren.
+            return true;
         }
 
-        // 3) Weder Trigger- noch Grundzustand setzen Foreground: das Element erbt die normale
-        // Fenstertextfarbe (dieselbe Annahme wie bei PlaintextElementNames in Weg 1) - konservativ
-        // als "traegt Text" werten, statt eine stille Luecke zu riskieren.
-        return true;
+        var fgKey = ExtrahiereBrushSchluessel(fgWert);
+        return fgKey is not null && PlaintextForegroundTokens.Contains(fgKey);
+    }
+
+    /// <summary>
+    /// Sucht den Wert eines Setters fuer <paramref name="property"/>, der auf dasselbe Element
+    /// wirkt wie <paramref name="ausgangsSetter"/> - zuerst im selben Trigger-Zustand (ein direktes
+    /// Geschwister, TargetName-unabhaengig: Foreground ist eine vererbte Eigenschaft, ein Setter
+    /// ohne TargetName auf dem Gesamtelement wirkt bis in eine benannte Teilflaeche hinein, z. B.
+    /// PhotoMeasurementWindow.xaml's PresetBtn/PhotoToolBtn - Background auf TargetName="Bd",
+    /// Foreground ohne TargetName im selben Trigger), danach im Grundzustand JEDES umschliessenden
+    /// Style/ControlTemplate/DataTemplate von innen nach aussen (nicht nur des naechsten). Ein
+    /// ControlTemplate.Triggers haengt oft in einem Style, dessen eigener Grundzustand-Setter sonst
+    /// uebersehen wuerde - genau das verbarg PresetBtn's IsMouseOver-Trigger (Fix-Runde 3, per
+    /// Testlauf gefunden): er aendert nur Background, das Grundzustand-Weiss steckt eine Ebene
+    /// hoeher im umschliessenden Style.
+    ///
+    /// Der Grundzustand-Fallback gilt NUR fuer einen Background-Setter OHNE TargetName (er gilt dann
+    /// dem Gesamtelement, wie sein Grundzustand-Gegenstueck). Ein Background MIT TargetName (eine
+    /// benannte Teilflaeche wie "CheckBorder") bekommt aus dem Grundzustand NICHTS zugeordnet, weil
+    /// unklar ist, ob diese Teilflaeche ueberhaupt den textfaehigen Bereich enthaelt - beim CheckBox-
+    /// Beispiel ist "CheckBorder" nur das kleine Kaestchen, der Grundzustand-Foreground gehoert zur
+    /// separat danebenliegenden Beschriftung (per Testlauf als Fehlalarm gefunden und hier bewusst
+    /// ausgeschlossen). Liefert null, wenn nirgends ein passender Setter existiert.
+    /// </summary>
+    private static string? FindeGeerbtenSetterWert(XElement ausgangsSetter, string property)
+    {
+        var geschwister = ausgangsSetter.Parent?.Elements()
+            .FirstOrDefault(e => e.Name.LocalName == "Setter" && e.Attribute("Property")?.Value == property);
+        if (geschwister is not null)
+            return geschwister.Attribute("Value")?.Value;
+
+        if (ausgangsSetter.Attribute("TargetName") is not null)
+            return null; // benannte Teilflaeche ohne eigenen Foreground im selben Zustand - siehe Klassendoku
+
+        foreach (var container in ausgangsSetter.Ancestors().Where(a => a.Name.LocalName is "Style" or "ControlTemplate" or "DataTemplate"))
+        {
+            var basis = container.Elements()
+                .FirstOrDefault(e => e.Name.LocalName == "Setter"
+                                   && e.Attribute("Property")?.Value == property
+                                   && e.Attribute("TargetName") is null);
+            if (basis is not null)
+                return basis.Attribute("Value")?.Value;
+        }
+
+        return null;
     }
 
     private static string? ExtrahiereBrushSchluessel(string? wert)
@@ -260,6 +448,30 @@ public sealed class ThemeHighContrastCoverageTests
         return match.Success ? match.Groups[1].Value : null;
     }
 
+    /// <summary>Wie <see cref="ExtrahiereBrushSchluessel"/>, aber ohne die Einschraenkung auf einen
+    /// mit "Brush" endenden Namen - fuer die Property-Element-Form (Weg 3) und die
+    /// Highlight-Gegenpruefung, wo auch ein roher Color-Schluessel wie "ColorHeader" zaehlt.</summary>
+    private static string? ExtrahiereBeliebigenSchluessel(string? wert)
+    {
+        if (string.IsNullOrEmpty(wert))
+            return null;
+
+        var match = Regex.Match(wert, @"\{(?:Dynamic|Static)Resource\s+([A-Za-z0-9]+)\}");
+        return match.Success ? match.Groups[1].Value : null;
+    }
+
+    private static XElement? LadeRoot(string datei)
+    {
+        try
+        {
+            return XDocument.Load(datei).Root;
+        }
+        catch (System.Xml.XmlException)
+        {
+            return null; // keine XML-Wohlgeformtheit (kommt in diesem Bestand nicht vor, aber fail-safe statt Testfehler durch eine fremde Datei)
+        }
+    }
+
     private static IEnumerable<string> XamlDateien()
         => Directory.EnumerateFiles(RepoFile("src", "AuswertungPro.Next.UI"), "*.xaml", SearchOption.AllDirectories)
             .Where(p => !p.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", System.StringComparison.OrdinalIgnoreCase)
@@ -267,15 +479,54 @@ public sealed class ThemeHighContrastCoverageTests
 
     private static HashSet<string> LiesUeberlagerungsSchluessel()
     {
-        var pfad = RepoFile("src", "AuswertungPro.Next.UI", "Theme", "ThemeHighContrast.xaml");
-        var doc = XDocument.Load(pfad);
-        var xNamespace = doc.Root!.GetDefaultNamespace();
-        var xamlNs = doc.Root.GetNamespaceOfPrefix("x")!;
+        var doc = LiesUeberlagerungsDokument();
+        var xamlNs = doc.Root!.GetNamespaceOfPrefix("x")!;
 
         return doc.Root.Elements()
             .Select(e => e.Attribute(xamlNs + "Key")?.Value)
             .Where(k => k is not null)
             .Select(k => k!)
             .ToHashSet(System.StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Fix-Runde 3: liest ThemeHighContrast.xaml ein zweites Mal aus, dieses Mal nicht nur nach
+    /// Schluesselnamen, sondern danach, WELCHES SystemColors-Ziel jeder Schluessel hat. Liefert die
+    /// Menge der Hintergrund-Schluessel, die auf HighlightColorKey faellt (AccentBrush &amp; Co.),
+    /// und die Menge der Vordergrund-Schluessel, die auf HighlightTextColorKey faellt (OnAccentBrush,
+    /// AccentTextBrush, SelectionTextBrush, NavSelectedTextBrush) - beide direkt aus der Datei
+    /// abgeleitet, damit ein spaeter dort ergaenzter Schluessel automatisch erfasst wird, ohne diese
+    /// Liste von Hand nachzufuehren.
+    /// </summary>
+    private static (HashSet<string> HighlightHintergrund, HashSet<string> HighlightText) LiesHighlightZuordnung()
+    {
+        var doc = LiesUeberlagerungsDokument();
+        var xamlNs = doc.Root!.GetNamespaceOfPrefix("x")!;
+
+        var highlightHintergrund = new HashSet<string>(System.StringComparer.Ordinal);
+        var highlightText = new HashSet<string>(System.StringComparer.Ordinal);
+
+        foreach (var element in doc.Root.Elements())
+        {
+            var key = element.Attribute(xamlNs + "Key")?.Value;
+            var colorWert = element.Attribute("Color")?.Value;
+            if (key is null || colorWert is null)
+                continue;
+
+            // "HighlightColorKey" ist KEIN Teilstring von "HighlightTextColorKey" (dazwischen
+            // steht "Text"), die beiden Contains-Pruefungen sind deshalb trennscharf.
+            if (colorWert.Contains("HighlightTextColorKey", System.StringComparison.Ordinal))
+                highlightText.Add(key);
+            else if (colorWert.Contains("HighlightColorKey", System.StringComparison.Ordinal))
+                highlightHintergrund.Add(key);
+        }
+
+        return (highlightHintergrund, highlightText);
+    }
+
+    private static XDocument LiesUeberlagerungsDokument()
+    {
+        var pfad = RepoFile("src", "AuswertungPro.Next.UI", "Theme", "ThemeHighContrast.xaml");
+        return XDocument.Load(pfad);
     }
 }

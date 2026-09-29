@@ -85,11 +85,14 @@
                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                         <Setter Property="TextElement.Foreground" Value="{DynamicResource TextBrush}"/>
                     </Trigger>
+                    <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): AccentBrush faellt unter Hochkontrast
+                         auf SystemColors.Highlight, hartes Weiss war dort potenziell unlesbar (von
+                         ThemeHighContrastCoverageTests gefunden). -->
                     <Trigger Property="IsPressed" Value="True">
                         <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                        <Setter Property="Foreground" Value="White"/>
-                        <Setter Property="TextElement.Foreground" Value="White"/>
+                        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
+                        <Setter Property="TextElement.Foreground" Value="{DynamicResource OnAccentBrush}"/>
                     </Trigger>
                 </Style.Triggers>
             </Style>

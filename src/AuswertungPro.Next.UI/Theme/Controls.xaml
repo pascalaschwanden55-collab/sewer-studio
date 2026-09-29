@@ -273,10 +273,13 @@
                                 CornerRadius="4"
                                 Margin="0,0,8,0">
                             <!-- Der Haken springt beim Setzen kurz auf — gleiche Sprache wie der
-                                 Punkt im RadioButton darunter. -->
+                                 Punkt im RadioButton darunter. Fix-Runde 3 (Aufgabe 13, IMPORTANT):
+                                 CheckBorder wird bei IsChecked auf AccentBrush gesetzt (siehe unten)
+                                 - derselbe Weiss-auf-Highlight-Fall wie bei PrimaryButton, nur als
+                                 Symbol statt Text. -->
                             <Path x:Name="CheckMark"
                                 Data="M2,6 L6,10 L14,2"
-                                Stroke="White"
+                                Stroke="{DynamicResource OnAccentBrush}"
                                 StrokeThickness="2"
                                 Visibility="Collapsed"
                                 RenderTransformOrigin="0.5,0.5">
@@ -524,9 +527,16 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
+                        <!-- Fix-Runde 3 (Aufgabe 13, MINOR): BorderThickness/BorderBrush neu, damit die
+                             IsSelected-Markierung unter Hochkontrast sichtbar bleibt - AccentSubtleBrush
+                             (Fuellung) faellt dort auf WindowColor, wie es die umgebende Flaeche meist
+                             auch tut; ohne eigenen Rand waere "ausgewaehlt" von "nicht ausgewaehlt" nicht
+                             mehr zu unterscheiden. -->
                         <Border x:Name="ItemBorder"
                                 Grid.Row="0"
                                 Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
                                 CornerRadius="6"
                                 Padding="6,4">
                             <Grid>
@@ -594,6 +604,7 @@
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource HoverBrush}"/>
@@ -1389,10 +1400,12 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
+                    <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): siehe CheckMark-Kommentar oben - derselbe
+                         Weiss-auf-AccentBrush-Fall, hier als Griffring statt Symbol. -->
                     <Ellipse x:Name="Ellipse"
                            Width="16" Height="16"
                            Fill="{DynamicResource AccentBrush}"
-                           Stroke="White"
+                           Stroke="{DynamicResource OnAccentBrush}"
                            StrokeThickness="2">
                         <Ellipse.Effect>
                             <DropShadowEffect Color="#20000000" BlurRadius="4" ShadowDepth="1" Direction="270"/>

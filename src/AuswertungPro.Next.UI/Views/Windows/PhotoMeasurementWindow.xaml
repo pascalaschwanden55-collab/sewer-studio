@@ -35,10 +35,13 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): AccentBrush faellt unter
+                                 Hochkontrast auf SystemColors.Highlight, hartes Weiss war dort
+                                 potenziell unlesbar (von ThemeHighContrastCoverageTests gefunden). -->
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                <Setter Property="Foreground" Value="White"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="White"/>
+                                <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource OnAccentBrush}"/>
                             </Trigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
@@ -113,8 +116,16 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): der Grundzustand-Vordergrund
+                                 "White" (siehe Style oben) passt zur normalen dunklen Literalfarbe,
+                                 aber nicht mehr, sobald dieser Trigger die Flaeche auf AccentBrush
+                                 umstellt - unter Hochkontrast faellt das auf SystemColors.Highlight
+                                 (von ThemeHighContrastCoverageTests gefunden). Eigener
+                                 Foreground-Setter nur fuer DIESEN Zustand, der Grundzustand bleibt
+                                 unveraendert Weiss auf der dunklen Literalfarbe. -->
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -133,10 +144,7 @@
 
         <!-- ═══ ROW 0: TOOLBAR ═══ -->
         <Border Grid.Row="0" Padding="8,6" BorderThickness="0,0,0,1"
-                BorderBrush="{DynamicResource BorderBrush}">
-            <Border.Background>
-                <SolidColorBrush Color="{DynamicResource ColorHeader}"/>
-            </Border.Background>
+                BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource HeaderBrush}">
             <WrapPanel Orientation="Horizontal">
                 <!-- 1. Kalibrierung (immer zuerst) -->
                 <ToggleButton x:Name="BtnToolCalib" Style="{StaticResource PhotoToolBtn}"
@@ -426,10 +434,7 @@
         <!-- ═══ ROW 2: WINKEL-PANEL (nur Abzweig / Bogen) ═══ -->
         <Border x:Name="PanelAngle" Grid.Row="2" Padding="12,8"
                 BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderBrush}"
-                Visibility="Collapsed">
-            <Border.Background>
-                <SolidColorBrush Color="{DynamicResource ColorHeader}"/>
-            </Border.Background>
+                Visibility="Collapsed" Background="{DynamicResource HeaderBrush}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -507,10 +512,7 @@
 
         <!-- ═══ ROW 3: STATUSBAR ═══ -->
         <Border Grid.Row="3" Padding="12,6"
-                BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderBrush}">
-            <Border.Background>
-                <SolidColorBrush Color="{DynamicResource ColorHeader}"/>
-            </Border.Background>
+                BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource HeaderBrush}">
             <TextBlock x:Name="TxtStatus"
                        Text="Werkzeug wählen, um mit der Messung zu beginnen."
                        FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"/>
