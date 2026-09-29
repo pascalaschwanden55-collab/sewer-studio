@@ -76,7 +76,7 @@ public sealed class TrainingPdfReviewBatchImportUseCase
         var protection = await Task.Run(_loadProtection, cancellationToken)
             .ConfigureAwait(false)
                          ?? throw new InvalidDataException(
-                             "Der Eval-Schutz lieferte keinen gueltigen Stand.");
+                             "Der Eval-Schutz lieferte keinen gültigen Stand.");
         cancellationToken.ThrowIfCancellationRequested();
 
         var discovery = await Task.Run(
@@ -128,7 +128,7 @@ public sealed class TrainingPdfReviewBatchImportUseCase
 
                 if (string.IsNullOrWhiteSpace(result.SourceDocumentSha256))
                     throw new InvalidDataException(
-                        "Der PDF-Import lieferte keine Dokument-Pruefsumme.");
+                        "Der PDF-Import lieferte keine Dokument-Prüfsumme.");
                 readPdfCount++;
                 if (!documentHashes.Add(result.SourceDocumentSha256))
                 {

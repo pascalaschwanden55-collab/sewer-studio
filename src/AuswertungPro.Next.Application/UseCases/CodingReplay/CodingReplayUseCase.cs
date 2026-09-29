@@ -42,14 +42,14 @@ public sealed class CodingReplayUseCase(ICodingReplayAnalyzer analyzer)
         ArgumentNullException.ThrowIfNull(frames);
         ArgumentNullException.ThrowIfNull(actions);
         if (frames.Count == 0 || timeoutPerFrame <= TimeSpan.Zero || timeoutPerFrame > TimeSpan.FromMinutes(30))
-            throw new ArgumentException("Bildliste oder Zeitlimit ist ungueltig.");
+            throw new ArgumentException("Bildliste oder Zeitlimit ist ungültig.");
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var frame in frames)
         {
             if (string.IsNullOrWhiteSpace(frame.Id) || !ids.Add(frame.Id)
                 || frame.ImageSha256.Length != 64 || !frame.ImageSha256.All(Uri.IsHexDigit)
                 || !double.IsFinite(frame.TimestampSeconds) || frame.TimestampSeconds < 0)
-                throw new ArgumentException("Doppelte Kennung oder ungueltiger Bildnachweis.");
+                throw new ArgumentException("Doppelte Kennung oder ungültiger Bildnachweis.");
         }
 
         var results = new List<CodingReplayResult>();
@@ -73,7 +73,7 @@ public sealed class CodingReplayUseCase(ICodingReplayAnalyzer analyzer)
                     var bytes = await actions.ReadImage(frame.Id, deadline.Token).ConfigureAwait(false);
                     if (bytes.Length == 0 || !Convert.ToHexString(SHA256.HashData(bytes))
                         .Equals(frame.ImageSha256, StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidDataException("Bild stimmt nicht mit der gebundenen Pruefsumme ueberein.");
+                        throw new InvalidDataException("Bild stimmt nicht mit der gebundenen Prüfsumme überein.");
                     var observation = await analyzer.AnalyzeAsync(frame, bytes, deadline.Token).ConfigureAwait(false);
                     deadline.Token.ThrowIfCancellationRequested();
                     result = new(frame.Id, observation.TechnicalError is null ? "measured" : "technical_error",

@@ -128,7 +128,7 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
         ArgumentNullException.ThrowIfNull(request);
         var reviewer = request.ConfirmedByUser?.Trim() ?? string.Empty;
         if (reviewer.Length == 0)
-            throw new ArgumentException("Bearbeiter fuer die Goldpruefung fehlt.", nameof(request));
+            throw new ArgumentException("Bearbeiter für die Goldprüfung fehlt.", nameof(request));
         if (request.SamplesPerMainCode <= 0)
             throw new ArgumentOutOfRangeException(nameof(request), "Die Anzahl je Hauptcode muss positiv sein.");
 
@@ -201,11 +201,11 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
         var sampleId = request.SampleId?.Trim() ?? string.Empty;
         var sessionId = request.SessionId?.Trim() ?? string.Empty;
         if (reviewer.Length == 0 || sampleId.Length == 0 || sessionId.Length == 0)
-            throw new ArgumentException("Sitzung, Sample und Bearbeiter muessen angegeben sein.", nameof(request));
+            throw new ArgumentException("Sitzung, Sample und Bearbeiter müssen angegeben sein.", nameof(request));
 
         var session = _sessionStore.LoadCurrent(reviewer)
                       ?? throw new InvalidOperationException(
-                          "Goldpruefung kann nicht abgeschlossen werden: Die Sitzung fehlt.");
+                          "Goldprüfung kann nicht abgeschlossen werden: Die Sitzung fehlt.");
         if (!string.Equals(session.SessionId, sessionId, StringComparison.OrdinalIgnoreCase)
             || !session.Entries.Any(entry => string.Equals(
                 entry.SampleId,
@@ -213,7 +213,7 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
                 StringComparison.OrdinalIgnoreCase)))
         {
             throw new InvalidOperationException(
-                "Goldpruefung kann nicht abgeschlossen werden: Sitzung oder Sample passt nicht.");
+                "Goldprüfung kann nicht abgeschlossen werden: Sitzung oder Sample passt nicht.");
         }
 
         _sessionStore.MarkCompleted(session, sampleId, _utcNow().ToUniversalTime());
@@ -237,7 +237,7 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
             if (!samplesById.TryGetValue(entry.SampleId, out var sample))
             {
                 throw new InvalidOperationException(
-                    $"Goldpruefung kann nicht fortgesetzt werden: Sample '{entry.SampleId}' fehlt oder ist nicht mehr freigegeben.");
+                    $"Goldprüfung kann nicht fortgesetzt werden: Sample '{entry.SampleId}' fehlt oder ist nicht mehr freigegeben.");
             }
 
             var candidate = BuildCandidate(
@@ -249,12 +249,12 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
             if (candidate is null)
             {
                 throw new InvalidOperationException(
-                    $"Goldpruefung kann nicht fortgesetzt werden: Sample '{entry.SampleId}' ist nicht mehr sicher lesbar oder geschuetzt.");
+                    $"Goldprüfung kann nicht fortgesetzt werden: Sample '{entry.SampleId}' ist nicht mehr sicher lesbar oder geschützt.");
             }
             if (!string.Equals(candidate.ImageSha256, entry.ImageSha256, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
-                    $"Goldpruefung kann nicht fortgesetzt werden: Bildbytes von Sample '{entry.SampleId}' haben sich geaendert.");
+                    $"Goldprüfung kann nicht fortgesetzt werden: Bildbytes von Sample '{entry.SampleId}' haben sich geändert.");
             }
 
             if (completedSampleIds.Contains(entry.SampleId)
@@ -385,8 +385,8 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
             if (codeSelection.Count != samplesPerMainCode)
             {
                 throw new InvalidOperationException(
-                    $"Goldpruefung wurde nicht angelegt: Fuer {mainCode} sind nur {codeSelection.Count} " +
-                    $"sichere unterschiedliche Bilder verfuegbar, benoetigt werden {samplesPerMainCode}.");
+                    $"Goldprüfung wurde nicht angelegt: Für {mainCode} sind nur {codeSelection.Count} " +
+                    $"sichere unterschiedliche Bilder verfügbar, benötigt werden {samplesPerMainCode}.");
             }
 
             selected.AddRange(codeSelection);
@@ -563,7 +563,7 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
             if (!result.TryAdd(sample.SampleId, sample))
             {
                 throw new InvalidOperationException(
-                    $"Goldpruefung gesperrt: Sample-ID '{sample.SampleId}' ist im Bestand nicht eindeutig.");
+                    $"Goldprüfung gesperrt: Sample-ID '{sample.SampleId}' ist im Bestand nicht eindeutig.");
             }
         }
 
@@ -581,7 +581,7 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
         if (normalized.Any(code => code is null)
             || normalized.Distinct(StringComparer.OrdinalIgnoreCase).Count() != normalized.Length)
         {
-            throw new ArgumentException("Hauptcodes muessen eindeutig und genau dreistellig sein.", nameof(mainCodes));
+            throw new ArgumentException("Hauptcodes müssen eindeutig und genau dreistellig sein.", nameof(mainCodes));
         }
 
         return normalized.Cast<string>().ToArray();
@@ -656,7 +656,7 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
             || !IsSha256(registry.RegistryHash))
         {
             throw new InvalidOperationException(
-                "Goldpruefung gesperrt: Das Exportregister ist nicht vollstaendig persoenlich freigegeben.");
+                "Goldprüfung gesperrt: Das Exportregister ist nicht vollständig persönlich freigegeben.");
         }
     }
 
@@ -666,7 +666,7 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
         if (!IsSha256(snapshot.ProtectionFingerprint))
         {
             throw new InvalidOperationException(
-                "Goldpruefung gesperrt: Der aktuelle Eval-Schutzstand ist nicht vollstaendig gebunden.");
+                "Goldprüfung gesperrt: Der aktuelle Eval-Schutzstand ist nicht vollständig gebunden.");
         }
     }
 
@@ -704,7 +704,7 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                "Goldpruefung kann nicht fortgesetzt werden: Das Sitzungsmanifest passt nicht mehr zum freigegebenen Umfang.");
+                "Goldprüfung kann nicht fortgesetzt werden: Das Sitzungsmanifest passt nicht mehr zum freigegebenen Umfang.");
         }
         if (!string.Equals(
                 session.ProtectionFingerprint,
@@ -712,7 +712,7 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                "Goldpruefung kann nicht fortgesetzt werden: Der Eval-Schutzstand hat sich geaendert.");
+                "Goldprüfung kann nicht fortgesetzt werden: Der Eval-Schutzstand hat sich geändert.");
         }
     }
 

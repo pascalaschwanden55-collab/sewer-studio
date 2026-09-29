@@ -9,12 +9,12 @@ public static class TrainingInventoryReportValidator
 
         Require(
             report.SchemaVersion == TrainingDataInventoryReportSchema.CurrentSchemaVersion,
-            $"Nicht unterstuetzte Inventar-Schemaversion: {report.SchemaVersion}");
+            $"Nicht unterstützte Inventar-Schemaversion: {report.SchemaVersion}");
         Require(
             report.ScannerVersion == TrainingDataInventoryReportSchema.CurrentScannerVersion,
-            $"Nicht unterstuetzte Inventar-Scanner-Version: {report.ScannerVersion}");
-        Require(Guid.TryParseExact(report.RunId, "N", out _), "RunId fehlt oder ist ungueltig.");
-        Require(report.GeneratedUtc != default, "GeneratedUtc fehlt oder ist ungueltig.");
+            $"Nicht unterstützte Inventar-Scanner-Version: {report.ScannerVersion}");
+        Require(Guid.TryParseExact(report.RunId, "N", out _), "RunId fehlt oder ist ungültig.");
+        Require(report.GeneratedUtc != default, "GeneratedUtc fehlt oder ist ungültig.");
         Require(report.ReadOnly, "Inventarbericht muss readOnly=true sein.");
         Require(!string.IsNullOrWhiteSpace(report.KnowledgeRoot), "KnowledgeRoot fehlt.");
         Require(Path.IsPathFullyQualified(report.KnowledgeRoot), "KnowledgeRoot muss absolut sein.");
@@ -71,18 +71,18 @@ public static class TrainingInventoryReportValidator
                     $"Aktuelle Quelle liegt nicht am verbindlichen Pfad: {source.Path}");
             }
             if (source.Sha256 is not null)
-                Require(IsSha256(source.Sha256), $"{source.Path}: Quellen-SHA-256 ist ungueltig.");
+                Require(IsSha256(source.Sha256), $"{source.Path}: Quellen-SHA-256 ist ungültig.");
             if (source.ParseState == TrainingInventoryParseState.Parsed)
             {
                 Require(IsSha256(source.Sha256), $"{source.Path}: Quellen-SHA-256 fehlt.");
-                Require(source.Bytes is >= 0, $"{source.Path}: Quellengroesse fehlt.");
+                Require(source.Bytes is >= 0, $"{source.Path}: Qüllengrösse fehlt.");
                 Require(source.LastWriteUtc.HasValue, $"{source.Path}: Aenderungszeit fehlt.");
                 Require(source.RecordCount is >= 0, $"{source.Path}: Datensatzanzahl fehlt.");
-                Require(string.IsNullOrWhiteSpace(source.Error), $"{source.Path}: geparste Quelle enthaelt einen Fehler.");
+                Require(string.IsNullOrWhiteSpace(source.Error), $"{source.Path}: geparste Quelle enthält einen Fehler.");
             }
             else if (source.ParseState == TrainingInventoryParseState.Invalid)
             {
-                Require(!string.IsNullOrWhiteSpace(source.Error), $"{source.Path}: ungueltige Quelle ohne Fehlertext.");
+                Require(!string.IsNullOrWhiteSpace(source.Error), $"{source.Path}: ungültige Quelle ohne Fehlertext.");
             }
         }
 
@@ -104,7 +104,7 @@ public static class TrainingInventoryReportValidator
     private static void ValidateRoots(IReadOnlyList<string> roots, string field)
     {
         Require(roots.All(root => !string.IsNullOrWhiteSpace(root) && Path.IsPathFullyQualified(root)),
-            $"{field} muessen absolute, nichtleere Pfade enthalten.");
+            $"{field} müssen absolute, nichtleere Pfade enthalten.");
         Require(roots.Distinct(StringComparer.OrdinalIgnoreCase).Count() == roots.Count,
             $"{field} enthalten doppelte Pfade.");
     }
@@ -147,7 +147,7 @@ public static class TrainingInventoryReportValidator
         var discoveryErrors = status.DiscoveryErrors
                               ?? throw new InvalidDataException("EvalProtection.DiscoveryErrors fehlen.");
         Require(discoveryErrors.All(error => !string.IsNullOrWhiteSpace(error)),
-            "EvalProtection enthaelt eine leere Discovery-Fehlermeldung.");
+            "EvalProtection enthält eine leere Discovery-Fehlermeldung.");
 
         var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var set in sets)
@@ -164,7 +164,7 @@ public static class TrainingInventoryReportValidator
             Require(set.VerifiedImageHashes <= set.ManifestImageHashes,
                 $"{set.RootPath}: mehr verifizierte als vorhandene Manifest-Hashes.");
             Require(set.ManifestImageHashes <= set.ImageFiles || !set.ImageHashesComplete,
-                $"{set.RootPath}: vollstaendiger Hashstatus mit zusaetzlichen Manifest-Eintraegen.");
+                $"{set.RootPath}: vollständiger Hashstatus mit zusätzlichen Manifest-Einträgen.");
             var errors = set.Errors
                          ?? throw new InvalidDataException($"{set.RootPath}: Fehlerliste fehlt.");
             Require(errors.All(error => !string.IsNullOrWhiteSpace(error)),
@@ -172,29 +172,29 @@ public static class TrainingInventoryReportValidator
             if (errors.Count > 0)
             {
                 Require(!set.ImageHashesComplete && !set.HoldingKeysComplete,
-                    $"{set.RootPath}: Eval-Set mit Fehlern darf nicht vollstaendig sein.");
+                    $"{set.RootPath}: Eval-Set mit Fehlern darf nicht vollständig sein.");
             }
 
             if (set.ImageHashesComplete)
             {
-                Require(status.ImageHashCheckEnabled, $"{set.RootPath}: Hashstatus trotz deaktivierter Pruefung.");
-                Require(set.ImageFiles > 0, $"{set.RootPath}: vollstaendiger Hashstatus ohne Bilder.");
+                Require(status.ImageHashCheckEnabled, $"{set.RootPath}: Hashstatus trotz deaktivierter Prüfung.");
+                Require(set.ImageFiles > 0, $"{set.RootPath}: vollständiger Hashstatus ohne Bilder.");
                 Require(set.ManifestImageHashes == set.ImageFiles,
-                    $"{set.RootPath}: Manifest- und Bildanzahl stimmen nicht ueberein.");
+                    $"{set.RootPath}: Manifest- und Bildanzahl stimmen nicht überein.");
                 Require(set.VerifiedImageHashes == set.ImageFiles,
                     $"{set.RootPath}: nicht alle Bild-Hashes wurden verifiziert.");
             }
 
             if (set.HoldingKeysComplete)
-                Require(set.HoldingKeys > 0, $"{set.RootPath}: vollstaendiger Haltungsschutz ohne Schluessel.");
+                Require(set.HoldingKeys > 0, $"{set.RootPath}: vollständiger Haltungsschutz ohne Schlüssel.");
         }
 
         if (!status.Complete)
         {
             Require(records.All(record => record.Disposition != TrainingInventoryDisposition.TrainValCandidate),
-                "Train/Val-Kandidat trotz unvollstaendigem Eval-Schutz.");
+                "Train/Val-Kandidat trotz unvollständigem Eval-Schutz.");
             Require(records.All(record => record.EvalState != TrainingInventoryEvalState.Clean),
-                "Sauberer Eval-Status trotz unvollstaendigem Eval-Schutz.");
+                "Sauberer Eval-Status trotz unvollständigem Eval-Schutz.");
         }
     }
 
@@ -210,7 +210,7 @@ public static class TrainingInventoryReportValidator
         var candidates = path.Candidates
                          ?? throw new InvalidDataException($"{recordKey}/{field}: Kandidatenliste fehlt.");
         Require(candidates.Distinct(StringComparer.OrdinalIgnoreCase).Count() == candidates.Count,
-            $"{recordKey}/{field}: Kandidatenliste enthaelt doppelte Pfade.");
+            $"{recordKey}/{field}: Kandidatenliste enthält doppelte Pfade.");
 
         if (path.State == TrainingInventoryPathState.Existing)
         {
@@ -218,9 +218,9 @@ public static class TrainingInventoryReportValidator
             Require(!string.IsNullOrWhiteSpace(existingPath), $"{recordKey}/{field}: ExistingPath fehlt.");
             Require(Path.IsPathFullyQualified(existingPath!), $"{recordKey}/{field}: ExistingPath ist nicht absolut.");
             Require(path.IsProtected == IsWithinAny(existingPath!, protectedRoots),
-                $"{recordKey}/{field}: Schutzstatus des ExistingPath ist widerspruechlich.");
+                $"{recordKey}/{field}: Schutzstatus des ExistingPath ist widersprüchlich.");
             Require(string.IsNullOrWhiteSpace(path.SuggestedPath) && candidates.Count == 0,
-                $"{recordKey}/{field}: bestehender Pfad darf keine Vorschlaege tragen.");
+                $"{recordKey}/{field}: bestehender Pfad darf keine Vorschläge tragen.");
         }
         if (path.State == TrainingInventoryPathState.SuggestedForManualReview)
         {
@@ -229,11 +229,11 @@ public static class TrainingInventoryReportValidator
             Require(Path.IsPathFullyQualified(suggestedPath!), $"{recordKey}/{field}: SuggestedPath ist nicht absolut.");
             Require(candidates.Count == 1, $"{recordKey}/{field}: Vorschlag muss genau einen Kandidaten haben.");
             Require(PathsEqual(candidates[0], suggestedPath!),
-                $"{recordKey}/{field}: SuggestedPath stimmt nicht mit dem Kandidaten ueberein.");
+                $"{recordKey}/{field}: SuggestedPath stimmt nicht mit dem Kandidaten überein.");
             Require(IsWithinAny(suggestedPath!, searchRoots),
                 $"{recordKey}/{field}: SuggestedPath liegt ausserhalb der Suchwurzeln.");
             Require(!IsWithinAny(suggestedPath!, protectedRoots) && !path.IsProtected,
-                $"{recordKey}/{field}: geschuetzter Pfad darf kein Reparaturvorschlag sein.");
+                $"{recordKey}/{field}: geschützter Pfad darf kein Reparaturvorschlag sein.");
             Require(string.IsNullOrWhiteSpace(path.ExistingPath),
                 $"{recordKey}/{field}: Vorschlag darf keinen ExistingPath tragen.");
         }
@@ -245,7 +245,7 @@ public static class TrainingInventoryReportValidator
 
         Require(candidates.All(candidate =>
                 !string.IsNullOrWhiteSpace(candidate) && Path.IsPathFullyQualified(candidate)),
-            $"{recordKey}/{field}: Kandidaten muessen absolute Pfade sein.");
+            $"{recordKey}/{field}: Kandidaten müssen absolute Pfade sein.");
         Require(candidates.All(candidate =>
                 IsWithinAny(candidate, searchRoots) || IsWithinAny(candidate, protectedRoots)),
             $"{recordKey}/{field}: Kandidat liegt ausserhalb der Such- und Schutzwurzeln.");
@@ -253,7 +253,7 @@ public static class TrainingInventoryReportValidator
         {
             Require(candidates.Count > 1, $"{recordKey}/{field}: mehrdeutiger Pfad braucht mehrere Kandidaten.");
             Require(path.IsProtected == candidates.Any(candidate => IsWithinAny(candidate, protectedRoots)),
-                $"{recordKey}/{field}: Schutzstatus der mehrdeutigen Kandidaten ist widerspruechlich.");
+                $"{recordKey}/{field}: Schutzstatus der mehrdeutigen Kandidaten ist widersprüchlich.");
             Require(string.IsNullOrWhiteSpace(path.ExistingPath) && string.IsNullOrWhiteSpace(path.SuggestedPath),
                 $"{recordKey}/{field}: mehrdeutiger Pfad darf keinen Einzelpfad tragen.");
             Require(path.HashState == TrainingInventoryHashState.NotApplicable,
@@ -261,14 +261,14 @@ public static class TrainingInventoryReportValidator
         }
         if (path.State == TrainingInventoryPathState.ProtectedCandidate)
         {
-            Require(path.IsProtected, $"{recordKey}/{field}: geschuetzter Kandidat ohne Schutzstatus.");
-            Require(candidates.Count == 1, $"{recordKey}/{field}: geschuetzter Kandidat muss eindeutig sein.");
+            Require(path.IsProtected, $"{recordKey}/{field}: geschützter Kandidat ohne Schutzstatus.");
+            Require(candidates.Count == 1, $"{recordKey}/{field}: geschützter Kandidat muss eindeutig sein.");
             Require(candidates.All(candidate => IsWithinAny(candidate, protectedRoots)),
-                $"{recordKey}/{field}: ungeschuetzter Pfad im geschuetzten Kandidatensatz.");
+                $"{recordKey}/{field}: ungeschützter Pfad im geschützten Kandidatensatz.");
             Require(string.IsNullOrWhiteSpace(path.ExistingPath) && string.IsNullOrWhiteSpace(path.SuggestedPath),
-                $"{recordKey}/{field}: geschuetzter Kandidat darf keinen Einzelpfad tragen.");
+                $"{recordKey}/{field}: geschützter Kandidat darf keinen Einzelpfad tragen.");
             Require(path.HashState == TrainingInventoryHashState.NotApplicable,
-                $"{recordKey}/{field}: geschuetzter Kandidat darf keinen Hashstatus tragen.");
+                $"{recordKey}/{field}: geschützter Kandidat darf keinen Hashstatus tragen.");
         }
 
         if (path.State is TrainingInventoryPathState.Empty
@@ -279,9 +279,9 @@ public static class TrainingInventoryReportValidator
                     && string.IsNullOrWhiteSpace(path.SuggestedPath)
                     && candidates.Count == 0
                     && !path.IsProtected,
-                $"{recordKey}/{field}: leerer, fehlender oder ungueltiger Pfad traegt Aufloesungsdaten.");
+                $"{recordKey}/{field}: leerer, fehlender oder ungültiger Pfad trägt Auflösungsdaten.");
             Require(path.HashState == TrainingInventoryHashState.NotApplicable,
-                $"{recordKey}/{field}: leerer, fehlender oder ungueltiger Pfad darf keinen Hashstatus tragen.");
+                $"{recordKey}/{field}: leerer, fehlender oder ungültiger Pfad darf keinen Hashstatus tragen.");
         }
         if (path.State == TrainingInventoryPathState.Empty)
             Require(string.IsNullOrWhiteSpace(path.StoredPath), $"{recordKey}/{field}: leerer Zustand mit gespeichertem Pfad.");
@@ -290,7 +290,7 @@ public static class TrainingInventoryReportValidator
 
         if (path.HashState == TrainingInventoryHashState.Computed)
         {
-            Require(IsSha256(path.Sha256), $"{recordKey}/{field}: gueltiger SHA-256 fehlt.");
+            Require(IsSha256(path.Sha256), $"{recordKey}/{field}: gültiger SHA-256 fehlt.");
         }
         else
         {
@@ -300,7 +300,7 @@ public static class TrainingInventoryReportValidator
         if (path.HashState == TrainingInventoryHashState.ReadError)
             Require(!string.IsNullOrWhiteSpace(path.Error), $"{recordKey}/{field}: Hash-Lesefehler ohne Meldung.");
         if (path.State == TrainingInventoryPathState.Invalid)
-            Require(!string.IsNullOrWhiteSpace(path.Error), $"{recordKey}/{field}: ungueltiger Pfad ohne Meldung.");
+            Require(!string.IsNullOrWhiteSpace(path.Error), $"{recordKey}/{field}: ungültiger Pfad ohne Meldung.");
         if (path.HashState != TrainingInventoryHashState.ReadError
             && path.State != TrainingInventoryPathState.Invalid)
         {
@@ -334,7 +334,7 @@ public static class TrainingInventoryReportValidator
                 $"{record.RecordKey}: Haltungsvorschlag fehlt.");
             Require(holdingCandidates.Count == 1
                     && holdingCandidates[0].Equals(record.SuggestedHolding, StringComparison.OrdinalIgnoreCase),
-                $"{record.RecordKey}: Haltungsvorschlag ist widerspruechlich.");
+                $"{record.RecordKey}: Haltungsvorschlag ist widersprüchlich.");
         }
         else if (record.HoldingState == TrainingInventoryHoldingState.Ambiguous)
         {
@@ -345,7 +345,7 @@ public static class TrainingInventoryReportValidator
         else
         {
             Require(string.IsNullOrWhiteSpace(record.SuggestedHolding) && holdingCandidates.Count == 0,
-                $"{record.RecordKey}: unbekannte Haltung darf keine Vorschlaege tragen.");
+                $"{record.RecordKey}: unbekannte Haltung darf keine Vorschläge tragen.");
         }
 
         var expectedDisposition = TeacherInventoryPolicy.ClassifyDisposition(
@@ -354,21 +354,21 @@ public static class TrainingInventoryReportValidator
             record.BoxState,
             record.EvalState);
         Require(record.Disposition == expectedDisposition,
-            $"{record.RecordKey}: Disposition ist widerspruechlich.");
+            $"{record.RecordKey}: Disposition ist widersprüchlich.");
 
         if (record.FullFrame.IsProtected && record.FullFrame.Exists)
         {
             Require(record.EvalState is not TrainingInventoryEvalState.Clean
                     and not TrainingInventoryEvalState.NotChecked,
-                $"{record.RecordKey}: bestehender geschuetzter Pfad hat keinen Eval-Sperrstatus.");
+                $"{record.RecordKey}: bestehender geschützter Pfad hat keinen Eval-Sperrstatus.");
             Require(record.Disposition == TrainingInventoryDisposition.EvaluationLocked,
-                $"{record.RecordKey}: bestehender geschuetzter Pfad ist nicht gesperrt.");
+                $"{record.RecordKey}: bestehender geschützter Pfad ist nicht gesperrt.");
         }
         if (record.EvalState is TrainingInventoryEvalState.ProtectedPath
             or TrainingInventoryEvalState.ProtectedPathAndHolding)
         {
             Require(record.FullFrame.IsProtected,
-                $"{record.RecordKey}: ProtectedPath ohne geschuetzten Pfad.");
+                $"{record.RecordKey}: ProtectedPath ohne geschützten Pfad.");
         }
         if (record.EvalState is TrainingInventoryEvalState.ImageHash
             or TrainingInventoryEvalState.ImageHashAndHolding)
@@ -391,7 +391,7 @@ public static class TrainingInventoryReportValidator
             record.EvalState,
             record.Disposition);
         Require(reasons.SequenceEqual(expectedReasons, StringComparer.Ordinal),
-            $"{record.RecordKey}: ReasonCodes sind widerspruechlich.");
+            $"{record.RecordKey}: ReasonCodes sind widersprüchlich.");
     }
 
     private static void ValidateSummary(
@@ -455,12 +455,12 @@ public static class TrainingInventoryReportValidator
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            throw new InvalidDataException($"Ungueltiger Pfad im Inventarbericht: {path}", ex);
+            throw new InvalidDataException($"Ungültiger Pfad im Inventarbericht: {path}", ex);
         }
     }
 
     private static void Equal(int actual, int expected, string field)
-        => Require(actual == expected, $"{field} ist widerspruechlich: {actual} statt {expected}.");
+        => Require(actual == expected, $"{field} ist widersprüchlich: {actual} statt {expected}.");
 
     private static void Require(bool condition, string message)
     {

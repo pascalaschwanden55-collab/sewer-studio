@@ -164,7 +164,7 @@ public sealed class PhotoAnnotationUseCaseTests
             CreateSegmentRequest(CreateGeometry()));
 
         Assert.False(segmented.Success);
-        Assert.Contains("veraendert", segmented.Message);
+        Assert.Contains("verändert", segmented.Message);
         Assert.Null(segmented.Draft);
         Assert.Null(workbench.SaveDecision);
     }

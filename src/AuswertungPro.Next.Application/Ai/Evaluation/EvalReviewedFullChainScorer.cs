@@ -133,9 +133,9 @@ public static class EvalReviewedFullChainScorer
         var stageError = dropReason switch
         {
             "dino_error" => "DINO-Aufruf fehlgeschlagen (dino_error).",
-            "dino_degraded" => "DINO lieferte kein verlaessliches Ergebnis (dino_degraded).",
+            "dino_degraded" => "DINO lieferte kein verlässliches Ergebnis (dino_degraded).",
             "sam_error" => "SAM-Aufruf fehlgeschlagen (sam_error).",
-            "vram_insufficient" => "Pipeline wegen VRAM-Mangel unvollstaendig (vram_insufficient).",
+            "vram_insufficient" => "Pipeline wegen VRAM-Mangel unvollständig (vram_insufficient).",
             "qwen_timeout" => "Qwen-Vision fehlgeschlagen (qwen_timeout).",
             "qwen_error" => "Qwen-Vision fehlgeschlagen (qwen_error).",
             _ => null
@@ -153,7 +153,7 @@ public static class EvalReviewedFullChainScorer
 
         return degradedReason
                ?? (string.IsNullOrWhiteSpace(dropReason) ? null : dropReason)
-               ?? "Pipeline unvollstaendig.";
+               ?? "Pipeline unvollständig.";
     }
 
     public static void WriteCsv(
@@ -271,10 +271,10 @@ public static class EvalReviewedFullChainScorer
                 damage.HoldingKey,
                 damage.EventId
                 ?? throw new InvalidDataException(
-                    $"Ereignis-ID fehlt fuer {damage.FrameFileName}."),
+                    $"Ereignis-ID fehlt für {damage.FrameFileName}."),
                 damage.ExpectedSeverity
                 ?? throw new InvalidDataException(
-                    $"Schadensstufe fehlt fuer {damage.FrameFileName}."),
+                    $"Schadensstufe fehlt für {damage.FrameFileName}."),
                 outcome);
         }).ToList();
 

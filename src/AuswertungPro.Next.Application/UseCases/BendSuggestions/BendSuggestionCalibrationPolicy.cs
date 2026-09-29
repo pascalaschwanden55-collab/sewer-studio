@@ -48,16 +48,16 @@ public static class BendSuggestionCalibrationPolicy
         if (calibration is null)
         {
             return Reject(
-                "Fuer diesen Kandidaten ist kein gemessener Arbeitspunkt hinterlegt.");
+                "Für diesen Kandidaten ist kein gemessener Arbeitspunkt hinterlegt.");
         }
 
         if (string.IsNullOrWhiteSpace(candidateId) || string.IsNullOrWhiteSpace(weightSha256))
-            return Reject("Kandidat und Gewicht muessen benannt sein.");
+            return Reject("Kandidat und Gewicht müssen benannt sein.");
 
         if (!string.Equals(calibration.CandidateId, candidateId, StringComparison.Ordinal))
         {
             return Reject(
-                $"Der Arbeitspunkt gehoert zum Kandidaten {calibration.CandidateId}, "
+                $"Der Arbeitspunkt gehört zum Kandidaten {calibration.CandidateId}, "
                 + $"angefragt wurde {candidateId}.");
         }
 
@@ -68,7 +68,7 @@ public static class BendSuggestionCalibrationPolicy
         }
 
         if (string.IsNullOrWhiteSpace(calibration.Source))
-            return Reject("Der Arbeitspunkt traegt keinen Beleg seiner Herkunft.");
+            return Reject("Der Arbeitspunkt trägt keinen Beleg seiner Herkunft.");
 
         if (calibration.MinConfidence <= 0.0
             || calibration.MinConfidence > 1.0

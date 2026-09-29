@@ -34,7 +34,7 @@ public sealed class VsaCodeEntryValidatorTests
     public void ValidateQuantField_ungueltige_zahl_gibt_fehler()
     {
         var rule = new QuantField { Pflicht = "O" };
-        Assert.Equal("Ungueltige Zahl", VsaCodeEntryValidator.ValidateQuantField("abc", rule));
+        Assert.Equal("Ungültige Zahl", VsaCodeEntryValidator.ValidateQuantField("abc", rule));
     }
 
     [Fact]

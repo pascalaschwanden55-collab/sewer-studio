@@ -121,7 +121,7 @@ public sealed class WorkbenchImageSnapshot
     {
         ArgumentNullException.ThrowIfNull(imageBytes);
         if (imageBytes.Length == 0)
-            throw new ArgumentException("Die Originalbildbytes duerfen nicht leer sein.", nameof(imageBytes));
+            throw new ArgumentException("Die Originalbildbytes dürfen nicht leer sein.", nameof(imageBytes));
         if (string.IsNullOrWhiteSpace(extension))
             throw new ArgumentException("Die Bildendung darf nicht leer sein.", nameof(extension));
 

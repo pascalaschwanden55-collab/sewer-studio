@@ -45,21 +45,21 @@ public static class BendSuggestionScanWorkflow
         ArgumentNullException.ThrowIfNull(actions);
 
         if (actions.IsBusy())
-            return new BendSuggestionScanWorkflowResult(false, false, null, "Ein Durchlauf laeuft bereits.");
+            return new BendSuggestionScanWorkflowResult(false, false, null, "Ein Durchlauf läuft bereits.");
 
         var cancellationToken = actions.ResetCancellation();
         try
         {
             actions.SetBusy(true);
             actions.SetStatusText(
-                $"Bogen-Vorschlaege {request.Haltung}: Bilder werden extrahiert und geprueft ...");
+                $"Bogen-Vorschläge {request.Haltung}: Bilder werden extrahiert und geprüft ...");
 
             var progress = new Progress<BendSuggestionScanProgress>(wert =>
             {
                 if (wert.Processed % 25 != 0 && wert.Processed != wert.Total)
                     return;
                 actions.SetStatusText(
-                    $"Bogen-Vorschlaege {request.Haltung}: Bild {wert.Processed} von {wert.Total} ...");
+                    $"Bogen-Vorschläge {request.Haltung}: Bild {wert.Processed} von {wert.Total} ...");
             });
 
             var result = await actions.Scan(
@@ -69,7 +69,7 @@ public static class BendSuggestionScanWorkflow
             {
                 // Die Meldung kommt bereits verstaendlich aus der Kalibrierung;
                 // sie wird woertlich weitergereicht. Keine Liste ohne Arbeitspunkt.
-                actions.SetStatusText($"Bogen-Vorschlaege {request.Haltung}: {result.Reason}");
+                actions.SetStatusText($"Bogen-Vorschläge {request.Haltung}: {result.Reason}");
                 actions.Log($"Bogen-Vorschlaege {request.Haltung}: {result.Reason}");
                 return new BendSuggestionScanWorkflowResult(true, false, result, result.Reason);
             }
@@ -78,7 +78,7 @@ public static class BendSuggestionScanWorkflow
                 ? $", {result.FramesNotAssessed} Bilder nicht ausgewertet"
                 : string.Empty;
             var abschluss =
-                $"Bogen-Vorschlaege {request.Haltung}: {result.Suggestions.Count} Stellen in "
+                $"Bogen-Vorschläge {request.Haltung}: {result.Suggestions.Count} Stellen in "
                 + $"{result.Duration.TotalSeconds:0} s ({result.FramesAnalyzed} Bilder{nichtAusgewertet}).";
             actions.SetStatusText(abschluss);
             actions.Log(abschluss);
@@ -87,14 +87,14 @@ public static class BendSuggestionScanWorkflow
         }
         catch (OperationCanceledException)
         {
-            var meldung = $"Bogen-Vorschlaege {request.Haltung}: abgebrochen.";
+            var meldung = $"Bogen-Vorschläge {request.Haltung}: abgebrochen.";
             actions.SetStatusText(meldung);
             actions.Log(meldung);
             return new BendSuggestionScanWorkflowResult(true, false, null, "abgebrochen");
         }
         catch (Exception ex)
         {
-            var meldung = $"Bogen-Vorschlaege {request.Haltung} fehlgeschlagen: {ex.Message}";
+            var meldung = $"Bogen-Vorschläge {request.Haltung} fehlgeschlagen: {ex.Message}";
             actions.SetStatusText(meldung);
             actions.Log(meldung);
             return new BendSuggestionScanWorkflowResult(true, false, null, ex.Message);

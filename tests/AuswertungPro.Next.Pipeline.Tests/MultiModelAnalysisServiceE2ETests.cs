@@ -387,7 +387,7 @@ public sealed class MultiModelAnalysisServiceE2ETests
         Assert.True(result.Degraded);
         Assert.Equal(false, result.DetectorQualified);
         Assert.Equal("Altmodell: BBox-Kollaps.", result.DetectorQualificationReason);
-        Assert.Contains("manuelle Pruefung", result.DegradedReason);
+        Assert.Contains("manuelle Prüfung", result.DegradedReason);
         Assert.Equal(0, client.YoloCalls);
         Assert.True(client.DinoCalls > 0);
         Assert.Equal(client.DinoCalls, client.SamCalls);
@@ -414,7 +414,7 @@ public sealed class MultiModelAnalysisServiceE2ETests
         Assert.True(result.Degraded);
         Assert.Null(result.DetectorQualified);
         Assert.Contains("Qualifikationsstatus", result.DetectorQualificationReason);
-        Assert.Contains("manuelle Pruefung", result.DegradedReason);
+        Assert.Contains("manuelle Prüfung", result.DegradedReason);
         Assert.Equal(0, client.YoloCalls);
         Assert.True(client.DinoCalls > 0);
     }

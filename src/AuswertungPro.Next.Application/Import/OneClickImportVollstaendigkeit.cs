@@ -24,18 +24,18 @@ public static class OneClickImportVollstaendigkeit
 
         if (result.Errors > 0)
         {
-            return $"nicht vollstaendig — {result.Errors} Fehler in "
+            return $"nicht vollständig — {result.Errors} Fehler in "
                    + $"{ZaehleFehlerhafteSchritte(result)} Schritt(en)";
         }
 
         if (!urteil.Geprueft)
         {
-            return "nicht vollstaendig geprueft — diese Quelle liefert keine Sollzahl, "
+            return "nicht vollständig geprüft — diese Quelle liefert keine Sollzahl, "
                    + "das Ergebnis konnte nicht gegengerechnet werden";
         }
 
         if (urteil.Stufe != PlausibilitaetsStufe.Gruen)
-            return "nicht vollstaendig — " + urteil.Begruendung;
+            return "nicht vollständig — " + urteil.Begruendung;
 
         if (result.Bestand?.DateienGeprueft != true)
             return "nicht vollständig geprüft — Haltungszahlen geprüft, Dateiverweise noch nicht geprüft";
@@ -44,9 +44,9 @@ public static class OneClickImportVollstaendigkeit
             return $"nicht vollständig geklärt — {result.Conflicts} offene Konflikte; Bericht prüfen";
 
         return result.ErwarteteHaltungen > 0
-            ? $"geprueft — {result.BearbeiteteHaltungen} von {result.ErwarteteHaltungen} "
-              + "Haltung(en) uebernommen, keine Fehler gemeldet"
-            : "geprueft — keine Fehler gemeldet";
+            ? $"geprüft — {result.BearbeiteteHaltungen} von {result.ErwarteteHaltungen} "
+              + "Haltung(en) übernommen, keine Fehler gemeldet"
+            : "geprüft — keine Fehler gemeldet";
     }
 
     private static int ZaehleFehlerhafteSchritte(OneClickProjectImportResult result)

@@ -135,12 +135,12 @@ public static class Quellenwahl
             QuellenBefund befund;
             try
             {
-                befund = pruefe(pfad) ?? QuellenBefund.NichtLesbar("Pruefung ohne Ergebnis.");
+                befund = pruefe(pfad) ?? QuellenBefund.NichtLesbar("Prüfung ohne Ergebnis.");
             }
             catch (Exception ex)
             {
                 // Ein einzelner kaputter Kandidat darf die uebrigen nie blockieren.
-                befund = QuellenBefund.NichtLesbar($"Pruefung fehlgeschlagen: {ex.Message}");
+                befund = QuellenBefund.NichtLesbar($"Prüfung fehlgeschlagen: {ex.Message}");
             }
 
             versuche.Add(new QuellenVersuch(pfad, befund));

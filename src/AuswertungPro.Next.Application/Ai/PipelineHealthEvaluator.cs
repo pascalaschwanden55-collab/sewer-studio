@@ -20,7 +20,7 @@ public static class PipelineHealthEvaluator
                 PipelineHealthLevel.Down, false,
                 i.SidecarReachable, i.TokenValid, i.SidecarHealthy, i.QwenAvailable,
                 i.YoloLoaded, i.DinoLoaded, i.SamLoaded,
-                "Kuenstliche Intelligenz deaktiviert",
+                "Künstliche Intelligenz deaktiviert",
                 "KI ist in den Einstellungen aus.",
                 i.DetectorQualified,
                 i.DetectorQualificationReason);
@@ -38,8 +38,8 @@ public static class PipelineHealthEvaluator
                     PipelineHealthLevel.Degraded, true,
                     true, true, true, i.QwenAvailable,
                     i.YoloLoaded, i.DinoLoaded, i.SamLoaded,
-                    "KI eingeschraenkt (DINO + SAM)",
-                    $"{reason} YOLO wird nicht als Filter oder Beweis verwendet; Ergebnisse muessen geprueft werden.",
+                    "KI eingeschränkt (DINO + SAM)",
+                    $"{reason} YOLO wird nicht als Filter oder Beweis verwendet; Ergebnisse müssen geprüft werden.",
                     i.DetectorQualified,
                     i.DetectorQualificationReason);
             }
@@ -60,7 +60,7 @@ public static class PipelineHealthEvaluator
         // Sidecar nicht nutzbar -> Grund bestimmen.
         string grund;
         if (!i.SidecarReachable) grund = "Sidecar offline -> keine YOLO/DINO/SAM-Masken.";
-        else if (!i.TokenValid) grund = "Sidecar Token ungueltig -> Qwen-only.";
+        else if (!i.TokenValid) grund = "Sidecar Token ungültig -> Qwen-only.";
         else grund = "Sidecar antwortet, ist aber nicht gesund -> Qwen-only.";
 
         if (i.QwenAvailable)
@@ -76,7 +76,7 @@ public static class PipelineHealthEvaluator
             PipelineHealthLevel.Down, false,
             i.SidecarReachable, i.TokenValid, i.SidecarHealthy, false,
             i.YoloLoaded, i.DinoLoaded, i.SamLoaded,
-            "KI nicht verfuegbar", grund,
+            "KI nicht verfügbar", grund,
             i.DetectorQualified,
             i.DetectorQualificationReason);
     }

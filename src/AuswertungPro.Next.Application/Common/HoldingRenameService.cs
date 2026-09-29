@@ -100,7 +100,7 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
         {
             var parent = Path.GetDirectoryName(folder);
             if (string.IsNullOrWhiteSpace(parent))
-                return HoldingRenameResult.Fail($"Uebergeordneter Ordner nicht ermittelbar: {folder}");
+                return HoldingRenameResult.Fail($"Übergeordneter Ordner nicht ermittelbar: {folder}");
 
             targetFolder = Path.Combine(parent, newSan);
 

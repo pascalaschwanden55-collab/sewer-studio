@@ -110,7 +110,7 @@ public static class Sia405WhitelistEnricher
                     // Abweichung: Konflikt melden, Wert NICHT ueberschreiben
                     conflicts.Add(
                         $"Konflikt Haltung {haltungsname} Feld {feld}: " +
-                        $"vorhanden '{vorhandenerWert}' vs SIA405 '{sia405Wert}' — nicht ueberschrieben");
+                        $"vorhanden '{vorhandenerWert}' vs SIA405 '{sia405Wert}' — nicht überschrieben");
                 }
                 // Gleicher Wert -> nichts tun
             }

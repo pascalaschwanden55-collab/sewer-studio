@@ -73,7 +73,7 @@ public sealed class StrassenUebernahme : IStrassenUebernahme
 
         var nummer = Sauber(schachtnummer);
         if (nummer.Length == 0)
-            return new FeldNachschlagErgebnis.NichtGefunden("Ohne Schachtnummer keine Uebernahme.");
+            return new FeldNachschlagErgebnis.NichtGefunden("Ohne Schachtnummer keine Übernahme.");
 
         var quellen = haltungen
             .Where(h => h is not null)
@@ -88,7 +88,7 @@ public sealed class StrassenUebernahme : IStrassenUebernahme
 
         return Ergebnis(
             quellen.Select(h => (Wert: Sauber(h.Strasse), Quelle: $"Haltung {Sauber(h.Name)}")),
-            $"Die Haltungen an Schacht {nummer} fuehren selbst keine Strasse.");
+            $"Die Haltungen an Schacht {nummer} führen selbst keine Strasse.");
     }
 
     public FeldNachschlagErgebnis FuerHaltung(
@@ -104,7 +104,7 @@ public sealed class StrassenUebernahme : IStrassenUebernahme
         if (knoten.Count == 0)
         {
             return new FeldNachschlagErgebnis.NichtGefunden(
-                $"Die Haltung {Sauber(haltung.Name)} fuehrt keinen Ober- oder Unterschacht.");
+                $"Die Haltung {Sauber(haltung.Name)} führt keinen Ober- oder Unterschacht.");
         }
 
         var quellen = schaechte
@@ -120,7 +120,7 @@ public sealed class StrassenUebernahme : IStrassenUebernahme
 
         return Ergebnis(
             quellen.Select(s => (Wert: Sauber(s.Strasse), Quelle: $"Schacht {Sauber(s.Nummer)}")),
-            "Die Schaechte dieser Haltung fuehren selbst keine Strasse.");
+            "Die Schaechte dieser Haltung führen selbst keine Strasse.");
     }
 
     public IReadOnlyList<StrassenUebernahmeZeile> AlleSchaechte(

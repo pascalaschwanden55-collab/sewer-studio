@@ -114,7 +114,7 @@ public static class CatalogPriceResolver
         var dn = price.DnFrom == price.DnTo
             ? price.DnFrom.ToString(CultureInfo.InvariantCulture)
             : $"{price.DnFrom.ToString(CultureInfo.InvariantCulture)}-{price.DnTo.ToString(CultureInfo.InvariantCulture)}";
-        return $"Preis von DN {dn} uebernommen";
+        return $"Preis von DN {dn} übernommen";
     }
 
     private static CatalogPriceResolution Missing()

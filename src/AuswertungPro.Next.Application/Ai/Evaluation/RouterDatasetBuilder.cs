@@ -41,7 +41,7 @@ public static class RouterDatasetBuilder
         ArgumentNullException.ThrowIfNull(options);
         var sourceFileLists = options.SourceFileLists ?? Array.Empty<string>();
         if (options.SourceDatasetRoots.Count == 0 && sourceFileLists.Count == 0)
-            throw new ArgumentException("Mindestens ein Quell-Dataset oder eine Pfadliste ist noetig.", nameof(options));
+            throw new ArgumentException("Mindestens ein Quell-Dataset oder eine Pfadliste ist nötig.", nameof(options));
         if (string.IsNullOrWhiteSpace(options.OutputRoot))
             throw new ArgumentException("OutputRoot fehlt.", nameof(options));
 

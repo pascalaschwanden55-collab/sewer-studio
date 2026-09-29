@@ -113,7 +113,7 @@ public sealed class TrainingStudioBoxAnalysisUseCase
         {
             return Invalid(
                 TrainingStudioSegmentationValidationFailure.MissingBox,
-                "Es fehlt eine gueltige rote Box.");
+                "Es fehlt eine gültige rote Box.");
         }
 
         if (segmentation is null)
@@ -138,7 +138,7 @@ public sealed class TrainingStudioBoxAnalysisUseCase
         {
             return Invalid(
                 TrainingStudioSegmentationValidationFailure.Degraded,
-                "SAM hat nur eine unvollstaendige Degraded-Teilsegmentierung geliefert.");
+                "SAM hat nur eine unvollständige Degraded-Teilsegmentierung geliefert.");
         }
 
         if (!SamMaskFormatValidator.HasForegroundPixelInsideBox(
@@ -149,7 +149,7 @@ public sealed class TrainingStudioBoxAnalysisUseCase
                 out var boxReason))
         {
             var failure = boxReason.StartsWith(
-                "Hand-Box ist ungueltig",
+                "Hand-Box ist ungültig",
                 StringComparison.Ordinal)
                 ? TrainingStudioSegmentationValidationFailure.MissingBox
                 : TrainingStudioSegmentationValidationFailure.OutsideBox;
@@ -173,7 +173,7 @@ public sealed class TrainingStudioBoxAnalysisUseCase
         {
             return Invalid(
                 TrainingStudioSegmentationValidationFailure.AreaMismatch,
-                "Maskenflaeche widerspricht den echten Maskenpixeln "
+                "Maskenfläche widerspricht den echten Maskenpixeln "
                 + $"({segmentation.MaskAreaPixels.Value} statt {foregroundPixels}).");
         }
 

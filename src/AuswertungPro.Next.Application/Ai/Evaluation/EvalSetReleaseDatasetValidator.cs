@@ -38,8 +38,8 @@ public sealed class EvalSetReleaseDatasetValidationException : Exception
 
     private static string BuildMessage(IReadOnlyList<EvalSetReleaseDatasetValidationIssue> issues)
         => issues.Count == 0
-            ? "Das Release-Eval-Set ist ungueltig."
-            : "Das Release-Eval-Set ist ungueltig: "
+            ? "Das Release-Eval-Set ist ungültig."
+            : "Das Release-Eval-Set ist ungültig: "
               + string.Join(" | ", issues.Select(issue => $"{issue.CaseId}/{issue.Field}: {issue.Message}"));
 }
 
@@ -128,7 +128,7 @@ public static class EvalSetReleaseDatasetValidator
                     issues,
                     caseId,
                     "event_metadata",
-                    $"Die Angaben fuer Haltung '{holdingKey}', Ereignis '{eventId}' widersprechen einem anderen Frame.");
+                    $"Die Angaben für Haltung '{holdingKey}', Ereignis '{eventId}' widersprechen einem anderen Frame.");
             }
         }
 
@@ -148,7 +148,7 @@ public static class EvalSetReleaseDatasetValidator
         var hasEnd = benchmarkCase.MeterEnd.HasValue;
         if (hasStart != hasEnd)
         {
-            Add(issues, caseId, "meter_range", "MeterStart und MeterEnd muessen gemeinsam gesetzt sein.");
+            Add(issues, caseId, "meter_range", "MeterStart und MeterEnd müssen gemeinsam gesetzt sein.");
             return;
         }
 

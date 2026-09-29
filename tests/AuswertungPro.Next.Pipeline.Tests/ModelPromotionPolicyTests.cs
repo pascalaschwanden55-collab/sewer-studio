@@ -27,7 +27,7 @@ public sealed class ModelPromotionPolicyTests
             kandidat: [0.70, 0.71, 0.72]);
 
         Assert.True(entscheidung.Promote);
-        Assert.Contains("groesser als die Streuung", entscheidung.Reason);
+        Assert.Contains("grösser als die Streuung", entscheidung.Reason);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public sealed class ModelPromotionPolicyTests
         });
 
         Assert.False(entscheidung.Promote);
-        Assert.Contains("Laeufe", entscheidung.Reason);
+        Assert.Contains("Läufe", entscheidung.Reason);
     }
 
     [Fact]

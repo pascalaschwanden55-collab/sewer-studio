@@ -64,7 +64,7 @@ public sealed class ManifestCodeCatalogProvider : ICodeCatalogProvider
                 errors.Add($"Duplikat-Code '{codeDef.Code}'.");
 
             if (string.IsNullOrWhiteSpace(codeDef.Title))
-                errors.Add($"Title fehlt fuer Code '{(string.IsNullOrWhiteSpace(codeDef.Code) ? $"#{row}" : codeDef.Code)}'.");
+                errors.Add($"Title fehlt für Code '{(string.IsNullOrWhiteSpace(codeDef.Code) ? $"#{row}" : codeDef.Code)}'.");
         }
 
         return errors;

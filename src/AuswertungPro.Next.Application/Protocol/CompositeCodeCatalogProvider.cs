@@ -57,7 +57,7 @@ public sealed class CompositeCodeCatalogProvider : ICodeCatalogProvider
                 errors.Add($"Duplikat-Code '{code.Code}'.");
 
             if (string.IsNullOrWhiteSpace(code.Title))
-                errors.Add($"Title fehlt fuer Code '{code.Code}'.");
+                errors.Add($"Title fehlt für Code '{code.Code}'.");
         }
 
         return errors;

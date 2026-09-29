@@ -224,7 +224,7 @@ public sealed class TrainingExportPlanServiceTests
                 ("100-200", TrainingExportHoldingRole.Train),
                 ("200-300", TrainingExportHoldingRole.DevelopmentValidation)))));
 
-        Assert.Contains("widerspruechlichen Haltungen", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("widersprüchlichen Haltungen", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

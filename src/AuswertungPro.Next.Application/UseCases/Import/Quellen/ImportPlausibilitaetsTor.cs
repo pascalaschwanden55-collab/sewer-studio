@@ -52,7 +52,7 @@ public sealed record PlausibilitaetsUrteil(
     /// entstanden sein.
     /// </summary>
     public const string AbbruchHinweis =
-        "Keine Projektdaten und keine Importdateien uebernommen.";
+        "Keine Projektdaten und keine Importdateien übernommen.";
 
     public string VollerText()
     {
@@ -62,7 +62,7 @@ public sealed record PlausibilitaetsUrteil(
         {
             sb.AppendLine();
             sb.AppendLine();
-            sb.AppendLine("Gepruefte Quellen:");
+            sb.AppendLine("Geprüfte Quellen:");
             foreach (var zeile in Quellenzeilen)
                 sb.AppendLine("  " + zeile);
         }
@@ -108,7 +108,7 @@ public static class ImportPlausibilitaetsTor
         {
             return new PlausibilitaetsUrteil(
                 PlausibilitaetsStufe.HartAbbruch,
-                $"{untauglich} Quelle(n) gefunden, aber keine davon ist lesbar oder enthaelt "
+                $"{untauglich} Quelle(n) gefunden, aber keine davon ist lesbar oder enthält "
                 + "Haltungsdaten. " + PlausibilitaetsUrteil.AbbruchHinweis,
                 zeilen,
                 fingerabdruck);
@@ -123,7 +123,7 @@ public static class ImportPlausibilitaetsTor
             return new PlausibilitaetsUrteil(
                 PlausibilitaetsStufe.Rueckfrage,
                 $"{tauglich} Quelle(n) mit zusammen {erwartet} Haltung(en) gelesen, "
-                + "aber keine einzige Haltung uebernommen. Das kann nicht stimmen.",
+                + "aber keine einzige Haltung übernommen. Das kann nicht stimmen.",
                 zeilen,
                 fingerabdruck);
         }
@@ -134,7 +134,7 @@ public static class ImportPlausibilitaetsTor
             return new PlausibilitaetsUrteil(
                 PlausibilitaetsStufe.Rueckfrage,
                 $"{erwartet} Haltung(en) in den Quellen, aber nur {bearbeiteteHaltungen} "
-                + $"uebernommen — {fehlend} fehlen.",
+                + $"übernommen — {fehlend} fehlen.",
                 zeilen,
                 fingerabdruck);
         }

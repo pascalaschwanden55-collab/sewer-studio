@@ -207,12 +207,12 @@ public sealed class CodeCatalogSelectionCatalog : IVsaCodeSelectionCatalog
         {
             "BA" => ("Baulicher Zustand", "#DC2626", "BA"),
             "BB" => ("Betrieblicher Zustand", "#F59E0B", "BB"),
-            "BC" => ("Anschluesse/Reparaturen", "#2563EB", "BC"),
+            "BC" => ("Anschlüsse/Reparaturen", "#2563EB", "BC"),
             "BD" => ("Inspektion/Betrieb", "#64748B", "BD"),
             "AE" => ("Geometrie/Profil", "#0F766E", "AE"),
             "DA" => ("Schacht baulich", "#DC2626", "DA"),
-            "DB" => ("Schacht Oberflaeche", "#F59E0B", "DB"),
-            "DC" => ("Schacht Anschluesse", "#2563EB", "DC"),
+            "DB" => ("Schacht Oberfläche", "#F59E0B", "DB"),
+            "DC" => ("Schacht Anschlüsse", "#2563EB", "DC"),
             "DD" => ("Schacht Betrieb", "#64748B", "DD"),
             _ => (ResolveObjectType(def), "#64748B", groupKey)
         };

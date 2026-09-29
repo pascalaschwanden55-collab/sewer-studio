@@ -40,7 +40,7 @@ public sealed class SidecarInsufficientVramException : Exception
 
     private static string BuildMessage(string endpoint, double? freeGb, double? requiredGb, double? reservedGb)
         => $"Sidecar {endpoint}: VRAM unzureichend – frei {FormatGb(freeGb)}, " +
-           $"benoetigt {FormatGb(requiredGb)}, reserviert {FormatGb(reservedGb)}.";
+           $"benötigt {FormatGb(requiredGb)}, reserviert {FormatGb(reservedGb)}.";
 
     private static string FormatGb(double? gb)
         => gb is { } value

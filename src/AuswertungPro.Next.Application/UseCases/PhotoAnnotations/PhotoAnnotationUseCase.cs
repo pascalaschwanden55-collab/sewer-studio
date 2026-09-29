@@ -103,7 +103,7 @@ public sealed class PhotoAnnotationUseCase : IPhotoAnnotationUseCase
             return FailedSegment("Haltungskennung fehlt. Das Bild wird nicht als KI-Beispiel freigegeben.");
 
         if (!TryCreateBox(request.Geometry, out var box))
-            return FailedSegment("Die Markierung liegt nicht vollstaendig im Foto. Bitte die Box neu ziehen.");
+            return FailedSegment("Die Markierung liegt nicht vollständig im Foto. Bitte die Box neu ziehen.");
 
         byte[] bytesBefore;
         string hashBefore;
@@ -188,7 +188,7 @@ public sealed class PhotoAnnotationUseCase : IPhotoAnnotationUseCase
         }
 
         if (!string.Equals(hashBefore, snapshot.Sha256, StringComparison.Ordinal))
-            return FailedSegment("Das Originalfoto wurde waehrend der Segmentierung veraendert. Bitte neu markieren.");
+            return FailedSegment("Das Originalfoto wurde während der Segmentierung verändert. Bitte neu markieren.");
 
         var samMask = new OverlaySamMask
         {
@@ -226,7 +226,7 @@ public sealed class PhotoAnnotationUseCase : IPhotoAnnotationUseCase
 
         var user = request.ConfirmedByUser?.Trim() ?? string.Empty;
         if (user.Length == 0)
-            return FailedSave("Name der pruefenden Person fehlt.");
+            return FailedSave("Name der prüfenden Person fehlt.");
 
         WorkbenchImageSnapshot snapshot;
         try
@@ -248,12 +248,12 @@ public sealed class PhotoAnnotationUseCase : IPhotoAnnotationUseCase
                 request.Draft.OriginalPhotoSha256,
                 StringComparison.OrdinalIgnoreCase))
         {
-            return FailedSave("Die gebundenen Originalbildbytes stimmen nicht mit ihrem SHA-256 ueberein. Bitte neu markieren.");
+            return FailedSave("Die gebundenen Originalbildbytes stimmen nicht mit ihrem SHA-256 überein. Bitte neu markieren.");
         }
 
         var finalCode = NormalizeCode(request.FinalEntry.Code);
         if (finalCode.Length == 0)
-            return FailedSave("Der bestaetigte VSA-Code fehlt.");
+            return FailedSave("Der bestätigte VSA-Code fehlt.");
 
         // Der Protokolleintrag kann "Meter unbekannt" ausdruecken (double?), das
         // Goldsample konnte es nicht — die 0 sah hinterher aus wie Rohranfang.

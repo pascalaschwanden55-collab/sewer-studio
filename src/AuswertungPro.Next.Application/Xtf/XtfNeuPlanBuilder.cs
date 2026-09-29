@@ -130,7 +130,7 @@ public static class XtfNeuPlanBuilder
         if (name.Length > BauwerkNameMax)
         {
             hinweise.Add(
-                $"{name}: der Name ist {name.Length} Zeichen lang, das Modell laesst " +
+                $"{name}: der Name ist {name.Length} Zeichen lang, das Modell lässt " +
                 $"{BauwerkNameMax} zu — die Haltung wird nicht geschrieben.");
             return false;
         }
@@ -157,7 +157,7 @@ public static class XtfNeuPlanBuilder
         {
             hinweise.Add(
                 $"{name}: Objekt-ID {objektId} vorhanden — wird mit einer eigenen " +
-                "XTF-Kennung exportiert. Fuer eine Aktualisierung im Kataster bitte " +
+                "XTF-Kennung exportiert. Für eine Aktualisierung im Kataster bitte " +
                 "\"Revidierte XTF\" verwenden.");
         }
 
@@ -318,7 +318,7 @@ public static class XtfNeuPlanBuilder
         {
             hinweise.Add(
                 $"Schacht {nummer}: der Name ist {nummer.Length} Zeichen lang, das Modell " +
-                "laesst 20 zu — nicht geschrieben.");
+                "lässt 20 zu — nicht geschrieben.");
             return false;
         }
 
@@ -336,7 +336,7 @@ public static class XtfNeuPlanBuilder
         {
             hinweise.Add(
                 $"Schacht {nummer}: Objekt-ID {objektId} vorhanden — wird mit einer " +
-                "eigenen XTF-Kennung exportiert. Fuer eine Aktualisierung im Kataster " +
+                "eigenen XTF-Kennung exportiert. Für eine Aktualisierung im Kataster " +
                 "bitte \"Revidierte XTF\" verwenden.");
         }
 
@@ -423,7 +423,7 @@ public static class XtfNeuPlanBuilder
     private static string NichtGeschrieben(string wofuer, string xtfName, string roh)
         => string.Equals(xtfName, "Bemerkung", StringComparison.Ordinal)
            && XtfStammdatenPlanBuilder.BemerkungZuLang(roh, out var zeichen)
-            ? $"{wofuer}: die Bemerkung ist {zeichen} Zeichen lang, das Modell laesst " +
+            ? $"{wofuer}: die Bemerkung ist {zeichen} Zeichen lang, das Modell lässt " +
               $"{XtfStammdatenPlanBuilder.BemerkungGrenze} zu — nicht geschrieben."
             : $"{wofuer}: {xtfName} = \"{roh}\" hat in SIA405 keinen Wert — nicht geschrieben.";
 
@@ -451,7 +451,7 @@ public static class XtfNeuPlanBuilder
             }
 
             throw new InvalidOperationException(
-                $"Fuer \"{wunsch}\" konnte keine eindeutige Bezeichnung vergeben werden.");
+                $"Für \"{wunsch}\" konnte keine eindeutige Bezeichnung vergeben werden.");
         }
     }
 
@@ -521,7 +521,7 @@ public static class XtfNeuPlanBuilder
             if (EigentumVokabular.NachOrganisationstyp(name) is null)
             {
                 hinweise.Add(
-                    $"{wofuer}: fuer den {rolle} \"{name}\" ist kein Organisationstyp " +
+                    $"{wofuer}: für den {rolle} \"{name}\" ist kein Organisationstyp " +
                     "nach SIA405 bekannt — nicht geschrieben.");
                 return null;
             }

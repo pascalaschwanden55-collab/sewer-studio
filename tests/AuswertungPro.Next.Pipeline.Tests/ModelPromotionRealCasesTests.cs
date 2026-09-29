@@ -43,7 +43,7 @@ public sealed class ModelPromotionRealCasesTests
         });
 
         Assert.False(entscheidung.Promote);
-        Assert.Contains("Laeufe", entscheidung.Reason);
+        Assert.Contains("Läufe", entscheidung.Reason);
     }
 
     [Fact]

@@ -145,7 +145,7 @@ public sealed class EvalSetV2BuilderTests : IDisposable
         var error = Assert.Throws<InvalidDataException>(() => EvalSetV2Builder.Build(
             new EvalSetV2BuildOptions(candidateFile, Path.Combine(v1, "v2"), v1, MinimumHoldings: 5)));
 
-        Assert.Contains("widerspruechliche Metadaten", error.Message);
+        Assert.Contains("widersprüchliche Metadaten", error.Message);
     }
 
     [Fact]

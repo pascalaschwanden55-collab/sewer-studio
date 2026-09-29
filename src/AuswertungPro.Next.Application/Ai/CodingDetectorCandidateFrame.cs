@@ -18,16 +18,16 @@ public sealed record CodingDetectorCandidateFrame(
     public string? ValidateForImage(ReadOnlySpan<byte> image)
     {
         if (string.IsNullOrWhiteSpace(CandidateId) || CandidateId.Length > 200)
-            return "Kandidatenkennung fehlt oder ist ungueltig.";
+            return "Kandidatenkennung fehlt oder ist ungültig.";
         if (!CodingLocalizedDetection.IsSha256(ExpectedWeightSha256)
             || !string.Equals(ExpectedWeightSha256, ActualWeightSha256, StringComparison.OrdinalIgnoreCase))
-            return "Kandidatengewichte stimmen nicht mit dem vorher gewaehlten SHA-256 ueberein.";
+            return "Kandidatengewichte stimmen nicht mit dem vorher gewählten SHA-256 überein.";
         if (!CodingLocalizedDetection.IsSha256(ImageSha256)
             || !string.Equals(ImageSha256, Convert.ToHexString(SHA256.HashData(image)), StringComparison.OrdinalIgnoreCase))
-            return "Kandidatenantwort gehoert nicht zum analysierten Bild (SHA-256).";
+            return "Kandidatenantwort gehört nicht zum analysierten Bild (SHA-256).";
         if (Detections is null || Detections.Any(d => d is null)
             || !double.IsFinite(InferenceTimeMs) || InferenceTimeMs < 0)
-            return "Kandidatenantwort ist unvollstaendig oder technisch ungueltig.";
+            return "Kandidatenantwort ist unvollständig oder technisch ungültig.";
         return null;
     }
 }

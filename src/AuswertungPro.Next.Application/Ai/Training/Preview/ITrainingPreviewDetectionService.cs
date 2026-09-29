@@ -67,7 +67,7 @@ public interface ITrainingPreviewDetectionService
         CancellationToken cancellationToken = default)
         => Task.FromResult(new TrainingPreviewDetectionResult(
             Available: false,
-            Error: "Dieser Dienst unterstuetzt die exakte Anheftung eines BCC-Kandidaten nicht.",
+            Error: "Dieser Dienst unterstützt die exakte Anheftung eines BCC-Kandidaten nicht.",
             TrainingPreviewModelKind.BccTestCandidate,
             ModelName: candidateId,
             ModelSha256: candidateSha256,
@@ -78,7 +78,7 @@ public interface ITrainingPreviewDetectionService
         CancellationToken cancellationToken = default)
         => Task.FromResult(new TrainingPreviewCandidateCatalogResult(
             Available: false,
-            Error: "Die BCC-Kandidatenliste wird von diesem Dienst nicht unterstuetzt.",
+            Error: "Die BCC-Kandidatenliste wird von diesem Dienst nicht unterstützt.",
             Candidates: []));
 
     /// <summary>

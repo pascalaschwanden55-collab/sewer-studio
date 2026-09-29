@@ -40,7 +40,7 @@ public sealed class TrainingPdfReviewProtectionSnapshot
             if (hash.Length != 64 || hash.Any(character => !Uri.IsHexDigit(character)))
             {
                 throw new InvalidDataException(
-                    "Der PDF-Eval-Schutz enthaelt einen ungueltigen SHA-256-Bildhash.");
+                    "Der PDF-Eval-Schutz enthält einen ungültigen SHA-256-Bildhash.");
             }
 
             normalized.Add(hash.ToLowerInvariant());
@@ -62,7 +62,7 @@ public sealed class TrainingPdfReviewProtectionSnapshot
             if (!IsCanonicalHoldingKey(holdingKey))
             {
                 throw new InvalidDataException(
-                    "Der PDF-Eval-Schutz enthaelt keine gueltige numerische Haltungskennung.");
+                    "Der PDF-Eval-Schutz enthält keine gültige numerische Haltungskennung.");
             }
 
             normalized.Add(holdingKey!);

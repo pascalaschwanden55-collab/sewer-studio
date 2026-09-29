@@ -27,5 +27,5 @@ public interface IStoredImportFileService
         CancellationToken cancellationToken = default,
         Func<DateTime>? now = null)
         => throw new NotSupportedException(
-            "Dieser Importdatei-Dienst unterstuetzt noch kein Datei-Staging.");
+            "Dieser Importdatei-Dienst unterstützt noch kein Datei-Staging.");
 }

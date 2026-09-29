@@ -45,7 +45,7 @@ public sealed class VideoFullAnalysisFailureTests
         Assert.True(result.IsSuccess);
         Assert.True(result.Degraded);
         Assert.NotNull(result.DegradedReason);
-        Assert.Contains("Analyse unvollstaendig", result.DegradedReason);
+        Assert.Contains("Analyse unvollständig", result.DegradedReason);
         Assert.Contains("1 von 3 Frames fehlgeschlagen", result.DegradedReason);
         Assert.Contains("Timeout", result.DegradedReason);
         Assert.Equal(3, result.FramesAnalyzed);
@@ -53,7 +53,7 @@ public sealed class VideoFullAnalysisFailureTests
         Assert.Equal(1, result.Telemetry!.FailedFrames);
 
         Assert.NotNull(progress.LastStatus);
-        Assert.Contains("Analyse unvollstaendig", progress.LastStatus);
+        Assert.Contains("Analyse unvollständig", progress.LastStatus);
         Assert.Contains("1 von 3", progress.LastStatus);
     }
 

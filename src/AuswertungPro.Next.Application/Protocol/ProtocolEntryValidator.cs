@@ -66,7 +66,7 @@ public static class ProtocolEntryValidator
         var distanzOk = ProtocolEntryInputNormalizer.TryParseOptionalDouble(inputs.Distanz ?? string.Empty, out var distanz);
         if (!distanzOk)
         {
-            errors.Add("VSA: Distanz ist ungueltig.");
+            errors.Add("VSA: Distanz ist ungültig.");
         }
         else if (requireDistanz && hasCode && !distanz.HasValue)
         {
@@ -77,7 +77,7 @@ public static class ProtocolEntryValidator
         // Video-Uhrzeit
         var videoOk = ProtocolEntryInputNormalizer.TryParseOptionalTimeSpan(inputs.Video ?? string.Empty, out _);
         if (!videoOk)
-            errors.Add("VSA: Uhrzeit (Video) ist ungueltig.");
+            errors.Add("VSA: Uhrzeit (Video) ist ungültig.");
 
         // Uhrzeiger von
         var uhrVonOk = ProtocolEntryInputNormalizer.TryNormalizeClockPosition(inputs.UhrVon, out _, out var hasUhrVon);
@@ -92,12 +92,12 @@ public static class ProtocolEntryValidator
         // Q1
         var q1Ok = ProtocolEntryInputNormalizer.TryParseOptionalDouble(inputs.Q1 ?? string.Empty, out _);
         if (!q1Ok)
-            errors.Add("VSA: Quantifizierung 1 ist ungueltig.");
+            errors.Add("VSA: Quantifizierung 1 ist ungültig.");
 
         // Q2
         var q2Ok = ProtocolEntryInputNormalizer.TryParseOptionalDouble(inputs.Q2 ?? string.Empty, out _);
         if (!q2Ok)
-            errors.Add("VSA: Quantifizierung 2 ist ungueltig.");
+            errors.Add("VSA: Quantifizierung 2 ist ungültig.");
 
         // Strecke
         var streckeOk = ProtocolEntryInputNormalizer.TryNormalizeStrecke(inputs.Strecke, out _, out var hasStrecke);
@@ -140,13 +140,13 @@ public static class ProtocolEntryValidator
             if (!hasQuant1 && !string.IsNullOrWhiteSpace(inputs.Q1))
             {
                 q1Ok = false;
-                errors.Add("VSA: Quantifizierung 1 ist fuer diesen Code nicht vorgesehen.");
+                errors.Add("VSA: Quantifizierung 1 ist für diesen Code nicht vorgesehen.");
             }
 
             if (!hasQuant2 && !string.IsNullOrWhiteSpace(inputs.Q2))
             {
                 q2Ok = false;
-                errors.Add("VSA: Quantifizierung 2 ist fuer diesen Code nicht vorgesehen.");
+                errors.Add("VSA: Quantifizierung 2 ist für diesen Code nicht vorgesehen.");
             }
         }
 

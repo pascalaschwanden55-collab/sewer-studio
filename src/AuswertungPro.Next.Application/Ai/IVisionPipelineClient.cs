@@ -22,12 +22,12 @@ public interface IVisionPipelineClient
         CancellationToken ct = default)
         => Task.FromException<BccTestYoloResponse>(
             new NotSupportedException(
-                "Dieser Vision-Client unterstuetzt die exakte Anheftung eines BCC-Kandidaten nicht."));
+                "Dieser Vision-Client unterstützt die exakte Anheftung eines BCC-Kandidaten nicht."));
     Task<BccTestCandidatesResponse> GetBccTestCandidatesAsync(
         CancellationToken ct = default)
         => Task.FromResult(new BccTestCandidatesResponse(
             Available: false,
-            Error: "Dieser Vision-Client unterstuetzt keine BCC-Kandidatenliste.",
+            Error: "Dieser Vision-Client unterstützt keine BCC-Kandidatenliste.",
             Candidates: []));
     Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default);
     Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default);
@@ -36,5 +36,5 @@ public interface IVisionPipelineClient
         TrainingExportPlanRequestDto request,
         CancellationToken ct = default)
         => Task.FromException<TrainingExportPlanResponseDto>(
-            new NotSupportedException("Dieser Vision-Client unterstuetzt den plan-gesteuerten Export v2 nicht."));
+            new NotSupportedException("Dieser Vision-Client unterstützt den plan-gesteuerten Export v2 nicht."));
 }

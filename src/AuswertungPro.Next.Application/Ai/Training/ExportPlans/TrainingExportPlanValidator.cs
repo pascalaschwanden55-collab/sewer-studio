@@ -21,11 +21,11 @@ public static class TrainingExportPlanValidator
             RequireSha256(item.Value, $"Quellen-Hash '{item.Key}'");
         }
         if (plan.Classes.Count == 0)
-            throw new TrainingExportPlanException("Der Exportplan enthaelt keine Klassen.");
+            throw new TrainingExportPlanException("Der Exportplan enthält keine Klassen.");
         if (plan.Classes.Distinct(StringComparer.OrdinalIgnoreCase).Count() != plan.Classes.Count)
-            throw new TrainingExportPlanException("Die Klassenliste enthaelt Duplikate.");
+            throw new TrainingExportPlanException("Die Klassenliste enthält Duplikate.");
         if (plan.ProtectedSets.Count == 0)
-            throw new TrainingExportPlanException("Der Exportplan enthaelt keine Schutz-Set-Referenz.");
+            throw new TrainingExportPlanException("Der Exportplan enthält keine Schutz-Set-Referenz.");
         foreach (var protectedSet in plan.ProtectedSets)
         {
             if (string.IsNullOrWhiteSpace(protectedSet.SetId))
@@ -93,7 +93,7 @@ public static class TrainingExportPlanValidator
                 if (!TrainingExportHoldingIdentity.IsCompleteNumericPair(image.HoldingKey))
                 {
                     throw new TrainingExportPlanException(
-                        $"Negativbild-Haltung '{image.HoldingKey}' ist kein vollstaendiges numerisches Schachtpaar.");
+                        $"Negativbild-Haltung '{image.HoldingKey}' ist kein vollständiges numerisches Schachtpaar.");
                 }
                 if (!expectedHoldings.Contains(image.HoldingKey))
                 {
@@ -118,7 +118,7 @@ public static class TrainingExportPlanValidator
                         $"Klassen-ID auf Bild {image.ImageSha256} passt nicht zur Klassenliste.");
                 }
                 if (!label.BoundingBox.IsValid)
-                    throw new TrainingExportPlanException($"Ungueltige Box auf Bild {image.ImageSha256}.");
+                    throw new TrainingExportPlanException($"Ungültige Box auf Bild {image.ImageSha256}.");
                 var labelKey = $"{label.ClassId}|{label.BoundingBox}";
                 if (!labelKeys.Add(labelKey))
                     throw new TrainingExportPlanException($"Doppeltes Label auf Bild {image.ImageSha256}.");
@@ -151,13 +151,13 @@ public static class TrainingExportPlanValidator
                 !plan.InstancesPerClass.TryGetValue(item.Key, out var declared)
                 || declared != item.Value))
         {
-            throw new TrainingExportPlanException("Die Klassenzaehlung passt nicht zu den Plan-Labels.");
+            throw new TrainingExportPlanException("Die Klassenzählung passt nicht zu den Plan-Labels.");
         }
     }
 
     private static void RequireSha256(string? value, string label)
     {
         if (value is not { Length: 64 } || !value.All(Uri.IsHexDigit))
-            throw new TrainingExportPlanException($"{label} ist kein gueltiger SHA-256.");
+            throw new TrainingExportPlanException($"{label} ist kein gültiger SHA-256.");
     }
 }

@@ -36,26 +36,26 @@ public static class KostenfallExtraktor
 
         if (merkmale.DnMm is not > 0)
         {
-            grund = "Kein gueltiger Durchmesser (DN_mm).";
+            grund = "Kein gültiger Durchmesser (DN_mm).";
             return false;
         }
 
         if (merkmale.LaengeM <= 0d)
         {
-            grund = "Keine gueltige Laenge (Haltungslaenge_m).";
+            grund = "Keine gültige Länge (Haltungslaenge_m).";
             return false;
         }
 
         if (merkmale.Schaeden.Count == 0)
         {
-            grund = "Kein einziger Schaden im Protokoll (Bauteile zaehlen nicht).";
+            grund = "Kein einziger Schaden im Protokoll (Bauteile zählen nicht).";
             return false;
         }
 
         var positionen = MassnahmePaketLeser.Lies(cost);
         if (positionen.Count == 0)
         {
-            grund = "Keine ausgewaehlte Massnahme in der Kostenzusammenstellung.";
+            grund = "Keine ausgewählte Massnahme in der Kostenzusammenstellung.";
             return false;
         }
 

@@ -64,7 +64,7 @@ public sealed class TrainingExportCompletionService : ITrainingExportCompletionS
         if (!execution.PlanId.Equals(plan.PlanId, StringComparison.OrdinalIgnoreCase)
             || !execution.PlanSha256.Equals(plan.PlanId, StringComparison.OrdinalIgnoreCase))
         {
-            throw new TrainingExportPlanException("Exportbestaetigung gehoert nicht zum aktuellen Plan.");
+            throw new TrainingExportPlanException("Exportbestaetigung gehört nicht zum aktuellen Plan.");
         }
         if (execution.TotalImages != plan.Images.Count
             || execution.TrainImages != plan.Images.Count(image => image.Target == TrainingExportTarget.Train)
@@ -83,7 +83,7 @@ public sealed class TrainingExportCompletionService : ITrainingExportCompletionS
             || !plannedHashes.SetEquals(writtenHashes))
         {
             throw new TrainingExportPlanException(
-                "Exportbestaetigung enthaelt nicht genau alle geplanten Bild-Hashes.");
+                "Exportbestaetigung enthält nicht genau alle geplanten Bild-Hashes.");
         }
     }
 }

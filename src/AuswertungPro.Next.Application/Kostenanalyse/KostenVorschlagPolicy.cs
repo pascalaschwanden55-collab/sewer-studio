@@ -42,8 +42,8 @@ public static class KostenVorschlagPolicy
             {
                 return KostenVorschlag.Enthaltung(
                     EnthaltungsGrund.BogenNichtGelernt,
-                    $"Haltung hat einen Bogen, gelernt sind erst {bogenfaelle} Bogenfaelle "
-                    + $"(noetig: {MindestBogenFaelle}).");
+                    $"Haltung hat einen Bogen, gelernt sind erst {bogenfaelle} Bogenfälle "
+                    + $"(nötig: {MindestBogenFaelle}).");
             }
         }
 
@@ -52,8 +52,8 @@ public static class KostenVorschlagPolicy
         {
             return KostenVorschlag.Enthaltung(
                 EnthaltungsGrund.ZuWenigeFaelle,
-                $"Zu wenig Erfahrung: nur {nachbarn.Count} aehnliche Faelle "
-                + $"(noetig: {MindestNachbarn}).");
+                $"Zu wenig Erfahrung: nur {nachbarn.Count} ähnliche Fälle "
+                + $"(nötig: {MindestNachbarn}).");
         }
 
         var positionen = KostenVorschlagRechner.Rechne(ziel, nachbarn);
@@ -61,7 +61,7 @@ public static class KostenVorschlagPolicy
         {
             return KostenVorschlag.Enthaltung(
                 EnthaltungsGrund.NachbarnUneinig,
-                $"Die {nachbarn.Count} aehnlichen Faelle haben keine gemeinsame Massnahme.");
+                $"Die {nachbarn.Count} ähnlichen Fälle haben keine gemeinsame Massnahme.");
         }
 
         return new KostenVorschlag

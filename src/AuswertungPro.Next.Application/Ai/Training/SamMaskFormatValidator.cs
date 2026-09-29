@@ -61,7 +61,7 @@ public static class SamMaskFormatValidator
 
         if (parsedForegroundPixelCount > int.MaxValue)
         {
-            reason = "Maskenflaeche ist zu gross.";
+            reason = "Maskenfläche ist zu gross.";
             return false;
         }
 
@@ -97,7 +97,7 @@ public static class SamMaskFormatValidator
 
         if (!TryGetBoxPixelRange(box, width, height, out var minCol, out var maxCol, out var minRow, out var maxRow))
         {
-            reason = "Hand-Box ist ungueltig oder enthaelt kein Pixelzentrum.";
+            reason = "Hand-Box ist ungültig oder enthält kein Pixelzentrum.";
             return false;
         }
 
@@ -125,7 +125,7 @@ public static class SamMaskFormatValidator
         if (foregroundPixelsInsideBox == 0)
         {
             reason =
-                $"Maske gehoert nicht zur Hand-Box (kein Vordergrundpixel innerhalb der Box; "
+                $"Maske gehört nicht zur Hand-Box (kein Vordergrundpixel innerhalb der Box; "
                 + $"mindestens {MinimumContainmentPercent} % erforderlich).";
             return false;
         }
@@ -173,7 +173,7 @@ public static class SamMaskFormatValidator
         }
         if (maskImageWidth is null or <= 0 || maskImageHeight is null or <= 0)
         {
-            reason = "Masken-Bildmasse fehlen oder sind ungueltig.";
+            reason = "Masken-Bildmasse fehlen oder sind ungültig.";
             return false;
         }
 
@@ -218,7 +218,7 @@ public static class SamMaskFormatValidator
         }
         if (foregroundPixelCount == 0)
         {
-            reason = "Maske enthaelt keine Pixel (Leermaske).";
+            reason = "Maske enthält keine Pixel (Leermaske).";
             return false;
         }
 

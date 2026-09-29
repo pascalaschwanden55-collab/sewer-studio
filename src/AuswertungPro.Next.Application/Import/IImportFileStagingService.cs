@@ -69,7 +69,7 @@ public interface IImportFileStagingSession : IDisposable
         if (!Path.GetFileName(sourcePath).Equals(targetFileName, StringComparison.OrdinalIgnoreCase))
         {
             throw new NotSupportedException(
-                "Diese Datei-Staging-Implementierung unterstuetzt keine abweichenden logischen Dateinamen.");
+                "Diese Datei-Staging-Implementierung unterstützt keine abweichenden logischen Dateinamen.");
         }
 
         return StageCopy(sourcePath, targetDirectory, now, cancellationToken);
@@ -109,7 +109,7 @@ public interface IImportFileStagingSession : IDisposable
         Action<string> writeStageFile,
         CancellationToken cancellationToken = default)
         => throw new NotSupportedException(
-            "Diese Datei-Staging-Implementierung unterstuetzt keine erzeugten Dateien.");
+            "Diese Datei-Staging-Implementierung unterstützt keine erzeugten Dateien.");
 
     void Publish();
 

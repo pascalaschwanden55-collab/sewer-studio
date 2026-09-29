@@ -315,7 +315,7 @@ public static class AiFieldQualityReportAnalyzer
                 reviewedSample,
                 expected,
                 predicted,
-                "KI-Kriterien waren erfuellt, menschliche Pruefung bestaetigte den Befund aber nicht unveraendert."));
+                "KI-Kriterien waren erfüllt, menschliche Prüfung bestätigte den Befund aber nicht unverändert."));
         }
 
         var upper = BinomialUpper95(reviewed, errors);
@@ -334,8 +334,8 @@ public static class AiFieldQualityReportAnalyzer
             ErrorRate: reviewed == 0 ? 0 : (double)errors / reviewed,
             ErrorRateUpper95: upper,
             ReleaseCriterionMet: releaseReady,
-            Criterion: $"Mindestens {options.RequiredGreenFindings} gepruefte, deduplizierte gruene Befunde "
-                       + $"aus {options.RequiredHoldings} Haltungen; hoechstens {options.AllowedGreenErrors} Fehler; "
+            Criterion: $"Mindestens {options.RequiredGreenFindings} geprüfte, deduplizierte gruene Befunde "
+                       + $"aus {options.RequiredHoldings} Haltungen; höchstens {options.AllowedGreenErrors} Fehler; "
                        + $"obere 95%-Fehlergrenze unter {options.MaximumUpperErrorRate:P0}.");
     }
 
@@ -704,7 +704,7 @@ public static class AiFieldQualityReportWriter
         var g = report.GreenRelease;
         var s = report.Shadow;
         var sb = new StringBuilder();
-        sb.AppendLine("# KI-Qualitaetsbericht");
+        sb.AppendLine("# KI-Qualitätsbericht");
         sb.AppendLine();
         sb.AppendLine($"Erstellt: {report.GeneratedAtUtc:O}");
         sb.AppendLine();
@@ -720,14 +720,14 @@ public static class AiFieldQualityReportWriter
         sb.AppendLine($"| Falsche Code-Familie | {d.WrongCodeFamily} |");
         sb.AppendLine($"| Abgelehnte Fehlalarme | {d.RejectedFalsePositive} |");
         sb.AppendLine($"| Quantifizierung/Detail korrigiert | {d.QuantificationCorrections} |");
-        sb.AppendLine($"| Moegliche verpasste Schaeden | {d.PossibleMisses} |");
-        sb.AppendLine($"| Moegliche Meterfehler | {d.PossibleMeterMismatches} |");
+        sb.AppendLine($"| Mögliche verpasste Schaeden | {d.PossibleMisses} |");
+        sb.AppendLine($"| Mögliche Meterfehler | {d.PossibleMeterMismatches} |");
         sb.AppendLine($"| Exakte Code-Genauigkeit | {d.ExactCodeAccuracy:P1} |");
         sb.AppendLine($"| Erkennungs-Recall gegen manuelle Befunde | {d.DetectionRecall:P1} |");
         sb.AppendLine();
         sb.AppendLine("## Gruene Entscheidungen");
         sb.AppendLine();
-        sb.AppendLine($"- Geprueft: {g.ReviewedGreenFindings} von {g.DeduplicatedGreenFindings}");
+        sb.AppendLine($"- Geprüft: {g.ReviewedGreenFindings} von {g.DeduplicatedGreenFindings}");
         sb.AppendLine($"- Fehler: {g.GreenErrors} ({g.ErrorRate:P2})");
         sb.AppendLine($"- Obere 95%-Fehlergrenze: {g.ErrorRateUpper95:P2}");
         sb.AppendLine($"- Haltungen: {g.Holdings}");
@@ -743,7 +743,7 @@ public static class AiFieldQualityReportWriter
         sb.AppendLine($"- Veraltet: {s.Stale}");
         sb.AppendLine($"- Zustandsklasse abweichend: {s.ConditionClassDifferences}");
         sb.AppendLine($"- Massnahme abweichend: {s.MeasureDifferences}");
-        sb.AppendLine($"- Kosten ueber 25 % abweichend: {s.CostDifferences}");
+        sb.AppendLine($"- Kosten über 25 % abweichend: {s.CostDifferences}");
         sb.AppendLine();
         sb.AppendLine("## Fehlergruppen");
         sb.AppendLine();

@@ -13,7 +13,7 @@ public static class XtfAenderungsPlanBuilder
     {
         var hinweise = voll.Hinweise.Where(h => !h.Contains("Zusatzangaben in derselben XTF", StringComparison.Ordinal)).ToList();
         if (voll.Objekte.GroupBy(o => o.Tid, StringComparer.Ordinal).Any(g => g.Count() > 1))
-            return new([], ["Doppelte Objektkennungen: keine eindeutige Aenderungslieferung moeglich."], 0, 0, true);
+            return new([], ["Doppelte Objektkennungen: keine eindeutige Aenderungslieferung möglich."], 0, 0, true);
         var alle = voll.Objekte.ToDictionary(o => o.Tid, StringComparer.Ordinal);
         var auftraege = new Dictionary<(string Tid, string Feld), DateTime>();
         var hs = 0;
@@ -85,9 +85,9 @@ public static class XtfAenderungsPlanBuilder
             objekte.Add(new("Aenderung", ids.Fuer("Aenderung", tid + "|" + feld),
                 [new("ObjektTid", tid), new("Feld", feld), new("GeaendertAm", zeit.ToString("O", CultureInfo.InvariantCulture))], [], ImTopicZusatz: true));
         }
-        hinweise.Add($"Aenderungslieferung: {hs} bearbeitete Haltungen, {ss} bearbeitete Bauwerke, {auftraege.Count} Feldauftraege. Andere Objekte sind nur Verknuepfungshilfen und duerfen nicht aktualisiert werden.");
-        hinweise.Add($"{objekte.Count(o => o.Klasse == "Zusatzangabe")} Zusatzwerte und {auftraege.Count} Aenderungseintraege in derselben XTF; das Modell {XtfZusatzangaben.Modell}.ili gehoert zur Lieferung.");
-        hinweise.Add("Auswahl anhand der Handmarkierung je Feld, ohne bestaetigten GEONIS-Vergleichsstand. Bereits frueher exportierte Handaenderungen bleiben bis zur geklaerten Uebernahme enthalten; der Export setzt keine Markierung zurueck.");
+        hinweise.Add($"Aenderungslieferung: {hs} bearbeitete Haltungen, {ss} bearbeitete Bauwerke, {auftraege.Count} Feldaufträge. Andere Objekte sind nur Verknüpfungshilfen und dürfen nicht aktualisiert werden.");
+        hinweise.Add($"{objekte.Count(o => o.Klasse == "Zusatzangabe")} Zusatzwerte und {auftraege.Count} Aenderungseintraege in derselben XTF; das Modell {XtfZusatzangaben.Modell}.ili gehört zur Lieferung.");
+        hinweise.Add("Auswahl anhand der Handmarkierung je Feld, ohne bestätigten GEONIS-Vergleichsstand. Bereits früher exportierte Handänderungen bleiben bis zur geklärten Übernahme enthalten; der Export setzt keine Markierung zurück.");
         return new(objekte, hinweise, hs, ss, true);
 
         XtfNeuObjekt? Finde(string? name, string? klasse)
