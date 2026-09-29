@@ -144,13 +144,12 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <TextBlock Text="Für diesen Hauptcode sind noch keine persönlichen Beispiele vorhanden."
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource MutedBrush}"
-                                   TextWrapping="Wrap" MaxWidth="340" TextAlignment="Center"
-                                   IsHitTestVisible="False">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
+                        <controls:EmptyStateControl IsHitTestVisible="False"
+                                                    Icon="&#xE722;"
+                                                    Title="Keine Beispiele"
+                                                    Message="Für diesen Hauptcode sind noch keine persönlichen Beispiele vorhanden.">
+                            <controls:EmptyStateControl.Style>
+                                <Style TargetType="controls:EmptyStateControl">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding HasItems, ElementName=AlbumItems}"
@@ -159,8 +158,8 @@
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+                            </controls:EmptyStateControl.Style>
+                        </controls:EmptyStateControl>
                     </Grid>
                 </Border>
 

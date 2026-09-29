@@ -65,27 +65,6 @@
             </Setter>
         </Style>
 
-        <!-- ProgressBar -->
-        <Style x:Key="ThinProgress" TargetType="ProgressBar">
-            <Setter Property="Height"          Value="3"/>
-            <Setter Property="Background"      Value="{DynamicResource SurfaceSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ProgressBar">
-                        <Border CornerRadius="{DynamicResource RadiusS}" Background="{TemplateBinding Background}">
-                            <Border x:Name="PART_Track">
-                                <Border x:Name="PART_Indicator"
-                                        CornerRadius="{DynamicResource RadiusS}"
-                                        HorizontalAlignment="Left"
-                                        Background="{DynamicResource AccentBrush}"/>
-                            </Border>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
     </Window.Resources>
 
     <Grid Margin="0">
@@ -259,7 +238,7 @@
                                                Text="{Binding PillarDetectionCount}"
                                                Foreground="{DynamicResource AccentBrush}"/>
                                     <ProgressBar Grid.Row="6"
-                                                 Style="{StaticResource ThinProgress}"
+                                                 Style="{StaticResource ProgressBarThin}"
                                                  Value="{Binding VideoProgressPct}"
                                                  Maximum="100"/>
                                     <TextBlock Grid.Row="8" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}">
@@ -294,7 +273,7 @@
                                                Text="{Binding PillarQuantCount}"
                                                Foreground="{DynamicResource SuccessBrush}"/>
                                     <ProgressBar Grid.Row="6"
-                                                 Style="{StaticResource ThinProgress}"
+                                                 Style="{StaticResource ProgressBarThin}"
                                                  Value="{Binding MappingProgressPct}"
                                                  Maximum="100"/>
                                     <TextBlock Grid.Row="8" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}">
@@ -329,7 +308,7 @@
                                                Text="{Binding PillarLocalCount}"
                                                Foreground="{DynamicResource WarningBrush}"/>
                                     <ProgressBar Grid.Row="6"
-                                                 Style="{StaticResource ThinProgress}">
+                                                 Style="{StaticResource ProgressBarThin}">
                                         <ProgressBar.Value>
                                             <Binding Path="IsDone">
                                                 <Binding.Converter>
@@ -811,9 +790,7 @@
 
                                             <!-- Konfidenz-Bar -->
                                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                <ProgressBar Width="44" Height="3"
-                                                             Background="{DynamicResource SurfaceSubtleBrush}"
-                                                             BorderThickness="0"
+                                                <ProgressBar Style="{StaticResource ProgressBarThin}" Width="44"
                                                              Maximum="1"
                                                              Value="{Binding Confidence}">
                                                     <ProgressBar.Foreground>

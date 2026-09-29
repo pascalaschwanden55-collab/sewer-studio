@@ -296,7 +296,7 @@
                                                    FontWeight="SemiBold"
                                                    DockPanel.Dock="Right"/>
                                     </DockPanel>
-                                    <ProgressBar Height="8"
+                                    <ProgressBar Style="{StaticResource ProgressBarStandard}"
                                                  Margin="0,2,0,0"
                                                  Minimum="0"
                                                  Maximum="100"
@@ -327,7 +327,7 @@
                                                    FontWeight="SemiBold"
                                                    DockPanel.Dock="Right"/>
                                     </DockPanel>
-                                    <ProgressBar Height="8"
+                                    <ProgressBar Style="{StaticResource ProgressBarStandard}"
                                                  Margin="0,2,0,0"
                                                  Minimum="0"
                                                  Maximum="100"
@@ -396,6 +396,7 @@
                 Style="{StaticResource Card}"
                 Padding="8"
                 Margin="0,0,0,10">
+            <Grid>
             <DataGrid x:Name="RowsGrid"
                       ItemsSource="{Binding Rows}"
                       MinHeight="280"
@@ -487,6 +488,23 @@
                     </DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
+
+            <ctrl:EmptyStateControl IsHitTestVisible="False"
+                                    Icon="&#xE8A5;"
+                                    Title="Noch keine Haltungen"
+                                    Message="Importiere Inspektionsdaten, damit hier Druckvorlagen ausgewählt werden können.">
+                <ctrl:EmptyStateControl.Style>
+                    <Style TargetType="ctrl:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems, ElementName=RowsGrid}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ctrl:EmptyStateControl.Style>
+            </ctrl:EmptyStateControl>
+            </Grid>
         </Border>
 
         <Border Grid.Row="4"
@@ -558,8 +576,7 @@
                         <TextBlock Text="{Binding PdfExportProgress}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
-                        <ProgressBar Width="180"
-                                     Height="8"
+                        <ProgressBar Style="{StaticResource ProgressBarStandard}" Width="180"
                                      IsIndeterminate="True"/>
                     </StackPanel>
                     <StackPanel Margin="0,0,12,4"

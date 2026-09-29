@@ -717,6 +717,47 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `DossierBatchProposalUseCase`), `Quellenwahl`, `XtfRevisionExportService` (4 Stellen) und die XmlException
   in `XtfLieferungsNorm` melden deutsch und protokollieren den Rohtext; `ProjektPruefregeln` und
   `GeoShopAbgleichPlanBuilder` laufen ueber `DescribeInputHint` (eigene Meldung bleibt, fremde wird generisch).
+- **Aufgabe 11 — Leer- und Ladezustände, Fortschrittsbalken.** `EmptyStateControl` (Icon-Kreis, Titel,
+  Nachricht, optionale Aktion, schwebt sanft mit Ruhe-Schalter) ist die EINE Leerzustandsanzeige — nie eine
+  eigene Textzeile mit derselben `HasItems`-Pruefung danebenbauen (Ausnahme sofort behoben, siehe
+  `PersonalGoldAlbumWindow`, das eine solche Altfassung auf das Control umgestellt hat). Bindung immer ueber
+  `Visibility="Collapsed"` als Standard und einen `DataTrigger`/`MultiDataTrigger` auf
+  `{Binding HasItems, ElementName=<Liste>}` (built-in `ItemsControl.HasItems`, kein neues Feld); wo ein
+  `IsBusy`/`IstBerechnung`-Flag existiert, zaehlt es als zweite `MultiDataTrigger`-Bedingung, damit der
+  Leerzustand waehrend eines laufenden Ladevorgangs nicht aufblitzt. Neu versorgt: Sanierungs-/
+  Schacht-Matrix, Schattenauswertung, Import-Vorschau, Code-Katalog-, Massnahmen- und Beobachtungs-Editor,
+  Verteilen-Vorschau, SIA405-Lieferung, beide Dossier-Picker, Beobachtungen-Fenster, Protokoll-Historie/
+  -Beobachtungen, Goldalbum, Strasse-uebernehmen, Schacht-Massnahmen(-Katalog), Druckcenter- und
+  Dossiers-Hauptliste — Liste und Wortlaut je Stelle in `DesignAuditLeerUndLadezustandTests`. Medienkonflikte
+  hatte den Leerzustand bereits ueber `StatusHost` (EmptyIcon/EmptyTitle/EmptyMessage); dort nichts geaendert.
+  Bewusst ausgelassen: `XtfExportVorschauWindow` (eigene, an mehr als Item-Anzahl haengende
+  `OhneZeilen`/`OhneTabelleHinweis`-Regel im ViewModel, keine reine Zaehlanzeige), `FeldVorschlagWindow`/
+  `StrassenUebernahmeWindow`-Auswahlbereiche, die nur bei bereits vorhandenen Kandidaten ueberhaupt sichtbar
+  werden (kein echter Leerzustand einer sichtbaren Liste).
+  **Fortschrittsbalken:** genau zwei Theme-Stile in `Theme/Controls.xaml`, `ProgressBarThin` (4 px, dünne
+  Werkzeugleisten-/Karten-Hinweise wie „laedt") und `ProgressBarStandard` (8 px, echte Fortschrittsanzeigen:
+  Import, Sicherung, Export, Batch-Laeufe). Beide teilen eine Vorlage (Spur + Indikator + wandernder
+  Lichtstreif bei `IsIndeterminate`, wie zuvor der programmweite Default-Stil), Radius `RadiusBar` (rundet
+  beide Hoehen voll zur Kapsel), Indikatorfarbe ueber `TemplateBinding Foreground` (Standard `AccentBarBrush`,
+  aber je Balken ueberschreibbar — Zustandsklassen-/Confidence-Faerbung bleibt moeglich). JEDES
+  `<ProgressBar>`-Element traegt seither `Style="{StaticResource ProgressBarThin|Standard}"` (oder, bei einem
+  lokalen `<ProgressBar.Style>` mit eigenen Triggern, `BasedOn="{StaticResource ...}"` — siehe `VsaPage.xaml`).
+  Die alte `ImportProgressBar`/`ImportBarHeight`-Sondervorlage der Importkarte und das lokale `ThinProgress`
+  in `VideoAnalysisPipelineWindow` sind zugunsten der zwei einheitlichen Stile entfernt. **Zwei benannte
+  Ausnahmen ohne echtes `<ProgressBar>`-Element** (Waechter `DesignAuditLeerUndLadezustandTests`):
+  `VsaCodeExplorerWindow` (vier `Border x:Name="ProgressBar0.."3"` sind eine Wizard-Schrittanzeige mit VIER
+  unabhaengig eingefaerbten Segmenten — ein einzelner Balken mit einem Value/Maximum kann das nicht abbilden,
+  „falls gleichwertig" aus dem Auftrag trifft hier nicht zu) und `StartupSplashWindow` (Border-Splashbalken der
+  eigenen Choreografie, ohnehin als Video-/Startfenster ausgenommen). Der implizite typweite Standard-Stil
+  bleibt als Sicherheitsnetz unveraendert bestehen (Fallback, falls ein kuenftiges `<ProgressBar>` den
+  Style vergisst), gilt aber nicht als eine der zwei erlaubten Formen im Waechter.
+  **Lade-Hinweise:** `MediaSearchWindow`s Text+Balken-Panel ist bewusst UNVERAENDERT (echte
+  Prozent-Fortschrittsanzeige mit eigenem Value/Maximum — kein reiner Spinner-Hinweis, `BusyOverlay` haette
+  die Prozentanzeige entfernt). Offen: `OverviewPage`s „Vorschau wird geladen…"-Karte (eigene, gegen ein
+  Geschwister-`Border` per `Visibility` ausgetauschte Karte statt Overlay-ueber-Inhalt) liesse sich nur mit
+  einer Umstrukturierung der drei nebeneinanderstehenden Zustands-Borders (Projekt waehlen/Laden/Inhalt) auf
+  `BusyOverlay` oder ein `StatusHost`-`State`-Enum umstellen — das ginge ueber eine reine Optikaenderung
+  hinaus und ist deshalb nicht angefasst.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

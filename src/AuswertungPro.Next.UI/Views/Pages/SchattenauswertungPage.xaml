@@ -85,12 +85,10 @@
                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
                 <StackPanel>
                     <TextBlock Text="{Binding FortschrittText}" Foreground="{DynamicResource TextBrush}" FontSize="{DynamicResource TextS}"/>
-                    <ProgressBar Height="4" Margin="0,6,0,0"
+                    <ProgressBar Style="{StaticResource ProgressBarThin}" Margin="0,6,0,0"
                                  Minimum="0"
                                  Maximum="{Binding FortschrittMax}"
-                                 Value="{Binding FortschrittWert, Mode=OneWay}"
-                                 Background="{DynamicResource BorderLightBrush}"
-                                 Foreground="{DynamicResource AccentBrush}"/>
+                                 Value="{Binding FortschrittWert, Mode=OneWay}"/>
                 </StackPanel>
             </Border>
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1"
@@ -109,7 +107,9 @@
             </Grid.ColumnDefinitions>
 
             <Border Style="{StaticResource Card}" Padding="8">
-                <DataGrid ItemsSource="{Binding Rows}"
+                <Grid>
+                <DataGrid x:Name="SchattenGrid"
+                          ItemsSource="{Binding Rows}"
                           SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
                           AutoGenerateColumns="False"
                           IsReadOnly="True"
@@ -165,6 +165,27 @@
                         </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <ctrl:EmptyStateControl IsHitTestVisible="False"
+                                       Icon="&#xE9D9;"
+                                       Title="Noch kein Schattenlauf"
+                                       Message="«Schattenlauf starten» rechnet zum Vergleich eine eigene Bewertung je Haltung, ohne Projektdaten zu ändern.">
+                    <ctrl:EmptyStateControl.Style>
+                        <Style TargetType="ctrl:EmptyStateControl">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding HasItems, ElementName=SchattenGrid}" Value="False"/>
+                                        <Condition Binding="{Binding IsBusy}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ctrl:EmptyStateControl.Style>
+                </ctrl:EmptyStateControl>
+                </Grid>
             </Border>
 
             <!-- Detail: KI-Begründung der gewählten Haltung -->

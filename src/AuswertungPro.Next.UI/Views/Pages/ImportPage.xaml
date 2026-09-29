@@ -252,7 +252,7 @@
                         <TextBlock Text="{Binding ImportProgress}" Foreground="{DynamicResource TextSecondaryBrush}"
                                    FontSize="{DynamicResource TextS}" TextTrimming="CharacterEllipsis" ToolTip="{Binding ImportProgress}"/>
                     </DockPanel>
-                    <ProgressBar Style="{StaticResource ImportProgressBar}" Maximum="100" Value="{Binding ImportProgressPercent, Mode=OneWay}"
+                    <ProgressBar Style="{StaticResource ProgressBarStandard}" Maximum="100" Value="{Binding ImportProgressPercent, Mode=OneWay}"
                                  IsIndeterminate="{Binding ImportIsIndeterminate}" AutomationProperties.Name="Fortschritt im laufenden Importschritt"/>
                     <TextBlock Text="{Binding ImportRemaining}" Foreground="{DynamicResource TextSecondaryBrush}"
                                FontSize="{DynamicResource TextS}" TextWrapping="Wrap"/>

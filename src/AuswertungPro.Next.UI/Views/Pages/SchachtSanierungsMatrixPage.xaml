@@ -119,6 +119,23 @@
             </DataGrid.Columns>
         </DataGrid>
 
+        <uc:EmptyStateControl Grid.Row="1"
+                              IsHitTestVisible="False"
+                              Icon="&#xE80A;"
+                              Title="Noch keine Massnahmen"
+                              Message="Sobald Schächte mit erfasstem Sanierungsbedarf im Projekt vorhanden sind, erscheinen sie hier zur Auswahl.">
+            <uc:EmptyStateControl.Style>
+                <Style TargetType="uc:EmptyStateControl">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasItems, ElementName=SchachtRowsGrid}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </uc:EmptyStateControl.Style>
+        </uc:EmptyStateControl>
+
         <!-- Status -->
         <TextBlock Grid.Row="2" Text="{Binding Status}" Opacity="0.7" Margin="2,8,0,0"/>
     </Grid>

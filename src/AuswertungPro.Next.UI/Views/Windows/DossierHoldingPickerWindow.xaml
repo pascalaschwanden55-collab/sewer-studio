@@ -58,6 +58,7 @@
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="{DynamicResource RadiusXL}">
+            <Grid>
             <ListBox x:Name="HoldingList"
                      Background="Transparent"
                      BorderThickness="0"
@@ -103,6 +104,23 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+
+            <controls:EmptyStateControl IsHitTestVisible="False"
+                                        Icon="&#xE721;"
+                                        Title="Keine Haltungen gefunden"
+                                        Message="Suchbegriff prüfen oder leeren — oder das Projekt enthält noch keine Haltungen.">
+                <controls:EmptyStateControl.Style>
+                    <Style TargetType="controls:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems, ElementName=HoldingList}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </controls:EmptyStateControl.Style>
+            </controls:EmptyStateControl>
+            </Grid>
         </Border>
 
         <Border Grid.Row="3" Style="{StaticResource DialogButtonBar}">

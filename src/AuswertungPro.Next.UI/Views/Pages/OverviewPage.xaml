@@ -301,8 +301,7 @@
                                        FontSize="{DynamicResource TextXL}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
-                            <ProgressBar IsIndeterminate="True"
-                                         Height="4"
+                            <ProgressBar Style="{StaticResource ProgressBarThin}" IsIndeterminate="True"
                                          Margin="0,12,0,0"
                                          Background="{DynamicResource BorderLightBrush}"
                                          Foreground="{DynamicResource AccentBrush}"/>
@@ -493,7 +492,7 @@
                                                             Background="{Binding Key, Converter={StaticResource ZustandsklasseBrush}}"
                                                             VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/>
-                                                    <ProgressBar Grid.Column="2" Height="6" Maximum="100" Value="{Binding Percent}"
+                                                    <ProgressBar Grid.Column="2" Style="{StaticResource ProgressBarThin}" Maximum="100" Value="{Binding Percent}"
                                                                  BorderThickness="0" Background="{DynamicResource BorderBrush}"
                                                                  Foreground="{Binding Key, Converter={StaticResource ZustandsklasseBrush}}" VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="3"
@@ -546,7 +545,7 @@
                                                             Background="{Binding Key, Converter={StaticResource ZustandsklasseBrush}}"
                                                             VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/>
-                                                    <ProgressBar Grid.Column="2" Height="6" Maximum="100" Value="{Binding Percent}"
+                                                    <ProgressBar Grid.Column="2" Style="{StaticResource ProgressBarThin}" Maximum="100" Value="{Binding Percent}"
                                                                  BorderThickness="0" Background="{DynamicResource BorderBrush}"
                                                                  Foreground="{Binding Key, Converter={StaticResource ZustandsklasseBrush}}" VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="3"

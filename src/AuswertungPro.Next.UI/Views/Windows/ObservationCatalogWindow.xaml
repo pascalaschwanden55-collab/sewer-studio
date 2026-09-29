@@ -71,17 +71,34 @@
                      Grid.Row="1"
                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                      Margin="0,0,0,6"/>
-            <ListView Grid.Row="2"
-                      x:Name="SearchList"
-                      ItemsSource="{Binding FilteredCodes}"
-                      SelectionChanged="SearchList_SelectionChanged">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn Header="Code" Width="70" DisplayMemberBinding="{Binding Code}"/>
-                        <GridViewColumn Header="Text" Width="200" DisplayMemberBinding="{Binding Title}"/>
-                    </GridView>
-                </ListView.View>
-            </ListView>
+            <Grid Grid.Row="2">
+                <ListView x:Name="SearchList"
+                          ItemsSource="{Binding FilteredCodes}"
+                          SelectionChanged="SearchList_SelectionChanged">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Code" Width="70" DisplayMemberBinding="{Binding Code}"/>
+                            <GridViewColumn Header="Text" Width="200" DisplayMemberBinding="{Binding Title}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+
+                <nova:EmptyStateControl IsHitTestVisible="False"
+                                        Icon="&#xE721;"
+                                        Title="Keine Treffer"
+                                        Message="Keine Treffer für die aktuelle Suche.">
+                    <nova:EmptyStateControl.Style>
+                        <Style TargetType="nova:EmptyStateControl">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasItems, ElementName=SearchList}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </nova:EmptyStateControl.Style>
+                </nova:EmptyStateControl>
+            </Grid>
         </Grid>
 
         <!-- Oben Mitte: Code-Titel und Beschreibung (wie WinCan-Original) -->

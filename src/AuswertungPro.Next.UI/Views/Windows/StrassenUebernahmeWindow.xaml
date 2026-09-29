@@ -25,6 +25,7 @@
                 Background="{DynamicResource CardBrush}"
                 CornerRadius="{DynamicResource RadiusS}"
                 Padding="8">
+            <Grid>
             <ListView x:Name="Liste"
                       BorderThickness="0"
                       Background="Transparent">
@@ -46,6 +47,23 @@
                     </GridView>
                 </ListView.View>
             </ListView>
+
+            <controls:EmptyStateControl IsHitTestVisible="False"
+                                        Icon="&#xE8A5;"
+                                        Title="Keine Vorschläge"
+                                        Message="Es gibt keine übernehmbaren Strassennamen für diese Auswahl.">
+                <controls:EmptyStateControl.Style>
+                    <Style TargetType="controls:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems, ElementName=Liste}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </controls:EmptyStateControl.Style>
+            </controls:EmptyStateControl>
+            </Grid>
         </Border>
 
         <!-- Widerspruechliche Nachbarn: sichtbar lassen, aber nicht entscheiden -->

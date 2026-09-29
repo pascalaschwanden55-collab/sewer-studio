@@ -46,9 +46,9 @@
 
                         <!-- S10: Sichtbares Lade-Feedback waehrend die Bewertung im Hintergrund laeuft.
                              Der Button wird durch das AsyncRelayCommand automatisch gesperrt. -->
-                        <ProgressBar IsIndeterminate="True" Height="4" Margin="0,10,0,0">
+                        <ProgressBar IsIndeterminate="True" Margin="0,10,0,0">
                             <ProgressBar.Style>
-                                <Style TargetType="ProgressBar">
+                                <Style TargetType="ProgressBar" BasedOn="{StaticResource ProgressBarThin}">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsBusy}" Value="True">

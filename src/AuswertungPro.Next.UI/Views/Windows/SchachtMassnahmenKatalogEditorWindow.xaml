@@ -21,7 +21,8 @@
                                     Title="Deine Schacht-Massnahmen (Name + Preis)"
                                     Subtitle="Diese Liste gilt für alle Projekte. Preise sind Vorgaben — pro Schacht kannst du sie später anpassen."/>
 
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Zeilen}" SelectedItem="{Binding Selected, Mode=TwoWay}"
+        <Grid Grid.Row="1">
+        <DataGrid x:Name="ZeilenGrid" ItemsSource="{Binding Zeilen}" SelectedItem="{Binding Selected, Mode=TwoWay}"
                   AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                   HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                   Background="Transparent" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
@@ -31,6 +32,25 @@
                 <DataGridTextColumn Header="Einheit" Binding="{Binding Einheit, UpdateSourceTrigger=LostFocus}" Width="80"/>
             </DataGrid.Columns>
         </DataGrid>
+
+        <controls:EmptyStateControl IsHitTestVisible="False"
+                                    Icon="&#xE8A5;"
+                                    Title="Noch keine Massnahmen"
+                                    Message="Über «Hinzufügen» eine erste Schacht-Massnahme anlegen."
+                                    ActionText="Hinzufügen"
+                                    ActionCommand="{Binding HinzufuegenCommand}">
+            <controls:EmptyStateControl.Style>
+                <Style TargetType="controls:EmptyStateControl">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasItems, ElementName=ZeilenGrid}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </controls:EmptyStateControl.Style>
+        </controls:EmptyStateControl>
+        </Grid>
 
         <Border Grid.Row="2" Style="{StaticResource DialogButtonBar}" Margin="0,10,0,0">
         <Grid>

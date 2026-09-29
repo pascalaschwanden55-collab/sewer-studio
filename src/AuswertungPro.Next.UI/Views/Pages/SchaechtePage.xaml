@@ -544,7 +544,7 @@
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="12,0,8,0"/>
-                <ProgressBar Width="220" Height="10"
+                <ProgressBar Style="{StaticResource ProgressBarStandard}" Width="220"
                              Minimum="0" Maximum="100"
                              Value="{Binding StammdatenErgaenzungProgress}"/>
                 <Button Content="Abbrechen"

@@ -199,11 +199,12 @@
                 <StackPanel Grid.Row="1" Margin="0,0,0,8">
                     <TextBlock Text="{Binding Kopfzeile}" TextWrapping="Wrap" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBrush}"/>
-                    <ProgressBar IsIndeterminate="True" Height="4" Margin="0,6,0,0"
+                    <ProgressBar Style="{StaticResource ProgressBarThin}" IsIndeterminate="True" Margin="0,6,0,0"
                                  Visibility="{Binding IstBerechnung, Converter={StaticResource BoolToVis}}"/>
                 </StackPanel>
 
-                <DataGrid Grid.Row="2" ItemsSource="{Binding Zeilen}" AutoGenerateColumns="False" IsReadOnly="True"
+                <Grid Grid.Row="2">
+                <DataGrid x:Name="VorschauGrid" ItemsSource="{Binding Zeilen}" AutoGenerateColumns="False" IsReadOnly="True"
                           HeadersVisibility="Column" SelectionMode="Single" CanUserResizeRows="False"
                           FontSize="{DynamicResource TextS}">
                     <DataGrid.Columns>
@@ -256,6 +257,27 @@
                         <DataGridTextColumn Header="Hinweis" Binding="{Binding Hinweis}" Width="2*"/>
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <controls:EmptyStateControl IsHitTestVisible="False"
+                                            Icon="&#xE7B3;"
+                                            Title="Noch keine Vorschau"
+                                            Message="Quelle und Ziel wählen — die Vorschau erscheint automatisch.">
+                    <controls:EmptyStateControl.Style>
+                        <Style TargetType="controls:EmptyStateControl">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding HasItems, ElementName=VorschauGrid}" Value="False"/>
+                                        <Condition Binding="{Binding IstBerechnung}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </controls:EmptyStateControl.Style>
+                </controls:EmptyStateControl>
+                </Grid>
 
                 <ItemsControl Grid.Row="3" ItemsSource="{Binding Hinweise}" Margin="0,8,0,0"
                               Visibility="{Binding HatHinweise, Converter={StaticResource BoolToVis}}">

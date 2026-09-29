@@ -33,21 +33,37 @@
                       SelectedItem="{Binding SelectedGroup}" />
         </StackPanel>
 
-        <DataGrid Grid.Row="2"
-                  Grid.Column="0"
-                  Margin="0,0,10,0"
-                  ItemsSource="{Binding CodesView}"
-                  SelectedItem="{Binding SelectedCode}"
-                  AutoGenerateColumns="False"
-                  CanUserAddRows="False"
-                  SelectionUnit="FullRow"
-                  RowHeaderWidth="0">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Code" Binding="{Binding Code, UpdateSourceTrigger=PropertyChanged}" Width="110" ElementStyle="{StaticResource MonoCellStyle}" />
-                <DataGridTextColumn Header="Title" Binding="{Binding Title, UpdateSourceTrigger=PropertyChanged}" Width="*" />
-                <DataGridTextColumn Header="Group" Binding="{Binding Group, UpdateSourceTrigger=PropertyChanged}" Width="150" />
-            </DataGrid.Columns>
-        </DataGrid>
+        <Grid Grid.Row="2" Grid.Column="0" Margin="0,0,10,0">
+            <DataGrid x:Name="CodesGrid"
+                      ItemsSource="{Binding CodesView}"
+                      SelectedItem="{Binding SelectedCode}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      SelectionUnit="FullRow"
+                      RowHeaderWidth="0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Code" Binding="{Binding Code, UpdateSourceTrigger=PropertyChanged}" Width="110" ElementStyle="{StaticResource MonoCellStyle}" />
+                    <DataGridTextColumn Header="Title" Binding="{Binding Title, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+                    <DataGridTextColumn Header="Group" Binding="{Binding Group, UpdateSourceTrigger=PropertyChanged}" Width="150" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <controls:EmptyStateControl IsHitTestVisible="False"
+                                        Icon="&#xE8A5;"
+                                        Title="Noch keine Codes"
+                                        Message="Über «Neu» einen ersten Katalogeintrag anlegen.">
+                <controls:EmptyStateControl.Style>
+                    <Style TargetType="controls:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems, ElementName=CodesGrid}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </controls:EmptyStateControl.Style>
+            </controls:EmptyStateControl>
+        </Grid>
 
         <Border Grid.Row="2" Grid.Column="1" Padding="12" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
             <StackPanel>

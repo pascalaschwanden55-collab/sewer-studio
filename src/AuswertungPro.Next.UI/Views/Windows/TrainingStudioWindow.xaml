@@ -131,7 +131,7 @@
                              ToolTip="Optionaler Rohrdurchmesser in mm (leer = 300 mm Standard)."/>
 
                     <StackPanel x:Name="PdfImportProgressPanel" Visibility="Collapsed" Margin="0,0,0,8">
-                        <ProgressBar Height="8" IsIndeterminate="True" Margin="0,0,0,6"/>
+                        <ProgressBar Style="{StaticResource ProgressBarStandard}" IsIndeterminate="True" Margin="0,0,0,6"/>
                         <Button x:Name="PdfImportCancelButton"
                                 Content="PDF-Import abbrechen"
                                 Style="{StaticResource ToolbarButtonDanger}"

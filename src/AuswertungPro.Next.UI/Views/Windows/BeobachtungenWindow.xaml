@@ -42,6 +42,7 @@
                 BorderThickness="1"
                 CornerRadius="{DynamicResource RadiusL}"
                 Background="{DynamicResource CardBrush}">
+            <Grid>
             <DataGrid x:Name="EntriesGrid"
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
@@ -127,6 +128,23 @@
                     <DataGridTextColumn Header="Bemerkung" Binding="{Binding CodeMeta.Notes}" Width="150"/>
                 </DataGrid.Columns>
             </DataGrid>
+
+            <controls:EmptyStateControl IsHitTestVisible="False"
+                                        Icon="&#xE721;"
+                                        Title="Keine Beobachtungen"
+                                        Message="Für diese Auswahl liegen keine Protokolleinträge vor.">
+                <controls:EmptyStateControl.Style>
+                    <Style TargetType="controls:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems, ElementName=EntriesGrid}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </controls:EmptyStateControl.Style>
+            </controls:EmptyStateControl>
+            </Grid>
         </Border>
     </Grid>
 </Window>

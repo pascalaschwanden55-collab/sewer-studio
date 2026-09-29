@@ -10,7 +10,7 @@
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
             <controls:NovaDialogHeader x:Name="Kopf" Title="GeoShop-Abgleich"
                        Subtitle="Die XTF wird gelesen. Deine Projektdaten werden noch nicht geändert." Margin="0"/>
-            <ProgressBar x:Name="Fortschritt" Height="4" IsIndeterminate="True" Margin="0,12,0,0"/>
+            <ProgressBar x:Name="Fortschritt" Style="{StaticResource ProgressBarThin}" IsIndeterminate="True" Margin="0,12,0,0"/>
         </StackPanel>
         <Border DockPanel.Dock="Bottom" Style="{StaticResource DialogButtonBar}" Margin="0,14,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

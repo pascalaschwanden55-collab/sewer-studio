@@ -21,22 +21,40 @@
         <controls:NovaDialogHeader x:Name="Kopf" Grid.Row="0"/>
 
         <!-- Changes DataGrid -->
-        <DataGrid Grid.Row="1" x:Name="ChangesGrid"
-                  AutoGenerateColumns="False" IsReadOnly="True"
-                  CanUserSortColumns="True" CanUserReorderColumns="False"
-                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                  BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
-                  Background="{StaticResource CardBrush}"
-                  RowBackground="{StaticResource CardBrush}"
-                  AlternatingRowBackground="{DynamicResource BgLightBrush}"
-                  Foreground="{StaticResource TextBrush}">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Haltung" Binding="{Binding RecordKey}" Width="180"/>
-                <DataGridTextColumn Header="Aktion" Binding="{Binding Action}" Width="80"/>
-                <DataGridTextColumn Header="Feld" Binding="{Binding Field}" Width="160"/>
-                <DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
+        <Grid Grid.Row="1">
+            <DataGrid x:Name="ChangesGrid"
+                      AutoGenerateColumns="False" IsReadOnly="True"
+                      CanUserSortColumns="True" CanUserReorderColumns="False"
+                      HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                      BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
+                      Background="{StaticResource CardBrush}"
+                      RowBackground="{StaticResource CardBrush}"
+                      AlternatingRowBackground="{DynamicResource BgLightBrush}"
+                      Foreground="{StaticResource TextBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Haltung" Binding="{Binding RecordKey}" Width="180"/>
+                    <DataGridTextColumn Header="Aktion" Binding="{Binding Action}" Width="80"/>
+                    <DataGridTextColumn Header="Feld" Binding="{Binding Field}" Width="160"/>
+                    <DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <controls:EmptyStateControl IsHitTestVisible="False"
+                                        Icon="&#xE8A5;"
+                                        Title="Keine Änderungen"
+                                        Message="Diese Quelle enthält nichts, was am Projekt geändert würde.">
+                <controls:EmptyStateControl.Style>
+                    <Style TargetType="controls:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems, ElementName=ChangesGrid}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </controls:EmptyStateControl.Style>
+            </controls:EmptyStateControl>
+        </Grid>
 
         <!-- Conflicts Expander -->
         <Expander Grid.Row="2" Header="Konflikte" Margin="0,8,0,0" x:Name="ConflictsExpander">

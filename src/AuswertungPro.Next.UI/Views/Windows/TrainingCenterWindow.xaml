@@ -1076,7 +1076,7 @@
         <!-- Progress Bar (sichtbar wenn Busy) -->
         <Grid Grid.Row="3" Margin="0,8,0,0"
               Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
-            <ProgressBar Height="20" Minimum="0"
+            <ProgressBar Style="{StaticResource ProgressBarStandard}" Minimum="0"
                          Maximum="{Binding ProgressMax}"
                          Value="{Binding ProgressValue}"/>
             <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"

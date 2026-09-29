@@ -91,7 +91,7 @@
                 </Grid.RowDefinitions>
                 <TextBlock x:Name="ProgressText" Grid.Row="0" Text="Suche läuft..."
                            Style="{StaticResource LabelText}" Margin="0,0,0,6"/>
-                <ProgressBar x:Name="ProgressBar" Grid.Row="1" Height="10" Minimum="0" Maximum="100"
+                <ProgressBar x:Name="ProgressBar" Grid.Row="1" Style="{StaticResource ProgressBarStandard}" Minimum="0" Maximum="100"
                              HorizontalAlignment="Stretch"/>
             </Grid>
         </Border>
