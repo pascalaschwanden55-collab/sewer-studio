@@ -61,7 +61,7 @@ public static partial class HoldingFolderDistributor
     {
         text = NormalizeText(text);
         if (string.IsNullOrWhiteSpace(text))
-            return new ParsedShaftPdf(false, "PDF enthaelt keine lesbare Textebene", null, null);
+            return new ParsedShaftPdf(false, "PDF enthält keine lesbare Textebene", null, null);
 
         return ParseSchachtPdfPage(text);
     }
@@ -71,7 +71,7 @@ public static partial class HoldingFolderDistributor
     {
         text = NormalizeText(text);
         if (string.IsNullOrWhiteSpace(text))
-            return new ParsedShaftPdf(false, "PDF-Seite enthaelt keine lesbare Textebene", null, null);
+            return new ParsedShaftPdf(false, "PDF-Seite enthält keine lesbare Textebene", null, null);
 
         var shaftNumber = TryFindSchachtNumber(text);
         var date = TryFindSchachtDate(text);
@@ -178,7 +178,7 @@ public static partial class HoldingFolderDistributor
     {
         text = NormalizeText(text);
         if (string.IsNullOrWhiteSpace(text))
-            return new ParsedPdf(false, "PDF-Seite enthaelt keine lesbare Textebene", null, null, null);
+            return new ParsedPdf(false, "PDF-Seite enthält keine lesbare Textebene", null, null, null);
 
         var isWinCan = text.Contains("wincan", StringComparison.OrdinalIgnoreCase);
         var filenameHaltung = isWinCan ? TryExtractHaltungFromPdfPath(pdfPath) : null;
@@ -300,7 +300,7 @@ public static partial class HoldingFolderDistributor
                     var holding = holdings.FirstOrDefault();
                     if (holding != null && !string.IsNullOrWhiteSpace(holding.HaltungId))
                     {
-                        return new ParsedPdf(true, "(aus XTF uebernommen)", date, holding.HaltungId, videoFile);
+                        return new ParsedPdf(true, "(aus XTF übernommen)", date, holding.HaltungId, videoFile);
                     }
                 }
             }

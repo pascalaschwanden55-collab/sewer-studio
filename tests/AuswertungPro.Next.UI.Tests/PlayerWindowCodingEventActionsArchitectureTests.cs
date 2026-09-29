@@ -22,7 +22,7 @@ public sealed class PlayerWindowCodingEventActionsArchitectureTests
         var closeStretchCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEventCloseStretchCommandWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionshandler sollen aus dem allgemeinen Events-Partial heraus.");
-        Assert.True(File.Exists(dialogServicePath), "Coding-Event-Aktionsdialoge muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogServicePath), "Coding-Event-Aktionsdialoge müssen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServiceFactoryPath), "Coding-Event-Aktionsdialog-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogWorkflowPath), "Coding-Event-Aktionsdialog-Aufrufe sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(deleteApplierPath), "Coding-Event-Loeschanwendung muss ausserhalb der PlayerWindow-Partials liegen.");

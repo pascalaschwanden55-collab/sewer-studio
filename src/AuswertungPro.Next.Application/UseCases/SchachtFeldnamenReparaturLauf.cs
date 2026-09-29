@@ -88,18 +88,18 @@ public static class SchachtFeldnamenReparaturLauf
         ArgumentNullException.ThrowIfNull(plan);
 
         var text = new StringBuilder();
-        text.AppendLine($"Geprueft: {plan.GeprueteSchaechte} Schaechte im Projekt.");
+        text.AppendLine($"Geprüft: {plan.GeprueteSchaechte} Schächte im Projekt.");
         text.AppendLine();
 
         if (plan.OhneAenderung)
         {
-            text.AppendLine("Es gibt nichts zusammenzufuehren — jedes Feld steht genau einmal da.");
+            text.AppendLine("Es gibt nichts zusammenzuführen — jedes Feld steht genau einmal da.");
         }
         else
         {
             text.AppendLine(
                 $"{plan.ZusammenzufuehrendeSchreibweisen} doppelte Schreibweisen auf " +
-                $"{plan.BetroffeneSchaechte} Schaechten wuerden zusammengefuehrt:");
+                $"{plan.BetroffeneSchaechte} Schächten würden zusammengeführt:");
             foreach (var (ziel, anzahl) in plan.JeZiel)
                 text.AppendLine($"    {anzahl,6}x  ->  {Einzeilig(ziel)}");
         }
@@ -108,14 +108,14 @@ public static class SchachtFeldnamenReparaturLauf
         {
             text.AppendLine();
             text.AppendLine(
-                $"Nicht angefasst: {plan.UneindeutigeGruppen} Faelle, in denen zwei Schreibweisen");
+                $"Nicht angefasst: {plan.UneindeutigeGruppen} Fälle, in denen zwei Schreibweisen");
             text.AppendLine("VERSCHIEDENE Werte tragen. Welcher gilt, kann nur der Mensch entscheiden.");
             foreach (var (ziel, anzahl) in plan.UneindeutigJeZiel)
                 text.AppendLine($"    {anzahl,6}x  {Einzeilig(ziel)}");
         }
 
         text.AppendLine();
-        text.AppendLine("Werte gehen dabei nicht verloren: Der gefuellte Wert wandert in den");
+        text.AppendLine("Werte gehen dabei nicht verloren: Der gefüllte Wert wandert in den");
         text.AppendLine("bleibenden Namen, nur die leere Zweitschreibweise verschwindet.");
 
         return text.ToString().TrimEnd();

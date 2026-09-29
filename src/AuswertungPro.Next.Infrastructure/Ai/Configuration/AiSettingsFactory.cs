@@ -141,7 +141,7 @@ public static class AiSettingsFactory
     public static void Use(IAiPlatformSettingsResolver resolver) =>
         throw new NotSupportedException(
             "Der globale KI-Einstellungsdienst kann nicht mehr ausgetauscht werden. " +
-            "IAiPlatformSettingsResolver bitte per Konstruktor uebergeben.");
+            "IAiPlatformSettingsResolver bitte per Konstruktor übergeben.");
 
     public static AiPlatformSettings Load(AiSettingsSource? source = null) =>
         Current.Load(source);

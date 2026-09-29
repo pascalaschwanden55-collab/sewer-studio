@@ -34,7 +34,7 @@ public sealed class UserErrorArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "Technische Exception-Texte duerfen nicht direkt im Dialog erscheinen. "
+            "Technische Exception-Texte dürfen nicht direkt im Dialog erscheinen. "
             + "UserError verwenden und die volle Ursache nur protokollieren:\n"
             + string.Join("\n", offenders));
     }
@@ -53,7 +53,7 @@ public sealed class UserErrorArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "Technische Exception-Texte duerfen nicht direkt im sichtbaren ViewModel-Status erscheinen. "
+            "Technische Exception-Texte dürfen nicht direkt im sichtbaren ViewModel-Status erscheinen. "
             + "UserError verwenden und die volle Ursache nur protokollieren:\n"
             + string.Join("\n", offenders));
     }
@@ -72,7 +72,7 @@ public sealed class UserErrorArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "Technische Exception-Texte duerfen nicht direkt in sichtbaren Textfeldern erscheinen. "
+            "Technische Exception-Texte dürfen nicht direkt in sichtbaren Textfeldern erscheinen. "
             + "UserError verwenden und die volle Ursache nur protokollieren:\n"
             + string.Join("\n", offenders));
     }

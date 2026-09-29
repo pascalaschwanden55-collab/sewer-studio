@@ -120,7 +120,7 @@ public sealed class DirectoryMirror
             {
                 stats.Warnings.Add(
                     $"{source.SourceRoot}: Gemerkter Projektordner nicht gefunden - " +
-                    "uebersprungen, bisheriger Sicherungsstand bleibt erhalten.");
+                    "übersprungen, bisheriger Sicherungsstand bleibt erhalten.");
             }
             PreserveExistingMirror(backupRoot, source.TargetRelativeRoot, expectedTargets);
             return;
@@ -137,7 +137,7 @@ public sealed class DirectoryMirror
             // protokollieren UND den vorhandenen Spiegelbestand als "erwartet" markieren.
             stats.Errors.Add(
                 $"{source.SourceRoot}: Quellordner nicht sicher lesbar ({ex.Message}) - " +
-                "uebersprungen, bisheriger Sicherungsstand bleibt erhalten.");
+                "übersprungen, bisheriger Sicherungsstand bleibt erhalten.");
             PreserveExistingMirror(backupRoot, source.TargetRelativeRoot, expectedTargets);
             return;
         }
@@ -293,7 +293,7 @@ public sealed class DirectoryMirror
             // heraus auf fremde Dateien umlenken — solche Pfade nie anfassen.
             if (ReparsePointGuard.HasReparsePointBelow(backupRoot, file))
             {
-                stats.Errors.Add($"{file}: Verknuepfung im Zielpfad - Entfernen uebersprungen");
+                stats.Errors.Add($"{file}: Verknüpfung im Zielpfad - Entfernen übersprungen");
                 continue;
             }
 
@@ -569,7 +569,7 @@ public sealed class DirectoryMirror
             var tempHash = await HashFileAsync(tempFile, FileShare.Read, ct).ConfigureAwait(false);
             if (new FileInfo(tempFile).Length != bytesCopied
                 || !sourceHash.AsSpan().SequenceEqual(tempHash))
-                throw new IOException("Vollstaendige Inhaltspruefung nach dem Kopieren fehlgeschlagen.");
+                throw new IOException("Vollständige Inhaltsprüfung nach dem Kopieren fehlgeschlagen.");
 
             if (bytesCopied == sourceLength
                 && src.Length == sourceLength
@@ -584,7 +584,7 @@ public sealed class DirectoryMirror
             if (attempt == MaxStableCopyAttempts)
             {
                 throw new IOException(
-                    $"Datei wurde waehrend des Kopierens mehrfach geaendert ({MaxStableCopyAttempts} Versuche).");
+                    $"Datei wurde während des Kopierens mehrfach geändert ({MaxStableCopyAttempts} Versuche).");
             }
         }
 
@@ -765,7 +765,7 @@ public sealed class DirectoryMirror
                 if (ReparsePointGuard.IsReparsePoint(children[i]))
                 {
                     Report(stats, linksAreErrors,
-                        $"{children[i]}: Verknuepfung/Junction uebersprungen - bisherige Sicherungskopie bleibt erhalten");
+                        $"{children[i]}: Verknüpfung/Junction übersprungen - bisherige Sicherungskopie bleibt erhalten");
                     onSkippedDirectory?.Invoke(children[i]);
                     continue;
                 }
@@ -797,7 +797,7 @@ public sealed class DirectoryMirror
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Leere Ordner sind nur Kosmetik — kein Grund, die Sicherung zu verwerfen.
-            stats.Warnings.Add($"{backupRoot}: Ordner-Aufraeumen fehlgeschlagen ({ex.Message})");
+            stats.Warnings.Add($"{backupRoot}: Ordner-Aufräumen fehlgeschlagen ({ex.Message})");
             return;
         }
 

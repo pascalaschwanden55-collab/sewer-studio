@@ -130,7 +130,7 @@ public sealed class ProjektPruefungUiTests
                     Assert.Null(vm.FokusPunkt);
                     foreach (var row in VisualTreeSafe.FindDescendants<DataGridRow>(grid))
                     foreach (var text in VisualTreeSafe.FindDescendants<TextBlock>(row).Where(t => t.TextWrapping == TextWrapping.Wrap))
-                        Assert.True(text.DesiredSize.Height <= row.ActualHeight, "Der Hinweis muss vollstaendig in die Zeile passen.");
+                        Assert.True(text.DesiredSize.Height <= row.ActualHeight, "Der Hinweis muss vollständig in die Zeile passen.");
                     Zeichne(seitenScroll, $"projektpruefung-{theme}-{skalierung}");
                 }
             }

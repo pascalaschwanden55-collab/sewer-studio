@@ -84,7 +84,7 @@ public sealed class LiveDetectionMarkBoxSegmentationWorkflowTests
 
         Assert.Equal(LiveDetectionMarkBoxSegmentationOutcome.Failed, result.Outcome);
         Assert.Null(result.Segmentation);
-        Assert.Equal(["[Mark-SAM] Segmentierung uebersprungen: kaputt"], calls);
+        Assert.Equal(["[Mark-SAM] Segmentierung übersprungen: kaputt"], calls);
     }
 
     private static LiveDetectionMarkBoxSegmentationActions NoActions()

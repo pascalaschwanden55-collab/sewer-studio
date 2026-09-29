@@ -17,8 +17,8 @@ public static class TrainingCenterSettingsStore
     [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(ITrainingCenterSettingsStore store) =>
         throw new NotSupportedException(
-            "Der globale Speicher fuer Trainings-Einstellungen kann nicht mehr ausgetauscht werden. " +
-            "ITrainingCenterSettingsStore bitte per Konstruktor uebergeben.");
+            "Der globale Speicher für Trainings-Einstellungen kann nicht mehr ausgetauscht werden. " +
+            "ITrainingCenterSettingsStore bitte per Konstruktor übergeben.");
 
     public static Task<TrainingCenterSettings> LoadAsync() =>
         Current.LoadAsync();

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 namespace AuswertungPro.Next.UI.Ai.Coding;
 
 public sealed record CodingSessionStartWorkflowRequest(
@@ -31,7 +32,7 @@ public static class CodingSessionStartWorkflow
         }
         catch (Exception ex)
         {
-            actions.ShowSessionStartFailed(ex.Message);
+            actions.ShowSessionStartFailed(UserError.DescribeAndReport(ex, "Codier-Session starten"));
             actions.ExitCodingMode();
             return false;
         }

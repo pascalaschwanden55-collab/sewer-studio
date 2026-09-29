@@ -30,11 +30,11 @@ public sealed class CodingSessionStartWorkflowTests
                 executeStartSession: () =>
                 {
                     calls.Add("execute");
-                    throw new InvalidOperationException("Laenge fehlt");
+                    throw new InvalidOperationException("Länge fehlt");
                 }));
 
         Assert.False(result);
-        Assert.Equal(["execute", "error:Laenge fehlt", "exit"], calls);
+        Assert.Equal(["execute", "error:Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.", "exit"], calls);
     }
 
     [Fact]

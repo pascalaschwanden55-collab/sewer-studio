@@ -97,7 +97,7 @@ public sealed class EvidenceFrameRendererTests
 
                     Assert.True(saved);
                     var center = ReadPixel(annotatedPath, 30, 30);
-                    Assert.True(center.G > center.R + 20, $"Maskenpixel muss gruen markiert sein: R={center.R} G={center.G} B={center.B}");
+                    Assert.True(center.G > center.R + 20, $"Maskenpixel muss grün markiert sein: R={center.R} G={center.G} B={center.B}");
                 }
                 finally
                 {

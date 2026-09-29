@@ -137,7 +137,7 @@ public sealed class PdfProtocolExtractorOcrFallbackTests
 
             Assert.Empty(entries);
             Assert.Empty(ocr.Calls);
-            Assert.Contains(logger.Messages, m => m.Contains("OCR uebersprungen (Budget)", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(logger.Messages, m => m.Contains("OCR übersprungen (Budget)", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {

@@ -63,7 +63,7 @@ public sealed class PlayerWindowCodingBoundaryArchitectureTests
         Assert.True(File.Exists(contextPath), "Boundary-Adapter sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(commandWorkflowPath), "Boundary-Event-Requestaufbau soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(workflowPath), "Boundary-Event-Erzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(policyPath), "Import-Referenzlogik fuer BCD/BCE muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(policyPath), "Import-Referenzlogik für BCD/BCE muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var boundaries = File.ReadAllText(contextPath);
         var commandWorkflow = File.ReadAllText(commandWorkflowPath);

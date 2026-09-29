@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Globalization;
 using System.Windows;
@@ -95,7 +96,7 @@ public partial class DossierPlanWindow : Window
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Der Plan konnte nicht geladen werden: " + ex.Message;
+            StatusText.Text = "Der Plan konnte nicht geladen werden: " + UserError.DescribeAndReport(ex, "Dossierplan laden");
         }
     }
 

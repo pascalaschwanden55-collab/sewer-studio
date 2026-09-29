@@ -20,7 +20,7 @@ internal static class XtfZusatzReader
             var (tid, feld) = gruppe.Key;
             if (gruppe.Count() != 1 || !XtfZusatzangaben.IstErlaubt(feld) || !ziele.TryGetValue(tid, out var objekt))
             {
-                Melde($"Zusatzangabe {tid}/{feld}: unbekannt, doppelt oder ohne eindeutiges Ziel; nicht uebernommen.");
+                Melde($"Zusatzangabe {tid}/{feld}: unbekannt, doppelt oder ohne eindeutiges Ziel; nicht übernommen.");
                 continue;
             }
             var wert = (string?)gruppe.Single().Element(ns + "Wert");
@@ -43,13 +43,13 @@ internal static class XtfZusatzReader
             {
                 var treffer = projekt.Data.Where(h => HoldingKeyNormalizer.Normalize(h.GetFieldValue(FieldKeys.HoldingName)) == nummer).ToArray();
                 if (treffer.Length == 1) treffer[0].SetFieldValue(feld, wert, FieldSource.Xtf405, userEdited: false);
-                else Melde($"Zusatzangabe {tid}/{feld}: Haltung im Projekt nicht eindeutig; nicht uebernommen.");
+                else Melde($"Zusatzangabe {tid}/{feld}: Haltung im Projekt nicht eindeutig; nicht übernommen.");
             }
             else if (AbwasserbauwerkVokabular.Auswahl.Contains(klasse))
             {
                 var treffer = projekt.SchaechteData.Where(s => HoldingKeyNormalizer.Normalize(XtfSchachtPlanBuilder.Wert(s, "Schachtnummer")) == nummer).ToArray();
                 if (treffer.Length == 1) treffer[0].SetFieldValue(XtfZusatzangaben.Schachtfeld(treffer[0], feld), wert, FieldSource.Xtf405, userEdited: false);
-                else Melde($"Zusatzangabe {tid}/{feld}: Bauwerk im Projekt nicht eindeutig; nicht uebernommen.");
+                else Melde($"Zusatzangabe {tid}/{feld}: Bauwerk im Projekt nicht eindeutig; nicht übernommen.");
             }
         }
         void Melde(string message) => stats.Messages.Add(new ImportMessage { Level = "Warn", Context = "XTF-ZUSATZ", Message = message });

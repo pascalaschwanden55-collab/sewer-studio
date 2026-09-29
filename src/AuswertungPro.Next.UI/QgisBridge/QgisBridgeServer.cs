@@ -58,7 +58,7 @@ internal sealed class QgisBridgeServer : IDisposable
         }
         catch (SocketException ex)
         {
-            logger.LogWarning(ex, "QGIS-Bridge konnte Port {Port} nicht oeffnen.", port);
+            logger.LogWarning(ex, "QGIS-Bridge konnte Port {Port} nicht öffnen.", port);
             server.Dispose();
             return null;
         }
@@ -161,7 +161,7 @@ internal sealed class QgisBridgeServer : IDisposable
         }
         catch (OperationCanceledException)
         {
-            TryLogWarning(null, "QGIS-Bridge Request wegen Zeitueberschreitung beendet.");
+            TryLogWarning(null, "QGIS-Bridge Request wegen Zeitüberschreitung beendet.");
         }
         catch (Exception ex)
         {

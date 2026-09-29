@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.Windows;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -82,6 +83,29 @@ public sealed class CodeCatalogEditorViewModelTests
         });
     }
 
+    [Fact]
+    public void ValidateCommand_meldet_toast_statt_dialog_wenn_toastdienst_verfuegbar()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var provider = new CatalogProvider([]);
+            var dialogs = new DialogFake();
+            var toasts = new ToastFake();
+            var window = CreateTestWindow();
+            var viewModel = new CodeCatalogEditorViewModel(provider, window, dialogs, toasts);
+            window.Loaded += (_, _) =>
+            {
+                viewModel.ValidateCommand.Execute(null);
+                window.Close();
+            };
+
+            window.ShowDialog();
+
+            Assert.Null(dialogs.LastWarning);
+            Assert.Contains("Validierung erfolgreich", toasts.Meldung, StringComparison.Ordinal);
+        });
+    }
+
     private static Window CreateTestWindow()
         => new()
         {
@@ -139,8 +163,19 @@ public sealed class CodeCatalogEditorViewModelTests
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") => LastWarning = message;
         public void Error(string message, string title = "Fehler") => throw new Xunit.Sdk.XunitException(message);
-        public bool Confirm(string message, string title = "Bestaetigung") => true;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => true;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Yes;
+        public bool Confirm(string message, string title = "Bestätigung") => true;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => true;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Yes;
+    }
+
+    private sealed class ToastFake : IToastService
+    {
+        public string? Meldung { get; private set; }
+
+        public void Success(string message) => Meldung = message;
+        public void Success(string message, string aktionText, Action aktion) => Meldung = message;
+        public void Info(string message) { }
+        public void Warning(string message) { }
+        public void Error(string message) => throw new Xunit.Sdk.XunitException(message);
     }
 }

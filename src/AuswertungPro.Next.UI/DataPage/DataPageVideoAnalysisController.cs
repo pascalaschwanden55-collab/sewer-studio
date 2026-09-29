@@ -98,7 +98,7 @@ public sealed class DataPageVideoAnalysisController : IDisposable
         // Manuelle Eintraege bleiben geschuetzt; die alte Revision wird erst nach Bestaetigung archiviert.
         if (ProtocolReplacementService.HasManualCurrentEntries(record.Protocol)
             && !_dialogs.Confirm(
-                "Diese Haltung enthaelt manuell codierte Eintraege.\n\n" +
+                "Diese Haltung enthält manuell codierte Einträge.\n\n" +
                 "Die KI-Reanalyse ersetzt das angezeigte Protokoll. Das bisherige Protokoll " +
                 "wird in die Historie verschoben (wiederherstellbar).\n\nFortfahren?",
                 "KI-Reanalyse"))
@@ -138,7 +138,7 @@ public sealed class DataPageVideoAnalysisController : IDisposable
 
         return new LiveControlRetryResult(
             true,
-            $"KI-Videoanalyse fuer '{name}' gestartet.");
+            $"KI-Videoanalyse für '{name}' gestartet.");
     }
 
     public void Dispose()

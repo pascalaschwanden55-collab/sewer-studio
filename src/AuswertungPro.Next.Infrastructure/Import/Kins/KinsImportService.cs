@@ -100,7 +100,7 @@ public sealed class KinsImportService : IKinsImportService
         }
 
         if (executed == 0)
-            return Result<ImportStats>.Fail("KINS_NO_STRATEGY", "Keine KINS-Importstrategie ausgewaehlt.");
+            return Result<ImportStats>.Fail("KINS_NO_STRATEGY", "Keine KINS-Importstrategie ausgewählt.");
 
         if (successCount == 0)
         {
@@ -198,18 +198,18 @@ public sealed class KinsImportService : IKinsImportService
                     else if (video.IsAmbiguous)
                     {
                         uncertain++;
-                        messages.Add($"KINS-TXT: Video mehrdeutig fuer {holdingName}: {header.VideoFile} ({video.Candidates.Count} Kandidaten)");
+                        messages.Add($"KINS-TXT: Video mehrdeutig für {holdingName}: {header.VideoFile} ({video.Candidates.Count} Kandidaten)");
                     }
                     else
                     {
                         uncertain++;
-                        messages.Add($"KINS-TXT: Video nicht gefunden fuer {holdingName}: {header.VideoFile}");
+                        messages.Add($"KINS-TXT: Video nicht gefunden für {holdingName}: {header.VideoFile}");
                     }
 
                     if (currentEntries.Count == 0)
                     {
                         uncertain++;
-                        messages.Add($"KINS-TXT: Keine Beobachtungen fuer {holdingName} in {Path.GetFileName(dataFile)}");
+                        messages.Add($"KINS-TXT: Keine Beobachtungen für {holdingName} in {Path.GetFileName(dataFile)}");
                     }
 
                     // Ein Header ohne Beobachtungszeilen liefert Stammdaten, aber kein

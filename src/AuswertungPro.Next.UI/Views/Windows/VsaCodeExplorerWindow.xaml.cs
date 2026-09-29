@@ -51,6 +51,7 @@ public partial class VsaCodeExplorerWindow : Window
     private Color _colorSuccess;
     private Color _colorBorderLight;
     private Color _colorDanger;
+    private FontFamily? _fontMono;
 
     /// <summary>Ergebnis-Entry nach erfolgreichem Uebernehmen.</summary>
     public ProtocolEntry? SelectedEntry { get; private set; }
@@ -282,6 +283,7 @@ public partial class VsaCodeExplorerWindow : Window
         _colorSuccess = (Color)FindResource("ColorSuccess");
         _colorBorderLight = (Color)FindResource("ColorBorderLight");
         _colorDanger = (Color)FindResource("ColorDanger");
+        _fontMono = (FontFamily)FindResource("FontMono");
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -378,10 +380,9 @@ public partial class VsaCodeExplorerWindow : Window
         // und Padding=16,8 — beides bricht das Alignment der Farbbalken.
     }
 
-    // Gecachte Styles und Consolas-Font
+    // Gecachte Styles
     private Style? _toolbarButtonStyle;
     private Style? _tileButtonStyle;
-    private static readonly FontFamily ConsolasFont = new("Consolas");
 
     // Cache fuer GroupColor-Brushes (vermeidet wiederholtes ColorConverter.ConvertFromString)
     private readonly System.Collections.Generic.Dictionary<string, SolidColorBrush> _groupColorCache = new();
@@ -567,7 +568,7 @@ public partial class VsaCodeExplorerWindow : Window
                 new VsaCodeExplorerBreadcrumbRenderBrushes(
                     _textBrush ?? Brushes.Black,
                     _mutedBrush ?? Brushes.Gray),
-                ConsolasFont,
+                _fontMono ?? new FontFamily("Consolas"),
                 _vm.NavigateToBreadcrumb));
     }
 

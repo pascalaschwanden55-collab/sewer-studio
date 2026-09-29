@@ -108,7 +108,7 @@ internal sealed class PersonalGoldArchiveRecoveryJournalStore(
                 StringComparison.Ordinal))
         {
             throw new InvalidDataException(
-                "Recovery-Journal gehoert nicht mehr zur laufenden Transaktion.");
+                "Recovery-Journal gehört nicht mehr zur laufenden Transaktion.");
         }
         PersonalGoldBrainFileService.DeleteFileSafe(
             GetJournalSafetyRoot(paths),

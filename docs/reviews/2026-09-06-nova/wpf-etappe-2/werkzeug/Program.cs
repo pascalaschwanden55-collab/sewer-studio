@@ -48,9 +48,13 @@ internal static partial class Program
         }
     }
 
-    static readonly string Root = @"C:\Sewer-Studio_KI_4.5-nova\.tmp\nova-abnahme-codex\bedienung";
-    static readonly string Bin = @"C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.UI\bin\Debug\net10.0-windows10.0.19041";
-    static readonly string AppXaml = @"C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.UI\App.xaml";
+    // Aufgabe 17 (Optikanalyse 28.09.2026): Der Ordnerumzug auf 5.0 (13.09.2026) hat diese drei
+    // Konstanten nicht mitgezogen — sie zeigten noch auf den nicht mehr vorhandenen alten
+    // Worktree C:\Sewer-Studio_KI_4.5-nova. Root bleibt ein eigener, isolierter Profilordner
+    // (nie das echte Benutzerprofil/echte Projekte), jetzt im aktuellen Arbeitsbaum.
+    static readonly string Root = @"C:\Sewer-Studio_KI_5.0\.claude\worktrees\optik-professionell\.tmp\optik-abnahme\bedienung";
+    static readonly string Bin = @"C:\Sewer-Studio_KI_5.0\.claude\worktrees\optik-professionell\src\AuswertungPro.Next.UI\bin\Debug\net10.0-windows10.0.19041";
+    static readonly string AppXaml = @"C:\Sewer-Studio_KI_5.0\.claude\worktrees\optik-professionell\src\AuswertungPro.Next.UI\App.xaml";
     static string AppliedTheme = "Dark";
     static string AppliedPage = "Haltungen";
     static string AppliedVariant = "";
@@ -134,21 +138,37 @@ internal static partial class Program
         foreach (var element in dictionary.Descendants())
             if (element.Name.NamespaceName.StartsWith("clr-namespace:") && !element.Name.NamespaceName.Contains(";assembly="))
                 element.Name = XName.Get(element.Name.LocalName, element.Name.NamespaceName + ";assembly=SewerStudio");
+        // Aufgabe 17: das gewaehlte Theme wird VOR dem einzigen XamlReader.Parse-Aufruf in den
+        // Baum geschrieben (statt per nachtraeglichem MergedDictionaries[0]-Tausch danach) — ein
+        // in sich konsistenter Parse ist grundsaetzlich sauberer als ein Objekttausch nach dem
+        // Laden. Behebt NICHT den unten dokumentierten offenen Befund (siehe OFFEN).
+        var themeFile = theme == "Dark" ? "Theme.xaml" : "ThemeLight.xaml";
         foreach (var source in dictionary.Descendants().Attributes("Source"))
+        {
+            source.Value = source.Value.EndsWith("Theme/ThemeLight.xaml", StringComparison.OrdinalIgnoreCase)
+                ? $"Theme/{themeFile}"
+                : source.Value;
             source.Value = "/SewerStudio;component/" + source.Value;
+        }
         app.Resources = (ResourceDictionary)System.Windows.Markup.XamlReader.Parse(dictionary.ToString());
 
         WindowStateManager.Configure(settings);
         ViewCustomizationStore.Configure(settings);
         MotionSettings.Configure(true);
 
-        // App.xaml fuehrt drei gemergte Woerterbuecher: [0] Theme, [1] Theme/Controls.xaml,
-        // [2] Controls/NovaPageHeader.xaml. Nur [0] wird gegen das gewaehlte Theme getauscht.
-        var themeFile = theme == "Dark" ? "Theme.xaml" : "ThemeLight.xaml";
-        app.Resources.MergedDictionaries[0] = new ResourceDictionary
-        {
-            Source = new Uri($"/SewerStudio;component/Theme/{themeFile}", UriKind.Relative)
-        };
+        // OFFEN (Aufgabe 17, nicht behoben): Auf Seiten, die einen Stil mit
+        // BasedOn="{StaticResource ToolbarButton}" aus Controls.xaml lazy laden (z. B.
+        // "BearbeitungErledigtKnopf" auf der Haltungsseite; ToolbarButton selbst ist in
+        // Theme.xaml/ThemeLight.xaml definiert), wirft XamlReader.Parse beim ersten Gebrauch
+        // "Die Ressource mit dem Namen 'ToolbarButton' kann nicht gefunden werden" — real
+        // geprueft, auch nach obigem Umbau unveraendert. Vermutete Ursache: Cross-Datei-BasedOn
+        // ueber mehrere per Source= geladene ResourceDictionary-Eintraege setzt bei
+        // XamlReader.Parse (im Unterschied zur echten kompilierten BAML von App.xaml) keinen
+        // gemeinsamen Aufloesungskontext voraus. Betroffen sind mindestens die Seiten Haltungen
+        // und vermutlich Schaechte; Uebersicht ist NICHT betroffen (real erfolgreich fotografiert,
+        // 29.09.2026). Eine echte Behebung braeuchte eine tiefere Aenderung an diesem Pruefhost
+        // (z. B. App.xaml wirklich per InitializeComponent() aus der kompilierten Assembly laden
+        // statt es als Text nachzubauen) und ist nicht Teil dieser Aufgabe.
 
         var services = new AuswertungPro.Next.UI.ServiceProvider(settings, new DiagnosticsOptions(),
             NullLogger.Instance, NullLoggerFactory.Instance);

@@ -17,6 +17,7 @@ public sealed class SettingsSearchController(TabControl reiter)
     {
         var sichtbarGesamt = 0;
         TabItem? ersterMitTreffer = null;
+        var hatSuche = !string.IsNullOrWhiteSpace(suche);
 
         foreach (var tab in reiter.Items.OfType<TabItem>())
         {
@@ -29,7 +30,18 @@ public sealed class SettingsSearchController(TabControl reiter)
                     sichtbarImReiter++;
             }
 
-            tab.Opacity = sichtbarImReiter == 0 && !string.IsNullOrWhiteSpace(suche)
+            // Aufgabe 10a: Ein Treffer in einem technischen «Erweitert»-Bereich (Expander,
+            // Standard zugeklappt) muss trotzdem gefunden werden. Ohne dieses Aufklappen
+            // bliebe eine sichtbar geschaltete Gruppe hinter einem zugeklappten Kopf
+            // verborgen. Ohne Suche geht der Bereich zurueck in seinen Standardzustand zu.
+            foreach (var aufklapper in Aufklapper(tab))
+            {
+                var hatTreffer = Nachfahren(aufklapper).OfType<GroupBox>()
+                    .Any(gruppe => gruppe.Visibility == Visibility.Visible);
+                aufklapper.IsExpanded = hatSuche && hatTreffer;
+            }
+
+            tab.Opacity = sichtbarImReiter == 0 && hatSuche
                 ? AbgedunkeltOpacity
                 : 1.0;
             if (sichtbarImReiter > 0)
@@ -50,6 +62,10 @@ public sealed class SettingsSearchController(TabControl reiter)
 
     private static IEnumerable<GroupBox> Gruppen(TabItem tab)
         => Nachfahren(tab.Content as DependencyObject).OfType<GroupBox>();
+
+    /// <summary>Zugeklappte «Erweitert»-Bereiche des Reiters (z. B. technische Einstellungen).</summary>
+    private static IEnumerable<Expander> Aufklapper(TabItem tab)
+        => Nachfahren(tab.Content as DependencyObject).OfType<Expander>();
 
     /// <summary>Liest Ueberschrift, Texte, Beschriftungen und Tooltips einer Gruppe.</summary>
     private static IEnumerable<string> Texte(GroupBox gruppe)

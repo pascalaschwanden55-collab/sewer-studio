@@ -91,7 +91,7 @@ public sealed class DashboardStatisticsBuilderTests
 
         Assert.Equal(["BAB", "BAF"], stats.TopSchaeden.Select(b => b.Key).OrderBy(k => k));
         Assert.Contains(stats.TopSchaeden, b => b.Key == "BAB" && b.Label == "BAB (Riss)");
-        Assert.Contains(stats.TopSchaeden, b => b.Key == "BAF" && b.Label == "BAF (Oberflaeche)");
+        Assert.Contains(stats.TopSchaeden, b => b.Key == "BAF" && b.Label == "BAF (Oberfläche)");
     }
 
     [Theory]

@@ -106,7 +106,7 @@ public sealed class DossiersPageActionFlowTests : IDisposable
 
         Assert.Contains("Kostendaten nicht lesbar", vm.StatusMessage, StringComparison.Ordinal);
         Assert.Contains("schacht_empfehlungen.json", vm.StatusMessage, StringComparison.Ordinal);
-        Assert.Contains("ungueltiges JSON", vm.StatusMessage, StringComparison.Ordinal);
+        Assert.Contains("ungültiges JSON", vm.StatusMessage, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -843,7 +843,7 @@ public sealed class DossiersPageActionFlowTests : IDisposable
             public ProjectCostStore Load(string? projectPath, out string? loadError)
             {
                 loadError = string.Equals(fileName, fehlerDatei, StringComparison.Ordinal)
-                    ? "ungueltiges JSON"
+                    ? "ungültiges JSON"
                     : null;
                 return new ProjectCostStore();
             }
@@ -881,16 +881,16 @@ public sealed class DossiersPageActionFlowTests : IDisposable
 
         public void Error(string message, string title = "Fehler") { }
 
-        public bool Confirm(string message, string title = "Bestaetigung")
+        public bool Confirm(string message, string title = "Bestätigung")
         {
             ConfirmCalls++;
             return true;
         }
 
         public bool ConfirmWarn(
-            string message, string title = "Bestaetigung", bool defaultNo = true) => true;
+            string message, string title = "Bestätigung", bool defaultNo = true) => true;
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
             => DialogConfirm.Yes;
     }
 

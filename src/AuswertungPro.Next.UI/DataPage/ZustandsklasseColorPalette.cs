@@ -52,7 +52,7 @@ public static class ZustandsklasseColorPalette
     private static SolidColorBrush CreateBrush(string argb)
     {
         if (argb.Length != 8)
-            throw new InvalidOperationException($"Ungueltige ARGB-Farbe: {argb}");
+            throw new InvalidOperationException($"Ungültige ARGB-Farbe: {argb}");
 
         var brush = new SolidColorBrush(Color.FromRgb(
             Convert.ToByte(argb.Substring(2, 2), 16),

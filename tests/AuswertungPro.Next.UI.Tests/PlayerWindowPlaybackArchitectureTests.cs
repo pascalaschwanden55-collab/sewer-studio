@@ -40,7 +40,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
             "PlayerWindow.xaml.cs"
         };
 
-        Assert.True(File.Exists(hostPath), "Pause/Resume-Zugriffe sollen ueber einen Playback-Control-Host laufen.");
+        Assert.True(File.Exists(hostPath), "Pause/Resume-Zugriffe sollen über einen Playback-Control-Host laufen.");
         Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
         Assert.True(File.Exists(liveDetectionFactoryPath));
         Assert.True(File.Exists(markToolFactoryPath));
@@ -572,7 +572,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackController.cs");
 
-        Assert.True(File.Exists(controllerPath), "Playback-Start soll ausserhalb des PlayerWindow ueber den Host laufen.");
+        Assert.True(File.Exists(controllerPath), "Playback-Start soll ausserhalb des PlayerWindow über den Host laufen.");
 
         var playback = File.ReadAllText(playbackPath);
         var controller = File.ReadAllText(controllerPath);
@@ -691,11 +691,11 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
 
         Assert.True(File.Exists(overlayPath), "Playback-Marquee-Overlay-Wiring soll in einem eigenen Playback-Partial liegen.");
-        Assert.True(File.Exists(policyPath), "VLC-Marquee-Anzeigeparameter muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(policyPath), "VLC-Marquee-Anzeigeparameter müssen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(displayWorkflowPath), "Overlay-Anzeige-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(lastOverlayWorkflowPath), "Last-PlayerWindow-Overlay-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(disablerPath), "VLC-Marquee-Deaktivieren muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(hostPath), "Direkte VLC-Marquee-Zugriffe sollen ueber einen Host laufen.");
+        Assert.True(File.Exists(hostPath), "Direkte VLC-Marquee-Zugriffe sollen über einen Host laufen.");
         Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
 
         var playback = File.ReadAllText(playbackPath);

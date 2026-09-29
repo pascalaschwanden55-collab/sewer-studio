@@ -56,7 +56,41 @@ public sealed class DesignAuditFeinschliffTests
 
         Assert.True(
             treffer.Count == 0,
-            "Sichtbare Texte schreiben Umlaute als ae/oe/ue. Die Konvention gilt nur fuer den Quellcode, nicht fuer das, was der Nutzer liest:\n"
+            "Sichtbare Texte schreiben Umlaute als ae/oe/ue. Die Konvention gilt nur für den Quellcode, nicht für das, was der Nutzer liest:\n"
+            + string.Join("\n", treffer));
+    }
+
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 10a: Schweizer Schreibweise gilt auch fuer das
+    /// scharfe S. Sichtbare Texte schreiben "ss" statt "ß" ("Massnahmen", "Strasse",
+    /// "schliessen"); Kommentare und Bezeichner bleiben unberuehrt (dieselbe Regel wie beim
+    /// Umlaut-Waechter oben — <see cref="SichtbaresAttribut"/> sieht nur XAML-Attributwerte).
+    /// </summary>
+    [Fact]
+    public void Sichtbare_Texte_enthalten_kein_scharfes_S()
+    {
+        var treffer = new List<string>();
+
+        foreach (var datei in AlleXamlDateien())
+        {
+            var zeilen = File.ReadAllLines(datei);
+            for (var i = 0; i < zeilen.Length; i++)
+            {
+                foreach (Match m in SichtbaresAttribut.Matches(zeilen[i]))
+                {
+                    var wert = SichtbarerAnteil(m.Groups[2].Value);
+                    if (wert is null)
+                        continue;
+
+                    if (wert.Contains('ß'))
+                        treffer.Add($"{Relativ(datei)}:{i + 1}: {m.Groups[1].Value}=\"{wert}\"");
+                }
+            }
+        }
+
+        Assert.True(
+            treffer.Count == 0,
+            "Sichtbare Texte schreiben ein scharfes ß statt der Schweizer Schreibweise ss:\n"
             + string.Join("\n", treffer));
     }
 
@@ -197,7 +231,7 @@ public sealed class DesignAuditFeinschliffTests
         foreach (var stil in stile)
         {
             var start = controls.IndexOf($"<Style TargetType=\"{{x:Type {stil}}}\"", StringComparison.Ordinal);
-            Assert.True(start >= 0, $"Impliziter Stil fuer {stil} nicht gefunden.");
+            Assert.True(start >= 0, $"Impliziter Stil für {stil} nicht gefunden.");
 
             // Nur die Setter auf oberster Ebene des Stils zaehlen (bis zum ersten Template/Trigger-Block).
             var ende = controls.IndexOf("<Setter Property=\"Template\">", start, StringComparison.Ordinal);
@@ -222,6 +256,12 @@ public sealed class DesignAuditFeinschliffTests
             "PhotoMeasurementWindow.xaml", "StartupSplashWindow.xaml", "PipeGraphTimeline.xaml"
         };
         var festeFarbe = new Regex("\\b(Background|Foreground|BorderBrush|Fill|Stroke)=\"#[0-9A-Fa-f]{6,8}\"", RegexOptions.Compiled);
+        // Aufgabe 12 (Optik-Plan 28.09.2026): Ein Setter schreibt die Farbe nicht als Attributname,
+        // sondern als Wert von Property="Background" ... Value="#hex" — die Regel oben sieht das
+        // nicht. Genau diese Luecke versteckte die fuenf Hex-Werte in SanierungsmassnahmenWindow.xaml.
+        var festeSetterFarbe = new Regex(
+            "Property=\"(Background|Foreground|BorderBrush|Fill|Stroke)\"\\s+Value=\"#[0-9A-Fa-f]{6,8}\"",
+            RegexOptions.Compiled);
         var treffer = new List<string>();
 
         foreach (var datei in AlleXamlDateien())
@@ -233,6 +273,8 @@ public sealed class DesignAuditFeinschliffTests
             for (var i = 0; i < zeilen.Length; i++)
             {
                 foreach (Match m in festeFarbe.Matches(zeilen[i]))
+                    treffer.Add($"{Relativ(datei)}:{i + 1}: {m.Value}");
+                foreach (Match m in festeSetterFarbe.Matches(zeilen[i]))
                     treffer.Add($"{Relativ(datei)}:{i + 1}: {m.Value}");
             }
         }

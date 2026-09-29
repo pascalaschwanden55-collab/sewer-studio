@@ -22,7 +22,9 @@ public sealed partial class DataPageViewModel
 
         var anzahl = new GeoShopAbgleichDialog(_geoShop, _dialogs, datei => { Settings.GeoShopXtfPath = datei; Settings.Save(); }, _geoShopSicherung).Zeige(BauteilArt.Haltung,
             () => Records.Select(r => GeoShopZiel.Fuer(r, _shell.Project)).ToArray(), () => _shell.IsProjectReady);
-        SaveStatus = anzahl > 0 ? $"GeoShop: {anzahl} Haltungen abgeglichen. Bitte speichern." : "GeoShop: Keine Änderungen übernommen.";
+        // ScheduleAutoSave() speichert bereits selbst - kein "Bitte speichern" mehr noetig
+        // (gleiche Korrektur wie beim Schaechte-Gegenstueck SchaechtePageViewModel.KatasterKennungen.cs).
+        SaveStatus = anzahl > 0 ? $"GeoShop: {anzahl} Haltungen abgeglichen." : "GeoShop: Keine Änderungen übernommen.";
         IsSaveStatusVisible = true;
         if (anzahl > 0)
         {

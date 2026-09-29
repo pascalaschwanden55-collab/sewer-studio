@@ -22,7 +22,7 @@ public static class TrainingCenterScanWorkflow
 
         if (request.RootFolders.Count == 0)
         {
-            request.SetStatusText("Bitte zuerst einen oder mehrere Ordner waehlen.");
+            request.SetStatusText("Bitte zuerst einen oder mehrere Ordner wählen.");
             return;
         }
 

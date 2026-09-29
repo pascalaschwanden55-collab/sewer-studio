@@ -47,6 +47,16 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly IAiPlatformSettingsResolver _aiSettings;
     private readonly ISidecarScriptLocator _sidecarScripts;
     private readonly ISidecarTokenResolver _sidecarTokens;
+    // Gemeinsame Quelle fuer das Logo in Berichten (Optikanalyse 28.09.2026, Aufgabe 15).
+    // Liefert die Vorschau; die Einstellung selbst steht in AppSettings.BerichtsLogoPfad.
+    private readonly IBerichtsMarke _berichtsMarke;
+
+    /// <summary>
+    /// Aufgabe 13 (Windows-Integration, 28.09.2026): spiegelt den Fortschritt der Datensicherung
+    /// am Programmsymbol in der Taskleiste. Optional (null in Alt-/Testkonstruktoren ohne
+    /// ServiceProvider) - dann bleibt die Taskleiste unberuehrt.
+    /// </summary>
+    private readonly ITaskbarFortschritt? _taskbar;
 
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
@@ -71,10 +81,50 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private int _videoNetworkCachingMs;
     [ObservableProperty] private int _videoCodecThreads;
     [ObservableProperty] private string _videoOutput = "direct3d11";
+
+    /// <summary>
+    /// Design-Wahl Hell/Dunkel/"Wie Windows" (<see cref="ThemeManager.System"/>). Aufgabe 13:
+    /// wird beim Setzen sofort angewendet UND gespeichert (<see cref="OnUiThemeChanged"/>) - kein
+    /// getrennter "Anwenden"-Knopf mehr.
+    /// </summary>
     [ObservableProperty] private string _uiTheme = ThemeManager.Light;
-    [ObservableProperty] private bool _isDarkTheme;
     [ObservableProperty] private bool _reduceMotion;
     [ObservableProperty] private bool _hintergrundEngine;
+
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 8: Die drei Umschalter "Alte Haltungsansicht", "Alte
+    /// Schachtansicht" und "Klassische Übersicht" sind aus ihren Menüs entfernt und stehen jetzt
+    /// hier in der Gruppe "Frühere Ansichten". Jeder Schalter setzt denselben AppSettings-Wert wie
+    /// zuvor der Menüpunkt und speichert sofort (Muster wie ReduceMotion oben). Haltungen, Schächte
+    /// und Übersicht sind eigene Seiten, die nicht gleichzeitig mit den Einstellungen sichtbar sein
+    /// können - die Änderung wirkt deshalb beim nächsten Öffnen der jeweiligen Seite.
+    /// </summary>
+    [ObservableProperty] private bool _alteHaltungsansicht;
+    [ObservableProperty] private bool _alteSchachtansicht;
+    [ObservableProperty] private bool _klassischeProjektuebersicht;
+
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 15: eigenes Logo fuer Berichte (PDF-/Excel-Export,
+    /// Dossier). Leer = das mitgelieferte Standardlogo gilt weiter. Setzt sofort
+    /// <see cref="AppSettings.BerichtsLogoPfad"/> und speichert sofort (Muster wie
+    /// ReduceMotion oben); "Auswählen…" und "Zurücksetzen" sind die einzigen Schreibwege,
+    /// deshalb genügt das — kein Speichern je Tastenanschlag.
+    /// </summary>
+    [ObservableProperty] private string? _berichtsLogoPfad;
+
+    /// <summary>Anzeige unter dem Pfadfeld: eigener Pfad oder Hinweis auf das Standardlogo.</summary>
+    public string BerichtsLogoAnzeige => string.IsNullOrWhiteSpace(BerichtsLogoPfad)
+        ? "Standardlogo wird verwendet"
+        : BerichtsLogoPfad;
+
+    /// <summary>
+    /// Tatsächlich verwendetes Logo (Einstellung oder Standard) für die Vorschau; liest live
+    /// über dieselbe Quelle, die auch die Exporte verwenden. Null = kein Logo gefunden
+    /// (weder eingestellt noch Standardlogo vorhanden) — dann zeigt die Vorschau nichts.
+    /// </summary>
+    public string? BerichtsLogoVorschauPfad => _berichtsMarke.LogoPfad;
+
+    public bool HatBerichtsLogoVorschau => !string.IsNullOrWhiteSpace(BerichtsLogoVorschauPfad);
 
     /// <summary>Anzahl Fotos je Seite in den selbst erzeugten Haltungsprotokollen.</summary>
     [ObservableProperty] private int _protocolPhotosPerPage;
@@ -90,12 +140,11 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private string _backupStatusText = string.Empty;
     [ObservableProperty] private bool _includeProjectVideosInFullBackup;
     [ObservableProperty] private string _aiStartupStatusText = string.Empty;
-    [ObservableProperty] private string _programCleanupStatusText = "Noch nicht geprueft.";
-    [ObservableProperty] private string _codexArtifactCleanupStatusText = "Noch nicht geprueft.";
+    [ObservableProperty] private string _programCleanupStatusText = "Noch nicht geprüft.";
+    [ObservableProperty] private string _codexArtifactCleanupStatusText = "Noch nicht geprüft.";
     [ObservableProperty] private bool _isProgramCleanupRunning;
     // true, solange "KI starten" laeuft -> Fortschrittsbalken sichtbar, Knopf gesperrt.
     [ObservableProperty] private bool _isAiStarting;
-    private bool _syncingThemeState;
 
     public IReadOnlyList<IntOption> ProtocolPhotosPerPageOptions { get; } =
         ProtocolPdfPhotoLayout.AllowedValues
@@ -141,10 +190,11 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     public IRelayCommand BrowseAbwasserkatasterXtfPathCommand { get; }
     public IRelayCommand BrowseVideoFolderCommand { get; }
     public IRelayCommand BrowseKantonUriXtfDirectoryCommand { get; }
+    public IRelayCommand BrowseBerichtsLogoCommand { get; }
+    public IRelayCommand ResetBerichtsLogoCommand { get; }
     public IRelayCommand OpenDataFolderCommand { get; }
     public IRelayCommand OpenLogsFolderCommand { get; }
     public IRelayCommand OpenRestorePointsFolderCommand { get; }
-    public IRelayCommand ApplyThemeCommand { get; }
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand ResetYoloConfidenceCommand { get; }
     public IRelayCommand ResetDinoBoxThresholdCommand { get; }
@@ -178,7 +228,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             sidecarScripts: sp.SidecarScripts,
             sidecarTokens: sp.SidecarTokens,
             programSnapshot: sp.ProgramSnapshot,
-            backupAdditionalFolders: sp.BackupAdditionalFolders)
+            backupAdditionalFolders: sp.BackupAdditionalFolders,
+            taskbar: sp.Taskbar,
+            berichtsMarke: sp.BerichtsMarke)
     {
     }
 
@@ -270,7 +322,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         ISidecarScriptLocator? sidecarScripts = null,
         ISidecarTokenResolver? sidecarTokens = null,
         IProgramSnapshotService? programSnapshot = null,
-        IBackupAdditionalFolders? backupAdditionalFolders = null)
+        IBackupAdditionalFolders? backupAdditionalFolders = null,
+        ITaskbarFortschritt? taskbar = null,
+        IBerichtsMarke? berichtsMarke = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
@@ -298,6 +352,10 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             ?? Infrastructure.Ai.Startup.SidecarScriptLocator.Current;
         _sidecarTokens = sidecarTokens
             ?? Infrastructure.Ai.Pipeline.SidecarTokenResolver.Current;
+        _taskbar = taskbar;
+        // Ohne Injektion (Alt-/Testkonstruktoren) selbst aufbauen: _settings ist hier immer
+        // vorhanden, anders als bei Diensten, die ohne ServiceProvider entstehen koennen.
+        _berichtsMarke = berichtsMarke ?? new AppSettingsBerichtsMarke(_settings);
 
         EnableDiagnostics = _settings.EnableDiagnostics;
         PdfToTextPath = _settings.PdfToTextPath;
@@ -316,13 +374,19 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         VideoNetworkCachingMs = SettingsSaveWorkflow.ClampCaching(_settings.VideoNetworkCachingMs);
         VideoCodecThreads = SettingsSaveWorkflow.ClampCodecThreads(_settings.VideoCodecThreads);
         VideoOutput = SettingsSaveWorkflow.NormalizeVideoOutput(_settings.VideoOutput);
-        UiTheme = ThemeManager.NormalizeTheme(_settings.UiTheme);
-        IsDarkTheme = string.Equals(UiTheme, ThemeManager.Dark, StringComparison.Ordinal);
+        // Direkt ins Feld, wie ProtocolPhotosPerPage oben: ueber die Eigenschaft wuerde das
+        // blosse Oeffnen der Seite OnUiThemeChanged ausloesen und damit sofort erneut speichern.
+        _uiTheme = ThemeManager.NormalizePreference(_settings.UiTheme);
         ReduceMotion = _settings.ReduceMotion;
         HintergrundEngine = _settings.HintergrundEngine;
+        AlteHaltungsansicht = !_settings.ShowHaltungenNovaLayout;
+        AlteSchachtansicht = !_settings.ShowSchaechteNovaLayout;
+        KlassischeProjektuebersicht = !_settings.ShowUebersichtNovaLayout;
         // Direkt ins Feld: ueber die Eigenschaft wuerde das blosse Oeffnen der Seite
         // die Einstellungen ohne Aenderung neu schreiben.
         _protocolPhotosPerPage = ProtocolPdfPhotoLayout.Normalize(_settings.ProtocolPhotosPerPage);
+        // Direkt ins Feld (gleicher Grund wie ProtocolPhotosPerPage oben).
+        _berichtsLogoPfad = _settings.BerichtsLogoPfad;
         StartAiOnProgramStart = _settings.AiStartOnProgramStart;
         CodingSuggestionsEnabled = _settings.CodingSuggestionsEnabled;
         var pipelineConfig = AiSettingsFactory
@@ -343,10 +407,11 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         BrowseAbwasserkatasterXtfPathCommand = new RelayCommand(BrowseAbwasserkatasterXtfPath);
         BrowseVideoFolderCommand = new RelayCommand(BrowseVideoFolder);
         BrowseKantonUriXtfDirectoryCommand = new RelayCommand(BrowseKantonUriXtfDirectory);
+        BrowseBerichtsLogoCommand = new RelayCommand(BrowseBerichtsLogo);
+        ResetBerichtsLogoCommand = new RelayCommand(() => BerichtsLogoPfad = null);
         OpenDataFolderCommand = new RelayCommand(OpenDataFolder);
         OpenLogsFolderCommand = new RelayCommand(OpenLogsFolder);
         OpenRestorePointsFolderCommand = new RelayCommand(OpenRestorePointsFolder);
-        ApplyThemeCommand = new RelayCommand(ApplyTheme);
         SaveCommand = new RelayCommand(Save);
         ResetYoloConfidenceCommand = new RelayCommand(() => PipelineYoloConfidence = DefaultYoloConfidence);
         ResetDinoBoxThresholdCommand = new RelayCommand(() => PipelineDinoBoxThreshold = DefaultDinoBoxThreshold);
@@ -407,6 +472,44 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         MotionSettings.RaiseEngineChanged();
     }
 
+    partial void OnAlteHaltungsansichtChanged(bool value)
+    {
+        // Sofort speichern (Muster wie ReduceMotion oben). Die Haltungen-Seite liest
+        // AppSettings.ShowHaltungenNovaLayout beim naechsten Aufbau (Projektwechsel, erneutes
+        // Oeffnen der Seite) frisch - waehrend die Einstellungen offen sind, kann die
+        // Haltungen-Seite ohnehin nicht gleichzeitig sichtbar sein.
+        _settings.ShowHaltungenNovaLayout = !value;
+        _settings.SaveImmediate();
+    }
+
+    partial void OnAlteSchachtansichtChanged(bool value)
+    {
+        // Sofort speichern (Muster wie ReduceMotion oben). Die Schaechte-Seite liest
+        // AppSettings.ShowSchaechteNovaLayout beim naechsten Aufbau frisch.
+        _settings.ShowSchaechteNovaLayout = !value;
+        _settings.SaveImmediate();
+    }
+
+    partial void OnKlassischeProjektuebersichtChanged(bool value)
+    {
+        // Sofort speichern (Muster wie ReduceMotion oben). ShellViewModel.NavItems liest
+        // AppSettings.ShowUebersichtNovaLayout bei jeder Navigation zu "Uebersicht" frisch aus.
+        _settings.ShowUebersichtNovaLayout = !value;
+        _settings.SaveImmediate();
+    }
+
+    partial void OnBerichtsLogoPfadChanged(string? value)
+    {
+        // Sofort speichern (Muster wie ReduceMotion oben); der Wert kommt nur ueber
+        // "Auswählen…"/"Zurücksetzen", nie ueber Tippen. Vorschau und Anzeigetext lesen
+        // dieselbe Quelle (IBerichtsMarke) frisch nach und werden deshalb hier gemeldet.
+        _settings.BerichtsLogoPfad = value;
+        _settings.SaveImmediate();
+        OnPropertyChanged(nameof(BerichtsLogoAnzeige));
+        OnPropertyChanged(nameof(BerichtsLogoVorschauPfad));
+        OnPropertyChanged(nameof(HatBerichtsLogoVorschau));
+    }
+
     partial void OnProtocolPhotosPerPageChanged(int value)
     {
         // Sofort speichern (Muster wie der Backup-Schalter). Bereits erzeugte PDFs bleiben
@@ -431,14 +534,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         CleanCodexArtifactsCommand?.NotifyCanExecuteChanged();
     }
 
+    /// <summary>
+    /// Aufgabe 13: die Design-Wahl (Radioknoepfe Hell/Dunkel/Wie Windows) wendet sich sofort an
+    /// und speichert sofort - kein getrennter "Anwenden"-Knopf mehr.
+    /// </summary>
     partial void OnUiThemeChanged(string value)
     {
-        SettingsThemeWorkflow.SyncUiThemeChanged(value, ThemeUi());
-    }
-
-    partial void OnIsDarkThemeChanged(bool value)
-    {
-        SettingsThemeWorkflow.SyncIsDarkThemeChanged(value, ThemeUi());
+        SettingsThemeWorkflow.ApplyTheme(_settings, value, _settings.SaveImmediate);
     }
 
     private void OpenDataFolder() => OpenFolder(DataFolderPath);
@@ -493,6 +595,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         KantonUriXtfDirectory = p;
     }
 
+    private void BrowseBerichtsLogo()
+    {
+        var p = SettingsPathWorkflow.SelectBerichtsLogoPfad(_dialogs, BerichtsLogoPfad);
+        if (p is null) return;
+        BerichtsLogoPfad = p;
+    }
+
     private void Save()
     {
         SettingsSaveWorkflow.Save(new SettingsSaveWorkflowRequest(
@@ -542,27 +651,14 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             _sidecarTokens).ConfigureAwait(true);
     }
 
-    private void ApplyTheme()
-    {
-        SettingsThemeWorkflow.ApplyTheme(_settings, UiTheme, _settings.SaveImmediate);
-    }
-
-    private SettingsThemeWorkflowUi ThemeUi()
-        => new(
-            () => _syncingThemeState,
-            value => _syncingThemeState = value,
-            () => UiTheme,
-            value => UiTheme = value,
-            () => IsDarkTheme,
-            value => IsDarkTheme = value);
-
     private async Task ExportBackupAsync()
     {
         await SettingsKnowledgeBackupWorkflow.ExportAsync(
             _knowledgeBackup,
             _dialogs,
             value => BackupStatusText = value,
-            () => DateTime.Now).ConfigureAwait(true);
+            () => DateTime.Now,
+            toasts: _toasts).ConfigureAwait(true);
     }
 
     private async Task ImportBackupAsync()
@@ -589,7 +685,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
                     AppContext.BaseDirectory,
                     Environment.CurrentDirectory),
                 _programSnapshot.CreateAsync,
-                () => DateTime.Now)).ConfigureAwait(true);
+                () => DateTime.Now,
+                Toasts: _toasts)).ConfigureAwait(true);
     }
 
     private async Task CreateFullBackupAsync(CancellationToken ct)
@@ -603,7 +700,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
                 FullBackupOperation,
                 AppSettings.FlushPendingSave,
                 _settings.SaveImmediate,
-                () => DateTime.UtcNow),
+                () => DateTime.UtcNow,
+                Taskbar: _taskbar),
             ct).ConfigureAwait(true);
     }
 

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -184,7 +185,7 @@ public sealed class SchaechteNovaWorkspaceController
         {
             // Anzeige-Hilfe: Die Seite darf an einer kaputten QGIS-Kopie nicht scheitern, aber
             // der Grund gehoert sichtbar in die Grafik.
-            hinweis = "Lage aus der QGIS-Kopie nicht lesbar: " + ex.Message;
+            hinweis = "Lage aus der QGIS-Kopie nicht lesbar: " + UserError.DescribeAndReport(ex, "Schachtlage aus QGIS lesen");
         }
 
         if (generation != _zusatzGeneration)

@@ -4,28 +4,42 @@
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
+        xmlns:nova="clr-namespace:AuswertungPro.Next.UI.Controls"
         x:Name="Root"
         Title="SewerStudio — Details" Width="1360" Height="860" MinWidth="980" MinHeight="680"
         WindowStartupLocation="CenterOwner" WindowStyle="SingleBorderWindow"
         AllowsTransparency="False" ResizeMode="CanResize">
     <Grid Margin="18">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <controls:RecordDetailsView Grid.Row="0"
+        <!-- RecordDetailsView traegt ihren eigenen Kopf ueber Header/SubHeader; hier wird er
+             ausgeblendet (IsHeaderVisible=False, gleiches Muster wie DataPageNovaWorkspaceController)
+             und stattdessen als gemeinsamer Fensterkopf gezeigt. -->
+        <nova:NovaDialogHeader Grid.Row="0"
+                                Title="{Binding Header, ElementName=Root}"
+                                Subtitle="{Binding SubHeader, ElementName=Root}"/>
+
+        <controls:RecordDetailsView Grid.Row="1"
+                                    IsHeaderVisible="False"
                                     Header="{Binding Header, ElementName=Root}"
                                     SubHeader="{Binding SubHeader, ElementName=Root}"
                                     Groups="{Binding Groups, ElementName=Root}"
                                     SuggestMeasuresCommand="{Binding SuggestMeasuresCommand, ElementName=Root}"/>
 
-        <DockPanel Grid.Row="1" Margin="0,14,0,0" LastChildFill="False">
-            <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center"
-                       Foreground="{StaticResource TextSecondaryBrush}"
-                       Text="Doppelklick oder Kontextmenü auf der Zeile öffnet diese Detailansicht."/>
-            <Button DockPanel.Dock="Right" Width="120" Command="{Binding CloseCommand, ElementName=Root}"
-                    Style="{StaticResource SecondaryButton}">Schließen</Button>
-        </DockPanel>
+        <Border Grid.Row="2" Style="{StaticResource DialogButtonBar}" Margin="0,14,0,0">
+            <Grid>
+                <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Text="Doppelklick oder Kontextmenü auf der Zeile öffnet diese Detailansicht."/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Width="120" Command="{Binding CloseCommand, ElementName=Root}"
+                            Style="{StaticResource SecondaryButton}" IsCancel="True">Schliessen</Button>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

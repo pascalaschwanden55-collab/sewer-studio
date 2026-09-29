@@ -288,7 +288,7 @@ public sealed class KanalExportDetectionService : IKanalExportDetectionService
                 .ToList();
             teile.Add(
                 $"{alteInspektionen.Count} XTF-Datei(en) mit zusammen {untersuchungen} Untersuchungen "
-                + $"(Modell {string.Join(", ", modelle)}) — dieses Modell ist fuer den Import noch nicht freigegeben");
+                + $"(Modell {string.Join(", ", modelle)}) — dieses Modell ist für den Import noch nicht freigegeben");
         }
 
         // Eine unlesbare XTF darf nicht stillschweigend verschwinden: Sie IST eine

@@ -109,7 +109,7 @@ public sealed class ImportSourceArchiveServiceTests : IDisposable
 
             Assert.Equal(0, result.Copied);
             Assert.Contains(result.Messages, message =>
-                message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+                message.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
             Assert.Empty(Directory.EnumerateFileSystemEntries(external));
             Assert.Equal("PDF-Inhalt", File.ReadAllText(sourcePath));
         }

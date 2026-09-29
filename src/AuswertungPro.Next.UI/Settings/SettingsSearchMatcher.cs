@@ -1,34 +1,17 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Settings;
 
 /// <summary>
 /// Reiner Textabgleich fuer die Einstellungssuche. Umlaute und ihre ae/oe/ue-Schreibweise
-/// gelten als gleich. Mehrere Suchwoerter muessen alle vorkommen.
+/// gelten als gleich. Mehrere Suchwoerter muessen alle vorkommen. Die Faltung selbst liegt
+/// seit Aufgabe 14 (Befehle in der Strg+K-Suche) in <see cref="SucheTextFaltung"/>
+/// (Application, WPF-frei), damit die globale Suche dieselbe Regel verwendet.
 /// </summary>
 public static class SettingsSearchMatcher
 {
-    public static string Normalisiere(string text)
-        => (text ?? string.Empty)
-            .ToLowerInvariant()
-            .Replace("ä", "ae")
-            .Replace("ö", "oe")
-            .Replace("ü", "ue")
-            .Replace("ß", "ss");
+    public static string Normalisiere(string text) => SucheTextFaltung.Falte(text);
 
-    public static bool Passt(string suche, IEnumerable<string> texte)
-    {
-        var woerter = Normalisiere(suche).Split(
-            ' ',
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (woerter.Length == 0)
-            return true;
-
-        var inhalt = Normalisiere(string.Join(
-            " ",
-            texte.Where(text => !string.IsNullOrWhiteSpace(text))));
-        return woerter.All(wort => inhalt.Contains(wort, StringComparison.Ordinal));
-    }
+    public static bool Passt(string suche, IEnumerable<string> texte) => SucheTextFaltung.PasstAlle(suche, texte);
 }

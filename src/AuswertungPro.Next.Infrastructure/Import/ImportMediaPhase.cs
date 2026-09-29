@@ -279,7 +279,7 @@ internal sealed class ImportMediaPhase
 
             meldungen.Add(
                 $"Schachtprotokolle: {erfolgreich.Count} verteilt, "
-                + $"{verknuepfung.Verknuepft} mit einem Schacht verknuepft.");
+                + $"{verknuepfung.Verknuepft} mit einem Schacht verknüpft.");
             meldungen.AddRange(verknuepfung.Meldungen);
 
             // Ein Protokollteil, der nicht abgelegt werden konnte, MUSS im Bericht stehen.

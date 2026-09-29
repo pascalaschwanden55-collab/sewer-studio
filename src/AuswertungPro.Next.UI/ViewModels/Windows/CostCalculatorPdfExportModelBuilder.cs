@@ -30,9 +30,9 @@ public static class CostCalculatorPdfExportModelBuilder
         var (dn, lengthM) = ResolveFirstDnAndLength(selectedMeasures);
         var textBlocks = new List<string>
         {
-            "Kosten je Massnahme: Nettobetraege fuer die aktuell ausgewaehlte Haltung.",
-            "Kostenzusammenstellung nach Eigentuemer und Gesamtpositionen fuer diese Haltung.",
-            "Diese Ausgabe ersetzt eine Offerte und dient als Kostenuebersicht."
+            "Kosten je Massnahme: Nettobeträge für die aktuell ausgewählte Haltung.",
+            "Kostenzusammenstellung nach Eigentümer und Gesamtpositionen für diese Haltung.",
+            "Diese Ausgabe ersetzt eine Offerte und dient als Kostenübersicht."
         };
         var vatMismatchHint = BuildVatMismatchHint(currentHoldingCost.MwstRate, CostCalculatorLogicService.DefaultVatRate);
         if (vatMismatchHint.Length > 0)
@@ -44,7 +44,7 @@ public static class CostCalculatorPdfExportModelBuilder
             VariantTitle = $"Auswertung ({entries.Count} Haltung(en))",
             CustomerBlock = "",
             ObjectBlock = OfferPdfModelFactory.BuildObjectBlock(holding, dn, lengthM, date),
-            FilterSummaryText = "Eigentuemer: Alle",
+            FilterSummaryText = "Eigentümer: Alle",
             Currency = "CHF",
             OfferNo = "",
             TextBlocks = textBlocks

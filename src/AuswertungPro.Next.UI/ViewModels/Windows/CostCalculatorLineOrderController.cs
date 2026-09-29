@@ -11,6 +11,7 @@ public static class CostCalculatorLineOrderController
         "Hauptarbeit",
         "Qualitaetskontrolle",
         "Qualitaet",
+        "Qualität",
         "Sonstiges"
     };
 

@@ -108,7 +108,7 @@ public sealed class SingleFrameMultiModelService
               + (string.IsNullOrWhiteSpace(detectorQualificationReason)
                   ? string.Empty
                   : $": {detectorQualificationReason}")
-              + ". DINO/SAM liefen ohne YOLO-Filter; Ergebnis manuell pruefen."
+              + ". DINO/SAM liefen ohne YOLO-Filter; Ergebnis manuell prüfen."
             : null;
         if (candidate is not null) yoloMs = candidate.InferenceTimeMs;
 
@@ -201,7 +201,7 @@ public sealed class SingleFrameMultiModelService
                         ?? "YOLO-Antwort ohne positive Detektorqualifikation";
                     detectorReviewReason =
                         $"YOLO-Detektor nicht qualifiziert: {detectorQualificationReason}. "
-                        + "DINO/SAM liefen ohne YOLO-Filter; Ergebnis manuell pruefen.";
+                        + "DINO/SAM liefen ohne YOLO-Filter; Ergebnis manuell prüfen.";
                 }
                 else
                 {
@@ -246,7 +246,7 @@ public sealed class SingleFrameMultiModelService
                 : CodingLocalizedDetectionPlan.BuildCandidate(dinoResp.Detections, candidate,
                     pngBytes, imageWidth, imageHeight);
             var localizedReviewReason = localized.RejectedBoxes > 0
-                ? $"{localized.RejectedBoxes} Box(en) ohne eindeutigen Klassen-, Bild- oder Modellnachweis; manuell pruefen."
+                ? $"{localized.RejectedBoxes} Box(en) ohne eindeutigen Klassen-, Bild- oder Modellnachweis; manuell prüfen."
                 : null;
 
             if (localized.Detections.Count == 0)
@@ -254,7 +254,7 @@ public sealed class SingleFrameMultiModelService
                 // Leere DINO-Detektionen bei degraded=true sind KEIN "kein Schaden", sondern ein
                 // Modellfehler — sonst erscheint ein DINO-Ausfall im Codiermodus als gruenes Rohr.
                 var dinoDegradedReason = dinoResp.Degraded
-                    ? $"DINO nicht verfuegbar: {dinoResp.Error}"
+                    ? $"DINO nicht verfügbar: {dinoResp.Error}"
                     : null;
                 var emptyDinoDegradedReason = CombineReasons(
                     bildQualitaet is null ? null : $"Bild nicht beurteilbar: {bildQualitaet}",
@@ -429,7 +429,7 @@ public sealed class SingleFrameMultiModelService
         return new VsaCodeResolver.ResolvedCode(
             "BCE",
             top1.Confidence,
-            $"YOLO BCE {top1.Confidence:P0} (sichtbarer Kandidat, Positionspruefung im Player)");
+            $"YOLO BCE {top1.Confidence:P0} (sichtbarer Kandidat, Positionsprüfung im Player)");
     }
 
     private static bool IsClassifierOnlyStructuralCode(string? code)

@@ -38,9 +38,13 @@ internal static class ProjektPruefpunktNavigation
         Project projekt, IObjektaktenListenErgaenzungen ergaenzungen)
     {
         bool Bereit() => shell.IsProjectReady && shell.SaveCommand.CanExecute(null) && ReferenceEquals(shell.Project, projekt);
+        // Schlusswelle (Item 5): denselben Datenaenderungsverlauf wie die Haltungs-/Schachtseite
+        // (services.DatenaenderungsVerlauf) uebergeben, damit auch eine ueber die Projektpruefung
+        // geoeffnete Objektakte Rueckgaengig/Wiederholen (Aufgabe 16) traegt - kein Service-Locator
+        // in einer Seite, sondern derselbe DI-Wert wie ueberall sonst.
         var fabrik = ObjektaktenDialog.Fabrik(punkt.Objektart, () => shell.Project, sp.Settings,
             Bereit, () => shell.MarkProjectDirty(), () => shell.TrySaveProject(), sp.ObjektaktenPakete, sp.Dialogs,
-            ergaenzungen, sp.GeoShop, sp.GeoShopSicherung);
+            ergaenzungen, sp.GeoShop, sp.GeoShopSicherung, sp.DatenaenderungsVerlauf);
         var vm = fabrik(punkt.ObjektId);
         if (vm is null) return;
         var feld = BereiteFeldVor(vm, punkt);

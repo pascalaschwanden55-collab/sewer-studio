@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using AuswertungPro.Next.Domain.Models.Dossiers;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Dossiers.Lookup;
 
@@ -77,7 +78,7 @@ public sealed class DossierParcelLookupUseCase
         }
         catch (Exception ex)
         {
-            warnungen.Add("Die Parzelle konnte nicht abgefragt werden: " + ex.Message);
+            warnungen.Add("Die Parzelle konnte nicht abgefragt werden: " + UserError.DescribeAndReport(ex, "Parzelle abfragen"));
             return Leer(warnungen);
         }
 
@@ -100,7 +101,7 @@ public sealed class DossierParcelLookupUseCase
         }
         catch (Exception ex)
         {
-            warnungen.Add("Die Grundbuchauskunft konnte nicht gelesen werden: " + ex.Message);
+            warnungen.Add("Die Grundbuchauskunft konnte nicht gelesen werden: " + UserError.DescribeAndReport(ex, "Grundbuchauskunft lesen"));
             eintrag = null;
         }
 
@@ -145,7 +146,7 @@ public sealed class DossierParcelLookupUseCase
         }
         catch (Exception ex)
         {
-            warnungen.Add("Die Leitungen konnten nicht abgefragt werden: " + ex.Message);
+            warnungen.Add("Die Leitungen konnten nicht abgefragt werden: " + UserError.DescribeAndReport(ex, "Leitungen auf der Parzelle abfragen"));
         }
 
         return new DossierParcelLookupResult(

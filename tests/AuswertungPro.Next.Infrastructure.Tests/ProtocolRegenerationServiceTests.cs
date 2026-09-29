@@ -38,6 +38,42 @@ public sealed class ProtocolRegenerationServiceTests
         }
     }
 
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 15: mit injizierter <see cref="IBerichtsMarke"/> geht
+    /// deren Pfad in die Optionen — die gemeinsame Quelle statt des fest eingetragenen Pfads
+    /// neben dem Programm.
+    /// </summary>
+    [Fact]
+    public void Adapter_RegenerateOne_uebernimmt_das_Logo_aus_der_injizierten_IBerichtsMarke()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "sewertest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            var exporter = new PdfExporterFake([1, 2, 3, 4]);
+            var service = new ProtocolRegenerationAdapter(
+                exporter,
+                new StubBerichtsMarke(@"D:\Firmenlogos\aktuelles-logo.png"));
+            var project = new Project();
+            var record = new HaltungRecord();
+            record.SetFieldValue("Haltungsname", "TEST-3", FieldSource.Manual, userEdited: false);
+            var document = new ProtocolDocument { HaltungId = "TEST-3" };
+
+            service.RegenerateOne(project, tempRoot, record, document);
+
+            Assert.Equal(@"D:\Firmenlogos\aktuelles-logo.png", exporter.LastOptions?.LogoPathAbs);
+        }
+        finally
+        {
+            try { Directory.Delete(tempRoot, recursive: true); } catch { }
+        }
+    }
+
+    private sealed class StubBerichtsMarke(string? logoPfad) : IBerichtsMarke
+    {
+        public string? LogoPfad { get; } = logoPfad;
+    }
+
     [Fact]
     public void RegenerateOne_writes_E_protocol_into_haltung_folder_and_links_pdf_eigen()
     {
@@ -149,7 +185,7 @@ public sealed class ProtocolRegenerationServiceTests
             var error = Assert.Throws<IOException>(() =>
                 service.RegenerateOne(project, tempRoot, record, document));
 
-            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(Directory.EnumerateFileSystemEntries(external));
             Assert.True(string.IsNullOrEmpty(record.GetFieldValue("PDF_Eigen")));
         }
@@ -167,6 +203,7 @@ public sealed class ProtocolRegenerationServiceTests
     private sealed class PdfExporterFake(byte[] pdf, Action? onBuild = null) : IProtocolPdfExporter
     {
         public int BuildCalls { get; private set; }
+        public HaltungsprotokollPdfOptions? LastOptions { get; private set; }
 
         public byte[] BuildPdf(string projectTitle, ProtocolDocument document, string projectRootAbs)
             => throw new NotSupportedException();
@@ -186,6 +223,7 @@ public sealed class ProtocolRegenerationServiceTests
             HaltungsprotokollPdfOptions? options = null)
         {
             BuildCalls++;
+            LastOptions = options;
             onBuild?.Invoke();
             return pdf;
         }

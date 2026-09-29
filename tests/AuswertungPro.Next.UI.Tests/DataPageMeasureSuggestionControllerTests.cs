@@ -35,7 +35,7 @@ public sealed class DataPageMeasureSuggestionControllerTests
             controller.Suggest(record);
 
             var erwartet = 1250m.ToString("N2", CultureInfo.GetCultureInfo("de-CH"));
-            Assert.Contains($"Geschaetzte Kosten: {erwartet}", dialogs.LastInfo!.Value.Message);
+            Assert.Contains($"Geschätzte Kosten: {erwartet}", dialogs.LastInfo!.Value.Message);
         }
         finally
         {
@@ -58,7 +58,7 @@ public sealed class DataPageMeasureSuggestionControllerTests
 
         controller.Suggest(null);
 
-        Assert.Equal(("Noch keine Vorschlaege verfuegbar. Bitte zuerst einige Haltungen mit Massnahmen bewerten.", "Massnahmen"), dialogs.LastInfo);
+        Assert.Equal(("Noch keine Vorschläge verfügbar. Bitte zuerst einige Haltungen mit Massnahmen bewerten.", "Massnahmen"), dialogs.LastInfo);
         var requested = Assert.Single(service.RequestedRecords);
         Assert.Same(record, requested);
         Assert.Equal(0, dirty);
@@ -90,10 +90,10 @@ public sealed class DataPageMeasureSuggestionControllerTests
         Assert.Equal("1250.00", record.GetFieldValue("Kosten"));
         Assert.Equal(new[] { "Inliner", "Manschette" }, options);
         Assert.Equal(1, dirty);
-        Assert.Equal("Maßnahmenvorschlag mit Kostenschätzung gesetzt (1250.00, KI-Modell)", statuses.Single());
+        Assert.Equal("Massnahmenvorschlag mit Kostenschätzung gesetzt (1250.00, KI-Modell)", statuses.Single());
         Assert.Equal((3, 1250m), learning.Single());
         Assert.Equal(
-            ("Inliner\nManschette\n\nGeschaetzte Kosten: 1’250.00\n\nQuelle: KI-Modell (3 aehnliche Faelle)", "Empfohlene Sanierungsmassnahmen"),
+            ("Inliner\nManschette\n\nGeschätzte Kosten: 1’250.00\n\nQuelle: KI-Modell (3 ähnliche Fälle)", "Empfohlene Sanierungsmassnahmen"),
             dialogs.LastInfo);
     }
 
@@ -204,13 +204,13 @@ public sealed class DataPageMeasureSuggestionControllerTests
         public void Error(string message, string title = "Fehler")
             => throw new NotSupportedException();
 
-        public bool Confirm(string message, string title = "Bestaetigung")
+        public bool Confirm(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
 
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true)
             => throw new NotSupportedException();
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
     }
 }

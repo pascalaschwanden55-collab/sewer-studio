@@ -73,7 +73,7 @@ public static class XtfRevisionPlanBuilder
         {
             warnungen.Add(
                 $"{haltung}: Der importierte Befund '{offen.Code}' bei {Meter(offen.MeterStart)} " +
-                "passt auf mehrere Eintraege der Originaldatei. Bitte von Hand entscheiden.");
+                "passt auf mehrere Einträge der Originaldatei. Bitte von Hand entscheiden.");
         }
 
         var elementJeEintrag = zurDatei.Zugeordnet;

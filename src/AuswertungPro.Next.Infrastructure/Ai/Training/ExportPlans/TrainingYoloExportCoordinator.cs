@@ -66,12 +66,12 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
         Report(
             progress,
             TrainingYoloExportProgressStage.PreparingSamples,
-            "YOLO-Export: Trainingsfreigaben werden geprueft.");
+            "YOLO-Export: Trainingsfreigaben werden geprüft.");
         var registry = _registryStore.ReadBundle();
         Report(
             progress,
             TrainingYoloExportProgressStage.InspectingInventory,
-            "YOLO-Export: Datenbestand und Schutz-Sets werden geprueft.");
+            "YOLO-Export: Datenbestand und Schutz-Sets werden geprüft.");
         var inventoryRequest = TrainingDataInventoryRequestFactory.CreateStrictCurrentSnapshot(
             _knowledgeRoot,
             _evalSetRoot,
@@ -93,7 +93,7 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
             Report(
                 progress,
                 TrainingYoloExportProgressStage.RegistryGateNotice,
-                $"YOLO-Export: {selection.RegistryGateSkippedSampleIds.Count} vollstaendige " +
+                $"YOLO-Export: {selection.RegistryGateSkippedSampleIds.Count} vollständige " +
                 "Goldsamples nicht im Freigaberegister - nicht exportiert.");
         }
 
@@ -104,7 +104,7 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
                 StringComparison.Ordinal))
         {
             throw new TrainingExportPlanException(
-                "Das Exportregister wurde waehrend der Vorbereitung veraendert.");
+                "Das Exportregister wurde während der Vorbereitung verändert.");
         }
         registry = currentRegistry;
         Report(
@@ -124,7 +124,7 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
         var bundle = _planService.CreatePlan(planInput);
         if (bundle.Plan.Images.Count == 0)
         {
-            const string message = "YOLO-Export: Der gepruefte Plan enthaelt keine exportierbaren Bilder.";
+            const string message = "YOLO-Export: Der geprüfte Plan enthält keine exportierbaren Bilder.";
             Report(progress, TrainingYoloExportProgressStage.NoImages, message, total: 0);
             return new TrainingYoloExportResult(
                 TrainingYoloExportResultStatus.NoImages,
@@ -137,7 +137,7 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
         if (command.Mode == TrainingYoloExportMode.PlanOnly)
         {
             var message =
-                $"YOLO-Exportplan geprueft: {bundle.Plan.Images.Count} Bilder, " +
+                $"YOLO-Exportplan geprüft: {bundle.Plan.Images.Count} Bilder, " +
                 $"{bundle.Plan.Classes.Count} feste Klassen. Es wurde nichts geschrieben.";
             Report(
                 progress,
@@ -344,15 +344,15 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
         => execution.Route switch
         {
             TrainingExportExecutionRoute.Sidecar =>
-                $"Sidecar v{execution.SidecarVersion ?? "?"} hat den Export bestaetigt.",
+                $"Sidecar v{execution.SidecarVersion ?? "?"} hat den Export bestätigt.",
             TrainingExportExecutionRoute.LocalRequested =>
-                "Der verbindliche Plan wurde wie angefordert lokal ausgefuehrt.",
+                "Der verbindliche Plan wurde wie angefordert lokal ausgeführt.",
             TrainingExportExecutionRoute.LocalSidecarOffline =>
-                "Sidecar ist offline. Derselbe Plan wurde lokal ausgefuehrt.",
+                "Sidecar ist offline. Derselbe Plan wurde lokal ausgeführt.",
             TrainingExportExecutionRoute.LocalRequestTooLarge =>
-                "Der Plan ist fuer einen Sidecar-Request zu gross. Derselbe Plan wurde lokal ausgefuehrt.",
+                "Der Plan ist für einen Sidecar-Request zu gross. Derselbe Plan wurde lokal ausgeführt.",
             TrainingExportExecutionRoute.LocalAfterTransportFailure =>
-                "Die Sidecar-Verbindung ist ausgefallen. Derselbe Plan wurde lokal ausgefuehrt.",
+                "Die Sidecar-Verbindung ist ausgefallen. Derselbe Plan wurde lokal ausgeführt.",
             _ => throw new ArgumentOutOfRangeException(nameof(execution))
         };
 

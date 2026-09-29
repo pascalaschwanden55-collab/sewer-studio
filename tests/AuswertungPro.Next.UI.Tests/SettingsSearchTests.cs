@@ -83,5 +83,61 @@ public sealed class SettingsSearchTests
             "ToolTip=\"Einstellung suchen — zeigt nur passende Gruppen und springt zum ersten Reiter mit Treffer.\"",
             xaml,
             StringComparison.Ordinal);
+        Assert.Contains("Text=\"Einstellung suchen…\"", xaml, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 10a: Technische Gruppen liegen je Reiter zugeklappt
+    /// unter «Erweitert (für Fachleute)». Ein Treffer darin darf nicht unsichtbar bleiben —
+    /// der Controller muss den Expander bei einem Treffer aufklappen und ohne Suche wieder
+    /// auf den Standardzustand (zugeklappt) zurueckstellen.
+    /// </summary>
+    [Fact]
+    public void Controller_klappt_einen_Erweitert_Bereich_bei_Treffer_darin_auf_und_wieder_zu()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var reiter = new TabControl();
+
+            var sichtbareGruppe = new GroupBox
+            {
+                Header = "Werkzeuge",
+                Content = new TextBlock { Text = "Telefonsuche" }
+            };
+            var technischeGruppe = new GroupBox
+            {
+                Header = "Werkzeuge (Fachleute)",
+                Content = new TextBlock { Text = "pdftotext.exe auswählen" }
+            };
+            var erweitert = new Expander
+            {
+                Header = "Erweitert (für Fachleute)",
+                IsExpanded = false,
+                Content = technischeGruppe
+            };
+            var tab = new TabItem
+            {
+                Header = "Import und Referenzdaten",
+                Content = new StackPanel { Children = { sichtbareGruppe, erweitert } }
+            };
+            reiter.Items.Add(tab);
+            reiter.SelectedIndex = 0;
+
+            var controller = new SettingsSearchController(reiter);
+
+            // Ein Treffer nur in der zugeklappten Gruppe klappt sie auf.
+            controller.Anwenden("pdftotext");
+            Assert.Equal(System.Windows.Visibility.Collapsed, sichtbareGruppe.Visibility);
+            Assert.Equal(System.Windows.Visibility.Visible, technischeGruppe.Visibility);
+            Assert.True(erweitert.IsExpanded);
+
+            // Ohne Suche geht der Bereich zurueck in seinen Standardzustand (zugeklappt).
+            controller.Anwenden("");
+            Assert.False(erweitert.IsExpanded);
+
+            // Ein Treffer ohne Bezug zum Erweitert-Bereich klappt ihn nicht auf.
+            controller.Anwenden("telefonsuche");
+            Assert.False(erweitert.IsExpanded);
+        });
     }
 }

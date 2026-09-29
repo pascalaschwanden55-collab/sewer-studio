@@ -112,7 +112,7 @@ public sealed class HaltungsgrafikKlartextTests
             record.Protocol!.Current.Entries.Clear();
             for (var i = 0; i < 30; i++)
                 record.Protocol.Current.Entries.Add(new ProtocolEntry { Code = "BAB", MeterStart = 8,
-                    Beschreibung = "Langer Klartext mit mehreren Worten fuer einen Riss in der Rohrwand" });
+                    Beschreibung = "Langer Klartext mit mehreren Worten für einen Riss in der Rohrwand" });
             var bild = HaltungsgrafikKlartextZeichner.Zeichne(record, null, new Grid(), 260, 500, null)!.Value;
             Assert.True(bild.Flaeche.Height > 1400);
             var texte = bild.Flaeche.Children.OfType<TextBlock>().Where(t => t.Text.Contains("BAB")).ToArray();

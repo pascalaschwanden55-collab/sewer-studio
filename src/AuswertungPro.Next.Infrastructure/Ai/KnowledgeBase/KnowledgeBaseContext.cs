@@ -62,7 +62,7 @@ public sealed class KnowledgeBaseContext : IDisposable
         {
             throw new InvalidDataException(
                 $"Die Wissensdatenbank stammt aus einer neueren Programmversion " +
-                $"(Schema {existingVersion}, unterstuetzt bis {SchemaVersion}). Sie wurde nicht veraendert.");
+                $"(Schema {existingVersion}, unterstützt bis {SchemaVersion}). Sie wurde nicht verändert.");
         }
 
         ExecuteNonQuery("""
@@ -192,7 +192,7 @@ public sealed class KnowledgeBaseContext : IDisposable
         {
             throw new InvalidDataException(
                 $"Die Wissensdatenbank stammt aus einer neueren Programmversion " +
-                $"(Schema {current}, unterstuetzt bis {SchemaVersion}). Sie wurde nicht veraendert.");
+                $"(Schema {current}, unterstützt bis {SchemaVersion}). Sie wurde nicht verändert.");
         }
         if (current < SchemaVersion)
             ExecuteNonQuery($"PRAGMA user_version={SchemaVersion};");

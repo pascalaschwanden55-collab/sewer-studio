@@ -101,7 +101,7 @@ public sealed class OllamaProtocolAiService : IProtocolAiService
         }
 
         if (input.RequireImage && frameBase64 is null)
-            throw new IOException("Fuer die Foto-Pruefung konnte kein Bild geladen werden.");
+            throw new IOException("Für die Foto-Prüfung konnte kein Bild geladen werden.");
 
         if (frameBase64 != null)
         {

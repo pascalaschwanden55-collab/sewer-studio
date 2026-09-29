@@ -10,7 +10,7 @@ public sealed class KatasterPaketLiesmichTests
 {
     private const string AenderungsBericht = """
         Projekt: Beispiel
-        Lieferart: nur Handaenderungen mit Feldauftraegen.
+        Lieferart: nur Handänderungen mit Feldaufträgen.
         Im Projekt: 19 Haltungen, 33 Schaechte.
         In die Datei: 19 Haltungen, 33 Schaechte (991 Objekte insgesamt).
         Hinweise:

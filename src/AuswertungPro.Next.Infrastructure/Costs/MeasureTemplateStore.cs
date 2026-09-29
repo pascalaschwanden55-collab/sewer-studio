@@ -249,7 +249,7 @@ public sealed class MeasureTemplateStore : IMeasureTemplateStore
         }
         catch (Exception ex)
         {
-            loadError = $"{Path.GetFileName(path)} ist beschaedigt oder nicht lesbar: {ex.Message}";
+            loadError = $"{Path.GetFileName(path)} ist beschädigt oder nicht lesbar: {ex.Message}";
             if (rememberUserOverrideError)
                 LastUserOverrideLoadError = ex.Message;
             return new MeasureTemplateCatalog();
@@ -298,7 +298,7 @@ public sealed class MeasureTemplateStore : IMeasureTemplateStore
             if (!ids.Add(id))
                 throw new InvalidDataException($"Die normalisierte Vorlagen-ID '{id}' ist doppelt.");
             if (template.Lines is null)
-                throw new InvalidDataException($"Positionen der Vorlage '{id}' duerfen nicht null sein.");
+                throw new InvalidDataException($"Positionen der Vorlage '{id}' dürfen nicht null sein.");
 
             for (var lineIndex = 0; lineIndex < template.Lines.Count; lineIndex++)
             {
@@ -307,7 +307,7 @@ public sealed class MeasureTemplateStore : IMeasureTemplateStore
                                $"Position {lineIndex + 1} der Vorlage '{id}' darf nicht null sein.");
                 if (string.IsNullOrWhiteSpace(line.ItemKey))
                     throw new InvalidDataException(
-                        $"Position {lineIndex + 1} der Vorlage '{id}' hat keinen Katalog-Schluessel.");
+                        $"Position {lineIndex + 1} der Vorlage '{id}' hat keinen Katalog-Schlüssel.");
                 if (line.DefaultQty < 0)
                     throw new InvalidDataException(
                         $"Position {lineIndex + 1} der Vorlage '{id}' hat eine negative Menge.");

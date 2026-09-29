@@ -56,7 +56,7 @@ public sealed class KatasterHaltungFeldNachschlag : IFeldWertNachschlag
         {
             return new FeldNachschlagErgebnis.NichtGefunden(
                 "Der Abwasserkataster ist nicht eingerichtet. "
-                + "Die XTF-Datei laesst sich in den Einstellungen hinterlegen.");
+                + "Die XTF-Datei lässt sich in den Einstellungen hinterlegen.");
         }
 
         // Der erste Aufruf baut die Tabelle aus einer sehr grossen Datei.
@@ -73,7 +73,7 @@ public sealed class KatasterHaltungFeldNachschlag : IFeldWertNachschlag
             {
                 return new FeldNachschlagErgebnis.NichtGefunden(
                     $"Haltung {anfrage.Bauteilnummer} steht nicht im Abwasserkataster. "
-                    + "Private Hausanschluesse fuehrt der Kanton nicht.");
+                    + "Private Hausanschlüsse führt der Kanton nicht.");
             }
 
             var werte = treffer
@@ -85,7 +85,7 @@ public sealed class KatasterHaltungFeldNachschlag : IFeldWertNachschlag
             if (werte.Count == 0)
             {
                 return new FeldNachschlagErgebnis.NichtGefunden(
-                    $"Der Abwasserkataster fuehrt fuer {anfrage.Feldname} keinen Wert.");
+                    $"Der Abwasserkataster führt für {anfrage.Feldname} keinen Wert.");
             }
 
             return werte.Count == 1

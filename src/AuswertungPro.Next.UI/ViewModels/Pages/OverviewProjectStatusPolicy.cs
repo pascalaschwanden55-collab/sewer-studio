@@ -10,7 +10,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 public static class OverviewProjectStatusPolicy
 {
     public static string Build(bool isDirty, bool hasPersistedProject)
-        => isDirty ? "Ungespeicherte Aenderungen"
+        => isDirty ? "Ungespeicherte Änderungen"
            : hasPersistedProject ? "Projekt gespeichert"
            : "Projekt noch nicht gespeichert";
 }

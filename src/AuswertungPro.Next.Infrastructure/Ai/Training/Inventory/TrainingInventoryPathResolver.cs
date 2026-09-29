@@ -66,7 +66,7 @@ internal sealed class TrainingInventoryPathResolver
         {
             var reparsePoint = TrainingInventoryPaths.FindReparsePoint(fullStoredPath);
             if (reparsePoint is not null)
-                return CreateInvalid(storedPath, $"Pfad enthaelt eine Verknuepfung oder Junction: {reparsePoint}");
+                return CreateInvalid(storedPath, $"Pfad enthält eine Verknüpfung oder Junction: {reparsePoint}");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

@@ -1,6 +1,7 @@
 using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -41,6 +42,26 @@ public sealed class MeasureTemplateEditorViewModelTests
     }
 
     [Fact]
+    public void SaveTemplateCommand_meldet_toast_statt_dialog_wenn_toastdienst_verfuegbar()
+    {
+        using var temp = new TempDirectory();
+        var templatePath = Path.Combine(temp.Path, "measure_templates.user.json");
+        var dialogs = new DialogFake();
+        var toasts = new ToastFake();
+        var store = new MeasureTemplateStore(templatePath);
+        var viewModel = CreateViewModel(temp.Path, store, dialogs, toasts);
+
+        viewModel.NewTemplateCommand.Execute(null);
+        viewModel.TemplateId = "test_toast";
+        viewModel.TemplateName = "Toast Test";
+
+        viewModel.SaveTemplateCommand.Execute(null);
+
+        Assert.Null(dialogs.LastInfo);
+        Assert.Contains("Template gespeichert", toasts.Meldung, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SaveTemplateCommand_preserves_corrupt_user_file_and_reports_error()
     {
         using var temp = new TempDirectory();
@@ -71,7 +92,7 @@ public sealed class MeasureTemplateEditorViewModelTests
         var viewModel = CreateViewModel(temp.Path, store, dialogs);
         viewModel.NewTemplateCommand.Execute(null);
         viewModel.TemplateId = "MENGE_UNGUELTIG";
-        viewModel.TemplateName = "Ungueltige Menge";
+        viewModel.TemplateName = "Ungültige Menge";
         viewModel.AddLineCommand.Execute(new CatalogItemRow(new CostCatalogItem
         {
             Key = "ROBOTER_ST",
@@ -187,14 +208,15 @@ public sealed class MeasureTemplateEditorViewModelTests
                 Assert.Equal("NEW", added.Id);
                 Assert.Equal("Neue Vorlage", added.Name);
             });
-        Assert.Contains("uebernommen", dialogs.LastInfo, StringComparison.Ordinal);
+        Assert.Contains("übernommen", dialogs.LastInfo, StringComparison.Ordinal);
         Assert.Null(dialogs.LastError);
     }
 
     private static MeasureTemplateEditorViewModel CreateViewModel(
         string root,
         MeasureTemplateStore templateStore,
-        IDialogService dialogs)
+        IDialogService dialogs,
+        IToastService? toasts = null)
     {
         var legacyPath = Path.Combine(root, "legacy", "measure_templates.json");
         var activePath = Path.Combine(root, "measure_templates.user.json");
@@ -204,7 +226,8 @@ public sealed class MeasureTemplateEditorViewModelTests
             new CostCatalogStore(Path.Combine(root, "cost_catalog.user.json")),
             dialogs,
             legacyPath,
-            activePath);
+            activePath,
+            toasts);
     }
 
     private sealed class DialogFake : IDialogService
@@ -219,9 +242,20 @@ public sealed class MeasureTemplateEditorViewModelTests
         public void Info(string message, string title = "Hinweis") => LastInfo = message;
         public void Warn(string message, string title = "Warnung") { }
         public void Error(string message, string title = "Fehler") => LastError = message;
-        public bool Confirm(string message, string title = "Bestaetigung") => true;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => true;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Yes;
+        public bool Confirm(string message, string title = "Bestätigung") => true;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => true;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Yes;
+    }
+
+    private sealed class ToastFake : IToastService
+    {
+        public string? Meldung { get; private set; }
+
+        public void Success(string message) => Meldung = message;
+        public void Success(string message, string aktionText, Action aktion) => Meldung = message;
+        public void Info(string message) { }
+        public void Warning(string message) { }
+        public void Error(string message) => Assert.Fail(message);
     }
 
     private sealed class TempDirectory : IDisposable

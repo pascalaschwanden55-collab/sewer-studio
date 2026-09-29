@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.UseCases.Import.Quellen;
 
@@ -135,12 +136,12 @@ public static class Quellenwahl
             QuellenBefund befund;
             try
             {
-                befund = pruefe(pfad) ?? QuellenBefund.NichtLesbar("Pruefung ohne Ergebnis.");
+                befund = pruefe(pfad) ?? QuellenBefund.NichtLesbar("Prüfung ohne Ergebnis.");
             }
             catch (Exception ex)
             {
                 // Ein einzelner kaputter Kandidat darf die uebrigen nie blockieren.
-                befund = QuellenBefund.NichtLesbar($"Pruefung fehlgeschlagen: {ex.Message}");
+                befund = QuellenBefund.NichtLesbar($"Prüfung fehlgeschlagen: {UserError.DescribeAndReport(ex, "Importquelle prüfen")}");
             }
 
             versuche.Add(new QuellenVersuch(pfad, befund));

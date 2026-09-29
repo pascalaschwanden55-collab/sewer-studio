@@ -127,7 +127,7 @@ internal static class DossierAttachmentFilePublisher
             var restoredAt = RestoreUnexpectedFile(backup, target, guard);
             throw new IOException(
                 $"Die vorhandene Beilage '{Path.GetFileName(target)}' wurde "
-                + "zwischenzeitlich veraendert und blieb unter "
+                + "zwischenzeitlich verändert und blieb unter "
                 + $"'{Path.GetFileName(restoredAt)}' erhalten.");
         }
 

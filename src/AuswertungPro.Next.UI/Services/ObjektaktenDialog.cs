@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Windows;
 using AuswertungPro.Next.Application.Lookup;
+using AuswertungPro.Next.Application.UseCases.Datenaenderungen;
 using AuswertungPro.Next.Application.UseCases.Objektakten;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.ViewModels;
@@ -15,7 +16,8 @@ public static class ObjektaktenDialog
     public static Func<Guid, ObjektakteViewModel?> Fabrik(string art, Func<Project> projekt, AppSettings settings,
         Func<bool> bereit, Action geaendert, Action speichern,
         AuswertungPro.Next.Application.Projects.IObjektaktenPaketService pakete, IDialogService dialogs,
-        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null)
+        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null,
+        IDatenaenderungsVerlauf? verlauf = null)
         => id =>
         {
             if (!bereit()) return null;
@@ -23,15 +25,15 @@ public static class ObjektaktenDialog
             bool DarfSchreiben() => bereit() && ReferenceEquals(p, projekt())
                 && (art == "haltung" ? p.Data.Any(r => r.Id == id) : p.SchaechteData.Any(r => r.Id == id));
             if (!DarfSchreiben()) return null;
-            var bearbeitung = new ObjektaktenBearbeitung(p, id, art, ergaenzungen);
+            var bearbeitung = new ObjektaktenBearbeitung(p, id, art, ergaenzungen) { Verlauf = verlauf };
             bearbeitung.PruefeBestand();
             var paketDialog = new ObjektaktenPaketDialog(pakete, dialogs);
             var geo = geoShop is null ? null : new GeoShopEinzelErgaenzungDialog(geoShop, dialogs, settings, geoShopSicherung);
             ObjektakteViewModel? vm = null;
             vm = new ObjektakteViewModel(bearbeitung, settings, geaendert, DarfSchreiben, speichern,
-                () => paketDialog.Exportiere(p), () => paketDialog.Importiere(p, DarfSchreiben),
+                () => paketDialog.Exportiere(p), MitSperre(() => paketDialog.Importiere(p, DarfSchreiben), verlauf, DatenaenderungsVerlauf.GrundPaket),
                 feld => ListeBearbeiten(feld, () => vm),
-                geo is null ? null : () => geo.ErgaenzeAsync(p, id, art, DarfSchreiben),
+                geo is null ? null : MitSperre(() => geo.ErgaenzeAsync(p, id, art, DarfSchreiben), verlauf),
                 geo is null ? null : () => geo.Datei(neuWaehlen: true));
             return vm;
         };
@@ -39,32 +41,34 @@ public static class ObjektaktenDialog
     public static IRelayCommand Befehl(string art, Func<Project> projekt, Func<Guid?> auswahl, AppSettings settings,
         Func<bool> bereit, Action geaendert, Action speichern,
         AuswertungPro.Next.Application.Projects.IObjektaktenPaketService pakete, IDialogService dialogs,
-        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null)
+        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null,
+        IDatenaenderungsVerlauf? verlauf = null)
         => new RelayCommand(() =>
         {
             if (!bereit() || auswahl() is not { } id) return;
             var p = projekt();
             Zeige(p, id, art, settings, geaendert, () => bereit() && ReferenceEquals(p, projekt())
                 && (art == "haltung" ? p.Data.Any(r => r.Id == id) : p.SchaechteData.Any(r => r.Id == id)), speichern,
-                pakete, dialogs, ergaenzungen, geoShop, geoShopSicherung);
+                pakete, dialogs, ergaenzungen, geoShop, geoShopSicherung, verlauf);
         });
 
     public static void Zeige(Project projekt, Guid id, string art, AppSettings settings, Action geaendert,
         Func<bool> darfSchreiben, Action speichern,
         AuswertungPro.Next.Application.Projects.IObjektaktenPaketService? pakete = null, IDialogService? dialogs = null,
-        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null)
+        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null,
+        IDatenaenderungsVerlauf? verlauf = null)
     {
         if (!darfSchreiben()) return;
-        var bearbeitung = new ObjektaktenBearbeitung(projekt, id, art, ergaenzungen);
+        var bearbeitung = new ObjektaktenBearbeitung(projekt, id, art, ergaenzungen) { Verlauf = verlauf };
         bearbeitung.PruefeBestand();
         var paketDialog = pakete is not null && dialogs is not null ? new ObjektaktenPaketDialog(pakete, dialogs) : null;
         var geo = geoShop is not null && dialogs is not null ? new GeoShopEinzelErgaenzungDialog(geoShop, dialogs, settings, geoShopSicherung) : null;
         ObjektakteViewModel? vm = null;
         vm = new ObjektakteViewModel(bearbeitung, settings, geaendert, darfSchreiben, speichern,
             paketDialog is null ? null : () => paketDialog.Exportiere(projekt),
-            paketDialog is null ? null : () => paketDialog.Importiere(projekt, darfSchreiben),
+            paketDialog is null ? null : MitSperre(() => paketDialog.Importiere(projekt, darfSchreiben), verlauf, DatenaenderungsVerlauf.GrundPaket),
             feld => ListeBearbeiten(feld, () => vm),
-            geo is null ? null : () => geo.ErgaenzeAsync(projekt, id, art, darfSchreiben),
+            geo is null ? null : MitSperre(() => geo.ErgaenzeAsync(projekt, id, art, darfSchreiben), verlauf),
             geo is null ? null : () => geo.Datei(neuWaehlen: true));
         var fenster = new ObjektakteWindow(vm);
         var owner = AktivesFenster();
@@ -109,6 +113,25 @@ public static class ObjektaktenDialog
         bearbeitung.ErgaenzungenNeuLaden();
         akte()?.AktualisiereFelder();
     }
+
+    /// <summary>Optik Aufgabe 16: Zusatzdatei und GeoShop-Ergaenzung in der Akte schreiben am Verlauf vorbei;
+    /// nach einer erfolgreichen Uebernahme ist er leer (kein Eintrag passt mehr sicher).</summary>
+    internal static Func<bool> MitSperre(Func<bool> uebernahme, IDatenaenderungsVerlauf? verlauf, string grund)
+        => () =>
+        {
+            var ok = uebernahme();
+            if (ok) verlauf?.Leere(grund);
+            return ok;
+        };
+
+    internal static Func<System.Threading.Tasks.Task<bool>> MitSperre(Func<System.Threading.Tasks.Task<bool>> uebernahme,
+        IDatenaenderungsVerlauf? verlauf)
+        => async () =>
+        {
+            var ok = await uebernahme();
+            if (ok) verlauf?.Leere(DatenaenderungsVerlauf.GrundUebernahme);
+            return ok;
+        };
 
     private static Window? AktivesFenster()
         => System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);

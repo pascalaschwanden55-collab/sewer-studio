@@ -111,8 +111,8 @@ public partial class SchachtansichtView : UserControl
 
         if (SchachtList.SelectedItem is not SchachtRecord record || DetailBuilder is null)
         {
-            Detail.Header = "Kein Schacht gewaehlt";
-            Detail.SubHeader = "Links einen Schacht waehlen.";
+            Detail.Header = "Kein Schacht gewählt";
+            Detail.SubHeader = "Links einen Schacht wählen.";
             Detail.Groups = Array.Empty<RecordDetailGroup>();
             DamageList.ItemsSource = Array.Empty<SchachtDamageLine>();
             return;
@@ -120,7 +120,7 @@ public partial class SchachtansichtView : UserControl
 
         var number = record.GetFieldValue("Schachtnummer");
         Detail.Header = string.IsNullOrWhiteSpace(number) ? "Schachtdetails" : $"Schacht {number}";
-        Detail.SubHeader = "Alle Felder editierbar - Aenderungen erscheinen sofort in der Tabelle.";
+        Detail.SubHeader = "Alle Felder editierbar - Änderungen erscheinen sofort in der Tabelle.";
         Detail.Groups = RecordDetailLayoutApplier.Apply(
             DetailBuilder(record),
             RecordDetailLayoutSettingsMapper.ToLayout(_settings?.SchaechtePageLayout?.DetailLayout));

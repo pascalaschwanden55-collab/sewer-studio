@@ -35,11 +35,14 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
+    private readonly IToastService? _toasts;
     private readonly IProtocolPdfExporter _protocolPdfExporter;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly IProtocolPdfLayoutSettings? _protocolPdfLayoutSettings;
+    // Gemeinsame Quelle fuer das Logo in Berichten (Optikanalyse 28.09.2026, Aufgabe 15).
+    private readonly IBerichtsMarke? _berichtsMarke;
     private readonly IPdfMergeService _pdfMerge;
     // Nur auf dem produktiven ServiceProvider-Weg gesetzt; die Alt-/Test-Konstruktoren
     // ohne ServiceProvider lassen ihn null (der PDF-Export wacht dann mit klarer Meldung).
@@ -203,10 +206,12 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             schachtEmpfehlungRepo: services.CostStores.CreateProjectCostStore(SchachtEmpfehlungFileName))
     {
         _protocolPdfLayoutSettings = services.ProtocolPdfLayoutSettings;
+        _berichtsMarke = services.BerichtsMarke;
         _pdfMerge = services.PdfMerge;
         _pdfExport = services.OfferPdfExport;
         _npkPdfExport = services.NpkOfferPdfExport;
         _pdfPrint = services.PdfPrint;
+        _toasts = services.Toasts;
     }
 
     /// <summary>
@@ -480,7 +485,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             if (!string.IsNullOrWhiteSpace(empfehlungError))
             {
                 LastResult = $"Schacht-Massnahmen konnten nicht geladen werden: {empfehlungError}";
-                _shell.SetStatus("Schacht-Massnahmen unlesbar — Kosten koennen fehlen.");
+                _shell.SetStatus("Schacht-Massnahmen unlesbar — Kosten können fehlen.");
             }
         }
         else
@@ -524,7 +529,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         }
 
         LastResult = $"Kostendaten konnten nicht geladen werden: {loadError}";
-        _shell.SetStatus("Kostendaten beschaedigt/unlesbar — Druckcenter-Exporte gesperrt.");
+        _shell.SetStatus("Kostendaten beschädigt/unlesbar — Druckcenter-Exporte gesperrt.");
 
         if (!string.Equals(_costStoreLoadError, loadError, StringComparison.Ordinal))
         {
@@ -532,7 +537,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
                 $"Kostendaten konnten nicht geladen werden:\n{loadError}\n\n" +
                 "Die Liste wird ohne Kosten angezeigt und Exporte sind gesperrt, damit keine " +
                 "plausibel aussehenden Berichte ohne Kostendaten entstehen.\n" +
-                "Bitte costs.json pruefen (costs\\costs.json bzw. .bak) und danach 'Aktualisieren'.",
+                "Bitte costs.json prüfen (costs\\costs.json bzw. .bak) und danach 'Aktualisieren'.",
                 "Druckcenter");
         }
 
@@ -552,14 +557,14 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         }
 
         LastResult = $"Kostenkatalog konnte nicht geladen werden: {loadError}";
-        _shell.SetStatus("Kostenkatalog beschaedigt/unlesbar — Druckcenter-Exporte gesperrt.");
+        _shell.SetStatus("Kostenkatalog beschädigt/unlesbar — Druckcenter-Exporte gesperrt.");
 
         if (!string.Equals(_catalogLoadError, loadError, StringComparison.Ordinal))
         {
             _dialogs.Error(
                 $"Der Kostenkatalog konnte nicht geladen werden:\n{loadError}\n\n" +
                 "Exporte und Neuberechnungen sind gesperrt, damit keine falschen " +
-                "MwSt-/NPK-Angaben entstehen. Bitte die Katalogdatei pruefen und danach 'Aktualisieren'.",
+                "MwSt-/NPK-Angaben entstehen. Bitte die Katalogdatei prüfen und danach 'Aktualisieren'.",
                 "Druckcenter");
         }
 
@@ -598,13 +603,13 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         }
 
         LastResult = parseError;
-        _shell.SetStatus("Tabellenkosten ungueltig - Druckcenter-Exporte gesperrt.");
+        _shell.SetStatus("Tabellenkosten ungültig - Druckcenter-Exporte gesperrt.");
 
         if (!string.Equals(_tableCostParseError, parseError, StringComparison.Ordinal))
         {
             _dialogs.Error(
                 $"{parseError}\n\n" +
-                "Nichtleere ungueltige Kosten werden nicht als CHF 0 behandelt. " +
+                "Nichtleere ungültige Kosten werden nicht als CHF 0 behandelt. " +
                 "Bitte die Kostenfelder korrigieren und danach 'Aktualisieren'.",
                 "Druckcenter");
         }
@@ -622,7 +627,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         {
             _dialogs.Error(
                 $"Export abgebrochen - die gespeicherten Kostendaten sind nicht lesbar:\n{_costStoreLoadError}\n\n" +
-                "Bitte costs.json pruefen (costs\\costs.json bzw. .bak) und danach 'Aktualisieren'.",
+                "Bitte costs.json prüfen (costs\\costs.json bzw. .bak) und danach 'Aktualisieren'.",
                 "Druckcenter");
             return false;
         }
@@ -631,7 +636,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         {
             _dialogs.Error(
                 $"Export abgebrochen - der Kostenkatalog ist nicht lesbar:\n{_catalogLoadError}\n\n" +
-                "Bitte cost_catalog.json bzw. die User-Overrides pruefen und danach 'Aktualisieren'.",
+                "Bitte cost_catalog.json bzw. die User-Overrides prüfen und danach 'Aktualisieren'.",
                 "Druckcenter");
             return false;
         }
@@ -800,7 +805,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         StatsLem = specialStats.Linerendmanschetten;
         var positionStats = specialStats.PositionStats;
         SpecialPositionStatsHint = positionStats.Count == 0
-            ? "Keine spezialrelevanten Positionen in den gewaehlten Massnahmen gefunden."
+            ? "Keine spezialrelevanten Positionen in den gewählten Massnahmen gefunden."
             : $"Einzelpositionen aus Massnahmen: {positionStats.Count}";
 
         SpecialPositionStats.Clear();
@@ -823,7 +828,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         var openCount = Math.Max(0, total - yesCount - noCount);
 
         RehabilitationShareChart.Clear();
-        RehabilitationShareChart.Add(new ChartBarVm("Sanierung noetig", yesCount, total));
+        RehabilitationShareChart.Add(new ChartBarVm("Sanierung nötig", yesCount, total));
         RehabilitationShareChart.Add(new ChartBarVm("Keine Sanierung", noCount, total));
         RehabilitationShareChart.Add(new ChartBarVm("Nicht bewertet", openCount, total));
 
@@ -852,7 +857,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         CostByExecutorHint = totalCost <= 0m
             ? "Keine Kosten in der aktuellen Filterauswahl."
-            : $"Kostenverteilung nach 'Ausgefuehrt durch' (Basis: {filtered.Count} gefilterte Haltungen).";
+            : $"Kostenverteilung nach 'Ausgeführt durch' (Basis: {filtered.Count} gefilterte Haltungen).";
     }
 
     private string BuildFilterSummaryText()

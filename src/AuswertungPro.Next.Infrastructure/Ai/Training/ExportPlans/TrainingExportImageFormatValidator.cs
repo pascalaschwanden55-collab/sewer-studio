@@ -37,7 +37,7 @@ internal static class TrainingExportImageFormatValidator
         ArgumentNullException.ThrowIfNull(bytes);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetFileName);
         var image = ReadImageInfo(bytes)
-                    ?? throw Error("Originalbild hat kein unterstuetztes oder vollstaendiges Bildformat.");
+                    ?? throw Error("Originalbild hat kein unterstütztes oder vollständiges Bildformat.");
         var extension = Path.GetExtension(targetFileName).ToLowerInvariant();
         var extensionMatches = image.Format switch
         {
@@ -53,7 +53,7 @@ internal static class TrainingExportImageFormatValidator
             || image.Height <= 0
             || (long)image.Width * image.Height > MaximumPixels)
         {
-            throw Error("Bildabmessungen sind ungueltig oder groesser als 50 Millionen Pixel.");
+            throw Error("Bildabmessungen sind ungültig oder grösser als 50 Millionen Pixel.");
         }
 
         return image;

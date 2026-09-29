@@ -40,7 +40,7 @@ public static class KiasExportPattern
     public static void Use(IKiasExportPatternDetector detector)
         => throw new NotSupportedException(
             "Die globale KIAS-Erkennung kann nicht mehr ausgetauscht werden. " +
-            "IKiasExportPatternDetector bitte per Konstruktor uebergeben.");
+            "IKiasExportPatternDetector bitte per Konstruktor übergeben.");
 
     public sealed record DetectionResult(
         bool IsKias,

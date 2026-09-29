@@ -8,7 +8,7 @@ public sealed class CodingProtocolMatchDisplayPolicyTests
 {
     [Theory]
     [InlineData(CodingProtocolMatchBucket.TrainingGreen, "TRAIN", "Abgleich: sicherer Treffer, Trainingskandidat")]
-    [InlineData(CodingProtocolMatchBucket.ReviewYellow, "PRUEF", "Abgleich: wahrscheinlicher Treffer, kurz pruefen")]
+    [InlineData(CodingProtocolMatchBucket.ReviewYellow, "PRUEF", "Abgleich: wahrscheinlicher Treffer, kurz prüfen")]
     [InlineData(CodingProtocolMatchBucket.WrongCode, "CODE", "Abgleich: gleiche Stelle, falscher Code")]
     [InlineData(CodingProtocolMatchBucket.Missed, "FEHLT", "Abgleich: im Import vorhanden, von KI verpasst")]
     [InlineData(CodingProtocolMatchBucket.FalseAlarm, "EXTRA", "Abgleich: KI-Fehlalarm ohne Import-Partner")]
@@ -35,7 +35,7 @@ public sealed class CodingProtocolMatchDisplayPolicyTests
     {
         var result = CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge("BCA", 12.34);
 
-        Assert.Equal($"? BCA @ {12.34:F1}m bestaetigt", result.Text);
+        Assert.Equal($"? BCA @ {12.34:F1}m bestätigt", result.Text);
         Assert.Equal(TimeSpan.FromSeconds(3), result.AutoHideDelay);
     }
 
@@ -44,7 +44,7 @@ public sealed class CodingProtocolMatchDisplayPolicyTests
     {
         var result = CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay(3);
 
-        Assert.Equal("3 gruene Treffer als Training uebernommen", result.Text);
+        Assert.Equal("3 grüne Treffer als Training übernommen", result.Text);
         Assert.Equal(TimeSpan.FromSeconds(4), result.Duration);
     }
 }

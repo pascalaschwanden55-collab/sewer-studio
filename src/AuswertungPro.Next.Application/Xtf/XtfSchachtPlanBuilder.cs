@@ -175,7 +175,7 @@ public static class XtfSchachtPlanBuilder
         bool Ungueltig(string? roh) => SiaAbmessung.SchachtmassFehler(roh) is not null;
         if (hatGetrennt && (Ungueltig(roh1) || Ungueltig(roh2)))
         {
-            hinweise?.Add($"{wofuer}: Innenmasse sind ungueltig. SIA405 erlaubt hoechstens 4000 mm; beide Masse werden nicht geschrieben. Bitte die Eingabe pruefen.");
+            hinweise?.Add($"{wofuer}: Innenmasse sind ungültig. SIA405 erlaubt höchstens 4000 mm; beide Masse werden nicht geschrieben. Bitte die Eingabe prüfen.");
             return null;
         }
         var getrennt = AusGetrenntenFeldern(record);
@@ -185,7 +185,7 @@ public static class XtfSchachtPlanBuilder
         {
             if (zusammen is { } alt && (int.Parse(alt.Dimension1) > 4000 || int.Parse(alt.Dimension2) > 4000))
             {
-                hinweise?.Add($"{wofuer}: Innenmasse ueberschreiten 4000 mm; beide Masse werden nicht geschrieben.");
+                hinweise?.Add($"{wofuer}: Innenmasse überschreiten 4000 mm; beide Masse werden nicht geschrieben.");
                 return null;
             }
             return zusammen;
@@ -289,7 +289,7 @@ public static class XtfSchachtPlanBuilder
             if (!normschaechte.TryGetValue(nummer, out var element))
             {
                 if (HatHandaenderung(record))
-                    hinweise.Add($"Schacht {nummer}: in der XTF nicht gefunden — die Handaenderung bleibt aussen vor.");
+                    hinweise.Add($"Schacht {nummer}: in der XTF nicht gefunden — die Handänderung bleibt aussen vor.");
                 continue;
             }
 
@@ -351,8 +351,8 @@ public static class XtfSchachtPlanBuilder
                         string.Equals(xtfName, "Bemerkung", StringComparison.Ordinal)
                         && XtfStammdatenPlanBuilder.BemerkungZuLang(roh, out var zeichen)
                             ? $"Schacht {nummer}: die Bemerkung ist {zeichen} Zeichen lang, das " +
-                              $"Modell laesst {XtfStammdatenPlanBuilder.BemerkungGrenze} zu — nicht geschrieben."
-                            : $"Schacht {nummer}: {xtfName} = \"{roh}\" passt zu keinem gueltigen " +
+                              $"Modell lässt {XtfStammdatenPlanBuilder.BemerkungGrenze} zu — nicht geschrieben."
+                            : $"Schacht {nummer}: {xtfName} = \"{roh}\" passt zu keinem gültigen " +
                               "Wert nach SIA405 — nicht geschrieben.");
                 }
 

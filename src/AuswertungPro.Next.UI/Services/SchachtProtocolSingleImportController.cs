@@ -143,7 +143,7 @@ internal sealed class SchachtProtocolSingleImportController
                 $"Protokoll nicht übernommen: Schacht {result.Schachtnummer} wurde inzwischen entfernt.";
             _actions.SetLastResult(removed);
             _dialogs.Warn(
-                removed + " Der gelöschte Datensatz wurde nicht wieder eingefuegt.",
+                removed + " Der gelöschte Datensatz wurde nicht wieder eingefügt.",
                 DialogTitle);
             return;
         }

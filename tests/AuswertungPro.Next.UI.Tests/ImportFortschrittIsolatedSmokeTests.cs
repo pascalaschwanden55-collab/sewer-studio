@@ -52,7 +52,10 @@ public sealed class ImportFortschrittIsolatedSmokeTests
                 page.UpdateLayout();
                 var bar = Find<ProgressBar>(page)!;
                 Assert.NotNull(bar);
-                Assert.Equal(10, bar.ActualHeight);
+                // Optikanalyse 28.09.2026, Aufgabe 11: die Importkarte verwendet seither den
+                // programmweiten Stil ProgressBarStandard (8 px) statt der eigenen, aufgehobenen
+                // ImportProgressBar-Vorlage (Height=ImportBarHeight=10).
+                Assert.Equal(8, bar.ActualHeight);
                 Assert.False(bar.IsIndeterminate);
                 Assert.Equal(15, bar.Value);
                 var indicator = (Border)bar.Template.FindName("PART_Indicator", bar);

@@ -205,7 +205,7 @@ public sealed class FullBackupService : IFullBackupService
 
             Protokolliere(
                 targetFolder,
-                $"Kopieren fertig: {stats.Copied} kopiert, {stats.Unchanged} unveraendert");
+                $"Kopieren fertig: {stats.Copied} kopiert, {stats.Unchanged} unverändert");
             progressState.Report(progress, "Extras", "umgebung.txt", force: true);
             await WriteGeneratedExtrasAsync(backupRoot, sources, (path, text) => journal.WriteText(path, text), ct).ConfigureAwait(false);
 
@@ -232,7 +232,7 @@ public sealed class FullBackupService : IFullBackupService
                 backupRoot, expectedTargets, stats, ct, n => MeldeAbschluss(PhaseAufraeumen, n));
             ThrowIfMirrorErrors(
                 stats,
-                "Die Vollsicherung konnte den Zielstand nicht vollstaendig bereinigen.");
+                "Die Vollsicherung konnte den Zielstand nicht vollständig bereinigen.");
 
             EnsureTargetStillTrusted(backupRoot, ct, n => MeldeAbschluss(PhaseZielordner, n));
             var versionStaende = Math.Min(BackupVersionRetention.MaxStaende,
@@ -240,7 +240,7 @@ public sealed class FullBackupService : IFullBackupService
                     .Count(p => BackupVersionRetention.IsStandName(Path.GetFileName(p))) + (journal.HasHistory ? 1 : 0));
             ThrowIfMirrorErrors(
                 stats,
-                "Die Vollsicherung konnte die Versionsstaende nicht sicher bereinigen.");
+                "Die Vollsicherung konnte die Versionsstände nicht sicher bereinigen.");
 
             var skipped = stats.Warnings.Take(200).ToArray();
             BackupTargetPathGuard.EnsureTreeIsSafe(
@@ -271,18 +271,18 @@ public sealed class FullBackupService : IFullBackupService
 
             Protokolliere(
                 targetFolder,
-                $"Phase: Pruefe Sicherung ({checkFiles:N0} Dateien, SHA-256 — laengster Teil)");
+                $"Phase: Prüfe Sicherung ({checkFiles:N0} Dateien, SHA-256 — längster Teil)");
             var checkProgress = new ProgressState(checkBytes, checkFiles);
             var manifestFiles = await _manifestIntegrity.CreateEntriesAsync(
                     backupRoot,
                     file => checkProgress.FileDone(
                         progress,
-                        "Pruefe Sicherung",
+                        "Prüfe Sicherung",
                         Path.GetRelativePath(backupRoot, file),
                         TryGetFileLength(file)),
                     ct)
                 .ConfigureAwait(false);
-            checkProgress.Report(progress, "Pruefe Sicherung", "SHA-256 abgeschlossen", force: true);
+            checkProgress.Report(progress, "Prüfe Sicherung", "SHA-256 abgeschlossen", force: true);
             var manifestPlan = BackupProjectTargetMapping.ForManifest(plan, previousProjectTargets, backupRoot);
             var manifest = BuildManifest(
                 sources, manifestPlan, sizeReport, stats, skipped, versionStaende,
@@ -305,7 +305,7 @@ public sealed class FullBackupService : IFullBackupService
             // Laufprotokoll, damit keine Luecke ohne Pfad bleibt (Audit A17, 23.09.2026).
             if (stats.Warnings.Count > 0)
             {
-                Protokolliere(targetFolder, $"Nicht gesichert oder uebersprungen ({stats.Warnings.Count}):");
+                Protokolliere(targetFolder, $"Nicht gesichert oder übersprungen ({stats.Warnings.Count}):");
                 foreach (var warnung in stats.Warnings)
                     Protokolliere(targetFolder, "  " + warnung);
             }
@@ -653,7 +653,7 @@ public sealed class FullBackupService : IFullBackupService
         sb.AppendLine();
         sb.AppendLine("Ollama Modelle:");
         var ollama = _ollamaList is null ? null : await _ollamaList(ct).ConfigureAwait(false);
-        sb.AppendLine(string.IsNullOrWhiteSpace(ollama) ? "  (ollama list nicht verfuegbar)" : ollama.TrimEnd());
+        sb.AppendLine(string.IsNullOrWhiteSpace(ollama) ? "  (ollama list nicht verfügbar)" : ollama.TrimEnd());
         return sb.ToString();
     }
 

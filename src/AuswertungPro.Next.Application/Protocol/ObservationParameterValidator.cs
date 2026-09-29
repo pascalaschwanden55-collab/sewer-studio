@@ -38,7 +38,7 @@ public static class ObservationParameterValidator
 
         if (isEnum && allowedValues is { Count: > 0 } && !allowedValues.Contains(v, StringComparer.OrdinalIgnoreCase))
         {
-            error = $"Parameter '{paramName}' hat einen ungueltigen Wert.";
+            error = $"Parameter '{paramName}' hat einen ungültigen Wert.";
             return false;
         }
 

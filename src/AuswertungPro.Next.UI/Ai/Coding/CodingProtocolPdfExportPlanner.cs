@@ -18,7 +18,10 @@ public static class CodingProtocolPdfExportPlanner
         string? lastProjectPath,
         string baseDirectory,
         DateTime now,
-        Func<string, bool>? fileExists = null)
+        Func<string, bool>? fileExists = null,
+        // Gemeinsame Quelle (Optikanalyse 28.09.2026, Aufgabe 15): wird sie gereicht,
+        // gilt sie statt der lokalen baseDirectory/fileExists-Berechnung darunter.
+        Func<string?>? resolveLogoPath = null)
     {
         fileExists ??= File.Exists;
 
@@ -27,12 +30,25 @@ public static class CodingProtocolPdfExportPlanner
             projectRoot = ProjectFileLocator.ProjectRootFromFile(lastProjectPath)
                           ?? "";
 
-        var logoPath = Path.Combine(baseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+        string? logo;
+        if (resolveLogoPath is not null)
+        {
+            logo = resolveLogoPath();
+        }
+        else
+        {
+            // Gemeinsame Quelle nur fuer den Standardpfad selbst (Optikanalyse 28.09.2026,
+            // Aufgabe 15) - UI/Ai darf keinen Service-Locator verwenden
+            // (UiArchitectureGuardTests), deshalb liest dieser Zweig die Einstellung nicht.
+            var logoPath = BerichtsLogoResolver.DefaultLogoPath(baseDirectory);
+            logo = fileExists(logoPath) ? logoPath : null;
+        }
+
         var options = new HaltungsprotokollPdfOptions
         {
             IncludePhotos = true,
             IncludeHaltungsgrafik = true,
-            LogoPathAbs = fileExists(logoPath) ? logoPath : null
+            LogoPathAbs = logo
         };
 
         return new CodingProtocolPdfExportPlan(

@@ -68,7 +68,7 @@ public sealed class ThemeRessourcenNamenTests
 
         Assert.True(
             treffer.Count == 0,
-            "Diese Verweise zeigen ins Leere — WPF laesst die Eigenschaft dann ungesetzt:"
+            "Diese Verweise zeigen ins Leere — WPF lässt die Eigenschaft dann ungesetzt:"
             + Environment.NewLine + string.Join(Environment.NewLine, treffer.Distinct()));
     }
 

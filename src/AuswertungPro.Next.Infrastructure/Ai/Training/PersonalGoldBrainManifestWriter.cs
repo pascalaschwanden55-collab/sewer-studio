@@ -81,6 +81,6 @@ internal static class PersonalGoldBrainManifestWriter
                     .ConfigureAwait(false);
         }
 
-        throw new IOException($"Datei war waehrend der Manifest-Pruefung nicht stabil: {path}");
+        throw new IOException($"Datei war während der Manifest-Prüfung nicht stabil: {path}");
     }
 }

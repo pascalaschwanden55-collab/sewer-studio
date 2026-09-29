@@ -103,6 +103,6 @@ public sealed class XtfNeuKennungen
         }
 
         throw new InvalidOperationException(
-            $"Fuer \"{merkmal}\" konnte keine freie Objektkennung vergeben werden.");
+            $"Für \"{merkmal}\" konnte keine freie Objektkennung vergeben werden.");
     }
 }

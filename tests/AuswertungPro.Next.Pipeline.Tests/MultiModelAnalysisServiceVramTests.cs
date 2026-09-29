@@ -200,7 +200,7 @@ public sealed class MultiModelAnalysisServiceVramTests
         Assert.True(result.Degraded, "VRAM-Mangel muss als Degraded sichtbar sein.");
         Assert.Contains("VRAM", result.DegradedReason);
         Assert.Contains("1.5", result.DegradedReason);     // frei
-        Assert.Contains("benoetigt", result.DegradedReason);
+        Assert.Contains("benötigt", result.DegradedReason);
         Assert.DoesNotContain("Sidecar antwortete", result.DegradedReason ?? "");
         Assert.True(result.Incomplete, "20/20 fehlerbedingte Skips muessen Incomplete liefern.");
     }

@@ -51,14 +51,14 @@ public static class PipeEndSuggestionScanWorkflow
         ArgumentNullException.ThrowIfNull(actions);
 
         if (actions.IsBusy())
-            return new PipeEndSuggestionScanWorkflowResult(false, false, null, "Ein Durchlauf laeuft bereits.");
+            return new PipeEndSuggestionScanWorkflowResult(false, false, null, "Ein Durchlauf läuft bereits.");
 
         var cancellationToken = actions.ResetCancellation();
         try
         {
             actions.SetBusy(true);
             actions.SetStatusText(
-                $"{Titel} {request.Haltung}: Bilder werden extrahiert und geprueft ...");
+                $"{Titel} {request.Haltung}: Bilder werden extrahiert und geprüft ...");
 
             // Bewusst synchron auf dem meldenden Thread, nicht Progress<T>: Der
             // Aufrufer marshallt selbst auf die Oberflaeche, und der Test sieht

@@ -119,6 +119,7 @@
                                         </Button>
                                     </StackPanel>
 
+                                    <Grid>
                                     <ListBox x:Name="LstCodingEvents"
                                              behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
                                              behaviors:CodingEventDragDropBehavior.Enabled="True"
@@ -142,7 +143,7 @@
                                                     <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8B9;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
                                                 </MenuItem>
                                                 <Separator/>
-                                                <MenuItem Header="Streckenschaden schließen (Ende hier)"
+                                                <MenuItem Header="Streckenschaden schliessen (Ende hier)"
                                                           Click="CodingEventCloseStretch_Click"
                                                           FontWeight="SemiBold"
                                                           ToolTip="Nur für eine Zeile mit der Marke OFFEN">
@@ -214,7 +215,7 @@
                                                                  Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="1"
                                                                    Text="{Binding Entry.Code}"
-                                                                   FontFamily="Consolas"
+                                                                   FontFamily="{DynamicResource FontMono}"
                                                                    FontWeight="Bold" FontSize="{DynamicResource TextXS}"
                                                                    VerticalAlignment="Top"
                                                                    Margin="0,0,4,0"/>
@@ -284,6 +285,23 @@
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
+
+                                    <ctrl:EmptyStateControl IsHitTestVisible="False"
+                                                            Icon="&#xE721;"
+                                                            Title="Keine KI-Befunde"
+                                                            Message="Noch keine Codierereignisse in dieser Haltung.">
+                                        <ctrl:EmptyStateControl.Style>
+                                            <Style TargetType="ctrl:EmptyStateControl">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasItems, ElementName=LstCodingEvents}" Value="False">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ctrl:EmptyStateControl.Style>
+                                    </ctrl:EmptyStateControl>
+                                    </Grid>
                                 </DockPanel>
                             </Border>
 
@@ -293,7 +311,7 @@
                                 <StackPanel>
                                     <!-- Kompakte Details: Code + Konfidenz -->
                                     <TextBlock x:Name="TxtInlineDetailCode"
-                                               FontFamily="Consolas" FontSize="{DynamicResource TextL}" FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                                                Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                                     <TextBlock x:Name="TxtInlineDetailDesc"
                                                FontSize="{DynamicResource TextXS}" TextWrapping="Wrap"
@@ -309,14 +327,14 @@
                                             <TextBlock Text="Distanz" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtInlineDetailDistance"
-                                                       FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
+                                                       FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextBrush}"/>
                                         </StackPanel>
                                         <StackPanel>
                                             <TextBlock Text="Konfidenz" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtInlineDetailConfidence"
-                                                       FontFamily="Consolas" FontSize="{DynamicResource TextXS}" FontWeight="Bold"/>
+                                                       FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" FontWeight="Bold"/>
                                         </StackPanel>
                                     </Grid>
 
@@ -395,6 +413,7 @@
                                             </TextBlock>
                                         </DockPanel>
 
+                                        <Grid>
                                         <ListBox x:Name="LstImportEvents"
                                                  behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
                                                  behaviors:CodingEventDragDropBehavior.Enabled="True"
@@ -474,7 +493,7 @@
                                                                     Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                             <TextBlock Grid.Column="1"
                                                                        Text="{Binding Entry.Code}"
-                                                                       FontFamily="Consolas"
+                                                                       FontFamily="{DynamicResource FontMono}"
                                                                        FontWeight="Bold" FontSize="{DynamicResource TextXS}"
                                                                        VerticalAlignment="Top"
                                                                        Margin="0,0,4,0"/>
@@ -508,6 +527,23 @@
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>
+
+                                        <ctrl:EmptyStateControl IsHitTestVisible="False"
+                                                                Icon="&#xE721;"
+                                                                Title="Kein Import"
+                                                                Message="Zu dieser Haltung liegt kein importiertes Referenzprotokoll vor.">
+                                            <ctrl:EmptyStateControl.Style>
+                                                <Style TargetType="ctrl:EmptyStateControl">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasItems, ElementName=LstImportEvents}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ctrl:EmptyStateControl.Style>
+                                        </ctrl:EmptyStateControl>
+                                        </Grid>
                                     </DockPanel>
                                 </Border>
                                 <Border Grid.Row="1" Style="{DynamicResource PlayerCard}" Margin="0,4,0,0">
@@ -657,7 +693,7 @@
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtCodingStatHumanAccepted"
                                                        Text="0" FontSize="{DynamicResource TextXL}" FontWeight="Bold"
-                                                       Foreground="#2563EB"/>
+                                                       Foreground="{DynamicResource AccentBrush}"/>
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Row="2" Grid.Column="0" Style="{DynamicResource StatTile}">

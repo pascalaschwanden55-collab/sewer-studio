@@ -86,7 +86,8 @@ public sealed partial class DiagnosticsPackageService : IDiagnosticsPackageServi
                 includedLogCount,
                 skippedLogCount == 0
                     ? $"Diagnosepaket erstellt ({includedLogCount} Logdatei(en))."
-                    : $"Diagnosepaket erstellt ({includedLogCount} Logdatei(en), {skippedLogCount} nicht lesbar).");
+                    : $"Diagnosepaket erstellt ({includedLogCount} Logdatei(en), {skippedLogCount} nicht lesbar).",
+                skippedLogCount);
         }
         catch (OperationCanceledException)
         {
@@ -192,7 +193,7 @@ public sealed partial class DiagnosticsPackageService : IDiagnosticsPackageServi
             return content;
 
         var firstLineBreak = content.IndexOf('\n');
-        return "[Aelterer Loganfang wegen Groessenlimit ausgelassen.]\n"
+        return "[Älterer Loganfang wegen Grössenlimit ausgelassen.]\n"
             + (firstLineBreak >= 0 ? content[(firstLineBreak + 1)..] : content);
     }
 

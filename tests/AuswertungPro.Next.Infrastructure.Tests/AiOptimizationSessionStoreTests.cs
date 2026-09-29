@@ -72,7 +72,7 @@ public sealed class AiOptimizationSessionStoreTests
             var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 store.SaveAsync(new AiOptimizationSession { HaltungId = "H-001" }));
 
-            Assert.Contains("NICHT veraendert", error.Message, StringComparison.Ordinal);
+            Assert.Contains("NICHT verändert", error.Message, StringComparison.Ordinal);
             Assert.Equal(corruptJson, await File.ReadAllTextAsync(path));
         }
         finally

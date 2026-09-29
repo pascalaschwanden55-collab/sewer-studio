@@ -111,19 +111,19 @@ public static class LeereFelderBericht
         var text = new StringBuilder();
 
         text.AppendLine($"Quelle: {quellpfad}");
-        text.AppendLine($"Geprueft: {plan.GepruefteBauteile} {bauteil} im Projekt.");
+        text.AppendLine($"Geprüft: {plan.GepruefteBauteile} {bauteil} im Projekt.");
         text.AppendLine();
 
         if (plan.OhneAenderung)
         {
-            text.AppendLine("Es gibt nichts zu ergaenzen — alle Felder sind entweder gefuellt");
+            text.AppendLine("Es gibt nichts zu ergänzen — alle Felder sind entweder gefüllt");
             text.AppendLine("oder im QGIS-Bestand ohne Angabe.");
         }
         else
         {
             text.AppendLine(
                 $"{plan.Positionen.Count} leere Felder auf {plan.BetroffeneBauteile} {bauteil} " +
-                "wuerden ergaenzt:");
+                "würden ergänzt:");
             foreach (var (feld, anzahl) in plan.JeFeld)
                 text.AppendLine($"    {anzahl.ToString(CultureInfo.InvariantCulture),6}x  {feld}");
         }
@@ -135,24 +135,24 @@ public static class LeereFelderBericht
         if (mehrdeutig + fehlend + nichts > 0)
         {
             text.AppendLine();
-            text.AppendLine("Nicht ergaenzt:");
+            text.AppendLine("Nicht ergänzt:");
 
             if (mehrdeutig > 0)
             {
                 text.AppendLine(
                     $"    {mehrdeutig} mit mehrfach vorkommendem Namen — im QGIS-Bestand nicht");
-                text.AppendLine("      eindeutig, deshalb wird nichts uebernommen.");
+                text.AppendLine("      eindeutig, deshalb wird nichts übernommen.");
             }
 
             if (fehlend > 0)
                 text.AppendLine($"    {fehlend} im QGIS-Bestand nicht gefunden.");
 
             if (nichts > 0)
-                text.AppendLine($"    {nichts} ohne offene Luecke.");
+                text.AppendLine($"    {nichts} ohne offene Lücke.");
         }
 
         text.AppendLine();
-        text.AppendLine("Gefuellte Felder werden nie ueberschrieben.");
+        text.AppendLine("Gefüllte Felder werden nie überschrieben.");
 
         return text.ToString().TrimEnd();
     }

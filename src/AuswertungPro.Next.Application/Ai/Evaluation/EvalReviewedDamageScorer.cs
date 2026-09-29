@@ -243,9 +243,9 @@ public static class EvalReviewedDamageScorer
             item.FrameFileName,
             item.HoldingKey,
             item.EventId
-            ?? throw new InvalidDataException($"Ereignis-ID fehlt fuer {item.FrameFileName}."),
+            ?? throw new InvalidDataException($"Ereignis-ID fehlt für {item.FrameFileName}."),
             item.ExpectedSeverity
-            ?? throw new InvalidDataException($"Schadensstufe fehlt fuer {item.FrameFileName}."),
+            ?? throw new InvalidDataException($"Schadensstufe fehlt für {item.FrameFileName}."),
             detected(item)
                 ? EvalSetEventFrameOutcome.CorrectlyDetectedGateBlocked
                 : EvalSetEventFrameOutcome.NotCorrectlyDetected))

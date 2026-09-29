@@ -60,7 +60,7 @@ internal sealed class SchachtMassnahmenDialogController
             _dialogs.Error(
                 $"Bestehende Schacht-Empfehlungen konnten nicht gelesen werden:\n{loadError}\n\n" +
                 "Bearbeiten und Speichern sind gesperrt, damit die vorhandene Datei nicht " +
-                "ueberschrieben wird. Bitte die Datei pruefen und danach erneut oeffnen.",
+                "überschrieben wird. Bitte die Datei prüfen und danach erneut öffnen.",
                 "Sanierungsmassnahmen");
             return;
         }
@@ -71,8 +71,8 @@ internal sealed class SchachtMassnahmenDialogController
             _dialogs.Error(
                 $"Die Schacht-Massnahmenliste konnte nicht gelesen werden:\n{katalogError}\n\n" +
                 "Bearbeiten und Speichern sind gesperrt, damit die selbst gepflegte Liste " +
-                "nicht durch die Standardliste ersetzt wird. Bitte die Datei pruefen und " +
-                "danach erneut oeffnen.",
+                "nicht durch die Standardliste ersetzt wird. Bitte die Datei prüfen und " +
+                "danach erneut öffnen.",
                 "Sanierungsmassnahmen");
             return;
         }

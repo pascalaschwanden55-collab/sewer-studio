@@ -251,7 +251,7 @@ public sealed class CodingTrainingSamplePersistenceCoordinatorTests
             Request(caseId: "H-500"));
 
         Assert.False(result.Success);
-        Assert.Contains("JSON gesperrt", result.Error);
+        Assert.Contains("Eine Datei oder ein Ordner ist momentan nicht verfügbar", result.Error);
     }
 
     [Fact]
@@ -274,7 +274,7 @@ public sealed class CodingTrainingSamplePersistenceCoordinatorTests
 
         Assert.NotNull(saved);
         Assert.Empty(saved.FramePath);
-        Assert.Equal("kein Frame verfuegbar", saved.SnapshotError);
+        Assert.Equal("kein Frame verfügbar", saved.SnapshotError);
         Assert.Equal(
             ManualGoldTrainingPolicy.GoldFrameRequiredReason,
             ManualGoldTrainingPolicy.EvaluateForExport(saved, "tester").Reason);

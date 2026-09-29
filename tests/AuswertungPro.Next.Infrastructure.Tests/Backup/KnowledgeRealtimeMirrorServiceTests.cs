@@ -216,7 +216,7 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
 
         var error = await Assert.ThrowsAsync<InvalidDataException>(
             () => service.SynchronizeNowAsync());
-        Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(Directory.EnumerateFileSystemEntries(foreign));
     }
 
@@ -275,7 +275,7 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
                 Path.Combine(_root, "gesperrt.txt"),
                 _ => throw new UnauthorizedAccessException("gesperrt")));
 
-        Assert.Contains("nicht sicher geprueft", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nicht sicher geprüft", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [JunctionFact]

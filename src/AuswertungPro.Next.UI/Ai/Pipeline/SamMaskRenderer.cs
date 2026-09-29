@@ -354,7 +354,7 @@ public static class SamMaskRenderer
             catch (Exception ex)
             {
                 // Eine defekte Maske darf das Rendern der uebrigen nicht verhindern.
-                logger?.LogWarning(ex, "SamMaskRenderer: Maske {MaskIndex} uebersprungen.", i);
+                logger?.LogWarning(ex, "SamMaskRenderer: Maske {MaskIndex} übersprungen.", i);
             }
         }
 

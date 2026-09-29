@@ -44,7 +44,7 @@ public static class TrainingCenterSampleGenerationStatusFormatter
             TrainingSampleGenerationOutcome.OnlyDuplicates => new TrainingCenterBatchSkipInfo(
                 TrainingCenterBatchSkipKind.DuplicateOnly,
                 $"{generation.ParsedEntries} Duplikate",
-                $"  -> 0 Samples (alle {generation.ParsedEntries} Eintraege bereits vorhanden)",
+                $"  -> 0 Samples (alle {generation.ParsedEntries} Einträge bereits vorhanden)",
                 $"{generation.ParsedEntries} Duplikate",
                 "bereits vorhanden"),
             TrainingSampleGenerationOutcome.ProtocolFileMissing => new TrainingCenterBatchSkipInfo(
@@ -61,9 +61,9 @@ public static class TrainingCenterSampleGenerationStatusFormatter
                 "nicht lesbar"),
             _ => new TrainingCenterBatchSkipInfo(
                 TrainingCenterBatchSkipKind.EmptyProtocol,
-                "keine Eintraege",
-                "  -> 0 Samples (keine Protokolleintraege erkannt)",
+                "keine Einträge",
+                "  -> 0 Samples (keine Protokolleinträge erkannt)",
                 NoValueDisplay,
-                "keine Eintraege")
+                "keine Einträge")
         };
 }

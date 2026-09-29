@@ -3,63 +3,16 @@ using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Settings;
 
-public sealed record SettingsThemeWorkflowUi(
-    Func<bool> GetIsSyncing,
-    Action<bool> SetIsSyncing,
-    Func<string> GetUiTheme,
-    Action<string> SetUiTheme,
-    Func<bool> GetIsDarkTheme,
-    Action<bool> SetIsDarkTheme);
-
+/// <summary>
+/// Optikanalyse 28.09.2026, Aufgabe 13: EIN Weg statt zwei. Die Design-Auswahl (Hell/Dunkel/Wie
+/// Windows, drei Radioknoepfe in den Einstellungen) wendet sich beim Auswaehlen sofort an und
+/// speichert sofort - kein getrennter "Anwenden"-Knopf mehr. Bis Aufgabe 13 gab es zusaetzlich
+/// einen zweiten Umschalter (IsDarkTheme, bi-state) mit eigenem Abgleichweg
+/// (SyncUiThemeChanged/SyncIsDarkThemeChanged); der ist mit der dritten Wahl "Wie Windows"
+/// entfallen (ein bi-state-Umschalter kann keine drei Zustaende abbilden).
+/// </summary>
 public static class SettingsThemeWorkflow
 {
-    public static void SyncUiThemeChanged(string value, SettingsThemeWorkflowUi ui)
-    {
-        ArgumentNullException.ThrowIfNull(ui);
-
-        if (ui.GetIsSyncing())
-            return;
-
-        ui.SetIsSyncing(true);
-        try
-        {
-            var normalized = ThemeManager.NormalizeTheme(value);
-            if (!string.Equals(normalized, value, StringComparison.Ordinal))
-            {
-                ui.SetUiTheme(normalized);
-                return;
-            }
-
-            var shouldBeDark = string.Equals(normalized, ThemeManager.Dark, StringComparison.Ordinal);
-            if (ui.GetIsDarkTheme() != shouldBeDark)
-                ui.SetIsDarkTheme(shouldBeDark);
-        }
-        finally
-        {
-            ui.SetIsSyncing(false);
-        }
-    }
-
-    public static void SyncIsDarkThemeChanged(bool isDarkTheme, SettingsThemeWorkflowUi ui)
-    {
-        ArgumentNullException.ThrowIfNull(ui);
-
-        if (ui.GetIsSyncing())
-            return;
-
-        ui.SetIsSyncing(true);
-        try
-        {
-            var targetTheme = isDarkTheme ? ThemeManager.Dark : ThemeManager.Light;
-            if (!string.Equals(ui.GetUiTheme(), targetTheme, StringComparison.Ordinal))
-                ui.SetUiTheme(targetTheme);
-        }
-        finally
-        {
-            ui.SetIsSyncing(false);
-        }
-    }
-
     public static void ApplyTheme(
         AppSettings settings,
         string? uiTheme,
@@ -70,16 +23,23 @@ public static class SettingsThemeWorkflow
         AppSettings settings,
         string? uiTheme,
         Action saveSettingsImmediate,
-        Action<string> applyToResources)
+        Action<string> applyToResources,
+        // Fix-Runde 1, MINOR 7: injizierbarer Registry-Leser fuer die Aufloesung von "System" -
+        // null verwendet den echten Registry-Zugriff (Produktionsweg unveraendert). Tests fuer
+        // die "System"-Wahl koennen so das konkrete aufgeloeste Theme deterministisch pruefen,
+        // statt den echten Registry-Stand des Testrechners zu lesen.
+        Func<int?>? readWindowsAppsUseLightTheme = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(saveSettingsImmediate);
         ArgumentNullException.ThrowIfNull(applyToResources);
 
-        var normalized = ThemeManager.NormalizeTheme(uiTheme);
-        settings.UiTheme = normalized;
+        // Gespeichert wird die Wahl selbst (kann "System" sein); angewendet wird immer das
+        // daraus aufgeloeste konkrete Theme (Light/Dark).
+        var preference = ThemeManager.NormalizePreference(uiTheme);
+        settings.UiTheme = preference;
         saveSettingsImmediate();
-        applyToResources(normalized);
+        applyToResources(ThemeManager.ResolveEffectiveTheme(preference, readWindowsAppsUseLightTheme));
     }
 
     private static void ApplyToApplicationResources(string theme)

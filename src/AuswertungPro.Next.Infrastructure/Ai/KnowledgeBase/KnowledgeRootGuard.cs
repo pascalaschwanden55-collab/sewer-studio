@@ -47,23 +47,23 @@ public static class KnowledgeRootGuard
                 "Die Wissensdatenbank liegt jetzt in einem anderen Ordner als beim letzten Start.\n" +
                 $"Zuletzt: {lastKnownRoot}\n" +
                 $"Jetzt: {currentRoot}\n" +
-                "Falls das nicht gewollt ist, pruefe die Umgebungsvariable SEWERSTUDIO_KNOWLEDGE_ROOT — " +
+                "Falls das nicht gewollt ist, prüfe die Umgebungsvariable SEWERSTUDIO_KNOWLEDGE_ROOT — " +
                 "sonst landen neue Trainingsdaten in einer anderen Wissensdatenbank.");
 
         // 2. Gleicher Ordner, aber die DB war weg -> neu/leer angelegt.
         if (!dbExisted)
             return new(KnowledgeRootWarnungArt.LeereOderNeueDb,
                 $"Die Wissensdatenbank wurde neu (leer) angelegt: {currentRoot}\n" +
-                "Beim letzten Start lag hier bereits eine Datenbank. Wurde sie geloescht oder verschoben? " +
-                "Bitte eine Datensicherung pruefen, bevor du weiterarbeitest.");
+                "Beim letzten Start lag hier bereits eine Datenbank. Wurde sie gelöscht oder verschoben? " +
+                "Bitte eine Datensicherung prüfen, bevor du weiterarbeitest.");
 
         // 3. Sample-Einbruch ueber 90 % bei vorher substanziellem Bestand.
         if (lastKnownSampleCount is int last
             && last >= MinRelevanterBestand
             && currentSampleCount < last / 10)
             return new(KnowledgeRootWarnungArt.SampleEinbruch,
-                "Die Wissensdatenbank enthaelt viel weniger Beispiele als beim letzten Start " +
-                $"(jetzt {currentSampleCount}, zuletzt {last}). Moeglicher Datenverlust — bitte eine Datensicherung pruefen.");
+                "Die Wissensdatenbank enthält viel weniger Beispiele als beim letzten Start " +
+                $"(jetzt {currentSampleCount}, zuletzt {last}). Möglicher Datenverlust — bitte eine Datensicherung prüfen.");
 
         return KnowledgeRootGuardResult.Ok;
     }

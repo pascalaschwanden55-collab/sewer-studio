@@ -3,8 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Hydraulik-PDF drucken"
-        Width="380" Height="340"
+        Width="380" Height="380"
+        MinWidth="380" MinHeight="380"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}">
@@ -55,9 +57,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Abschnitte für den Druck auswählen:"
-                   FontSize="{DynamicResource TextM}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
-                   Margin="0,0,0,12"/>
+        <controls:NovaDialogHeader Grid.Row="0" Title="Abschnitte für den Druck auswählen"/>
 
         <StackPanel Grid.Row="1" Margin="8,0,0,0">
             <CheckBox x:Name="ChkTeilfuellung" Content="Teilfüllung (v, Q, A, Lu, Rhy, Bsp)"
@@ -74,13 +74,17 @@
                       IsChecked="True"/>
         </StackPanel>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button Content="Abbrechen" Width="90" Height="30" Margin="0,0,8,0"
-                    Click="Cancel_Click"
-                    Style="{StaticResource SecondaryButton}"/>
-            <Button Content="PDF erstellen" Width="110" Height="30"
-                    Click="Ok_Click"
-                    Style="{StaticResource SuccessButton}"/>
-        </StackPanel>
+        <Border Grid.Row="2" Style="{StaticResource DialogButtonBar}" Margin="0,16,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Abbrechen" Width="90" Height="30" Margin="0,0,8,0"
+                        Click="Cancel_Click"
+                        IsCancel="True"
+                        Style="{StaticResource SecondaryButton}"/>
+                <Button Content="PDF erstellen" Width="110" Height="30"
+                        Click="Ok_Click"
+                        IsDefault="True"
+                        Style="{StaticResource PrimaryButton}"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

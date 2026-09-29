@@ -22,11 +22,11 @@ public interface IDialogService
     void Error(string message, string title = "Fehler");
 
     /// <summary>Ja/Nein-Bestaetigung. true = Ja.</summary>
-    bool Confirm(string message, string title = "Bestaetigung");
+    bool Confirm(string message, string title = "Bestätigung");
 
     /// <summary>Warnende Ja/Nein-Bestaetigung. true = Ja.</summary>
-    bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true);
+    bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true);
 
     /// <summary>Ja/Nein/Abbrechen-Bestaetigung.</summary>
-    DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung");
+    DialogConfirm ConfirmCancel(string message, string title = "Bestätigung");
 }

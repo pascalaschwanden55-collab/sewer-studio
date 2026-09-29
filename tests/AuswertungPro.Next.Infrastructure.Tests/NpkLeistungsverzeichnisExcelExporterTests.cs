@@ -254,4 +254,55 @@ public sealed class NpkLeistungsverzeichnisExcelExporterTests
         Assert.NotNull(row);
         return row!;
     }
+
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 15: mit injizierter <see cref="IBerichtsMarke"/> gilt
+    /// deren Pfad statt des fest eingetragenen Standardpfads.
+    /// </summary>
+    [Fact]
+    public void ResolveLogoPath_verwendet_die_injizierte_IBerichtsMarke()
+    {
+        var service = new NpkLeistungsverzeichnisExcelExportService(
+            new StubBerichtsMarke(@"D:\Firmenlogos\aktuelles-logo.png"));
+
+        Assert.Equal(@"D:\Firmenlogos\aktuelles-logo.png", service.ResolveLogoPath(null));
+    }
+
+    [Fact]
+    public void ResolveLogoPath_bevorzugt_einen_ausdruecklich_uebergebenen_und_vorhandenen_Pfad()
+    {
+        var eigenerPfad = Path.GetTempFileName();
+        try
+        {
+            var service = new NpkLeistungsverzeichnisExcelExportService(
+                new StubBerichtsMarke(@"D:\Firmenlogos\aktuelles-logo.png"));
+
+            Assert.Equal(eigenerPfad, service.ResolveLogoPath(eigenerPfad));
+        }
+        finally
+        {
+            File.Delete(eigenerPfad);
+        }
+    }
+
+    [Fact]
+    public void ResolveLogoPath_ohne_Injektion_prueft_weiterhin_den_festen_Standardpfad()
+    {
+        // Ohne injizierte IBerichtsMarke gilt weiterhin der alte, fest berechnete Pfad neben
+        // dem Programm. Im Testlauf liegt dort keine Bilddatei (kein Export_Vorlage-Asset in
+        // diesem Testprojekt) - genau das ist der geforderte saubere Rueckfall: null, kein
+        // erfundener Pfad, kein Absturz.
+        var service = new NpkLeistungsverzeichnisExcelExportService();
+
+        var appLogo = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+        var erwartet = File.Exists(appLogo) ? appLogo : null;
+
+        Assert.Equal(erwartet, service.ResolveLogoPath(null));
+    }
+
+    private sealed class StubBerichtsMarke : AuswertungPro.Next.Application.Reports.IBerichtsMarke
+    {
+        public StubBerichtsMarke(string? logoPfad) => LogoPfad = logoPfad;
+        public string? LogoPfad { get; }
+    }
 }

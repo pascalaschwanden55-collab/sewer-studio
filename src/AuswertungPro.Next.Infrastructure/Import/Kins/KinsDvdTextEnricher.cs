@@ -17,7 +17,7 @@ public static class KinsDvdTextEnricher
     public static void Use(IKinsDvdTextEnricher enricher)
         => throw new NotSupportedException(
             "Die globale KINS-Textanreicherung kann nicht mehr ausgetauscht werden. " +
-            "IKinsDvdTextEnricher bitte per Konstruktor uebergeben.");
+            "IKinsDvdTextEnricher bitte per Konstruktor übergeben.");
 
     public static KinsDvdTextEnrichResult Apply(Project project, string kiDvDatenPath)
     {

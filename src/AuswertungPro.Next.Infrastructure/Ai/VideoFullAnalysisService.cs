@@ -314,7 +314,7 @@ public sealed class VideoFullAnalysisService
                     $"Video nur teilweise analysiert (Frames {partialCompletion.FramesRead}/{partialCompletion.ExpectedFrames}, " +
                     $"ffmpeg-Exit {FormatExitCode(partialCompletion.ExitCode)})");
             }
-            degradedReason = "Analyse unvollstaendig: " + string.Join("; ", issues) + ".";
+            degradedReason = "Analyse unvollständig: " + string.Join("; ", issues) + ".";
         }
 
         _logger.LogInformation(

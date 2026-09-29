@@ -82,7 +82,7 @@ public static class MedienKandidatenAuswahl
         {
             return new MedienWahl(null, Array.Empty<string>(), true,
                 $"{eindeutig.Count} Kandidaten, davon nicht lesbar: {Beschreibe(unlesbar)} — "
-                + "Gleichheit nicht pruefbar");
+                + "Gleichheit nicht prüfbar");
         }
 
         var gruppen = lesbar

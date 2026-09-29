@@ -48,7 +48,8 @@ internal sealed class SchachtProArchiveReader : IDisposable
         {
             throw new SchachtProArchiveException(
                 "INVALID_ARCHIVE",
-                $"Die Datei ist kein gueltiges ZIP-Archiv: {Path.GetFileName(sproPath)} ({ex.Message})");
+                $"Die Datei ist kein gültiges ZIP-Archiv: {Path.GetFileName(sproPath)}",
+                ex);
         }
 
         try
@@ -57,7 +58,7 @@ internal sealed class SchachtProArchiveReader : IDisposable
             {
                 throw new SchachtProArchiveException(
                     "INVALID_ARCHIVE",
-                    $"Archiv enthaelt zu viele Eintraege (>{MaxEntryCount}).");
+                    $"Archiv enthält zu viele Einträge (>{MaxEntryCount}).");
             }
 
             var entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.Ordinal);
@@ -74,13 +75,13 @@ internal sealed class SchachtProArchiveReader : IDisposable
 
                 if (name.EndsWith('/') && entry.Length != 0)
                     throw new SchachtProArchiveException("INVALID_ARCHIVE",
-                        $"Ein Ordner-Eintrag enthaelt unerwartete Dateidaten: {name}");
+                        $"Ein Ordner-Eintrag enthält unerwartete Dateidaten: {name}");
 
                 if (entry.Length > MaxEntrySize)
                 {
                     throw new SchachtProArchiveException(
                         "INVALID_ARCHIVE",
-                        $"Eintrag '{name}' ueberschreitet {MaxEntrySize} Bytes.");
+                        $"Eintrag '{name}' überschreitet {MaxEntrySize} Bytes.");
                 }
 
                 total += entry.Length;
@@ -88,12 +89,12 @@ internal sealed class SchachtProArchiveReader : IDisposable
                 {
                     throw new SchachtProArchiveException(
                         "INVALID_ARCHIVE",
-                        $"Archivinhalt ueberschreitet das Gesamtlimit von {MaxTotalUncompressedSize} Bytes (Zip-Bomb-Schutz).");
+                        $"Archivinhalt überschreitet das Gesamtlimit von {MaxTotalUncompressedSize} Bytes (Zip-Bomb-Schutz).");
                 }
 
                 if (!entries.TryAdd(name, entry))
                     throw new SchachtProArchiveException("DUPLICATE_ENTRY",
-                        $"Archiv enthaelt einen mehrfachen Dateipfad: {name}");
+                        $"Archiv enthält einen mehrfachen Dateipfad: {name}");
             }
 
             return new SchachtProArchiveReader(archive, entries);
@@ -113,14 +114,14 @@ internal sealed class SchachtProArchiveReader : IDisposable
         {
             throw new SchachtProArchiveException(
                 "MANIFEST_MISSING",
-                "Ungueltiges Archiv: manifest.json fehlt.");
+                "Ungültiges Archiv: manifest.json fehlt.");
         }
 
         if (entry.Length > MaxManifestSize)
         {
             throw new SchachtProArchiveException(
                 "INVALID_ARCHIVE",
-                $"manifest.json ist groesser als {MaxManifestSize} Bytes.");
+                $"manifest.json ist grösser als {MaxManifestSize} Bytes.");
         }
 
         ArchiveManifestDto? manifest;
@@ -133,38 +134,39 @@ internal sealed class SchachtProArchiveReader : IDisposable
         {
             throw new SchachtProArchiveException(
                 "MANIFEST_INVALID",
-                $"manifest.json ist beschaedigt ({ex.Message})");
+                "manifest.json ist beschädigt.",
+                ex);
         }
 
         if (manifest is null || manifest.Projects is null || manifest.AppVersionName is null)
         {
             throw new SchachtProArchiveException(
                 "MANIFEST_INVALID",
-                "Manifest unvollstaendig: Pflichtfelder fehlen.");
+                "Manifest unvollständig: Pflichtfelder fehlen.");
         }
 
         if (manifest.FormatVersion > SupportedFormatVersion)
         {
             throw new SchachtProArchiveException(
                 "UNSUPPORTED_VERSION",
-                $"Archiv-Version {manifest.FormatVersion} ist neuer als unterstuetzt ({SupportedFormatVersion}). Bitte SewerStudio aktualisieren.");
+                $"Archiv-Version {manifest.FormatVersion} ist neuer als unterstützt ({SupportedFormatVersion}). Bitte SewerStudio aktualisieren.");
         }
 
         if (manifest.DbSchemaVersion > SupportedDbSchemaVersion)
         {
             throw new SchachtProArchiveException(
                 "UNSUPPORTED_VERSION",
-                $"Archiv-DB-Schema {manifest.DbSchemaVersion} ist neuer als unterstuetzt ({SupportedDbSchemaVersion}). Bitte SewerStudio aktualisieren.");
+                $"Archiv-DB-Schema {manifest.DbSchemaVersion} ist neuer als unterstützt ({SupportedDbSchemaVersion}). Bitte SewerStudio aktualisieren.");
         }
 
         if (manifest.FormatVersion < 1 || manifest.DbSchemaVersion < 1)
-            throw new SchachtProArchiveException("MANIFEST_INVALID", "Ungueltige Archiv- oder Datenbankversion.");
+            throw new SchachtProArchiveException("MANIFEST_INVALID", "Ungültige Archiv- oder Datenbankversion.");
 
         if (manifest.ProjectCount != manifest.Projects.Count)
         {
             throw new SchachtProArchiveException(
                 "MANIFEST_INVALID",
-                "Manifest widerspruechlich: Projektanzahl stimmt nicht.");
+                "Manifest widersprüchlich: Projektanzahl stimmt nicht.");
         }
 
         var exportIds = new HashSet<string>(StringComparer.Ordinal);
@@ -174,14 +176,14 @@ internal sealed class SchachtProArchiveReader : IDisposable
             {
                 throw new SchachtProArchiveException(
                     "MANIFEST_INVALID",
-                    "Manifest enthaelt eine ungueltige Projekt-ID.");
+                    "Manifest enthält eine ungültige Projekt-ID.");
             }
 
             if (!exportIds.Add(project.ExportId))
             {
                 throw new SchachtProArchiveException(
                     "MANIFEST_INVALID",
-                    "Manifest enthaelt doppelte Projekt-IDs.");
+                    "Manifest enthält doppelte Projekt-IDs.");
             }
         }
 
@@ -203,7 +205,7 @@ internal sealed class SchachtProArchiveReader : IDisposable
         {
             throw new SchachtProArchiveException(
                 "INVALID_ARCHIVE",
-                $"Projekt-JSON {exportId} ist groesser als {MaxProjectJsonSize} Bytes.");
+                $"Projekt-JSON {exportId} ist grösser als {MaxProjectJsonSize} Bytes.");
         }
 
         return ReadEntryText(entry);
@@ -309,6 +311,12 @@ internal sealed class SchachtProArchiveException : Exception
 {
     internal SchachtProArchiveException(string code, string message)
         : base(message)
+    {
+        Code = code;
+    }
+
+    internal SchachtProArchiveException(string code, string message, Exception innerException)
+        : base(message, innerException)
     {
         Code = code;
     }

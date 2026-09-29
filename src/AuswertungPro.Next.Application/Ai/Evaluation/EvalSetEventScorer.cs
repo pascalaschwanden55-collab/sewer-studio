@@ -62,7 +62,7 @@ public static class EvalSetEventScorer
             else if (aggregate.ExpectedSeverity != frame.ExpectedSeverity)
             {
                 throw new ArgumentException(
-                    $"Die Metadaten fuer Haltung '{holdingKey}', Ereignis '{eventId}' sind nicht konsistent.",
+                    $"Die Metadaten für Haltung '{holdingKey}', Ereignis '{eventId}' sind nicht konsistent.",
                     nameof(frames));
             }
 

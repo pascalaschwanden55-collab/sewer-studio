@@ -23,7 +23,13 @@ public sealed record SettingsFullBackupWorkflowRequest(
     /// die Ursache nur im Dialog sichtbar und nach dem Wegklicken verloren.
     /// null verwendet den zentralen Logkanal.
     /// </summary>
-    Action<string>? Log = null);
+    Action<string>? Log = null,
+    /// <summary>
+    /// Aufgabe 13 (Windows-Integration, 28.09.2026): spiegelt den Fortschritt zusaetzlich am
+    /// Programmsymbol in der Taskleiste. Optional, damit bestehende Aufrufer/Tests unveraendert
+    /// bleiben; null bedeutet "keine Anzeige".
+    /// </summary>
+    ITaskbarFortschritt? Taskbar = null);
 
 public static class SettingsFullBackupWorkflow
 {
@@ -36,21 +42,24 @@ public static class SettingsFullBackupWorkflow
 
         if (request.Operation.IsRunning)
         {
-            request.Toasts.Info("Datensicherung laeuft bereits.");
+            request.Toasts.Info("Datensicherung läuft bereits.");
             return;
         }
 
         var targetFolder = request.Dialogs.SelectFolder(
-            "Zielordner fuer die Datensicherung waehlen",
+            "Zielordner für die Datensicherung wählen",
             request.Settings.LastFullBackupPath);
         if (targetFolder is null)
             return;
 
         if (!request.Operation.TryBegin(ct, out var runToken))
         {
-            request.Toasts.Info("Datensicherung laeuft bereits.");
+            request.Toasts.Info("Datensicherung läuft bereits.");
             return;
         }
+
+        var taskbar = request.Taskbar;
+        SicherTaskbar(() => taskbar?.SetzeUnbestimmt());
 
         try
         {
@@ -63,11 +72,12 @@ public static class SettingsFullBackupWorkflow
             if (!request.Dialogs.Confirm(confirmText, "Datensicherung erstellen"))
             {
                 request.Operation.SetStatus("Datensicherung nicht gestartet.");
+                SicherTaskbar(() => taskbar?.Beenden());
                 return;
             }
 
             request.FlushPendingSave();
-            request.Operation.SetStatus("Datensicherung laeuft...");
+            request.Operation.SetStatus("Datensicherung läuft...");
 
             var progress = new InlineProgress<FullBackupProgress>(p =>
             {
@@ -76,6 +86,11 @@ public static class SettingsFullBackupWorkflow
                     presentation.Percent,
                     presentation.CurrentFileName,
                     presentation.StatusText);
+                // Dieser Callback laeuft auf dem Threadpool-Thread der Datensicherung (kein
+                // Progress<T> mit eigenem Marshalling) - SicherTaskbar faengt zusaetzlich zu
+                // ITaskbarFortschritt.Anwenden(...) selbst jede Ausnahme ab: eine Anzeige darf
+                // den Lauf nie abbrechen, egal welche Implementierung injiziert wurde.
+                SicherTaskbar(() => taskbar?.SetzeFortschritt(presentation.Percent / 100d));
             });
 
             var result = await Task.Run(
@@ -91,21 +106,26 @@ public static class SettingsFullBackupWorkflow
                     $"{result.Error ?? "ohne Angabe"}");
                 request.Operation.SetStatus($"Fehler: {result.Error}");
                 request.Toasts.Error("Datensicherung fehlgeschlagen.");
+                SicherTaskbar(() => taskbar?.Fehler());
                 request.Dialogs.Error(result.Error ?? "Datensicherung fehlgeschlagen.", "Datensicherung");
+                // Der rote Zustand bleibt WAEHREND der Dialog offen ist sichtbar stehen (der
+                // Benutzer soll den Fehlschlag am Symbol bemerken); erst nach dem Wegklicken
+                // (Dialogs.Error ist modal/blockierend) wird zurueckgesetzt (MINOR 4, Fix-Runde 1).
+                SicherTaskbar(() => taskbar?.Beenden());
                 return;
             }
 
             var databaseInfo = result.DatabasesSnapshotted switch
             {
                 1 => ", 1 Datenbank-Schnappschuss",
-                > 1 => $", {result.DatabasesSnapshotted} Datenbank-Schnappschuesse",
+                > 1 => $", {result.DatabasesSnapshotted} Datenbank-Schnappschüsse",
                 _ => string.Empty
             };
             request.Operation.UpdateProgress(
                 100,
                 string.Empty,
-                $"Fertig: {result.FilesCopied} kopiert, {result.FilesVerified} vollstaendig geprueft" +
-                $"{databaseInfo}, {result.FilesUnchanged} unveraendert, " +
+                $"Fertig: {result.FilesCopied} kopiert, {result.FilesVerified} vollständig geprüft" +
+                $"{databaseInfo}, {result.FilesUnchanged} unverändert, " +
                 $"{result.FilesDeleted} entfernt.");
             if (result.SkippedFileTotal > 0 || result.SkippedFiles.Count > 0)
                 request.Toasts.Warning("Datensicherung mit Lücken abgeschlossen – Hinweise prüfen.");
@@ -127,8 +147,8 @@ public static class SettingsFullBackupWorkflow
                 // tatsaechliche Zahl, damit eine grosse Luecke nicht klein aussieht.
                 var anzahl = Math.Max(result.SkippedFileTotal, result.SkippedFiles.Count);
                 foreach (var uebersprungen in result.SkippedFiles)
-                    log($"[Datensicherung] Uebersprungen: {uebersprungen}");
-                log($"[Datensicherung] Uebersprungene Dateien insgesamt: {anzahl}");
+                    log($"[Datensicherung] Übersprungen: {uebersprungen}");
+                log($"[Datensicherung] Übersprungene Dateien insgesamt: {anzahl}");
 
                 var sample = string.Join(Environment.NewLine, result.SkippedFiles.Take(10));
                 request.Dialogs.Warn(
@@ -138,6 +158,8 @@ public static class SettingsFullBackupWorkflow
                     "Die vollständige Liste steht im Sicherungsprotokoll «SewerStudio_Sicherung_Protokoll.txt» neben dem Sicherungsordner.",
                     "Datensicherung");
             }
+
+            SicherTaskbar(() => taskbar?.Beenden());
         }
         catch (OperationCanceledException)
         {
@@ -146,17 +168,46 @@ public static class SettingsFullBackupWorkflow
                 string.Empty,
                 "Abgebrochen - vorheriger Sicherungsstand wiederhergestellt.");
             request.Toasts.Info("Datensicherung abgebrochen.");
+            // Ein Abbruch durch den Benutzer ist kein Fehler (MINOR 5-Prinzip, hier bereits
+            // vorher korrekt): sofort zurueck auf "keine Anzeige", kein roter Zustand.
+            SicherTaskbar(() => taskbar?.Beenden());
         }
         catch (Exception ex)
         {
             var userMessage = UserError.DescribeAndReport(ex, "Datensicherung");
             request.Operation.SetStatus($"Fehler: {userMessage}");
             request.Toasts.Error("Datensicherung fehlgeschlagen.");
+            SicherTaskbar(() => taskbar?.Fehler());
             request.Dialogs.Error($"Datensicherung fehlgeschlagen:\n{userMessage}", "Datensicherung");
+            // Wie beim Ergebnis-Fehlschlag oben: rot bleibt sichtbar, bis der Dialog
+            // bestaetigt ist, dann zurueckgesetzt (MINOR 4, Fix-Runde 1).
+            SicherTaskbar(() => taskbar?.Beenden());
         }
         finally
         {
             request.Operation.Finish();
+        }
+    }
+
+    /// <summary>
+    /// Eine Taskleisten-Anzeige darf einen Sicherungslauf NIE abbrechen (CRITICAL 1, Fix-Runde 1
+    /// - real reproduziert: ein auf dem Threadpool-Thread geworfener Zugriff auf
+    /// Window.TaskbarItemInfo liess den kompletten Lauf als Fehlschlag werten). Diese Sperre gilt
+    /// zusaetzlich zu <see cref="TaskbarFortschritt"/>s eigenem Schutz - unabhaengig davon, welche
+    /// ITaskbarFortschritt-Implementierung injiziert wurde.
+    /// </summary>
+    private static void SicherTaskbar(Action? aufruf)
+    {
+        if (aufruf is null)
+            return;
+
+        try
+        {
+            aufruf();
+        }
+        catch (Exception ex)
+        {
+            BestEffort.ReportWarning($"Taskleisten-Fortschritt konnte nicht ausgefuehrt werden: {ex.Message}");
         }
     }
 

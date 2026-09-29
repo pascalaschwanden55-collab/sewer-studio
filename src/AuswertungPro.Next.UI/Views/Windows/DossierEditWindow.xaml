@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         ui:WindowFx.Entrance="True"
         Title="SewerStudio — Liegenschaft"
         Width="620" Height="700"
@@ -30,14 +31,15 @@
 
     <Grid Margin="18">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="0,0,12,0">
+        <controls:NovaDialogHeader Grid.Row="0" Title="Liegenschaft"/>
 
-                <TextBlock Text="Liegenschaft" Style="{StaticResource SectionStyle}" Margin="0,0,0,4"/>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,12,0">
 
                 <TextBlock Text="Name (erscheint in der Liste und als Ordnername)"/>
                 <TextBox x:Name="NameBox"/>
@@ -250,16 +252,19 @@
             </StackPanel>
         </ScrollViewer>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"
-                    Margin="0,16,0,0">
-            <TextBlock x:Name="HintText" Text="" Foreground="{DynamicResource DangerBrush}"
-                       VerticalAlignment="Center" Margin="0,0,12,0"/>
-            <Button Content="Abbrechen" Width="110" Height="32" Margin="0,0,8,0"
-                    ToolTip="Schliesst das Fenster. Die Stammdaten bleiben so, wie sie beim Öffnen waren."
-                    IsCancel="True" Click="OnCancel"/>
-            <Button Content="Speichern" Width="110" Height="32"
-                    ToolTip="Übernimmt die Stammdaten und schreibt sie auf die Platte."
-                    IsDefault="True" Click="OnSave"/>
-        </StackPanel>
+        <Border Grid.Row="2" Style="{StaticResource DialogButtonBar}">
+            <Grid>
+                <TextBlock x:Name="HintText" Text="" Foreground="{DynamicResource DangerBrush}"
+                           VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Abbrechen" Style="{StaticResource SecondaryButton}" Width="110" Height="32" Margin="0,0,8,0"
+                            ToolTip="Schliesst das Fenster. Die Stammdaten bleiben so, wie sie beim Öffnen waren."
+                            IsCancel="True" Click="OnCancel"/>
+                    <Button Content="Speichern" Style="{StaticResource PrimaryButton}" Width="110" Height="32"
+                            ToolTip="Übernimmt die Stammdaten und schreibt sie auf die Platte."
+                            IsDefault="True" Click="OnSave"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

@@ -54,7 +54,7 @@ public sealed class ProjectRecoveryServiceTests : IDisposable
             repository);
 
         Assert.False(result.ProjectFolderModified);
-        Assert.Contains("Quarantaene", result.Detail, StringComparison.Ordinal);
+        Assert.Contains("Quarantäne", result.Detail, StringComparison.Ordinal);
         Assert.False(File.Exists(projectFile));
     }
 
@@ -146,7 +146,7 @@ public sealed class ProjectRecoveryServiceTests : IDisposable
                 recovery,
                 new JsonProjectRepository());
 
-            Assert.Contains("Verknuepfung", result.Detail, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", result.Detail, StringComparison.OrdinalIgnoreCase);
             Assert.True(result.ProjectFolderModified);
             Assert.False(File.Exists(Path.Combine(external, ProjectFileLocator.ProjectFileName)));
         }

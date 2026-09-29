@@ -47,7 +47,7 @@ public sealed class PlayerWindowCodingTimelineArchitectureTests
         var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(timelinePath), "Coding-Timeline-Wiring soll in einem eigenen Lifecycle-Partial liegen.");
-        Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln muessen ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln müssen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(controlsPath), "Timeline-Control-Konfiguration soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(commandWorkflowPath), "Timeline-Command-Entscheidungen sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(commandFactoryPath), "Timeline-Commands sollen ausserhalb der PlayerWindow-Partials erzeugt werden.");

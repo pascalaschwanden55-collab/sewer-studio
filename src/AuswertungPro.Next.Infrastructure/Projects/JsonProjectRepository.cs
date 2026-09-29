@@ -52,8 +52,8 @@ public sealed class JsonProjectRepository : IProjectRepository
             {
                 return Result<Project>.Fail(
                     ProjektLadefehler.Version,
-                    $"Das Projekt stammt aus einer neueren Programmversion (Projektformat {project.Version}, unterstuetzt bis {CurrentVersion}). " +
-                    "Bitte oeffne es mit der neueren SewerStudio-Version. Die Datei wurde nicht veraendert.");
+                    $"Das Projekt stammt aus einer neueren Programmversion (Projektformat {project.Version}, unterstützt bis {CurrentVersion}). " +
+                    "Bitte öffne es mit der neueren SewerStudio-Version. Die Datei wurde nicht verändert.");
             }
 
             if (project.Version < 2)
@@ -103,7 +103,7 @@ public sealed class JsonProjectRepository : IProjectRepository
             return Result<Project>.Fail(
                 ProjektLadefehler.Zugriff,
                 $"Die Projektdatei konnte nicht gelesen werden: {ex.Message} "
-                + "Sie wurde nicht veraendert. Bitte schliesse Programme, die sie offen halten, "
+                + "Sie wurde nicht verändert. Bitte schliesse Programme, die sie offen halten, "
                 + "und versuche es erneut.");
         }
     }

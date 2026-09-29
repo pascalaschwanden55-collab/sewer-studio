@@ -87,11 +87,11 @@ public static class CodingPointFollowUpPolicy
             || !session.Events.Contains(existing))
             return "kein Nachweis eines neuen Sitzungsvorschlags";
         if (!IsUntouchedPoint(existing) || Fingerprint(existing) != state.Fingerprint)
-            return "menschlich bearbeitet oder seit Erstellung veraendert";
+            return "menschlich bearbeitet oder seit Erstellung verändert";
         if (entry.Source != ProtocolEntrySource.Ai || entry.IsStreckenschaden || entry.IsDeleted
             || context.Decision != CodingUserDecision.Ignored || context.HumanTouchedAtUtc is not null
             || !string.Equals(existing.Entry.Code, entry.Code, StringComparison.OrdinalIgnoreCase))
-            return "kein gleichartiger ungepruefter Punktbeleg";
+            return "kein gleichartiger ungeprüfter Punktbeleg";
         if (!meterFromOsd || entry.MeterStart is not { } meter || !double.IsFinite(meter)
             || entry.Zeit is not { } time || meter < state.AnchorMeter
             || meter - state.AnchorMeter >= MaximumAnchorMeters
@@ -101,7 +101,7 @@ public static class CodingPointFollowUpPolicy
             || !CodingPointGeometry.Matches(existing.Overlay, box)
             || coverageCandidates.Count(ev => CodingDedupPolicy.CodesMatch(ev.Entry.Code, entry.Code)
                 && Math.Abs(ev.MeterAtCapture - meter) < MaximumAnchorMeters) != 1)
-            return "keine eindeutige raeumliche Zuordnung";
+            return "keine eindeutige räumliche Zuordnung";
         var before = existing.AiContext!;
         if (context.ObservationHasTechnicalFailure
             || before.SamMaskImageWidth != context.SamMaskImageWidth
@@ -119,7 +119,7 @@ public static class CodingPointFollowUpPolicy
             || before.Evidence.SamMaskStability!.Value - context.Evidence.SamMaskStability!.Value > MaximumSamLoss + 1e-9
             || context.QualityGateLevel is null or "Red"
             || before.QualityGateLevel == "Green" && context.QualityGateLevel != "Green")
-            return "kein ausreichend staerkerer Beleg bei erhaltener Maskenqualitaet";
+            return "kein ausreichend stärkerer Beleg bei erhaltener Maskenqualität";
         return null;
     }
 
@@ -129,7 +129,7 @@ public static class CodingPointFollowUpPolicy
     {
         var block = ImprovementBlockReason(session, existing, entry, box, context, meterFromOsd, coverageCandidates);
         if (block is null && !HasCompleteImageEvidence(entry, context))
-            block = "vollstaendiger neuer Bild-/Maskenbeleg fehlt";
+            block = "vollständiger neuer Bild-/Maskenbeleg fehlt";
         if (block is not null) { reason = block; return false; }
 
         var states = Sessions.GetOrCreateValue(session!);
@@ -146,7 +146,7 @@ public static class CodingPointFollowUpPolicy
         existing.MeterAtCapture = entry.MeterStart!.Value;
         existing.VideoTimestamp = entry.Zeit!.Value;
         states[existing.EventId] = state with { Fingerprint = Fingerprint(existing) };
-        reason = "staerkerer Folgebeleg; vorheriger Beleg archiviert";
+        reason = "stärkerer Folgebeleg; vorheriger Beleg archiviert";
         return true;
     }
 

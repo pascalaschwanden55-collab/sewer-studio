@@ -116,7 +116,7 @@ public sealed class TrainingProtocolStartdataApprovalWorkflowTests
             [
                 "approve:item-1",
                 "approve:item-2",
-                "log:Startdaten-Freigabe Fehler (BAB): defekt",
+                "log:Startdaten-Freigabe Fehler (BAB): Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
                 "status:1/2 Protokoll-Startdaten freigegeben."
             ],
             calls);

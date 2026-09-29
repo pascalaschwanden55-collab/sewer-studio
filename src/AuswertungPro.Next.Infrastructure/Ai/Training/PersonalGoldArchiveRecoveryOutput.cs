@@ -43,7 +43,7 @@ internal sealed class PersonalGoldArchiveRecoveryOutput(
                     StringComparison.OrdinalIgnoreCase))
             {
                 throw new IOException(
-                    $"Goldbild fuer Archiv-Sample '{candidate.Sample.SampleId}' " +
+                    $"Goldbild für Archiv-Sample '{candidate.Sample.SampleId}' " +
                     "konnte nicht sicher kopiert werden.");
             }
 
@@ -56,8 +56,8 @@ internal sealed class PersonalGoldArchiveRecoveryOutput(
             if (!hash.Equals(plan.Sha256, StringComparison.OrdinalIgnoreCase))
             {
                 throw new IOException(
-                    $"Goldbild fuer Archiv-Sample '{candidate.Sample.SampleId}' " +
-                    "besitzt eine falsche Pruefsumme.");
+                    $"Goldbild für Archiv-Sample '{candidate.Sample.SampleId}' " +
+                    "besitzt eine falsche Prüfsumme.");
             }
             targets.Add(candidate.Sample.SampleId, target);
         }
@@ -92,12 +92,12 @@ internal sealed class PersonalGoldArchiveRecoveryOutput(
             if (!databasePaths.TryGetValue(sample.SampleId, out var databasePath))
             {
                 throw new InvalidDataException(
-                    $"Nachhol-Pruefung: Datenbankpfad fehlt fuer '{sample.SampleId}'.");
+                    $"Nachhol-Prüfung: Datenbankpfad fehlt für '{sample.SampleId}'.");
             }
             if (!targetPaths.TryGetValue(sample.SampleId, out var expectedPath))
             {
                 throw new InvalidDataException(
-                    $"Nachhol-Pruefung: Zielpfad fehlt fuer '{sample.SampleId}'.");
+                    $"Nachhol-Prüfung: Zielpfad fehlt für '{sample.SampleId}'.");
             }
             if (!string.Equals(
                     databasePath,
@@ -105,13 +105,13 @@ internal sealed class PersonalGoldArchiveRecoveryOutput(
                     StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException(
-                    $"Nachhol-Pruefung: Pfade weichen ab fuer '{sample.SampleId}': " +
+                    $"Nachhol-Prüfung: Pfade weichen ab für '{sample.SampleId}': " +
                     $"DB='{databasePath}', Gold='{expectedPath}'.");
             }
             if (!File.Exists(expectedPath))
             {
                 throw new FileNotFoundException(
-                    $"Nachhol-Pruefung: Goldbild fehlt fuer '{sample.SampleId}'.",
+                    $"Nachhol-Prüfung: Goldbild fehlt für '{sample.SampleId}'.",
                     expectedPath);
             }
         }

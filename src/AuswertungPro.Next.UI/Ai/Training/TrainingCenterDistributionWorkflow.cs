@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
@@ -54,7 +55,7 @@ public static class TrainingCenterDistributionWorkflow
             request.Log($"--- Fertig: {result.Distributed} Haltungen verteilt, {result.VideosMatched} Videos zugeordnet ---");
 
             if (result.Uncertain > 0)
-                request.Log($"  {result.Uncertain} Chunks ohne Haltungs-ID uebersprungen.");
+                request.Log($"  {result.Uncertain} Chunks ohne Haltungs-ID übersprungen.");
 
             request.SetStatusText($"Verteilt: {result.Distributed} Haltungen, {result.VideosMatched} Videos -> {result.OutputFolder}");
 
@@ -62,13 +63,13 @@ public static class TrainingCenterDistributionWorkflow
             {
                 TrainingCenterStateController.AddRootFolder(request.RootFolders, result.OutputFolder);
                 request.UpdateRootFolderDisplay();
-                request.Log("Output-Ordner als Trainings-Ordner hinzugefuegt. Klicke 'Scannen' zum Laden.");
+                request.Log("Output-Ordner als Trainings-Ordner hinzugefügt. Klicke 'Scannen' zum Laden.");
             }
         }
         catch (Exception ex)
         {
             request.Log($"Fehler: {ex.Message}");
-            request.SetStatusText($"Fehler bei Verteilung: {ex.Message}");
+            request.SetStatusText($"Fehler bei Verteilung: {UserError.Describe(ex)}");
         }
         finally
         {

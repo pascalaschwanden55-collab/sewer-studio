@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Services;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
@@ -18,6 +19,7 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
     private readonly AppProtocol.ICodeCatalogProvider _catalogProvider;
     private readonly Window _window;
     private readonly IDialogService _dialogs;
+    private readonly IToastService? _toasts;
     private readonly ICollectionView _codesView;
     private bool _hasChanges;
 
@@ -36,11 +38,16 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
     public IRelayCommand ValidateCommand { get; }
     public IRelayCommand CancelCommand { get; }
 
-    public CodeCatalogEditorViewModel(AppProtocol.ICodeCatalogProvider catalogProvider, Window window, IDialogService? dialogs = null)
+    public CodeCatalogEditorViewModel(
+        AppProtocol.ICodeCatalogProvider catalogProvider,
+        Window window,
+        IDialogService? dialogs = null,
+        IToastService? toasts = null)
     {
         _catalogProvider = catalogProvider;
         _window = window;
         _dialogs = dialogs ?? new DialogService();
+        _toasts = toasts;
 
         Codes = new ObservableCollection<CodeDefinitionItem>(
             catalogProvider.GetAll()
@@ -128,8 +135,8 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
 
         var label = string.IsNullOrWhiteSpace(SelectedCode.Code) ? SelectedCode.Title : SelectedCode.Code;
         var confirmed = _dialogs.Confirm(
-            $"Code '{label}' wirklich loeschen?",
-            "Code loeschen");
+            $"Code '{label}' wirklich löschen?",
+            "Code löschen");
 
         if (!confirmed)
             return;
@@ -178,7 +185,10 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
 
         if (errors.Count == 0)
         {
-            _dialogs.Info("Validierung erfolgreich. Keine Fehler gefunden.", "Code-Katalog");
+            if (_toasts is not null)
+                _toasts.Success("Validierung erfolgreich. Keine Fehler gefunden.");
+            else
+                _dialogs.Info("Validierung erfolgreich. Keine Fehler gefunden.", "Code-Katalog");
             return;
         }
 
@@ -190,7 +200,7 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
         if (_hasChanges)
         {
             var confirmed = _dialogs.Confirm(
-                "Aenderungen verwerfen?",
+                "Änderungen verwerfen?",
                 "Code-Katalog");
 
             if (!confirmed)

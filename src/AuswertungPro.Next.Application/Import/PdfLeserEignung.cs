@@ -77,12 +77,12 @@ public static class PdfLeserEignung
         if (version < KleinstePopplerVersion)
         {
             return new PdfLeserUrteil(false, "Poppler", version,
-                $"Poppler {VersionText(version)} ist aelter als die gepruefte Fassung "
+                $"Poppler {VersionText(version)} ist älter als die geprüfte Fassung "
                 + $"{KleinstePopplerVersion}. Es wird der eingebaute Leser verwendet.");
         }
 
         return new PdfLeserUrteil(true, "Poppler", version,
-            $"Poppler {VersionText(version)} ist geprueft geeignet.");
+            $"Poppler {VersionText(version)} ist geprüft geeignet.");
     }
 
     private static string VersionText(int version) => version > 0 ? version.ToString() : "unbekannt";

@@ -30,7 +30,7 @@ internal sealed class DossierConditionClassPdfTemplateService
         if (!File.Exists(_templatePath))
         {
             throw new FileNotFoundException(
-                "Die feste PDF-Vorlage fuer die Zustandsklassen fehlt.",
+                "Die feste PDF-Vorlage für die Zustandsklassen fehlt.",
                 _templatePath);
         }
 

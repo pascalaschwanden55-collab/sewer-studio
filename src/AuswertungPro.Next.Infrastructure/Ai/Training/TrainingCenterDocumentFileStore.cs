@@ -133,7 +133,7 @@ public sealed class TrainingCenterDocumentFileStore : ITrainingCenterDocumentSto
                     if (File.Exists(tempPath))
                         File.Delete(tempPath);
                 },
-                "Training-Center: Temp-Datei nach Speicherfehler loeschen");
+                "Training-Center: Temp-Datei nach Speicherfehler löschen");
             throw;
         }
     }

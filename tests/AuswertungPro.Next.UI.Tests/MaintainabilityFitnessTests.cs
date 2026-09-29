@@ -114,7 +114,7 @@ public sealed class MaintainabilityFitnessTests
 
         Assert.True(
             staleEntries.Length == 0,
-            "Veraltete Eintraege aus der Grossdatei-Ausnahmeliste entfernen:\n"
+            "Veraltete Einträge aus der Grossdatei-Ausnahmeliste entfernen:\n"
             + string.Join("\n", staleEntries));
     }
 
@@ -150,7 +150,7 @@ public sealed class MaintainabilityFitnessTests
 
         Assert.True(
             staleEntries.Length == 0,
-            "Diese Klassen sind nicht mehr zu gross und muessen aus der Ausnahme entfernt werden:\n"
+            "Diese Klassen sind nicht mehr zu gross und müssen aus der Ausnahme entfernt werden:\n"
             + string.Join("\n", staleEntries));
     }
 
@@ -206,11 +206,11 @@ public sealed class MaintainabilityFitnessTests
 
         Assert.True(
             newFacades.Length == 0,
-            "Neue veraenderbare Current/Use-Fassade gefunden. Neue Dienste muessen per Konstruktor " +
+            "Neue veraenderbare Current/Use-Fassade gefunden. Neue Dienste müssen per Konstruktor " +
             "injiziert werden:\n  " + string.Join("\n  ", newFacades));
         Assert.True(
             removedFacades.Length == 0,
-            "Diese Current/Use-Altstellen wurden entfernt. Bitte aus der Altliste loeschen, damit " +
+            "Diese Current/Use-Altstellen wurden entfernt. Bitte aus der Altliste löschen, damit " +
             "die Obergrenze dauerhaft sinkt:\n  " + string.Join("\n  ", removedFacades));
     }
 

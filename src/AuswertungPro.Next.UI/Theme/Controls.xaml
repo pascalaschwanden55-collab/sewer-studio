@@ -36,7 +36,6 @@
     <CornerRadius x:Key="RadiusChip">11</CornerRadius>
     <!-- Fortschritts- und Anteilsbalken mit 10 px Hoehe. -->
     <CornerRadius x:Key="RadiusBar">5</CornerRadius>
-    <sys:Double x:Key="ImportBarHeight">10</sys:Double>
     <sys:Double x:Key="ImportPulseSize">14</sys:Double>
     <Thickness x:Key="ImportCardPadding">12</Thickness>
     <Thickness x:Key="ImportRowGap">0,0,0,8</Thickness>
@@ -274,10 +273,13 @@
                                 CornerRadius="4"
                                 Margin="0,0,8,0">
                             <!-- Der Haken springt beim Setzen kurz auf — gleiche Sprache wie der
-                                 Punkt im RadioButton darunter. -->
+                                 Punkt im RadioButton darunter. Fix-Runde 3 (Aufgabe 13, IMPORTANT):
+                                 CheckBorder wird bei IsChecked auf AccentBrush gesetzt (siehe unten)
+                                 - derselbe Weiss-auf-Highlight-Fall wie bei PrimaryButton, nur als
+                                 Symbol statt Text. -->
                             <Path x:Name="CheckMark"
                                 Data="M2,6 L6,10 L14,2"
-                                Stroke="White"
+                                Stroke="{DynamicResource OnAccentBrush}"
                                 StrokeThickness="2"
                                 Visibility="Collapsed"
                                 RenderTransformOrigin="0.5,0.5">
@@ -584,6 +586,16 @@
                                 <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
+                        <!-- Fix-Runde 4 (Aufgabe 13, Befund D): Auswahlrahmen auf einer eigenen Ebene ueber
+                             ItemBorder - nimmt keinen Platz ein (nichts verschiebt sich), in den normalen
+                             Themes transparent (HcAuswahlRahmenBrush), nur unter Hochkontrast Highlight: dort
+                             faellt die Auswahlfuellung AccentSubtleBrush auf Window wie die Umgebung. -->
+                        <Border x:Name="HcAuswahlRahmen"
+                                Grid.Row="0"
+                                CornerRadius="6"
+                                BorderThickness="1"
+                                BorderBrush="Transparent"
+                                IsHitTestVisible="False"/>
                         <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Margin="18,2,0,0"/>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -595,6 +607,7 @@
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                            <Setter TargetName="HcAuswahlRahmen" Property="BorderBrush" Value="{DynamicResource HcAuswahlRahmenBrush}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource HoverBrush}"/>
@@ -721,64 +734,32 @@
         </Setter>
     </Style>
 
-    <!-- Importkarte: eigene Vorlage, damit andere Balken ihre bisherigen Masse behalten. -->
-    <Style x:Key="ImportProgressBar" TargetType="ProgressBar">
-        <Setter Property="Height" Value="{DynamicResource ImportBarHeight}"/>
-        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+    <!-- Aufgabe 11 (Optikanalyse 28.09.2026), Fix-Runde 1: EINE gemeinsame Vorlage
+         (Spur + Indikator + Wanderstreif bei IsIndeterminate) fuer alle ProgressBar-Stile des
+         Programms — vorher stand dieselbe rund 70-zeilige ControlTemplate zweimal im Dokument
+         (einmal hier, einmal im impliziten Fallback direkt darunter). ProgressBarThin (4 px) und
+         ProgressBarStandard (8 px) sind fuer Werkzeugleisten-/Karten-Hinweise bzw. echte
+         Fortschrittsanzeigen (Import, Sicherung, Export, Batch-Laeufe) BasedOn diesem Basisstil.
+         Der Indikator bindet an TemplateBinding Foreground, damit einzelne Balken weiterhin eine
+         eigene Farbe setzen koennen (z. B. Zustandsklasse, Severity) — Standardwert AccentBarBrush.
+         RadiusBar (5) rundet jede der drei Hoehen (4/6/8) voll zur Kapsel. -->
+    <Style x:Key="ProgressBarBaseFuerZweiHoehen" TargetType="ProgressBar">
         <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ProgressBar">
-                    <Border x:Name="PART_Track" Background="{TemplateBinding Background}"
-                            CornerRadius="{DynamicResource RadiusBar}">
-                        <Border x:Name="PART_Indicator" HorizontalAlignment="Left"
-                                Background="{TemplateBinding Foreground}"
-                                CornerRadius="{DynamicResource RadiusBar}"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsIndeterminate" Value="True"/>
-                                <Condition Property="IsVisible" Value="True"/>
-                            </MultiTrigger.Conditions>
-                            <MultiTrigger.EnterActions>
-                                <BeginStoryboard Name="Waiting">
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="PART_Indicator"
-                                                         Storyboard.TargetProperty="Opacity"
-                                                         From="0.25" To="1" Duration="0:0:1"
-                                                         AutoReverse="True" RepeatBehavior="Forever"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </MultiTrigger.EnterActions>
-                            <MultiTrigger.ExitActions>
-                                <RemoveStoryboard BeginStoryboardName="Waiting"/>
-                            </MultiTrigger.ExitActions>
-                        </MultiTrigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- ProgressBar -->
-    <Style TargetType="{x:Type ProgressBar}">
-        <Setter Property="Height" Value="6"/>
-        <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBarBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ProgressBar">
                     <Border Background="{TemplateBinding Background}"
-                            CornerRadius="3"
+                            CornerRadius="{DynamicResource RadiusBar}"
                             SnapsToDevicePixels="True"
                             ClipToBounds="True">
                         <Grid>
                             <!-- Bestimmter Fortschritt: der Balken laeuft farblich von Blau nach Teal mit. -->
-                            <Border x:Name="PART_Track" CornerRadius="3">
+                            <Border x:Name="PART_Track" CornerRadius="{DynamicResource RadiusBar}">
                                 <Border x:Name="PART_Indicator"
-                                        Background="{DynamicResource AccentBarBrush}"
-                                        CornerRadius="3"
+                                        Background="{TemplateBinding Foreground}"
+                                        CornerRadius="{DynamicResource RadiusBar}"
                                         HorizontalAlignment="Left"/>
                             </Border>
                             <!-- Unbestimmtes Warten: ein Lichtstreif wandert durch den Balken.
@@ -788,7 +769,7 @@
                                  Streif jeder Breite an, ohne dass Layout animiert wird.
                                  Farbe fest: GradientStops koennen keine DynamicResource aufnehmen —
                                  Blau ist auf hell wie dunkel lesbar. -->
-                            <Border x:Name="Sweep" CornerRadius="3" Visibility="Collapsed">
+                            <Border x:Name="Sweep" CornerRadius="{DynamicResource RadiusBar}" Visibility="Collapsed">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                         <GradientStop x:Name="SweepLead" Color="#002563EB" Offset="-0.4"/>
@@ -811,7 +792,7 @@
                             <Setter TargetName="PART_Track" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="Sweep" Property="Visibility" Value="Visible"/>
                             <MultiTrigger.EnterActions>
-                                <BeginStoryboard x:Name="SweepRun">
+                                <BeginStoryboard x:Name="SweepRunZweiHoehen">
                                     <Storyboard RepeatBehavior="Forever">
                                         <DoubleAnimation Storyboard.TargetName="SweepLead"
                                                          Storyboard.TargetProperty="Offset"
@@ -826,13 +807,32 @@
                                 </BeginStoryboard>
                             </MultiTrigger.EnterActions>
                             <MultiTrigger.ExitActions>
-                                <StopStoryboard BeginStoryboardName="SweepRun"/>
+                                <StopStoryboard BeginStoryboardName="SweepRunZweiHoehen"/>
                             </MultiTrigger.ExitActions>
                         </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <Style x:Key="ProgressBarThin" TargetType="ProgressBar" BasedOn="{StaticResource ProgressBarBaseFuerZweiHoehen}">
+        <Setter Property="Height" Value="4"/>
+    </Style>
+
+    <Style x:Key="ProgressBarStandard" TargetType="ProgressBar" BasedOn="{StaticResource ProgressBarBaseFuerZweiHoehen}">
+        <Setter Property="Height" Value="8"/>
+    </Style>
+
+    <!-- ProgressBar (impliziter Fallback fuer den seltenen Fall, dass ein ProgressBar-Element
+         keinen der zwei benannten Stile traegt; Aufgabe 11 verlangt aber ausdruecklich einen
+         benannten Stil an jedem Balken, siehe ProgressBarThin/ProgressBarStandard oben). Fix-Runde 1:
+         BasedOn derselben Vorlage statt einer zweiten Kopie — nur die abweichende Hoehe (6 statt 4/8)
+         bleibt als eigener Setter. Visuell unveraendert: Radius {RadiusBar}=5 rundet 6 px genauso
+         voll zur Kapsel wie zuvor der hart kodierte Radius 3, und die geerbte Foreground=AccentBarBrush
+         ergibt denselben Indikatorton wie vorher der fest verdrahtete Wert. -->
+    <Style TargetType="{x:Type ProgressBar}" BasedOn="{StaticResource ProgressBarBaseFuerZweiHoehen}">
+        <Setter Property="Height" Value="6"/>
     </Style>
 
     <!-- ═══ MENU / CONTEXTMENU ═══ -->
@@ -970,10 +970,9 @@
                                       ContentSource="Icon"
                                       VerticalAlignment="Center"
                                       HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="Glyph"
+                    <ui:FluentIcon x:Name="Glyph"
                                Grid.Column="0"
-                               Text="&#xE73E;"
-                               FontFamily="{DynamicResource FontIcon}"
+                               Glyph="&#xE73E;"
                                Visibility="Collapsed"
                                Foreground="{DynamicResource AccentBrush}"
                                FontWeight="Bold"
@@ -983,9 +982,8 @@
                                       ContentSource="Header"
                                       RecognizesAccessKey="True"
                                       VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="2"
-                               Text="&#xE76C;"
-                               FontFamily="{DynamicResource FontIcon}"
+                    <ui:FluentIcon Grid.Column="2"
+                               Glyph="&#xE76C;"
                                FontSize="11"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"
@@ -1107,10 +1105,9 @@
                                       ContentSource="Icon"
                                       VerticalAlignment="Center"
                                       HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="Glyph"
+                    <ui:FluentIcon x:Name="Glyph"
                                Grid.Column="0"
-                               Text="&#xE73E;"
-                               FontFamily="{DynamicResource FontIcon}"
+                               Glyph="&#xE73E;"
                                Visibility="Collapsed"
                                Foreground="{DynamicResource AccentBrush}"
                                FontWeight="Bold"
@@ -1406,10 +1403,12 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
+                    <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): siehe CheckMark-Kommentar oben - derselbe
+                         Weiss-auf-AccentBrush-Fall, hier als Griffring statt Symbol. -->
                     <Ellipse x:Name="Ellipse"
                            Width="16" Height="16"
                            Fill="{DynamicResource AccentBrush}"
-                           Stroke="White"
+                           Stroke="{DynamicResource OnAccentBrush}"
                            StrokeThickness="2">
                         <Ellipse.Effect>
                             <DropShadowEffect Color="#20000000" BlurRadius="4" ShadowDepth="1" Direction="270"/>
@@ -1591,9 +1590,8 @@
                 <ColumnDefinition Width="24"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0"
-                       Text="{Binding Icon}"
-                       FontFamily="{DynamicResource FontIcon}"
+            <ui:FluentIcon Grid.Column="0"
+                       Glyph="{Binding Icon}"
                        FontSize="15"
                        Foreground="{DynamicResource AccentBrush}"
                        VerticalAlignment="Top"
@@ -1617,7 +1615,7 @@
                         </Border.Style>
                         <TextBlock Text="{Binding Shortcut}"
                                    FontSize="11"
-                                   FontFamily="Consolas"
+                                   FontFamily="{DynamicResource FontMono}"
                                    Foreground="{DynamicResource AccentBrush}"/>
                     </Border>
                     <TextBlock Text="{Binding Title}"
@@ -1733,8 +1731,8 @@
                         <!-- Laedt -->
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="320"
                                     Visibility="{Binding State, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource StatusHostEnumToVisibility}, ConverterParameter=Loading}">
-                            <ProgressBar IsIndeterminate="True" Height="4" Width="180"
-                                         Background="Transparent" BorderThickness="0"
+                            <ProgressBar Style="{StaticResource ProgressBarThin}" IsIndeterminate="True" Width="180"
+                                         Background="Transparent"
                                          Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
                             <TextBlock Text="{TemplateBinding LoadingText}"
                                        HorizontalAlignment="Center" TextAlignment="Center"
@@ -1757,7 +1755,7 @@
                                     Background="{DynamicResource DangerSubtleBrush}"
                                     BorderBrush="{DynamicResource DangerBrush}" BorderThickness="1"
                                     HorizontalAlignment="Center" Margin="0,0,0,14">
-                                <TextBlock Text="&#xE783;" FontFamily="{DynamicResource FontIcon}"
+                                <ui:FluentIcon Glyph="&#xE783;"
                                            FontSize="30" Foreground="{DynamicResource DangerBrush}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
@@ -1812,4 +1810,115 @@
         <ui:FluentIcon Style="{StaticResource BearbeitungErledigtMarke}"
                        DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGridRow}}"/>
     </DataTemplate>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         FENSTERKOPF UND KNOPFLEISTE (Optik und Bedienung professionell, 28.09.2026, Aufgabe 3):
+         EIN gemeinsamer Kopf und EINE gemeinsame Fussleiste fuer Dialoge/Zusatzfenster. Regel:
+         Seiten verwenden NovaPageHeader, Fenster (Window) verwenden NovaDialogHeader.
+         ═══════════════════════════════════════════════════════════ -->
+
+    <!-- NovaDialogHeader: Titel oben, darunter ein UMBRECHENDER Untertitel (der bisherige
+         Einleitungssatz), rechts optional ein Aktionsbereich. Kollabiert bei leerem Untertitel
+         wie NovaPageHeader - kein leerer Rand. -->
+    <Style TargetType="{x:Type controls:NovaDialogHeader}">
+        <Setter Property="Margin" Value="0,0,0,14"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:NovaDialogHeader}">
+                    <DockPanel LastChildFill="True">
+                        <ContentPresenter DockPanel.Dock="Right" Content="{TemplateBinding Aktionen}"
+                                          VerticalAlignment="Top" Margin="14,0,0,0"/>
+                        <StackPanel>
+                            <TextBlock x:Name="TitleText" Text="{TemplateBinding Title}"
+                                       FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock x:Name="SubtitleText" Text="{TemplateBinding Subtitle}"
+                                       FontSize="{DynamicResource TextS}"
+                                       Foreground="{DynamicResource MutedBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Subtitle" Value="">
+                            <Setter TargetName="SubtitleText" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- DialogButtonBar: Fussleiste eines Fensters. Trennlinie oben (BorderLightBrush), 16 px
+         Abstand zwischen Trennlinie und Knoepfen. Anwendung: ein Border mit diesem Stil um eine
+         rechtsbuendige, horizontale StackPanel mit den Knoepfen; jeder Knopf ausser dem letzten
+         (dem ganz rechten Hauptknopf) traegt Margin="0,0,8,0" fuer den einheitlichen 8-px-Abstand.
+         Das genaue XAML-Muster steht im CLAUDE.md-Absatz zu dieser Aufgabe. -->
+    <Style x:Key="DialogButtonBar" TargetType="Border">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
+        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="Padding" Value="0,16,0,0"/>
+    </Style>
+
+    <!-- DangerButton: destruktive Hauptaktion - Umriss/Text in DangerBrush statt Flaechenfuellung.
+         Optisch identisch mit dem bisherigen fensterlokalen NovaDialogDangerButton
+         (NovaDialogWindow.xaml, Aufgabe 1), hier programmweit als Theme-Stil verfuegbar, damit
+         neue Fenster nicht erneut eine eigene lokale Kopie anlegen. -->
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
+    </Style>
+
+    <!-- WarningButton: risikobehaftete, aber nicht destruktive Aktion (z. B. "Pause" waehrend
+         eines laufenden Selbsttrainings) - Umriss/Text in WarningBrush statt Flaechenfuellung,
+         genau nach dem Muster von DangerButton (Aufgabe 4b, Nachbesserung Fix-Runde 1). Beide
+         sind BasedOn SecondaryButton (Umriss, gleiche Sichtgewichtsklasse wie eine neutrale
+         Nebenaktion) und zaehlen deshalb NICHT als "Hauptknopf" im Sinn der Knopfregel/des
+         DesignAuditKnopfleistenTests-Waechters - anders als SuccessButton, das BasedOn
+         PrimaryButton eine gefuellte Flaeche traegt und optisch dieselbe Gewichtsklasse wie
+         PrimaryButton hat. Kontrast WarningTextBrush/CardBrush gemessen (siehe
+         DesignAuditContrastTests): 6,28:1 dunkel, 5,02:1 hell - beide ueber 4,5:1. -->
+    <Style x:Key="WarningButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
+    </Style>
+
+    <!-- SeverityXButton: die fuenf Schadensstufen-Knoepfe der Fachlichen Codierung
+         (TrainingStudioWindow, Aufgabe 4b Fix-Runde 1). Eine eigene Klasse statt Primary/
+         Secondary/Danger/Warning - eine 5-stufige Farbskala ist keine der vier semantischen
+         Aktionsklassen, sondern ein Stufen-Auswahlwidget. Gefuellte Flaeche bleibt (bestehende
+         Optik unveraendert, nur vom lokalen Background= in einen geteilten Theme-Stil
+         verschoben), zaehlt aber NICHT als "Hauptknopf" im Sinn von Knopfregel/
+         DesignAuditKnopfleistenTests (a) - nur PrimaryButton/SuccessButton zaehlen dort. -->
+    <Style x:Key="SeverityButtonBase" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="FontWeight" Value="Bold"/>
+        <!-- Fix-Runde 4 (Aufgabe 13): gefuellte Vorlage ohne die Hover-/Druck-Toenung des impliziten
+             Button-Stils - die legte eine 4-%/8-%-Akzenttoenung unter die weisse Schrift (unter der
+             Maus unlesbar). Die Flaeche bleibt die Stufenfarbe, Rueckmeldung gibt die Skalierung.
+             Die weisse Schrift steht deshalb erst an den Stufenstilen, wo auch die Flaeche steht. -->
+        <Setter Property="Template" Value="{DynamicResource FilledButtonTemplate}"/>
+    </Style>
+    <Style x:Key="Severity1Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity1Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style x:Key="Severity2Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity2Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style x:Key="Severity3Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity3Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style x:Key="Severity4Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity4Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style x:Key="Severity5Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity5Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
 </ResourceDictionary>

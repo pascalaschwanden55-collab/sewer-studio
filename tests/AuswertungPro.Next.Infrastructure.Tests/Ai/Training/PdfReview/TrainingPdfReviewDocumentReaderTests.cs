@@ -744,7 +744,7 @@ public sealed class TrainingPdfReviewDocumentReaderTests : IDisposable
         var exception = Assert.Throws<InvalidDataException>(
             () => TrainingPdfProtocolMetadataParser.Parse(documentText));
 
-        Assert.Contains("widerspruechliche", exception.Message);
+        Assert.Contains("widersprüchliche", exception.Message);
     }
 
     [Fact]

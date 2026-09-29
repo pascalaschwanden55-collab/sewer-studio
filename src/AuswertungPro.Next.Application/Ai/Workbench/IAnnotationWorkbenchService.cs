@@ -54,7 +54,7 @@ public interface IAnnotationWorkbenchService
         CancellationToken ct = default)
         => Task.FromResult(new WorkbenchSaveResult(
             false,
-            "Dieser Pruefplatz unterstuetzt keine gebundene Originalbild-Momentaufnahme.",
+            "Dieser Prüfplatz unterstützt keine gebundene Originalbild-Momentaufnahme.",
             null,
             "-",
             null));

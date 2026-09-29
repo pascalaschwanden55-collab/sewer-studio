@@ -72,7 +72,7 @@ public sealed class PersonalGoldInboxFileService : IPersonalGoldInboxService
 
                 if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
                 {
-                    issues.Add($"Verknuepfter Ordner wurde uebersprungen: {directory}");
+                    issues.Add($"Verknüpfter Ordner wurde übersprungen: {directory}");
                     continue;
                 }
 
@@ -116,7 +116,7 @@ public sealed class PersonalGoldInboxFileService : IPersonalGoldInboxService
                     continue;
                 if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
                 {
-                    issues.Add($"Verknuepfte Datei wurde uebersprungen: {path}");
+                    issues.Add($"Verknüpfte Datei wurde übersprungen: {path}");
                     continue;
                 }
 

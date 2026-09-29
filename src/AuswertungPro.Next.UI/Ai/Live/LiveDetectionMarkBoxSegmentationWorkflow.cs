@@ -61,7 +61,7 @@ public static class LiveDetectionMarkBoxSegmentationWorkflow
         }
         catch (Exception ex)
         {
-            actions.TraceError($"[Mark-SAM] Segmentierung uebersprungen: {ex.Message}");
+            actions.TraceError($"[Mark-SAM] Segmentierung übersprungen: {ex.Message}");
             return Result(LiveDetectionMarkBoxSegmentationOutcome.Failed, null);
         }
     }

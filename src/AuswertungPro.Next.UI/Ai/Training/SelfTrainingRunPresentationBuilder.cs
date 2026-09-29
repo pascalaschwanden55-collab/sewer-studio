@@ -39,7 +39,7 @@ public static class SelfTrainingRunPresentationBuilder
         {
             "--- Selbsttraining abgeschlossen ---",
             $"  Dauer: {result.Duration:mm\\:ss}",
-            $"  Eintraege: {result.TotalEntries} gesamt",
+            $"  Einträge: {result.TotalEntries} gesamt",
             $"  ExactMatch: {result.ExactMatches} | PartialMatch: {result.PartialMatches}",
             $"  Mismatch: {result.Mismatches} | NoFindings: {result.NoFindings}",
             $"  Samples erzeugt: {result.SamplesGenerated}"
@@ -48,7 +48,7 @@ public static class SelfTrainingRunPresentationBuilder
         if (result.OverallTechnique is { } technique)
         {
             logLines.Add(
-                $"  Technik: {technique.OverallGrade} (Licht={technique.LightingQuality}, Schaerfe={technique.SharpnessQuality})");
+                $"  Technik: {technique.OverallGrade} (Licht={technique.LightingQuality}, Schärfe={technique.SharpnessQuality})");
         }
 
         return new SelfTrainingRunCompletionPresentation(
@@ -62,7 +62,7 @@ public static class SelfTrainingRunPresentationBuilder
         ArgumentNullException.ThrowIfNull(result);
 
         return result.ExactMatches > 0
-            ? $"{result.ExactMatches} ExactMatch-Samples erzeugt. Fuer Few-Shot-Export: Tab 'Samples' \u2192 'Export Approved'"
+            ? $"{result.ExactMatches} ExactMatch-Samples erzeugt. Für Few-Shot-Export: Tab 'Samples' \u2192 'Export Approved'"
             : null;
     }
 }

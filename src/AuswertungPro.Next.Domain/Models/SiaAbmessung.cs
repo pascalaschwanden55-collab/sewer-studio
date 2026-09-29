@@ -49,7 +49,7 @@ public static class SiaAbmessung
 
     public static string? SchachtmassFehler(string? wert)
         => string.IsNullOrWhiteSpace(wert) || AusMillimeterfeld(wert) is > 0 and <= 4000
-            ? null : "Innenmass in mm eingeben; fuer SIA405 hoechstens 4000 mm. Der Wert wird nicht als Schachtmass exportiert.";
+            ? null : "Innenmass in mm eingeben; für SIA405 höchstens 4000 mm. Der Wert wird nicht als Schachtmass exportiert.";
 
     private static int? Umrechnen(string? wert, bool millimeterfeld)
     {

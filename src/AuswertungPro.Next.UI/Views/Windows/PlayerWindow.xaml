@@ -38,6 +38,23 @@
             </Style>
 
             <Style x:Key="MarkToolPopupButton" TargetType="Button">
+                <!-- Fix-Runde 4 (Aufgabe 13): Beim Druecken wird der Knopf AccentBrush - eigene TextBlocks
+                     im Inhalt blieben TextBrush (impliziter Stil im logischen Baum), die Symbole
+                     AccentBrush (Akzent auf Akzent). Beide folgen jetzt dem Knopfzustand; in Ruhe und
+                     unter der Maus unveraendert TextBrush bzw. AccentBrush. -->
+                <Style.Resources>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Style>
+                    <Style TargetType="ui:FluentIcon">
+                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPressed, RelativeSource={RelativeSource AncestorType=Button}}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Style.Resources>
                 <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                 <Setter Property="TextElement.Foreground" Value="{DynamicResource TextBrush}"/>
@@ -72,7 +89,7 @@
                                     <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource SurfaceSubtleBrush}"/>
+                                    <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -85,11 +102,14 @@
                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                         <Setter Property="TextElement.Foreground" Value="{DynamicResource TextBrush}"/>
                     </Trigger>
+                    <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): AccentBrush faellt unter Hochkontrast
+                         auf SystemColors.Highlight, hartes Weiss war dort potenziell unlesbar (von
+                         ThemeHighContrastCoverageTests gefunden). -->
                     <Trigger Property="IsPressed" Value="True">
                         <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
                         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                        <Setter Property="Foreground" Value="White"/>
-                        <Setter Property="TextElement.Foreground" Value="White"/>
+                        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
+                        <Setter Property="TextElement.Foreground" Value="{DynamicResource OnAccentBrush}"/>
                     </Trigger>
                 </Style.Triggers>
             </Style>
@@ -141,7 +161,11 @@
             <RowDefinition Height="Auto"/>      <!-- Controls -->
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" x:Name="PlayerKopfzeile" Style="{StaticResource PlayerCard}" Margin="0,0,0,8" Padding="12,8">
+        <!-- Aufgabe 17: der Kopf zeigt nur noch den Dateinamen; der volle Pfad (weiterhin von
+             PlayerWindowHeaderControls.ApplyVideoInfo in VideoPathText.Text geschrieben) steht
+             als ToolTip auf der ganzen Kopfzeile statt zusaetzlich ausgeschrieben daneben. -->
+        <Border Grid.Row="0" x:Name="PlayerKopfzeile" Style="{StaticResource PlayerCard}" Margin="0,0,0,8" Padding="12,8"
+                ToolTip="{Binding Text, ElementName=VideoPathText}">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Style="{StaticResource PlayerButton}" Padding="10,4" Margin="6,0,0,0"
                         Click="Close_Click" ToolTip="Player schliessen" AutomationProperties.Name="Player schliessen">
@@ -164,12 +188,10 @@
                     <TextBlock DockPanel.Dock="Left" Text="Video · " VerticalAlignment="Center"
                                FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                     <TextBlock x:Name="VideoNameText" DockPanel.Dock="Left" Text="Video" VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis" MaxWidth="260"
+                               TextTrimming="CharacterEllipsis" MaxWidth="420"
                                FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
-                    <TextBlock DockPanel.Dock="Left" Text=" · " VerticalAlignment="Center"
-                               FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
-                    <TextBlock x:Name="VideoPathText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                               FontSize="{DynamicResource TextL}" FontWeight="Normal" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <!-- Traegt weiterhin den vollen Pfad (fuer den ToolTip oben), erscheint selbst nicht mehr im Kopf. -->
+                    <TextBlock x:Name="VideoPathText" Visibility="Collapsed"/>
                 </DockPanel>
             </DockPanel>
         </Border>
@@ -299,7 +321,7 @@
                             <Button Click="ConfirmAccept_Click"
                                     Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0">
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:FluentIcon Glyph="&#xE73E;" Foreground="White" Margin="0,0,6,0"/>
+                                    <ui:FluentIcon Glyph="&#xE73E;" Foreground="{DynamicResource OnAccentBrush}" Margin="0,0,6,0"/>
                                     <TextBlock Text="Übernehmen"/>
                                 </StackPanel>
                             </Button>
@@ -340,7 +362,7 @@
                             <Button Click="DetectionAccept_Click"
                                     Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0">
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:FluentIcon Glyph="&#xE73E;" Foreground="White" Margin="0,0,6,0"/>
+                                    <ui:FluentIcon Glyph="&#xE73E;" Foreground="{DynamicResource OnAccentBrush}" Margin="0,0,6,0"/>
                                     <TextBlock Text="Akzeptieren"/>
                                 </StackPanel>
                             </Button>
@@ -370,7 +392,7 @@
                         Padding="12,6" Visibility="Collapsed">
                     <TextBlock x:Name="TxtCodingMeasurement"
                                Foreground="White" FontSize="{DynamicResource TextM}"
-                               FontFamily="Consolas, Cascadia Mono" HorizontalAlignment="Center"/>
+                               FontFamily="{DynamicResource FontMono}" HorizontalAlignment="Center"/>
                 </Border>
 
                 <!-- KI-Scan-Overlay: wandernde Linie + Rahmen waehrend Analyse -->
@@ -410,7 +432,7 @@
                         Visibility="Collapsed">
                     <TextBlock x:Name="TxtOsdMeter"
                                Foreground="{DynamicResource AccentBrush}"
-                               FontFamily="Consolas, Cascadia Mono"
+                               FontFamily="{DynamicResource FontMono}"
                                FontSize="{DynamicResource TextL}" FontWeight="Bold"/>
                 </Border>
             </Grid>
@@ -441,7 +463,7 @@
                         <ui:FluentIcon Glyph="&#xE76B;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}"/>
                     </Button>
                     <TextBlock x:Name="TxtCodingMeter"
-                               FontFamily="Consolas, Cascadia Mono" FontSize="{DynamicResource TextL}" FontWeight="Bold"
+                               FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                                Foreground="{DynamicResource TextBrush}"
                                VerticalAlignment="Center" Margin="8,0"
                                Text="0.00m"/>
@@ -488,7 +510,7 @@
                                 <Button x:Name="BtnCodingCalibrate" Style="{StaticResource MarkToolPopupButton}"
                                         Click="CodingCalibrate_Click">
                                     <StackPanel Orientation="Horizontal">
-                                        <ui:FluentIcon Glyph="&#xECC8;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
+                                        <ui:FluentIcon Glyph="&#xECC8;" Width="22" Margin="0,0,6,0"/>
                                         <TextBlock Text="Rohr kalibrieren (DN)"/>
                                     </StackPanel>
                                 </Button>
@@ -496,7 +518,7 @@
                                 <Button x:Name="BtnCodingRect" Style="{StaticResource MarkToolPopupButton}"
                                         Click="CodingToolRect_Click">
                                     <StackPanel Orientation="Horizontal">
-                                        <ui:FluentIcon Glyph="&#xE739;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
+                                        <ui:FluentIcon Glyph="&#xE739;" Width="22" Margin="0,0,6,0"/>
                                         <TextBlock Text="Bereich markieren"/>
                                     </StackPanel>
                                 </Button>
@@ -678,7 +700,7 @@
                     <TextBlock x:Name="OverlayOpacityText"
                                Width="38"
                                Text="100%"
-                               FontFamily="Consolas, Cascadia Mono"
+                               FontFamily="{DynamicResource FontMono}"
                                FontSize="{DynamicResource TextXS}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center"
@@ -839,11 +861,14 @@
 
         <Border x:Name="Bedienleiste" Grid.Row="5" Style="{StaticResource PlayerCard}" Padding="14,12">
             <WrapPanel VerticalAlignment="Center">
-                <Button Style="{StaticResource PlayerPrimaryButton}" Margin="0,0,6,0" Click="Play_Click"
+                <!-- Aufgabe 17: "Abspielen" ist keine Akzent-Hauptaktion mehr — in dieser
+                     Bedienleiste bleibt nur der Codier-Modus-Knopf weiter unten farbig
+                     hervorgehoben (Knopfregel: hoechstens ein Akzentknopf je Leiste). -->
+                <Button Style="{StaticResource PlayerButton}" Margin="0,0,6,0" Click="Play_Click"
                         ToolTip="Abspielen / Pause — Leertaste">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Play" VerticalAlignment="Center"/>
+                        <TextBlock Text="Abspielen" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button Style="{StaticResource PlayerButton}" Margin="0,0,6,0" Click="Pause_Click"
@@ -857,7 +882,7 @@
                         ToolTip="Stopp — Taste S">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE71A;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Stop" VerticalAlignment="Center"/>
+                        <TextBlock Text="Stopp" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
@@ -865,13 +890,18 @@
                         Background="{DynamicResource BorderBrush}"/>
 
                 <DockPanel LastChildFill="True" Width="200" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <!-- Der Tooltip nennt bewusst weiter die Taste "+" (Gegenstueck zu "Langsamer —
+                         Taste −" am Regler direkt daneben, siehe DesignAuditPlayerShortcutTests);
+                         AutomationProperties.Name fehlte fuer den unbeschrifteten "..."-Knopf bisher
+                         ganz (Aufgabe 17). -->
                     <ToggleButton x:Name="SpeedPresetButton"
                                   DockPanel.Dock="Right"
                                   Style="{StaticResource SpeedToggleButton}"
                                   MinHeight="28"
                                   Padding="8,3"
                                   Margin="8,0,0,0"
-                                  ToolTip="Schneller — Taste +">
+                                  ToolTip="Schneller — Taste +"
+                                  AutomationProperties.Name="Feste Geschwindigkeitsstufen (0.5x bis 8x) — Schneller: Taste +">
                         <TextBlock Text="&#xE712;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
                     </ToggleButton>
                     <Slider x:Name="SpeedSlider"
@@ -978,14 +1008,14 @@
                                 <Button Click="MarkTool_Freihand_Click" Padding="12,6"
                                         Style="{StaticResource MarkToolPopupButton}">
                                     <StackPanel Orientation="Horizontal">
-                                        <ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
+                                        <ui:FluentIcon Glyph="&#xE70F;" Width="22" Margin="0,0,6,0"/>
                                         <TextBlock Text="Freihand"/>
                                     </StackPanel>
                                 </Button>
                                 <Button Click="MarkTool_Rechteck_Click" Padding="12,6"
                                         Style="{StaticResource MarkToolPopupButton}">
                                     <StackPanel Orientation="Horizontal">
-                                        <ui:FluentIcon Glyph="&#xE739;" Foreground="{DynamicResource AccentBrush}" Width="22" Margin="0,0,6,0"/>
+                                        <ui:FluentIcon Glyph="&#xE739;" Width="22" Margin="0,0,6,0"/>
                                         <TextBlock Text="Rechteck"/>
                                     </StackPanel>
                                 </Button>
@@ -1072,7 +1102,7 @@
                                 <TextBlock x:Name="VolumeText"
                                            Grid.Column="2"
                                            Text="80%"
-                                           FontFamily="Consolas, Cascadia Mono"
+                                           FontFamily="{DynamicResource FontMono}"
                                            FontSize="{DynamicResource TextXS}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            VerticalAlignment="Center"
@@ -1131,25 +1161,25 @@
                     <UniformGrid Columns="2" Rows="4" Margin="0,0,0,4">
                         <StackPanel Margin="0,0,18,12">
                             <TextBlock Text="Wiedergabe" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                            <TextBlock Text="Space  Play/Pause" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="S      Stop" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="P / R  Pause / Weiter" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="Leertaste  Abspielen/Pause" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="S          Stopp" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="P / R      Pause / Weiter" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,0,12">
                             <TextBlock Text="Navigation" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                            <TextBlock Text="← / →  5 Sekunden springen" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="+ / -  Geschwindigkeit" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="← / →  5 Sekunden springen" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="+ / -  Geschwindigkeit" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,18,12">
                             <TextBlock Text="Codierung" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                            <TextBlock Text="D      Live-Erkennung" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="M      Markierwerkzeug" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="Esc    Overlay abbrechen" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="D      Live-Erkennung" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="M      Markierwerkzeug" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="Esc    Overlay abbrechen" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,0,12">
                             <TextBlock Text="Hilfe" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                            <TextBlock Text="F1 / ? Diese Übersicht" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="Esc    Übersicht schliessen" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="F1 / ? Diese Übersicht" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="Esc    Übersicht schliessen" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
                         </StackPanel>
                     </UniformGrid>
                 </StackPanel>

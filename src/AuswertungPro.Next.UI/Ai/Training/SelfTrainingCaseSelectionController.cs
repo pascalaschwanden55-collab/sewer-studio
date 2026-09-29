@@ -34,8 +34,8 @@ public static class SelfTrainingCaseSelectionController
 
         var withProtocol = cases.Count(c => !string.IsNullOrEmpty(c.ProtocolPath));
         var status = withProtocol > 0
-            ? $"Alle {withProtocol} Faelle bereits verarbeitet. Waehle manuell fuer erneutes Training."
-            : "Keine Faelle mit Protokoll vorhanden. Bitte zuerst Ordner waehlen und scannen.";
+            ? $"Alle {withProtocol} Fälle bereits verarbeitet. Wähle manuell für erneutes Training."
+            : "Keine Fälle mit Protokoll vorhanden. Bitte zuerst Ordner wählen und scannen.";
 
         return new SelfTrainingCaseSelectionResult(true, null, status);
     }
@@ -48,6 +48,6 @@ public static class SelfTrainingCaseSelectionController
         return new SelfTrainingCaseSelectionResult(
             true,
             selectedCase,
-            "Der ausgewaehlte Fall hat kein Protokoll (PDF).");
+            "Der ausgewählte Fall hat kein Protokoll (PDF).");
     }
 }

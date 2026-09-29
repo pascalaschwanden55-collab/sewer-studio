@@ -22,6 +22,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
 {
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
+    private readonly IToastService? _toasts;
     private readonly ISchachtProtocolImportService _schachtProtocolImport;
     private readonly SchachtProtocolRefreshController _schachtProtocolRefreshController;
     private readonly SchachtProtocolSingleImportController _schachtProtocolSingleImportController;
@@ -45,6 +46,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
 
     internal AppSettings Settings => _settings;
     internal IDialogService Dialogs => _dialogs;
+    internal IToastService? Toasts => _toasts;
     internal ISchachtMassnahmenKatalogStore SchachtMassnahmenKatalog => _schachtMassnahmenKatalog;
     internal IProjectCostStoreRepository SchachtRecommendationCosts => _schachtRecommendationCosts;
     /// <summary>Quelle des Projekt-MWST-Satzes fuer den Schacht-Massnahmen-Dialog.</summary>
@@ -135,7 +137,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
             explorerReveal: services.ExplorerReveal,
             templateColumnReader: services.SchaechteTemplateColumns,
             schachtFileTargets: services.SchachtFileTargets,
-            protocolFileLocator: services.SchachtProtocolFiles)
+            protocolFileLocator: services.SchachtProtocolFiles,
+            toasts: services.Toasts)
     {
         // Nachschlagen leerer Felder beim Kanton. Optional: Die aelteren Uebergangskonstruktoren kennen den Dienst nicht, dort bleibt der Menuepunkt aus.
         FeldNachschlag = services.FeldNachschlag;
@@ -147,10 +150,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         _webGisHolen = services.WebGisHolen;
         ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("schacht", () => _shell.Project, Settings,
             () => CanMutateShaftData, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
         ObjektakteCommand = Services.ObjektaktenDialog.Befehl("schacht", () => _shell.Project, () => Selected?.Id,
             Settings, () => CanMutateShaftData, () => _shell.MarkProjectDirty(), Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
         CodeCatalog = services.CodeCatalog;
     }
 
@@ -226,11 +229,13 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         ISchaechteTemplateColumnReader? templateColumnReader = null,
         ISchachtFileTargetResolver? schachtFileTargets = null,
         ISchachtProtocolFileLocator? protocolFileLocator = null,
-        ICostCatalogStore? schachtCostCatalog = null)
+        ICostCatalogStore? schachtCostCatalog = null,
+        IToastService? toasts = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _toasts = toasts;
         _schachtProtocolImport = schachtProtocolImport ?? throw new ArgumentNullException(nameof(schachtProtocolImport));
         _schachtStammdatenErgaenzung = schachtStammdatenErgaenzung ?? throw new ArgumentNullException(nameof(schachtStammdatenErgaenzung));
         _schachtMassnahmenKatalog = schachtMassnahmenKatalog ?? throw new ArgumentNullException(nameof(schachtMassnahmenKatalog));
@@ -428,7 +433,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
 
         if (!result.TemplateFound)
         {
-            LastResult = "Schaechte-Vorlage nicht gefunden.";
+            LastResult = "Schächte-Vorlage nicht gefunden.";
             return;
         }
 
@@ -471,7 +476,9 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
 
         EnsureRecordColumns();
         UpdateNr();
-        LastResult = $"Spalten geladen: {Columns.Count}";
+        // Aufgabe 17 (Optikanalyse 28.09.2026): "Spalten geladen: N" ist ein rein technisches
+        // Detail ohne Wert fuer Pascal — LastResult bleibt fuer wirkliche Probleme reserviert
+        // (siehe die beiden Fehlerfaelle oben); ein erfolgreicher Ladevorgang meldet nichts.
     }
 
     private void EnsureRecordColumns()
@@ -492,7 +499,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
             return;
 
         var ok = _shell.TrySaveProject();
-        LastResult = ok ? "Schaechte gespeichert." : "Speichern fehlgeschlagen.";
+        LastResult = ok ? "Schächte gespeichert." : "Speichern fehlgeschlagen.";
     }
 
     private void AddOptionIfMissing(ObservableCollection<string> options, string value)

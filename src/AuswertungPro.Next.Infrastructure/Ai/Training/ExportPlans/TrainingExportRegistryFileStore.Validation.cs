@@ -44,7 +44,7 @@ public sealed partial class TrainingExportRegistryFileStore
                 || !string.Equals(candidate.Status, "pending_review", StringComparison.Ordinal))
             {
                 throw new TrainingExportPlanException(
-                    "Der Queue-Kandidaten-Receipt enthaelt ungueltige oder doppelte Kandidaten.");
+                    "Der Queue-Kandidaten-Receipt enthält ungültige oder doppelte Kandidaten.");
             }
             RequireLowercaseSha256(
                 candidate.SourceSha256,
@@ -64,7 +64,7 @@ public sealed partial class TrainingExportRegistryFileStore
             || !queue.Hashes.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(expectedQueueHashPaths))
         {
             throw new TrainingExportPlanException(
-                "Queue-Manifest, Kandidatenliste und Queue-Hashabdeckung sind unvollstaendig.");
+                "Queue-Manifest, Kandidatenliste und Queue-Hashabdeckung sind unvollständig.");
         }
         return result;
     }
@@ -102,7 +102,7 @@ public sealed partial class TrainingExportRegistryFileStore
         if (!review.Decisions.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(expectedIds))
         {
             throw new TrainingExportPlanException(
-                "Der Review-Receipt ist nicht vollstaendig oder enthaelt fremde Kandidaten.");
+                "Der Review-Receipt ist nicht vollständig oder enthält fremde Kandidaten.");
         }
 
         var counts = new Dictionary<string, int>(StringComparer.Ordinal)
@@ -119,7 +119,7 @@ public sealed partial class TrainingExportRegistryFileStore
                 || decision.Value.Comment is null)
             {
                 throw new TrainingExportPlanException(
-                    $"Review-Entscheidung '{decision.Key}' ist ungueltig.");
+                    $"Review-Entscheidung '{decision.Key}' ist ungültig.");
             }
             ValidateUtcTimestamp(
                 decision.Value.ReviewedAtUtc,
@@ -165,7 +165,7 @@ public sealed partial class TrainingExportRegistryFileStore
             || !DateTimeOffset.TryParse(value, out var parsed)
             || parsed.Offset != TimeSpan.Zero)
         {
-            throw new TrainingExportPlanException($"{label} ist kein gueltiger UTC-Zeitstempel.");
+            throw new TrainingExportPlanException($"{label} ist kein gültiger UTC-Zeitstempel.");
         }
     }
 
@@ -190,7 +190,7 @@ public sealed partial class TrainingExportRegistryFileStore
             || semantic.Images.Count == 0)
         {
             throw new TrainingExportPlanException(
-                "Der semantische Negativ-Set-Beleg ist unvollstaendig oder ungueltig.");
+                "Der semantische Negativ-Set-Beleg ist unvollständig oder ungültig.");
         }
 
         RequireLowercaseSha256(semantic.Queue.QueueId, "Queue-ID im Negativ-Set-Manifest");
@@ -227,7 +227,7 @@ public sealed partial class TrainingExportRegistryFileStore
             || semantic.SplitRule.OneImagePerPhysicalHolding is false)
         {
             throw new TrainingExportPlanException(
-                "Queue, Review, Klassenkarte oder Splitregel im Negativ-Set-Manifest ist ungueltig.");
+                "Queue, Review, Klassenkarte oder Splitregel im Negativ-Set-Manifest ist ungültig.");
         }
 
         NegativeSetContractValidator.ValidateContractSpecificShape(semantic, isProto);
@@ -242,7 +242,7 @@ public sealed partial class TrainingExportRegistryFileStore
             if (image is null)
             {
                 throw new TrainingExportPlanException(
-                    "Der semantische Negativ-Set-Beleg enthaelt einen leeren Bildeintrag.");
+                    "Der semantische Negativ-Set-Beleg enthält einen leeren Bildeintrag.");
             }
             RequireLowercaseSha256(image.ImageSha256, "Bildhash im Negativ-Set-Manifest");
             var expectedFileName = $"img_{image.ImageSha256}.{image.ImageFormat}";
@@ -260,7 +260,7 @@ public sealed partial class TrainingExportRegistryFileStore
                 || !seenReviewItems.Add(image.ReviewItemId))
             {
                 throw new TrainingExportPlanException(
-                    "Der semantische Negativ-Set-Beleg enthaelt ein ungueltiges oder doppeltes Bild.");
+                    "Der semantische Negativ-Set-Beleg enthält ein ungültiges oder doppeltes Bild.");
             }
             if (isProto)
             {
@@ -270,7 +270,7 @@ public sealed partial class TrainingExportRegistryFileStore
                     || string.IsNullOrWhiteSpace(image.Quelle))
                 {
                     throw new TrainingExportPlanException(
-                        "Der semantische Negativ-Set-Beleg enthaelt ein ungueltiges oder doppeltes Bild.");
+                        "Der semantische Negativ-Set-Beleg enthält ein ungültiges oder doppeltes Bild.");
                 }
             }
             else
@@ -279,7 +279,7 @@ public sealed partial class TrainingExportRegistryFileStore
                 if (image.InspectionDate is null || image.Quelle is not null)
                 {
                     throw new TrainingExportPlanException(
-                        "Der semantische Negativ-Set-Beleg enthaelt ein ungueltiges oder doppeltes Bild.");
+                        "Der semantische Negativ-Set-Beleg enthält ein ungültiges oder doppeltes Bild.");
                 }
             }
             var holdingKey = NormalizeStrictHoldingKey(image.HoldingKey);
@@ -348,7 +348,7 @@ public sealed partial class TrainingExportRegistryFileStore
                 || alignment.GoldRole is not ("train" or "val" or "test"))
             {
                 throw new TrainingExportPlanException(
-                    "Eine Gold-Ausrichtung im Negativ-Set-Manifest ist ungueltig.");
+                    "Eine Gold-Ausrichtung im Negativ-Set-Manifest ist ungültig.");
             }
             var expectedForcedSplit = alignment.GoldRole == "train" ? "train" : "validation";
             if (!string.Equals(alignment.ForcedSplit, expectedForcedSplit, StringComparison.Ordinal)
@@ -359,7 +359,7 @@ public sealed partial class TrainingExportRegistryFileStore
                         : TrainingExportTarget.Validation))
             {
                 throw new TrainingExportPlanException(
-                    "Eine Gold-Ausrichtung im Negativ-Set-Manifest ist ungueltig.");
+                    "Eine Gold-Ausrichtung im Negativ-Set-Manifest ist ungültig.");
             }
         }
         var appliedValidationCount = 0;
@@ -453,7 +453,7 @@ public sealed partial class TrainingExportRegistryFileStore
         if (matchingHashes.Length != 1)
         {
             throw new TrainingExportPlanException(
-                $"Das Negativ-Set-Manifest besitzt keinen eindeutigen Hashbeleg fuer '{relativeImagePath}'.");
+                $"Das Negativ-Set-Manifest besitzt keinen eindeutigen Hashbeleg für '{relativeImagePath}'.");
         }
         var hashEntry = matchingHashes[0].Value;
         RequireLowercaseSha256(hashEntry.Sha256, $"Hashbeleg von '{relativeImagePath}'");
@@ -461,7 +461,7 @@ public sealed partial class TrainingExportRegistryFileStore
             || hashEntry.SizeBytes != image.SizeBytes)
         {
             throw new TrainingExportPlanException(
-                $"Der Hashbeleg bindet '{relativeImagePath}' nicht mit Bildhash und Groesse.");
+                $"Der Hashbeleg bindet '{relativeImagePath}' nicht mit Bildhash und Grösse.");
         }
 
         if (!validatedManifest.Files.TryGetValue(relativeImagePath, out var verifiedImage)
@@ -470,7 +470,7 @@ public sealed partial class TrainingExportRegistryFileStore
             || !verifiedImage.Sha256.Equals(image.ImageSha256, StringComparison.Ordinal))
         {
             throw new TrainingExportPlanException(
-                $"Negativbild '{relativeImagePath}' stimmt nicht bytegenau mit dem Manifest ueberein.");
+                $"Negativbild '{relativeImagePath}' stimmt nicht bytegenau mit dem Manifest überein.");
         }
     }
 
@@ -525,7 +525,7 @@ public sealed partial class TrainingExportRegistryFileStore
             || !string.Equals(entry.ReviewDecision, "all_classes_clear", StringComparison.Ordinal))
         {
             throw new TrainingExportPlanException(
-                "Ein neuer Negativbild-Eintrag muss alle Felder der strikten Provenienzbindung vollstaendig enthalten.");
+                "Ein neuer Negativbild-Eintrag muss alle Felder der strikten Provenienzbindung vollständig enthalten.");
         }
 
         var holdingKey = NormalizeStrictHoldingKey(entry.HoldingKey);
@@ -600,7 +600,7 @@ public sealed partial class TrainingExportRegistryFileStore
     {
         var holdingKey = EvalContaminationGuard.NormalizeHaltungKey(value);
         if (string.IsNullOrWhiteSpace(holdingKey))
-            throw new TrainingExportPlanException("Ein neuer Negativbild-Eintrag hat keine gueltige Haltung.");
+            throw new TrainingExportPlanException("Ein neuer Negativbild-Eintrag hat keine gültige Haltung.");
         var parts = holdingKey.Split('-', StringSplitOptions.None);
         if (parts.Length != 2
             || parts.Any(part =>
@@ -608,7 +608,7 @@ public sealed partial class TrainingExportRegistryFileStore
                 || part.Any(character => character is not (>= '0' and <= '9'))))
         {
             throw new TrainingExportPlanException(
-                $"Negativbild-Haltung '{holdingKey}' ist kein vollstaendiges numerisches Schachtpaar.");
+                $"Negativbild-Haltung '{holdingKey}' ist kein vollständiges numerisches Schachtpaar.");
         }
 
         return holdingKey;
@@ -642,19 +642,19 @@ public sealed partial class TrainingExportRegistryFileStore
                 case JsonTokenType.PropertyName:
                 {
                     if (propertiesByObject.Count == 0)
-                        throw new JsonException($"{label} enthaelt ein Feld ausserhalb eines Objekts.");
+                        throw new JsonException($"{label} enthält ein Feld ausserhalb eines Objekts.");
                     var propertyName = reader.GetString()
-                                       ?? throw new JsonException($"{label} enthaelt einen leeren Feldnamen.");
+                                       ?? throw new JsonException($"{label} enthält einen leeren Feldnamen.");
                     if (!propertiesByObject.Peek().Add(propertyName))
                     {
                         throw new JsonException(
-                            $"{label} enthaelt das doppelte Feld '{propertyName}'.");
+                            $"{label} enthält das doppelte Feld '{propertyName}'.");
                     }
                     break;
                 }
                 case JsonTokenType.EndObject:
                     if (propertiesByObject.Count == 0)
-                        throw new JsonException($"{label} besitzt eine ungueltige Objektstruktur.");
+                        throw new JsonException($"{label} besitzt eine ungültige Objektstruktur.");
                     propertiesByObject.Pop();
                     break;
             }
@@ -722,7 +722,7 @@ public sealed partial class TrainingExportRegistryFileStore
                 writer.WriteNullValue();
                 break;
             default:
-                throw new JsonException("Der semantische Negativ-Set-Beleg enthaelt einen ungueltigen JSON-Wert.");
+                throw new JsonException("Der semantische Negativ-Set-Beleg enthält einen ungültigen JSON-Wert.");
         }
     }
 
@@ -732,7 +732,7 @@ public sealed partial class TrainingExportRegistryFileStore
         {
             var reparsePoint = TrainingInventoryPaths.FindReparsePoint(path);
             if (reparsePoint is not null)
-                throw new IOException($"Registerpfad enthaelt eine Verknuepfung oder Junction: {reparsePoint}");
+                throw new IOException($"Registerpfad enthält eine Verknüpfung oder Junction: {reparsePoint}");
 
             var before = new FileInfo(path);
             before.Refresh();
@@ -758,7 +758,7 @@ public sealed partial class TrainingExportRegistryFileStore
             if (afterReparsePoint is not null)
             {
                 throw new IOException(
-                    $"Dateipfad wurde waehrend des Lesens durch eine Verknuepfung ersetzt: {afterReparsePoint}");
+                    $"Dateipfad wurde während des Lesens durch eine Verknüpfung ersetzt: {afterReparsePoint}");
             }
             if (after.Exists
                 && before.Length == after.Length
@@ -769,14 +769,14 @@ public sealed partial class TrainingExportRegistryFileStore
             }
         }
 
-        throw new IOException("Datei wurde waehrend des Lesens veraendert.");
+        throw new IOException("Datei wurde während des Lesens verändert.");
     }
 
     private static void RequireSha256(string? value, string label)
     {
         var normalized = value?.Trim();
         if (normalized is not { Length: 64 } || !normalized.All(Uri.IsHexDigit))
-            throw new TrainingExportPlanException($"{label} ist kein gueltiger SHA-256.");
+            throw new TrainingExportPlanException($"{label} ist kein gültiger SHA-256.");
     }
 
     internal static string RequireLowercaseSha256(string? value, string label)

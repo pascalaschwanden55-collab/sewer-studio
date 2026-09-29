@@ -54,7 +54,7 @@ public sealed class CodingMultiModelAnalysisStartWorkflowTests
                 "read-osd:12.3:3",
                 "readiness:12.3:7.8",
                 "is-ready",
-                "state:Dateneinblendung erkannt - uebersprungen|Warte auf sauberes Videobild...|pulse:False"
+                "state:Dateneinblendung erkannt - übersprungen|Warte auf sauberes Videobild...|pulse:False"
             ],
             calls);
     }

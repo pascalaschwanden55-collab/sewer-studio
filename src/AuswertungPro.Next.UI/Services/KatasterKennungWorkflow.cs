@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.Application.UseCases;
@@ -44,7 +45,7 @@ public static class KatasterKennungWorkflow
             // Eine fehlende oder unlesbare Datei darf nie wie "nichts gefunden"
             // aussehen — sonst haelt der Benutzer eine Stoerung fuer eine Datenluecke.
             dialogs.Error(
-                $"Die Kennungstabelle konnte nicht gelesen werden.\n\n{ex.Message}\n\n" +
+                $"Die Kennungstabelle konnte nicht gelesen werden.\n\n{UserError.DescribeAndReport(ex, "Kennungstabelle lesen")}\n\n" +
                 $"Eingestellte Datei:\n{leser.Quellpfad()}",
                 titel);
             return new KatasterKennungErgebnis(false, 0, "Kennungstabelle nicht lesbar.");

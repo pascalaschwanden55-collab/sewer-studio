@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AuswertungPro.Next.Application.Common;
+using System;
 using System.Collections.Generic;
 
 using AuswertungPro.Next.Application.Dossiers.Lookup;
@@ -68,7 +69,7 @@ public sealed class DossierPreviewChoice : IDisposable
         }
         catch (Exception ex)
         {
-            return DossierPlanRollbackResult.Failed(ex.Message);
+            return DossierPlanRollbackResult.Failed(UserError.DescribeAndReport(ex, "Dossierplan zurücknehmen"));
         }
         finally
         {

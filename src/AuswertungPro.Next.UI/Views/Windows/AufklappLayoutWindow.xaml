@@ -4,6 +4,7 @@
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
+        xmlns:nova="clr-namespace:AuswertungPro.Next.UI.Controls"
         Title="SewerStudio — Ansicht anpassen" Width="1440" Height="850" MinWidth="800" MinHeight="500"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource CardBrush}">
     <Grid Margin="16">
@@ -12,22 +13,22 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <StackPanel Margin="0,0,0,12">
-            <TextBlock Text="Deine Eingabefelder" FontSize="{DynamicResource TextTitle}" FontWeight="SemiBold"/>
-            <TextBlock Margin="0,6,0,0" TextWrapping="Wrap"
-                       Text="Felder an der Beschriftung ziehen, auch in eine andere Spalte. Spalten an der Überschrift ziehen. Mit × ausblenden; unten wieder einblenden."/>
-            <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"
-                       Text="Die Anordnung gilt für alle Einträge dieser Liste. Feldwerte und Exporte bleiben erhalten. Erst Speichern übernimmt die Anpassung."/>
-        </StackPanel>
+        <nova:NovaDialogHeader Grid.Row="0"
+                   Title="Deine Eingabefelder"
+                   Subtitle="Felder an der Beschriftung ziehen, auch in eine andere Spalte. Spalten an der Überschrift ziehen. Mit × ausblenden; unten wieder einblenden. Die Anordnung gilt für alle Einträge dieser Liste. Feldwerte und Exporte bleiben erhalten. Erst Speichern übernimmt die Anpassung."/>
         <AdornerDecorator Grid.Row="1">
             <controls:RecordDetailsView x:Name="Details" IsCompactLayout="True"
                 IsHeaderVisible="False" CanCustomize="True" IsCustomizing="True"/>
         </AdornerDecorator>
-        <DockPanel Grid.Row="2" Margin="0,12,0,0" LastChildFill="False">
-            <Button DockPanel.Dock="Left" Content="Standard wiederherstellen" Click="Standard_Click"/>
-            <Button DockPanel.Dock="Right" Content="Speichern" Click="Speichern_Click"
-                    Style="{DynamicResource PrimaryButton}" Margin="8,0,0,0"/>
-            <Button DockPanel.Dock="Right" Content="Abbrechen" IsCancel="True"/>
-        </DockPanel>
+        <Border Grid.Row="2" Style="{StaticResource DialogButtonBar}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Standard wiederherstellen" Click="Standard_Click"
+                        Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button Content="Abbrechen" IsCancel="True"
+                        Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button Content="Speichern" Click="Speichern_Click"
+                        Style="{StaticResource PrimaryButton}" IsDefault="True"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

@@ -59,11 +59,11 @@ public static class SettingsCodexArtifactCleanupWorkflow
                 return;
             }
 
-            request.Toasts.Warning("Bereinigung mit geschuetzten oder belegten Bereichen beendet.");
+            request.Toasts.Warning("Bereinigung mit geschützten oder belegten Bereichen beendet.");
             var sample = string.Join(Environment.NewLine, result.FailedPaths.Take(8));
             request.Dialogs.Warn(
                 $"{successText}\n\n{result.FailedPaths.Count} Bereich(e) blieben erhalten. " +
-                $"Sie wurden geaendert, sind in Benutzung oder bestanden die Schutzpruefung nicht.\n\n{sample}",
+                $"Sie wurden geändert, sind in Benutzung oder bestanden die Schutzprüfung nicht.\n\n{sample}",
                 "Alte Agenten-Daten bereinigen");
         }
         catch (Exception ex)

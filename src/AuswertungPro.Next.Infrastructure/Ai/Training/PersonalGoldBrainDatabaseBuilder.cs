@@ -62,7 +62,7 @@ internal sealed class PersonalGoldBrainDatabaseBuilder(
             if (matchedSamples != selected.Count || matchedEmbeddings != selected.Count)
             {
                 throw new InvalidDataException(
-                    $"Goldbestand ist in SQLite unvollstaendig: " +
+                    $"Goldbestand ist in SQLite unvollständig: " +
                     $"Samples={matchedSamples}/{selected.Count}, " +
                     $"Embeddings={matchedEmbeddings}/{selected.Count}.");
             }
@@ -204,7 +204,7 @@ internal sealed class PersonalGoldBrainDatabaseBuilder(
         }
 
         if (!actual.SetEquals(expected.Keys))
-            throw new InvalidDataException("SQLite enthaelt nicht exakt den ausgewaehlten Goldbestand.");
+            throw new InvalidDataException("SQLite enthält nicht exakt den ausgewählten Goldbestand.");
         if (Count(connection, "Embeddings") != expected.Count)
             throw new InvalidDataException("Nicht jedes Goldsample besitzt genau eine Einbettung.");
         if (CountIfPresent(connection, "ValidationLog") != 0
@@ -214,7 +214,7 @@ internal sealed class PersonalGoldBrainDatabaseBuilder(
             || CountIfPresent(connection, "Versions") != 0
             || CountIfPresent(connection, "Embeddings_orphan") != 0)
         {
-            throw new InvalidDataException("Die neue Gold-Datenbank enthaelt noch alte Laufzeitdaten.");
+            throw new InvalidDataException("Die neue Gold-Datenbank enthält noch alte Laufzeitdaten.");
         }
     }
 
@@ -239,8 +239,8 @@ internal sealed class PersonalGoldBrainDatabaseBuilder(
                 out var parsed))
         {
             throw new InvalidDataException(
-                $"SQLite-Konflikt fuer Sample '{sampleId}', Feld 'ConfirmedAtUtc': " +
-                "Zeitwert ist ungueltig.");
+                $"SQLite-Konflikt für Sample '{sampleId}', Feld 'ConfirmedAtUtc': " +
+                "Zeitwert ist ungültig.");
         }
 
         return parsed.ToUniversalTime();
@@ -255,7 +255,7 @@ internal sealed class PersonalGoldBrainDatabaseBuilder(
         if (!EqualityComparer<T>.Default.Equals(expected, actual))
         {
             throw new InvalidDataException(
-                $"SQLite-Konflikt fuer Sample '{sampleId}', Feld '{field}'.");
+                $"SQLite-Konflikt für Sample '{sampleId}', Feld '{field}'.");
         }
     }
 
@@ -273,7 +273,7 @@ internal sealed class PersonalGoldBrainDatabaseBuilder(
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                $"SQLite-Konflikt fuer Sample '{sampleId}', Feld '{field}'.");
+                $"SQLite-Konflikt für Sample '{sampleId}', Feld '{field}'.");
         }
     }
 
@@ -294,7 +294,7 @@ internal sealed class PersonalGoldBrainDatabaseBuilder(
         command.CommandText = "PRAGMA integrity_check;";
         var result = Convert.ToString(command.ExecuteScalar());
         if (!string.Equals(result, "ok", StringComparison.OrdinalIgnoreCase))
-            throw new IOException($"SQLite-Inhaltspruefung fehlgeschlagen: {result ?? "keine Antwort"}");
+            throw new IOException($"SQLite-Inhaltsprüfung fehlgeschlagen: {result ?? "keine Antwort"}");
     }
 
     private static SqliteConnection Open(string path, bool readOnly)

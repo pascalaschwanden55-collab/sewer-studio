@@ -91,7 +91,10 @@ public sealed class TrainingYoloExportWorkflowTests
 
         await TrainingYoloExportWorkflow.RunAsync(CreateRequest(coordinator, state));
 
-        Assert.Contains("Register fehlt", state.Status, StringComparison.Ordinal);
+        Assert.Contains(
+            "Die gelesenen Daten sind beschädigt oder nicht gültig.",
+            state.Status,
+            StringComparison.Ordinal);
         Assert.Equal([true, false], state.BusyValues);
     }
 

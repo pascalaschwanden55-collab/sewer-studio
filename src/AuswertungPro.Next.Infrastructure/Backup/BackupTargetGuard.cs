@@ -58,13 +58,13 @@ public static class BackupTargetGuard
                 || target.StartsWith(src + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             {
                 return $"Der Zielordner liegt innerhalb der Sicherungsquelle \"{source}\". " +
-                       "Bitte einen Ordner ausserhalb der zu sichernden Daten waehlen.";
+                       "Bitte einen Ordner ausserhalb der zu sichernden Daten wählen.";
             }
 
             if (src.StartsWith(target + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             {
                 return $"Die Sicherungsquelle \"{source}\" liegt innerhalb des Zielordners. " +
-                       "Bitte einen anderen Zielordner waehlen.";
+                       "Bitte einen anderen Zielordner wählen.";
             }
         }
 

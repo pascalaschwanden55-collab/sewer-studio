@@ -41,8 +41,8 @@ internal static class TrainingStudioPreviewModelCatalog
         if (!catalog.Available || catalog.Candidates.Count == 0)
         {
             var summary = string.IsNullOrWhiteSpace(catalog.Error)
-                ? "Keine manifest- und hashgeprueften BCC-Testkandidaten verfuegbar."
-                : $"BCC-Kandidaten nicht verfuegbar: {catalog.Error}";
+                ? "Keine manifest- und hashgeprüften BCC-Testkandidaten verfügbar."
+                : $"BCC-Kandidaten nicht verfügbar: {catalog.Error}";
             return Unavailable(currentOptions, standardModelUnavailable, summary);
         }
 
@@ -62,7 +62,7 @@ internal static class TrainingStudioPreviewModelCatalog
             return Unavailable(
                 currentOptions,
                 standardModelUnavailable,
-                "Keine sicher angehefteten BCC-Testkandidaten verfuegbar.");
+                "Keine sicher angehefteten BCC-Testkandidaten verfügbar.");
         }
 
         var selected = currentSelection?.Kind switch

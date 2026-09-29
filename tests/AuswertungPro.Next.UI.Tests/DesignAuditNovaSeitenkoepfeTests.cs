@@ -9,7 +9,7 @@ public sealed class DesignAuditNovaSeitenkoepfeTests
     [Theory]
     [InlineData("ProjectPage.xaml", "Stammdaten des offenen Projekts")]
     [InlineData("ImportPage.xaml", "Daten ins Projekt holen. Oben der Normalfall, darunter Sonderfälle.")]
-    [InlineData("ExportPage.xaml", "Excel, Verteilung, Kataster")]
+    [InlineData("ExportPage.xaml", "Excel-Listen, Dateien verteilen, Kataster (XTF), WebGIS")]
     [InlineData("MediaConflictsPage.xaml", "Videos, die keiner Haltung sicher zugeordnet sind")]
     [InlineData("BuilderPage.xaml", "Listen, Statistik und NPK-Leistungsverzeichnis")]
     [InlineData("DossiersPage.xaml", "eine Liegenschaft, ihre Leitungen und Schächte")]

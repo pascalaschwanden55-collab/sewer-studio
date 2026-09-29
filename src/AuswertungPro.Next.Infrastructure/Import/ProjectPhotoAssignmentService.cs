@@ -79,7 +79,7 @@ public sealed class ProjectPhotoAssignmentService : IProjectPhotoAssignmentServi
             var entries = GetEntries(record);
             if (entries.Count == 0)
             {
-                messages.Add($"Haltung {san}: keine Beobachtungen vorhanden, {kv.Value.Count} Fotos uebersprungen.");
+                messages.Add($"Haltung {san}: keine Beobachtungen vorhanden, {kv.Value.Count} Fotos übersprungen.");
                 continue;
             }
 

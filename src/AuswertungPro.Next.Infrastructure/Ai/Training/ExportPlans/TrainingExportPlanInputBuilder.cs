@@ -83,12 +83,12 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
             if (!actualSha256.Equals(negative.Sha256, StringComparison.OrdinalIgnoreCase))
             {
                 throw new TrainingExportPlanException(
-                    $"Negativbild wurde seit der Register-Freigabe veraendert: {negative.Path}");
+                    $"Negativbild wurde seit der Register-Freigabe verändert: {negative.Path}");
             }
             if (inventory.Protection.ImageHashes.Contains(actualSha256))
             {
                 throw new TrainingExportPlanException(
-                    $"Negativbild gehoert zum eingefrorenen Eval-/Abnahme-Set: {negative.Path}");
+                    $"Negativbild gehört zum eingefrorenen Eval-/Abnahme-Set: {negative.Path}");
             }
             if (negative.HoldingKey is not null
                 && EvalContaminationGuard.IsEvalHaltung(
@@ -96,7 +96,7 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
                     negative.HoldingKey))
             {
                 throw new TrainingExportPlanException(
-                    $"Negativbild-Haltung gehoert zum eingefrorenen Eval-/Abnahme-Set: {negative.HoldingKey}");
+                    $"Negativbild-Haltung gehört zum eingefrorenen Eval-/Abnahme-Set: {negative.HoldingKey}");
             }
             if (negative.HoldingKey is not null)
                 TrainingNegativeClassMapBinding.Validate(negative, classMap);
@@ -116,7 +116,7 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
             || inventory.Report.Summary.Triage.EvaluationNotChecked != 0)
         {
             throw new TrainingExportPlanException(
-                "Der Live-Inventarlauf hat Eval/Abnahme nicht vollstaendig geprueft.");
+                "Der Live-Inventarlauf hat Eval/Abnahme nicht vollständig geprüft.");
         }
         if (inventory.Report.Sources.Any(source => source.Role != TrainingInventorySourceRole.Current))
         {
@@ -140,7 +140,7 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
                 || !set.ManifestSha256.Equals(expected.ManifestSha256, StringComparison.OrdinalIgnoreCase))
             {
                 throw new TrainingExportPlanException(
-                    $"Schutz-Set '{expected.SetId}' fehlt oder sein Manifest wurde veraendert.");
+                    $"Schutz-Set '{expected.SetId}' fehlt oder sein Manifest wurde verändert.");
             }
         }
     }
@@ -159,7 +159,7 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
             }
             var key = Path.GetFileName(source.Path);
             if (string.IsNullOrWhiteSpace(key) || !result.TryAdd(key, source.Sha256.ToLowerInvariant()))
-                throw new TrainingExportPlanException($"Doppelte oder ungueltige Inventarquelle '{source.Path}'.");
+                throw new TrainingExportPlanException($"Doppelte oder ungültige Inventarquelle '{source.Path}'.");
         }
         return result;
     }
@@ -265,7 +265,7 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
         {
             var reparsePoint = TrainingInventoryPaths.FindReparsePoint(path);
             if (reparsePoint is not null)
-                throw new TrainingExportPlanException($"Sample-Bildpfad enthaelt eine Verknuepfung: {reparsePoint}");
+                throw new TrainingExportPlanException($"Sample-Bildpfad enthält eine Verknüpfung: {reparsePoint}");
             var before = new FileInfo(path);
             before.Refresh();
             if (!before.Exists)
@@ -293,6 +293,6 @@ public sealed class TrainingExportPlanInputBuilder : ITrainingExportPlanInputBui
             }
         }
 
-        throw new TrainingExportPlanException($"Sample-Bild wurde waehrend des Hashens veraendert: {path}");
+        throw new TrainingExportPlanException($"Sample-Bild wurde während des Hashens verändert: {path}");
     }
 }

@@ -32,13 +32,13 @@ public sealed class CodingProtocolMatchSummaryFormatterTests
 
         var summary = CodingProtocolMatchSummaryFormatter.Format(routing);
 
-        Assert.Equal("Abgleich: 2 Treffer (1 gruen/1 gelb) | 1 falscher Code | 1 fehlen | 1 extra | P 50% R 50%",
+        Assert.Equal("Abgleich: 2 Treffer (1 grün/1 gelb) | 1 falscher Code | 1 fehlen | 1 extra | P 50% R 50%",
             summary);
         Assert.True(CodingProtocolMatchSummaryFormatter.CanAcceptGreenMatches(routing));
     }
 
     private static BefundMatchPair Pair(string gtRefId, string kiRefId)
-        => new(Finding(gtRefId), Finding(kiRefId), 0.0, "gruen");
+        => new(Finding(gtRefId), Finding(kiRefId), 0.0, "grün");
 
     private static BefundMatchFinding Finding(string refId)
         => new("BAB", 1.0, 1.0, "Riss", refId);

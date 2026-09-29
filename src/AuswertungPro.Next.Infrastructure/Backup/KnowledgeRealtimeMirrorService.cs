@@ -450,7 +450,7 @@ public sealed class KnowledgeRealtimeMirrorService : IKnowledgeRealtimeMirrorSer
                                    or NotSupportedException)
         {
             throw new InvalidDataException(
-                $"KI-Quelldatei konnte nicht sicher geprueft werden: {sourcePath}",
+                $"KI-Quelldatei konnte nicht sicher geprüft werden: {sourcePath}",
                 ex);
         }
     }

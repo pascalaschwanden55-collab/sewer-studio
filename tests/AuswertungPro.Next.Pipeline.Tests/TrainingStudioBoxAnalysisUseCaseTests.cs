@@ -66,7 +66,7 @@ public sealed class TrainingStudioBoxAnalysisUseCaseTests
 
         Assert.False(result.IsValid);
         Assert.Equal(TrainingStudioSegmentationValidationFailure.AreaMismatch, result.Failure);
-        Assert.Contains("Maskenflaeche", result.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Maskenfläche", result.Reason, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("15", result.Reason, StringComparison.Ordinal);
         Assert.Contains("16", result.Reason, StringComparison.Ordinal);
     }

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -72,7 +73,7 @@ public sealed partial class ProjektPruefungViewModel : ObservableObject, IDispos
                 : $"{Punkte.Count} Hinweise · {ergebnis.Haltungen} Haltungen und {ergebnis.Schaechte} Schächte geprüft · Stand {DateTime.Now:HH:mm}.";
         }
         catch (OperationCanceledException) { if (!_disposed) Meldung = "Prüfung abgebrochen. Kein vollständiges Ergebnis."; }
-        catch (Exception ex) { if (!_disposed) Meldung = $"Prüfung fehlgeschlagen: {ex.Message}"; }
+        catch (Exception ex) { if (!_disposed) Meldung = $"Prüfung fehlgeschlagen: {UserError.DescribeAndReport(ex, "Projektprüfung")}"; }
     }
 
     [RelayCommand]
@@ -103,7 +104,7 @@ public sealed partial class ProjektPruefungViewModel : ObservableObject, IDispos
         catch (Exception ex)
         {
             if (_disposed) return;
-            Verwerfe(); Meldung = $"Stelle konnte nicht geöffnet werden: {ex.Message}";
+            Verwerfe(); Meldung = $"Stelle konnte nicht geöffnet werden: {UserError.DescribeAndReport(ex, "Prüfstelle öffnen")}";
         }
     }
 

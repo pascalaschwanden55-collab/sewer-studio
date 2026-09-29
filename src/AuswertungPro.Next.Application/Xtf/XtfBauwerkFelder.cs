@@ -22,7 +22,7 @@ public static class XtfBauwerkFelder
                 : XtfSchachtPlanBuilder.NachXtfWert(xtfName, roh);
             if (!string.IsNullOrEmpty(wert)) felder.Add(new(xtfName, wert));
             else if (xtfName == "Bemerkung" && XtfStammdatenPlanBuilder.BemerkungZuLang(roh, out var zeichen))
-                hinweise.Add($"Schacht {nummer}: die Bemerkung ist {zeichen} Zeichen lang, das Modell laesst {XtfStammdatenPlanBuilder.BemerkungGrenze} zu — nicht geschrieben im Standardfeld; siehe Zusatzangaben.");
+                hinweise.Add($"Schacht {nummer}: die Bemerkung ist {zeichen} Zeichen lang, das Modell lässt {XtfStammdatenPlanBuilder.BemerkungGrenze} zu — nicht geschrieben im Standardfeld; siehe Zusatzangaben.");
             else hinweise.Add($"Schacht {nummer}: {xtfName} = \"{roh}\" passt nicht ins Standardfeld; siehe Zusatzangaben.");
         }
         if (klasse is "Normschacht" or "Versickerungsanlage")
@@ -58,14 +58,14 @@ public static class XtfBauwerkFelder
         if (!string.IsNullOrEmpty(ort))
         {
             if (ort.EnumerateRunes().Count() <= 50) felder.Add(new("Standortname", ort));
-            else hinweise.Add($"{nummer}: Strasse ist laenger als 50 Zeichen; vollstaendig in den Zusatzangaben.");
+            else hinweise.Add($"{nummer}: Strasse ist länger als 50 Zeichen; vollständig in den Zusatzangaben.");
         }
         var kosten = wert(FieldKeys.GrossCost)?.Trim();
         if (!string.IsNullOrEmpty(kosten) && !felder.Any(f => f.Key == "Bruttokosten"))
         {
             var norm = XtfStammdatenPlanBuilder.NachXtfWert("Bruttokosten", kosten, "SIA405_ABWASSER_2020_LV95");
             if (norm is not null) felder.Add(new("Bruttokosten", norm));
-            else hinweise.Add($"{nummer}: Bruttokosten \"{kosten}\" sind im Standardfeld nicht gueltig; siehe Zusatzangaben.");
+            else hinweise.Add($"{nummer}: Bruttokosten \"{kosten}\" sind im Standardfeld nicht gültig; siehe Zusatzangaben.");
         }
         var datum = wert(FieldKeys.InspectionYear)?.Trim();
         if (string.IsNullOrEmpty(datum)) return;

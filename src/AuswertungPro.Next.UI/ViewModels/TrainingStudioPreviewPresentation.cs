@@ -21,7 +21,7 @@ internal static class TrainingStudioPreviewPresenter
         if (!result.Available)
         {
             var unavailableSummary = string.IsNullOrWhiteSpace(result.Error)
-                ? $"{model.DisplayName}: Modell ist nicht verfuegbar."
+                ? $"{model.DisplayName}: Modell ist nicht verfügbar."
                 : $"{model.DisplayName}: {result.Error}";
             return new TrainingStudioPreviewPresentation([], unavailableSummary);
         }
@@ -29,11 +29,11 @@ internal static class TrainingStudioPreviewPresenter
         if (!result.FrameUsable)
         {
             var reason = string.IsNullOrWhiteSpace(result.QualityReason)
-                ? "Qualitaetspruefung fehlgeschlagen"
+                ? "Qualitätsprüfung fehlgeschlagen"
                 : result.QualityReason;
             return new TrainingStudioPreviewPresentation(
                 [],
-                $"{model.DisplayName}: Foto nicht geprueft ({reason}). "
+                $"{model.DisplayName}: Foto nicht geprüft ({reason}). "
                 + "Das ist kein Negativtreffer; nichts gespeichert.");
         }
 

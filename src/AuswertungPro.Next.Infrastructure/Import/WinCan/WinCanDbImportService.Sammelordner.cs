@@ -66,7 +66,7 @@ public sealed partial class WinCanDbImportService
     {
         var messages = new List<string>
         {
-            $"{projektWurzeln.Count} WinCan-Projekte im gewaehlten Ordner gefunden."
+            $"{projektWurzeln.Count} WinCan-Projekte im gewählten Ordner gefunden."
         };
 
         var found = 0;
@@ -186,7 +186,7 @@ public sealed partial class WinCanDbImportService
         }
 
         messages.Add(
-            $"Haltung {section.Key}: Schacht oben/unten unvollstaendig, "
+            $"Haltung {section.Key}: Schacht oben/unten unvollständig, "
             + "Haltungsnummer konnte nicht aus dem Schachtpaar gebildet werden.");
 
         return BestimmeRueckfallname(project, section, nodeKeyByPk, zonenName, messages);

@@ -60,7 +60,7 @@ public sealed class BackupManifestIntegrityService : IBackupManifestIntegritySer
             if (infoBefore.Length != infoAfter.Length
                 || infoBefore.LastWriteTimeUtc != infoAfter.LastWriteTimeUtc)
             {
-                throw new IOException($"Datei wurde waehrend der Manifest-Pruefung geaendert: {file}");
+                throw new IOException($"Datei wurde während der Manifest-Prüfung geändert: {file}");
             }
 
             result.Add(new BackupManifestFileEntry(
@@ -112,7 +112,7 @@ public sealed class BackupManifestIntegrityService : IBackupManifestIntegritySer
             {
                 issues.Add(new BackupIntegrityIssue(
                     "manifest.json",
-                    "Manifest enthaelt keine Datei-Hashes."));
+                    "Manifest enthält keine Datei-Hashes."));
                 return new BackupIntegrityReport(0, issues);
             }
 
@@ -148,7 +148,7 @@ public sealed class BackupManifestIntegrityService : IBackupManifestIntegritySer
 
             if (!TryResolveProtectedPath(root, entry.Path, out var fullPath))
             {
-                issues.Add(new BackupIntegrityIssue(entry.Path, "Unsicherer oder ungueltiger Manifest-Pfad."));
+                issues.Add(new BackupIntegrityIssue(entry.Path, "Unsicherer oder ungültiger Manifest-Pfad."));
                 continue;
             }
 
@@ -165,7 +165,7 @@ public sealed class BackupManifestIntegrityService : IBackupManifestIntegritySer
                 {
                     issues.Add(new BackupIntegrityIssue(
                         entry.Path,
-                        $"Dateigroesse stimmt nicht ({info.Length} statt {entry.Length})."));
+                        $"Dateigrösse stimmt nicht ({info.Length} statt {entry.Length})."));
                     continue;
                 }
 
@@ -177,7 +177,7 @@ public sealed class BackupManifestIntegrityService : IBackupManifestIntegritySer
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                issues.Add(new BackupIntegrityIssue(entry.Path, $"Datei nicht pruefbar: {ex.Message}"));
+                issues.Add(new BackupIntegrityIssue(entry.Path, $"Datei nicht prüfbar: {ex.Message}"));
             }
         }
 
@@ -192,7 +192,7 @@ public sealed class BackupManifestIntegrityService : IBackupManifestIntegritySer
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            issues.Add(new BackupIntegrityIssue(".", $"Sicherungsordner nicht vollstaendig lesbar: {ex.Message}"));
+            issues.Add(new BackupIntegrityIssue(".", $"Sicherungsordner nicht vollständig lesbar: {ex.Message}"));
         }
 
         return new BackupIntegrityReport(checkedFiles, issues);
@@ -303,8 +303,8 @@ public static class BackupManifestIntegrity
     [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IBackupManifestIntegrityService service) =>
         throw new NotSupportedException(
-            "Die globale Sicherungspruefung kann nicht mehr ausgetauscht werden. " +
-            "IBackupManifestIntegrityService bitte per Konstruktor uebergeben.");
+            "Die globale Sicherungsprüfung kann nicht mehr ausgetauscht werden. " +
+            "IBackupManifestIntegrityService bitte per Konstruktor übergeben.");
 
     public static Task<IReadOnlyList<BackupManifestFileEntry>> CreateEntriesAsync(
         string backupRoot,

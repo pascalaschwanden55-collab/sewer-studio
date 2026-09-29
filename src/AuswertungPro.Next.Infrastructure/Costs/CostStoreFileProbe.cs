@@ -29,7 +29,7 @@ internal static class CostStoreFileProbe
             {
                 return new CostStorePathProbeResult(
                     CostStorePathState.Invalid,
-                    "Verknuepfte Katalogdateien sind nicht erlaubt.");
+                    "Verknüpfte Katalogdateien sind nicht erlaubt.");
             }
 
             if ((attributes & FileAttributes.Directory) != 0)

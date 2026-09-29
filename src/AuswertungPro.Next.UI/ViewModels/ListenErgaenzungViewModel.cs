@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -48,8 +49,8 @@ public sealed class ListenErgaenzungViewModel : ObservableObject
     internal void Melde(Action aktion)
     {
         try { aktion(); Fehler = ""; }
-        catch (ArgumentException ex) { Fehler = ex.Message; }
-        catch (InvalidOperationException ex) { Fehler = ex.Message; }
+        catch (ArgumentException ex) { Fehler = UserError.DescribeInputHint(ex, "Listeneintrag ergänzen"); }
+        catch (InvalidOperationException ex) { Fehler = UserError.DescribeInputHint(ex, "Listeneintrag ergänzen"); }
     }
 
     internal void Entferne(ListenErgaenzungZeileViewModel zeile)

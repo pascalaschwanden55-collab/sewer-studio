@@ -40,7 +40,7 @@ public sealed class TrainingPreviewDetectionService : ITrainingPreviewDetectionS
                 return new TrainingPreviewDetectionResult(
                     Available: false,
                     Error: qualification?.Reason
-                        ?? "Der Qualifikationsstatus des Standardmodells ist nicht verfuegbar.",
+                        ?? "Der Qualifikationsstatus des Standardmodells ist nicht verfügbar.",
                     modelKind,
                     ModelName: "Aktives Standardmodell",
                     ModelSha256: string.Empty,
@@ -79,7 +79,7 @@ public sealed class TrainingPreviewDetectionService : ITrainingPreviewDetectionS
             return new TrainingPreviewDetectionResult(
                 Available: false,
                 Error: standard.DetectorQualificationReason
-                    ?? "Die YOLO-Antwort enthaelt keine positive Modellfreigabe.",
+                    ?? "Die YOLO-Antwort enthält keine positive Modellfreigabe.",
                 modelKind,
                 standard.ModelName ?? "Aktives Standardmodell",
                 standard.DetectorArtifactSha256 ?? string.Empty,
@@ -106,9 +106,9 @@ public sealed class TrainingPreviewDetectionService : ITrainingPreviewDetectionS
         if (string.IsNullOrWhiteSpace(framePath))
             throw new ArgumentException("Es wurde kein Bildpfad angegeben.", nameof(framePath));
         if (!IsSafeCandidateId(candidateId))
-            throw new ArgumentException("Die BCC-Kandidaten-ID ist ungueltig.", nameof(candidateId));
+            throw new ArgumentException("Die BCC-Kandidaten-ID ist ungültig.", nameof(candidateId));
         if (!IsSha256(candidateSha256))
-            throw new ArgumentException("Der BCC-Kandidaten-Hash ist ungueltig.", nameof(candidateSha256));
+            throw new ArgumentException("Der BCC-Kandidaten-Hash ist ungültig.", nameof(candidateSha256));
         if (confidenceThreshold is < 0 or > 1)
             throw new ArgumentOutOfRangeException(nameof(confidenceThreshold));
 

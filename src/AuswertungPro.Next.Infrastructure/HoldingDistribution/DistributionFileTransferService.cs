@@ -26,7 +26,7 @@ public sealed class DistributionFileTransferService : IDistributionFileTransfer
                 return candidate;
         }
 
-        throw new IOException($"Unable to find free filename for {path}");
+        throw new IOException($"Kein freier Dateiname für {path} gefunden.");
     }
 
     public void MoveOrCopy(string source, string destination, bool move, bool overwrite)

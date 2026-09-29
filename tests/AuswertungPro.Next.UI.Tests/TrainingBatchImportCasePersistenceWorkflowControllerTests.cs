@@ -51,7 +51,7 @@ public sealed class TrainingBatchImportCasePersistenceWorkflowControllerTests
             new[]
             {
                 "save-samples:existing=1",
-                "log:2 Samples als Kandidaten gespeichert (Status: Neu). Freigabe ueber Review (Modul I) - KEIN Auto-Index.",
+                "log:2 Samples als Kandidaten gespeichert (Status: Neu). Freigabe über Review (Modul I) - KEIN Auto-Index.",
                 "on-ui",
                 "samples:3",
                 "codes:2",

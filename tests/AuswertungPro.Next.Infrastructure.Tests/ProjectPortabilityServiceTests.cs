@@ -276,7 +276,7 @@ public sealed class ProjectPortabilityServiceTests
             Assert.Equal(0, result.FotosCopied);
             Assert.Equal(1, result.Unresolved);
             Assert.Contains(result.Messages, message =>
-                message.Contains("nicht aufgeloest", StringComparison.OrdinalIgnoreCase));
+                message.Contains("nicht aufgelöst", StringComparison.OrdinalIgnoreCase));
             Assert.Equal(source, record.VsaFindings[0].FotoPath);
             Assert.Equal("kundenfoto", File.ReadAllText(source));
             Assert.False(Directory.Exists(Path.Combine(foreignFolder, "Fotos")));
@@ -316,7 +316,7 @@ public sealed class ProjectPortabilityServiceTests
             Assert.Equal(1, result.Unresolved);
             Assert.Equal(disguisedLink, record.VsaFindings[0].FotoPath);
             Assert.Contains(result.Messages, message =>
-                message.Contains("nicht aufgeloest", StringComparison.OrdinalIgnoreCase));
+                message.Contains("nicht aufgelöst", StringComparison.OrdinalIgnoreCase));
             Assert.Equal("kundendaten", File.ReadAllText(protectedSource));
             Assert.False(Directory.Exists(Path.Combine(holdingFolder, "Fotos")));
         }

@@ -172,7 +172,7 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
             {
                 _dialogs.Error(
                     "Standard konnte nicht geladen werden; die aktuelle Liste bleibt " +
-                    $"unveraendert:\n{_positionLoadError}",
+                    $"unverändert:\n{_positionLoadError}",
                     "Standard wiederherstellen");
                 return;
             }

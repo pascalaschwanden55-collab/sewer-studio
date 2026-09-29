@@ -111,7 +111,7 @@ public static class XtfExportAuswahl
                 if (IstTeilmengeVon(doppelt.Merkmale, sieger.Merkmale))
                 {
                     entscheide.Add(new XtfExportEntscheid(doppelt.Pfad, false,
-                        $"gleiche Untersuchungen wie {Dateiname(sieger.Pfad)} und dort vollstaendig "
+                        $"gleiche Untersuchungen wie {Dateiname(sieger.Pfad)} und dort vollständig "
                         + "enthalten — nicht nochmals gelesen"));
                     continue;
                 }
@@ -119,7 +119,7 @@ public static class XtfExportAuswahl
                 uebernommen.Add(doppelt.Pfad);
                 entscheide.Add(new XtfExportEntscheid(doppelt.Pfad, true,
                     $"gleiche Untersuchungen wie {Dateiname(sieger.Pfad)}, aber abweichender Inhalt — "
-                    + "wird zusaetzlich gelesen und sollte geprueft werden"));
+                    + "wird zusätzlich gelesen und sollte geprüft werden"));
             }
         }
 

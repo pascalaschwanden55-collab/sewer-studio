@@ -30,7 +30,7 @@ public static class TrainingKnowledgeBaseQualityPresentationBuilder
                 $"{r.TimestampUtc.ToLocalTime():dd.MM. HH:mm} \u2014 " +
                 $"Exact: {r.ExactPercent:P0} | Partial: {r.PartialPercent:P0} | " +
                 $"Miss: {r.MismatchPercent:P0} | Leer: {r.NoFindingsPercent:P0}"))
-            : "Noch keine Selbsttraining-Laeufe";
+            : "Noch keine Selbsttraining-Läufe";
 
         var direction = "";
         if (last5.Count >= 2)
@@ -45,7 +45,7 @@ public static class TrainingKnowledgeBaseQualityPresentationBuilder
 
         var logLines = new List<string>();
         if (quality.StaleSampleCount > 0)
-            logLines.Add($"KB-Qualitaet: {quality.StaleSampleCount} veraltete Samples erkannt (manuell pruefen im Tab 'Samples')");
+            logLines.Add($"KB-Qualität: {quality.StaleSampleCount} veraltete Samples erkannt (manuell prüfen im Tab 'Samples')");
 
         // Kurvendaten fuer die Sparkline: Exact-Quote der letzten 10 Laeufe (Rohwerte 0..1).
         var trendSerie = runs.TakeLast(10).Select(r => r.ExactPercent).ToList();

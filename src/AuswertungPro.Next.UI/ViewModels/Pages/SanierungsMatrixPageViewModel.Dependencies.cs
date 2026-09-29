@@ -17,7 +17,8 @@ public sealed partial class SanierungsMatrixPageViewModel
         CostCalculationStores costStores,
         string? holding,
         bool singleHoldingMode,
-        HaltungRecord? targetRecord = null)
+        HaltungRecord? targetRecord = null,
+        IToastService? toasts = null)
         : this(
             shell,
             settings,
@@ -29,7 +30,8 @@ public sealed partial class SanierungsMatrixPageViewModel
             costStores.ProjectCosts,
             holding,
             singleHoldingMode,
-            targetRecord)
+            targetRecord,
+            toasts)
     {
     }
 }

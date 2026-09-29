@@ -50,7 +50,7 @@ public sealed class NetzFeldNachschlag : IFeldWertNachschlag
             {
                 return new FeldNachschlagErgebnis.NichtGefunden(
                     $"Haltung {name} steht nicht im Abwassernetz des Kantons. "
-                    + "Private Hausanschluesse fuehrt er nicht.");
+                    + "Private Hausanschlüsse führt er nicht.");
             }
 
             var werte = treffer
@@ -62,7 +62,7 @@ public sealed class NetzFeldNachschlag : IFeldWertNachschlag
             if (werte.Count == 0)
             {
                 return new FeldNachschlagErgebnis.NichtGefunden(
-                    $"Das Abwassernetz fuehrt fuer {anfrage.Feldname} keinen Wert.");
+                    $"Das Abwassernetz führt für {anfrage.Feldname} keinen Wert.");
             }
 
             _log?.Invoke("Abwassernetz-Abfrage erfolgreich.");

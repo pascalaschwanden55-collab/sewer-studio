@@ -70,7 +70,7 @@ public sealed class ProjectStructureInitializerTests : IDisposable
             var error = Assert.Throws<IOException>(() =>
                 new ProjectStructureInitializer().EnsureCreated(projectLink));
 
-            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(Directory.EnumerateFileSystemEntries(external));
         }
         finally
@@ -94,7 +94,7 @@ public sealed class ProjectStructureInitializerTests : IDisposable
             var error = Assert.Throws<IOException>(() =>
                 new ProjectStructureInitializer().EnsureCreated(projectFolder));
 
-            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(Directory.EnumerateFileSystemEntries(external));
         }
         finally

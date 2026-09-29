@@ -46,7 +46,7 @@
                     <Button Content="Objektakte" Command="{Binding ObjektakteCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,8,0" ToolTip="Vollständige Angaben, Deckel und Sanierungen"/>
                         <Button Command="{Binding SaveCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74E;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE74E;" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Speichern" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -60,19 +60,19 @@
                     <Button Command="{Binding ImportProtocolCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Einzelne PDF oder ganzen Ordner einschliesslich Unterordner importieren">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8E5;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE8E5;" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Protokoll importieren" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding AddCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE710;" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Neu" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding RemoveCommand}" Style="{StaticResource ToolbarButtonDanger}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE74D;" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Löschen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -81,63 +81,77 @@
 
                     <Button x:Name="WeitereAktionenDropdown" Click="DropdownButton_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Weitere Aktionen: Daten, Reihenfolge, Fachlich, Ansicht"
+                            ToolTip="Weitere Aktionen: Daten abgleichen, Bearbeiten, Reihenfolge, Ansicht, Ausgabe"
                             AutomationProperties.Name="Weitere Aktionen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE712;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE712;" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Weitere Aktionen" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
+                            <ui:FluentIcon Glyph="&#xE70D;" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 7 (Fix-Runde 1, Controller-Entscheid
+                             "Auffindbarkeit schlaegt Entdoppelung"): dieselben fuenf Untermenue-Titel
+                             in derselben Reihenfolge wie bei den Haltungen (Wächter
+                             WeitereAktionenUntermenueTests). "Sanierungsmassnahmen...", "Protokoll
+                             (PDF)..." und "Gehe zu Ordner" stehen bewusst SOWOHL hier ALS AUCH im
+                             Zeilenmenue (SchachtZeilenMenue) - das Zeilenmenue bleibt unveraendert, hier
+                             kommt derselbe Handler dazu, damit die Aktion auch ohne Rechtsklick auf eine
+                             Zeile auffindbar ist. Aufgabe 8 hat "Alte Schachtansicht" ebenfalls entfernt
+                             (siehe Einstellungen -> Allgemein -> Frühere Ansichten). -->
                         <Button.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Header="PDF-Daten" Command="{Binding ErgaenzeStammdatenAusPdfsCommand}"
-                                          ToolTip="Fehlende Schachtform, Dimension und Schachttiefe aus vorhandenen PDFs ergänzen">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Aktualisieren" Command="{Binding RefreshProtocolCommand}"
-                                          ToolTip="Verknüpftes Protokoll neu einlesen (Schacht wird neu aufgebaut)">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE72C;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Leere Felder aus QGIS" Command="{Binding QgisFelderErgaenzenCommand}" IsEnabled="{Binding CanMutateShaftData}"
-                                          ToolTip="Leere Felder aus dem QGIS-Bestand ergänzen. Gefüllte Felder bleiben unberührt; vorher erscheint ein Bericht.">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE896;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Vom WebGIS holen" Command="{Binding WebGisHolenCommand}" IsEnabled="{Binding CanMutateShaftData}"
-                                          ToolTip="Holt aus dem WebGIS: GlobalID, Baujahr (wenn leer) und passende Stammdaten. WebGIS-Werte ersetzen Katasterwerte; Handwerte bleiben. Vorschau zuerst; ins WebGIS wird nichts geschrieben. Anmeldung auf der Seite Export.">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE753;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="GeoShop-Abgleich (XTF)" Command="{Binding KatasterKennungenErgaenzenCommand}" IsEnabled="{Binding CanMutateShaftData}"
-                                          ToolTip="TIDs und Verknüpfungen aus GeoShop übernehmen und leere Felder ergänzen. XTF auswählen und Änderungen vorher prüfen.">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Feldnamen aufräumen" Command="{Binding FeldnamenAufraeumenCommand}" IsEnabled="{Binding CanMutateShaftData}"
-                                          ToolTip="Doppelte Schreibweisen desselben Feldes zusammenführen (Zeichensalat aus alten Importen). Zeigt vorher einen Bericht.">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8FD;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Strassen" Click="StrassenStapel_Click" IsEnabled="{Binding CanMutateShaftData}"
-                                          ToolTip="Leere Strassenfelder aus den angrenzenden Haltungen füllen - mit Vorschau, nichts wird überschrieben">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE71B;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
-                                </MenuItem>
-                                <Separator/>
-                                <MenuItem Header="Hoch" Command="{Binding MoveUpCommand}">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74A;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Runter" Command="{Binding MoveDownCommand}">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74B;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                <MenuItem Header="Daten abgleichen"
+                                          ToolTip="Werte aus WebGIS, GeoShop und QGIS abgleichen sowie Stammdaten, Strassennamen und Feldnamen ergänzen">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE895;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    <MenuItem Header="Vom WebGIS holen" Command="{Binding WebGisHolenCommand}" IsEnabled="{Binding CanMutateShaftData}"
+                                              ToolTip="Holt aus dem WebGIS: GlobalID, Baujahr (wenn leer) und passende Stammdaten. WebGIS-Werte ersetzen Katasterwerte; Handwerte bleiben. Vorschau zuerst; ins WebGIS wird nichts geschrieben. Ohne Anmeldung: zuerst auf der Seite Export am WebGIS anmelden.">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE753;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="GeoShop-Abgleich (XTF)" Command="{Binding KatasterKennungenErgaenzenCommand}" IsEnabled="{Binding CanMutateShaftData}"
+                                              ToolTip="TIDs und Verknüpfungen aus GeoShop übernehmen und leere Felder ergänzen. XTF auswählen und Änderungen vorher prüfen.">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Leere Felder aus QGIS" Command="{Binding QgisFelderErgaenzenCommand}" IsEnabled="{Binding CanMutateShaftData}"
+                                              ToolTip="Leere Felder aus dem QGIS-Bestand ergänzen. Gefüllte Felder bleiben unberührt; vorher erscheint ein Bericht.">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE896;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Stammdaten aus PDFs ergänzen" Command="{Binding ErgaenzeStammdatenAusPdfsCommand}"
+                                              ToolTip="Fehlende Schachtform, Dimension und Schachttiefe aus vorhandenen PDFs ergänzen">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Protokoll neu einlesen" Command="{Binding RefreshProtocolCommand}"
+                                              ToolTip="Verknüpftes Protokoll neu einlesen (Schacht wird neu aufgebaut)">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE72C;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Feldnamen aufräumen" Command="{Binding FeldnamenAufraeumenCommand}" IsEnabled="{Binding CanMutateShaftData}"
+                                              ToolTip="Doppelte Schreibweisen desselben Feldes zusammenführen (Zeichensalat aus alten Importen). Zeigt vorher einen Bericht.">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8FD;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Strassennamen ergänzen" Click="StrassenStapel_Click" IsEnabled="{Binding CanMutateShaftData}"
+                                              ToolTip="Leere Strassenfelder aus den angrenzenden Haltungen füllen - mit Vorschau, nichts wird überschrieben">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE71B;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
                                 </MenuItem>
                                 <Separator/>
-                                <MenuItem Header="Sanierungsmassnahmen..." Click="SanierungsmassnahmenMenu_Click">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Protokoll (PDF)..." Click="ProtokollMenu_Click">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                <!-- Steht auch im Zeilenmenue (SchachtZeilenMenue) - bewusst doppelt
+                                     auffindbar (Controller-Entscheid Fix-Runde 1). -->
+                                <MenuItem Header="Bearbeiten" ToolTip="Fachliche Einzelaktionen für den gewählten Schacht">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE70F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    <MenuItem Header="Sanierungsmassnahmen..." Click="SanierungsmassnahmenMenu_Click">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
                                 </MenuItem>
                                 <Separator/>
-                                <MenuItem Header="Ansicht anpassen" ToolTip="Position, Zeile, Zeilenhöhe, Zoom und Ausrichtung">
-                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE713;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                <!-- "Nach oben"/"Nach unten" wie bei den Haltungen (frueher "Hoch"/"Runter");
+                                     Verschieben auf Position/Gehe zu Zeile bleiben die eingebetteten Eingabefelder. -->
+                                <MenuItem Header="Reihenfolge" ToolTip="Schacht verschieben oder zu einer Zeile springen">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8CB;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    <MenuItem Header="Nach oben" Command="{Binding MoveUpCommand}">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74A;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Nach unten" Command="{Binding MoveDownCommand}">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE74B;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
                                     <MenuItem StaysOpenOnClick="True">
                                         <MenuItem.Header>
                                             <StackPanel Orientation="Horizontal" Margin="0,2">
@@ -176,128 +190,160 @@
                                             </StackPanel>
                                         </MenuItem.Header>
                                     </MenuItem>
-                                    <MenuItem StaysOpenOnClick="True">
-                                        <MenuItem.Header>
-                                            <StackPanel Orientation="Horizontal" Margin="0,2">
-                                                <TextBlock Text="Zeilenhöhe:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
-                                                <Slider Width="130"
-                                                        Minimum="24"
-                                                        Maximum="240"
-                                                        Value="{Binding GridMinRowHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                        SmallChange="2"
-                                                        LargeChange="10"
-                                                        IsSnapToTickEnabled="False"
-                                                        VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding GridMinRowHeight, StringFormat={}{0:0}px}"
-                                                           Foreground="{DynamicResource TextBrush}"
-                                                           VerticalAlignment="Center"
-                                                           Margin="8,0,0,0"
-                                                           MinWidth="36"/>
-                                            </StackPanel>
-                                        </MenuItem.Header>
-                                    </MenuItem>
-                                    <MenuItem StaysOpenOnClick="True">
-                                        <MenuItem.Header>
-                                            <StackPanel Orientation="Horizontal" Margin="0,2">
-                                                <TextBlock Text="Zoom:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
-                                                <Slider Width="130"
-                                                        Minimum="0.5"
-                                                        Maximum="2.0"
-                                                        Value="{Binding GridZoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                        SmallChange="0.05"
-                                                        LargeChange="0.1"
-                                                        IsSnapToTickEnabled="False"
-                                                        VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding GridZoom, StringFormat={}{0:0%}}"
-                                                           Foreground="{DynamicResource TextBrush}"
-                                                           VerticalAlignment="Center"
-                                                           Margin="8,0,0,0"
-                                                           MinWidth="36"/>
-                                            </StackPanel>
-                                        </MenuItem.Header>
-                                    </MenuItem>
-                                    <MenuItem StaysOpenOnClick="True">
-                                        <MenuItem.Header>
-                                            <StackPanel Orientation="Horizontal" Margin="0,2">
-                                                <TextBlock Text="Ausrichtung:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
-                                                <StackPanel Orientation="Vertical">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <ToggleButton x:Name="AlignLeftButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                                                      ToolTip="Horizontal links" Click="AlignLeftButton_Click">
-                                                            <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                                <Border Height="1.6" Width="12" HorizontalAlignment="Left" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                                <Border Height="1.6" Width="9" HorizontalAlignment="Left" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                                <Border Height="1.6" Width="11" HorizontalAlignment="Left" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                            </StackPanel>
-                                                        </ToggleButton>
-                                                        <ToggleButton x:Name="AlignCenterButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                                                      ToolTip="Horizontal zentriert" Click="AlignCenterButton_Click">
-                                                            <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                                <Border Height="1.6" Width="12" HorizontalAlignment="Center" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                                <Border Height="1.6" Width="9" HorizontalAlignment="Center" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                                <Border Height="1.6" Width="11" HorizontalAlignment="Center" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                            </StackPanel>
-                                                        </ToggleButton>
-                                                        <ToggleButton x:Name="AlignRightButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                                                      ToolTip="Horizontal rechts" Click="AlignRightButton_Click">
-                                                            <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                                <Border Height="1.6" Width="12" HorizontalAlignment="Right" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                                <Border Height="1.6" Width="9" HorizontalAlignment="Right" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                                <Border Height="1.6" Width="11" HorizontalAlignment="Right" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                            </StackPanel>
-                                                        </ToggleButton>
-                                                    </StackPanel>
-                                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                                        <ToggleButton x:Name="AlignTopButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                                                      ToolTip="Vertikal oben" Click="AlignTopButton_Click">
-                                                            <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                                <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                                <Border Height="2" Width="8" VerticalAlignment="Top" Margin="0,2,0,0" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                            </Grid>
-                                                        </ToggleButton>
-                                                        <ToggleButton x:Name="AlignMiddleButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                                                      ToolTip="Vertikal mitte" Click="AlignMiddleButton_Click">
-                                                            <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                                <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                                <Border Height="2" Width="8" VerticalAlignment="Center" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                            </Grid>
-                                                        </ToggleButton>
-                                                        <ToggleButton x:Name="AlignBottomButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                                                      ToolTip="Vertikal unten" Click="AlignBottomButton_Click">
-                                                            <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                                <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                                <Border Height="2" Width="8" VerticalAlignment="Bottom" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                                            </Grid>
-                                                        </ToggleButton>
-                                                    </StackPanel>
+                                </MenuItem>
+                                <Separator/>
+                                <!-- Nova, Aufklapp-Liste (Task 6): Aufklapp-Liste/Tabelle sind eine Gruppe,
+                                     wie bei den Haltungen. Genau einer der beiden Nova-Punkte ist angehakt.
+                                     Optikanalyse 28.09.2026, Aufgabe 8: "Alte Schachtansicht" ist aus
+                                     diesem Menü entfernt und steht jetzt in Einstellungen -> Allgemein ->
+                                     Frühere Ansichten. -->
+                                <MenuItem Header="Ansicht" ToolTip="Ansicht wechseln und anpassen">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE713;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    <MenuItem x:Name="AnsichtListeMenu" Header="Aufklapp-Liste" IsCheckable="True" Tag="liste"
+                                              Click="AnsichtMenu_Click"
+                                              ToolTip="Schächte als Liste; die gewählte Zeile klappt mit allen Feldern auf"/>
+                                    <MenuItem x:Name="AnsichtTabelleMenu" Header="Tabelle" IsCheckable="True" Tag="tabelle"
+                                              Click="AnsichtMenu_Click"
+                                              ToolTip="Schächte als Tabelle mit Spaltenansichten und Eingabefeldern unten"/>
+                                    <Separator/>
+                                    <MenuItem Header="Ansicht anpassen" ToolTip="Spalten, Zeilenhöhe, Zoom und Ausrichtung">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE713;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                        <MenuItem Header="Spalten anordnen" IsCheckable="True" IsChecked="{Binding IsColumnReorderEnabled}"/>
+                                        <MenuItem x:Name="ClearColumnModeButton" Header="Spalte leeren" IsCheckable="True"
+                                                  IsEnabled="{Binding CanMutateShaftData}"
+                                                  ToolTip="Aktivieren, dann auf Spaltentitel klicken um Spalte zu leeren"/>
+                                        <Separator/>
+                                        <MenuItem StaysOpenOnClick="True">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                    <TextBlock Text="Zeilenhöhe:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                                    <Slider Width="130"
+                                                            Minimum="24"
+                                                            Maximum="240"
+                                                            Value="{Binding GridMinRowHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            SmallChange="2"
+                                                            LargeChange="10"
+                                                            IsSnapToTickEnabled="False"
+                                                            VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding GridMinRowHeight, StringFormat={}{0:0}px}"
+                                                               Foreground="{DynamicResource TextBrush}"
+                                                               VerticalAlignment="Center"
+                                                               Margin="8,0,0,0"
+                                                               MinWidth="36"/>
                                                 </StackPanel>
-                                                <TextBlock Text="(Zelle oder Spaltenkopf auswählen)"
-                                                           Foreground="{DynamicResource MutedBrush}"
-                                                           VerticalAlignment="Center"
-                                                           Margin="10,0,0,0"/>
-                                            </StackPanel>
-                                        </MenuItem.Header>
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                        <MenuItem StaysOpenOnClick="True">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                    <TextBlock Text="Zoom:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                                    <Slider Width="130"
+                                                            Minimum="0.5"
+                                                            Maximum="2.0"
+                                                            Value="{Binding GridZoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            SmallChange="0.05"
+                                                            LargeChange="0.1"
+                                                            IsSnapToTickEnabled="False"
+                                                            VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding GridZoom, StringFormat={}{0:0%}}"
+                                                               Foreground="{DynamicResource TextBrush}"
+                                                               VerticalAlignment="Center"
+                                                               Margin="8,0,0,0"
+                                                               MinWidth="36"/>
+                                                </StackPanel>
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem StaysOpenOnClick="True">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                    <TextBlock Text="Ausrichtung:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                                    <StackPanel Orientation="Vertical">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <ToggleButton x:Name="AlignLeftButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                          ToolTip="Horizontal links" Click="AlignLeftButton_Click">
+                                                                <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                    <Border Height="1.6" Width="12" HorizontalAlignment="Left" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                    <Border Height="1.6" Width="9" HorizontalAlignment="Left" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                    <Border Height="1.6" Width="11" HorizontalAlignment="Left" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                </StackPanel>
+                                                            </ToggleButton>
+                                                            <ToggleButton x:Name="AlignCenterButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                          ToolTip="Horizontal zentriert" Click="AlignCenterButton_Click">
+                                                                <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                    <Border Height="1.6" Width="12" HorizontalAlignment="Center" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                    <Border Height="1.6" Width="9" HorizontalAlignment="Center" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                    <Border Height="1.6" Width="11" HorizontalAlignment="Center" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                </StackPanel>
+                                                            </ToggleButton>
+                                                            <ToggleButton x:Name="AlignRightButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                          ToolTip="Horizontal rechts" Click="AlignRightButton_Click">
+                                                                <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                    <Border Height="1.6" Width="12" HorizontalAlignment="Right" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                    <Border Height="1.6" Width="9" HorizontalAlignment="Right" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                    <Border Height="1.6" Width="11" HorizontalAlignment="Right" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                </StackPanel>
+                                                            </ToggleButton>
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                            <ToggleButton x:Name="AlignTopButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                          ToolTip="Vertikal oben" Click="AlignTopButton_Click">
+                                                                <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                    <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                    <Border Height="2" Width="8" VerticalAlignment="Top" Margin="0,2,0,0" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                </Grid>
+                                                            </ToggleButton>
+                                                            <ToggleButton x:Name="AlignMiddleButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                          ToolTip="Vertikal mitte" Click="AlignMiddleButton_Click">
+                                                                <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                    <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                    <Border Height="2" Width="8" VerticalAlignment="Center" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                </Grid>
+                                                            </ToggleButton>
+                                                            <ToggleButton x:Name="AlignBottomButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                          ToolTip="Vertikal unten" Click="AlignBottomButton_Click">
+                                                                <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                    <Border BorderThickness="1" CornerRadius="{DynamicResource RadiusS}" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                    <Border Height="2" Width="8" VerticalAlignment="Bottom" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                                </Grid>
+                                                            </ToggleButton>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <TextBlock Text="(Zelle oder Spaltenkopf auswählen)"
+                                                               Foreground="{DynamicResource MutedBrush}"
+                                                               VerticalAlignment="Center"
+                                                               Margin="10,0,0,0"/>
+                                                </StackPanel>
+                                            </MenuItem.Header>
+                                        </MenuItem>
                                     </MenuItem>
                                 </MenuItem>
-                                <MenuItem Header="Spalten anordnen" IsCheckable="True" IsChecked="{Binding IsColumnReorderEnabled}"/>
-                                <MenuItem x:Name="ClearColumnModeButton" Header="Spalte leeren" IsCheckable="True"
-                                          IsEnabled="{Binding CanMutateShaftData}"
-                                          ToolTip="Aktivieren, dann auf Spaltentitel klicken um Spalte zu leeren"/>
-                                <!-- Nova, Aufklapp-Liste (Task 6): Die drei Ansichten der Schachtseite sind
-                                     EINE Gruppe, wie bei den Haltungen. Genau einer der beiden Nova-Punkte
-                                     ist angehakt. -->
-                                <MenuItem x:Name="AnsichtListeMenu" Header="Aufklapp-Liste" IsCheckable="True" Tag="liste"
-                                          Click="AnsichtMenu_Click"
-                                          ToolTip="Schächte als Liste; die gewählte Zeile klappt mit allen Feldern auf"/>
-                                <MenuItem x:Name="AnsichtTabelleMenu" Header="Tabelle" IsCheckable="True" Tag="tabelle"
-                                          Click="AnsichtMenu_Click"
-                                          ToolTip="Schächte als Tabelle mit Spaltenansichten und Eingabefeldern unten"/>
-                                <MenuItem x:Name="SchachtansichtToggle" Header="Alte Schachtansicht" IsCheckable="True"
-                                          Checked="SchachtansichtToggle_Changed" Unchecked="SchachtansichtToggle_Changed"
-                                          ToolTip="Zwischen Tabelle und Schachtansicht umschalten"/>
+                                <Separator/>
+                                <!-- Beide Eintraege stehen auch im Zeilenmenue (SchachtZeilenMenue) -
+                                     bewusst doppelt auffindbar (Controller-Entscheid Fix-Runde 1). -->
+                                <MenuItem Header="Ausgabe" ToolTip="Berichte des gewählten Schachts">
+                                    <MenuItem.Icon><ui:FluentIcon Glyph="&#xE749;" Foreground="{DynamicResource MutedBrush}"/></MenuItem.Icon>
+                                    <MenuItem Header="Protokoll (PDF)..." Click="ProtokollMenu_Click">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE8A5;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click">
+                                        <MenuItem.Icon><ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource AccentBrush}"/></MenuItem.Icon>
+                                    </MenuItem>
+                                </MenuItem>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
+
+                    <!-- Optikanalyse 28.09.2026, Aufgabe 8: "Alte Schachtansicht" ist aus dem Menü
+                         "Weitere Aktionen -> Ansicht" entfernt und steht jetzt in Einstellungen ->
+                         Allgemein -> Frühere Ansichten. Dieses MenuItem bleibt unsichtbar als reiner
+                         Zustandshalter erhalten - "IsChecked" entscheidet in SchaechteAnsichtUmschalter
+                         weiterhin zwischen Nova-Arbeitsflaeche und alter Ansicht. Es wird nur noch
+                         programmatisch gesetzt (aus AppSettings.ShowSchaechteNovaLayout beim
+                         Seitenaufbau), nie mehr durch einen Klick. Kein Header mehr, damit es in
+                         keiner Menü-/Umlaut-Prüfung als sichtbarer Text auftaucht. -->
+                    <MenuItem x:Name="SchachtansichtToggle" IsCheckable="True" Visibility="Collapsed"
+                              Checked="SchachtansichtToggle_Changed" Unchecked="SchachtansichtToggle_Changed"/>
                 </StackPanel>
 
                 <!-- Nova-Etappe 2b, Task 4: Suche als Pille rechts, gleiches Muster wie die
@@ -310,8 +356,9 @@
                         <DockPanel>
                             <ui:FluentIcon DockPanel.Dock="Left" Glyph="&#xE721;" Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <Button DockPanel.Dock="Right" Margin="6,0,0,0" Style="{StaticResource IconButton}"
-                                    Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen">
-                                <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
+                                    Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen"
+                                    AutomationProperties.Name="Suche zurücksetzen">
+                                <ui:FluentIcon Glyph="&#xE711;" FontSize="{DynamicResource TextS}"/>
                             </Button>
                             <Grid>
                                 <TextBox x:Name="SearchBox" BorderThickness="0" Background="Transparent" MinWidth="150"
@@ -353,7 +400,20 @@
                                   Click="ColumnViewChip_Click" ToolTip="{Binding Titel}" AutomationProperties.Name="{Binding Titel}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding Titel}"/>
-                            <TextBlock x:Name="ChipZaehler" Margin="6,0,0,0" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                            <TextBlock x:Name="ChipZaehler" Margin="6,0,0,0" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}">
+                                <!-- Fix-Runde 4 (Aufgabe 13): im gewaehlten Chip (SelectionBackgroundBrush, unter Hochkontrast
+                                     Highlight) ein eigener Ton - normal unveraendert MutedBrush-Wert, unter Hochkontrast HighlightText. -->
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource ChipZaehlerAktivBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </ToggleButton>
                 </DataTemplate>
@@ -401,8 +461,8 @@
                   SnapsToDevicePixels="True"
                   TextOptions.TextFormattingMode="Display"
                   TextOptions.TextRenderingMode="Grayscale"
-                  BeginningEdit="Grid_BeginningEdit"
-                  CellEditEnding="Grid_CellEditEnding"
+                  BeginningEdit="Grid_BeginningEditMitVerlauf"
+                  CellEditEnding="Grid_CellEditEndingMitVerlauf"
                   SelectedCellsChanged="Grid_SelectedCellsChanged"
                   CurrentCellChanged="Grid_CurrentCellChanged"
                   PreviewMouseWheel="Grid_PreviewMouseWheel"
@@ -498,7 +558,7 @@
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource MutedBrush}"
                            Margin="12,0,8,0"/>
-                <ProgressBar Width="220" Height="10"
+                <ProgressBar Style="{StaticResource ProgressBarStandard}" Width="220"
                              Minimum="0" Maximum="100"
                              Value="{Binding StammdatenErgaenzungProgress}"/>
                 <Button Content="Abbrechen"

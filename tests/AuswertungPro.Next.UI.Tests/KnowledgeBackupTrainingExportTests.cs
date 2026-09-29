@@ -95,7 +95,7 @@ public sealed class KnowledgeBackupTrainingExportTests
             flushPendingSettings: () => { },
             flushSqliteWal: _ => throw new UserFacingException(
                 "SQLite WAL-Checkpoint fehlgeschlagen; der Export wurde abgebrochen. " +
-                "Technischer Hinweis: simuliert"));
+                "Technische Details stehen im Programmlog."));
 
         var result = await service.ExportAsync(zipPath);
 

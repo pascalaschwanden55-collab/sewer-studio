@@ -11,7 +11,7 @@ internal static class SchachtProProtocolImport
     {
         var matches = project.SchaechteData.Count(record => SchachtKeyFields.Any(field =>
             string.Equals(record.GetFieldValue(field).Trim(), key.Trim(), StringComparison.OrdinalIgnoreCase)));
-        if (matches > 1) throw new InvalidDataException("Schachtnummer ist im Projekt mehrfach vorhanden. Bitte zuerst die Zuordnung klaeren.");
+        if (matches > 1) throw new InvalidDataException("Schachtnummer ist im Projekt mehrfach vorhanden. Bitte zuerst die Zuordnung klären.");
     }
 
     private static readonly string[] SchachtKeyFields =
@@ -34,14 +34,14 @@ internal static class SchachtProProtocolImport
         if (string.IsNullOrWhiteSpace(schachtNr))
         {
             uncertain++;
-            messages.Add("Protokoll ohne Schachtnummer uebersprungen.");
+            messages.Add("Protokoll ohne Schachtnummer übersprungen.");
             return null;
         }
 
         var mapped = prepared ?? SchachtProProtocolMapper.Map(dto, isLite);
         uncertain += mapped.UnknownLabels.Count;
         foreach (var label in mapped.UnknownLabels)
-            messages.Add($"Schacht {schachtNr}: unbekanntes Zustands-Label '{label}' als Klartext uebernommen.");
+            messages.Add($"Schacht {schachtNr}: unbekanntes Zustands-Label '{label}' als Klartext übernommen.");
 
         var record = FindSchachtRecord(project.SchaechteData, schachtNr);
         var isNew = record is null;
@@ -78,7 +78,7 @@ internal static class SchachtProProtocolImport
         if (geschuetzt.Count > 0)
         {
             messages.Add(
-                $"Schacht {schachtNr}: {geschuetzt.Count} Feld(er) nicht uebernommen, weil von Hand geaendert - "
+                $"Schacht {schachtNr}: {geschuetzt.Count} Feld(er) nicht übernommen, weil von Hand geändert - "
                 + string.Join(", ", geschuetzt) + ".");
         }
 

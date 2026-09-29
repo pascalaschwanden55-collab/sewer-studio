@@ -67,7 +67,7 @@ public sealed class LiveDetectionStartupWorkflowTests
             actions: Actions(calls));
 
         Assert.False(result);
-        Assert.Equal(["uncheck", "warn:Live-KI konnte nicht gestartet werden: Port belegt"], calls);
+        Assert.Equal(["uncheck", "warn:Live-KI konnte nicht gestartet werden: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog."], calls);
     }
 
     private static LiveDetectionStartupActions Actions(List<string> calls)

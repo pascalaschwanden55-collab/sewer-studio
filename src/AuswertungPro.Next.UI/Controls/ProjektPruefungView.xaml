@@ -5,23 +5,12 @@
              AutomationProperties.Name="Projektprüfung"
              KeyboardNavigation.TabNavigation="Continue">
     <UserControl.Resources>
-        <!-- Die Systemfarben machen diese Karte auch im Windows-Kontrastdesign lesbar. -->
-        <Style x:Key="ProjektPruefungCard" TargetType="Border" BasedOn="{StaticResource Card}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Source={x:Static system:SystemParameters.HighContrast}}" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource {x:Static system:SystemColors.WindowBrushKey}}"/>
-                    <Setter Property="BorderBrush" Value="{DynamicResource {x:Static system:SystemColors.WindowTextBrushKey}}"/>
-                    <Setter Property="BorderThickness" Value="1"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
+        <!-- Im Windows-Kontrastdesign ersetzt die zentrale Ueberlagerung ThemeHighContrast.xaml
+             alle Farb-Tokens paarweise; eigene Systemfarben-Ausloeser hier wuerden diese Paare
+             brechen (ThemeHighContrastFarbpaarTests). -->
+        <Style x:Key="ProjektPruefungCard" TargetType="Border" BasedOn="{StaticResource Card}"/>
         <Style x:Key="ProjektPruefungText" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Source={x:Static system:SystemParameters.HighContrast}}" Value="True">
-                    <Setter Property="Foreground" Value="{DynamicResource {x:Static system:SystemColors.WindowTextBrushKey}}"/>
-                </DataTrigger>
-            </Style.Triggers>
         </Style>
         <Style x:Key="ProjektPruefungNebenText" TargetType="TextBlock" BasedOn="{StaticResource ProjektPruefungText}">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -29,25 +18,15 @@
         <Style x:Key="ProjektPruefungHinweisText" TargetType="TextBlock" BasedOn="{StaticResource ProjektPruefungText}">
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
         </Style>
-        <Style x:Key="ProjektPruefungButton" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Source={x:Static system:SystemParameters.HighContrast}}" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource {x:Static system:SystemColors.WindowBrushKey}}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource {x:Static system:SystemColors.WindowTextBrushKey}}"/>
-                    <Setter Property="BorderBrush" Value="{DynamicResource {x:Static system:SystemColors.WindowTextBrushKey}}"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
+        <Style x:Key="ProjektPruefungButton" TargetType="Button" BasedOn="{StaticResource ToolbarButton}"/>
+        <!-- Gefuellter Hauptknopf einfarbig (der Verlauf von ToolbarButtonAccent faellt im hellen
+             Theme mit Weiss unter 4,5:1). Schrift OnAccentBrush statt festem Weiss, damit das
+             Kontrastdesign Highlight/HighlightText paart; FilledButtonTemplate ohne Hover-Toenung
+             unter der Schrift. -->
         <Style x:Key="ProjektPruefungPrimaryButton" TargetType="Button" BasedOn="{StaticResource ProjektPruefungButton}">
+            <Setter Property="Template" Value="{DynamicResource FilledButtonTemplate}"/>
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Source={x:Static system:SystemParameters.HighContrast}}" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource {x:Static system:SystemColors.HighlightBrushKey}}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource {x:Static system:SystemColors.HighlightTextBrushKey}}"/>
-                    <Setter Property="BorderBrush" Value="{DynamicResource {x:Static system:SystemColors.WindowTextBrushKey}}"/>
-                </DataTrigger>
-            </Style.Triggers>
+            <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
         </Style>
         <Style x:Key="ProjektPruefungGrid" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
             <Setter Property="RowHeight" Value="NaN"/>
@@ -55,13 +34,6 @@
             <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
             <Setter Property="AlternatingRowBackground" Value="{DynamicResource HeaderBrush}"/>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding Source={x:Static system:SystemParameters.HighContrast}}" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource {x:Static system:SystemColors.WindowBrushKey}}"/>
-                    <Setter Property="Foreground" Value="{DynamicResource {x:Static system:SystemColors.WindowTextBrushKey}}"/>
-                    <Setter Property="RowBackground" Value="{DynamicResource {x:Static system:SystemColors.WindowBrushKey}}"/>
-                    <Setter Property="AlternatingRowBackground" Value="{DynamicResource {x:Static system:SystemColors.WindowBrushKey}}"/>
-                    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource {x:Static system:SystemColors.WindowTextBrushKey}}"/>
-                </DataTrigger>
                 <DataTrigger Binding="{Binding Punkte.Count}" Value="0">
                     <Setter Property="Visibility" Value="Collapsed"/>
                 </DataTrigger>

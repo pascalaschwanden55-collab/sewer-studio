@@ -80,7 +80,7 @@ public sealed class KnowledgeBaseDiagnosticsRunner(
                 ? "KB leer - noch keine Samples indexiert"
                 : underRepresented.Count > 0
                     ? string.Join("\n", underRepresented.Select(c => $"{c.VsaCode}: {c.Count} Samples"))
-                    : "Keine Luecken (alle Codes >= 3 Samples)";
+                    : "Keine Lücken (alle Codes >= 3 Samples)";
 
             var accuracyText = ReadAccuracyText(db);
             var staleCount = ReadStaleSampleCount(db);
@@ -122,7 +122,7 @@ public sealed class KnowledgeBaseDiagnosticsRunner(
         }
         catch
         {
-            return "Validierungsdaten nicht verfuegbar";
+            return "Validierungsdaten nicht verfügbar";
         }
     }
 

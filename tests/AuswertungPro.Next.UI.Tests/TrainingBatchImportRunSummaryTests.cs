@@ -18,7 +18,7 @@ public sealed class TrainingBatchImportRunSummaryTests
         var status = summary.BuildNoNewStatus(processedCaseCount: 4);
 
         Assert.Equal(
-            "0 neue Samples aus 4 Faellen. 1 Fehler (letzter: kaputt). 1 ohne Eintraege. 1 nur Duplikate. 1 fehlende Protokolle. 1 nicht lesbar.",
+            "0 neue Samples aus 4 Fällen. 1 Fehler (letzter: kaputt). 1 ohne Einträge. 1 nur Duplikate. 1 fehlende Protokolle. 1 nicht lesbar.",
             status);
     }
 
@@ -43,7 +43,7 @@ public sealed class TrainingBatchImportRunSummaryTests
         var status = summary.BuildCompletionStatus();
 
         Assert.Equal(
-            "Fertig! 5 Kandidaten gespeichert (Status: Neu). Freigabe ueber Review (Modul I) \u2014 kein Auto-Index. 1 Fehler.",
+            "Fertig! 5 Kandidaten gespeichert (Status: Neu). Freigabe über Review (Modul I) \u2014 kein Auto-Index. 1 Fehler.",
             status);
     }
 }

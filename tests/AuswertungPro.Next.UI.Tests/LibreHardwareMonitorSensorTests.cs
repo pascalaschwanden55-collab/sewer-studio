@@ -31,7 +31,7 @@ public sealed class LibreHardwareMonitorSensorTests
             Sample(HardwareType.Motherboard, SensorType.Temperature, "CPU Socket", 54),
             Sample(HardwareType.SuperIO, SensorType.Temperature, "CPU Package", 61),
             Sample(HardwareType.SuperIO, SensorType.Temperature, "DIMM 1", 43),
-            Sample(HardwareType.SuperIO, SensorType.Temperature, "DIMM ungueltig", 170)
+            Sample(HardwareType.SuperIO, SensorType.Temperature, "DIMM ungültig", 170)
         ]);
 
         Assert.Equal(61, reading.CpuTempC);

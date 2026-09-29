@@ -77,7 +77,7 @@ public sealed class ArchitectureDriftRatchetTests
         var neu = gefunden.Where(pfad => !erlaubt.Contains(pfad)).ToArray();
         Assert.True(neu.Length == 0,
             "Neue ViewModels nehmen den konkreten ServiceProvider im Konstruktor. Statt dessen die " +
-            "wirklich genutzten Dienste als Interfaces uebergeben:\n" + string.Join("\n", neu));
+            "wirklich genutzten Dienste als Interfaces übergeben:\n" + string.Join("\n", neu));
 
         var verschwunden = erlaubt.Except(gefunden, StringComparer.OrdinalIgnoreCase).ToArray();
         Assert.True(verschwunden.Length == 0,
@@ -107,7 +107,7 @@ public sealed class ArchitectureDriftRatchetTests
         Assert.True(treffer.Length == CurrentFassadenBestand,
             $"Es sind nur noch {treffer.Length} Current-Fassaden (Bestand war {CurrentFassadenBestand}). " +
             "Bitte CurrentFassadenBestand auf den neuen, kleineren Wert setzen - sonst faengt die " +
-            "Ratsche den naechsten Zuwachs zu spaet.");
+            "Ratsche den nächsten Zuwachs zu spaet.");
     }
 
     private static bool IstBuildAusgabe(string pfad)

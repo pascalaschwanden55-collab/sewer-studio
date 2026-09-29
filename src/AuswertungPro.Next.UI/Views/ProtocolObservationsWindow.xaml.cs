@@ -55,9 +55,9 @@ public partial class ProtocolObservationsWindow : Window
         _markDirty = markDirty;
 
         _doc = EnsureDocument(record);
-        HeaderText.Text = string.IsNullOrWhiteSpace(record.GetFieldValue("Haltungsname"))
-            ? "Beobachtungen / Schaeden"
-            : $"Beobachtungen / Schaeden - {record.GetFieldValue("Haltungsname")}";
+        Kopf.Title = string.IsNullOrWhiteSpace(record.GetFieldValue("Haltungsname"))
+            ? "Beobachtungen / Schäden"
+            : $"Beobachtungen / Schäden - {record.GetFieldValue("Haltungsname")}";
         RefreshRevisionHeader();
 
         LoadEntries();
@@ -115,7 +115,7 @@ public partial class ProtocolObservationsWindow : Window
     {
         var rev = _doc.Current;
         var who = string.IsNullOrWhiteSpace(rev.CreatedBy) ? "unbekannt" : rev.CreatedBy;
-        RevisionText.Text = $"Revision: {rev.Comment} / {rev.CreatedAt:dd.MM.yyyy HH:mm} / {who}";
+        Kopf.Subtitle = $"Revision: {rev.Comment} / {rev.CreatedAt:dd.MM.yyyy HH:mm} / {who}";
     }
 
     private ProtocolEntry? SelectedEntry => EntriesGrid.SelectedItem as ProtocolEntry;
@@ -143,7 +143,7 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Protokoll");
             return;
         }
 
@@ -172,11 +172,11 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Protokoll");
             return;
         }
 
-        if (!_sp.Dialogs.Confirm("Beobachtung wirklich loeschen?", "Protokoll"))
+        if (!_sp.Dialogs.Confirm("Beobachtung wirklich löschen?", "Protokoll"))
             return;
 
         entry.IsDeleted = true;
@@ -246,7 +246,7 @@ public partial class ProtocolObservationsWindow : Window
     {
         if (_sp.CodeSelectionCatalog is null)
         {
-            _sp.Dialogs.Info("Code-Katalog ist nicht verfuegbar.", "Protokoll");
+            _sp.Dialogs.Info("Code-Katalog ist nicht verfügbar.", "Protokoll");
             return false;
         }
 
@@ -288,13 +288,13 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Protokoll");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(_videoPath))
         {
-            _sp.Dialogs.Info("Kein Video verlinkt. Bitte zuerst Video verknuepfen.", "Video");
+            _sp.Dialogs.Info("Kein Video verlinkt. Bitte zuerst Video verknüpfen.", "Video");
             return;
         }
 
@@ -366,12 +366,12 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Training");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Training");
             return;
         }
 
         _sp.ProtocolTraining.AddSample(entry, _record.GetFieldValue("Haltungsname"));
-        _sp.Dialogs.Info("Trainingseintrag gespeichert.", "Training");
+        _sp.Toasts.Success("Trainingseintrag gespeichert.");
     }
 
     private async void ExportPdf()
@@ -389,10 +389,9 @@ public partial class ProtocolObservationsWindow : Window
         try
         {
             ExportPdfButton.IsEnabled = false;
-            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
             var options = new HaltungsprotokollPdfOptions
             {
-                LogoPathAbs = File.Exists(logoPath) ? logoPath : null
+                LogoPathAbs = _sp.BerichtsMarke.LogoPfad
             };
 
             var root = _projectFolder;
@@ -411,7 +410,7 @@ public partial class ProtocolObservationsWindow : Window
                 File.WriteAllBytes(output, pdf);
             });
 
-            _sp.Dialogs.Info($"PDF wurde erstellt:\n{output}", "PDF");
+            _sp.Toasts.Success("PDF wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(output, out _));
         }
         catch (Exception ex)
         {

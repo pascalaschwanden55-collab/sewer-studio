@@ -167,7 +167,7 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject, I
             Result.CostEstimate.Expected.ToString("0.00", CultureInfo.InvariantCulture),
             FieldSource.Unknown, userEdited: false);
         // Bemerkung mit KI-Vorschlag UND Kosten-Hinweis
-        var costNote = $"Kosten {Result.CostEstimate.Expected:N0} CHF = KI-Schaetzung (nicht kalkuliert), Bandbreite {Result.CostEstimate.Min:N0}–{Result.CostEstimate.Max:N0} CHF";
+        var costNote = $"Kosten {Result.CostEstimate.Expected:N0} CHF = KI-Schätzung (nicht kalkuliert), Bandbreite {Result.CostEstimate.Min:N0}–{Result.CostEstimate.Max:N0} CHF";
         var reasoning = !string.IsNullOrWhiteSpace(Result.Reasoning) ? Result.Reasoning : "";
         _record.SetFieldValue("Bemerkungen",
             $"[KI-Vorschlag] {reasoning}\n{costNote}", FieldSource.Unknown, userEdited: false);

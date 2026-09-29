@@ -64,7 +64,7 @@ internal sealed class ImportFileStagingPathGuard
     public static void EnsureNotReparsePoint(string path)
     {
         if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new IOException($"Importpfad enthaelt eine Verknuepfung oder Junction: {path}");
+            throw new IOException($"Importpfad enthält eine Verknüpfung oder Junction: {path}");
     }
 
     public static void EnsureDirectChild(string child, string parent)
@@ -73,7 +73,7 @@ internal sealed class ImportFileStagingPathGuard
         var fullParent = Path.GetFullPath(parent)
             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (!string.Equals(childParent, fullParent, StringComparison.OrdinalIgnoreCase))
-            throw new IOException("Unsicherer Import-Arbeitsordner wird nicht geloescht.");
+            throw new IOException("Unsicherer Import-Arbeitsordner wird nicht gelöscht.");
     }
 
     private static void EnsureExistingTargetIsNotReparsePoint(string path)

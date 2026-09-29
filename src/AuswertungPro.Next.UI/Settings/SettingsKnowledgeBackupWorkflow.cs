@@ -11,7 +11,8 @@ public sealed record SettingsKnowledgeBackupWorkflowRequest(
     Action<string> SetStatusText,
     Func<string, IProgress<string>?, CancellationToken, Task<KnowledgeBackupService.BackupResult>> ExportAsync,
     Func<string, IProgress<string>?, CancellationToken, Task<KnowledgeBackupService.BackupResult>> ImportAsync,
-    Func<DateTime> Now);
+    Func<DateTime> Now,
+    IToastService? Toasts = null);
 
 public static class SettingsKnowledgeBackupWorkflow
 {
@@ -34,10 +35,11 @@ public static class SettingsKnowledgeBackupWorkflow
         IDialogService dialogs,
         Action<string> setStatusText,
         Func<DateTime> now,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IToastService? toasts = null)
     {
         ArgumentNullException.ThrowIfNull(knowledgeBackup);
-        return ExportAsync(DefaultRequest(dialogs, setStatusText, now, knowledgeBackup), ct);
+        return ExportAsync(DefaultRequest(dialogs, setStatusText, now, knowledgeBackup, toasts), ct);
     }
 
     public static Task ImportAsync(
@@ -78,12 +80,22 @@ public static class SettingsKnowledgeBackupWorkflow
             {
                 var sizeMb = result.SizeBytes / (1024.0 * 1024.0);
                 request.SetStatusText($"Export OK: {result.FileCount} Dateien, {sizeMb:F1} MB");
-                request.Dialogs.Info(
-                    $"KI-Wissen erfolgreich exportiert.\n\n" +
-                    $"Dateien: {result.FileCount}\n" +
-                    $"Groesse: {sizeMb:F1} MB\n" +
-                    $"Pfad: {path}",
-                    "SewerStudio");
+                if (request.Toasts is not null)
+                {
+                    request.Toasts.Success(
+                        $"KI-Wissen exportiert: {result.FileCount} Dateien, {sizeMb:F1} MB.",
+                        "Datei öffnen",
+                        () => ExplorerRevealService.TryReveal(path, out _));
+                }
+                else
+                {
+                    request.Dialogs.Info(
+                        $"KI-Wissen erfolgreich exportiert.\n\n" +
+                        $"Dateien: {result.FileCount}\n" +
+                        $"Grösse: {sizeMb:F1} MB\n" +
+                        $"Pfad: {path}",
+                        "SewerStudio");
+                }
             }
             else
             {
@@ -116,7 +128,7 @@ public static class SettingsKnowledgeBackupWorkflow
             return;
 
         var confirm = request.Dialogs.Confirm(
-            "Vorhandene KI-Daten und Einstellungen werden ueberschrieben.\n\n" +
+            "Vorhandene KI-Daten und Einstellungen werden überschrieben.\n\n" +
             "Nach dem Import muss die Anwendung neu gestartet werden.\n\n" +
             "Fortfahren?",
             "SewerStudio");
@@ -161,11 +173,13 @@ public static class SettingsKnowledgeBackupWorkflow
         IDialogService dialogs,
         Action<string> setStatusText,
         Func<DateTime> now,
-        IKnowledgeBackupService? knowledgeBackup = null)
+        IKnowledgeBackupService? knowledgeBackup = null,
+        IToastService? toasts = null)
         => new(
             dialogs,
             setStatusText,
             knowledgeBackup is null ? KnowledgeBackupService.ExportAsync : knowledgeBackup.ExportAsync,
             knowledgeBackup is null ? KnowledgeBackupService.ImportAsync : knowledgeBackup.ImportAsync,
-            now);
+            now,
+            toasts);
 }

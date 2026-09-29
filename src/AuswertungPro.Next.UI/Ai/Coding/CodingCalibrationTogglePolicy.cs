@@ -14,7 +14,7 @@ public static class CodingCalibrationTogglePolicy
 {
     public const string CalibrateButtonName = "BtnCodingCalibrate";
     public const string CalibrationLabel = "Kalibrieren";
-    public const string CalibrationHintText = "Linie ueber den sichtbaren Rohrdurchmesser zeichnen";
+    public const string CalibrationHintText = "Linie über den sichtbaren Rohrdurchmesser zeichnen";
 
     public static CodingCalibrationToggleState Build(bool isCurrentlyCalibrating)
     {

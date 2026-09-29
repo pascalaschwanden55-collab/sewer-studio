@@ -133,7 +133,7 @@ public sealed class ExportPageXtfVorschauTests
             Requests.Add(request);
             if (request.NurPruefen)
             {
-                return new XtfRevisionExportResult(true, "seilergasse.xtf: 1 geaendert, 0 neu, 0 entfernt, 2 unveraendert.", null, [],
+                return new XtfRevisionExportResult(true, "seilergasse.xtf: 1 geändert, 0 neu, 0 entfernt, 2 unverändert.", null, [],
                     Plaene: [new XtfRevisionPlan("seilergasse.xtf",
                         [new XtfRevisionPosition(XtfRevisionAenderung.Geaendert, "t", "", "78998-79002", "", null,
                             [new XtfRevisionFeld("Material", "Steinzeug", "Zement")], Objekt: "Haltung")], [])]);
@@ -163,13 +163,13 @@ public sealed class ExportPageXtfVorschauTests
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") { }
         public void Error(string message, string title = "Fehler") => Assert.Fail(message);
-        public bool Confirm(string message, string title = "Bestaetigung")
+        public bool Confirm(string message, string title = "Bestätigung")
         {
             Assert.Fail("Die Vorschau ersetzt den Textdialog.");
             return false;
         }
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => true;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => true;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
         {
             Assert.Fail("Die Vorschau ersetzt den Textdialog.");
             return DialogConfirm.Cancel;

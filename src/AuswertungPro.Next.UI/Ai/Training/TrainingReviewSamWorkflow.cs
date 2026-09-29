@@ -64,7 +64,7 @@ internal sealed class TrainingReviewSamWorkflow
         {
             return ExpectedFailure(
                 TrainingReviewSamOutcome.MissingSelection,
-                "Bitte zuerst einen Review-Kandidaten waehlen.");
+                "Bitte zuerst einen Review-Kandidaten wählen.");
         }
 
         if (request.Box is not { } box)
@@ -79,7 +79,7 @@ internal sealed class TrainingReviewSamWorkflow
         {
             return ExpectedFailure(
                 TrainingReviewSamOutcome.MissingFrame,
-                "Der Review-Frame ist nicht verfuegbar.");
+                "Der Review-Frame ist nicht verfügbar.");
         }
 
         // Ab hier laeuft der echte Vorgang. Das Fenster sperrt nun die Schaltflaeche
@@ -131,7 +131,7 @@ internal sealed class TrainingReviewSamWorkflow
 
         if (response.SkippedBoxes > 0)
         {
-            return $"SAM: keine Maske ({response.SkippedBoxes}/{response.RequestedBoxes} Box(en) uebersprungen)";
+            return $"SAM: keine Maske ({response.SkippedBoxes}/{response.RequestedBoxes} Box(en) übersprungen)";
         }
 
         return "SAM: keine Maske";

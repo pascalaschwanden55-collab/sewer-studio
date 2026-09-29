@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Dossiers.Lookup;
 using AuswertungPro.Next.Domain.Models.Dossiers;
 using AuswertungPro.Next.UI.ViewModels.Windows;
@@ -97,7 +98,8 @@ public partial class DossierBatchWindow : Window
             if (!IsLoaded)
                 return;
 
-            StatusText.Text = "Die Gemeindeliste konnte nicht geladen werden: " + ex.Message;
+            StatusText.Text = "Die Gemeindeliste konnte nicht geladen werden: "
+                + UserError.DescribeAndReport(ex, "Gemeindeliste laden");
         }
     }
 
@@ -152,7 +154,8 @@ public partial class DossierBatchWindow : Window
             if (!IsLoaded)
                 return;
 
-            StatusText.Text = "Die Suche ist fehlgeschlagen: " + ex.Message;
+            StatusText.Text = "Die Suche ist fehlgeschlagen: "
+                + UserError.DescribeAndReport(ex, "Dossier-Stapelvorschlag suchen");
         }
         finally
         {

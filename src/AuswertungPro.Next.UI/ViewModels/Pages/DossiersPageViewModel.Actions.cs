@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Dossiers;
 using AuswertungPro.Next.Application.Dossiers.Lookup;
 using AuswertungPro.Next.Domain.Models;
@@ -33,7 +34,8 @@ public sealed partial class DossiersPageViewModel
         }
         catch (Exception ex)
         {
-            StatusMessage = "Die Abfrage konnte nicht geöffnet werden: " + ex.Message;
+            StatusMessage = "Die Abfrage konnte nicht geöffnet werden: "
+                + UserError.DescribeAndReport(ex, "Neue Liegenschaft");
             _dialogs.Error(StatusMessage, "Neue Liegenschaft");
             return;
         }
@@ -459,7 +461,8 @@ public sealed partial class DossiersPageViewModel
         }
         catch (Exception ex)
         {
-            StatusMessage = title + " konnte nicht erstellt werden: " + ex.Message;
+            StatusMessage = title + " konnte nicht erstellt werden: "
+                + UserError.DescribeAndReport(ex, title);
             _dialogs.Error(StatusMessage, title);
         }
         finally
@@ -652,7 +655,8 @@ public sealed partial class DossiersPageViewModel
         }
         catch (Exception ex)
         {
-            StatusMessage = "Die Vorschau konnte nicht geöffnet werden: " + ex.Message;
+            StatusMessage = "Die Vorschau konnte nicht geöffnet werden: "
+                + UserError.DescribeAndReport(ex, "Dossier-Vorschau");
             _dialogs.Error(StatusMessage, "Vorschau");
             return;
         }
@@ -897,7 +901,8 @@ public sealed partial class DossiersPageViewModel
         }
         catch (Exception ex)
         {
-            StatusMessage = "Speichern fehlgeschlagen: " + ex.Message;
+            StatusMessage = "Speichern fehlgeschlagen: "
+                + UserError.DescribeAndReport(ex, "Dossier speichern");
             _dialogs.Error(StatusMessage, "Dossiers");
             return false;
         }

@@ -67,7 +67,7 @@ public static class BackupPlanBuilder
 
             new(
                 "KI-Gehirn",
-                "Wissensdatenbank, Gold-Labels, Eval-Set, trainierte Modelle (ohne regenerierbare Trainings-Datensaetze)",
+                "Wissensdatenbank, Gold-Labels, Eval-Set, trainierte Modelle (ohne regenerierbare Trainings-Datensätze)",
                 new[] { new BackupSource(sources.KnowledgeRoot, "KI_BRAIN", BackupExclusionRules.IsKiBrainDirExcluded) }),
 
             new(

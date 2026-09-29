@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Output;
+using AuswertungPro.Next.Application.Reports;
 
 namespace AuswertungPro.Next.Infrastructure.Output.Offers;
 
@@ -18,14 +19,18 @@ internal static class OfferPdfTemplateExport
         string templateFileName,
         IOfferPdfModel model,
         string outputPdfPath,
-        CancellationToken ct)
+        CancellationToken ct,
+        IBerichtsMarke? berichtsMarke = null)
     {
         ArgumentNullException.ThrowIfNull(model);
         if (string.IsNullOrWhiteSpace(outputPdfPath))
             throw new ArgumentException("Zielpfad fehlt.", nameof(outputPdfPath));
 
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", templateFileName);
-        var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+        // Gemeinsame Quelle (Optikanalyse 28.09.2026, Aufgabe 15); ohne Injektion der
+        // bisherige feste Pfad (Der Renderer prueft selbst, ob die Datei existiert).
+        var logoPath = berichtsMarke?.LogoPfad
+            ?? BerichtsLogoResolver.DefaultLogoPath(AppContext.BaseDirectory);
 
         return render(model, templatePath, outputPdfPath, logoPath, ct);
     }

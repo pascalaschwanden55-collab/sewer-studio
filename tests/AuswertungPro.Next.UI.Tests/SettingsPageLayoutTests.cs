@@ -79,10 +79,10 @@ public sealed class SettingsPageLayoutTests
         var firstScrollViewerIndex = xaml.IndexOf("<ScrollViewer", StringComparison.Ordinal);
 
         Assert.True(tabControlIndex >= 0, "SettingsPage braucht die linke Tab-Navigation.");
-        Assert.True(firstScrollViewerIndex >= 0, "Die Tab-Inhalte muessen weiterhin scrollbar sein.");
+        Assert.True(firstScrollViewerIndex >= 0, "Die Tab-Inhalte müssen weiterhin scrollbar sein.");
         Assert.True(
             tabControlIndex < firstScrollViewerIndex,
-            "Kopfzeile und linke Einstellungsnavigation duerfen nicht in einem aeusseren ScrollViewer liegen.");
+            "Kopfzeile und linke Einstellungsnavigation dürfen nicht in einem aeusseren ScrollViewer liegen.");
         Assert.Contains("<TabControl Grid.Row=\"1\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Key=\"SettingsTabScrollViewer\"", xaml, StringComparison.Ordinal);
     }

@@ -291,7 +291,7 @@ public static class EvalContaminationGuard
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
             {
-                throw new InvalidDataException($"Prüfdaten-Datei nicht lesbar: {candidatesPath} ({ex.Message})", ex);
+                throw new InvalidDataException($"Prüfdaten-Datei nicht lesbar: {candidatesPath}", ex);
             }
             if (node is not JsonArray && !(node is JsonObject o && o["candidates"] is JsonArray))
                 throw new InvalidDataException($"Prüfdaten-Datei ohne Kandidatenliste: {candidatesPath}");

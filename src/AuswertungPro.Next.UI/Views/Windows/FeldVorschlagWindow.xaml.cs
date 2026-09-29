@@ -23,7 +23,7 @@ public partial class FeldVorschlagWindow : Window
     {
         InitializeComponent();
 
-        KopfText.Text = $"Schacht {schachtnummer} · Feld \"{feldname}\"";
+        KopfText.Title = $"Schacht {schachtnummer} · Feld \"{feldname}\"";
         Zeige(ergebnis);
     }
 
@@ -55,7 +55,7 @@ public partial class FeldVorschlagWindow : Window
             case FeldNachschlagErgebnis.Gedrosselt:
                 NurMeldung(
                     "Der Auskunftsdienst des Kantons hat zu viele Abfragen in kurzer Zeit "
-                    + "erhalten und antwortet gerade nicht. Bitte spaeter erneut versuchen.");
+                    + "erhalten und antwortet gerade nicht. Bitte später erneut versuchen.");
                 break;
 
             case FeldNachschlagErgebnis.Fehler fehler:

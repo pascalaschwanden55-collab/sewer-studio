@@ -32,7 +32,7 @@ public sealed partial class BuilderPageViewModel
         if (filteredRows.Count == 0)
         {
             _dialogs.Info(
-                "Keine Daten fuer den aktuellen Filter gefunden.",
+                "Keine Daten für den aktuellen Filter gefunden.",
                 "Druckcenter");
             return;
         }
@@ -73,7 +73,7 @@ public sealed partial class BuilderPageViewModel
         var row = SelectedRow;
         if (row is null)
         {
-            _dialogs.Info($"Bitte zuerst eine {BauteilLabel} in der Tabelle waehlen.", "Druckcenter");
+            _dialogs.Info($"Bitte zuerst eine {BauteilLabel} in der Tabelle wählen.", "Druckcenter");
             return;
         }
 
@@ -105,7 +105,7 @@ public sealed partial class BuilderPageViewModel
         var row = SelectedRow;
         if (row is null)
         {
-            _dialogs.Info($"Bitte zuerst eine {BauteilLabel} in der Tabelle waehlen.", "Dossier");
+            _dialogs.Info($"Bitte zuerst eine {BauteilLabel} in der Tabelle wählen.", "Dossier");
             return;
         }
 
@@ -113,8 +113,8 @@ public sealed partial class BuilderPageViewModel
         if (!row.CanPrintDossier)
         {
             _dialogs.Info(
-                "Ein volles Dossier gibt es nur fuer Haltungen. Fuer einen Schacht steht das "
-                + "Kostenblatt (Rechtsklick auf die Zeile) zur Verfuegung.",
+                "Ein volles Dossier gibt es nur für Haltungen. Für einen Schacht steht das "
+                + "Kostenblatt (Rechtsklick auf die Zeile) zur Verfügung.",
                 "Dossier");
             return;
         }
@@ -147,8 +147,8 @@ public sealed partial class BuilderPageViewModel
             var textBlocks = new List<string>
             {
                 qualityHint,
-                "Die Statistik fuer Inliner/Manschetten basiert auf vorhandenen Positionsdetails.",
-                "Kostenzusammenstellung nach Eigentuemer und Gesamtpositionen ist im Ausdruck enthalten."
+                "Die Statistik für Inliner/Manschetten basiert auf vorhandenen Positionsdetails.",
+                "Kostenzusammenstellung nach Eigentümer und Gesamtpositionen ist im Ausdruck enthalten."
             };
             var vatMismatchHint = BuildVatMismatchHint(entries, _vatRate);
             if (vatMismatchHint.Length > 0)
@@ -177,7 +177,7 @@ public sealed partial class BuilderPageViewModel
                 : BauteilLabelPlural;
 
             var pdfExport = _pdfExport
-                ?? throw new InvalidOperationException("PDF-Export ist ohne ServiceProvider nicht verfuegbar.");
+                ?? throw new InvalidOperationException("PDF-Export ist ohne ServiceProvider nicht verfügbar.");
             PdfExportProgress = "PDF wird gerendert...";
             await pdfExport.ExportAsync(model, output);
 
@@ -189,9 +189,12 @@ public sealed partial class BuilderPageViewModel
             LastResult = $"PDF erstellt: {Path.GetFileName(output)}";
             _shell.SetStatus("Druckcenter PDF erstellt");
             PdfExportProgress = "PDF fertig.";
-            _dialogs.Info(
-                $"Druckcenter-PDF wurde erstellt:\n{output}",
-                "Druckcenter");
+            if (_toasts is not null)
+                _toasts.Success("Druckcenter-PDF wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(output, out _));
+            else
+                _dialogs.Info(
+                    $"Druckcenter-PDF wurde erstellt:\n{output}",
+                    "Druckcenter");
         }
         catch (Exception ex)
         {
@@ -230,7 +233,9 @@ public sealed partial class BuilderPageViewModel
                 record,
                 _settings.HydraulikPanel,
                 dn,
-                saveSettings: _settings.Save));
+                saveSettings: _settings.Save),
+            toasts: _toasts,
+            berichtsMarke: _berichtsMarke);
 
     private SchachtRecord? FindSchachtByNummer(string? nummer)
     {
@@ -388,7 +393,7 @@ public sealed partial class BuilderPageViewModel
         var filteredRows = Rows.ToList();
         if (filteredRows.Count == 0)
         {
-            _dialogs.Info("Keine Daten fuer den aktuellen Filter gefunden.", "Druckcenter");
+            _dialogs.Info("Keine Daten für den aktuellen Filter gefunden.", "Druckcenter");
             return null;
         }
 
@@ -399,7 +404,7 @@ public sealed partial class BuilderPageViewModel
         var holdingSelection = BuilderPageLvPreparationService.SelectAwuHoldings(filteredRows, _vatRate);
         var includePauschalen = holdingSelection.FallbackHoldings.Count > 0 && _dialogs.ConfirmWarn(
             "Pauschalen ohne echte NPK-Position im Leistungsverzeichnis ausweisen?\n\n" +
-            "Ja = als uebrige Positionen aufnehmen.\nNein = im LV weglassen und unten als nicht enthaltene Pauschalkosten ausweisen.",
+            "Ja = als übrige Positionen aufnehmen.\nNein = im LV weglassen und unten als nicht enthaltene Pauschalkosten ausweisen.",
             "NPK-Leistungsverzeichnis",
             defaultNo: true);
 
@@ -439,7 +444,7 @@ public sealed partial class BuilderPageViewModel
     // sonst druckt man nach Matrix-Aenderungen kommentarlos den alten Stand.
     private string BuildLvStandHinweis()
         => _shell.Project.Dirty
-            ? "\n\nACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt — das LV entspricht dem zuletzt GESPEICHERTEN Stand der Sanierungs-Matrix, Schacht-Matrix und Schacht-Massnahmen."
+            ? "\n\nACHTUNG: Es gibt ungespeicherte Änderungen im Projekt — das LV entspricht dem zuletzt GESPEICHERTEN Stand der Sanierungs-Matrix, Schacht-Matrix und Schacht-Massnahmen."
             : "\n\nDaten-Stand: zuletzt gespeicherte Sanierungs-Matrix (costs.json), Schacht-Matrix (schacht_costs.json) und Schacht-Massnahmen (schacht_empfehlungen.json).";
 
     private sealed record LvPrep(
@@ -484,7 +489,7 @@ public sealed partial class BuilderPageViewModel
         var filteredRows = Rows.ToList();
         if (filteredRows.Count == 0)
         {
-            _dialogs.Info("Keine Daten fuer den aktuellen Filter gefunden.", "NPK-Offerte");
+            _dialogs.Info("Keine Daten für den aktuellen Filter gefunden.", "NPK-Offerte");
             return;
         }
 
@@ -525,7 +530,7 @@ public sealed partial class BuilderPageViewModel
         if (positions.Count == 0)
         {
             var pauschaleHint = excludedPauschaleTotal > 0m
-                ? "\n\nEs gibt nur Pauschalkosten ohne NPK-Position; diese koennen nicht als echte NPK-135-Offerte ausgegeben werden."
+                ? "\n\nEs gibt nur Pauschalkosten ohne NPK-Position; diese können nicht als echte NPK-135-Offerte ausgegeben werden."
                 : "";
             _dialogs.Info(
                 "Keine AWU-Positionen gefunden. Es gibt keine Haltungen/Schaechte im Eigentum AWU mit Massnahmen-Positionen " +
@@ -574,7 +579,7 @@ public sealed partial class BuilderPageViewModel
                 pauschaleHoldings.Count);
 
             var npkExport = _npkPdfExport
-                ?? throw new InvalidOperationException("NPK-Export ist ohne ServiceProvider nicht verfuegbar.");
+                ?? throw new InvalidOperationException("NPK-Export ist ohne ServiceProvider nicht verfügbar.");
             PdfExportProgress = "NPK-Offerte wird gerendert...";
             await npkExport.ExportAsync(model, output);
 
@@ -586,7 +591,10 @@ public sealed partial class BuilderPageViewModel
             LastResult = $"NPK-Offerte erstellt: {Path.GetFileName(output)}";
             _shell.SetStatus("NPK-Offerte erstellt");
             PdfExportProgress = "NPK-Offerte fertig.";
-            _dialogs.Info($"NPK-Offerte wurde erstellt:\n{output}", "NPK-Offerte");
+            if (_toasts is not null)
+                _toasts.Success("NPK-Offerte wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(output, out _));
+            else
+                _dialogs.Info($"NPK-Offerte wurde erstellt:\n{output}", "NPK-Offerte");
         }
         catch (Exception ex)
         {
@@ -615,7 +623,7 @@ public sealed partial class BuilderPageViewModel
             else
             {
                 var decision = _dialogs.ConfirmCancel(
-                    "Der Druckstand hat sich seit dem letzten Export geaendert.\n\nJa = letztes PDF drucken\nNein = anderes PDF auswaehlen\nAbbrechen = nichts tun",
+                    "Der Druckstand hat sich seit dem letzten Export geändert.\n\nJa = letztes PDF drucken\nNein = anderes PDF auswählen\nAbbrechen = nichts tun",
                     "Druckcenter");
 
                 if (decision == DialogConfirm.Cancel)
@@ -626,7 +634,7 @@ public sealed partial class BuilderPageViewModel
             }
         }
 
-        pdfPath ??= _dialogs.OpenFile("PDF zum Drucken waehlen", "PDF (*.pdf)|*.pdf");
+        pdfPath ??= _dialogs.OpenFile("PDF zum Drucken wählen", "PDF (*.pdf)|*.pdf");
 
         if (string.IsNullOrWhiteSpace(pdfPath))
             return;
@@ -634,7 +642,7 @@ public sealed partial class BuilderPageViewModel
         try
         {
             var druck = _pdfPrint
-                ?? throw new InvalidOperationException("Drucken ist ohne ServiceProvider nicht verfuegbar.");
+                ?? throw new InvalidOperationException("Drucken ist ohne ServiceProvider nicht verfügbar.");
             druck.Print(pdfPath);
             LastResult = $"Druckauftrag gestartet: {pdfPath}";
             _shell.SetStatus("PDF-Druckauftrag gestartet");
@@ -663,13 +671,13 @@ public sealed partial class BuilderPageViewModel
 
         if (_shellOpen.TryOpen(LastExportedPdfPath, out var error))
         {
-            LastResult = $"PDF geoeffnet: {Path.GetFileName(LastExportedPdfPath)}";
+            LastResult = $"PDF geöffnet: {Path.GetFileName(LastExportedPdfPath)}";
             return;
         }
 
-        LastResult = $"Fehler beim Oeffnen: {error}";
+        LastResult = $"Fehler beim Öffnen: {error}";
         _dialogs.Error(
-            $"PDF konnte nicht geoeffnet werden:\n{error}",
+            $"PDF konnte nicht geöffnet werden:\n{error}",
             "Druckcenter");
     }
 

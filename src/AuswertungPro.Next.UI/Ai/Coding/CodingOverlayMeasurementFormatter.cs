@@ -31,7 +31,7 @@ public static class CodingOverlayMeasurementFormatter
         }
 
         if (overlay.ToolType == OverlayToolType.Ruler && overlay.Q1Mm.HasValue)
-            return $"Laenge: {overlay.Q1Mm.Value:F1} mm";
+            return $"Länge: {overlay.Q1Mm.Value:F1} mm";
 
         if (overlay.ToolType is OverlayToolType.Ellipse or OverlayToolType.Freehand or OverlayToolType.CrossSection
             && overlay.FillPercent.HasValue)
@@ -87,7 +87,7 @@ public static class CodingOverlayMeasurementFormatter
         else if (overlay.ToolType == OverlayToolType.Ruler)
         {
             if (overlay.Q1Mm.HasValue)
-                parts.Add($"Laenge:{overlay.Q1Mm:F1}mm");
+                parts.Add($"Länge:{overlay.Q1Mm:F1}mm");
         }
         else
         {
@@ -139,7 +139,7 @@ public static class CodingOverlayMeasurementFormatter
     private static string BuildPanelArcText(OverlayGeometry overlay)
     {
         if (overlay.ToolType == OverlayToolType.Level && overlay.FillPercent.HasValue)
-            return $"Fuellung: {overlay.FillPercent:F1}%";
+            return $"Füllung: {overlay.FillPercent:F1}%";
 
         if (!overlay.ArcDegrees.HasValue)
             return "Bogen: -";

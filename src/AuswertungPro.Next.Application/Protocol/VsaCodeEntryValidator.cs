@@ -23,8 +23,8 @@ public static class VsaCodeEntryValidator
 
         if (!TryParseDouble(value, out var num))
             return string.IsNullOrWhiteSpace(rule.Einheit)
-                ? "Ungueltige Zahl"
-                : $"Ungueltige Zahl ({rule.Einheit})";
+                ? "Ungültige Zahl"
+                : $"Ungültige Zahl ({rule.Einheit})";
 
         if (rule.Min.HasValue && num < rule.Min.Value)
             return FormatLimit(">=", rule.Min.Value, rule.Einheit);

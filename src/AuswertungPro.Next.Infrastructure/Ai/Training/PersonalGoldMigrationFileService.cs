@@ -42,7 +42,7 @@ internal static class PersonalGoldMigrationFileService
             }
         }
 
-        throw new IOException($"Datei wurde waehrend des Lesens veraendert: {path}");
+        throw new IOException($"Datei wurde während des Lesens verändert: {path}");
     }
 
     public static void ValidateUpdatedJson(
@@ -60,7 +60,7 @@ internal static class PersonalGoldMigrationFileService
             if (!byId.TryGetValue(sample.SampleId, out var saved)
                 || !string.Equals(saved.FramePath, sample.FramePath, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidDataException($"Aktualisierter Goldpfad fehlt fuer '{sample.SampleId}'.");
+                throw new InvalidDataException($"Aktualisierter Goldpfad fehlt für '{sample.SampleId}'.");
             }
         }
     }
@@ -80,7 +80,7 @@ internal static class PersonalGoldMigrationFileService
                 || !savedById.TryGetValue(sample.SampleId, out var savedSample)
                 || !string.Equals(savedSample.FramePath, target, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidDataException($"Goldpfad-Pruefung fehlgeschlagen fuer '{sample.SampleId}'.");
+                throw new InvalidDataException($"Goldpfad-Prüfung fehlgeschlagen für '{sample.SampleId}'.");
             }
         }
     }

@@ -28,7 +28,7 @@ public static class ImportPlausibilityValidator
             .GroupBy(name => name, StringComparer.OrdinalIgnoreCase)
             .Where(group => group.Count() > 1);
         foreach (var duplicate in duplicates)
-            warnings.Add($"Haltungsname mehrfach vorhanden: {duplicate.Key} ({duplicate.Count()} Eintraege).");
+            warnings.Add($"Haltungsname mehrfach vorhanden: {duplicate.Key} ({duplicate.Count()} Einträge).");
 
         return warnings;
     }

@@ -72,7 +72,7 @@ public sealed class TrainingKnowledgeBaseSampleDeindexerTests
 
         Assert.Equal(["set-client"], calls);
         Assert.False(ergebnis.Removed);
-        Assert.Contains("kaputt", ergebnis.Error ?? "", StringComparison.Ordinal);
+        Assert.Contains("Programmlog", ergebnis.Error ?? "", StringComparison.Ordinal);
     }
 
     [Fact]

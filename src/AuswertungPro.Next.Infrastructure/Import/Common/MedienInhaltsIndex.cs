@@ -88,7 +88,7 @@ public sealed class MedienInhaltsIndex : IMedienInhaltsIndex
                 var geaendert = gemerkt with
                 {
                     Pruefsumme = null,
-                    Fehler = "Datei hat sich waehrend des Imports geaendert"
+                    Fehler = "Datei hat sich während des Imports geändert"
                 };
                 _bekannt[pfad] = geaendert;
                 return geaendert;
@@ -134,7 +134,7 @@ public sealed class MedienInhaltsIndex : IMedienInhaltsIndex
             if (nachher.Fehler is not null)
                 return (null, nachher.Fehler);
             if (nachher.Groesse != stand.Groesse || nachher.GeaendertUtc != stand.GeaendertUtc)
-                return (null, "Datei hat sich waehrend des Imports geaendert");
+                return (null, "Datei hat sich während des Imports geändert");
 
             _bekannt[pfad] = stand with { Pruefsumme = hash };
             return (hash, null);

@@ -80,7 +80,7 @@ public sealed class LiveDetectionRunCommandWorkflowTests
                 "badge:KI aktiv|qwen2.5-vl:7b | Overlay",
                 "store:1:12.5",
                 "confirm:1",
-                "badge:Befund erkannt|qwen2.5-vl:7b | Warte auf Bestaetigung",
+                "badge:Befund erkannt|qwen2.5-vl:7b | Warte auf Bestätigung",
                 "end"
             ],
             calls);

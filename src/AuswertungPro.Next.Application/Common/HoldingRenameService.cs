@@ -89,7 +89,7 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
         }
         catch (Exception ex)
         {
-            return HoldingRenameResult.Fail(ex.Message);
+            return HoldingRenameResult.Fail(UserError.DescribeAndReport(ex, "Haltung umbenennen"));
         }
         string? targetFolder = null;
         var folderRenamed = false;
@@ -100,7 +100,7 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
         {
             var parent = Path.GetDirectoryName(folder);
             if (string.IsNullOrWhiteSpace(parent))
-                return HoldingRenameResult.Fail($"Uebergeordneter Ordner nicht ermittelbar: {folder}");
+                return HoldingRenameResult.Fail($"Übergeordneter Ordner nicht ermittelbar: {folder}");
 
             targetFolder = Path.Combine(parent, newSan);
 

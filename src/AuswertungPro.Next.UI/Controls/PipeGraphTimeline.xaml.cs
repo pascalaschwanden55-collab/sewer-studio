@@ -259,10 +259,10 @@ public partial class PipeGraphTimeline : UserControl
                 {
                     Text = code,
                     FontSize = 9,
-                    FontFamily = new FontFamily("Consolas"),
                     Foreground = fill,
                     TextAlignment = TextAlignment.Center
                 };
+                label.SetResourceReference(TextBlock.FontFamilyProperty, "FontMono");
                 Canvas.SetLeft(label, labelX - 14);
                 Canvas.SetTop(label, 34);
                 MarkerCanvas.Children.Add(label);
@@ -303,9 +303,9 @@ public partial class PipeGraphTimeline : UserControl
             {
                 Text = tick.Text,
                 FontSize = 10,
-                Foreground = BrushScaleText,
-                FontFamily = new FontFamily("Consolas")
+                Foreground = BrushScaleText
             };
+            tb.SetResourceReference(TextBlock.FontFamilyProperty, "FontMono");
 
             // Letzte Beschriftung rechtsbuendig
             if (tick.AlignRight)

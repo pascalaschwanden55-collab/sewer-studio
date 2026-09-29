@@ -138,7 +138,9 @@ public sealed class OwnerDirectoryLookupUseCaseTests
 
         Assert.Equal(0, result.AppliedCount);
         Assert.True(result.IsUnavailable);
-        Assert.Contains("Dienst weg", result.Unavailable, StringComparison.Ordinal);
+        // Fix-Runde 2 zu 10c2: Der Fehler wird deutsch gemeldet; der rohe Ausnahmetext geht ins Programmlog.
+        Assert.StartsWith("Die Telefonsuche war nicht erreichbar:", result.Unavailable, StringComparison.Ordinal);
+        Assert.DoesNotContain("Dienst weg", result.Unavailable, StringComparison.Ordinal);
         Assert.Equal(new[] { "A" }, dienst.Gefragt);
         Assert.Equal("", dossier.Owners[1].Phone);
     }

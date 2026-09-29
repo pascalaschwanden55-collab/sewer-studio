@@ -51,7 +51,7 @@ public static class PhotoMeasurementGeometryService
         SortDeformationPoints(IReadOnlyList<NormalizedPoint> points, double centerX, double centerY)
     {
         if (points.Count < 4)
-            throw new ArgumentException("Es werden genau 4 Punkte benoetigt.", nameof(points));
+            throw new ArgumentException("Es werden genau 4 Punkte benötigt.", nameof(points));
 
         var pool = new List<NormalizedPoint>(points);
 

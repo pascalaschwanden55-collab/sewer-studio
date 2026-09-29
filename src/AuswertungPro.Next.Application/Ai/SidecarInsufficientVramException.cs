@@ -47,12 +47,12 @@ public sealed class SidecarInsufficientVramException : Exception
         string? reason, double? usedGb, double? budgetGb)
     {
         if (reason == "budget" && usedGb is not null && budgetGb is not null)
-            return $"Sidecar {endpoint}: VRAM-Budget ueberschritten – nach Ladung " +
-                   $"geschaetzt {FormatGb(usedGb)}, Grenze {FormatGb(budgetGb)}.";
+            return $"Sidecar {endpoint}: VRAM-Budget überschritten – nach Ladung " +
+                   $"geschätzt {FormatGb(usedGb)}, Grenze {FormatGb(budgetGb)}.";
         if (reason == "measurement")
             return $"Sidecar {endpoint}: VRAM-Messung fehlgeschlagen; Modell nicht geladen.";
         return $"Sidecar {endpoint}: VRAM unzureichend – frei {FormatGb(freeGb)}, " +
-               $"benoetigt {FormatGb(requiredGb)}, reserviert {FormatGb(reservedGb)}.";
+               $"benötigt {FormatGb(requiredGb)}, reserviert {FormatGb(reservedGb)}.";
     }
 
     private static string FormatGb(double? gb)

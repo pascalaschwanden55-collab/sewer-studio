@@ -55,7 +55,7 @@ public sealed class KnowledgeBackupOpenDatabaseImportTests : IDisposable
                     zipPath, locations, () => { });
 
                 Assert.False(blocked.Success);
-                Assert.Contains("momentan nicht verfuegbar", blocked.Error);
+                Assert.Contains("momentan nicht verfügbar", blocked.Error);
                 Assert.Equal("alt", ReadProbe(live.Connection));
                 using var reopened = new KnowledgeBaseContext(livePath);
                 Assert.Equal("alt", ReadProbe(reopened.Connection));

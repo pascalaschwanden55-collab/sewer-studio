@@ -84,7 +84,7 @@ internal sealed class ImportProtocolRegenerationController
             : "Eigene Protokolle übernommen, aber nicht gespeichert");
         Action<string, string> showResult = saved ? _dialogs.Info : _dialogs.Warn;
         showResult(
-            summary + "\n\nDie eigenen Protokolle (_E) liegen jetzt in Haltungen_Verteilt und sind ueber "
+            summary + "\n\nDie eigenen Protokolle (_E) liegen jetzt in Haltungen_Verteilt und sind über "
             + "das Feld „Eigenes Protokoll“ (PDF_Eigen) verlinkt.",
             "Protokoll neu generieren");
     }

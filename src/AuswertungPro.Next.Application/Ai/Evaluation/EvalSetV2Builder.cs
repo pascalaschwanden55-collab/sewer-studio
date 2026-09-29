@@ -173,7 +173,7 @@ public static class EvalSetV2Builder
 
             var v1DigestAfter = ComputeStableDigest(v1Root);
             if (!string.Equals(v1DigestBefore, v1DigestAfter, StringComparison.Ordinal))
-                throw new InvalidOperationException("V1 wurde waehrend des V2-Baus veraendert.");
+                throw new InvalidOperationException("V1 wurde während des V2-Baus verändert.");
 
             return CreateResult(
                 outputRoot,
@@ -201,7 +201,7 @@ public static class EvalSetV2Builder
               && nested.ValueKind == JsonValueKind.Array
                 ? nested.GetRawText()
                 : throw new InvalidDataException(
-                    "V2-Kandidaten muessen ein JSON-Array oder ein Objekt mit 'candidates' sein.");
+                    "V2-Kandidaten müssen ein JSON-Array oder ein Objekt mit 'candidates' sein.");
 
         return JsonSerializer.Deserialize<List<EvalSetV2Candidate>>(json, JsonOptions)
                ?? new List<EvalSetV2Candidate>();
@@ -254,7 +254,7 @@ public static class EvalSetV2Builder
     private static void ValidateCandidates(IReadOnlyList<EvalSetV2Candidate> candidates)
     {
         if (candidates.Count == 0)
-            throw new InvalidDataException("V2 enthaelt keine Kandidaten.");
+            throw new InvalidDataException("V2 enthält keine Kandidaten.");
 
         foreach (var candidate in candidates)
         {
@@ -263,7 +263,7 @@ public static class EvalSetV2Builder
             if (string.IsNullOrWhiteSpace(candidate.SourceImagePath))
                 throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Bildpfad fehlt.");
             if (!ImageExtensions.Contains(Path.GetExtension(candidate.SourceImagePath)))
-                throw new InvalidDataException($"V2-Kandidat {candidate.Id}: kein unterstuetztes Bild.");
+                throw new InvalidDataException($"V2-Kandidat {candidate.Id}: kein unterstütztes Bild.");
             if (string.IsNullOrWhiteSpace(candidate.CaseId))
                 throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Haltung fehlt.");
             if (candidate.DnMm is null or <= 0)
@@ -275,7 +275,7 @@ public static class EvalSetV2Builder
                 || candidate.ReviewedAtUtc is null)
             {
                 throw new InvalidDataException(
-                    $"V2-Kandidat {candidate.Id}: menschliche Pruefung ist nicht vollstaendig belegt.");
+                    $"V2-Kandidat {candidate.Id}: menschliche Prüfung ist nicht vollständig belegt.");
             }
 
             ValidateGroupCode(candidate);
@@ -291,7 +291,7 @@ public static class EvalSetV2Builder
         if (missingGroups.Length > 0)
         {
             throw new InvalidDataException(
-                "V2 muss alle fuenf Gruppen enthalten. Fehlt: " + string.Join(", ", missingGroups));
+                "V2 muss alle fünf Gruppen enthalten. Fehlt: " + string.Join(", ", missingGroups));
         }
     }
 
@@ -324,7 +324,7 @@ public static class EvalSetV2Builder
     private static void ValidateEventMetadata(EvalSetV2Candidate candidate)
     {
         if (candidate.Meter is { } meter && (!double.IsFinite(meter) || meter < 0))
-            throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Meterwert ist ungueltig.");
+            throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Meterwert ist ungültig.");
 
         if (candidate.ExpectedSeverity is < 1 or > 5)
             throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Severity muss zwischen 1 und 5 liegen.");
@@ -356,7 +356,7 @@ public static class EvalSetV2Builder
         if (hasStart != hasEnd)
         {
             throw new InvalidDataException(
-                $"V2-Kandidat {candidate.Id}: MeterStart und MeterEnd muessen gemeinsam gesetzt sein.");
+                $"V2-Kandidat {candidate.Id}: MeterStart und MeterEnd müssen gemeinsam gesetzt sein.");
         }
 
         if (!hasStart)
@@ -365,7 +365,7 @@ public static class EvalSetV2Builder
         var start = candidate.MeterStart!.Value;
         var end = candidate.MeterEnd!.Value;
         if (!double.IsFinite(start) || !double.IsFinite(end) || start < 0 || end < 0 || start > end)
-            throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Meterbereich ist ungueltig.");
+            throw new InvalidDataException($"V2-Kandidat {candidate.Id}: Meterbereich ist ungültig.");
         if (candidate.Meter is { } frameMeter && (frameMeter < start || frameMeter > end))
         {
             throw new InvalidDataException(
@@ -389,7 +389,7 @@ public static class EvalSetV2Builder
             if (!events.TryAdd(eventKey, metadata) && events[eventKey] != metadata)
             {
                 throw new InvalidDataException(
-                    $"V2-Kandidat {candidate.Id}: Haltung '{candidate.CaseId}', Ereignis '{eventId}' hat widerspruechliche Metadaten.");
+                    $"V2-Kandidat {candidate.Id}: Haltung '{candidate.CaseId}', Ereignis '{eventId}' hat widersprüchliche Metadaten.");
             }
         }
     }
@@ -494,13 +494,13 @@ public static class EvalSetV2Builder
             && distributions.ImageQualities.Count < Enum.GetValues<EvalSetV2ImageQuality>().Length)
         {
             problems.Add(
-                $"Bildqualitaeten {distributions.ImageQualities.Count}/{Enum.GetValues<EvalSetV2ImageQuality>().Length}");
+                $"Bildqualitäten {distributions.ImageQualities.Count}/{Enum.GetValues<EvalSetV2ImageQuality>().Length}");
         }
 
         if (problems.Count > 0)
         {
             throw new InvalidDataException(
-                "V2 ist noch nicht breit genug fuer eine belastbare Auswertung: "
+                "V2 ist noch nicht breit genug für eine belastbare Auswertung: "
                 + string.Join(", ", problems));
         }
     }

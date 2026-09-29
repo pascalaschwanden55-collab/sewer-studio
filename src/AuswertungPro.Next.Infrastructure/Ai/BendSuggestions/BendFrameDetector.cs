@@ -61,9 +61,9 @@ public sealed class BendFrameDetector
         if (!response.Available)
         {
             var detail = string.IsNullOrWhiteSpace(response.Error)
-                ? "ohne Begruendung"
+                ? "ohne Begründung"
                 : response.Error;
-            throw new InvalidOperationException($"Der Bogen-Kandidat ist nicht verfuegbar: {detail}");
+            throw new InvalidOperationException($"Der Bogen-Kandidat ist nicht verfügbar: {detail}");
         }
 
         if (!string.Equals(response.CandidateId, _candidateId, StringComparison.Ordinal))

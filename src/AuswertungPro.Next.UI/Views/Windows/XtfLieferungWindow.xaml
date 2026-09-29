@@ -51,7 +51,8 @@
                     <TextBlock Text="{Binding SeitenZeile}" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <Button Content="Weiter" Command="{Binding NaechsteCommand}" Style="{DynamicResource ToolbarButton}"/>
                 </StackPanel>
-                <DataGrid ItemsSource="{Binding Zeilen}" SelectedItem="{Binding Auswahl, Mode=TwoWay}" IsEnabled="{Binding Bereit}"
+                <Grid>
+                <DataGrid x:Name="ObjekteGrid" ItemsSource="{Binding Zeilen}" SelectedItem="{Binding Auswahl, Mode=TwoWay}" IsEnabled="{Binding Bereit}"
                           IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single"
                           EnableRowVirtualization="True" HeadersVisibility="Column">
                     <DataGrid.Columns>
@@ -61,6 +62,23 @@
                         <DataGridTextColumn Header="Prüfproblem" Binding="{Binding Problem}" Width="150"/>
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <controls:EmptyStateControl IsHitTestVisible="False"
+                                            Icon="&#xE8A5;"
+                                            Title="Noch keine Lieferung"
+                                            Message="«Lieferung öffnen …» lädt eine SIA405-XTF, deren Objekte hier erscheinen.">
+                    <controls:EmptyStateControl.Style>
+                        <Style TargetType="controls:EmptyStateControl">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasItems, ElementName=ObjekteGrid}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </controls:EmptyStateControl.Style>
+                </controls:EmptyStateControl>
+                </Grid>
             </DockPanel>
             </Border>
             <GridSplitter Grid.Column="1" HorizontalAlignment="Center" Width="4" Background="{DynamicResource BorderBrush}" Margin="0,12"/>
@@ -112,7 +130,7 @@
         </Expander>
         </Border>
         <StackPanel Grid.Row="4" Margin="0,8,0,0">
-            <ProgressBar IsIndeterminate="True" Height="4" Visibility="{Binding Arbeitet, Converter={StaticResource BoolToVis}}" Margin="0,0,0,5"/>
+            <ProgressBar Style="{StaticResource ProgressBarThin}" IsIndeterminate="True" Visibility="{Binding Arbeitet, Converter={StaticResource BoolToVis}}" Margin="0,0,0,5"/>
             <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
         </StackPanel>
     </Grid>

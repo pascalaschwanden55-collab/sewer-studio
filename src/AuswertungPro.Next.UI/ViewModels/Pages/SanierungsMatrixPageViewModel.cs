@@ -51,6 +51,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
+    private readonly IToastService? _toasts;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly DashboardRefreshNotifier _dashboardRefresh;
     private readonly ICostCatalogStore _catalogStore;
@@ -99,7 +100,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
 
     [ObservableProperty] private bool _isSingleHoldingMode;
     [ObservableProperty] private string _pageTitle = "Sanierungs-Matrix";
-    [ObservableProperty] private string _pageSubtitle = "Pro Haltung eine Hauptarbeit waehlen - Meter, DN und Anschluesse kommen automatisch.";
+    [ObservableProperty] private string _pageSubtitle = "Pro Haltung eine Hauptarbeit wählen - Meter, DN und Anschlüsse kommen automatisch.";
     [ObservableProperty] private decimal _gesamtTotal;
     [ObservableProperty] private decimal _pauschalenTotal;
     [ObservableProperty] private int _pauschalenHaltungen;
@@ -112,8 +113,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     [ObservableProperty] private int _belegteHaltungen;
     [ObservableProperty] private string _status = "";
     [ObservableProperty] private SanierungMatrixRowVm? _selectedRow;
-    [ObservableProperty] private string _detailTitle = "Keine Haltung gewaehlt";
-    [ObservableProperty] private string _detailSubtitle = "Links eine Haltung waehlen.";
+    [ObservableProperty] private string _detailTitle = "Keine Haltung gewählt";
+    [ObservableProperty] private string _detailSubtitle = "Links eine Haltung wählen.";
     [ObservableProperty] private string _detailTotal = "";
     [ObservableProperty] private string _detailEditStatus = "";
     [ObservableProperty] private bool _isDetailDirty;
@@ -140,7 +141,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             costStores: services.CostStores.CreateCalculationStores(),
             holding: holding,
             singleHoldingMode: singleHoldingMode,
-            targetRecord: targetRecord)
+            targetRecord: targetRecord,
+            toasts: services.Toasts)
     {
     }
 
@@ -155,11 +157,13 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         IProjectCostStoreRepository costRepo,
         string? holding,
         bool singleHoldingMode,
-        HaltungRecord? targetRecord = null)
+        HaltungRecord? targetRecord = null,
+        IToastService? toasts = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _toasts = toasts;
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         _dashboardRefresh = dashboardRefresh ?? throw new ArgumentNullException(nameof(dashboardRefresh));
         _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
@@ -183,7 +187,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         }
 
         SelectedRow = row;
-        Status = $"Sanierungs-Matrix: {row.Holding} gewaehlt.";
+        Status = $"Sanierungs-Matrix: {row.Holding} gewählt.";
         return true;
     }
 
@@ -231,7 +235,11 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             return;
         }
 
-        _dialogs.Info($"Vorlage \"{template.Name}\" gespeichert. Gilt fuer neue Projekte.", "Vorlage");
+        var meldung = $"Vorlage \"{template.Name}\" gespeichert. Gilt für neue Projekte.";
+        if (_toasts is not null)
+            _toasts.Success(meldung);
+        else
+            _dialogs.Info(meldung, "Vorlage");
     }
 
     [RelayCommand]
@@ -243,10 +251,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         if (IsDetailDirty || _hasUnsavedChanges)
         {
             if (!_dialogs.Confirm(
-                    "Nicht gespeicherte Aenderungen gehen beim Neuladen verloren.\nTrotzdem neu laden?",
+                    "Nicht gespeicherte Änderungen gehen beim Neuladen verloren.\nTrotzdem neu laden?",
                     PageTitle))
             {
-                Status = "Neu laden abgebrochen (offene Aenderungen).";
+                Status = "Neu laden abgebrochen (offene Änderungen).";
                 return;
             }
         }
@@ -322,13 +330,13 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         if (IsSingleHoldingMode && Rows.Count == 0)
         {
             Status = string.IsNullOrWhiteSpace(_singleHoldingTarget)
-                ? "Keine Haltung fuer Einzelansicht angegeben."
+                ? "Keine Haltung für Einzelansicht angegeben."
                 : $"Haltung in Sanierungsmassnahme nicht gefunden: {_singleHoldingTarget}.";
             return;
         }
 
         Status = Rows.Count == 0
-            ? "Keine Haltungen geladen (Projekt mit Haltungen oeffnen)."
+            ? "Keine Haltungen geladen (Projekt mit Haltungen öffnen)."
             : IsSingleHoldingMode
                 ? $"Sanierungsmassnahme geladen: {SelectedRow?.Holding}"
                 : $"{Rows.Count} Haltungen geladen.";
@@ -338,7 +346,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         {
             Status = $"WARNUNG: {_storeLoadError} - Speichern ist gesperrt, bestehende Kosten bleiben unangetastet.";
             _dialogs.Warn(
-                $"Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit costs.json nicht mit einem leeren Stand ueberschrieben wird.\nBitte Datei pruefen (costs\\costs.json bzw. .bak) und danach 'Neu laden'.",
+                $"Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit costs.json nicht mit einem leeren Stand überschrieben wird.\nBitte Datei prüfen (costs\\costs.json bzw. .bak) und danach 'Neu laden'.",
                 "Sanierungs-Matrix");
         }
         else if (calculationLoadError is not null)
@@ -346,8 +354,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             Status = $"FEHLER: {calculationLoadError} - Berechnungen und Speichern sind gesperrt.";
             _dialogs.Error(
                 $"{calculationLoadError}\n\n" +
-                "Berechnungen und Speichern sind gesperrt, damit bestehende Kosten nicht mit leeren Ersatzdaten veraendert werden. " +
-                "Bitte die Dateien pruefen und danach 'Neu laden'.",
+                "Berechnungen und Speichern sind gesperrt, damit bestehende Kosten nicht mit leeren Ersatzdaten verändert werden. " +
+                "Bitte die Dateien prüfen und danach 'Neu laden'.",
                 "Sanierungs-Matrix");
         }
         else if (_tableCostParseError is not null)
@@ -355,7 +363,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             Status = $"FEHLER: {_tableCostParseError} - Speichern ist gesperrt.";
             _dialogs.Error(
                 $"{_tableCostParseError}\n\n" +
-                "Nichtleere ungueltige Kosten werden nicht als CHF 0 behandelt. " +
+                "Nichtleere ungültige Kosten werden nicht als CHF 0 behandelt. " +
                 "Bitte die Kostenfelder korrigieren und danach 'Neu laden'.",
                 "Sanierungs-Matrix");
         }
@@ -417,7 +425,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
 
         return invalidHoldings.Count == 0
             ? null
-            : $"Haltungslaenge ist nicht lesbar bei: {string.Join(", ", invalidHoldings)}";
+            : $"Haltungslänge ist nicht lesbar bei: {string.Join(", ", invalidHoldings)}";
     }
 
     private void UpdatePageTexts()
@@ -425,12 +433,12 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         if (IsSingleHoldingMode)
         {
             PageTitle = "Sanierungsmassnahme";
-            PageSubtitle = "Einzelhaltung bearbeiten - Positionen im Detail pruefen, anpassen und uebernehmen.";
+            PageSubtitle = "Einzelhaltung bearbeiten - Positionen im Detail prüfen, anpassen und übernehmen.";
             return;
         }
 
         PageTitle = "Sanierungs-Matrix";
-        PageSubtitle = "Pro Haltung eine Hauptarbeit waehlen - Meter, DN und Anschluesse kommen automatisch.";
+        PageSubtitle = "Pro Haltung eine Hauptarbeit wählen - Meter, DN und Anschlüsse kommen automatisch.";
     }
 
     private void BuildMeasureOptions()
@@ -472,7 +480,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
 
         if (row.HasMultipleStoredMeasures)
         {
-            row.Hinweis = "Mehrfach-Massnahme geschuetzt";
+            row.Hinweis = "Mehrfach-Massnahme geschützt";
             return;
         }
 
@@ -497,10 +505,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             && (!FachzahlParser.TryParseMeasurement(row.Laenge, out var length)
                 || length <= 0m))
         {
-            row.Hinweis = "Laenge fehlt oder ist ungueltig - Berechnung gesperrt";
+            row.Hinweis = "Länge fehlt oder ist ungültig - Berechnung gesperrt";
             Status =
-                $"FEHLER: Haltungslaenge fuer {row.Holding} fehlt oder ist ungueltig. " +
-                "Bestehende Kosten bleiben unveraendert.";
+                $"FEHLER: Haltungslänge für {row.Holding} fehlt oder ist ungültig. " +
+                "Bestehende Kosten bleiben unverändert.";
             return;
         }
 
@@ -556,9 +564,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             return null;
 
         var keep = _dialogs.Confirm(
-            "Ungespeicherte Detail-Aenderungen an dieser Haltung gefunden.\n\n" +
-            "Ja = Detail-Aenderungen uebernehmen und neu berechnen.\n" +
-            "Nein = Detail-Aenderungen verwerfen und neu berechnen.",
+            "Ungespeicherte Detail-Änderungen an dieser Haltung gefunden.\n\n" +
+            "Ja = Detail-Änderungen übernehmen und neu berechnen.\n" +
+            "Nein = Detail-Änderungen verwerfen und neu berechnen.",
             PageTitle);
 
         if (!keep)
@@ -635,7 +643,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             return true;
 
         var decision = _dialogs.ConfirmCancel(
-            "Es gibt nicht uebernommene Aenderungen im Detailbereich.\n\nJa = uebernehmen, Nein = verwerfen, Abbrechen = abbrechen.",
+            "Es gibt nicht übernommene Änderungen im Detailbereich.\n\nJa = übernehmen, Nein = verwerfen, Abbrechen = abbrechen.",
             PageTitle);
 
         if (decision == DialogConfirm.Cancel)
@@ -662,7 +670,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             return true;
 
         var decision = _dialogs.ConfirmCancel(
-            $"{PageTitle}: Es gibt nicht gespeicherte Aenderungen (costs.json).\n\nJa = speichern, Nein = verwerfen, Abbrechen = auf der Seite bleiben.",
+            $"{PageTitle}: Es gibt nicht gespeicherte Änderungen (costs.json).\n\nJa = speichern, Nein = verwerfen, Abbrechen = auf der Seite bleiben.",
             PageTitle);
 
         if (decision == DialogConfirm.Cancel)
@@ -693,8 +701,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         {
             _detailSession = null;
             SelectedDetailMeasures = new ObservableCollection<SanierungsMatrixDetailEditMeasureVm>();
-            DetailTitle = "Keine Haltung gewaehlt";
-            DetailSubtitle = "Links eine Haltung waehlen.";
+            DetailTitle = "Keine Haltung gewählt";
+            DetailSubtitle = "Links eine Haltung wählen.";
             DetailTotal = "";
             DetailEditStatus = "";
             IsDetailDirty = false;
@@ -734,7 +742,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         else
         {
             DetailTotal = $"Total: {_detailSession.Total:N2} CHF";
-            DetailEditStatus = _detailSession.IsDirty ? "Aenderungen offen" : "";
+            DetailEditStatus = _detailSession.IsDirty ? "Änderungen offen" : "";
             IsDetailDirty = _detailSession.IsDirty;
         }
 
@@ -784,9 +792,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         _detailSession.MarkClean();
         DetailSubtitle = _detailRow.MeasuresSummary;
         UpdateDetailStateFromSession();
-        DetailEditStatus = "Uebernommen - noch nicht gespeichert";
+        DetailEditStatus = "Übernommen - noch nicht gespeichert";
         RecomputeGesamt();
-        Status = $"Detail uebernommen: {_detailRow.Holding}, Total {_detailRow.Total:N2} CHF - 'Speichern' schreibt costs.json.";
+        Status = $"Detail übernommen: {_detailRow.Holding}, Total {_detailRow.Total:N2} CHF - 'Speichern' schreibt costs.json.";
     }
 
     [RelayCommand(CanExecute = nameof(CanApplyDetailChanges))]
@@ -876,7 +884,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         if (updatedHoldings > 0)
             _hasUnsavedChanges = true;
         Status = updatedHoldings == 0
-            ? "Katalog neu geladen - keine Preisaenderungen."
+            ? "Katalog neu geladen - keine Preisänderungen."
             : $"Katalogpreise auf {updatedHoldings} Haltung(en) angewendet (manuelle Overrides unangetastet) - 'Speichern' schreibt costs.json.";
     }
 
@@ -894,7 +902,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         if (_storeLoadError is not null)
         {
             _dialogs.Error(
-                $"Speichern gesperrt: costs.json konnte beim Laden nicht gelesen werden.\n{_storeLoadError}\n\nBitte Datei pruefen (costs\\costs.json bzw. .bak), dann 'Neu laden'.",
+                $"Speichern gesperrt: costs.json konnte beim Laden nicht gelesen werden.\n{_storeLoadError}\n\nBitte Datei prüfen (costs\\costs.json bzw. .bak), dann 'Neu laden'.",
                 "Sanierungs-Matrix");
             return;
         }
@@ -904,7 +912,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         {
             _dialogs.Error(
                 $"Speichern gesperrt: {calculationLoadError}\n\n" +
-                "Bitte Kostenkatalog/Massnahmenvorlagen pruefen und danach 'Neu laden'.",
+                "Bitte Kostenkatalog/Massnahmenvorlagen prüfen und danach 'Neu laden'.",
                 "Sanierungs-Matrix");
             return;
         }
@@ -975,8 +983,13 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         _shell.Project.Dirty = true;
         Status = $"Gespeichert: {BelegteHaltungen} Haltungen, Total {GesamtTotal:N2} CHF.";
         _dashboardRefresh.NotifyCostsChanged();
-        _dialogs.Info(
-            $"Sanierungs-Matrix gespeichert.\n{BelegteHaltungen} Haltungen mit Massnahme, Total {GesamtTotal:N2} CHF (exkl. MwSt.).\n\nDas NPK-Leistungsverzeichnis exportierst du im Druckcenter.",
-            "Sanierungs-Matrix");
+        var meldungGespeichert =
+            $"Sanierungs-Matrix gespeichert. {BelegteHaltungen} Haltungen mit Massnahme, Total {GesamtTotal:N2} CHF (exkl. MwSt.).";
+        if (_toasts is not null)
+            _toasts.Success(meldungGespeichert);
+        else
+            _dialogs.Info(
+                meldungGespeichert + "\n\nDas NPK-Leistungsverzeichnis exportierst du im Druckcenter.",
+                "Sanierungs-Matrix");
     }
 }

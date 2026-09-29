@@ -54,10 +54,10 @@ internal static class SchachtStammdatenResultApplier
                 changedShafts++;
         }
 
-        var summary = $"Ergaenzt: {changedShafts} Schaechte / {addedFields} Felder. " +
+        var summary = $"Ergänzt: {changedShafts} Schächte / {addedFields} Felder. " +
                       $"PDF gefunden: {result.PdfGefunden}, ohne PDF: {result.PdfNichtGefunden}, " +
                       $"kein passendes Schachtprotokoll: {result.NichtLesbar}, " +
-                      $"bereits vollstaendig: {result.BereitsVollstaendig}.";
+                      $"bereits vollständig: {result.BereitsVollstaendig}.";
         var details = result.Meldungen.Count == 0
             ? string.Empty
             : "\n\nHinweise:\n" + string.Join("\n", result.Meldungen.Take(12));

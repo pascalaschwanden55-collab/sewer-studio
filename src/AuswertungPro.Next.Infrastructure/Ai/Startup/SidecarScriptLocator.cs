@@ -13,7 +13,7 @@ public static class SidecarScriptLocator
     public static void Use(ISidecarScriptLocator locator)
         => throw new NotSupportedException(
             "Die globale Sidecar-Startpfadsuche kann nicht mehr ausgetauscht werden. " +
-            "ISidecarScriptLocator bitte per Konstruktor uebergeben.");
+            "ISidecarScriptLocator bitte per Konstruktor übergeben.");
 
     public static string? FindDefaultSidecarScript()
         => Current.FindDefaultSidecarScript();

@@ -99,7 +99,7 @@ internal sealed class PersonalGoldArchiveRecoveryTransaction
         {
             throw new InvalidDataException(
                 "Eine offene Archiv-Recovery-Transaktion muss zuerst im echten Lauf " +
-                "wiederhergestellt werden; der Prueflauf veraendert nichts.");
+                "wiederhergestellt werden; der Prüflauf verändert nichts.");
         }
 
         var transaction = await _journal

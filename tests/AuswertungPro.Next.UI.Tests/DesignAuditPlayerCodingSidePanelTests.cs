@@ -159,10 +159,10 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var captureIndex = singleModelWorkflow.IndexOf("actions.CaptureSnapshotAsync", StringComparison.Ordinal);
 
         Assert.True(preflightIndex >= 0, "RunCodingAnalysisAsync muss zuerst den Preflight ausfuehren.");
-        Assert.True(singleModelIndex >= 0, "RunCodingAnalysisAsync muss weiterhin Single-Model-Frames capturen koennen.");
-        Assert.True(preflightIndex < singleModelIndex, "Stop-Pruefung muss vor Snapshot/SAM laufen.");
+        Assert.True(singleModelIndex >= 0, "RunCodingAnalysisAsync muss weiterhin Single-Model-Frames capturen können.");
+        Assert.True(preflightIndex < singleModelIndex, "Stop-Prüfung muss vor Snapshot/SAM laufen.");
         Assert.True(stopIndex >= 0, "Preflight muss nach BCE/BDC stoppen.");
-        Assert.True(captureIndex >= 0, "Single-Model-Workflow muss Frames mit Analyse-Cancellation capturen koennen.");
+        Assert.True(captureIndex >= 0, "Single-Model-Workflow muss Frames mit Analyse-Cancellation capturen können.");
         Assert.Contains("CodingDedupPolicy.ShouldStopAnalysisAfterTerminalCode", analysisContext);
     }
 
@@ -205,7 +205,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         AssertNoForbiddenTokens(
             persistBody,
             "CaptureFrameBytesAtRequiredPhotoTimeAsync",
-            "Rohranfang-Foto nach Datenblendung nicht verfuegbar");
+            "Rohranfang-Foto nach Datenblendung nicht verfügbar");
     }
 
     [Fact]
@@ -332,15 +332,15 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var controllerResolverIndex = resolveBody.IndexOf("_codingOsdMeterController.ResolveMeter", StringComparison.Ordinal);
         var viewModelMeterIndex = resolveBody.IndexOf("_codingSessionHost.CurrentMeter", StringComparison.Ordinal);
 
-        Assert.True(meterStart >= 0, "Analyse muss einen Meter fuer den Klassifikator bestimmen.");
+        Assert.True(meterStart >= 0, "Analyse muss einen Meter für den Klassifikator bestimmen.");
         Assert.True(resolveIndex >= 0, "Der Klassifikator muss den gemeinsamen Frame-Meter-Resolver verwenden.");
         Assert.True(inputIndex > resolveIndex, "Der Klassifikator-Input muss nach der Frame-Meter-Aufloesung gebaut werden.");
         Assert.Contains("CodingMultiModelInferenceWorkflow.ExecuteAnalyzedFrameAsync", multiModelBody);
         Assert.Contains("ResolveCurrentMeter: ResolveCodingMeterEvidenceForFrame", multiModelBody);
         Assert.Contains("CodingMultiModelClassifierInputPolicy.Build", inferenceWorkflow);
-        Assert.True(controllerResolverIndex >= 0, "Video-Positions-Fallback muss ueber den OSD-Meter-Controller laufen.");
+        Assert.True(controllerResolverIndex >= 0, "Video-Positions-Fallback muss über den OSD-Meter-Controller laufen.");
         Assert.Contains("CodingMeterResolver.Resolve", osdController);
-        Assert.True(viewModelMeterIndex >= 0, "ViewModel-Meter darf nur als spaeter Fallback genutzt werden.");
+        Assert.True(viewModelMeterIndex >= 0, "ViewModel-Meter darf nur als später Fallback genutzt werden.");
         Assert.True(
             controllerResolverIndex < viewModelMeterIndex,
             "Staler CurrentMeter=0 darf die echte Videoposition nicht ueberstimmen, sonst blockiert BCD die Pipeline.");
@@ -462,9 +462,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var snapshotIndex = workflow.IndexOf("actions.CaptureSnapshot(entry)", StringComparison.Ordinal);
 
         Assert.True(timeIndex >= 0, "Manuelles Foto muss den aktuellen Player-Zeitpunkt lesen.");
-        Assert.True(scopeIndex >= 0, "Befund- und Event-Zeit muessen vor dem Snapshot per Scope auf den Foto-Frame gesetzt werden.");
+        Assert.True(scopeIndex >= 0, "Befund- und Event-Zeit müssen vor dem Snapshot per Scope auf den Foto-Frame gesetzt werden.");
         Assert.True(snapshotIndex >= 0, "Manuelles Foto muss weiter den aktuellen Frame capturen.");
-        Assert.True(scopeIndex < snapshotIndex, "Dateiname und Befund muessen den Foto-Zeitpunkt verwenden.");
+        Assert.True(scopeIndex < snapshotIndex, "Dateiname und Befund müssen den Foto-Zeitpunkt verwenden.");
         Assert.Contains("CodingTakePhotoCommandWorkflow.Execute", controller);
         Assert.Contains("GetCurrentPlayerTimestamp: GetCurrentPlayerTimestamp", windowRoot);
         Assert.Contains("CodingEventPhotoTimestampScope.Apply", controller);
@@ -648,7 +648,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
             "addEvent(draft.Entry)",
             "CodingMultiModelEventAppender.Apply");
 
-        Assert.True(attachIndex >= 0, "KI-Befunde muessen den analysierten Frame in FotoPaths speichern.");
+        Assert.True(attachIndex >= 0, "KI-Befunde müssen den analysierten Frame in FotoPaths speichern.");
         Assert.True(addIndex >= 0, "Test erwartet AddEvent im KI-Befundpfad.");
         Assert.True(attachIndex < addIndex, "Der Frame muss vor AddEvent am ProtocolEntry haengen.");
     }

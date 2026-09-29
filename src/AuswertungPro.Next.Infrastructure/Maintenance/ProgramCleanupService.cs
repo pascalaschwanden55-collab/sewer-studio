@@ -169,7 +169,7 @@ public sealed class ProgramCleanupService
                 var markerScan = ScanForProjectMarker(item.Path);
                 if (IsReparsePoint(item.Path) || markerScan != ProjectMarkerScanResult.NotFound)
                 {
-                    failures.Add($"{item.Path}: Sicherheitspruefung vor dem Loeschen fehlgeschlagen.");
+                    failures.Add($"{item.Path}: Sicherheitsprüfung vor dem Löschen fehlgeschlagen.");
                     continue;
                 }
 
@@ -290,7 +290,7 @@ public sealed class ProgramCleanupService
             }
             catch (Exception ex)
             {
-                warnings.Add($"Temp-Ordner nicht vollstaendig gelesen: {ex.Message}");
+                warnings.Add($"Temp-Ordner nicht vollständig gelesen: {ex.Message}");
             }
         }
 
@@ -342,7 +342,7 @@ public sealed class ProgramCleanupService
 
         if (PathsEqual(fullPath, context.CurrentAppBaseDirectory))
         {
-            warnings.Add($"Laufender Programmordner uebersprungen: {fullPath}");
+            warnings.Add($"Laufender Programmordner übersprungen: {fullPath}");
             return;
         }
 
@@ -356,19 +356,19 @@ public sealed class ProgramCleanupService
         var markerScan = ScanForProjectMarker(fullPath);
         if (markerScan == ProjectMarkerScanResult.Found)
         {
-            warnings.Add($"Moeglicher Projektordner wurde uebersprungen: {fullPath}");
+            warnings.Add($"Möglicher Projektordner wurde übersprungen: {fullPath}");
             return;
         }
         if (markerScan == ProjectMarkerScanResult.Incomplete)
         {
-            warnings.Add($"Nicht vollstaendig pruefbarer Ordner wurde uebersprungen: {fullPath}");
+            warnings.Add($"Nicht vollständig prüfbarer Ordner wurde übersprungen: {fullPath}");
             return;
         }
 
         var measured = TryMeasureDirectory(fullPath);
         if (measured.ContainsReparsePoint)
         {
-            warnings.Add($"Verknuepfter Ordner wurde zur Sicherheit uebersprungen: {fullPath}");
+            warnings.Add($"Verknüpfter Ordner wurde zur Sicherheit übersprungen: {fullPath}");
             return;
         }
 

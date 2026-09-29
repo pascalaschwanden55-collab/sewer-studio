@@ -95,7 +95,7 @@ public sealed class TeacherAnnotationStoreTests
             var error = await Assert.ThrowsAsync<InvalidOperationException>(
                 () => TeacherAnnotationStore.AppendAsync(Make("neu")));
 
-            Assert.Contains("NICHT veraendert", error.Message, StringComparison.Ordinal);
+            Assert.Contains("NICHT verändert", error.Message, StringComparison.Ordinal);
             Assert.Equal(corruptJson, await File.ReadAllTextAsync(store));
             Assert.True(File.Exists(store + ".corrupt"));
         });

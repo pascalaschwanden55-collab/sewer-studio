@@ -14,7 +14,7 @@ public sealed partial class TrainingStudioViewModel
     {
         if (_goldQualityReview is null)
         {
-            StatusText = "Die Goldpruefung ist in diesem Programmstart nicht verfuegbar.";
+            StatusText = "Die Goldprüfung ist in diesem Programmstart nicht verfügbar.";
             return;
         }
 
@@ -22,7 +22,7 @@ public sealed partial class TrainingStudioViewModel
         {
             StatusText =
                 "Auf dem aktuellen Bild ist bereits ein Ereignis gespeichert. Bitte zuerst den " +
-                "zusaetzlichen Befund speichern oder verwerfen und danach 'Bild fertig' waehlen.";
+                "zusätzlichen Befund speichern oder verwerfen und danach 'Bild fertig' wählen.";
             return;
         }
 
@@ -34,14 +34,14 @@ public sealed partial class TrainingStudioViewModel
             || _isLoadingGoldQualityReview
             || _isStartingAi)
         {
-            StatusText = "Ein KI- oder Speichervorgang laeuft noch. Die Goldpruefung wurde nicht geladen.";
+            StatusText = "Ein KI- oder Speichervorgang läuft noch. Die Goldprüfung wurde nicht geladen.";
             return;
         }
 
         GoldQualityReviewQueueResult result;
         _isLoadingGoldQualityReview = true;
         IsBusy = true;
-        StatusText = "Goldbestand und Eval-Schutz werden geprueft. Bitte kurz warten ...";
+        StatusText = "Goldbestand und Eval-Schutz werden geprüft. Bitte kurz warten ...";
         try
         {
             result = await _goldQualityReview.ExecuteAsync(
@@ -50,13 +50,13 @@ public sealed partial class TrainingStudioViewModel
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Goldpruefung wurde abgebrochen. Die bisherige Warteschlange bleibt erhalten.";
+            StatusText = "Goldprüfung wurde abgebrochen. Die bisherige Warteschlange bleibt erhalten.";
             return;
         }
         catch (Exception ex)
         {
-            StatusText = "Goldpruefung konnte nicht geladen werden. Die bisherige Warteschlange bleibt erhalten: "
-                + UserError.DescribeAndReport(ex, "Training-Studio Goldpruefung laden");
+            StatusText = "Goldprüfung konnte nicht geladen werden. Die bisherige Warteschlange bleibt erhalten: "
+                + UserError.DescribeAndReport(ex, "Training-Studio Goldprüfung laden");
             return;
         }
         finally
@@ -80,13 +80,13 @@ public sealed partial class TrainingStudioViewModel
         QueueTotalCount = result.TotalCount;
         if (Items.Count == 0)
         {
-            StatusText = $"Goldpruefung abgeschlossen: {QueueDoneCount} von {QueueTotalCount} bestaetigt.";
+            StatusText = $"Goldprüfung abgeschlossen: {QueueDoneCount} von {QueueTotalCount} bestätigt.";
             return;
         }
 
         StatusText = result.Resumed
-            ? $"Goldpruefung fortgesetzt: {QueueDoneCount} von {QueueTotalCount} bestaetigt."
-            : $"Goldpruefung angelegt: {QueueTotalCount} Bilder, je 15 fuer BAB, BAF, BAI, BAJ, BBC und BBF.";
+            ? $"Goldprüfung fortgesetzt: {QueueDoneCount} von {QueueTotalCount} bestätigt."
+            : $"Goldprüfung angelegt: {QueueTotalCount} Bilder, je 15 für BAB, BAF, BAI, BAJ, BBC und BBF.";
         await PrepareCurrentStrictReviewItemAsync(cancellationToken);
     }
 }

@@ -181,7 +181,7 @@ public sealed class KanalImportDistributionServiceTests : IDisposable
         Assert.Equal(0, result.VideosDistributed);
         Assert.Equal(disguisedLink, record.GetFieldValue("Link"));
         Assert.Contains(result.Messages, message =>
-            message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+            message.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
         Assert.Equal("kundendaten", File.ReadAllText(protectedSource));
         Assert.False(Directory.Exists(Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt)));
     }
@@ -216,7 +216,7 @@ public sealed class KanalImportDistributionServiceTests : IDisposable
         Assert.Equal(0, result.VideosDistributed);
         Assert.Equal(disguisedLink, record.GetFieldValue("Link"));
         Assert.Contains(result.Messages, message =>
-            message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+            message.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
         Assert.Equal("kundendaten", File.ReadAllText(protectedSource));
         Assert.False(Directory.Exists(Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt)));
     }

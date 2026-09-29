@@ -12,7 +12,7 @@ public sealed class FullBackupOperationStateTests
         Assert.True(state.TryBegin(CancellationToken.None, out var runToken));
         Assert.True(state.IsRunning);
         Assert.False(runToken.IsCancellationRequested);
-        Assert.Equal("Berechne Groessen...", state.StatusText);
+        Assert.Equal("Berechne Grössen...", state.StatusText);
         Assert.False(state.TryBegin(CancellationToken.None, out _));
 
         state.Finish();
@@ -42,7 +42,7 @@ public sealed class FullBackupOperationStateTests
         state.Cancel();
 
         Assert.True(runToken.IsCancellationRequested);
-        Assert.Equal("Abbruch wird ausgefuehrt...", state.StatusText);
+        Assert.Equal("Abbruch wird ausgeführt...", state.StatusText);
         state.Finish();
     }
 

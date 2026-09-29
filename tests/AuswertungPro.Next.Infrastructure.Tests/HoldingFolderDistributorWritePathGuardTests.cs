@@ -31,7 +31,7 @@ public sealed class HoldingFolderDistributorWritePathGuardTests
                 moveInsteadOfCopy: true));
 
             Assert.False(result.Success);
-            Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(sourceBytes, File.ReadAllBytes(sourcePdf));
             Assert.Empty(Directory.EnumerateFileSystemEntries(foreignFolder));
         }
@@ -67,7 +67,7 @@ public sealed class HoldingFolderDistributorWritePathGuardTests
                 overwrite: true));
 
             Assert.False(result.Success);
-            Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(sourceBytes, File.ReadAllBytes(sourcePdf));
             Assert.Equal(foreignBytes, File.ReadAllBytes(foreignPdf));
         }
@@ -120,7 +120,7 @@ public sealed class HoldingFolderDistributorWritePathGuardTests
                 destGemeindeFolder: destinationRoot));
 
             Assert.False(result.Success);
-            Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(Directory.EnumerateFileSystemEntries(foreignFolder));
             Assert.Equal("erstes-kundenvideo", File.ReadAllText(firstVideo));
             Assert.Equal("zweites-kundenvideo", File.ReadAllText(secondVideo));
@@ -154,7 +154,7 @@ public sealed class HoldingFolderDistributorWritePathGuardTests
                 project: project));
 
             Assert.False(result.Success);
-            Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(sourceBytes, File.ReadAllBytes(sourcePdf));
             Assert.Empty(Directory.EnumerateFileSystemEntries(foreignFolder));
         }
@@ -190,7 +190,7 @@ public sealed class HoldingFolderDistributorWritePathGuardTests
 
             Assert.Contains(results, result =>
                 !result.Success
-                && result.Message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+                && result.Message.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
             Assert.Equal(sourceBytes, File.ReadAllBytes(sourcePdf));
             Assert.Empty(Directory.EnumerateFileSystemEntries(foreignFolder));
         }
@@ -238,7 +238,7 @@ public sealed class HoldingFolderDistributorWritePathGuardTests
             Assert.Equal(2, results.Count);
             Assert.True(results[0].Success, results[0].Message);
             Assert.False(results[1].Success);
-            Assert.Contains("Verknuepfung", results[1].Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", results[1].Message, StringComparison.OrdinalIgnoreCase);
             Assert.NotNull(publishedBytes);
             Assert.Equal(publishedBytes, File.ReadAllBytes(Path.Combine(foreignFolder, "20260712_74467.pdf")));
             Assert.Equal(firstSourceBytes, File.ReadAllBytes(firstPdf));
@@ -272,7 +272,7 @@ public sealed class HoldingFolderDistributorWritePathGuardTests
                 moveInsteadOfCopy: true));
 
             Assert.False(result.Success);
-            Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(sourceBytes, File.ReadAllBytes(sourcePdf));
             Assert.Empty(Directory.EnumerateFileSystemEntries(physicalDestination));
         }

@@ -20,7 +20,7 @@ public sealed class CodingLiveFindingQualityGatePolicyTests
 
         Assert.Equal(0.0, result.CompositeConfidence); // NICHT 0.8 (= Severity*0.2)
         Assert.Equal(TrafficLight.Red, result.TrafficLight);
-        Assert.Equal("QualityGate nicht verfuegbar", result.Explanation);
+        Assert.Equal("QualityGate nicht verfügbar", result.Explanation);
         Assert.Empty(result.WeightsUsed);
     }
 
@@ -41,7 +41,7 @@ public sealed class CodingLiveFindingQualityGatePolicyTests
         var result = CodingLiveFindingQualityGatePolicy.Evaluate(
             service, Finding(severity: 5, modelConfidence: 0.9));
 
-        Assert.NotEqual("QualityGate nicht verfuegbar", result.Explanation);
+        Assert.NotEqual("QualityGate nicht verfügbar", result.Explanation);
         Assert.Contains(nameof(EvidenceVector.QwenVisionConf), result.WeightsUsed.Keys);
         Assert.Contains(nameof(EvidenceVector.PlausibilityScore), result.WeightsUsed.Keys);
     }

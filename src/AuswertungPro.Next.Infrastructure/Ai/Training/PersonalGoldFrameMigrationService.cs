@@ -42,7 +42,7 @@ public sealed class PersonalGoldFrameMigrationService(
                 .ReadStableBytesAsync(samplesPath, cancellationToken)
                 .ConfigureAwait(false);
             samples = JsonSerializer.Deserialize<List<TrainingSample>>(originalSamplesBytes)
-                      ?? throw new InvalidDataException("training_samples.json enthaelt keine Liste.");
+                      ?? throw new InvalidDataException("training_samples.json enthält keine Liste.");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -56,7 +56,7 @@ public sealed class PersonalGoldFrameMigrationService(
             .OrderBy(sample => sample.SampleId, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (selected.Length == 0)
-            return Failure(request, "Keine persoenlich bestaetigten Hand-Goldsamples gefunden.");
+            return Failure(request, "Keine persönlich bestätigten Hand-Goldsamples gefunden.");
         EnsureUniqueSampleIds(selected);
 
         Dictionary<string, string> oldDatabasePaths;
@@ -157,7 +157,7 @@ public sealed class PersonalGoldFrameMigrationService(
                         .StoreExistingAsync(sample.FramePath, codeFramesDir, cancellationToken)
                         .ConfigureAwait(false);
                 if (string.IsNullOrWhiteSpace(targetPath))
-                    throw new IOException($"Goldbild fuer Sample '{sample.SampleId}' konnte nicht kopiert werden.");
+                    throw new IOException($"Goldbild für Sample '{sample.SampleId}' konnte nicht kopiert werden.");
                 paths.Add(sample.SampleId, Path.GetFullPath(targetPath));
             }
             return new TargetPathPreparation(true, paths, null);
@@ -171,7 +171,7 @@ public sealed class PersonalGoldFrameMigrationService(
             return new TargetPathPreparation(
                 false,
                 paths,
-                $"Goldbilder konnten nicht vollstaendig vorbereitet werden: {ex.Message}");
+                $"Goldbilder konnten nicht vollständig vorbereitet werden: {ex.Message}");
         }
     }
 
@@ -180,11 +180,11 @@ public sealed class PersonalGoldFrameMigrationService(
         if (string.IsNullOrWhiteSpace(request.KnowledgeRoot))
             throw new ArgumentException("KnowledgeRoot darf nicht leer sein.", nameof(request));
         if (string.IsNullOrWhiteSpace(request.ConfirmedByUser))
-            throw new ArgumentException("Bestaetiger darf nicht leer sein.", nameof(request));
+            throw new ArgumentException("Bestätiger darf nicht leer sein.", nameof(request));
         if (request.TargetMinimumPerMainCode <= 0
             || request.TargetMaximumPerMainCode < request.TargetMinimumPerMainCode)
         {
-            throw new ArgumentException("Ungueltiger Goldstandard-Zielbereich.", nameof(request));
+            throw new ArgumentException("Ungültiger Goldstandard-Zielbereich.", nameof(request));
         }
     }
 

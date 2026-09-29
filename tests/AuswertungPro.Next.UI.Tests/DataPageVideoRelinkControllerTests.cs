@@ -37,7 +37,7 @@ public sealed class DataPageVideoRelinkControllerTests
 
         controller.Relink(new HaltungRecord());
 
-        Assert.Equal(("Video auswaehlen", MediaFileTypes.VideoDialogFilter, "C:\\Quelle"), dialogs.LastOpenFile);
+        Assert.Equal(("Video auswählen", MediaFileTypes.VideoDialogFilter, "C:\\Quelle"), dialogs.LastOpenFile);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public sealed class DataPageVideoRelinkControllerTests
 
         controller.Relink(new HaltungRecord());
 
-        Assert.Equal(("Video auswaehlen", MediaFileTypes.VideoDialogFilter, "C:\\Projekt"), dialogs.LastOpenFile);
+        Assert.Equal(("Video auswählen", MediaFileTypes.VideoDialogFilter, "C:\\Projekt"), dialogs.LastOpenFile);
     }
 
     [Fact]
@@ -137,13 +137,13 @@ public sealed class DataPageVideoRelinkControllerTests
         public void Error(string message, string title = "Fehler")
             => throw new NotSupportedException();
 
-        public bool Confirm(string message, string title = "Bestaetigung")
+        public bool Confirm(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
 
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true)
             => throw new NotSupportedException();
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
     }
 }

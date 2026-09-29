@@ -115,7 +115,7 @@ public sealed class BuilderPageRowBuilderTests
         var text = BuilderPageFilterSummaryBuilder.Build(criteria, 3, 10);
 
         Assert.Equal(
-            "Eigentuemer=AWU | Sanieren=Ja | Jahr=2026 | nur mit Kosten | Suche='liner' | Treffer=3/10",
+            "Eigentümer=AWU | Sanieren=Ja | Jahr=2026 | nur mit Kosten | Suche='liner' | Treffer=3/10",
             text);
     }
 

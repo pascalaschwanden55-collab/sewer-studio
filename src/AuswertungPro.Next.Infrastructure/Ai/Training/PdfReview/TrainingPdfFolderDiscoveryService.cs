@@ -69,7 +69,7 @@ public sealed class TrainingPdfFolderDiscoveryService
                 issues.Add(new TrainingPdfFolderDiscoveryIssue(
                     rootReparsePoint,
                     "reparse_point",
-                    $"Verknuepfte Root-Pfadkette wurde nicht durchsucht: {rootReparsePoint}"));
+                    $"Verknüpfte Root-Pfadkette wurde nicht durchsucht: {rootReparsePoint}"));
                 continue;
             }
 
@@ -93,7 +93,7 @@ public sealed class TrainingPdfFolderDiscoveryService
                 issues.Add(new TrainingPdfFolderDiscoveryIssue(
                     currentReparsePoint,
                     "reparse_point",
-                    $"Verknuepfter Ordner wurde vor dem Lesen uebersprungen: {currentReparsePoint}"));
+                    $"Verknüpfter Ordner wurde vor dem Lesen übersprungen: {currentReparsePoint}"));
                 continue;
             }
 
@@ -144,7 +144,7 @@ public sealed class TrainingPdfFolderDiscoveryService
                     issues.Add(new TrainingPdfFolderDiscoveryIssue(
                         file,
                         "reparse_point",
-                        $"Verknuepfte PDF-Datei wurde ausgelassen: {file}"));
+                        $"Verknüpfte PDF-Datei wurde ausgelassen: {file}"));
                     continue;
                 }
 
@@ -169,7 +169,7 @@ public sealed class TrainingPdfFolderDiscoveryService
                     issues.Add(new TrainingPdfFolderDiscoveryIssue(
                         fullChild,
                         "reparse_point",
-                        $"Verknuepfter Ordner wurde nicht durchsucht: {fullChild}"));
+                        $"Verknüpfter Ordner wurde nicht durchsucht: {fullChild}"));
                     continue;
                 }
 
@@ -192,7 +192,7 @@ public sealed class TrainingPdfFolderDiscoveryService
         fullRoot = string.Empty;
         if (string.IsNullOrWhiteSpace(root))
         {
-            error = "Ein ausgewaehlter Ordnerpfad ist leer.";
+            error = "Ein ausgewählter Ordnerpfad ist leer.";
             return false;
         }
 
@@ -207,7 +207,7 @@ public sealed class TrainingPdfFolderDiscoveryService
                                    or NotSupportedException
                                    or PathTooLongException)
         {
-            error = $"Ordnerpfad ist ungueltig: {ex.Message}";
+            error = $"Ordnerpfad ist ungültig: {ex.Message}";
             return false;
         }
     }
@@ -274,7 +274,7 @@ public sealed class TrainingPdfFolderDiscoveryService
             issues.Add(new TrainingPdfFolderDiscoveryIssue(
                 path,
                 unreadableReason,
-                $"Pfad konnte nicht geprueft werden: {path}. {ex.Message}"));
+                $"Pfad konnte nicht geprüft werden: {path}. {ex.Message}"));
             return false;
         }
     }

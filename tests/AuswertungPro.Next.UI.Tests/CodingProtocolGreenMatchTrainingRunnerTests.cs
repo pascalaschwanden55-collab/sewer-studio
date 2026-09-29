@@ -27,7 +27,7 @@ public sealed class CodingProtocolGreenMatchTrainingRunnerTests
 
         Assert.Equal([first, second], confirmed);
         Assert.NotNull(overlay);
-        Assert.Equal("1 gruene Treffer als Training uebernommen", overlay.Value.Text);
+        Assert.Equal("1 grüne Treffer als Training übernommen", overlay.Value.Text);
         Assert.Equal(TimeSpan.FromSeconds(4), overlay.Value.Duration);
     }
 
@@ -63,5 +63,5 @@ public sealed class CodingProtocolGreenMatchTrainingRunnerTests
             new BefundMatchFinding("BAB", 1.0, 1.0, "Riss", gtRefId.ToString()),
             new BefundMatchFinding("BAB", 1.0, 1.0, "Riss"),
             0.0,
-            "gruen");
+            "grün");
 }

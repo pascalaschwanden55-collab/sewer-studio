@@ -86,7 +86,7 @@ public sealed class KbBlindValidationService
 
         if (gueltig.Count == 0)
             return new KbValidationResult(false, null,
-                "Kein fremder, menschlich bestaetigter Treffer ueber dem Mindest-Score.");
+                "Kein fremder, menschlich bestätigter Treffer über dem Mindest-Score.");
 
         var best = gueltig[0];
         var agrees = string.Equals(best.VsaCode?.Trim(), suggestedCode.Trim(), StringComparison.OrdinalIgnoreCase);
@@ -94,7 +94,7 @@ public sealed class KbBlindValidationService
             agrees,
             best,
             agrees
-                ? $"Bestaetigt durch fremden Gold-Fall {best.CaseId} (Score {best.Score:F2})."
+                ? $"Bestätigt durch fremden Gold-Fall {best.CaseId} (Score {best.Score:F2})."
                 : $"Bester Gold-Treffer sagt {best.VsaCode}, nicht {suggestedCode}.");
     }
 }

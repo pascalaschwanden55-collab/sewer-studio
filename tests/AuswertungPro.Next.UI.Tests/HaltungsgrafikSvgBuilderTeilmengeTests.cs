@@ -163,7 +163,7 @@ public sealed class HaltungsgrafikSvgBuilderTeilmengeTests
 
         Assert.True(
             ohneZuordnung.Count == 0,
-            "Farben ohne Theme-Zuordnung (SvgFarbZuordnung ergaenzen):\n"
+            "Farben ohne Theme-Zuordnung (SvgFarbZuordnung ergänzen):\n"
             + string.Join("\n", ohneZuordnung.Distinct()));
     }
 

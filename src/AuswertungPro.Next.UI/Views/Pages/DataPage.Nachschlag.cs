@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AuswertungPro.Next.Application.Common;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -50,7 +51,7 @@ public partial class DataPage
         if (string.IsNullOrWhiteSpace(haltungsname))
         {
             Dialogs.Info(
-                "Ohne Haltungsnamen laesst sich beim Kanton nichts nachschlagen.",
+                "Ohne Haltungsnamen lässt sich beim Kanton nichts nachschlagen.",
                 "Beim Kanton nachschlagen");
             return;
         }
@@ -64,7 +65,7 @@ public partial class DataPage
         }
         catch (Exception ex)
         {
-            ergebnis = new FeldNachschlagErgebnis.Fehler(ex.Message);
+            ergebnis = new FeldNachschlagErgebnis.Fehler(UserError.DescribeAndReport(ex, "Feld nachschlagen (Haltung)"));
         }
 
         var fenster = new FeldVorschlagWindow(haltungsname, feldname, ergebnis)
@@ -95,7 +96,7 @@ public partial class DataPage
         {
             Dialogs.Info(
                 $"Das Feld \"{feldname}\" hat inzwischen einen Wert. "
-                + "Der Nachschlag ueberschreibt nichts.",
+                + "Der Nachschlag überschreibt nichts.",
                 "Beim Kanton nachschlagen");
             return;
         }

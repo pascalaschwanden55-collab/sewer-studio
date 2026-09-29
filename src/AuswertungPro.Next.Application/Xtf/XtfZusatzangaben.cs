@@ -79,7 +79,7 @@ public static class XtfZusatzangaben
         }
         var anzahl = objekte.Count - plan.Objekte.Count;
         if (anzahl > 0)
-            hinweise.Add($"{anzahl} Zusatzangaben in derselben XTF. Das Zusatzmodell {Modell}.ili wird mitgeliefert. FME muss diese Angaben ausdruecklich zuordnen; leere Felder loeschen nichts.");
+            hinweise.Add($"{anzahl} Zusatzangaben in derselben XTF. Das Zusatzmodell {Modell}.ili wird mitgeliefert. FME muss diese Angaben ausdrücklich zuordnen; leere Felder löschen nichts.");
         return plan with { Objekte = objekte, Hinweise = hinweise };
 
         void ErgaenzeObjekt(string? name, string? klasse, Func<string, string?> wert)

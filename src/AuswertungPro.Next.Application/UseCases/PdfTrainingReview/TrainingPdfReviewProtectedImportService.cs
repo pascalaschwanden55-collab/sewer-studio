@@ -28,7 +28,7 @@ public sealed class TrainingPdfReviewProtectedImportService
         var protection = await Task.Run(_loadProtection, cancellationToken)
             .ConfigureAwait(false)
                          ?? throw new InvalidDataException(
-                             "Der Eval-Schutz lieferte keinen gueltigen Stand.");
+                             "Der Eval-Schutz lieferte keinen gültigen Stand.");
         cancellationToken.ThrowIfCancellationRequested();
         var result = await _inner.ImportAsync(
                 request with

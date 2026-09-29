@@ -147,7 +147,7 @@ internal sealed class ProtocolImportShellOperationGuard : IShellOperationGuard, 
     public bool CanSaveProjectFromShell => !_state.IsActive;
 
     public string ProjectSaveBlockedMessage
-        => "Manuelles Speichern ist waehrend einer Schacht-PDF-Verarbeitung gesperrt. " +
+        => "Manuelles Speichern ist während einer Schacht-PDF-Verarbeitung gesperrt. " +
            "Bitte den laufenden Vorgang zuerst abschliessen.";
 
     public bool AllowsInternalProjectSave => _state.IsOwnedBy(this);
@@ -155,7 +155,7 @@ internal sealed class ProtocolImportShellOperationGuard : IShellOperationGuard, 
     public bool CanLeaveShellContext => !_state.IsActive;
 
     public string LeaveBlockedMessage
-        => "Navigation, Projektwechsel und Schliessen sind waehrend des " +
+        => "Navigation, Projektwechsel und Schliessen sind während des " +
            "Schacht-PDF-Vorgangs gesperrt. Bitte den laufenden Vorgang zuerst abschliessen.";
 
     public event EventHandler? OperationAvailabilityChanged;

@@ -307,7 +307,7 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
         Assert.Equal(Path.Combine(sourceDir, "kiDVDaten.txt"), enricher.LastPath);
         Assert.Contains("KINS-TXT-Testdienst verwendet.", result.Messages);
         Assert.Contains(
-            "KINS-TXT: 7 Timecodes, 8 Laengen, 9 Daten gesetzt.",
+            "KINS-TXT: 7 Timecodes, 8 Längen, 9 Daten gesetzt.",
             result.Messages);
     }
 

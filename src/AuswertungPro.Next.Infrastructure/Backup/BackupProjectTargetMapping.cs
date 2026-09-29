@@ -73,10 +73,10 @@ internal static class BackupProjectTargetMapping
     private static JsonElement RequiredProperty(JsonElement element, string name, JsonValueKind kind)
     {
         if (element.ValueKind != JsonValueKind.Object)
-            throw InvalidMapping("Ein Eintrag im bisherigen Plan ist ungueltig.");
+            throw InvalidMapping("Ein Eintrag im bisherigen Plan ist ungültig.");
         var properties = element.EnumerateObject().Where(property => property.Name == name).ToArray();
         if (properties.Length != 1 || properties[0].Value.ValueKind != kind)
-            throw InvalidMapping($"Die Angabe {name} fehlt, ist mehrfach vorhanden oder ungueltig.");
+            throw InvalidMapping($"Die Angabe {name} fehlt, ist mehrfach vorhanden oder ungültig.");
         return properties[0].Value;
     }
 

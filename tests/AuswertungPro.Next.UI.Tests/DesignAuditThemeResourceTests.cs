@@ -14,7 +14,11 @@ public sealed class DesignAuditThemeResourceTests
 
         Assert.Contains("Background=\"{DynamicResource BgBrush}\"", xaml);
         Assert.Contains("Style=\"{StaticResource SecondaryButton}\"", xaml);
-        Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
+        // Optikanalyse 28.09.2026, Aufgabe 3: SuccessButton -> PrimaryButton (Knopfregel, hoechstens
+        // EIN Hauptknopf je Fenster, einheitlicher Primaerstil). HydraulikPrintDialog folgt in
+        // Aufgabe 4 (siehe Test unten).
+        Assert.Contains("Style=\"{StaticResource PrimaryButton}\"", xaml);
+        Assert.DoesNotContain("SuccessButton", xaml);
     }
 
     [Fact]
@@ -24,7 +28,10 @@ public sealed class DesignAuditThemeResourceTests
 
         Assert.Contains("Background=\"{DynamicResource BgBrush}\"", xaml);
         Assert.Contains("Style=\"{StaticResource SecondaryButton}\"", xaml);
-        Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
+        // Optikanalyse 28.09.2026, Aufgabe 4: SuccessButton -> PrimaryButton (Knopfregel, hoechstens
+        // EIN Hauptknopf je Fenster, einheitlicher Primaerstil).
+        Assert.Contains("Style=\"{StaticResource PrimaryButton}\"", xaml);
+        Assert.DoesNotContain("SuccessButton", xaml);
     }
 
     [Fact]
@@ -73,7 +80,7 @@ public sealed class DesignAuditThemeResourceTests
         var xaml = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml");
         var code = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml.cs");
 
-        Assert.Contains("Header=\"Maßnahmen\"", xaml);
+        Assert.Contains("Header=\"Massnahmen\"", xaml);
         Assert.Contains("Text=\"{Binding PageTitle}\"", xaml);
         Assert.Contains("Text=\"{Binding PageSubtitle}\"", xaml);
         Assert.Contains("DataContext.MeasureOptions", xaml);
@@ -112,9 +119,13 @@ public sealed class DesignAuditThemeResourceTests
         var dataPage = ReadUiFile("Views", "Pages", "DataPage.xaml");
         var shell = ReadUiFile("ViewModels", "ShellViewModel.cs");
 
-        Assert.Contains("Header=\"Sanierungsmaßnahme bearbeiten\"", dataPage);
-        // Nova-Etappe 1: der Einstieg liegt unter "Weitere Aktionen", der Text bleibt sichtbar.
-        Assert.Contains("Sanierungsmaßnahme bearbeiten", dataPage);
+        // Optikanalyse 28.09.2026, Aufgabe 7 (Fix-Runde 2, Controller-Entscheid "Auffindbarkeit
+        // schlaegt Entdoppelung"): "Sanierungsmaßnahme bearbeiten" (eigener Namens-Doppelgaenger)
+        // ist weiterhin entfernt, aber der Zeilenmenue-Eintrag "Sanierungsmassnahmen..." (ss statt
+        // ß, Click="CostsMenu_Click") steht jetzt bewusst SOWOHL im Zeilenmenue ALS AUCH unter
+        // "Weitere Aktionen -> Bearbeiten" - derselbe Handler, zwei Wege dorthin.
+        Assert.Contains("Header=\"Sanierungsmassnahmen...\"", dataPage);
+        Assert.Contains("Click=\"CostsMenu_Click\"", dataPage);
         Assert.Contains("x:Name=\"WeitereAktionenDropdown\"", dataPage);
         Assert.Contains("NavigateToSanierungsMatrix", shell);
         Assert.Contains("OpenSanierungsMatrix(record);", viewModel);
@@ -296,7 +307,7 @@ public sealed class DesignAuditThemeResourceTests
             var xaml = ReadUiFile("Views", "Windows", $"{dialog}.xaml");
             Assert.True(
                 xaml.Contains("ui:WindowFx.Entrance=\"True\"", StringComparison.Ordinal),
-                $"{dialog} soll beim Oeffnen sanft auftreten.");
+                $"{dialog} soll beim Öffnen sanft auftreten.");
             Assert.Contains("xmlns:ui=\"clr-namespace:AuswertungPro.Next.UI\"", xaml);
         }
 
@@ -475,7 +486,9 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Glyph=\"&#xE73E;\"", photoXaml);
         Assert.Contains("Glyph=\"&#xE7A7;\"", photoXaml);
         Assert.Contains("Glyph=\"&#xE74D;\"", photoXaml);
-        Assert.Contains("Glyph=\"&#xEB42;\"", hydraulicsXaml);
+        // Optikanalyse 28.09.2026, Aufgabe 4: der dekorative Icon-Kasten vor dem Titel ist mit der
+        // Vereinheitlichung auf NovaDialogHeader entfallen (kein Icon-Slot im gemeinsamen Kopf,
+        // gleiches Bild wie bei allen anderen umgestellten Fenstern); die Emoji-Sperre bleibt.
         Assert.DoesNotContain("&#x1F4A7;", hydraulicsXaml);
         Assert.DoesNotContain(" | ", rendering);
         Assert.DoesNotContain(" @ ", rendering);

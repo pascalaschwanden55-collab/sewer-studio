@@ -156,7 +156,7 @@ public sealed class VsaCodeExplorerPhotoCaptureWorkflowTests
                 LiveSnapshotProvider: null,
                 VideoPath: "video.mp4",
                 CurrentVideoTime: TimeSpan.FromSeconds(5),
-                TimeText: "ungueltig",
+                TimeText: "ungültig",
                 FileExists: path => path == "video.mp4",
                 ResolveFfmpeg: () => "ffmpeg.exe",
                 ExtractFramePngAsync: (_, _, _, _) => Task.FromResult<byte[]?>([]),

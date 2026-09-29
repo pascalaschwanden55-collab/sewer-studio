@@ -18,7 +18,7 @@ public partial class BendSuggestionPreviewWindow : Window
     /// <summary>Setzt Titel, Bild und optionalen Clip. Ohne Clip bleibt die Flaeche leer.</summary>
     public void SetContent(string ortText, ImageSource? spitzenbild, string? clipPath)
     {
-        TitelText.Text = $"Bogen-Vorschlag · {ortText}";
+        TitelText.Title = $"Bogen-Vorschlag · {ortText}";
         GrossBild.Source = spitzenbild;
         if (!string.IsNullOrWhiteSpace(clipPath))
         {

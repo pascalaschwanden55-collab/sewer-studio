@@ -84,21 +84,21 @@ public sealed class CodingTrainingFrameStore
                     ? new CodingTrainingFrameSaveResult(storedPath, null)
                     : new CodingTrainingFrameSaveResult(
                         null,
-                        "vorhandenes Bild konnte nicht uebernommen werden");
+                        "vorhandenes Bild konnte nicht übernommen werden");
             }
 
             var bytes = preferredFrameBytes;
             if (bytes is null || bytes.Length == 0)
                 bytes = await captureFallback().ConfigureAwait(false);
             if (bytes is null || bytes.Length == 0)
-                return new CodingTrainingFrameSaveResult(null, "kein Frame verfuegbar");
+                return new CodingTrainingFrameSaveResult(null, "kein Frame verfügbar");
 
             var storedBytesPath = await _goldFrameStore
                 .StoreBytesAsync(bytes, ".png", dir)
                 .ConfigureAwait(false);
             return !string.IsNullOrWhiteSpace(storedBytesPath)
                 ? new CodingTrainingFrameSaveResult(storedBytesPath, null)
-                : new CodingTrainingFrameSaveResult(null, "Frame konnte nicht uebernommen werden");
+                : new CodingTrainingFrameSaveResult(null, "Frame konnte nicht übernommen werden");
         }
         catch (Exception ex)
         {
@@ -111,7 +111,7 @@ public sealed class CodingTrainingFrameStore
         try
         {
             if (string.IsNullOrWhiteSpace(rawFramePath) || !File.Exists(rawFramePath))
-                return new CodingTrainingFrameSaveResult(null, "kein Rohbild fuer Beweisbild verfuegbar");
+                return new CodingTrainingFrameSaveResult(null, "kein Rohbild für Beweisbild verfügbar");
 
             var dir = Path.Combine(_knowledgeRootProvider(), "gold_frames_annotated");
             var file = Path.Combine(dir, $"{codingEvent.EventId:N}_annotated.png");

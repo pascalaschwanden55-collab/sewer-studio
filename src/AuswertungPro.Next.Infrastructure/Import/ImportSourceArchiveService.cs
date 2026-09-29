@@ -113,7 +113,7 @@ public sealed class ImportSourceArchiveService : IImportSourceArchiver
         }
 
         var directWritePaths = writePaths
-            ?? throw new InvalidOperationException("Direkte Archivziele brauchen eine Projektpfadpruefung.");
+            ?? throw new InvalidOperationException("Direkte Archivziele brauchen eine Projektpfadprüfung.");
         var fileName = Path.GetFileName(sourcePath);
         var targetPath = directWritePaths.EnsureSafeFileTarget(
             Path.Combine(targetDirectory, fileName));

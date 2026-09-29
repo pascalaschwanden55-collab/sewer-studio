@@ -194,7 +194,7 @@ public sealed partial class MultiModelAnalysisService
             "Checkpoint-Journal: Fortsetzung ab Frame {Frame} ({Count} Frames aus Journal uebernommen).",
             state.LastFrameIndex + 1, state.Frames.Count);
         progress?.Report(new VideoAnalysisProgress(state.LastFrameIndex, totalFrames,
-            $"Checkpoint: Fortsetzung ab Frame {state.LastFrameIndex + 1} ({state.Frames.Count} Frames uebernommen)."));
+            $"Checkpoint: Fortsetzung ab Frame {state.LastFrameIndex + 1} ({state.Frames.Count} Frames übernommen)."));
         return (state.LastFrameIndex, lastMeter);
     }
 
@@ -221,8 +221,8 @@ public sealed partial class MultiModelAnalysisService
     private static void ReportCompletion(IProgress<VideoAnalysisProgress>? progress, int totalFrames,
         int skippedFrames, VideoAnalysisResult result)
     {
-        var status = result.Incomplete ? "Multi-Model Analyse unvollstaendig" : result.Degraded
-            ? "Multi-Model abgeschlossen mit Einschraenkungen" : "Multi-Model fertig";
+        var status = result.Incomplete ? "Multi-Model Analyse unvollständig" : result.Degraded
+            ? "Multi-Model abgeschlossen mit Einschränkungen" : "Multi-Model fertig";
         progress?.Report(new VideoAnalysisProgress(result.Incomplete ? result.FramesAnalyzed : totalFrames, totalFrames,
             $"{status} – {result.Detections.Count} Schäden, {skippedFrames} Frames übersprungen. " + result.DegradedReason));
     }
@@ -253,14 +253,14 @@ public sealed partial class MultiModelAnalysisService
         if (completeness.ExtractionWarning is { } extractionWarning)
             degradedReasons.Add(extractionWarning);
         if (completeness.SamFailureFrames > 0)
-            degradedReasons.Add($"SAM: {completeness.SamFailureFrames} Frames technisch nicht vollstaendig segmentiert – manuelle Pruefung erforderlich.");
+            degradedReasons.Add($"SAM: {completeness.SamFailureFrames} Frames technisch nicht vollständig segmentiert – manuelle Prüfung erforderlich.");
         if (sidecarOutage)
-            degradedReasons.Add($"Sidecar antwortete ab Frame {frameIndex} nicht mehr – Analyse unvollstaendig.");
+            degradedReasons.Add($"Sidecar antwortete ab Frame {frameIndex} nicht mehr – Analyse unvollständig.");
         // Paket 2/A4: VRAM-Mangel ist kein Ausfall, aber ehrlich sichtbar (mit VRAM-Zahlen).
         if (!string.IsNullOrWhiteSpace(vramInsufficientMessage))
             degradedReasons.Add(
                 vramInsufficientMessage
-                + " Betroffene Frames wurden uebersprungen (Skip-Quote) – manuelle Pruefung erforderlich.");
+                + " Betroffene Frames wurden übersprungen (Skip-Quote) – manuelle Prüfung erforderlich.");
         if (qwenOutage.Noted)
         {
             // NotedErrorCount bleibt auch nach einem spaeteren Erfolg erhalten:
@@ -269,10 +269,10 @@ public sealed partial class MultiModelAnalysisService
                 "Qwen (Ollama) antwortet seit {Count} Frames nicht — VSA-Anreicherung unvollstaendig (Lauf laeuft weiter).",
                 qwenOutage.NotedErrorCount);
             degradedReasons.Add(
-                $"Qwen/Ollama antwortete bei {qwenOutage.NotedErrorCount} Folgeframes nicht – VSA-Code-Anreicherung unvollstaendig.");
+                $"Qwen/Ollama antwortete bei {qwenOutage.NotedErrorCount} Folgeframes nicht – VSA-Code-Anreicherung unvollständig.");
         }
         else if (completeness.QwenFailureFrames > 0)
-            degradedReasons.Add($"Qwen/Ollama fehlgeschlagen bei {completeness.QwenFailureFrames} Frames – VSA-Code-Anreicherung unvollstaendig.");
+            degradedReasons.Add($"Qwen/Ollama fehlgeschlagen bei {completeness.QwenFailureFrames} Frames – VSA-Code-Anreicherung unvollständig.");
         if (!detectorQualified)
         {
             degradedReasons.Add(
@@ -280,7 +280,7 @@ public sealed partial class MultiModelAnalysisService
                 + (string.IsNullOrWhiteSpace(detectorQualificationReason)
                     ? string.Empty
                     : $": {detectorQualificationReason}")
-                + ". DINO/SAM wurden ohne YOLO-Filter ausgefuehrt; manuelle Pruefung erforderlich.");
+                + ". DINO/SAM wurden ohne YOLO-Filter ausgeführt; manuelle Prüfung erforderlich.");
         }
 
         // Skip-Quote: Quote der fehlerbedingt uebersprungenen Frames an den in DIESEM

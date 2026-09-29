@@ -100,7 +100,7 @@ public sealed class ExcelTemplateExportService : IExcelExportService
             var headerToCol = ReadHeaderColumns(ws, headerRow);
             var fieldToCol = BaueFeldZuordnung(headerToCol);
             if (fieldToCol.Count == 0)
-                throw new InvalidOperationException("Keine passenden Spalten im Excel-Template gefunden (Header-Zeile pruefen).");
+                throw new InvalidOperationException("Keine passenden Spalten im Excel-Template gefunden (Header-Zeile prüfen).");
 
             var spaltenzahl = headerToCol.Values.DefaultIfEmpty(1).Max();
             LeereAlteDaten(ws, startRow, spaltenzahl);
@@ -206,7 +206,7 @@ public sealed class ExcelTemplateExportService : IExcelExportService
 
             var headerToCol = ReadHeaderColumns(ws, headerRow);
             if (headerToCol.Count == 0)
-                throw new InvalidOperationException("Keine Spalten in der Schacht-Vorlage gefunden (Header-Zeile pruefen).");
+                throw new InvalidOperationException("Keine Spalten in der Schacht-Vorlage gefunden (Header-Zeile prüfen).");
 
             var spaltenzahl = headerToCol.Values.Max();
             LeereAlteDaten(ws, startRow, spaltenzahl);
@@ -409,7 +409,7 @@ public sealed class ExcelTemplateExportService : IExcelExportService
                     entry.FullName.StartsWith("xl/worksheets/sheet", StringComparison.OrdinalIgnoreCase)
                     && entry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)))
             {
-                throw new InvalidDataException("Die erzeugte Datei ist keine vollstaendige Excel-Arbeitsmappe.");
+                throw new InvalidDataException("Die erzeugte Datei ist keine vollständige Excel-Arbeitsmappe.");
             }
         }
 

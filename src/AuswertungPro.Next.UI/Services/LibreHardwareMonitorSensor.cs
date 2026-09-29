@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using LibreHardwareMonitor.Hardware;
 using Microsoft.Win32;
 
@@ -93,7 +94,7 @@ internal sealed class LibreHardwareMonitorSensor : IDisposable
                 openedComputer.Close();
                 openedComputer = null;
                 var reason = _isHvciEnabled
-                    ? "HVCI (Kernisolierung) blockiert Sensor-Treiber.\nOption 1: HWiNFO64 starten (Shared Memory aktivieren) — funktioniert mit HVCI.\nOption 2: Kernisolierung deaktivieren unter Windows-Sicherheit > Geraetesicherheit."
+                    ? "HVCI (Kernisolierung) blockiert Sensor-Treiber.\nOption 1: HWiNFO64 starten (Shared Memory aktivieren) — funktioniert mit HVCI.\nOption 2: Kernisolierung deaktivieren unter Windows-Sicherheit > Gerätesicherheit."
                     : "Keine Sensoren gefunden (Admin-Rechte? Treiber?)";
                 messages.Add($"LHM: FEHLGESCHLAGEN — {reason.Replace('\n', ' ')}");
                 return new LibreHardwareInitializationResult(
@@ -125,7 +126,7 @@ internal sealed class LibreHardwareMonitorSensor : IDisposable
             BestEffortClose(openedComputer);
             var reason = _isHvciEnabled
                 ? "HVCI blockiert Sensor-Treiber"
-                : $"Sensor-Fehler: {ex.Message}";
+                : $"Sensor-Fehler: {UserError.DescribeAndReport(ex, "Hardware-Sensoren starten")}";
             messages.Add($"LHM: EXCEPTION — {ex.GetType().Name}: {ex.Message}");
             return new LibreHardwareInitializationResult(
                 false,

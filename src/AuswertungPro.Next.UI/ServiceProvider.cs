@@ -102,6 +102,12 @@ namespace AuswertungPro.Next.UI
         public ISettingsQuarantineStore SettingsQuarantine { get; }
         public ISettingsMigrationService SettingsMigration { get; }
         public IExplorerRevealService ExplorerReveal { get; }
+
+        /// <summary>
+        /// Aufgabe 13 (Windows-Integration, 28.09.2026). Settable (wie <see cref="Dialogs"/>) fuer
+        /// Tests, die einen Fake einsetzen wollen (`new ServiceProvider(...) { Taskbar = fake }`).
+        /// </summary>
+        public ITaskbarFortschritt Taskbar { get; internal set; } = new TaskbarFortschritt();
         public AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilberichtAblage Verteilberichte { get; }
         public IXtfExportVorschauDialog XtfExportVorschau { get; }
         public ISafeShellOpenService ShellOpen { get; }
@@ -262,6 +268,9 @@ namespace AuswertungPro.Next.UI
         public IDistributionDirectoryTreeResolver DistributionDirectoryTree { get; }
         public IProtocolService Protocols { get; }
         public IProtocolPdfLayoutSettings ProtocolPdfLayoutSettings { get; }
+        // Gemeinsame Quelle fuer das Logo in Berichten (PDF-/Excel-Export, Dossier);
+        // liest live aus den Einstellungen (Optikanalyse 28.09.2026, Aufgabe 15).
+        public IBerichtsMarke BerichtsMarke { get; }
         public ProtocolPdfExporter ProtocolPdfExporter { get; }
         public IProtocolPdfExporter ProtocolPdfExports => ProtocolPdfExporter;
         public IPdfMergeService PdfMerge { get; }
@@ -454,16 +463,16 @@ namespace AuswertungPro.Next.UI
             if (knowledgeResolution.Source == KnowledgeBasePaths.RootSource.EnvironmentOverride)
             {
                 Logger.LogInformation(
-                    "Wissensdatenbank-Override {EnvironmentVariable} ist fuer diesen Start aktiv: {KnowledgeRoot}",
+                    "Wissensdatenbank-Override {EnvironmentVariable} ist für diesen Start aktiv: {KnowledgeRoot}",
                     KnowledgeBasePaths.EnvironmentVariableName,
                     KnowledgeRoot);
             }
             var knowledgeConfigurationWarning = knowledgeResolution.HasEnvironmentSettingsMismatch
-                ? "Fuer diesen Start ist ein anderer Wissensordner ueber die Umgebungsvariable " +
+                ? "Für diesen Start ist ein anderer Wissensordner über die Umgebungsvariable " +
                   $"{KnowledgeBasePaths.EnvironmentVariableName} aktiv.\n" +
                   $"Gespeichert: {knowledgeResolution.PersistedSettingsRoot}\n" +
                   $"Jetzt aktiv: {KnowledgeRoot}\n" +
-                  "Der gespeicherte Pfad wird nicht ueberschrieben. Pruefe bitte, ob diese Abweichung gewollt ist."
+                  "Der gespeicherte Pfad wird nicht überschrieben. Prüfe bitte, ob diese Abweichung gewollt ist."
                 : null;
 
             // Statische Fassaden auf dieselben Instanzen zeigen lassen (Konsumenten ohne DI).
@@ -554,11 +563,12 @@ namespace AuswertungPro.Next.UI
                 VsaCatalogPaths,
                 catalogPaths.KekManifestPath,
                 catalogPaths.XmlCatalogPaths);
+            BerichtsMarke = new AppSettingsBerichtsMarke(Settings);
             ProtocolPdfLayoutSettings = new AppSettingsProtocolPdfLayoutSettings(Settings);
             ProtocolPdfExporter = new ProtocolPdfExporter(new ProtocolPdfAssetFileResolver(), ProtocolPdfLayoutSettings, CodeCatalog);
             PdfMerge = new PdfMergeService();
-            OfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.OfferPdfExportService();
-            NpkOfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.NpkOfferPdfExportService();
+            OfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.OfferPdfExportService(BerichtsMarke);
+            NpkOfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.NpkOfferPdfExportService(BerichtsMarke);
             PdfPrint = new AuswertungPro.Next.Infrastructure.Output.Offers.PdfPrintService();
             DossierPhotoAvailability = new DossierPhotoFileAvailabilityService();
             StoredImportFiles = new StoredImportFileService();
@@ -577,7 +587,7 @@ namespace AuswertungPro.Next.UI
                 () => Settings.SearchChApiKey);
             DichtheitProtocolFiles = new DichtheitProtocolFileLocator();
             SchachtFileTargets = new SchachtFileTargetPathResolver();
-            var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);
+            var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter, BerichtsMarke);
             ProtocolRegeneration = protocolRegeneration;
             ProtocolSingleRegeneration = protocolRegeneration;
             OneClickImportReports = new OneClickImportReportWriter(Logger);
@@ -591,7 +601,7 @@ namespace AuswertungPro.Next.UI
             DistributionPatterns = new DistributionPatternResolver();
             DistributionDirectoryTree = new DistributionDirectoryTreeResolver(DistributionPatterns);
             ExcelExport = new ExcelTemplateExportService();
-            NpkExcelExport = new NpkLeistungsverzeichnisExcelExportService();
+            NpkExcelExport = new NpkLeistungsverzeichnisExcelExportService(BerichtsMarke);
             CostFieldSync = new AuswertungPro.Next.Application.DataPage.DerivedCostFieldSynchronizer();
 
             // Register protocol/photo/pdf services (Protocols oben schon gebaut und injiziert)
@@ -854,7 +864,7 @@ namespace AuswertungPro.Next.UI
             }
             catch (Exception ex)
             {
-                Logger.LogInformation(ex, "KI-Schiedsrichter fuer Import ist nicht verfuegbar.");
+                Logger.LogInformation(ex, "KI-Schiedsrichter für Import ist nicht verfügbar.");
                 return null;
             }
         }

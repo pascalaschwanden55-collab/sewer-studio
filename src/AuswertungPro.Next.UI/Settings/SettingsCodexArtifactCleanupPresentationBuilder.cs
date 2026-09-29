@@ -21,13 +21,13 @@ public static class SettingsCodexArtifactCleanupPresentationBuilder
         return
             $"Gefunden: {SettingsProgramCleanupPresentationBuilder.FormatBytes(report.TotalBytes)} " +
             $"in {report.Items.Count:N0} alten Agenten-Baukopien.\n\n" +
-            "Groesste Bereiche:\n" +
+            "Grösste Bereiche:\n" +
             string.Join(Environment.NewLine, largest) +
-            "\n\nEntfernt werden nur Bereiche, die seit mindestens 24 Stunden nicht geaendert wurden " +
+            "\n\nEntfernt werden nur Bereiche, die seit mindestens 24 Stunden nicht geändert wurden " +
             "und ausschliesslich bin-, obj- oder TestResults-Daten enthalten.\n\n" +
-            "Aktuelle Bereiche sowie originale Projektdateien, Modelle, Karten, Verknuepfungen und unbekannte Inhalte " +
-            "bleiben geschuetzt.\n\n" +
-            "Diese alten Agenten-Baukopien jetzt endgueltig loeschen?";
+            "Aktuelle Bereiche sowie originale Projektdateien, Modelle, Karten, Verknüpfungen und unbekannte Inhalte " +
+            "bleiben geschützt.\n\n" +
+            "Diese alten Agenten-Baukopien jetzt endgültig löschen?";
     }
 
     public static string BuildSuccessText(CodexArtifactCleanupResult result)

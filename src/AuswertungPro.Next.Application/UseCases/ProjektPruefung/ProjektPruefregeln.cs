@@ -110,7 +110,7 @@ public static class ProjektPruefregeln
                 ct.ThrowIfCancellationRequested();
                 try { ObjektFeldPruefung.Pruefe(f, b.Lies(a, f)); }
                 catch (InvalidOperationException ex)
-                { Add(b, name, ProjektPruefbereich.Eingabefelder, $"{a.Art}: {ex.Message}", akte: a.Id, feld: f.Id); }
+                { Add(b, name, ProjektPruefbereich.Eingabefelder, $"{a.Art}: {UserError.DescribeInputHint(ex, "Projektprüfung Eingabefeld")}", akte: a.Id, feld: f.Id); }
             }
         }
     }

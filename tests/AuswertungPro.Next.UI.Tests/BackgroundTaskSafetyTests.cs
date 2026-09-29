@@ -164,6 +164,6 @@ public sealed class BackgroundTaskSafetyTests
             TState state,
             Exception? exception,
             Func<TState, Exception?, string> formatter)
-            => throw new IOException("Log-Datentraeger nicht verfuegbar");
+            => throw new IOException("Log-Datentraeger nicht verfügbar");
     }
 }

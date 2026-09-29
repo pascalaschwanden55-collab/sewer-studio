@@ -58,6 +58,46 @@ public sealed class DossierRevisionRowFocusTests
         });
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (Review Aufgabe 10c1): Die Panel-Schalter (Rows/Fields/Preview-
+    /// Fenster/Zeilenformatierung) vergleichen den Feldschluessel als Zeichenkette
+    /// gegen die feste ASCII-Form „Aenderungen". Der KATALOG (Application,
+    /// <see cref="DossierPreviewFieldCatalog"/>) ist die einzige Stelle, die diesen
+    /// Schluessel tatsaechlich vergibt. Dieser Test baut das Feld NICHT von Hand
+    /// nach (wie <see cref="ChangeField"/>), sondern liest es aus dem echten Katalog
+    /// — driftet der Katalog-Schluessel je auseinander von dem, was die Panel-Schalter
+    /// erwarten, faellt das hier auf, statt dass „Kennt" still false liefert.
+    /// </summary>
+    [Fact]
+    public void Katalogschluessel_fuer_Aenderungen_wird_vom_Panel_erkannt()
+    {
+        RunOnSta(() =>
+        {
+            var host = new StackPanel();
+            var dossier = new DossierDefinition();
+            var area = new DossierAreaSettings();
+            var panel = CreatePanel(host, dossier, area);
+
+            var felder = DossierPreviewFieldCatalog.Build(area, dossier);
+            var aenderungenFeld = Assert.Single(
+                felder.Where(f => f.Kind == DossierPreviewFieldKind.Rows && f.Label == "Änderungswesen"));
+
+            var seite = new DossierPreviewPage(
+                1, "Deckblatt",
+                new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.Zero),
+                [], [aenderungenFeld.Key]);
+
+            panel.Baue(seite, [aenderungenFeld]);
+
+            Assert.Single(dossier.Changes);
+            Assert.True(panel.Kennt(DossierPreviewTarget.Row(aenderungenFeld.Key, 0)));
+            Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(aenderungenFeld.Key, 0, "Version")));
+            Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(aenderungenFeld.Key, 0, "Datum")));
+            Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(aenderungenFeld.Key, 0, "Visum")));
+            Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(aenderungenFeld.Key, 0, "Aenderung")));
+        });
+    }
+
     [Fact]
     public void Sprung_in_Aenderungszelle_zeigt_alle_vier_Eingaben_der_Zeile_und_fokussiert_die_Zelle()
     {

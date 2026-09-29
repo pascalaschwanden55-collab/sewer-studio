@@ -239,7 +239,7 @@ public sealed class MeasureRecommendationServiceTests : IDisposable
         var result = NewService().TrainModel(minSamples: 25);
 
         Assert.False(result.Trained);
-        Assert.Equal("Zu wenige Trainingsfaelle", result.ErrorMessage);
+        Assert.Equal("Zu wenige Trainingsfälle", result.ErrorMessage);
         Assert.Equal(0, result.TotalSamples);
     }
 

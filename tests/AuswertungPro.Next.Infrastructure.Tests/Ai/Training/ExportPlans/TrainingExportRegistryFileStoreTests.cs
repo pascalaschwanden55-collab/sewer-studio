@@ -180,7 +180,7 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
         var error = Assert.Throws<TrainingExportPlanException>(() =>
             new TrainingExportRegistryFileStore(paths.RegistryPath, _root).ReadBundle());
 
-        Assert.Contains("vollstaendig", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("vollständig", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -843,7 +843,7 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
             var error = Assert.Throws<TrainingExportPlanException>(() =>
                 new TrainingExportRegistryFileStore(paths.RegistryPath, _root).ReadBundle());
 
-            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -890,7 +890,7 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
             var error = Assert.Throws<TrainingExportPlanException>(() =>
                 new TrainingExportRegistryFileStore(paths.RegistryPath, _root).ReadBundle());
 
-            Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

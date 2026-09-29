@@ -89,7 +89,7 @@ public static class KinsHoldingNameNormalizer
             // Echte Kollision (z.B. zweite Untersuchung desselben Schachtpaars):
             // Nummer behalten, damit nichts verloren geht.
             map[name] = record;
-            messages.Add($"KINS: Name {zielName} existiert bereits — '{name}' behaelt die Nummer.");
+            messages.Add($"KINS: Name {zielName} existiert bereits — '{name}' behält die Nummer.");
         }
 
         return new KinsNameNormalizeResult(map, umbenannt, entfernt, messages);

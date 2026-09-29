@@ -33,15 +33,18 @@ internal static class SchaechteDropdownCommandFactory
             CreateGroup(
                 options.Eigentuemer,
                 new DropdownOptionGroupSettings(
-                    "Eigentuemer-Liste",
+                    "Eigentümer-Liste",
                     fixedEigentuemerOptions,
                     LockedToResetItems: true),
                 actions),
             CreateGroup(
                 options.Pruefungsresultat,
                 new DropdownOptionGroupSettings(
-                    "Pruefungsresultat-Liste",
+                    "Prüfungsresultat-Liste",
                     [
+                        // Datenwert, kein Anzeigetext: identisch zu ExcelReportStyle.Farbregeln
+                        // und DataPageDropdownOptionGroupFactory. Bewusst ae/oe statt Umlaut,
+                        // damit gespeicherte Projektwerte weiterhin dieselbe Farbe treffen.
                         "Pruefung bestanden",
                         "Pruefung knapp nicht bestanden",
                         "Pruefung nicht bestanden (grob undicht)",
@@ -50,7 +53,7 @@ internal static class SchaechteDropdownCommandFactory
                 actions),
             CreateGroup(
                 options.Referenzpruefung,
-                new DropdownOptionGroupSettings("Referenzpruefung-Liste", ["Ja", "Nein"]),
+                new DropdownOptionGroupSettings("Referenzprüfung-Liste", ["Ja", "Nein"]),
                 actions));
     }
 

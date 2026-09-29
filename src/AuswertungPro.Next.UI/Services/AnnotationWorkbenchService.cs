@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using AuswertungPro.Next.Application.Common;
+using System.IO;
 using System.Security.Cryptography;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
@@ -102,7 +103,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 MaskImageWidth: resp.ImageWidth,
                 MaskImageHeight: resp.ImageHeight,
                 AreaPercent: null,
-                StatusText: "Keine verwertbare Maske — bitte Box pruefen.",
+                StatusText: "Keine verwertbare Maske — bitte Box prüfen.",
                 Degraded: true);
         }
 
@@ -122,7 +123,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 1)
             : null;
 
-        var statusText = degraded ? "Teil-Segmentierung — pruefen." : "Maske erstellt.";
+        var statusText = degraded ? "Teil-Segmentierung — prüfen." : "Maske erstellt.";
         return new WorkbenchSegmentation(
             MaskRle: mask.MaskRle,
             MaskImageWidth: resp.ImageWidth,
@@ -158,7 +159,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (allowedCodes.Length == 0)
-            return UnavailablePhotoSuggestion("Der VSA-Codekatalog ist nicht verfuegbar.");
+            return UnavailablePhotoSuggestion("Der VSA-Codekatalog ist nicht verfügbar.");
 
         var projectFolder = Path.GetDirectoryName(item.FramePath);
         if (string.IsNullOrWhiteSpace(projectFolder))
@@ -339,7 +340,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         if (confirmedByUser.Length == 0)
         {
             return Rejected(
-                "Persoenliche Bestaetigung fehlt. Ohne Bearbeiter wird kein Goldsample gespeichert.");
+                "Persönliche Bestätigung fehlt. Ohne Bearbeiter wird kein Goldsample gespeichert.");
         }
         if (beschreibung.Length < 10)
             return Rejected("Beschreibung zu kurz (mindestens 10 Zeichen).");
@@ -376,13 +377,13 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                            != item.ExpectedConfirmedAtUtc.Value.ToUniversalTime()))
                 {
                     return Rejected(
-                        "Goldsample wurde inzwischen in einem anderen Arbeitsablauf geaendert. Bitte die Goldpruefung neu laden.");
+                        "Goldsample wurde inzwischen in einem anderen Arbeitsablauf geändert. Bitte die Goldprüfung neu laden.");
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Rejected(
-                    $"Das zu reparierende Goldsample konnte nicht sicher gelesen werden: {ex.Message}");
+                    $"Das zu reparierende Goldsample konnte nicht sicher gelesen werden: {UserError.DescribeAndReport(ex, "Goldsample zur Reparatur lesen")}");
             }
         }
 
@@ -411,7 +412,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         if (!isPdfPhoto && !isManualCoding)
         {
             return Rejected(
-                "Die gespeicherte Herkunft ist nicht als persoenliches Gold zugelassen. Es wurde nichts gespeichert.");
+                "Die gespeicherte Herkunft ist nicht als persönliches Gold zugelassen. Es wurde nichts gespeichert.");
         }
         if (isPdfPhoto
             && (!PdfGoldProvenancePolicy.IsValid(sourceNote)
@@ -419,7 +420,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 || string.IsNullOrWhiteSpace(sourceReferenceDescription)))
         {
             return Rejected(
-                "PDF-Goldsample kann nicht gespeichert werden: Die Operateurreferenz oder PDF-Pruefspur ist unvollstaendig oder ungueltig.");
+                "PDF-Goldsample kann nicht gespeichert werden: Die Operateurreferenz oder PDF-Prüfspur ist unvollständig oder ungültig.");
         }
         if (existingSample is null
             && item.SourceSuggestion is not null
@@ -473,7 +474,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Rejected(
-                    $"Gebundener Bildstand konnte nicht sicher gelesen werden: {ex.Message}");
+                    $"Gebundener Bildstand konnte nicht sicher gelesen werden: {UserError.DescribeAndReport(ex, "Gebundenen Bildstand lesen")}");
             }
 
             if (!string.Equals(
@@ -482,7 +483,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                     StringComparison.OrdinalIgnoreCase))
             {
                 return Rejected(
-                    "Das Bild wurde seit dem Laden der Goldpruefung geaendert. Bitte die Goldpruefung neu laden.");
+                    "Das Bild wurde seit dem Laden der Goldprüfung geändert. Bitte die Goldprüfung neu laden.");
             }
         }
 
@@ -495,7 +496,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Rejected($"Eval-Schutz nicht verfuegbar: {ex.Message}");
+            return Rejected($"Eval-Schutz nicht verfügbar: {UserError.DescribeAndReport(ex, "Eval-Schutz laden")}");
         }
         // Beim Foto-Assistenten ist dies genau eine Arbeitskopie des beim
         // Segmentieren gebundenen Originals. Dieselben Bytes gehen unten an
@@ -515,7 +516,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         if (verdict != EvalContaminationGuard.ExportContaminationResult.Clean)
         {
             return Rejected(
-                $"Eval-Schutz: Bild gehoert zum eingefrorenen Mess-Set ({verdict}). Nicht speicherbar.");
+                $"Eval-Schutz: Bild gehört zum eingefrorenen Mess-Set ({verdict}). Nicht speicherbar.");
         }
 
         // 3) Das angenommene Bild zuerst unveraendert ins KI-Brain uebernehmen.
@@ -618,7 +619,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             return new WorkbenchSaveResult(
                 true,
                 CombineWarnings(
-                    "Entwurf gespeichert: ohne gepruefte SAM-Maske kein Goldsample. Das Sample landet in 'Unvollstaendige Goldframes' und kann dort mit Maske nachgeruestet werden.",
+                    "Entwurf gespeichert: ohne geprüfte SAM-Maske kein Goldsample. Das Sample landet in 'Unvollständige Goldframes' und kann dort mit Maske nachgerüstet werden.",
                     replaceWarning),
                 sampleId,
                 "Entwurf",
@@ -663,6 +664,24 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
     private static WorkbenchSaveResult Rejected(string message) =>
         new(false, message, null, "-", null);
 
+    /// <summary>
+    /// Deutscher Grund fuer einen gescheiterten Teacher-Export (Aufgabe 10c2, Fix-Runde 2).
+    /// <see cref="TrainingAnnotationResult.Error"/> kann je nach Exporteur ein roher
+    /// Framework-Text sein ("The process cannot access the file …") und wird deshalb nie
+    /// angezeigt, sondern nur protokolliert. Angezeigt wird die Einordnung der Ausnahme
+    /// ueber <see cref="UserError"/> oder ein fester deutscher Satz.
+    /// </summary>
+    internal static string TeacherExportGrund(TrainingAnnotationResult export)
+    {
+        if (export.Failure is { } fehler)
+            return UserError.Describe(fehler);
+
+        BestEffort.ReportWarning(
+            "[AnnotationWorkbenchService.TeacherExport] Teacher-Export ohne Erfolg: "
+            + (string.IsNullOrWhiteSpace(export.Error) ? "(kein Grund gemeldet)" : export.Error));
+        return "Der Teacher-Export ist fehlgeschlagen. Technische Details stehen im Programmlog.";
+    }
+
     private sealed record StoredGoldImage(string FramePath, string Sha256);
 
     /// <summary>
@@ -696,7 +715,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return (null, Rejected($"Goldbild konnte nicht sicher gespeichert werden: {ex.Message}"));
+            return (null, Rejected($"Goldbild konnte nicht sicher gespeichert werden: {UserError.DescribeAndReport(ex, "Goldbild speichern")}"));
         }
         if (string.IsNullOrWhiteSpace(storedFramePath))
         {
@@ -712,7 +731,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return (null, Rejected(
-                $"Goldbild konnte nach dem Speichern nicht bytegenau geprueft werden: {ex.Message}"));
+                $"Goldbild konnte nach dem Speichern nicht bytegenau geprüft werden: {UserError.DescribeAndReport(ex, "Goldbild nachprüfen")}"));
         }
 
         return (new StoredGoldImage(storedFramePath, storedImageSha256), null);
@@ -739,7 +758,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {ex.Message}"));
+                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {UserError.DescribeAndReport(ex, "Goldsample speichern")}"));
             }
         }
         else if (repairsExistingSample)
@@ -755,13 +774,13 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                     if (!added)
                     {
                         return (null, Rejected(
-                            "Goldsample wurde nicht gespeichert: Die Signatur gehoert bereits zu einem anderen Datensatz."));
+                            "Goldsample wurde nicht gespeichert: Die Signatur gehört bereits zu einem anderen Datensatz."));
                     }
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {ex.Message}"));
+                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {UserError.DescribeAndReport(ex, "Goldsample speichern")}"));
             }
 
             // Auch ein Nachlabeln mit gleichem Code ersetzt die fachliche Wahrheit
@@ -783,7 +802,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             if (!added)
             {
                 return (null, Rejected(
-                    "Bereits als Goldsample vorhanden (gleiche Haltung, Code, Meter und Box). Zum Aendern den Eintrag ueber 'Unvollstaendige Goldframes' oder das Goldalbum laden."));
+                    "Bereits als Goldsample vorhanden (gleiche Haltung, Code, Meter und Box). Zum Ändern den Eintrag über 'Unvollständige Goldframes' oder das Goldalbum laden."));
             }
         }
 
@@ -813,7 +832,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex)
         {
-            return (KbIndexState.Error.ToString(), $"KB-Index nicht aktualisiert: {ex.Message}");
+            return (KbIndexState.Error.ToString(), $"KB-Index nicht aktualisiert: {UserError.DescribeAndReport(ex, "KB-Index aktualisieren")}");
         }
     }
 
@@ -862,7 +881,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 .ExportAsync(storedFramePath, bbox, finalCode, classId, $"wb_{annotation.AnnotationId}", ct)
                 .ConfigureAwait(false);
             if (!export.Success)
-                throw new InvalidOperationException(export.Error ?? "Teacher-Export meldete keinen Erfolg.");
+                throw new UserFacingException(TeacherExportGrund(export));
 
             annotation.FullFramePath = export.FullFramePath;
             annotation.CroppedRegionPath = export.CroppedRegionPath;
@@ -873,7 +892,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         catch (Exception ex)
         {
             // Sample bleibt gespeichert; die Warnung wird sichtbar zurueckgegeben (nie still).
-            return (null, $"Teacher-Kandidat nicht gespeichert: {ex.Message}");
+            return (null, $"Teacher-Kandidat nicht gespeichert: {UserError.DescribeAndReport(ex, "Teacher-Kandidat speichern")}");
         }
     }
 
@@ -901,8 +920,8 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 var added = await _sampleStore.TryAddNewAsync(sample).ConfigureAwait(false);
                 if (!added)
                 {
-                    throw new InvalidOperationException(
-                        "Die Signatur gehoert bereits zu einem anderen Gold-Datensatz.");
+                    throw new UserFacingException(
+                        "Die Signatur gehört bereits zu einem anderen Gold-Datensatz.");
                 }
             }
         }
@@ -915,7 +934,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex)
         {
-            warning = $"Alter KB-Eintrag konnte nicht entfernt werden: {ex.Message}";
+            warning = $"Alter KB-Eintrag konnte nicht entfernt werden: {UserError.DescribeAndReport(ex, "Alten KB-Eintrag entfernen")}";
         }
 
         // Teacher: alten Kandidaten entfernen — sonst lernt der Export weiter den alten Code.
@@ -946,7 +965,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             else if (legacy.Count > 1)
                 warning = CombineWarnings(
                     warning,
-                    $"{legacy.Count} alte Teacher-Eintraege unklar zugeordnet — bitte manuell pruefen.");
+                    $"{legacy.Count} alte Teacher-Einträge unklar zugeordnet — bitte manuell prüfen.");
 
             foreach (var annotation in stale)
                 await _teacherStore.DeleteAsync(annotation.AnnotationId).ConfigureAwait(false);
@@ -955,7 +974,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         {
             warning = CombineWarnings(
                 warning,
-                $"Alter Teacher-Eintrag konnte nicht entfernt werden: {ex.Message}");
+                $"Alter Teacher-Eintrag konnte nicht entfernt werden: {UserError.DescribeAndReport(ex, "Alten Teacher-Eintrag entfernen")}");
         }
 
         return warning;

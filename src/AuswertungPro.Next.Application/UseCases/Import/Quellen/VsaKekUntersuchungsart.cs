@@ -139,14 +139,14 @@ public static class VsaKekUntersuchungsart
         {
             return new VsaKekArtErgebnis(
                 VsaKekBauteilart.Haltung,
-                $"Bezeichnung \"{belege.Bezeichnung.Trim()}\" nennt zwei Schaechte (letzter Rueckfall)");
+                $"Bezeichnung \"{belege.Bezeichnung.Trim()}\" nennt zwei Schächte (letzter Rückfall)");
         }
 
         if (fuerHaltung && fuerSchacht)
         {
             return new VsaKekArtErgebnis(
                 VsaKekBauteilart.Unklar,
-                "widerspruechliche Belege: " + string.Join(", ", gruende));
+                "widersprüchliche Belege: " + string.Join(", ", gruende));
         }
 
         if (fuerHaltung)

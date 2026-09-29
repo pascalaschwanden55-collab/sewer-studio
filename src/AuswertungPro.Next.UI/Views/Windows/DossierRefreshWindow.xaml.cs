@@ -30,7 +30,7 @@ public partial class DossierRefreshWindow : Window
 
         _vorschlag = vorschlag;
 
-        HeaderText.Text = $"Neu im Projekt für „{dossierName}“. "
+        Header.Subtitle = $"Neu im Projekt für „{dossierName}“. "
             + "Was Sie abhaken, wird beim nächsten Nachführen nicht wieder vorgeschlagen.";
 
         Baue();

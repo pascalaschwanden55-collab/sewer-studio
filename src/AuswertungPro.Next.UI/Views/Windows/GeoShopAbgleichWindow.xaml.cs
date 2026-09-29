@@ -16,13 +16,13 @@ public partial class GeoShopAbgleichWindow : Window
         Feldvergleich.ItemsSource = felder;
         Feldvergleich.Visibility = felder.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         if (felder.Length > 0)
-            Status.Text = "Häkchen: GeoShop übernehmen. Ohne Häkchen: bisherigen Wert behalten. Handwerte bleiben geschützt.";
+            Kopf.Subtitle = "Häkchen: GeoShop übernehmen. Ohne Häkchen: bisherigen Wert behalten. Handwerte bleiben geschützt.";
     }
 
     public void Zeige(string bericht, bool darfUebernehmen)
     {
         Bericht.Text = bericht;
-        Status.Text = darfUebernehmen ? "Prüfe die Änderungen. Erst mit Übernehmen werden sie ins Projekt geschrieben."
+        Kopf.Subtitle = darfUebernehmen ? "Prüfe die Änderungen. Erst mit Übernehmen werden sie ins Projekt geschrieben."
             : "Keine Übernahme möglich. Die Hinweise stehen unten.";
         Fortschritt.Visibility = Visibility.Collapsed;
         Uebernehmen.IsEnabled = darfUebernehmen;

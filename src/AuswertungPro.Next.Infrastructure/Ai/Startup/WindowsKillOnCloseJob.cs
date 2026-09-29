@@ -20,7 +20,7 @@ internal sealed class WindowsKillOnCloseJob : IDisposable
     public static WindowsKillOnCloseJob Create()
     {
         if (!OperatingSystem.IsWindows())
-            throw new PlatformNotSupportedException("Windows-Job-Objekte sind nur unter Windows verfuegbar.");
+            throw new PlatformNotSupportedException("Windows-Job-Objekte sind nur unter Windows verfügbar.");
 
         var handle = CreateJobObject(IntPtr.Zero, null);
         if (handle.IsInvalid)
@@ -58,7 +58,7 @@ internal sealed class WindowsKillOnCloseJob : IDisposable
         if (!AssignProcessToJobObject(_handle, process.Handle))
             throw new Win32Exception(
                 Marshal.GetLastWin32Error(),
-                $"KI-Prozess {process.Id} konnte nicht zur Prozessgruppe hinzugefuegt werden.");
+                $"KI-Prozess {process.Id} konnte nicht zur Prozessgruppe hinzugefügt werden.");
     }
 
     public void Dispose()

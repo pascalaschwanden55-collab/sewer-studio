@@ -146,7 +146,7 @@ public sealed class PositionTemplateStore : IPositionTemplateStore
         }
         catch (Exception ex)
         {
-            loadError = $"{Path.GetFileName(path)} ist beschaedigt oder nicht lesbar: {ex.Message}";
+            loadError = $"{Path.GetFileName(path)} ist beschädigt oder nicht lesbar: {ex.Message}";
             if (rememberUserOverrideError)
                 LastUserOverrideLoadError = ex.Message;
             return new PositionTemplateCatalog();
@@ -197,7 +197,7 @@ public sealed class PositionTemplateStore : IPositionTemplateStore
             if (!groupNames.Add(name))
                 throw new InvalidDataException($"Der Positionsgruppen-Name '{name}' ist doppelt.");
             if (group.Positions is null)
-                throw new InvalidDataException($"Positionen der Gruppe '{name}' duerfen nicht null sein.");
+                throw new InvalidDataException($"Positionen der Gruppe '{name}' dürfen nicht null sein.");
 
             for (var positionIndex = 0; positionIndex < group.Positions.Count; positionIndex++)
             {
@@ -209,13 +209,13 @@ public sealed class PositionTemplateStore : IPositionTemplateStore
                         $"Position {positionIndex + 1} der Gruppe '{name}' hat eine negative Menge.");
                 if (!position.IsCustom && string.IsNullOrWhiteSpace(position.ItemKey))
                     throw new InvalidDataException(
-                        $"Katalogposition {positionIndex + 1} der Gruppe '{name}' hat keinen Schluessel.");
+                        $"Katalogposition {positionIndex + 1} der Gruppe '{name}' hat keinen Schlüssel.");
                 if (position.IsCustom
                     && string.IsNullOrWhiteSpace(position.ItemKey)
                     && string.IsNullOrWhiteSpace(position.Name))
                 {
                     throw new InvalidDataException(
-                        $"Freie Position {positionIndex + 1} der Gruppe '{name}' hat weder Schluessel noch Name.");
+                        $"Freie Position {positionIndex + 1} der Gruppe '{name}' hat weder Schlüssel noch Name.");
                 }
             }
         }

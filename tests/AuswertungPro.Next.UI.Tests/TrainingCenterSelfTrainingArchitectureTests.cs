@@ -622,7 +622,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("request.Ui.Log(\"Selbsttraining abgebrochen.\");", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.Ui.SetStatusText(\"Selbsttraining abgebrochen.\");", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.Ui.Log($\"FEHLER: {ex.GetType().Name}: {ex.Message}\");", workflowSource, StringComparison.Ordinal);
-        Assert.Contains("request.Ui.SetStatusText($\"Fehler: {ex.Message}\");", workflowSource, StringComparison.Ordinal);
+        Assert.Contains("request.Ui.SetStatusText($\"Fehler: {UserError.Describe(ex)}\");", workflowSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2335,7 +2335,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Path.GetFileNameWithoutExtension(pdfPath)",
             "PDF nach Haltungen aufteilen...",
             "foreach (var msg in result.Messages)",
-            "Chunks ohne Haltungs-ID uebersprungen",
+            "Chunks ohne Haltungs-ID übersprungen",
             "Output-Ordner als Trainings-Ordner hinzugefuegt");
     }
 
@@ -2674,7 +2674,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Log(result.LogText)",
             "_codeCatalog ??",
             "if (catalog is null)",
-            "Kein Code-Katalog verfuegbar.");
+            "Kein Code-Katalog verfügbar.");
         AssertNoForbiddenTokens(
             reloadMethod,
             "if (ReviewQueueServiceRef is not null)",

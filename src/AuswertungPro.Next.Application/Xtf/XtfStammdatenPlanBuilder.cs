@@ -409,7 +409,7 @@ public static class XtfStammdatenPlanBuilder
                     || HatHandaenderungAmVerhaeltnis(record)
                     || HatHandaenderung(record, EigentuemerFeldKarte))
                 {
-                    hinweise.Add($"{name}: in der XTF nicht gefunden — die Handaenderung bleibt aussen vor.");
+                    hinweise.Add($"{name}: in der XTF nicht gefunden — die Handänderung bleibt aussen vor.");
                 }
 
                 continue;
@@ -441,7 +441,7 @@ public static class XtfStammdatenPlanBuilder
             {
                 hinweise.Add(
                     $"{name}: Kreisprofil mit zwei verschiedenen Massen ({konfliktHoehe} x {konfliktBreite}) — " +
-                    "Abmessung und Rohrprofil werden nicht geaendert.");
+                    "Abmessung und Rohrprofil werden nicht geändert.");
             }
             else
             {
@@ -475,7 +475,7 @@ public static class XtfStammdatenPlanBuilder
         if (element is null)
         {
             if (HatHandaenderung(record, felderKarte))
-                hinweise.Add($"{name}: in der XTF nicht gefunden — die Handaenderung bleibt aussen vor.");
+                hinweise.Add($"{name}: in der XTF nicht gefunden — die Handänderung bleibt aussen vor.");
             return;
         }
 
@@ -497,9 +497,9 @@ public static class XtfStammdatenPlanBuilder
                 {
                     hinweise.Add(IstZuLang(xtfName, roh, out var zeichen)
                         ? $"{name}: die Bemerkung ist {zeichen} Zeichen lang, das Modell " +
-                          $"laesst {BemerkungMaxZeichen} zu — nicht geschrieben."
+                          $"lässt {BemerkungMaxZeichen} zu — nicht geschrieben."
                         : $"{name}: {xtfName} = \"{roh}\" passt in dieser XTF zu keinem " +
-                          "gueltigen Wert — nicht geschrieben.");
+                          "gültigen Wert — nicht geschrieben.");
                 }
 
                 continue;
@@ -671,7 +671,7 @@ public static class XtfStammdatenPlanBuilder
             || !haltungElement.Werte.TryGetValue("RohrprofilRef", out var referenz)
             || string.IsNullOrWhiteSpace(referenz))
         {
-            hinweise.Add($"{name}: die XTF fuehrt kein Rohrprofil — der Profiltyp bleibt aussen vor.");
+            hinweise.Add($"{name}: die XTF führt kein Rohrprofil — der Profiltyp bleibt aussen vor.");
             return null;
         }
 
@@ -686,7 +686,7 @@ public static class XtfStammdatenPlanBuilder
         {
             hinweise.Add(
                 $"{name}: das Rohrprofil {tid} wird von {anzahl} Haltungen gemeinsam benutzt — " +
-                "der Profiltyp wird nicht geaendert, weil das die uebrigen mit umschreiben wuerde.");
+                "der Profiltyp wird nicht geändert, weil das die übrigen mit umschreiben würde.");
             return null;
         }
 

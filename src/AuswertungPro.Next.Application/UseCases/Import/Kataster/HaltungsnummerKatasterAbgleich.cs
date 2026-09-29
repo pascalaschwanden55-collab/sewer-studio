@@ -81,7 +81,7 @@ public static class HaltungsnummerKatasterAbgleich
             {
                 uebersprungen++;
                 meldungen.Add(
-                    $"Haltung {name}: amtlich {amtlich} — von Hand bearbeiteter Name bleibt unveraendert.");
+                    $"Haltung {name}: amtlich {amtlich} — von Hand bearbeiteter Name bleibt unverändert.");
                 continue;
             }
 
@@ -90,7 +90,7 @@ public static class HaltungsnummerKatasterAbgleich
                 uebersprungen++;
                 meldungen.Add(
                     $"Haltung {name}: amtlich {amtlich}, dieser Name ist aber bereits vergeben. "
-                    + "Nicht umbenannt — bitte pruefen.");
+                    + "Nicht umbenannt — bitte prüfen.");
                 continue;
             }
 
@@ -106,7 +106,7 @@ public static class HaltungsnummerKatasterAbgleich
         if (korrigiert > 0 || uebersprungen > 0)
         {
             meldungen.Insert(0,
-                $"Katasterabgleich: {geprueft} Haltung(en) geprueft, {korrigiert} umbenannt, "
+                $"Katasterabgleich: {geprueft} Haltung(en) geprüft, {korrigiert} umbenannt, "
                 + $"{uebersprungen} offen.");
         }
 

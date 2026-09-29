@@ -467,7 +467,7 @@ public sealed class SingleFrameMultiModelServiceTests
         Assert.Equal(0, client.YoloCalls);
         Assert.Equal(1, client.DinoCalls);
         Assert.Equal(1, client.SamCalls);
-        Assert.Contains("manuell pruefen", result.DegradedReason);
+        Assert.Contains("manuell prüfen", result.DegradedReason);
     }
 
     [Fact]

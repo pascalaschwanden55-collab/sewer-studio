@@ -30,7 +30,7 @@ public sealed class TrainingKnowledgeBaseCheckRunControllerTests
         var logs = new List<string>();
         string? status = null;
         var presentation = new TrainingKnowledgeBaseCheckPresentation(
-            "KB geprueft.",
+            "KB geprüft.",
             ["Zeile 1", "Zeile 2"]);
 
         TrainingKnowledgeBaseCheckRunController.ApplySuccess(
@@ -39,7 +39,7 @@ public sealed class TrainingKnowledgeBaseCheckRunControllerTests
             value => status = value);
 
         Assert.Equal(["Zeile 1", "Zeile 2"], logs);
-        Assert.Equal("KB geprueft.", status);
+        Assert.Equal("KB geprüft.", status);
     }
 
     [Fact]
@@ -54,7 +54,8 @@ public sealed class TrainingKnowledgeBaseCheckRunControllerTests
             logs.Add,
             value => status = value);
 
-        Assert.Equal("KB-Prüfung fehlgeschlagen: kaputt", status);
+        // Aufgabe 10c2: Der Status zeigt die UserError-Meldung, das Log behaelt den Rohtext.
+        Assert.Equal("KB-Prüfung fehlgeschlagen: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.", status);
         Assert.Equal(["KB-Prüfung FEHLER: kaputt"], logs);
     }
 }

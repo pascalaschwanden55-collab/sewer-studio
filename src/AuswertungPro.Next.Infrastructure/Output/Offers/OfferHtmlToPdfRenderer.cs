@@ -61,7 +61,7 @@ public sealed class OfferHtmlToPdfRenderer
         if (template.HasErrors)
         {
             var msg = string.Join("; ", template.Messages.Select(m => m.Message));
-            throw new InvalidOperationException("Template errors: " + msg);
+            throw new InvalidOperationException("Fehler in der Vorlage: " + msg);
         }
 
         SetLogoDataUri(
@@ -335,7 +335,7 @@ public sealed class OfferHtmlToPdfRenderer
             : "powershell -NoProfile -ExecutionPolicy Bypass -File <dein-output-ordner>/playwright.ps1 install chromium";
 
         var hint =
-            "PDF-Export konnte nicht gestartet werden (Playwright/Chromium fehlt oder ist nicht ausfuehrbar)." + Environment.NewLine +
+            "PDF-Export konnte nicht gestartet werden (Playwright/Chromium fehlt oder ist nicht ausführbar)." + Environment.NewLine +
             "Details: " + ex.Message + Environment.NewLine + Environment.NewLine +
             "Fix: einmalig Browser installieren:" + Environment.NewLine +
             cmd + Environment.NewLine + Environment.NewLine +

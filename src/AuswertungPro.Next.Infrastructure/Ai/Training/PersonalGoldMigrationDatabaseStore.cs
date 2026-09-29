@@ -42,7 +42,7 @@ internal static class PersonalGoldMigrationDatabaseStore
             command.Parameters.AddWithValue("$path", targetPath);
             command.Parameters.AddWithValue("$id", sampleId);
             if (command.ExecuteNonQuery() != 1)
-                throw new InvalidDataException($"KB-Pfad fuer Sample '{sampleId}' wurde nicht aktualisiert.");
+                throw new InvalidDataException($"KB-Pfad für Sample '{sampleId}' wurde nicht aktualisiert.");
         }
         transaction.Commit();
     }

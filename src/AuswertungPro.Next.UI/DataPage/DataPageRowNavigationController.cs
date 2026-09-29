@@ -2,9 +2,9 @@ namespace AuswertungPro.Next.UI.DataPage;
 
 public static class DataPageRowNavigationController
 {
-    public const string InvalidMovePositionMessage = "Bitte eine gueltige Zahl eingeben.";
-    public const string MoveNotPossibleMessage = "Verschieben nicht moeglich. Bitte Zeile auswaehlen.";
-    public const string InvalidRowNumberMessage = "Bitte eine gueltige Zeilennummer eingeben.";
+    public const string InvalidMovePositionMessage = "Bitte eine gültige Zahl eingeben.";
+    public const string MoveNotPossibleMessage = "Verschieben nicht möglich. Bitte Zeile auswählen.";
+    public const string InvalidRowNumberMessage = "Bitte eine gültige Zeilennummer eingeben.";
 
     public static bool TryMoveToPosition(
         string? text,

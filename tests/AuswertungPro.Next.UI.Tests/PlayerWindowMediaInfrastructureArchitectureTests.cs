@@ -59,7 +59,7 @@ public sealed class PlayerWindowMediaInfrastructureArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Partials sollen LibVLC/MediaPlayer-Erzeugung ueber PlayerMediaRuntimeFactory kapseln:\n"
+            "PlayerWindow-Partials sollen LibVLC/MediaPlayer-Erzeugung über PlayerMediaRuntimeFactory kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -109,7 +109,7 @@ public sealed class PlayerWindowMediaInfrastructureArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Root soll Media-Host-Verkabelung ueber PlayerMediaRuntime kapseln:\n"
+            "PlayerWindow-Root soll Media-Host-Verkabelung über PlayerMediaRuntime kapseln:\n"
             + string.Join("\n", offenders));
     }
 

@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using AuswertungPro.Next.Domain.Models.Dossiers;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Dossiers.Lookup;
 
@@ -103,7 +104,7 @@ public sealed class OwnerDirectoryLookupUseCase
                 // "Nicht gefunden" und "konnte nicht pruefen" bleiben getrennt.
                 return new OwnerDirectoryFillResult(
                     uebernommen,
-                    "Die Telefonsuche war nicht erreichbar: " + ex.Message);
+                    "Die Telefonsuche war nicht erreichbar: " + UserError.DescribeAndReport(ex, "Telefonsuche"));
             }
 
             if (treffer.IsUnavailable)

@@ -71,7 +71,7 @@ public sealed class TrainingCenterPersistenceGuardTests
             [
                 new TrainingCase
                 {
-                    CaseId = "vollstaendig",
+                    CaseId = "vollständig",
                     FolderPath = @"C:\Training\Fall",
                     VideoPath = @"C:\Training\Fall\video.mp4",
                     ProtocolPath = @"C:\Training\Fall\protokoll.pdf",
@@ -86,7 +86,7 @@ public sealed class TrainingCenterPersistenceGuardTests
         var loaded = await store.LoadAsync();
 
         var trainingCase = Assert.Single(loaded.Cases);
-        Assert.Equal("vollstaendig", trainingCase.CaseId);
+        Assert.Equal("vollständig", trainingCase.CaseId);
         Assert.Equal(@"C:\Training\Fall", trainingCase.FolderPath);
         Assert.Equal(@"C:\Training\Fall\video.mp4", trainingCase.VideoPath);
         Assert.Equal(@"C:\Training\Fall\protokoll.pdf", trainingCase.ProtocolPath);

@@ -166,7 +166,7 @@ public sealed class QualityGateServiceTests
         Assert.True(result.CompositeConfidence >= QualityGateService.GreenThreshold,
             "Der Zahlenwert allein waere Green - genau deshalb braucht es die Quellenregel");
         Assert.Equal(TrafficLight.Yellow, result.TrafficLight);
-        Assert.Contains("unabhaengige Belegquelle", result.Explanation);
+        Assert.Contains("unabhängige Belegquelle", result.Explanation);
     }
 
     [Fact]

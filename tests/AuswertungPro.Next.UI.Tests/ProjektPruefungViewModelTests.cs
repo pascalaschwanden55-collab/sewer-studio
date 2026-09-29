@@ -128,7 +128,7 @@ public sealed class ProjektPruefungViewModelTests
         var p = new Project();
         using var fehler = Vm(new Dienst((_, _) => throw new IOException("Testfehler")), () => (p, null));
         await fehler.PruefenCommand.ExecuteAsync(null);
-        Assert.False(fehler.IstAktuell); Assert.Contains("Testfehler", fehler.Meldung);
+        Assert.False(fehler.IstAktuell); Assert.Contains("Eine Datei oder ein Ordner ist momentan nicht verfügbar", fehler.Meldung); Assert.DoesNotContain("Testfehler", fehler.Meldung);
         using var leer = Vm(new Dienst((_, _) => new([], 0, 0)), () => (p, null));
         await leer.PruefenCommand.ExecuteAsync(null);
         Assert.Contains("keine Haltungen", leer.Meldung);

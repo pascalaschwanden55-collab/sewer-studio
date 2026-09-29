@@ -17,7 +17,7 @@ public partial class TrainingCenterViewModel
     {
         if (_trainingYoloExport is null)
         {
-            const string message = "YOLO-Export ist fuer dieses Fenster nicht eingerichtet.";
+            const string message = "YOLO-Export ist für dieses Fenster nicht eingerichtet.";
             Log(message);
             StatusText = message;
             return;

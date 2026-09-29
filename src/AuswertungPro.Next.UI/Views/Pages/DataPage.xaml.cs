@@ -17,14 +17,16 @@ using System.IO;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Behaviors;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
 public partial class DataPage : System.Windows.Controls.UserControl
 {
     private DataPageViewModel Vm => DataContext as DataPageViewModel
-        ?? throw new InvalidOperationException("DataPage benoetigt DataPageViewModel als DataContext.");
+        ?? throw new InvalidOperationException("DataPage benötigt DataPageViewModel als DataContext.");
     private IDialogService Dialogs => Vm.Dialogs;
+    private IToastService Toasts => Vm.Toasts;
     private AppSettings Settings => Vm.Settings;
     private AuswertungPro.Next.Application.Vsa.IVsaEvaluationService Vsa => Vm.Vsa;
     private AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog => Vm.CodeCatalog;
@@ -55,7 +57,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         FilterChips.StartFilterZurueckgesetzt += EntferneStartFilter;
         _haltungDetailItemFactory = new DataPageDetailItemFactory(
             ResolveManagedComboSpec,
-            CommitHaltungDetailField,
+            CommitHaltungDetailFieldMitVerlauf,
             BaueNachschlagBefehl,
             BaueStrassenBefehl,
             MeldeFormularKonflikt);
@@ -205,8 +207,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         var spalten = DataPageHaltungColumnBuilder.Baue(
             NovaLayoutAktiv,
-            ComboBox_LostKeyboardFocus,
-            ComboBox_SelectionChanged);
+            ComboBox_LostKeyboardFocusMitVerlauf,
+            ComboBox_SelectionChangedMitVerlauf);
 
         foreach (var spalte in spalten)
         {
@@ -281,7 +283,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         switch (result.Action)
         {
             case DataPageRightClickAction.ClearColumn:
-                ClearColumn(result.FieldName!, result.DisplayName!);
+                ClearColumnMitVerlauf(result.FieldName!, result.DisplayName!);
                 e.Handled = true;
                 break;
             case DataPageRightClickAction.SelectRow:
@@ -303,10 +305,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         }
 
         if (!Dialogs.ConfirmWarn(
-            $"ACHTUNG: Alle Werte in Spalte \"{displayName}\" werden geloescht.\n\n" +
+            $"ACHTUNG: Alle Werte in Spalte \"{displayName}\" werden gelöscht.\n\n" +
             $"Betroffen: {plan.AffectedCount} von {plan.TotalCount} Haltungen.\n" +
-            "Auch manuell bearbeitete Werte gehen verloren und koennen nicht rueckgaengig gemacht werden.\n\n" +
-            "Wirklich loeschen?",
+            "Auch manuell bearbeitete Werte werden gelöscht (Rückgängig mit Strg+Z).\n\n" +
+            "Wirklich löschen?",
             "Spalte leeren"))
             return;
 
@@ -709,7 +711,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         if (!Vm.ShellOpen.TryOpen(plan.ResolvedPath!, out var error))
         {
-            Dialogs.Error($"Foto konnte nicht geoeffnet werden:\n{error}", "Foto");
+            Dialogs.Error($"Foto konnte nicht geöffnet werden:\n{error}", "Foto");
         }
     }
 
@@ -721,7 +723,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = vm.Selected;
         if (record is null)
         {
-            Dialogs.Info("Bitte zuerst eine Haltung waehlen.", "Video");
+            Dialogs.Info("Bitte zuerst eine Haltung wählen.", "Video");
             return;
         }
 

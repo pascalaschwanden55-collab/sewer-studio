@@ -7,67 +7,6 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class SettingsThemeWorkflowTests
 {
     [Fact]
-    public void SyncUiThemeChanged_dark_sets_dark_toggle()
-    {
-        var state = new ThemeState { UiTheme = ThemeManager.Dark, IsDarkTheme = false };
-
-        SettingsThemeWorkflow.SyncUiThemeChanged(
-            ThemeManager.Dark,
-            Ui(state));
-
-        Assert.Equal(ThemeManager.Dark, state.UiTheme);
-        Assert.True(state.IsDarkTheme);
-        Assert.False(state.IsSyncing);
-    }
-
-    [Fact]
-    public void SyncUiThemeChanged_invalid_theme_normalizes_theme_name()
-    {
-        var state = new ThemeState { UiTheme = "Sepia", IsDarkTheme = false };
-
-        SettingsThemeWorkflow.SyncUiThemeChanged(
-            "Sepia",
-            Ui(state));
-
-        Assert.Equal(ThemeManager.Light, state.UiTheme);
-        Assert.False(state.IsDarkTheme);
-        Assert.False(state.IsSyncing);
-    }
-
-    [Fact]
-    public void SyncIsDarkThemeChanged_true_sets_ui_theme_to_dark()
-    {
-        var state = new ThemeState { UiTheme = ThemeManager.Light, IsDarkTheme = true };
-
-        SettingsThemeWorkflow.SyncIsDarkThemeChanged(
-            isDarkTheme: true,
-            Ui(state));
-
-        Assert.Equal(ThemeManager.Dark, state.UiTheme);
-        Assert.True(state.IsDarkTheme);
-        Assert.False(state.IsSyncing);
-    }
-
-    [Fact]
-    public void SyncUiThemeChanged_while_syncing_does_nothing()
-    {
-        var state = new ThemeState
-        {
-            UiTheme = ThemeManager.Light,
-            IsDarkTheme = false,
-            IsSyncing = true
-        };
-
-        SettingsThemeWorkflow.SyncUiThemeChanged(
-            ThemeManager.Dark,
-            Ui(state));
-
-        Assert.Equal(ThemeManager.Light, state.UiTheme);
-        Assert.False(state.IsDarkTheme);
-        Assert.True(state.IsSyncing);
-    }
-
-    [Fact]
     public void ApplyTheme_normalizes_saves_and_applies_theme()
     {
         var settings = new AppSettings { UiTheme = ThemeManager.Light };
@@ -83,19 +22,57 @@ public sealed class SettingsThemeWorkflowTests
         Assert.Equal(["save", "apply:Dark"], calls);
     }
 
-    private static SettingsThemeWorkflowUi Ui(ThemeState state)
-        => new(
-            GetIsSyncing: () => state.IsSyncing,
-            SetIsSyncing: value => state.IsSyncing = value,
-            GetUiTheme: () => state.UiTheme,
-            SetUiTheme: value => state.UiTheme = value,
-            GetIsDarkTheme: () => state.IsDarkTheme,
-            SetIsDarkTheme: value => state.IsDarkTheme = value);
-
-    private sealed class ThemeState
+    [Fact]
+    public void ApplyTheme_invalid_value_normalizes_to_light()
     {
-        public string UiTheme { get; set; } = ThemeManager.Light;
-        public bool IsDarkTheme { get; set; }
-        public bool IsSyncing { get; set; }
+        var settings = new AppSettings { UiTheme = ThemeManager.Dark };
+        var calls = new List<string>();
+
+        SettingsThemeWorkflow.ApplyTheme(
+            settings,
+            "Sepia",
+            saveSettingsImmediate: () => calls.Add("save"),
+            applyToResources: theme => calls.Add("apply:" + theme));
+
+        Assert.Equal(ThemeManager.Light, settings.UiTheme);
+        Assert.Equal(["save", "apply:Light"], calls);
+    }
+
+    [Fact]
+    public void ApplyTheme_system_saves_the_preference_but_applies_the_resolved_theme()
+    {
+        // "System" ist keine ladbare Ressource - gespeichert wird trotzdem "System" (Aufgabe 13:
+        // die Wahl "Wie Windows" muss den Neustart der App ueberleben), angewendet wird das
+        // aufgeloeste Theme. Fix-Runde 1, MINOR 7: ein injizierter Leser statt des echten
+        // Registry-Zugriffs macht das aufgeloeste Theme deterministisch pruefbar.
+        var settings = new AppSettings { UiTheme = ThemeManager.Dark };
+        var calls = new List<string>();
+
+        SettingsThemeWorkflow.ApplyTheme(
+            settings,
+            ThemeManager.System,
+            saveSettingsImmediate: () => calls.Add("save"),
+            applyToResources: theme => calls.Add("apply:" + theme),
+            readWindowsAppsUseLightTheme: () => 0); // AppsUseLightTheme=0 -> Dunkel
+
+        Assert.Equal(ThemeManager.System, settings.UiTheme);
+        Assert.Equal(["save", "apply:Dark"], calls);
+    }
+
+    [Fact]
+    public void ApplyTheme_system_resolves_to_light_when_the_registry_says_so()
+    {
+        var settings = new AppSettings { UiTheme = ThemeManager.Light };
+        var calls = new List<string>();
+
+        SettingsThemeWorkflow.ApplyTheme(
+            settings,
+            ThemeManager.System,
+            saveSettingsImmediate: () => calls.Add("save"),
+            applyToResources: theme => calls.Add("apply:" + theme),
+            readWindowsAppsUseLightTheme: () => 1); // AppsUseLightTheme=1 -> Hell
+
+        Assert.Equal(ThemeManager.System, settings.UiTheme);
+        Assert.Equal(["save", "apply:Light"], calls);
     }
 }

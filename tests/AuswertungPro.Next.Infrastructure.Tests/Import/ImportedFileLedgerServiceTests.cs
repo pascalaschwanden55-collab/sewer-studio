@@ -80,7 +80,7 @@ public sealed class ImportedFileLedgerServiceTests : IDisposable
         Assert.False(ergebnis.RolledBack);
         Assert.Equal(0, ergebnis.DeletedFiles);
         Assert.True(File.Exists(Voll("Importdateien\\XTF\\neu.xtf")));
-        Assert.Contains(ergebnis.Messages, m => m.Contains("nichts geloescht", StringComparison.Ordinal));
+        Assert.Contains(ergebnis.Messages, m => m.Contains("nichts gelöscht", StringComparison.Ordinal));
     }
 
     [Fact]

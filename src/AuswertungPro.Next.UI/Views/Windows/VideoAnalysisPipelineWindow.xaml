@@ -5,7 +5,7 @@
         xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Windows"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
-        Title="SewerStudio — Pipeline Analysis" Height="860" Width="1320"
+        Title="SewerStudio — Videoanalyse" Height="860" Width="1320"
         WindowStartupLocation="CenterOwner"
         WindowState="Normal"
         ui:Fluent.Backdrop="Mica"
@@ -30,14 +30,14 @@
             <Setter Property="FontSize"         Value="{DynamicResource TextXS}"/>
             <Setter Property="FontWeight"       Value="Bold"/>
             <Setter Property="Foreground"       Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="FontFamily"       Value="Consolas"/>
+            <Setter Property="FontFamily"       Value="{DynamicResource FontMono}"/>
             <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
         </Style>
 
         <Style x:Key="ValueLarge" TargetType="TextBlock">
             <Setter Property="FontSize"   Value="{DynamicResource TextTitle}"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontFamily" Value="{DynamicResource FontMono}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         </Style>
 
@@ -50,50 +50,6 @@
             <Setter Property="Padding"         Value="14,10"/>
         </Style>
 
-        <!-- Primär-Button -->
-        <Style x:Key="BtnPrimary" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="Foreground"   Value="White"/>
-            <Setter Property="FontWeight"   Value="SemiBold"/>
-            <Setter Property="FontSize"     Value="{DynamicResource TextM}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding"      Value="20,9"/>
-            <Setter Property="Cursor"       Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="{DynamicResource RadiusM}" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Abbrechen-Button -->
-        <Style x:Key="BtnCancel" TargetType="Button">
-            <Setter Property="Background"   Value="{DynamicResource HoverBrush}"/>
-            <Setter Property="Foreground"   Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="FontSize"     Value="{DynamicResource TextM}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush"  Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="Padding"      Value="20,9"/>
-            <Setter Property="Cursor"       Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="{DynamicResource RadiusM}" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <!-- Detection ListBox -->
         <Style x:Key="DetectionItem" TargetType="ListBoxItem">
             <Setter Property="Background"      Value="Transparent"/>
@@ -104,27 +60,6 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
                         <ContentPresenter/>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- ProgressBar -->
-        <Style x:Key="ThinProgress" TargetType="ProgressBar">
-            <Setter Property="Height"          Value="3"/>
-            <Setter Property="Background"      Value="{DynamicResource SurfaceSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ProgressBar">
-                        <Border CornerRadius="{DynamicResource RadiusS}" Background="{TemplateBinding Background}">
-                            <Border x:Name="PART_Track">
-                                <Border x:Name="PART_Indicator"
-                                        CornerRadius="{DynamicResource RadiusS}"
-                                        HorizontalAlignment="Left"
-                                        Background="{DynamicResource AccentBrush}"/>
-                            </Border>
-                        </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -184,9 +119,9 @@
                             Background="{DynamicResource AccentBrush}"/>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="S E W E R  S T U D I O" FontWeight="Bold" FontSize="{DynamicResource TextXS}"
-                                   FontFamily="Consolas" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,1"/>
+                                   FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,1"/>
                         <TextBlock Text="PIPELINE ANALYSIS" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
-                                   FontFamily="Consolas" Foreground="{DynamicResource MutedBrush}"/>
+                                   FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource MutedBrush}"/>
                     </StackPanel>
                 </StackPanel>
 
@@ -195,10 +130,10 @@
                             VerticalAlignment="Center" HorizontalAlignment="Center">
                     <TextBlock Text="{Binding PhaseLabel}"
                                FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
-                               FontFamily="Consolas" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                    <TextBlock Text="  //  " Foreground="{DynamicResource BorderBrush}" FontSize="{DynamicResource TextM}" FontFamily="Consolas"/>
+                               FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBlock Text="  //  " Foreground="{DynamicResource BorderBrush}" FontSize="{DynamicResource TextM}" FontFamily="{DynamicResource FontMono}"/>
                     <TextBlock Text="{Binding StatusText}"
-                               FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="Consolas"
+                               FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="{DynamicResource FontMono}"
                                MaxWidth="400" TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -212,10 +147,10 @@
                             Visibility="{Binding IsMultiModelActive,
                                 Converter={StaticResource BoolToVis}}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="MM" FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
+                            <TextBlock Text="MM" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}"
                                        FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
+                            <TextBlock FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}"
                                        Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center">
                                 <Run Text="Skip "/>
                                 <Run Text="{Binding YoloSkippedFrames}" FontWeight="Bold"
@@ -234,7 +169,7 @@
                                                      IsActive="{Binding VideoPhaseActive}"
                                                      Visibility="{Binding VideoPhaseActive,
                                                          Converter={StaticResource BoolToVis}}"/>
-                            <TextBlock FontFamily="Consolas" FontSize="{DynamicResource TextS}"
+                            <TextBlock FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextS}"
                                        Foreground="{DynamicResource AccentBrush}">
                                 <Run Text="Meter "/>
                                 <Run Text="{Binding CurrentMeter}" FontWeight="Bold"/>
@@ -303,7 +238,7 @@
                                                Text="{Binding PillarDetectionCount}"
                                                Foreground="{DynamicResource AccentBrush}"/>
                                     <ProgressBar Grid.Row="6"
-                                                 Style="{StaticResource ThinProgress}"
+                                                 Style="{StaticResource ProgressBarThin}"
                                                  Value="{Binding VideoProgressPct}"
                                                  Maximum="100"/>
                                     <TextBlock Grid.Row="8" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}">
@@ -338,7 +273,7 @@
                                                Text="{Binding PillarQuantCount}"
                                                Foreground="{DynamicResource SuccessBrush}"/>
                                     <ProgressBar Grid.Row="6"
-                                                 Style="{StaticResource ThinProgress}"
+                                                 Style="{StaticResource ProgressBarThin}"
                                                  Value="{Binding MappingProgressPct}"
                                                  Maximum="100"/>
                                     <TextBlock Grid.Row="8" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}">
@@ -373,7 +308,7 @@
                                                Text="{Binding PillarLocalCount}"
                                                Foreground="{DynamicResource WarningBrush}"/>
                                     <ProgressBar Grid.Row="6"
-                                                 Style="{StaticResource ThinProgress}">
+                                                 Style="{StaticResource ProgressBarThin}">
                                         <ProgressBar.Value>
                                             <Binding Path="IsDone">
                                                 <Binding.Converter>
@@ -412,7 +347,7 @@
                                           BorderThickness="1"
                                           FontSize="{DynamicResource TextXS}"
                                           FontWeight="SemiBold"
-                                          FontFamily="Consolas">
+                                          FontFamily="{DynamicResource FontMono}">
                                     <ComboBoxItem Content="x1" Tag="1" Foreground="{DynamicResource TextBrush}"/>
                                     <ComboBoxItem Content="x2" Tag="2" Foreground="{DynamicResource TextBrush}"/>
                                     <ComboBoxItem Content="x4" Tag="4" Foreground="{DynamicResource TextBrush}"/>
@@ -422,12 +357,22 @@
                                         Margin="8,0,0,0"
                                         FontSize="{DynamicResource TextXS}"
                                         FontWeight="SemiBold"
-                                        Foreground="White"
+                                        Foreground="{DynamicResource OnAccentBrush}"
                                         Padding="12,2"
                                         Cursor="Hand"
                                         Click="Start_Click">
+                                    <!-- Fix-Runde 4 (Aufgabe 13): Weiss -> OnAccentBrush (Flaeche AccentBrush, unter
+                                         Hochkontrast Highlight). Der TextBlock-Durchreich-Stil steht jetzt am Knopf
+                                         (Button.Resources): der eigene "Start"-TextBlock sucht seinen impliziten Stil
+                                         im logischen Baum und erreichte den Block im ContentPresenter nicht (zur Laufzeit
+                                         belegt - er war TextBrush statt Knopfschrift). -->
+                                    <Button.Resources>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                            <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                        </Style>
+                                    </Button.Resources>
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}" Margin="0,0,5,0"/>
+                                        <ui:FluentIcon Glyph="&#xE768;" FontSize="{DynamicResource TextXS}" Margin="0,0,5,0"/>
                                         <TextBlock Text="Start"/>
                                     </StackPanel>
                                     <Button.Template>
@@ -436,7 +381,17 @@
                                                     Padding="{TemplateBinding Padding}"
                                                     Background="{DynamicResource AccentBrush}">
                                                 <ContentPresenter HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center"/>
+                                                                  VerticalAlignment="Center">
+                                                    <!-- Das Glyph im StackPanel-Inhalt ist ein ui:FluentIcon (TextBlock-Unterklasse); der
+                                                         implizite TextBlock-Stil des Theme setzt Foreground selbst und schlaegt damit die
+                                                         Vererbung vom Knopf (dieselbe Falle wie bei den vier grossen Knopfvorlagen, siehe
+                                                         Nova-Fixwelle B7) — Symbol und "Start"-Text liefen dadurch in zwei Farben auseinander. -->
+                                                    <ContentPresenter.Resources>
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                            <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                                        </Style>
+                                                    </ContentPresenter.Resources>
+                                                </ContentPresenter>
                                             </Border>
                                         </ControlTemplate>
                                     </Button.Template>
@@ -457,14 +412,14 @@
                                     <Run Text="{Binding FramesAnalyzed}"/>/<Run Text="{Binding TotalFrames}"/>
                                 </TextBlock>
                                 <!-- Restzeit + Durchsatz (nach ETA-Warmup) -->
-                                <TextBlock Text="{Binding EtaText}" FontSize="{DynamicResource TextXS}" FontFamily="Consolas"
+                                <TextBlock Text="{Binding EtaText}" FontSize="{DynamicResource TextXS}" FontFamily="{DynamicResource FontMono}"
                                            Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"
                                            Margin="10,0,0,0"/>
                             </StackPanel>
                             <!-- Verbindungspfeil: faerbt sich, sobald die Phase dahinter arbeitet — der Fluss zeigt zur Arbeit. -->
-                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}"
+                            <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextXS}"
                                        VerticalAlignment="Center" Margin="0,0,16,0">
-                                <TextBlock.Style>
+                                <ui:FluentIcon.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
                                         <Style.Triggers>
@@ -473,8 +428,8 @@
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                                </ui:FluentIcon.Style>
+                            </ui:FluentIcon>
                             <!-- Code-Mapping -->
                             <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
                                 <Grid Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center">
@@ -503,9 +458,9 @@
                                     <Run Text="{Binding DetectionCount}"/>
                                 </TextBlock>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}"
+                            <ui:FluentIcon Glyph="&#xE72A;" FontSize="{DynamicResource TextXS}"
                                        VerticalAlignment="Center" Margin="0,0,16,0">
-                                <TextBlock.Style>
+                                <ui:FluentIcon.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
                                         <Style.Triggers>
@@ -514,8 +469,8 @@
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                                </ui:FluentIcon.Style>
+                            </ui:FluentIcon>
                             <!-- Protokoll -->
                             <StackPanel Orientation="Horizontal">
                                 <Grid Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center">
@@ -607,30 +562,14 @@
                                        VerticalAlignment="Center"/>
                             <Button DockPanel.Dock="Right"
                                     x:Name="UndockButton"
-                                    FontSize="{DynamicResource TextXS}"
-                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                    Background="{DynamicResource HoverBrush}"
-                                    BorderBrush="{DynamicResource BorderBrush}"
-                                    BorderThickness="1"
+                                    Style="{StaticResource ToolbarButton}"
                                     Padding="8,2"
-                                    Cursor="Hand"
                                     HorizontalAlignment="Right"
                                     Click="Undock_Click">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}" Margin="0,0,5,0"/>
+                                    <ui:FluentIcon Glyph="&#xE8A7;" FontSize="{DynamicResource TextXS}" Margin="0,0,5,0"/>
                                     <TextBlock Text="Abdocken"/>
                                 </StackPanel>
-                                <Button.Template>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}"
-                                                BorderBrush="{TemplateBinding BorderBrush}"
-                                                BorderThickness="{TemplateBinding BorderThickness}"
-                                                CornerRadius="{DynamicResource RadiusS}" Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter HorizontalAlignment="Center"
-                                                              VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Button.Template>
                             </Button>
                         </DockPanel>
 
@@ -839,7 +778,7 @@
                                                     CornerRadius="{DynamicResource RadiusS}" Padding="5,1"
                                                     Background="{DynamicResource AccentSubtleBrush}">
                                                 <TextBlock Text="{Binding Code}"
-                                                           FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
+                                                           FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}"
                                                            FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                                             </Border>
                                         </DockPanel>
@@ -865,15 +804,13 @@
                                             </Grid.ColumnDefinitions>
 
                                             <TextBlock Grid.Column="0"
-                                                       FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
+                                                       FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                                        Text="{Binding MeterRange}"/>
 
                                             <!-- Konfidenz-Bar -->
                                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                <ProgressBar Width="44" Height="3"
-                                                             Background="{DynamicResource SurfaceSubtleBrush}"
-                                                             BorderThickness="0"
+                                                <ProgressBar Style="{StaticResource ProgressBarThin}" Width="44"
                                                              Maximum="1"
                                                              Value="{Binding Confidence}">
                                                     <ProgressBar.Foreground>
@@ -881,7 +818,7 @@
                                                     </ProgressBar.Foreground>
                                                 </ProgressBar>
                                                 <TextBlock Margin="5,0,0,0"
-                                                           FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
+                                                           FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}"
                                                            FontWeight="Bold"
                                                            Text="{Binding ConfidencePct}">
                                                     <TextBlock.Foreground>
@@ -921,19 +858,20 @@
             <Grid Margin="16,0">
                 <!-- Stats links -->
                 <TextBlock VerticalAlignment="Center" FontSize="{DynamicResource TextXS}"
-                           Foreground="{DynamicResource MutedBrush}" FontFamily="Consolas"
+                           Foreground="{DynamicResource MutedBrush}" FontFamily="{DynamicResource FontMono}"
                            Text="{Binding StatsText}"/>
 
                 <!-- Buttons rechts -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                             VerticalAlignment="Center" Margin="0,0,0,0">
-                    <Button Style="{StaticResource BtnCancel}"
-                            Content="Abbrechen" Margin="0,0,8,0"
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="Abbrechen" Margin="0,0,8,0" IsCancel="True"
                             Click="Cancel_Click"/>
                     <Button x:Name="AcceptButton"
-                            Style="{StaticResource BtnPrimary}"
+                            Style="{StaticResource PrimaryButton}"
                             Content="Protokoll übernehmen"
                             IsEnabled="{Binding IsDone}"
+                            IsDefault="True"
                             Click="Accept_Click"/>
                 </StackPanel>
             </Grid>

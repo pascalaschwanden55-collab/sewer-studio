@@ -59,8 +59,14 @@ public sealed class DataPageLearningReadinessPresenterTests
         Assert.Equal("Grün", text);
     }
 
+    /// <summary>
+    /// Aufgabe 17 (Optikanalyse 28.09.2026): Ohne einen einzigen gelernten Fall ist das Band
+    /// nicht sichtbar — "Rot · Lernbasis: 0 Fälle" stand vorher dauerhaft über der Werkzeugleiste
+    /// jedes frischen Projekts, ohne etwas Handlungsleitendes zu sagen. Farbe/Text/Info bleiben
+    /// unveraendert (reine Darstellungsentscheidung, keine Aenderung der Ampel-Schwellenwerte).
+    /// </summary>
     [Fact]
-    public void Build_liefert_null_fall_text_und_rot()
+    public void Build_liefert_null_fall_text_und_rot_aber_unsichtbar()
     {
         var stats = new MeasureLearningStats(0, 0, 0, false, null, null, "");
 
@@ -69,7 +75,7 @@ public sealed class DataPageLearningReadinessPresenterTests
         Assert.Equal("Lernbasis: 0 Fälle", presentation.Info);
         Assert.Equal("#C62828", presentation.Color);
         Assert.Equal("Rot", presentation.Text);
-        Assert.True(presentation.IsVisible);
+        Assert.False(presentation.IsVisible);
     }
 
     [Fact]

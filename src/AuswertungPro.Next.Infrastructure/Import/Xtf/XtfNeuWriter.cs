@@ -86,7 +86,7 @@ public static class XtfNeuWriter
             return new XtfNeuErgebnis(false, "Es wurde kein Zielpfad angegeben.", null);
 
         if (plan.Leer)
-            return new XtfNeuErgebnis(false, "Das Projekt enthaelt nichts zum Exportieren.", null);
+            return new XtfNeuErgebnis(false, "Das Projekt enthält nichts zum Exportieren.", null);
 
         if (File.Exists(ziel))
             return new XtfNeuErgebnis(false, $"Die Datei \"{ziel}\" gibt es bereits.", null);

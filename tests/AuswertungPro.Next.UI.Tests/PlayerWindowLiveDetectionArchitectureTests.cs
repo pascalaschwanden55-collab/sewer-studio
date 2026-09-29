@@ -492,7 +492,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var factoryPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionDialogServiceFactory.cs");
         var startupDisplayWorkflowPath = Path.Combine(uiRoot, "Ai", "Live", "LiveDetectionStartupDisplayWorkflow.cs");
 
-        Assert.True(File.Exists(servicePath), "LiveDetection-Dialogtexte muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(servicePath), "LiveDetection-Dialogtexte müssen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "LiveDetection-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(startupDisplayWorkflowPath), "LiveDetection-Startup-Dialogverdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -548,7 +548,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionOverlayController.cs");
 
         Assert.True(File.Exists(overlayPath), "LiveDetection-Overlay-Rendering soll in ein eigenes Overlay-Partial.");
-        Assert.True(File.Exists(controllerPath), "LiveDetection-Overlay-Rendering soll ueber einen Player-Controller laufen.");
+        Assert.True(File.Exists(controllerPath), "LiveDetection-Overlay-Rendering soll über einen Player-Controller laufen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var overlay = File.ReadAllText(overlayPath);

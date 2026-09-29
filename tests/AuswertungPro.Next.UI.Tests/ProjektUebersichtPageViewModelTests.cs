@@ -8,12 +8,16 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class ProjektUebersichtPageViewModelTests
 {
+    /// <summary>
+    /// Aufgabe 17: die dringendste Klasse steht zuerst (Z0 -> Z4), damit die Legende mit der
+    /// KPI-Karte "Dringend (Z0/Z1)" gleich darueber uebereinstimmt statt mit Z4 zu beginnen.
+    /// </summary>
     [Fact]
-    public void Zustandslegende_listet_Z4_bis_Z0_und_nicht_berechnet()
+    public void Zustandslegende_listet_Z0_bis_Z4_und_nicht_berechnet()
     {
         var zeilen = ProjektUebersichtPageViewModel.BaueZustandLegende(new Dictionary<string, int> { ["4"] = 4, ["3"] = 3, ["2"] = 3, ["1"] = 2, ["0"] = 1, ["ohne"] = 1 });
-        Assert.Equal(new[] { "Z4 · kein Handlungsbedarf", "Z3 · langfristig", "Z2 · mittelfristig", "Z1 · kurzfristig", "Z0 · sofort", "nicht berechnet" }, zeilen.Select(z => z.Label).ToArray());
-        Assert.Equal(new[] { 4, 3, 3, 2, 1, 1 }, zeilen.Select(z => z.Anzahl).ToArray());
+        Assert.Equal(new[] { "Z0 · sofort", "Z1 · kurzfristig", "Z2 · mittelfristig", "Z3 · langfristig", "Z4 · kein Handlungsbedarf", "nicht berechnet" }, zeilen.Select(z => z.Label).ToArray());
+        Assert.Equal(new[] { 1, 2, 3, 3, 4, 1 }, zeilen.Select(z => z.Anzahl).ToArray());
     }
 
     /// <summary>

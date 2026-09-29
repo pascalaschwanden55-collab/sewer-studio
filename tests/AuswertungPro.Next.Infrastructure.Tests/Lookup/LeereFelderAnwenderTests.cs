@@ -143,7 +143,7 @@ public sealed class LeereFelderAnwenderTests
         Assert.Contains("2 leere Felder auf 2 Haltungen", bericht, StringComparison.Ordinal);
         Assert.Contains("2x  Rohrmaterial", bericht, StringComparison.Ordinal);
         Assert.Contains(@"D:\QGIS\Leitungen.gpkg", bericht, StringComparison.Ordinal);
-        Assert.Contains("nie ueberschrieben", bericht, StringComparison.Ordinal);
+        Assert.Contains("nie überschrieben", bericht, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -158,7 +158,7 @@ public sealed class LeereFelderAnwenderTests
         var bericht = LeereFelderBericht.Schreibe(plan, "x.gpkg");
 
         Assert.Contains("1 mit mehrfach vorkommendem Namen", bericht, StringComparison.Ordinal);
-        Assert.Contains("nichts zu ergaenzen", bericht, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nichts zu ergänzen", bericht, StringComparison.OrdinalIgnoreCase);
     }
 
     // Am Schacht heissen die Felder nach der Excel-Kopfzeile: Der Eigentuemer steht

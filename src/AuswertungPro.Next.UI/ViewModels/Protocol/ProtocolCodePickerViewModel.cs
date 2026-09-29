@@ -83,7 +83,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
         {
             if (!value.IsSelectable)
             {
-                ValidationMessage = "Dieser Code ist im Katalog sichtbar, aber nicht normal auswaehlbar.";
+                ValidationMessage = "Dieser Code ist im Katalog sichtbar, aber nicht normal auswählbar.";
                 return;
             }
 
@@ -260,25 +260,25 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
 
         if (SelectedCode is null)
         {
-            ValidationMessage = "Bitte einen Code auswaehlen.";
+            ValidationMessage = "Bitte einen Code auswählen.";
             return false;
         }
 
         if (SelectedCode.IsObservedExtension || !SelectedCode.IsSelectable)
         {
-            ValidationMessage = "Dieser Code ist nicht auswaehlbar.";
+            ValidationMessage = "Dieser Code ist nicht auswählbar.";
             return false;
         }
 
         if (!AppProtocol.ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterStartText, out var meterStart))
         {
-            ValidationMessage = "MeterStart ist ungueltig.";
+            ValidationMessage = "MeterStart ist ungültig.";
             return false;
         }
 
         if (!AppProtocol.ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterEndText, out var meterEnd))
         {
-            ValidationMessage = "MeterEnd ist ungueltig.";
+            ValidationMessage = "MeterEnd ist ungültig.";
             return false;
         }
         if (SelectedCode.RequiresRange && (!meterStart.HasValue || !meterEnd.HasValue))
@@ -289,7 +289,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
 
         if (!AppProtocol.ProtocolEntryInputNormalizer.TryParseOptionalInt(CountText, out var count))
         {
-            ValidationMessage = "Anzahl ist ungueltig.";
+            ValidationMessage = "Anzahl ist ungültig.";
             return false;
         }
 

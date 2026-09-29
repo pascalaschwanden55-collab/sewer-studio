@@ -82,7 +82,7 @@ public sealed class TrainingKnowledgeBaseCheckWorkflowTests
                 Log: value => calls.Add($"log:{value}"),
                 CancellationToken.None));
 
-        Assert.Contains("status:KB-Prüfung fehlgeschlagen: kaputt", calls);
+        Assert.Contains("status:KB-Prüfung fehlgeschlagen: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.", calls);
         Assert.Contains("log:KB-Prüfung FEHLER: kaputt", calls);
         Assert.DoesNotContain("refresh", calls);
         Assert.Equal("busy:False", calls[^1]);

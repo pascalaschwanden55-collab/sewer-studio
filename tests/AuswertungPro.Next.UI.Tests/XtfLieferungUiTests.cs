@@ -40,7 +40,7 @@ public sealed class XtfLieferungUiTests
         var store = new Ablage { Speicherfehler = true }; var vm = new XtfLieferungViewModel(store, new Dialoge());
         await vm.OeffnenCommand.ExecuteAsync(null); vm.Auswahl = vm.Zeilen[0]; await vm.AuswahlLaden;
         vm.Felder[0].Wert = "Eingabe"; await vm.SpeichernCommand.ExecuteAsync(null);
-        Assert.True(vm.HatEntwurf); Assert.Contains("zwischenzeitlich", vm.Status);
+        Assert.True(vm.HatEntwurf); Assert.Contains("Vorgang nicht abgeschlossen", vm.Status); Assert.Contains("Programmlog", vm.Status); // 10c2: UserError statt Rohtext der Test-Ausnahme
         vm.VerwerfenCommand.Execute(null); Assert.False(vm.HatEntwurf); Assert.Equal("Originaltext", vm.Felder[0].Wert);
     }
 
@@ -135,8 +135,8 @@ public sealed class XtfLieferungUiTests
         public void Info(string m, string title = "Hinweis") { }
         public void Warn(string m, string title = "Warnung") { }
         public void Error(string m, string title = "Fehler") { }
-        public bool Confirm(string m, string title = "Bestaetigung") => false;
-        public bool ConfirmWarn(string m, string title = "Bestaetigung", bool defaultNo = true) => false;
-        public DialogConfirm ConfirmCancel(string m, string title = "Bestaetigung") => DialogConfirm.Cancel;
+        public bool Confirm(string m, string title = "Bestätigung") => false;
+        public bool ConfirmWarn(string m, string title = "Bestätigung", bool defaultNo = true) => false;
+        public DialogConfirm ConfirmCancel(string m, string title = "Bestätigung") => DialogConfirm.Cancel;
     }
 }

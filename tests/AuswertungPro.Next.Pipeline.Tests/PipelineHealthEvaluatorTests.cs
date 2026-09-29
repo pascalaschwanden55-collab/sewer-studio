@@ -90,7 +90,7 @@ public class PipelineHealthEvaluatorTests
         Assert.Equal(false, s.DetectorQualified);
         Assert.Contains("DINO + SAM", s.Summary);
         Assert.Contains("BBox-Kollaps", s.Detail);
-        Assert.Contains("geprueft", s.Detail);
+        Assert.Contains("geprüft", s.Detail);
     }
 
     [Fact]
@@ -102,6 +102,6 @@ public class PipelineHealthEvaluatorTests
         Assert.True(s.MultiModelActive);
         Assert.Null(s.DetectorQualified);
         Assert.Contains("fehlt", s.Detail);
-        Assert.Contains("geprueft", s.Detail);
+        Assert.Contains("geprüft", s.Detail);
     }
 }

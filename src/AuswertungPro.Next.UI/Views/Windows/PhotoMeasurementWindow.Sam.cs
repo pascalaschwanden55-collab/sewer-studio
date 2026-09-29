@@ -78,14 +78,14 @@ public partial class PhotoMeasurementWindow
             _visiblePhotoSegmentation = null;
             geometry.SamMask = null;
             TxtStatus.Text = rendered.ErrorMessage
-                             ?? "Die SAM-Maske kann nicht sichtbar geprueft werden.";
+                             ?? "Die SAM-Maske kann nicht sichtbar geprüft werden.";
             BtnOk.IsEnabled = false;
             return;
         }
 
         BtnOk.IsEnabled = true;
         TxtStatus.Text =
-            "SAM-Maske ist sichtbar. OK = Maske fuer diese Beobachtung uebernehmen.";
+            "SAM-Maske ist sichtbar. OK = Maske für diese Beobachtung übernehmen.";
     }
 
     private bool CanCompletePhotoAnnotation()

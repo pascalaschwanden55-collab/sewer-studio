@@ -464,7 +464,7 @@ public sealed class FullBackupServiceTests : IDisposable
         var result = await service.RunAsync(targetParent);
 
         Assert.False(result.Success);
-        Assert.Contains("Verknuepfung", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verknüpfung", result.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(Directory.EnumerateFileSystemEntries(foreign));
     }
 

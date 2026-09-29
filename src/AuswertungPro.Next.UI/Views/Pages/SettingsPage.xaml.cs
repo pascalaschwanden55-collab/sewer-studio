@@ -1,5 +1,7 @@
+using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.UI.Settings;
+using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -11,6 +13,15 @@ public partial class SettingsPage : UserControl
     {
         InitializeComponent();
     }
+
+    /// <summary>Optikanalyse 28.09.2026, Aufgabe 6: Der Reiter «Hilfe» verweist nur noch auf das
+    /// eigene, nicht-modale Handbuchfenster (dieselbe Einstiegsstelle wie F1/Hilfe-Menü).</summary>
+    private void HandbuchOeffnen_Click(object sender, RoutedEventArgs e)
+        => HandbuchWindow.ZeigeAn(owner: Window.GetWindow(this));
+
+    /// <summary>Aufgabe 6: derselbe Weg wie Strg+F1/Hilfe-Menü.</summary>
+    private void TastenkuerzelAnzeigen_Click(object sender, RoutedEventArgs e)
+        => TastenkuerzelWindow.ZeigeAn(owner: Window.GetWindow(this));
 
     private void SucheBox_TextChanged(object sender, TextChangedEventArgs e)
     {

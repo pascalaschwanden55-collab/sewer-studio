@@ -52,9 +52,9 @@ public sealed class DataPageDropdownOptionGroupFactoryTests
             new[]
             {
                 "Sanieren-Liste",
-                "Eigentuemer-Liste",
-                "Pruefungsresultat-Liste",
-                "Referenzpruefung-Liste",
+                "Eigentümer-Liste",
+                "Prüfungsresultat-Liste",
+                "Referenzprüfung-Liste",
                 "Sanierungsmassnahmen-Liste"
             },
             previews.Select(x => x.Title));
@@ -92,7 +92,7 @@ public sealed class DataPageDropdownOptionGroupFactoryTests
         => new(
             new ObservableCollection<string> { "Sanieren alt" },
             new ObservableCollection<string> { "Eigentuemer alt" },
-            new ObservableCollection<string> { "Pruefung alt" },
+            new ObservableCollection<string> { "Prüfung alt" },
             new ObservableCollection<string> { "Referenz alt" },
             new ObservableCollection<string> { "Massnahme alt" },
             new ObservableCollection<string> { "Material alt" });

@@ -109,7 +109,8 @@ public sealed class ShaftRenameFileService : IShaftRenameService
                 if (!string.Equals(record.GetFieldValue(pair.Key), pair.Value, StringComparison.Ordinal))
                     record.Fields[pair.Key] = pair.Value;
             }
-            return ShaftRenameResult.Fail(rollbackError is null ? ex.Message : $"{ex.Message} Rücknahme fehlgeschlagen: {rollbackError}");
+            var grund = UserError.DescribeAndReport(ex, "Schacht umbenennen");
+            return ShaftRenameResult.Fail(rollbackError is null ? grund : $"{grund} Rücknahme fehlgeschlagen: {rollbackError}");
         }
     }
 
@@ -225,7 +226,7 @@ public sealed class ShaftRenameFileService : IShaftRenameService
         {
             var move = moves[i];
             try { MoveChecked(move.Destination, move.Source, move.IsDirectory, projectFile); }
-            catch (Exception ex) { errors.Add($"{move.Destination}: {ex.Message}"); }
+            catch (Exception ex) { errors.Add($"{move.Destination}: {UserError.DescribeAndReport(ex, "Schachtordner zurücknehmen")}"); }
         }
         return errors.Count == 0 ? null : string.Join(" | ", errors);
     }

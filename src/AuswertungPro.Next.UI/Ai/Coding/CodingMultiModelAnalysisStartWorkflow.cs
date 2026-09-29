@@ -73,7 +73,7 @@ public static class CodingMultiModelAnalysisStartWorkflow
         if (!actions.IsFrameReady())
         {
             actions.SetCodingAiState(
-                "Dateneinblendung erkannt - uebersprungen",
+                "Dateneinblendung erkannt - übersprungen",
                 PlayerStatusColors.Muted,
                 "Warte auf sauberes Videobild...",
                 false);

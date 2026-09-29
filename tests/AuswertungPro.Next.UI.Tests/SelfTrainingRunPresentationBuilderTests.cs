@@ -73,11 +73,11 @@ public sealed class SelfTrainingRunPresentationBuilderTests
             {
                 "--- Selbsttraining abgeschlossen ---",
                 "  Dauer: 03:05",
-                "  Eintraege: 8 gesamt",
+                "  Einträge: 8 gesamt",
                 "  ExactMatch: 3 | PartialMatch: 2",
                 "  Mismatch: 1 | NoFindings: 2",
                 "  Samples erzeugt: 4",
-                "  Technik: B (Licht=Gut, Schaerfe=Mittel)"
+                "  Technik: B (Licht=Gut, Schärfe=Mittel)"
             },
             presentation.LogLines);
         Assert.Equal("Fertig! 3/8 ExactMatch, 4 Samples in 03:05", presentation.StatusText);
@@ -87,7 +87,7 @@ public sealed class SelfTrainingRunPresentationBuilderTests
     public void BuildFewShotExportHint_only_returns_hint_when_exact_matches_exist()
     {
         Assert.Equal(
-            "2 ExactMatch-Samples erzeugt. Fuer Few-Shot-Export: Tab 'Samples' \u2192 'Export Approved'",
+            "2 ExactMatch-Samples erzeugt. Für Few-Shot-Export: Tab 'Samples' \u2192 'Export Approved'",
             SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(Result(exact: 2)));
         Assert.Null(SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(Result(exact: 0)));
     }

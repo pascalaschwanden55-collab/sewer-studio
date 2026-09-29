@@ -89,7 +89,7 @@ public sealed class GeoUrHttpGateway : IDisposable
         catch (Exception ex)
         {
             throw new GeoUrRequestFailedException(
-                "Die Abfrage an den Kartendienst ist fehlgeschlagen: " + ex.Message, ex);
+                "Die Abfrage an den Kartendienst ist fehlgeschlagen.", ex);
         }
         finally
         {

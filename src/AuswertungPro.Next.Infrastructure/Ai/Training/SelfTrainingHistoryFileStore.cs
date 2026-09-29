@@ -136,7 +136,7 @@ public sealed class SelfTrainingHistoryFileStore : ISelfTrainingHistoryStore
                     if (File.Exists(tempPath))
                         File.Delete(tempPath);
                 },
-                "Selbsttraining-Verlauf: Temp-Datei nach Speicherfehler loeschen");
+                "Selbsttraining-Verlauf: Temp-Datei nach Speicherfehler löschen");
             throw;
         }
     }

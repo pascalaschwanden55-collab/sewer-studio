@@ -54,6 +54,6 @@ public sealed class CodingProtocolTrainingSnapshotStore
                 if (_fileExists(snapshotPath))
                     _deleteFile(snapshotPath);
             },
-            "Foto/Snapshot: Temp loeschen");
+            "Foto/Snapshot: Temp löschen");
     }
 }

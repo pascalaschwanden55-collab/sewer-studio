@@ -29,7 +29,7 @@ public sealed class SchachtFeldnamenReparaturLaufTests
 
         var bericht = SchachtFeldnamenReparaturLauf.Bericht(plan);
 
-        Assert.Contains("2 doppelte Schreibweisen auf 1 Schaechten", bericht, StringComparison.Ordinal);
+        Assert.Contains("2 doppelte Schreibweisen auf 1 Schächten", bericht, StringComparison.Ordinal);
         Assert.Contains("Primäre Schäden", bericht, StringComparison.Ordinal);
         Assert.Contains("gehen dabei nicht verloren", bericht, StringComparison.Ordinal);
     }
@@ -69,7 +69,7 @@ public sealed class SchachtFeldnamenReparaturLaufTests
         var plan = SchachtFeldnamenReparaturLauf.Plane(new[] { Sauber("1") });
 
         Assert.True(plan.OhneAenderung);
-        Assert.Contains("nichts zusammenzufuehren", SchachtFeldnamenReparaturLauf.Bericht(plan),
+        Assert.Contains("nichts zusammenzuführen", SchachtFeldnamenReparaturLauf.Bericht(plan),
             StringComparison.Ordinal);
     }
 

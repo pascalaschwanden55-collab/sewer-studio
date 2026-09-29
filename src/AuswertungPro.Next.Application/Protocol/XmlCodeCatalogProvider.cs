@@ -94,7 +94,7 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
                 errors.Add($"Duplikat-Code '{codeDef.Code}'.");
 
             if (string.IsNullOrWhiteSpace(codeDef.Title))
-                errors.Add($"Title fehlt fuer Code '{SafeCodeLabel(codeDef.Code, row)}'.");
+                errors.Add($"Title fehlt für Code '{SafeCodeLabel(codeDef.Code, row)}'.");
         }
 
         return errors;

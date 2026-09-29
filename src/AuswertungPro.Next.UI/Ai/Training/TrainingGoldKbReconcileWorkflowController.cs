@@ -53,7 +53,7 @@ public static class TrainingGoldKbReconcileWorkflowController
             return new TrainingGoldKbReconcileWorkflowResult(0, 0, 0, 0, null, false);
         }
 
-        log($"KB-Nachholen: {total} bestaetigte Gold-Samples warten (davon {eligible} trainingsfaehig markiert).");
+        log($"KB-Nachholen: {total} bestätigte Gold-Samples warten (davon {eligible} trainingsfähig markiert).");
 
         var backupDirectory = Path.Combine(getKnowledgeBaseRoot(), "kb_backups");
         var backupZip = Path.Combine(
@@ -68,7 +68,7 @@ public static class TrainingGoldKbReconcileWorkflowController
             ct).ConfigureAwait(false);
         if (!backup.Success)
         {
-            log($"KB-Nachholen ABGEBROCHEN: Backup fehlgeschlagen ({backup.Error}). Keine Aenderung vorgenommen.");
+            log($"KB-Nachholen ABGEBROCHEN: Backup fehlgeschlagen ({backup.Error}). Keine Änderung vorgenommen.");
             setStatus("KB-Nachholen: Backup fehlgeschlagen");
             return new TrainingGoldKbReconcileWorkflowResult(total, eligible, 0, 0, backupZip, true);
         }
@@ -117,8 +117,8 @@ public static class TrainingGoldKbReconcileWorkflowController
             setStatus($"KB-Nachholen: {processed}/{total}");
         }
 
-        log($"KB-Nachholen fertig: {indexed} indexiert, {skipped} uebersprungen/fehlgeschlagen (von {total}).");
-        setStatus($"KB-Nachholen: {indexed} indexiert, {skipped} uebersprungen");
+        log($"KB-Nachholen fertig: {indexed} indexiert, {skipped} übersprungen/fehlgeschlagen (von {total}).");
+        setStatus($"KB-Nachholen: {indexed} indexiert, {skipped} übersprungen");
 
         return new TrainingGoldKbReconcileWorkflowResult(total, eligible, indexed, skipped, backupZip, false);
     }

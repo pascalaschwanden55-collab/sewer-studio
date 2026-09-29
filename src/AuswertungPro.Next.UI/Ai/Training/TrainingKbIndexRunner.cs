@@ -53,7 +53,7 @@ public sealed class TrainingKbIndexRunner
             ct => TrainingOllamaReachabilityChecker.CheckAsync(ollamaConfig, ct),
             () => TrainingKbIndexSession.Create(httpClient, ollamaConfig, EvalContaminationSetProvider.Load(settings)),
             log,
-            $"KB-Update uebersprungen: Ollama nicht erreichbar auf {ollamaConfig.BaseUri}");
+            $"KB-Update übersprungen: Ollama nicht erreichbar auf {ollamaConfig.BaseUri}");
     }
 
     public async Task<KbIndexOutcome> RunAsync(

@@ -218,7 +218,7 @@ public sealed partial class MultiModelAnalysisService
             progress?.Report(new VideoAnalysisProgress(
                 0,
                 totalFrames,
-                "WARNUNG: YOLO nicht freigegeben – DINO/SAM laufen ohne YOLO-Filter; manuelle Pruefung erforderlich."));
+                "WARNUNG: YOLO nicht freigegeben – DINO/SAM laufen ohne YOLO-Filter; manuelle Prüfung erforderlich."));
         }
 
         var resume = await RestoreCheckpointAsync(videoPath, detections, deduplicator, totalFrames, lastMeter, progress, ct).ConfigureAwait(false);
@@ -370,7 +370,7 @@ public sealed partial class MultiModelAnalysisService
                     FrameClass: detectorQualificationBypass ? "detector_unqualified" : "sweep",
                     InferenceTimeMs: 0);
                 yoloMs = 0;
-                var zone = detectorQualificationBypass ? "YOLO gesperrt – DINO/SAM-Pruefung"
+                var zone = detectorQualificationBypass ? "YOLO gesperrt – DINO/SAM-Prüfung"
                     : isBcdZone ? "BCD-Zone (Rohranfang)"
                     : isBceZone ? "BCE-Zone (Rohrende)"
                     : "Bestandsaufnahme-Sweep";
@@ -415,7 +415,7 @@ public sealed partial class MultiModelAnalysisService
                         progress?.Report(new VideoAnalysisProgress(
                             frameIndex,
                             totalFrames,
-                            "WARNUNG: YOLO-Freigabe waehrend des Laufs fehlt – DINO/SAM laufen weiter."));
+                            "WARNUNG: YOLO-Freigabe während des Laufs fehlt – DINO/SAM laufen weiter."));
                     }
 
                     // COCO-Fallback sichtbar machen: laeuft der Sidecar nicht mit den
@@ -431,7 +431,7 @@ public sealed partial class MultiModelAnalysisService
                             "YOLO laeuft mit '{Model}' statt der eigenen Gewichte ({Expected}) – COCO-Fallback, Schadenserkennung stark eingeschraenkt!",
                             yoloModelName, _expectedYoloModel);
                         progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                            $"WARNUNG: YOLO-Fallback aktiv ('{yoloModelName}' statt {_expectedYoloModel}) – Schadenserkennung eingeschraenkt!"));
+                            $"WARNUNG: YOLO-Fallback aktiv ('{yoloModelName}' statt {_expectedYoloModel}) – Schadenserkennung eingeschränkt!"));
                     }
 
                     // Klassenspezifische Filterung: Jede Klasse hat ihren eigenen Schwellenwert
@@ -470,7 +470,7 @@ public sealed partial class MultiModelAnalysisService
                     // (Skip-Quote + Incomplete); das Checkpoint-Journal schreibt weiter retry_required.
                     _logger.LogWarning(ex, "Frame {Frame}: YOLO wegen VRAM-Mangels uebersprungen", frameIndex);
                     progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                        $"Frame {frameIndex} – YOLO uebersprungen: {ex.Message}"));
+                        $"Frame {frameIndex} – YOLO übersprungen: {ex.Message}"));
                     telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, phaseSw.ElapsedMilliseconds, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                     trace.Path = "yolo_error";
                     trace.DropReason = "vram_insufficient";
@@ -540,7 +540,7 @@ public sealed partial class MultiModelAnalysisService
                 // (Skip-Quote + Incomplete); das Checkpoint-Journal schreibt weiter retry_required.
                 _logger.LogWarning(ex, "Frame {Frame}: DINO wegen VRAM-Mangels uebersprungen", frameIndex);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex} – DINO uebersprungen: {ex.Message}"));
+                    $"Frame {frameIndex} – DINO übersprungen: {ex.Message}"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, phaseSw.ElapsedMilliseconds, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 trace.Path = "dino_error";
                 trace.DropReason = "vram_insufficient";
@@ -682,7 +682,7 @@ public sealed partial class MultiModelAnalysisService
                 // (Skip-Quote + Incomplete); das Checkpoint-Journal schreibt weiter retry_required.
                 _logger.LogWarning(ex, "Frame {Frame}: SAM wegen VRAM-Mangels uebersprungen", frameIndex);
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                    $"Frame {frameIndex} – SAM uebersprungen: {ex.Message}"));
+                    $"Frame {frameIndex} – SAM übersprungen: {ex.Message}"));
                 telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, phaseSw.ElapsedMilliseconds, 0, frameSw.ElapsedMilliseconds, Skipped: true));
                 trace.Path = "sam_error";
                 trace.DropReason = "vram_insufficient";

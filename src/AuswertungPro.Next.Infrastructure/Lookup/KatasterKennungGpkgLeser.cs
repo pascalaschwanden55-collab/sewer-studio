@@ -147,7 +147,7 @@ public sealed class KatasterKennungGpkgLeser : IKatasterKennungLeser
         catch (SqliteException ex)
         {
             throw new InvalidDataException(
-                $"Die Kennungstabelle hat nicht den erwarteten Aufbau (Tabelle '{tabelle}'): {ex.Message}", ex);
+                $"Die Kennungstabelle hat nicht den erwarteten Aufbau (Tabelle '{tabelle}').", ex);
         }
     }
 

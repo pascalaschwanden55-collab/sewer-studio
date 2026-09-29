@@ -16,6 +16,6 @@ public static class StatusColors
         get => Default;
         [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. IStatusColorService direkt uebergeben.")]
         set => throw new NotSupportedException(
-            "StatusColors.Current ist unveraenderlich. IStatusColorService direkt uebergeben.");
+            "StatusColors.Current ist unveränderlich. IStatusColorService direkt übergeben.");
     }
 }

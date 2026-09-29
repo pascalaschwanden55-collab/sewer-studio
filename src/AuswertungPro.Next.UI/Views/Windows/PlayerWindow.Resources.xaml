@@ -13,7 +13,7 @@
         </Style>
 
         <Style x:Key="PlayerTimeText" TargetType="TextBlock" BasedOn="{StaticResource PlayerValueText}">
-            <Setter Property="FontFamily" Value="Consolas, Cascadia Mono, Segoe UI"/>
+            <Setter Property="FontFamily" Value="{DynamicResource FontMono}"/>
             <Setter Property="FontSize" Value="{DynamicResource TextL}"/>
         </Style>
 

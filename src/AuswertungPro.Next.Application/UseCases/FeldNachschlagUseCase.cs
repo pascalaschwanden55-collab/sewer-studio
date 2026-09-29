@@ -46,7 +46,7 @@ public sealed class FeldNachschlagUseCase
         {
             return Task.FromResult<FeldNachschlagErgebnis>(
                 new FeldNachschlagErgebnis.NichtGefunden(
-                    $"Fuer das Feld {anfrage.Feldname} gibt es keine Quelle."));
+                    $"Für das Feld {anfrage.Feldname} gibt es keine Quelle."));
         }
 
         switch (quelle)

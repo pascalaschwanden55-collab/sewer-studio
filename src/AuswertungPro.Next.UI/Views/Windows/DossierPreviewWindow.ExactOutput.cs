@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AuswertungPro.Next.Application.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -115,7 +116,7 @@ public partial class DossierPreviewWindow
 
                     _exactPreviewState.TryCompleteOutput(version, success: false);
                     ZeigeAusgabefehler(
-                        "Die Ausgabevorschau konnte nicht aktualisiert werden: " + ex.Message);
+                        "Die Ausgabevorschau konnte nicht aktualisiert werden: " + UserError.DescribeAndReport(ex, "Dossier-Ausgabevorschau"));
                     return;
                 }
 
@@ -152,7 +153,7 @@ public partial class DossierPreviewWindow
             var version = _exactPreviewState.RequestedOutputVersion;
             _exactPreviewState.TryCompleteOutput(version, success: false);
             ZeigeAusgabefehler(
-                "Die Ausgabevorschau konnte nicht aktualisiert werden: " + ex.Message);
+                "Die Ausgabevorschau konnte nicht aktualisiert werden: " + UserError.DescribeAndReport(ex, "Dossier-Ausgabevorschau"));
         }
         finally
         {
@@ -298,7 +299,7 @@ public partial class DossierPreviewWindow
         {
             if (_exactPreviewState.TryCompletePage(renderVersion, success: false))
             {
-                var message = "Seite konnte nicht angezeigt werden: " + ex.Message;
+                var message = "Seite konnte nicht angezeigt werden: " + UserError.DescribeAndReport(ex, "Dossier-Vorschauseite anzeigen");
                 _render = null;
                 Sheet.Child = DossierExactPreviewPageRenderer.CreateNotice(
                     message,

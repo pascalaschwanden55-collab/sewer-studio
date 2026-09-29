@@ -355,7 +355,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
             _document = new DossierDocument();
             _loaded = false;
             dossierLoadFailed = true;
-            StatusMessage = ex.Message;
+            StatusMessage = UserError.DescribeAndReport(ex, "Dossiers laden");
         }
 
         // Auch ohne vorhandenes Dossier muessen beschaedigte Kostendateien
@@ -436,7 +436,7 @@ public sealed partial class DossiersPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            errors.Add(fileName + ": " + ex.Message);
+            errors.Add(fileName + ": " + UserError.DescribeAndReport(ex, "Kostendaten für Dossier laden"));
             return new ProjectCostStore();
         }
     }

@@ -45,8 +45,11 @@ public sealed class TrainingAnnotationExportService(
         }
         catch (Exception ex)
         {
+            // Aufgabe 10c2, Fix-Runde 2: Error wird angezeigt ("Teacher-Kandidat nicht
+            // gespeichert: …") und darf deshalb nie der englische Framework-Text sein.
             result.Success = false;
-            result.Error = ex.Message;
+            result.Failure = ex;
+            result.Error = UserError.DescribeAndReport(ex, "Teacher-Export");
         }
 
         return result;

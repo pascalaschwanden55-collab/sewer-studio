@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Schachtansicht"
              xmlns:haltung="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
+             xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
              xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage" x:Name="Root">
     <UserControl.Resources>
         <local:SchachtZustandsklasseBrushConverter x:Key="ZkBrushConv"/>
@@ -78,7 +79,8 @@
                     </UniformGrid>
 
                     <TextBlock Grid.Row="3" Text="Schäden" FontSize="{DynamicResource TextM}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,4,0,6"/>
-                    <ListBox Grid.Row="4" ItemsSource="{Binding Entries, ElementName=Root}" BorderThickness="0" Background="Transparent" AutomationProperties.Name="Schäden"
+                    <Grid Grid.Row="4">
+                    <ListBox x:Name="SchadenList" ItemsSource="{Binding Entries, ElementName=Root}" BorderThickness="0" Background="Transparent" AutomationProperties.Name="Schäden"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -92,16 +94,35 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
+                    <uc:EmptyStateControl IsHitTestVisible="False"
+                                          Icon="&#xE73E;"
+                                          Title="Keine Schäden"
+                                          Message="Keine baulichen oder betrieblichen Schäden erfasst.">
+                        <uc:EmptyStateControl.Style>
+                            <Style TargetType="uc:EmptyStateControl">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasItems, ElementName=SchadenList}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </uc:EmptyStateControl.Style>
+                    </uc:EmptyStateControl>
+                    </Grid>
+
                     <Button Grid.Row="5" Content="Protokoll (PDF)" Click="Pdf_Click" Style="{StaticResource ToolbarButton}" HorizontalAlignment="Left" Margin="0,8,0,0" ToolTip="Schachtprotokoll öffnen"/>
                     <TextBlock Grid.Row="6" Text="Am Schacht wird die Zustandsklasse nie berechnet. Die Fachperson setzt sie von Hand." TextWrapping="Wrap" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0"/>
                 </Grid>
             </ScrollViewer>
 
-            <TextBlock x:Name="Leerzustand" Text="Kein Schacht gewählt. Links eine Zeile wählen."
-                       Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"
-                       VerticalAlignment="Top" HorizontalAlignment="Left">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
+            <uc:EmptyStateControl x:Name="Leerzustand"
+                                  IsHitTestVisible="False"
+                                  Icon="&#xE8A5;"
+                                  Title="Kein Schacht gewählt"
+                                  Message="Links eine Zeile wählen.">
+                <uc:EmptyStateControl.Style>
+                    <Style TargetType="uc:EmptyStateControl">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
@@ -109,8 +130,8 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </TextBlock.Style>
-            </TextBlock>
+                </uc:EmptyStateControl.Style>
+            </uc:EmptyStateControl>
         </Grid>
     </Border>
 </UserControl>

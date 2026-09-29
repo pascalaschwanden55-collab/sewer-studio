@@ -77,11 +77,11 @@ public sealed class XtfExportVorschauTests
     [Fact]
     public void Fehler_Vorschau_hat_keine_Tabelle_und_traegt_den_Grund_kurz()
     {
-        var vorschau = XtfExportVorschau.Fehler("Katasterdaten aktualisieren", "seilergasse.xtf: offene Faelle — die Pruefung ist nicht bestanden.", "voller Bericht");
+        var vorschau = XtfExportVorschau.Fehler("Katasterdaten aktualisieren", "seilergasse.xtf: offene Fälle — die Prüfung ist nicht bestanden.", "voller Bericht");
 
         Assert.True(vorschau.IstFehler);
         Assert.Empty(vorschau.Zeilen);
-        Assert.Equal("seilergasse.xtf: offene Faelle — die Pruefung ist nicht bestanden.", vorschau.Zusammenfassung);
+        Assert.Equal("seilergasse.xtf: offene Fälle — die Prüfung ist nicht bestanden.", vorschau.Zusammenfassung);
         Assert.Equal("voller Bericht", vorschau.Details);
     }
 

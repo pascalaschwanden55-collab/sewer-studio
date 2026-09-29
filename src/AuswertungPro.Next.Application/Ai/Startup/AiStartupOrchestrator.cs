@@ -65,10 +65,10 @@ public static class AiStartupOrchestrator
         {
             warnings.Add(
                 "Ollama-Adresse ist nicht lokal. Ollama besitzt keine eingebaute Anmeldung; " +
-                "Sewer Studio startet deshalb keinen eigenen Ollama-Prozess fuer diese Adresse.");
+                "SewerStudio startet deshalb keinen eigenen Ollama-Prozess für diese Adresse.");
         }
 
-        Report("Pruefe Ollama...");
+        Report("Prüfe Ollama...");
         var ollamaReachable = await launcher
             .IsReachableAsync(input.OllamaBaseUri, "/api/tags", headers: null, ct)
             .ConfigureAwait(false);
@@ -150,7 +150,7 @@ public static class AiStartupOrchestrator
         }
 
         // ------------------------------------------------------------------ Sidecar
-        Report("Pruefe Vision-Sidecar...");
+        Report("Prüfe Vision-Sidecar...");
         var sidecarReachable = await launcher
             .IsReachableAsync(input.SidecarUrl, "/health", ResolveSidecarHeaders(input), ct)
             .ConfigureAwait(false);

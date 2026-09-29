@@ -223,7 +223,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-MultiModel-Rendering soll Masken-Sichtbarkeit, Render-State und SAM-Details ueber Workflows/Controller kapseln:\n"
+            "PlayerWindow-MultiModel-Rendering soll Masken-Sichtbarkeit, Render-State und SAM-Details über Workflows/Controller kapseln:\n"
             + string.Join("\n", offenders));
     }
 

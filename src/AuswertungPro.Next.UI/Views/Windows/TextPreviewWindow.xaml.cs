@@ -9,7 +9,9 @@ public partial class TextPreviewWindow : Window
     {
         InitializeComponent();
         WindowStateManager.Track(this);
-        Title = string.IsNullOrWhiteSpace(title) ? "Text" : title;
+        var kopfTitel = string.IsNullOrWhiteSpace(title) ? "Text" : title;
+        Title = kopfTitel;
+        Kopf.Title = kopfTitel;
         ContentBox.Text = content ?? string.Empty;
     }
 }

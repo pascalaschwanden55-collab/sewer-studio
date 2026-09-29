@@ -83,7 +83,8 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private int _kbCodesCovered;
     [ObservableProperty] private string _kbReadinessLabel = "Unbekannt";
     [ObservableProperty] private System.Windows.Media.Brush _kbReadinessBrush
-        = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x94, 0xA3, 0xB8));
+        = System.Windows.Application.Current?.TryFindResource("MutedBrush") as System.Windows.Media.Brush
+          ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x94, 0xA3, 0xB8));
     [ObservableProperty] private string _kbLastUpdate = "\u2014";
     [ObservableProperty] private string _kbTopCodesText = "";
 

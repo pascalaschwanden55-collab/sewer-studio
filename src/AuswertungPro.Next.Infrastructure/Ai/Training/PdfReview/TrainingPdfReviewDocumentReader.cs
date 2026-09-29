@@ -600,7 +600,7 @@ internal sealed class TrainingPdfReviewDocumentReader : ITrainingPdfReviewDocume
 
         throw new InvalidDataException(
             $"Seite {pageNumber}, Foto {photoNumber}: {budgetName} des PDF-Fotolesers " +
-            $"ueberschritten ({current} + {additional} > {maximum}). Import abgebrochen.");
+            $"überschritten ({current} + {additional} > {maximum}). Import abgebrochen.");
     }
 
     private static string BuildNearestPhotoText(

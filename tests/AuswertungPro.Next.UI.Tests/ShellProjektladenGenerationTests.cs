@@ -55,7 +55,7 @@ public sealed class ShellProjektladenGenerationTests
             importRecovery: null,
             startGeneration: generationBeimStart);
 
-        Assert.False(uebernommen, "Ein verspaetetes Ergebnis darf nicht uebernommen werden.");
+        Assert.False(uebernommen, "Ein verspaetetes Ergebnis darf nicht übernommen werden.");
         Assert.Same(neuerEntwurf, shell.Project);
     }
 

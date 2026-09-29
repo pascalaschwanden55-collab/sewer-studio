@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
@@ -68,7 +69,7 @@ public static class TrainingCenterSampleGenerationWorkflow
         }
         catch (Exception ex)
         {
-            request.SetStatusText($"Fehler bei Sample-Generierung: {ex.Message}");
+            request.SetStatusText($"Fehler bei Sample-Generierung: {UserError.DescribeAndReport(ex, "Sample-Generierung")}");
         }
         finally
         {

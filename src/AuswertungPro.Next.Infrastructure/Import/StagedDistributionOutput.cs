@@ -35,7 +35,7 @@ internal sealed class StagedDistributionOutput : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(logicalFileName);
         var safeName = Path.GetFileName(logicalFileName);
         if (!safeName.Equals(logicalFileName, StringComparison.Ordinal))
-            throw new ArgumentException("Logischer Dateiname ist ungueltig.", nameof(logicalFileName));
+            throw new ArgumentException("Logischer Dateiname ist ungültig.", nameof(logicalFileName));
 
         // Zwei Quellen dürfen denselben Dateinamen haben. Der logische PDF-Name
         // bleibt für den Leser erhalten; nur sein privater Elternordner ist eindeutig.

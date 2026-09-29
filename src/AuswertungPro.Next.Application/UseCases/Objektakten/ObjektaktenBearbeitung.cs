@@ -19,6 +19,10 @@ public sealed class ObjektaktenBearbeitung(Project projekt, Guid wurzelId, strin
     public IObjektaktenListenErgaenzungen? ErgaenzungenSpeicher => ergaenzungen;
     public void ErgaenzungenNeuLaden() => _ergaenzungen = null;
 
+    /// <summary>Rueckgaengig/Wiederholen (Optik Aufgabe 16): Ist ein Verlauf gesetzt, ist jede Eingabe
+    /// samt nachgezogener abhaengiger Felder EIN Schritt. Ohne Verlauf (Importe, Pruefregeln) bleibt alles wie bisher.</summary>
+    public Datenaenderungen.IDatenaenderungsVerlauf? Verlauf { get; set; }
+
     /// <summary>Die Eintraege, die ein Auswahlfeld dieser Akte gerade anbietet: der passende
     /// Katalog (bei abhaengigen Feldern die Gruppe des gewaehlten Elternwerts), darueber die
     /// Ergaenzungen der Fachperson. Leer, wenn ein Elternwert fehlt.</summary>
@@ -118,6 +122,7 @@ public sealed class ObjektaktenBearbeitung(Project projekt, Guid wurzelId, strin
 
     public void Schreibe(ObjektAkte akte, ObjektFeldDefinition feld, string erwartet, string text, ObjektAuswahl? auswahl = null)
     {
+        using var erfassung = Verlauf?.ErfasseObjektakte(this, feld.Label);
         PruefeBestand();
         if (akte.Art != feld.Art || feld.NurLesen || akte.Id != wurzelId && !Verbund.Contains(akte))
             throw new InvalidOperationException("Dieses Feld ist hier nicht bearbeitbar.");

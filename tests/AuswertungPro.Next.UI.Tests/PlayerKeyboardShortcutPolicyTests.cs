@@ -53,4 +53,38 @@ public sealed class PlayerKeyboardShortcutPolicyTests
         // in den Text und darf die Uebersicht nicht oeffnen.
         Assert.Equal(erwartet, PlayerKeyboardShortcutPolicy.IsAllowedDuringTextInput(key));
     }
+
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 6: <see cref="PlayerKeyboardShortcutPolicy.Beschreibungen"/>
+    /// ist die EINE Quelle, aus der das neue Tastenkürzel-Fenster liest. Dieser Test hält fest, dass
+    /// jede echte <see cref="PlayerKeyboardAction"/> mindestens eine Beschreibung hat - eine neue
+    /// Aktion ohne Beschreibung faellt sonst still aus dem Fenster.
+    /// </summary>
+    [Theory]
+    [InlineData(PlayerKeyboardAction.CancelCodingOverlay)]
+    [InlineData(PlayerKeyboardAction.TogglePlayPause)]
+    [InlineData(PlayerKeyboardAction.Stop)]
+    [InlineData(PlayerKeyboardAction.Pause)]
+    [InlineData(PlayerKeyboardAction.Resume)]
+    [InlineData(PlayerKeyboardAction.SpeedUp)]
+    [InlineData(PlayerKeyboardAction.SpeedDown)]
+    [InlineData(PlayerKeyboardAction.JumpForward)]
+    [InlineData(PlayerKeyboardAction.JumpBackward)]
+    [InlineData(PlayerKeyboardAction.ToggleDetection)]
+    [InlineData(PlayerKeyboardAction.ToggleMarkTool)]
+    public void Jede_PlayerKeyboardAction_hat_eine_Beschreibung(PlayerKeyboardAction aktion)
+    {
+        Assert.Contains(PlayerKeyboardShortcutPolicy.Beschreibungen, b => b.Action == aktion);
+    }
+
+    [Fact]
+    public void Beschreibungen_haben_nichtleere_Gruppe_Taste_und_Text()
+    {
+        foreach (var beschreibung in PlayerKeyboardShortcutPolicy.Beschreibungen)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(beschreibung.Gruppe));
+            Assert.False(string.IsNullOrWhiteSpace(beschreibung.Taste));
+            Assert.False(string.IsNullOrWhiteSpace(beschreibung.Beschreibung));
+        }
+    }
 }

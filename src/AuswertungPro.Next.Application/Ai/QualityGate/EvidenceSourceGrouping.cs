@@ -33,7 +33,7 @@ public static class EvidenceSourceGrouping
     public const string SourceYolo = "Bildmodell YOLO";
     public const string SourceDino = "Bildmodell DINO";
     public const string SourceSam = "Segmentierung SAM";
-    public const string SourceLanguageModel = "Sprachmodell (inkl. Plausibilitaet und Prompt-Beispiele)";
+    public const string SourceLanguageModel = "Sprachmodell (inkl. Plausibilität und Prompt-Beispiele)";
     public const string SourceBlindKb = "Blinder Datenbankabgleich";
 
     private static readonly Dictionary<string, string> SourceBySignal =

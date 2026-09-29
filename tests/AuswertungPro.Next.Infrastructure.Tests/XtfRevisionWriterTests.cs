@@ -192,7 +192,7 @@ public sealed class XtfRevisionWriterTests : IDisposable
 
         Assert.False(ergebnis.Ok);
         Assert.False(File.Exists(ziel));
-        Assert.Contains("nicht vollstaendig", ergebnis.Fehler!, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nicht vollständig", ergebnis.Fehler!, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

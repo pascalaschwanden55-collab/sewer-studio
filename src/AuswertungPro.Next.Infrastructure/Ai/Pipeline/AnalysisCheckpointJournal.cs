@@ -430,7 +430,7 @@ public sealed class AnalysisCheckpointJournal : IAnalysisCheckpointJournal
             }
             catch (JsonException)
             {
-                read.InvalidReason = $"beschaedigte Zeile {contentLines + 1}";
+                read.InvalidReason = $"beschädigte Zeile {contentLines + 1}";
                 return read;
             }
 
@@ -450,7 +450,7 @@ public sealed class AnalysisCheckpointJournal : IAnalysisCheckpointJournal
                 if (string.IsNullOrWhiteSpace(rec.VideoPath)
                     || rec.StepSeconds is not { } step || !double.IsFinite(step) || step <= 0)
                 {
-                    read.InvalidReason = "ungueltiger Header";
+                    read.InvalidReason = "ungültiger Header";
                     return read;
                 }
                 read.Header = rec;
@@ -478,7 +478,7 @@ public sealed class AnalysisCheckpointJournal : IAnalysisCheckpointJournal
                 }
                 if (rec.FrameIndex is not { } index || index <= 0)
                 {
-                    read.InvalidReason = "fehlende oder ungueltige Frame-Nummer";
+                    read.InvalidReason = "fehlende oder ungültige Frame-Nummer";
                     return read;
                 }
                 if (rec.TimeSec is { } timeSec && !double.IsFinite(timeSec)
@@ -496,8 +496,8 @@ public sealed class AnalysisCheckpointJournal : IAnalysisCheckpointJournal
                 if (index != expectedFrame)
                 {
                     read.InvalidReason = index < expectedFrame
-                        ? $"doppelte oder ruecklaufende Frame-Nummer {index} (erwartet {expectedFrame})"
-                        : $"Luecke in den Frame-Nummern (erwartet {expectedFrame}, gefunden {index})";
+                        ? $"doppelte oder rücklaufende Frame-Nummer {index} (erwartet {expectedFrame})"
+                        : $"Lücke in den Frame-Nummern (erwartet {expectedFrame}, gefunden {index})";
                     return read;
                 }
 
@@ -514,7 +514,7 @@ public sealed class AnalysisCheckpointJournal : IAnalysisCheckpointJournal
                 if (rec.TimeSec is not { } timeSecValue || !double.IsFinite(timeSecValue)
                     || rec.Meter is not { } meterValue || !double.IsFinite(meterValue))
                 {
-                    read.InvalidReason = "fehlende oder ungueltige Zeit-/Meterwerte";
+                    read.InvalidReason = "fehlende oder ungültige Zeit-/Meterwerte";
                     return read;
                 }
                 if (rec.IsMeterEstimated is not { } isMeterEstimated)

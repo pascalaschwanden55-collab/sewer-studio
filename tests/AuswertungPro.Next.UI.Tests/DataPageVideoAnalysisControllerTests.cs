@@ -223,7 +223,7 @@ public sealed class DataPageVideoAnalysisControllerTests
         Assert.False(missing.Ok);
         Assert.Contains("nicht im geladenen Projekt gefunden", missing.Message);
         Assert.True(found.Ok);
-        Assert.Equal("KI-Videoanalyse fuer 'h-01' gestartet.", found.Message);
+        Assert.Equal("KI-Videoanalyse für 'h-01' gestartet.", found.Message);
 
         var action = Assert.Single(scheduled);
         action();
@@ -344,16 +344,16 @@ public sealed class DataPageVideoAnalysisControllerTests
         public void Error(string message, string title = "Fehler")
             => throw new NotSupportedException();
 
-        public bool Confirm(string message, string title = "Bestaetigung")
+        public bool Confirm(string message, string title = "Bestätigung")
         {
             LastConfirm = (message, title);
             return ConfirmResult;
         }
 
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true)
             => throw new NotSupportedException();
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
     }
 }

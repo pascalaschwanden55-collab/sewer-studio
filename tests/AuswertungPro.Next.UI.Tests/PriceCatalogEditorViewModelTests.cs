@@ -81,9 +81,9 @@ public sealed class PriceCatalogEditorViewModelTests
         public void Info(string message, string title = "Hinweis") => LastInfo = message;
         public void Warn(string message, string title = "Warnung") { }
         public void Error(string message, string title = "Fehler") => throw new Xunit.Sdk.XunitException(message);
-        public bool Confirm(string message, string title = "Bestaetigung") => true;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => true;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Yes;
+        public bool Confirm(string message, string title = "Bestätigung") => true;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => true;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Yes;
     }
 
     private sealed class TempDirectory : IDisposable

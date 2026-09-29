@@ -74,7 +74,7 @@ public sealed class KostenfallExtraktorTests
             KostenfallHerkunft.Unbeeinflusst, Zeitpunkt, out _, out var grund);
 
         Assert.False(ok);
-        Assert.Contains("Laenge", grund);
+        Assert.Contains("Länge", grund);
     }
 
     [Fact]

@@ -50,7 +50,7 @@ public static class EvalReviewedDamageDataset
         ValidateHeader(review, candidatesPath);
         var reviewEntries = review.Reviews
                             ?? throw new InvalidDataException(
-                                "Die Schadensreview enthaelt keine Review-Liste.");
+                                "Die Schadensreview enthält keine Review-Liste.");
 
         var originalDamageCases = EvalSetBenchmarkDataset
             .LoadForReleaseValidation(fullEvalRoot)
@@ -68,12 +68,12 @@ public static class EvalReviewedDamageDataset
             || review.CompletedReviews != originalDamageCases.Count)
         {
             throw new InvalidDataException(
-                $"Die Schadensreview ist nicht vollstaendig " +
+                $"Die Schadensreview ist nicht vollständig " +
                 $"({review.CompletedReviews}/{originalDamageCases.Count}).");
         }
 
         if (review.ConflictingReviews != 0)
-            throw new InvalidDataException("Die Schadensreview enthaelt noch Ereigniskonflikte.");
+            throw new InvalidDataException("Die Schadensreview enthält noch Ereigniskonflikte.");
 
         var reviewById = new Dictionary<string, ReviewEntry>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in reviewEntries)
@@ -86,7 +86,7 @@ public static class EvalReviewedDamageDataset
         foreach (var original in originalDamageCases)
         {
             if (!reviewById.Remove(original.Id, out var entry))
-                throw new InvalidDataException($"Review fuer Eval-Fall '{original.Id}' fehlt.");
+                throw new InvalidDataException($"Review für Eval-Fall '{original.Id}' fehlt.");
 
             result.Add(BuildCase(original, entry));
         }
@@ -94,7 +94,7 @@ public static class EvalReviewedDamageDataset
         if (reviewById.Count > 0)
         {
             throw new InvalidDataException(
-                "Die Review enthaelt unbekannte Eval-IDs: "
+                "Die Review enthält unbekannte Eval-IDs: "
                 + string.Join(", ", reviewById.Keys.OrderBy(value => value, StringComparer.OrdinalIgnoreCase)));
         }
 
@@ -118,7 +118,7 @@ public static class EvalReviewedDamageDataset
         }
         catch (JsonException ex)
         {
-            throw new InvalidDataException("Die Schadensreview ist kein gueltiges JSON.", ex);
+            throw new InvalidDataException("Die Schadensreview ist kein gültiges JSON.", ex);
         }
     }
 
@@ -127,7 +127,7 @@ public static class EvalReviewedDamageDataset
         if (review.SchemaVersion != SupportedSchemaVersion)
         {
             throw new InvalidDataException(
-                $"Nicht unterstuetzte Review-Schemaversion: {review.SchemaVersion}.");
+                $"Nicht unterstützte Review-Schemaversion: {review.SchemaVersion}.");
         }
 
         var actualHash = Convert.ToHexString(
@@ -139,7 +139,7 @@ public static class EvalReviewedDamageDataset
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                "Die Schadensreview gehoert nicht zum aktuellen eingefrorenen Eval-Set.");
+                "Die Schadensreview gehört nicht zum aktuellen eingefrorenen Eval-Set.");
         }
     }
 
@@ -166,7 +166,7 @@ public static class EvalReviewedDamageDataset
         if (!review.ImageExists || !File.Exists(original.ImagePath))
             throw new InvalidDataException($"Review-Fall {original.Id}: Bilddatei fehlt.");
         if (string.IsNullOrWhiteSpace(review.ReviewedBy) || review.ReviewedAtUtc is null)
-            throw new InvalidDataException($"Review-Fall {original.Id}: Pruefbeleg fehlt.");
+            throw new InvalidDataException($"Review-Fall {original.Id}: Prüfbeleg fehlt.");
 
         var decision = review.CodeDecision?.Trim().ToLowerInvariant() ?? "";
         var expectedCode = decision switch
@@ -186,7 +186,7 @@ public static class EvalReviewedDamageDataset
         }
 
         if (decision == "matches" && !string.IsNullOrWhiteSpace(review.CorrectedCode))
-            throw new InvalidDataException($"Review-Fall {original.Id}: unnoetiger Korrekturcode.");
+            throw new InvalidDataException($"Review-Fall {original.Id}: unnötiger Korrekturcode.");
 
         if (!expectedIsDamage)
         {
@@ -197,7 +197,7 @@ public static class EvalReviewedDamageDataset
                 || review.MeterEnd is not null)
             {
                 throw new InvalidDataException(
-                    $"Review-Fall {original.Id}: Ausschluss enthaelt Schadensmetadaten.");
+                    $"Review-Fall {original.Id}: Ausschluss enthält Schadensmetadaten.");
             }
         }
 

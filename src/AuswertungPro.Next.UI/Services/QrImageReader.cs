@@ -14,9 +14,9 @@ public sealed class QrImageReader : IQrImageReader
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!new[] { ".png", ".jpg", ".jpeg" }.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
-            throw new InvalidDataException("Bitte einen PNG- oder JPG-Screenshot waehlen.");
+            throw new InvalidDataException("Bitte einen PNG- oder JPG-Screenshot wählen.");
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        if (stream.Length > 32 * 1024 * 1024) throw new InvalidDataException("QR-Bild ist groesser als 32 MB.");
+        if (stream.Length > 32 * 1024 * 1024) throw new InvalidDataException("QR-Bild ist grösser als 32 MB.");
         var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnDemand);
         if (decoder.Frames.Count != 1) throw new InvalidDataException("Bitte ein Bild mit genau einer Seite verwenden.");
         var frame = decoder.Frames[0];

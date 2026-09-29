@@ -78,7 +78,7 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
                 .Equals(Path.GetFullPath(projectFolder), StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                "Datei-Staging und Dichtheits-Verteilung gehoeren nicht zum selben Projekt.");
+                "Datei-Staging und Dichtheits-Verteilung gehören nicht zum selben Projekt.");
         }
 
         var messages = new List<string>();
@@ -654,7 +654,7 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         // und sie verschwanden ohne eine einzige Zeile im Bericht.
         hinweis =
             $"{Path.GetFileName(pdfPath)}: Der Dateiname weist auf ein Begleitprotokoll hin, "
-            + "der lesbare Inhalt bestaetigt das aber nicht — nicht verteilt.";
+            + "der lesbare Inhalt bestätigt das aber nicht — nicht verteilt.";
         return null;
     }
 

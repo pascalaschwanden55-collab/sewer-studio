@@ -78,7 +78,7 @@ public sealed class LiveDetectionMarkSamMaskRenderWorkflowTests
                 TraceError: message => calls.Add(message)));
 
         Assert.Equal(LiveDetectionMarkSamMaskRenderOutcome.Failed, result.Outcome);
-        Assert.Equal(["[Mark-SAM] Masken-Render uebersprungen: kaputt"], calls);
+        Assert.Equal(["[Mark-SAM] Masken-Render übersprungen: kaputt"], calls);
     }
 
     private static BoxSegmentationResult Result(

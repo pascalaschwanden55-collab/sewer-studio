@@ -26,8 +26,14 @@ public sealed partial class SchaechtePageViewModel
             () => Records.Select(r => GeoShopZiel.Fuer(r, _shell.Project)).ToArray(), () => CanMutateShaftData);
         if (anzahl > 0)
         {
-            _shell.MarkProjectDirty(); ScheduleAutoSave(); FelderExternErgaenzt?.Invoke();
-            _dialogs.Info($"GeoShop: {anzahl} Schächte abgeglichen. Bitte das Projekt speichern.", "GeoShop-Abgleich");
+            _shell.MarkProjectDirty(); ScheduleAutoSave(); MeldeUebernahme();
+            // ScheduleAutoSave() speichert bereits selbst - kein "Bitte speichern" mehr noetig
+            // (gleiche Korrektur wie beim Haltungen-Gegenstueck DataPageViewModel.KatasterKennungen.cs).
+            var meldung = $"GeoShop: {anzahl} Schächte abgeglichen.";
+            if (_toasts is not null)
+                _toasts.Success(meldung);
+            else
+                _dialogs.Info(meldung, "GeoShop-Abgleich");
         }
     }
 }

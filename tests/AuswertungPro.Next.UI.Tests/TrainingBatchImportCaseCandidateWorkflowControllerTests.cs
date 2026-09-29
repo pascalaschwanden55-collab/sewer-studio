@@ -65,7 +65,7 @@ public sealed class TrainingBatchImportCaseCandidateWorkflowControllerTests
                 "on-ui",
                 "add-result:4:BAA",
                 "distribution:BAA:NoFindings",
-                "  -> 1 Samples (Status: Neu, Freigabe ueber Review):",
+                "  -> 1 Samples (Status: Neu, Freigabe über Review):",
                 "     BAA @ 1.25m [New] - Riss"
             },
             calls);
@@ -108,16 +108,16 @@ public sealed class TrainingBatchImportCaseCandidateWorkflowControllerTests
 
         Assert.False(result.ShouldPersist);
         Assert.Empty(result.NewSamples);
-        Assert.Contains("1 ohne Eintraege.", summary.BuildNoNewStatus(processedCaseCount: 1));
+        Assert.Contains("1 ohne Einträge.", summary.BuildNoNewStatus(processedCaseCount: 1));
         Assert.Empty(signatures);
         Assert.Equal(
             new[]
             {
                 "preview:processing:processing.jpg",
-                "  -> 0 Samples (keine Protokolleintraege erkannt)",
+                "  -> 0 Samples (keine Protokolleinträge erkannt)",
                 "preview:\u2014:preview.jpg",
                 "on-ui",
-                "add-result:8:101.1-102.1:keine Eintraege"
+                "add-result:8:101.1-102.1:keine Einträge"
             },
             calls);
     }

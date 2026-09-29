@@ -64,7 +64,7 @@ internal static class VsaConditionScorer
                     Abminderung = null,
                     Dringlichkeitszahl = null
                 };
-                na.Notes.Add("Nur unbekannte Schadenscodes – Bewertung nicht moeglich.");
+                na.Notes.Add("Nur unbekannte Schadenscodes – Bewertung nicht möglich.");
                 return na;
             }
 
@@ -78,7 +78,7 @@ internal static class VsaConditionScorer
                     Abminderung = null,
                     Dringlichkeitszahl = null
                 };
-                na.Notes.Add($"Keine bewertbaren EZ fuer diese Anforderung (Codes ohne EZ: {string.Join(", ", skippedCodes)}).");
+                na.Notes.Add($"Keine bewertbaren EZ für diese Anforderung (Codes ohne EZ: {string.Join(", ", skippedCodes)}).");
                 return na;
             }
 
@@ -143,7 +143,7 @@ internal static class VsaConditionScorer
         };
 
         // Zusammenfassung
-        result.Notes.Add($"Beitraege={entries.Count}; EZmin={ezMin}; A={abminderung:F2}; RB={randbedingungen:F4}");
+        result.Notes.Add($"Beiträge={entries.Count}; EZmin={ezMin}; A={abminderung:F2}; RB={randbedingungen:F4}");
 
         // Einzelbeitraege auflisten
         foreach (var e in entries)

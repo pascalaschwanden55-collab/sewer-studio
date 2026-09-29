@@ -248,7 +248,7 @@ public sealed partial class SchachtProImportServiceTests
 
         Assert.False(result.Ok);
         Assert.Equal("UNSUPPORTED_VERSION", result.ErrorCode);
-        Assert.Contains("neuer als unterstuetzt", result.ErrorMessage);
+        Assert.Contains("neuer als unterstützt", result.ErrorMessage);
     }
 
     // ---------------------------------------------------------------
@@ -277,7 +277,7 @@ public sealed partial class SchachtProImportServiceTests
         Assert.Equal(1, stats.Found);
         Assert.Equal(1, stats.Created);
         Assert.Equal(1, stats.Errors);
-        Assert.Contains(stats.Messages, m => m.Contains("beschaedigt"));
+        Assert.Contains(stats.Messages, m => m.Contains("beschädigt"));
         Assert.Single(project.SchaechteData);
         Assert.Equal("S-1", project.SchaechteData[0].GetFieldValue("Schachtnummer"));
     }

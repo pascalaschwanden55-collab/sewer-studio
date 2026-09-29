@@ -35,7 +35,7 @@ public sealed class ProtocolEntryEditorKiViewModelTests
     {
         var service = new CapturingAiService
         {
-            Result = new AiSuggestion("bab", 0.91, "Riss im Rohr", ["pruefen"])
+            Result = new AiSuggestion("bab", 0.91, "Riss im Rohr", ["prüfen"])
         };
         var entry = new ProtocolEntryVM(new ProtocolEntry());
         var editor = new ProtocolEntryEditorViewModel(new Catalog("BAB", "BBA"));

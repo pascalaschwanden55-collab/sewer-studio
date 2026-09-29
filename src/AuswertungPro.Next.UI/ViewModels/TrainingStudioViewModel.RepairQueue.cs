@@ -41,7 +41,7 @@ public sealed partial class TrainingStudioViewModel
         if (IsQueueItemCompleted(requestedIndex))
         {
             StatusText =
-                "Dieses Bild ist bereits abgeschlossen. Fertige Goldfaelle werden hier nicht erneut geoeffnet.";
+                "Dieses Bild ist bereits abgeschlossen. Fertige Goldfälle werden hier nicht erneut geöffnet.";
             return Task.FromResult(false);
         }
 
@@ -52,7 +52,7 @@ public sealed partial class TrainingStudioViewModel
         {
             StatusText =
                 "Das aktuelle Ereignis ist gespeichert. Bitte zuerst 'Bild fertig' oder " +
-                "'Weiteres Ereignis auf diesem Bild' waehlen.";
+                "'Weiteres Ereignis auf diesem Bild' wählen.";
             return Task.FromResult(false);
         }
 
@@ -60,7 +60,7 @@ public sealed partial class TrainingStudioViewModel
         {
             StatusText =
                 "Ein weiteres Ereignis auf diesem Bild ist noch offen. Bitte speichern oder verwerfen; " +
-                "danach 'Bild fertig' waehlen.";
+                "danach 'Bild fertig' wählen.";
             return Task.FromResult(false);
         }
 
@@ -131,14 +131,14 @@ public sealed partial class TrainingStudioViewModel
         {
             CurrentIndex = nextIndex;
             ResetForCurrent();
-            StatusText = $"{savedStatus} Naechstes Bild: {CurrentIndex + 1} von {Items.Count}.";
+            StatusText = $"{savedStatus} Nächstes Bild: {CurrentIndex + 1} von {Items.Count}.";
             return IsStrictReviewQueue;
         }
 
         CurrentIndex = -1;
         ResetForCurrent();
         StatusText = IsGoldQualityReviewQueue
-            ? $"{savedStatus} Goldpruefung abgeschlossen: {QueueDoneCount} von {QueueTotalCount} bestaetigt."
+            ? $"{savedStatus} Goldprüfung abgeschlossen: {QueueDoneCount} von {QueueTotalCount} bestätigt."
             : $"{savedStatus} Warteschlange abgearbeitet.";
         return false;
     }
@@ -191,7 +191,7 @@ public sealed partial class TrainingStudioViewModel
         _boxRunActive = true;
         IsBusy = true;
         StatusText =
-            $"Goldpruefung {QueueDoneCount + 1} von {QueueTotalCount}: " +
+            $"Goldprüfung {QueueDoneCount + 1} von {QueueTotalCount}: " +
             "Gespeicherte Goldmaske ist sichtbar. KI-Vergleich wird geladen ...";
         try
         {
@@ -211,8 +211,8 @@ public sealed partial class TrainingStudioViewModel
             if (ReferenceEquals(CurrentItem, item))
             {
                 StatusText = BuildSegmentationRepairMaskStatus(saveAttempt: false)
-                    + " Der KI-Vergleich ist derzeit nicht verfuegbar: "
-                    + UserError.DescribeAndReport(ex, "Training-Studio Goldpruefung");
+                    + " Der KI-Vergleich ist derzeit nicht verfügbar: "
+                    + UserError.DescribeAndReport(ex, "Training-Studio Goldprüfung");
             }
         }
         finally
@@ -235,7 +235,7 @@ public sealed partial class TrainingStudioViewModel
         var prefix = saveAttempt
             ? "Noch nicht gespeichert: "
             : IsGoldQualityReviewQueue
-                ? $"Goldpruefung {QueueDoneCount + 1} von {QueueTotalCount}: "
+                ? $"Goldprüfung {QueueDoneCount + 1} von {QueueTotalCount}: "
                 : $"Bild {CurrentIndex + 1} von {Items.Count}: ";
 
         if (!validation.IsValid)

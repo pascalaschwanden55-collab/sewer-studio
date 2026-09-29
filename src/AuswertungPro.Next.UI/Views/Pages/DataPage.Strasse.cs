@@ -127,10 +127,9 @@ public partial class DataPage
         if (geschrieben > 0)
             vm?.ScheduleAutoSave();
 
-        Dialogs.Info(
+        Toasts.Success(
             geschrieben == 1
                 ? "1 Haltung hat die Strasse ihrer Schächte übernommen."
-                : $"{geschrieben} Haltungen haben die Strasse ihrer Schächte übernommen.",
-            StrassenTitel);
+                : $"{geschrieben} Haltungen haben die Strasse ihrer Schächte übernommen.");
     }
 }

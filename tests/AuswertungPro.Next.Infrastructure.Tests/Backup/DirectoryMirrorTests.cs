@@ -508,7 +508,7 @@ public sealed class DirectoryMirrorTests : IDisposable
         // Eine einzelne beschaedigte Kopie ist eine Warnung: Das gueltige Ziel
         // bleibt stehen, die uebrigen Dateien werden weiter gesichert.
         Assert.Empty(stats.Errors);
-        Assert.Contains(stats.Warnings, e => e.Contains("Inhaltspruefung", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(stats.Warnings, e => e.Contains("Inhaltsprüfung", StringComparison.OrdinalIgnoreCase));
         Assert.False(File.Exists(targetFile + DirectoryMirror.TempSuffix));
     }
 

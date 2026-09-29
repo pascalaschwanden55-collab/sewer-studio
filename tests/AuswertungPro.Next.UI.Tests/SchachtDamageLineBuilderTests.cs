@@ -20,6 +20,27 @@ public sealed class SchachtDamageLineBuilderTests
         Assert.Equal("korrodiert", lines[1].Text);
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (Review Aufgabe 10c1): "Primaere Schaeden" (ASCII, mit Leerzeichen)
+    /// ist die Feld-Alias-Schreibweise, die <c>SchachtProtocolApplier</c> und
+    /// <c>SchachtProFieldNames.PrimaereSchaedenAscii</c> tatsaechlich schreiben —
+    /// nicht zu verwechseln mit der umlautrichtigen Vorlagenschreibweise
+    /// "Primäre Schäden" (bereits oben getestet) oder dem technischen
+    /// Unterstrich-Schluessel "Primaere_Schaeden".
+    /// </summary>
+    [Fact]
+    public void Build_UsesSchachtProAsciiAlias_WithSpaceNoUmlaut()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Primaere Schaeden", "Bankett: ausgebrochen");
+
+        var lines = SchachtDamageLineBuilder.Build(record);
+
+        var line = Assert.Single(lines);
+        Assert.Equal("Bankett", line.Component);
+        Assert.Equal("ausgebrochen", line.Text);
+    }
+
     [Fact]
     public void Build_UsesTechnicalPrimaereSchaedenField_WhenTemplateAliasIsEmpty()
     {

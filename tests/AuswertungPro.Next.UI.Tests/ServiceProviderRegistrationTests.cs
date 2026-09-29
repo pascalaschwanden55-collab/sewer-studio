@@ -136,10 +136,16 @@ public sealed class ServiceProviderRegistrationTests
         // 171 -> 172: IVerteilberichtAblage legt nach jeder Verteilung einen Bericht ab (28.09.2026).
         // 172 -> 174: IVerteilVorschau (schreibfreie Vorschau) und IVerteilenDialog (ein Fenster
         // «Verteilen» statt mehrerer Ja/Nein-Dialoge auf der Export-Seite, 28.09.2026).
+        // 174 -> 175: ITaskbarFortschritt zeigt den Fortschritt langer Laeufe am Programmsymbol
+        // in der Windows-Taskleiste (Aufgabe 13, Windows-Integration, 28.09.2026).
+        // 175 -> 176: IBerichtsMarke liefert den Logo-Pfad fuer PDF-/Excel-Export
+        // und Dossier aus einer gemeinsamen Quelle (Aufgabe 15, Optikanalyse 28.09.2026).
+        // 176 -> 177: IDatenaenderungsVerlauf haelt Rueckgaengig/Wiederholen fuer Haltungs- und
+        // Schachtdaten (Aufgabe 16, 29.09.2026).
         Assert.True(
-            registrations.Count == 174,
-            $"Erwartet 174 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
-            "Dienst die Registrierung in ServiceProviderRegistrationMap ergaenzen und diese Zahl " +
+            registrations.Count == 177,
+            $"Erwartet 177 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            "Dienst die Registrierung in ServiceProviderRegistrationMap ergänzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(services.XtfLieferungen,
             registrations[typeof(AuswertungPro.Next.Application.Xtf.Lieferung.IXtfLieferungsAblage)]);

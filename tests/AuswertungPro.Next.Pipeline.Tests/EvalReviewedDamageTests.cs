@@ -62,7 +62,7 @@ public sealed class EvalReviewedDamageTests : IDisposable
         var error = Assert.Throws<InvalidDataException>(
             () => EvalReviewedDamageDataset.Load(_evalRoot, _reviewFile));
 
-        Assert.Contains("gehoert nicht", error.Message);
+        Assert.Contains("gehört nicht", error.Message);
     }
 
     [Fact]

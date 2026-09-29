@@ -44,7 +44,7 @@ public sealed class SafeShellOpenService : ISafeShellOpenService
         var extension = Path.GetExtension(fullPath);
         if (!IsAllowedFileExtension(extension))
         {
-            error = $"Dateityp nicht zum direkten Oeffnen freigegeben: {extension}";
+            error = $"Dateityp nicht zum direkten Öffnen freigegeben: {extension}";
             return false;
         }
 

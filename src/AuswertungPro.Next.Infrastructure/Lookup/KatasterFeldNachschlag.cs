@@ -44,7 +44,7 @@ public sealed class KatasterFeldNachschlag : IFeldWertNachschlag
         {
             return new FeldNachschlagErgebnis.NichtGefunden(
                 "Der Abwasserkataster ist nicht eingerichtet. "
-                + "Die XTF-Datei laesst sich in den Einstellungen hinterlegen.");
+                + "Die XTF-Datei lässt sich in den Einstellungen hinterlegen.");
         }
 
         // Beim ersten Aufruf entsteht die Tabelle aus einer mehrere hundert
@@ -73,7 +73,7 @@ public sealed class KatasterFeldNachschlag : IFeldWertNachschlag
             if (vorschlaege.Count == 0)
             {
                 return new FeldNachschlagErgebnis.NichtGefunden(
-                    $"Der Abwasserkataster fuehrt fuer {anfrage.Feldname} keinen Wert.");
+                    $"Der Abwasserkataster führt für {anfrage.Feldname} keinen Wert.");
             }
 
             // Zwei Schaechte mit derselben Nummer: nicht raten, sondern fragen.

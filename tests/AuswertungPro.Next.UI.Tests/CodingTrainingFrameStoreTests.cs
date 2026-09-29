@@ -68,7 +68,7 @@ public sealed class CodingTrainingFrameStoreTests
             () => Task.FromResult<byte[]?>(Array.Empty<byte>()));
 
         Assert.Null(result.Path);
-        Assert.Equal("kein Frame verfuegbar", result.Error);
+        Assert.Equal("kein Frame verfügbar", result.Error);
         Assert.False(Directory.Exists(System.IO.Path.Combine(temp.Path, "gold_frames")));
     }
 
@@ -105,7 +105,7 @@ public sealed class CodingTrainingFrameStoreTests
         var result = store.SaveEvidenceFrame(MakeEvent(), rawFramePath: null);
 
         Assert.Null(result.Path);
-        Assert.Equal("kein Rohbild fuer Beweisbild verfuegbar", result.Error);
+        Assert.Equal("kein Rohbild für Beweisbild verfügbar", result.Error);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Collections;
 using System.Collections.Specialized;
@@ -303,7 +304,7 @@ public partial class HaltungsgrafikControl : UserControl
             // Anzeigen nicht abstuerzen lassen. Der Waechtertest faengt neue Faelle vorher ab.
             Buehne.Child = null;
             SetValue(SymbolAnzahlPropertyKey, 0);
-            ZeigeHinweis("Die Haltungsgrafik kann nicht gezeichnet werden: " + ex.Message);
+            ZeigeHinweis("Die Haltungsgrafik kann nicht gezeichnet werden: " + UserError.DescribeAndReport(ex, "Haltungsgrafik zeichnen"));
         }
     }
 

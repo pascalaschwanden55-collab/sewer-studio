@@ -143,7 +143,7 @@ public sealed class TrainingStudioViewModelTests
 
         await vm.FotoMitKiPruefenCommand.ExecuteAsync(null);
 
-        Assert.Contains("nicht verfuegbar", vm.StatusText);
+        Assert.Contains("nicht verfügbar", vm.StatusText);
         Assert.Contains("Testmodell fehlt", vm.StatusText);
         Assert.Empty(vm.SuggestionCandidates);
         Assert.Empty(wb.SavedDecisions);
@@ -218,7 +218,7 @@ public sealed class TrainingStudioViewModelTests
 
         Assert.Equal(0, wb.SegmentCalls);
         Assert.Null(vm.CurrentBox);
-        Assert.Contains("Foto-Pruefung", vm.StatusText);
+        Assert.Contains("Foto-Prüfung", vm.StatusText);
 
         gate.SetResult();
         await photoCheck;
@@ -512,7 +512,7 @@ public sealed class TrainingStudioViewModelTests
         Assert.Equal(0, vm.CurrentIndex);
         Assert.Equal(0, vm.QueueDoneCount);
         Assert.Equal(@"C:\a.jpg", vm.CurrentImagePath);
-        Assert.Contains("ausdruecklich", vm.StatusText);
+        Assert.Contains("ausdrücklich", vm.StatusText);
         Assert.Contains("Bild fertig", vm.StatusText);
     }
 
@@ -611,7 +611,7 @@ public sealed class TrainingStudioViewModelTests
         vm.DiscardCommand.Execute(null);
 
         Assert.Contains("Entwurf", vm.StatusText);
-        Assert.Contains("Unvollstaendige Goldframes", vm.StatusText);
+        Assert.Contains("Unvollständige Goldframes", vm.StatusText);
     }
 
     [Fact]
@@ -684,7 +684,7 @@ public sealed class TrainingStudioViewModelTests
         Assert.True(vm.IsAwaitingImageCompletion);
         Assert.Equal(1, vm.SavedEventCountForCurrentImage);
         Assert.Contains("Entwurf", vm.StatusText);
-        Assert.Contains("Unvollstaendige Goldframes", vm.StatusText);
+        Assert.Contains("Unvollständige Goldframes", vm.StatusText);
     }
 
     [Fact]
@@ -750,7 +750,7 @@ public sealed class TrainingStudioViewModelTests
     {
         var wb = new FakeWorkbench
         {
-            SaveResult = new WorkbenchSaveResult(false, "Eval-Schutz: Bild gehoert zum Mess-Set.", null, "-", null),
+            SaveResult = new WorkbenchSaveResult(false, "Eval-Schutz: Bild gehört zum Mess-Set.", null, "-", null),
         };
         var items = new[] { Foto(@"C:\a.jpg"), Foto(@"C:\b.jpg") };
         var vm = CreateVm(wb, items);
@@ -825,7 +825,7 @@ public sealed class TrainingStudioViewModelTests
         await vm.AcceptCommand.ExecuteAsync(null);
 
         Assert.Empty(wb.SavedDecisions);          // SaveAsync wurde NICHT aufgerufen
-        Assert.Contains("Segmentierung laeuft noch", vm.StatusText);
+        Assert.Contains("Segmentierung läuft noch", vm.StatusText);
         Assert.Equal(0, vm.CurrentIndex);         // bleibt beim selben Item
 
         wb.SegmentGate.SetResult();
@@ -860,7 +860,7 @@ public sealed class TrainingStudioViewModelTests
         var first = vm.AcceptCommand.ExecuteAsync(null);      // haengt am Save-Gate
         await vm.CorrectCommand.ExecuteAsync(null);           // zweiter Druck -> blockiert
 
-        Assert.Contains("Speichern laeuft bereits", vm.StatusText);
+        Assert.Contains("Speichern läuft bereits", vm.StatusText);
 
         gate.SetResult();
         await first;
@@ -882,7 +882,7 @@ public sealed class TrainingStudioViewModelTests
         await vm.BoxDrawnCommand.ExecuteAsync(new BoundingBox(0.4, 0.4, 0.1, 0.1));
 
         Assert.Equal(segmentCallsBeforeSave, wb.SegmentCalls);
-        Assert.Contains("Speichern laeuft", vm.StatusText);
+        Assert.Contains("Speichern läuft", vm.StatusText);
 
         gate.SetResult();
         await saving;
@@ -1678,7 +1678,7 @@ public sealed class TrainingStudioViewModelTests
         var vm = CreateVm(
             new FakeWorkbench(),
             labelLookup: code => code == "BCC" ? "Bogen" : null);
-        vm.Beschreibung = "Riss bei 3 Uhr — Ausmass ergaenzen";   // alte, unbearbeitete Vorlage
+        vm.Beschreibung = "Riss bei 3 Uhr — Ausmass ergänzen";   // alte, unbearbeitete Vorlage
 
         vm.ApplyCodeSelection("BCC", null, null, "Bogen");
 
@@ -1887,7 +1887,7 @@ public sealed class TrainingStudioViewModelTests
         await vm.RunPreviewDetectionCommand.ExecuteAsync(null);
 
         Assert.Empty(vm.PreviewDetections);
-        Assert.Contains("nicht geprueft", vm.PreviewDetectionSummary);
+        Assert.Contains("nicht geprüft", vm.PreviewDetectionSummary);
         Assert.Contains("zu dunkel", vm.PreviewDetectionSummary);
         Assert.DoesNotContain("kein Treffer", vm.PreviewDetectionSummary);
     }
@@ -2149,7 +2149,7 @@ public sealed class TrainingStudioViewModelTests
     public async Task Goldpruefung_Fehler_belaesst_die_bisherige_Warteschlange()
     {
         var loader = new FakeGoldQualityReviewUseCase(
-            new InvalidOperationException("Schutzscan unvollstaendig"));
+            new InvalidOperationException("Schutzscan unvollständig"));
         var vm = CreateVm(new FakeWorkbench(), goldQualityReview: loader);
         vm.LoadItems([Foto(@"C:\bisher.jpg")]);
 

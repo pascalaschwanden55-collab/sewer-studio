@@ -135,7 +135,7 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
                     minSamples,
                     _modelPath,
                     null,
-                    "Zu wenige Trainingsfaelle");
+                    "Zu wenige Trainingsfälle");
             }
 
             var model = new TrainedMeasureModel

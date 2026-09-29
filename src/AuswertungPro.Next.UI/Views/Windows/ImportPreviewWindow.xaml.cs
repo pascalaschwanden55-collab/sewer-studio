@@ -11,13 +11,13 @@ public partial class ImportPreviewWindow : Window
         InitializeComponent();
         WindowStateManager.Track(this);
 
-        HeaderText.Text = $"Vorschau: {preview.RecordsToCreate} neue, " +
+        Kopf.Title = $"Vorschau: {preview.RecordsToCreate} neue, " +
                           $"{preview.RecordsToUpdate} Updates, " +
                           $"{preview.ConflictsExpected} Konflikte";
 
-        SubHeaderText.Text = $"Import-Typ: {label}";
+        Kopf.Subtitle = $"Import-Typ: {label}";
         if (preview.MediaFilesFound > 0 || preview.MediaUnmatched > 0)
-            SubHeaderText.Text += $" · Medien: {preview.MediaFilesFound} gefunden, {preview.MediaUnmatched} nicht zugeordnet";
+            Kopf.Subtitle += $" · Medien: {preview.MediaFilesFound} gefunden, {preview.MediaUnmatched} nicht zugeordnet";
 
         ChangesGrid.ItemsSource = preview.Changes;
         ConflictsGrid.ItemsSource = preview.ConflictDetails;

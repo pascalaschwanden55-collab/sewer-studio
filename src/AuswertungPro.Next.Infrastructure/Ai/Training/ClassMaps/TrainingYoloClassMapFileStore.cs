@@ -38,7 +38,7 @@ public sealed class TrainingYoloClassMapFileStore : ITrainingYoloClassMapStore
                     StringComparison.Ordinal))
             {
                 throw new TrainingYoloClassMapException(
-                    "Die Detect-Klassenkarte wurde waehrend des Lesens veraendert.");
+                    "Die Detect-Klassenkarte wurde während des Lesens verändert.");
             }
 
             var actualManifestHash = ComputeSha256(_vsaManifestPath);
@@ -48,7 +48,7 @@ public sealed class TrainingYoloClassMapFileStore : ITrainingYoloClassMapStore
                     StringComparison.OrdinalIgnoreCase))
             {
                 throw new TrainingYoloClassMapException(
-                    "Die Detect-Klassenkarte gehoert nicht zum aktuellen VSA-Katalog. " +
+                    "Die Detect-Klassenkarte gehört nicht zum aktuellen VSA-Katalog. " +
                     $"Karte: {classMap.VsaManifestHash}; Katalog: {actualManifestHash}.");
             }
 
@@ -73,7 +73,7 @@ public sealed class TrainingYoloClassMapFileStore : ITrainingYoloClassMapStore
                     StringComparison.OrdinalIgnoreCase))
             {
                 throw new TrainingYoloClassMapException(
-                    "Die Migrationstabelle gehoert nicht zum aktuellen VSA-Katalog.");
+                    "Die Migrationstabelle gehört nicht zum aktuellen VSA-Katalog.");
             }
 
             return new TrainingYoloClassMapSnapshot(
@@ -128,7 +128,7 @@ public sealed class TrainingYoloClassMapFileStore : ITrainingYoloClassMapStore
         if (version == YoloDetectClassMapV3.Version)
             return YoloDetectClassMapV3.Classes;
         throw new TrainingYoloClassMapException(
-            $"Nicht unterstuetzte Detect-Klassenkartenversion {version}; erwartet wird " +
+            $"Nicht unterstützte Detect-Klassenkartenversion {version}; erwartet wird " +
             $"v{YoloDetectClassMapV2.Version} (eingefroren) oder v{YoloDetectClassMapV3.Version}.");
     }
 

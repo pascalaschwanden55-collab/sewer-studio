@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.UI.Ai.Live;
@@ -45,7 +46,7 @@ public static class LiveDetectionManualMarkTrainingCommandWorkflow
         }
         catch (Exception ex)
         {
-            actions.ShowOsdMeterStatus($"\u2717 Fehler: {ex.Message}", false);
+            actions.ShowOsdMeterStatus($"\u2717 Fehler: {UserError.DescribeAndReport(ex, "Handmarkierung als Training speichern")}", false);
             return Result(LiveDetectionManualMarkTrainingCommandOutcome.Failed);
         }
     }

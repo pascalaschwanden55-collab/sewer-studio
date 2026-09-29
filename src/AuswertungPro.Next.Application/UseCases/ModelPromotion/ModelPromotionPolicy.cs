@@ -68,13 +68,13 @@ public static class ModelPromotionPolicy
         var incumbent = request.Incumbent ?? [];
         var candidate = request.Candidate ?? [];
         if (incumbent.Count == 0 || candidate.Count == 0)
-            return Reject("Es fehlen Messungen fuer das bestehende Modell oder den Kandidaten.");
+            return Reject("Es fehlen Messungen für das bestehende Modell oder den Kandidaten.");
 
         if (incumbent.Count < request.MinimumSeeds || candidate.Count < request.MinimumSeeds)
         {
             return Reject(
-                $"Es braucht mindestens {request.MinimumSeeds} Laeufe je Seite; vorhanden sind "
-                + $"{incumbent.Count} und {candidate.Count}. Einzellaeufe sind keine Belege.",
+                $"Es braucht mindestens {request.MinimumSeeds} Läufe je Seite; vorhanden sind "
+                + $"{incumbent.Count} und {candidate.Count}. Einzelläufe sind keine Belege.",
                 incumbent, candidate);
         }
 
@@ -86,7 +86,7 @@ public static class ModelPromotionPolicy
         {
             return Reject(
                 "Die Messungen stammen nicht vom selben eingefrorenen Messbestand. Ein Lauf "
-                + "aendert genau eine Sache — Modell ODER Bestand.",
+                + "ändert genau eine Sache — Modell ODER Bestand.",
                 incumbent, candidate);
         }
 
@@ -102,7 +102,7 @@ public static class ModelPromotionPolicy
         {
             return new ModelPromotionDecision(
                 false,
-                $"Der Gewinn von {Prozent(gewinn)} liegt nicht ueber der gemessenen Streuung von "
+                $"Der Gewinn von {Prozent(gewinn)} liegt nicht über der gemessenen Streuung von "
                 + $"{Prozent(streuung)}. Nicht nachweisbar ist nicht dasselbe wie besser.",
                 recall.IncumbentMean, recall.IncumbentMinimum, recall.IncumbentMaximum,
                 recall.CandidateMean, recall.CandidateMinimum, recall.CandidateMaximum);
@@ -116,7 +116,7 @@ public static class ModelPromotionPolicy
         {
             return new ModelPromotionDecision(
                 false,
-                $"Die Fehlalarmquote steigt um {Prozent(alarmZuwachs)} und damit ueber ihre "
+                $"Die Fehlalarmquote steigt um {Prozent(alarmZuwachs)} und damit über ihre "
                 + $"eigene Streuung von {Prozent(alarmStreuung)}. Mehr Treffer bei mehr "
                 + "Fehlalarmen ist kein Fortschritt.",
                 recall.IncumbentMean, recall.IncumbentMinimum, recall.IncumbentMaximum,
@@ -125,8 +125,8 @@ public static class ModelPromotionPolicy
 
         return new ModelPromotionDecision(
             true,
-            $"Der Gewinn von {Prozent(gewinn)} ist groesser als die Streuung von "
-            + $"{Prozent(streuung)}, und die Fehlalarmquote verschlechtert sich nicht darueber "
+            $"Der Gewinn von {Prozent(gewinn)} ist grösser als die Streuung von "
+            + $"{Prozent(streuung)}, und die Fehlalarmquote verschlechtert sich nicht darüber "
             + "hinaus.",
             recall.IncumbentMean, recall.IncumbentMinimum, recall.IncumbentMaximum,
             recall.CandidateMean, recall.CandidateMinimum, recall.CandidateMaximum);

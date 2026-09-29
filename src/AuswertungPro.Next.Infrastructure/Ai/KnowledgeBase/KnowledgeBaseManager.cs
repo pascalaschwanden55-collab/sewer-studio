@@ -206,7 +206,7 @@ public sealed class KnowledgeBaseManager(
 
         if (eligibleIndices.Count == 0)
             throw new InvalidOperationException(
-                "KB-Rebuild abgebrochen: Kein menschlich bestaetigtes Gold-Sample vorhanden. Bestehende KB bleibt erhalten.");
+                "KB-Rebuild abgebrochen: Kein menschlich bestätigtes Gold-Sample vorhanden. Bestehende KB bleibt erhalten.");
 
         // Embeddings parallel erzeugen (VOR dem Loeschen)
         var embeddings = new ConcurrentDictionary<int, float[]>();
@@ -245,7 +245,7 @@ public sealed class KnowledgeBaseManager(
                 $"[KnowledgeBaseManager] ABBRUCH: Nur {embeddings.Count}/{samples.Count} Embeddings ({successRate:P0})");
             throw new InvalidOperationException(
                 $"KB-Rebuild abgebrochen: Nur {embeddings.Count} von {eligibleIndices.Count} Gold-Embeddings erzeugt ({successRate:P0}). " +
-                "Bestehende KB bleibt erhalten. Pruefe Ollama-Verbindung.");
+                "Bestehende KB bleibt erhalten. Prüfe Ollama-Verbindung.");
         }
 
         if (errors > 0)

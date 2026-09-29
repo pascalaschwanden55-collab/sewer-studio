@@ -39,7 +39,7 @@ internal sealed class SchachtProtocolRefreshController
 {
     private const string DialogTitle = "Aktualisieren";
     private const string InvalidProtocolFallback =
-        "Das verknuepfte PDF ist kein lesbares Schachtprotokoll.";
+        "Das verknüpfte PDF ist kein lesbares Schachtprotokoll.";
     private readonly IDialogService _dialogs;
     private readonly SchachtProtocolRefreshActions _actions;
 
@@ -77,7 +77,7 @@ internal sealed class SchachtProtocolRefreshController
 
         if (!_dialogs.ConfirmWarn(
                 "Der Schacht wird komplett aus dem Protokoll neu aufgebaut. " +
-                "Von Hand geaenderte Felder bleiben erhalten; alle uebrigen werden ersetzt. Fortfahren?",
+                "Von Hand geänderte Felder bleiben erhalten; alle übrigen werden ersetzt. Fortfahren?",
                 DialogTitle))
         {
             return SchachtProtocolRefreshOutcome.Cancelled;
@@ -87,7 +87,7 @@ internal sealed class SchachtProtocolRefreshController
         if (match is null)
         {
             _dialogs.Warn(
-                "Die verknuepfte Protokoll-Datei wurde nicht gefunden.",
+                "Die verknüpfte Protokoll-Datei wurde nicht gefunden.",
                 DialogTitle);
             return SchachtProtocolRefreshOutcome.LinkedFileMissing;
         }
@@ -117,8 +117,8 @@ internal sealed class SchachtProtocolRefreshController
         if (match.Herkunft == SchachtProtocolFileOrigin.Schachtordner
             && !MatchesShaftNumber(selected, result.Schachtnummer)
             && !_dialogs.ConfirmWarn(
-                $"Die verknuepfte Datei fehlt. Im Ordner dieses Schachts wurde stattdessen "
-                + $"\"{Path.GetFileName(match.PdfPfad)}\" gefunden, sie gehoert laut Protokoll aber "
+                $"Die verknüpfte Datei fehlt. Im Ordner dieses Schachts wurde stattdessen "
+                + $"\"{Path.GetFileName(match.PdfPfad)}\" gefunden, sie gehört laut Protokoll aber "
                 + $"zu Schacht {result.Schachtnummer!.Trim()}. Trotzdem übernehmen?",
                 DialogTitle))
         {

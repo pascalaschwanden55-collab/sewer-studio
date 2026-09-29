@@ -2,6 +2,10 @@ using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Application.DataPage;
 
+/// <param name="IsVisible">
+/// Aufgabe 17: false, solange kein einziger Fall gelernt wurde (nichts Handlungsleitendes zu
+/// zeigen); sobald mindestens ein Fall vorliegt, immer true.
+/// </param>
 public sealed record LearningReadinessPresentation(
     string Info,
     string Color,
@@ -49,8 +53,15 @@ public static class LearningReadinessPresenter
     {
         var (color, text) = Evaluate(stats.TotalSamples);
 
+        // Aufgabe 17 (Optikanalyse 28.09.2026): Ohne einen einzigen gelernten Fall stand hier
+        // dauerhaft "Rot · Lernbasis: 0 Fälle" über der Werkzeugleiste — fuer ein frisches
+        // Projekt eine staendige, nicht handlungsleitende Warnmeldung. Die Ampel-Schwellenwerte
+        // (Evaluate/StrongModelThreshold/MinimumSamplesForTraining) und der Infotext bleiben
+        // unveraendert; nur die Sichtbarkeit ist eine reine Darstellungsentscheidung: Ohne
+        // Faelle gibt es nichts zu zeigen, sobald der erste Fall gelernt ist, erscheint die
+        // Ampel wie bisher.
         if (stats.TotalSamples <= 0)
-            return new LearningReadinessPresentation("Lernbasis: 0 Fälle", color, text, true);
+            return new LearningReadinessPresentation("Lernbasis: 0 Fälle", color, text, false);
 
         var suffix = string.Empty;
         if (similarCases is not null && similarCases.Value > 0)

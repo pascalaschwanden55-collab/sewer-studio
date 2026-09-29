@@ -66,7 +66,7 @@ internal sealed class DossierAttachmentPublishSession
                     out var error))
             {
                 _warnings.Add(
-                    $"Die Sicherung fuer '{Path.GetFileName(file.TargetPath)}' blieb "
+                    $"Die Sicherung für '{Path.GetFileName(file.TargetPath)}' blieb "
                     + $"zur Sicherheit erhalten ({error}).");
             }
         }
@@ -101,12 +101,12 @@ internal sealed class DossierAttachmentPublishSession
                     stagedCurrent = null;
                     _warnings.Add(
                         $"Die Beilage '{Path.GetFileName(file.TargetPath)}' wurde "
-                        + "zwischenzeitlich veraendert und deshalb nicht zurueckgesetzt. "
+                        + "zwischenzeitlich verändert und deshalb nicht zurückgesetzt. "
                         + $"Der fremde Inhalt blieb unter '{Path.GetFileName(restoredAt)}'.");
                     if (file.BackupPath is not null && File.Exists(file.BackupPath))
                     {
                         _warnings.Add(
-                            $"Die letzte gepruefte Sicherung fuer "
+                            $"Die letzte geprüfte Sicherung für "
                             + $"'{Path.GetFileName(file.TargetPath)}' blieb ebenfalls erhalten.");
                     }
                     return;
@@ -135,7 +135,7 @@ internal sealed class DossierAttachmentPublishSession
                 _warnings.Add(
                     $"Die vorherige Beilage '{Path.GetFileName(file.TargetPath)}' "
                     + "konnte nicht wiederhergestellt werden: Sicherung fehlt oder "
-                    + "wurde veraendert.");
+                    + "wurde verändert.");
                 return;
             }
 
@@ -161,7 +161,7 @@ internal sealed class DossierAttachmentPublishSession
 
             _warnings.Add(
                 $"Die Beilage '{Path.GetFileName(file.TargetPath)}' konnte nach einem "
-                + $"Manifestfehler nicht zurueckgesetzt werden ({ex.Message}).");
+                + $"Manifestfehler nicht zurückgesetzt werden ({ex.Message}).");
         }
     }
 
@@ -173,7 +173,7 @@ internal sealed class DossierAttachmentPublishSession
         if (!TryDeleteVerified(stagedCurrent, file.PublishedSha256, out var error))
         {
             _warnings.Add(
-                $"Die zurueckgenommene neue Kopie "
+                $"Die zurückgenommene neue Kopie "
                 + $"'{Path.GetFileName(file.TargetPath)}' blieb erhalten ({error}).");
         }
     }

@@ -26,11 +26,15 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Top Bar -->
+        <!-- Top Bar (Kopf + Werkzeugleiste in derselben Karte, damit keine der uebrigen
+             Grid.Row-Zuordnungen in diesem Fenster verschoben werden muss) -->
         <Border Grid.Row="0" Padding="10" CornerRadius="{DynamicResource RadiusM}"
                 Background="{DynamicResource CardBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1" Margin="0,0,0,8">
+            <StackPanel>
+            <ctrl:NovaDialogHeader Title="Training Center" Margin="0,0,0,8"
+                                    Subtitle="KI-Trainingsdaten pruefen, Batch-Import und Wissensdatenbank verwalten."/>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -65,7 +69,7 @@
                         ToolTip="PDF, Videoordner und Ausgabe wählen und nach Haltung zusammenführen."
                         Margin="0,0,8,0"/>
                 <Button Grid.Column="7" Command="{Binding BatchImportAndIndexCommand}"
-                        ToolTip="Alle Ordner scannen, Samples generieren, auto-approve, Knowledge Base indizieren"
+                        ToolTip="Alle Ordner scannen, Trainingsdaten generieren, automatisch akzeptieren, Wissensdatenbank indizieren"
                         FontWeight="SemiBold" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
                         <ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
@@ -73,10 +77,10 @@
                     </StackPanel>
                 </Button>
                 <Button Grid.Column="8" Content="KB prüfen" Command="{Binding CheckKnowledgeBaseCommand}"
-                        ToolTip="Liest Samples, Embeddings, Versionen und Top-Codes aus der Knowledge Base"
+                        ToolTip="Liest Trainingsdaten, Embeddings, Versionen und Top-Codes aus der Wissensdatenbank"
                         Margin="0,0,8,0"/>
                 <Button Grid.Column="9" Command="{Binding ReconcileGoldToKbCommand}"
-                        ToolTip="Bestätigte Gold-Befunde, die noch nicht in der Knowledge Base stehen, nachträglich indexieren (legt vorher ein Backup an)"
+                        ToolTip="Bestätigte Gold-Befunde, die noch nicht in der Wissensdatenbank stehen, nachträglich indexieren (legt vorher ein Backup an)"
                         FontWeight="SemiBold" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
                         <ui:FluentIcon Glyph="&#xE896;" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0"/>
@@ -86,6 +90,7 @@
                 <Button Grid.Column="10" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
             </Grid>
+            </StackPanel>
         </Border>
 
         <!-- Row 1: Trainingsstand -->
@@ -109,12 +114,12 @@
 
                 <!-- Zaehler -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,16,0">
-                    <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" Text="Samples: "/>
+                    <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" Text="Trainingsdaten: "/>
                     <TextBlock Foreground="{DynamicResource TextBrush}" Text="{Binding KbSampleCount}" FontWeight="Bold"/>
                     <TextBlock Foreground="{DynamicResource WarningBrush}" FontSize="{DynamicResource TextXS}"
                                Text="{Binding KbErrorCount, StringFormat=' ({0}'}"/>
-                    <TextBlock Foreground="{DynamicResource WarningBrush}" FontSize="{DynamicResource TextXS}"
-                               Text="&#xE7BA;" FontFamily="{DynamicResource FontIcon}"/>
+                    <ui:FluentIcon Foreground="{DynamicResource WarningBrush}" FontSize="{DynamicResource TextXS}"
+                               Glyph="&#xE7BA;"/>
                     <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}"
                                Text="{Binding KbNewCount, StringFormat=' {0} neu)'}"/>
                     <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" Text="  |  Codes: "/>
@@ -124,7 +129,7 @@
                 <!-- Top-Codes Tooltip -->
                 <TextBlock Grid.Column="2" Text="Code-Verteilung" Foreground="{DynamicResource MutedBrush}" Cursor="Help">
                     <TextBlock.ToolTip>
-                        <TextBlock Text="{Binding KbTopCodesText}" FontFamily="Consolas"/>
+                        <TextBlock Text="{Binding KbTopCodesText}" FontFamily="{DynamicResource FontMono}"/>
                     </TextBlock.ToolTip>
                 </TextBlock>
 
@@ -154,7 +159,7 @@
                               CanUserAddRows="False"
                               IsReadOnly="True">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="CaseId" Binding="{Binding CaseId}" Width="1.2*"/>
+                            <DataGridTextColumn Header="Fall" Binding="{Binding CaseId}" Width="1.2*"/>
                             <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="0.6*"/>
                             <DataGridTextColumn Header="Video" Binding="{Binding VideoPath}" Width="2*"/>
                             <DataGridTextColumn Header="Protokoll" Binding="{Binding ProtocolPath}" Width="2*"/>
@@ -181,11 +186,11 @@
                             <TextBlock Grid.Row="4" Text="{Binding SelectedCase.ProtocolPath}" Margin="0,6,0,0" TextWrapping="Wrap"/>
                             <StackPanel Grid.Row="5" Orientation="Vertical" Margin="0,12,0,0">
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,6">
-                                    <Button Content="Approve" Command="{Binding ApproveCommand}" Margin="0,0,8,0"/>
-                                    <Button Content="Reject" Command="{Binding RejectCommand}" Margin="0,0,8,0"/>
-                                    <Button Content="Set New" Command="{Binding SetNewCommand}"/>
+                                    <Button Content="Akzeptieren" Command="{Binding ApproveCommand}" Margin="0,0,8,0"/>
+                                    <Button Content="Ablehnen" Command="{Binding RejectCommand}" Margin="0,0,8,0"/>
+                                    <Button Content="Zurücksetzen auf Neu" Command="{Binding SetNewCommand}"/>
                                 </StackPanel>
-                                <Button Content="Samples generieren..."
+                                <Button Content="Trainingsdaten generieren…"
                                         Command="{Binding GenerateSamplesCommand}"
                                         HorizontalAlignment="Stretch"
                                         Padding="8,6"/>
@@ -195,8 +200,8 @@
                 </Grid>
             </TabItem>
 
-            <!-- Tab 2: Samples -->
-            <TabItem Header="Samples">
+            <!-- Tab 2: Trainingsdaten -->
+            <TabItem Header="Trainingsdaten">
                 <Grid Margin="0,8,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -270,8 +275,8 @@
                                        Source="{Binding SelectedSample.FramePath, Converter={StaticResource FileToImage}}"/>
                                 <StackPanel Grid.Row="5" Orientation="Horizontal"
                                             HorizontalAlignment="Right" Margin="0,12,0,0">
-                                    <Button Content="Approve" Command="{Binding ApproveSampleCommand}" Margin="0,0,8,0"/>
-                                    <Button Content="Reject" Command="{Binding RejectSampleCommand}" Margin="0,0,8,0"/>
+                                    <Button Content="Akzeptieren" Command="{Binding ApproveSampleCommand}" Margin="0,0,8,0"/>
+                                    <Button Content="Ablehnen" Command="{Binding RejectSampleCommand}" Margin="0,0,8,0"/>
                                     <Button Content="Entfernen" Command="{Binding RemoveSampleCommand}"/>
                                 </StackPanel>
                             </Grid>
@@ -280,13 +285,13 @@
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Content="Neu laden" Command="{Binding LoadSamplesCommand}" Margin="0,0,8,0"/>
-                        <Button Content="YOLO Export..."
+                        <Button Content="YOLO exportieren…"
                                 Command="{Binding ExportYoloCommand}"
-                                ToolTip="Exportiert Approved-Samples als YOLO-Trainingsdaten (images + labels + data.yaml). Nutzt Sidecar wenn verfügbar, sonst lokaler Export."
+                                ToolTip="Exportiert akzeptierte Trainingsdaten als YOLO-Trainingsdaten (images + labels + data.yaml). Nutzt Sidecar wenn verfügbar, sonst lokaler Export."
                                 FontWeight="SemiBold" Margin="0,0,8,0"/>
                         <Button Content="Protokoll-Training"
                                 Command="{Binding ExportApprovedCommand}"
-                                ToolTip="Speichert Approved-Samples als Few-Shot-Beispiele für die Qwen-Protokollgenerierung (protocol_training.json)"/>
+                                ToolTip="Speichert akzeptierte Trainingsdaten als Few-Shot-Beispiele für die Qwen-Protokollgenerierung (protocol_training.json)"/>
                     </StackPanel>
                 </Grid>
             </TabItem>
@@ -309,28 +314,28 @@
                     <!-- ═══ Row 0: Start/Stop/Pause Buttons ═══ -->
                     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
                         <Button Command="{Binding RunSelfTrainingCommand}"
-                                Background="{DynamicResource SuccessBrush}" Foreground="White" FontWeight="SemiBold"
+                                Style="{StaticResource SuccessButton}" FontWeight="SemiBold"
                                 Padding="16,6" Margin="0,0,8,0" Cursor="Hand">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE768;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}" Margin="0,0,6,0"/>
+                                <ui:FluentIcon Glyph="&#xE768;" FontSize="{DynamicResource TextS}" Margin="0,0,6,0"/>
                                 <TextBlock Text="Selbsttraining starten"/>
                             </StackPanel>
                         </Button>
                         <Button Command="{Binding PauseSelfTrainingCommand}"
                                 IsEnabled="{Binding IsSelfTrainingRunning}"
-                                Background="{DynamicResource WarningBrush}" Foreground="White" FontWeight="SemiBold"
+                                Style="{StaticResource WarningButton}" FontWeight="SemiBold"
                                 Padding="16,6" Margin="0,0,8,0" Cursor="Hand">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE769;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}" Margin="0,0,6,0"/>
+                                <ui:FluentIcon Glyph="&#xE769;" FontSize="{DynamicResource TextS}" Margin="0,0,6,0"/>
                                 <TextBlock Text="Pause / Fortsetzen"/>
                             </StackPanel>
                         </Button>
                         <Button Command="{Binding StopSelfTrainingCommand}"
                                 IsEnabled="{Binding IsSelfTrainingRunning}"
-                                Background="{DynamicResource DangerBrush}" Foreground="White" FontWeight="SemiBold"
+                                Style="{StaticResource DangerButton}" FontWeight="SemiBold"
                                 Padding="16,6" Cursor="Hand">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE71A;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}" Margin="0,0,6,0"/>
+                                <ui:FluentIcon Glyph="&#xE71A;" FontSize="{DynamicResource TextS}" Margin="0,0,6,0"/>
                                 <TextBlock Text="Abbrechen"/>
                             </StackPanel>
                         </Button>
@@ -344,31 +349,31 @@
                                 <Ellipse Width="12" Height="12" x:Name="Dot0" Fill="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="OSD-Scan" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}"/>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}" Margin="6,0"/>
+                            <ui:FluentIcon Glyph="&#xE72A;" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}" Margin="6,0"/>
                             <!-- Stage 1: Frame -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage1">
                                 <Ellipse Width="12" Height="12" x:Name="Dot1" Fill="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="Frame" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}"/>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}" Margin="6,0"/>
+                            <ui:FluentIcon Glyph="&#xE72A;" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}" Margin="6,0"/>
                             <!-- Stage 2: KI -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage2">
                                 <Ellipse Width="12" Height="12" x:Name="Dot2" Fill="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="KI-Analyse" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}"/>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}" Margin="6,0"/>
+                            <ui:FluentIcon Glyph="&#xE72A;" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}" Margin="6,0"/>
                             <!-- Stage 3: Vergleich -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage3">
                                 <Ellipse Width="12" Height="12" x:Name="Dot3" Fill="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="Vergleich" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}"/>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}" Margin="6,0"/>
+                            <ui:FluentIcon Glyph="&#xE72A;" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}" Margin="6,0"/>
                             <!-- Stage 4: Technik -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage4">
                                 <Ellipse Width="12" Height="12" x:Name="Dot4" Fill="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="Technik" Foreground="{DynamicResource TextSecondaryBrush}" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}"/>
                             </StackPanel>
-                            <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}" Margin="6,0"/>
+                            <ui:FluentIcon Glyph="&#xE72A;" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" FontSize="{DynamicResource TextXS}" Margin="6,0"/>
                             <!-- Stage 5: Fertig -->
                             <StackPanel Orientation="Horizontal" x:Name="Stage5">
                                 <Ellipse Width="12" Height="12" x:Name="Dot5" Fill="{DynamicResource MutedBrush}"/>
@@ -524,7 +529,7 @@
                                              IsReadOnly="True"
                                              VerticalScrollBarVisibility="Auto"
                                              HorizontalScrollBarVisibility="Auto"
-                                             FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
+                                             FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}"
                                              TextWrapping="NoWrap" AcceptsReturn="True"
                                              Background="{DynamicResource BgLightBrush}" Foreground="{DynamicResource TextBrush}"
                                              BorderThickness="0" x:Name="LogTextBox"/>
@@ -614,7 +619,7 @@
                                                         <ColumnDefinition Width="30"/>
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Text="{Binding Code}" Foreground="{DynamicResource TextBrush}" FontSize="{DynamicResource TextXS}"
-                                                               FontFamily="Consolas" VerticalAlignment="Center"
+                                                               FontFamily="{DynamicResource FontMono}" VerticalAlignment="Center"
                                                                ToolTip="{Binding Code, Converter={StaticResource VsaCodeToText}}"/>
                                                     <!-- Gestapelter Mini-Balken -->
                                                     <Grid Grid.Column="1" Height="10" Margin="4,0">
@@ -647,14 +652,14 @@
                         <ListBox ItemsSource="{Binding SelfTrainingLogEntries}"
                                  x:Name="SelfTrainingLogList"
                                  MaxHeight="150" Background="{DynamicResource BgLightBrush}" BorderThickness="0"
-                                 FontFamily="Consolas" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                 FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextSecondaryBrush}"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"/>
                     </Expander>
                 </Grid>
             </TabItem>
 
-            <!-- Tab 4: Review Queue (Self-Improving Loop) -->
-            <TabItem Header="Review Queue">
+            <!-- Tab 4: Prüfliste (Self-Improving Loop) -->
+            <TabItem Header="Prüfliste">
                 <Grid Margin="8" KeyDown="ReviewGrid_KeyDown" Focusable="True">
                     <Grid.InputBindings>
                         <KeyBinding Key="Enter" Command="{Binding ApproveSelectedReviewCommand}"/>
@@ -675,7 +680,7 @@
                         <TextBlock Text="{Binding ReviewStatusText}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,16,0"/>
                         <Button Content="Protokoll-Startdaten vorschlagen"
                                 Command="{Binding SuggestProtocolStartdataCommand}"
-                                ToolTip="Geprüfte Protokoll-Samples (Status=New) als Kandidaten einreihen — keine KI-Analyse"
+                                ToolTip="Geprüfte Protokoll-Trainingsdaten (Status=New) als Kandidaten einreihen — keine KI-Analyse"
                                 Margin="0,0,6,0" Padding="8,3"/>
                         <Button Content="Alle Startdaten freigeben"
                                 Click="ReleaseStartdata_Click"
@@ -841,7 +846,7 @@
                         <Button Command="{Binding ApproveSelectedReviewCommand}"
                                 Padding="12,4" Margin="0,0,8,0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE73E;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
+                                <ui:FluentIcon Glyph="&#xE73E;" Margin="0,0,6,0"/>
                                 <TextBlock Text="Akzeptieren"/>
                             </StackPanel>
                         </Button>
@@ -849,14 +854,14 @@
                                 IsEnabled="{Binding SelectedReviewItem, Converter={StaticResource NotNullToBool}, FallbackValue=False}"
                                 Padding="12,4" Margin="0,0,8,0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE70F;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
+                                <ui:FluentIcon Glyph="&#xE70F;" Margin="0,0,6,0"/>
                                 <TextBlock Text="Korrigieren"/>
                             </StackPanel>
                         </Button>
                         <Button Command="{Binding RejectSelectedReviewCommand}"
                                 Padding="12,4">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
+                                <ui:FluentIcon Glyph="&#xE711;" Margin="0,0,6,0"/>
                                 <TextBlock Text="Ablehnen"/>
                             </StackPanel>
                         </Button>
@@ -874,11 +879,11 @@
                             <StackPanel>
                                 <TextBlock Text="Coverage-Analyse" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold" FontSize="{DynamicResource TextM}"/>
                                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}" Margin="0,4,0,0">
-                                    <Run Text="Codes mit weniger als 3 KB-Samples: "/>
+                                    <Run Text="Codes mit weniger als 3 KB-Trainingsdaten: "/>
                                     <Run Text="{Binding KbCoverageGapsCount, Mode=OneWay}" Foreground="{DynamicResource WarningBrush}" FontWeight="Bold"/>
                                 </TextBlock>
                                 <TextBlock Text="{Binding KbCoverageGapsText, Mode=OneWay}"
-                                           FontFamily="Consolas" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}"
+                                           FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}"
                                            TextWrapping="Wrap" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
@@ -890,7 +895,7 @@
                                 <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}" Margin="0,2,0,4"
                                            Text="F1 = Gesamtgenauigkeit, P = Precision, R = Recall"/>
                                 <TextBlock Text="{Binding KbAccuracyText, Mode=OneWay}"
-                                           FontFamily="Consolas" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}"
+                                           FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}"
                                            TextWrapping="NoWrap" Margin="0,0,0,0"/>
                             </StackPanel>
                         </Border>
@@ -898,7 +903,7 @@
                         <!-- Problematische KB-Samples -->
                         <Border Background="{DynamicResource BgLightBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10" Margin="0,0,0,8">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Problematische KB-Samples: " Foreground="{DynamicResource TextBrush}" FontSize="{DynamicResource TextM}"/>
+                                <TextBlock Text="Problematische KB-Trainingsdaten: " Foreground="{DynamicResource TextBrush}" FontSize="{DynamicResource TextM}"/>
                                 <TextBlock Text="{Binding KbStaleSampleCount, Mode=OneWay}"
                                            Foreground="{DynamicResource DangerBrush}" FontWeight="Bold" FontSize="{DynamicResource TextM}"/>
                             </StackPanel>
@@ -909,10 +914,10 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Match-Rate Trend (letzte Läufe)" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold" FontSize="{DynamicResource TextM}"/>
-                                    <TextBlock Text="{Binding KbTrendDirection, Mode=OneWay}"
-                                               FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextL}"
+                                    <ui:FluentIcon Glyph="{Binding KbTrendDirection, Mode=OneWay}"
+                                               FontSize="{DynamicResource TextL}"
                                                Margin="8,0,0,0">
-                                        <TextBlock.Style>
+                                        <ui:FluentIcon.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
                                                 <Style.Triggers>
@@ -924,15 +929,15 @@
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                        </ui:FluentIcon.Style>
+                                    </ui:FluentIcon>
                                 </StackPanel>
                                 <ctrl:Sparkline Values="{Binding KbTrendSeries, Mode=OneWay}"
                                                 Stroke="{DynamicResource AccentBrush}"
                                                 Height="42" Margin="0,6,0,2"
                                                 ToolTip="Exact-Quote der letzten Selbsttraining-Läufe"/>
                                 <TextBlock Text="{Binding KbTrendText, Mode=OneWay}"
-                                           FontFamily="Consolas" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}"
+                                           FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource TextBrush}"
                                            TextWrapping="NoWrap" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
@@ -975,7 +980,7 @@
                                         Click="TeacherRefresh_Click" Margin="0,0,8,0"
                                         Padding="8,4" FontSize="{DynamicResource TextS}">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE72C;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
+                                        <ui:FluentIcon Glyph="&#xE72C;" Margin="0,0,6,0"/>
                                         <TextBlock Text="Aktualisieren"/>
                                     </StackPanel>
                                 </Button>
@@ -984,7 +989,7 @@
                                         Padding="8,4" FontSize="{DynamicResource TextS}" IsEnabled="False"
                                         Foreground="{DynamicResource DangerBrush}">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
+                                        <ui:FluentIcon Glyph="&#xE74D;" Margin="0,0,6,0"/>
                                         <TextBlock Text="Löschen"/>
                                     </StackPanel>
                                 </Button>
@@ -1060,7 +1065,7 @@
                                 <TextBlock x:Name="TeacherDetailDate" FontSize="{DynamicResource TextS}"
                                            Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,0"/>
                                 <TextBlock x:Name="TeacherDetailId" FontSize="{DynamicResource TextXS}"
-                                           Foreground="{DynamicResource MutedBrush}" FontFamily="Consolas" Margin="0,2,0,0"/>
+                                           Foreground="{DynamicResource MutedBrush}" FontFamily="{DynamicResource FontMono}" Margin="0,2,0,0"/>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -1071,7 +1076,7 @@
         <!-- Progress Bar (sichtbar wenn Busy) -->
         <Grid Grid.Row="3" Margin="0,8,0,0"
               Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
-            <ProgressBar Height="20" Minimum="0"
+            <ProgressBar Style="{StaticResource ProgressBarStandard}" Minimum="0"
                          Maximum="{Binding ProgressMax}"
                          Value="{Binding ProgressValue}"/>
             <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"

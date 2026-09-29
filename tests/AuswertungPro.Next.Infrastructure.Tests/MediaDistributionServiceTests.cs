@@ -559,7 +559,7 @@ public sealed class MediaDistributionServiceTests
             Assert.Equal(0, result.FilesCopied);
             Assert.Equal(1, result.Errors);
             Assert.Contains(result.Messages, message =>
-                message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+                message.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
             Assert.Empty(Directory.EnumerateFileSystemEntries(external));
             Assert.Equal("kundenvideo", File.ReadAllText(source));
             Assert.Equal(source, project.Data[0].GetFieldValue(FieldKeys.Link));
@@ -591,7 +591,7 @@ public sealed class MediaDistributionServiceTests
 
             Assert.Equal(0, result.FilesCopied);
             Assert.Contains(result.Messages, message =>
-                message.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+                message.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
             Assert.Equal(aliasedSource, project.Data[0].GetFieldValue(FieldKeys.Link));
             Assert.Equal("kundenvideo", File.ReadAllText(externalVideo));
         }

@@ -38,10 +38,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     /// </summary>
     public event Action? FelderExternErgaenzt;
 
-    private void MeldeFelderExternErgaenzt() => FelderExternErgaenzt?.Invoke();
+    private void MeldeFelderExternErgaenzt() { Verlauf.Leere(AuswertungPro.Next.Application.UseCases.Datenaenderungen.DatenaenderungsVerlauf.GrundUebernahme); FelderExternErgaenzt?.Invoke(); }
 
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
+    private readonly IToastService _toasts;
     private readonly AuswertungPro.Next.Application.Lookup.IQgisBestandLeser _qgisBestand;
     private readonly AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser _katasterKennungen;
     private readonly AppSettings _settings;
@@ -85,6 +86,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private bool _disposed;
 
     internal IDialogService Dialogs => _dialogs;
+    internal IToastService Toasts => _toasts;
     internal AppSettings Settings => _settings;
     internal AuswertungPro.Next.Application.Vsa.IVsaEvaluationService Vsa => _vsa;
     internal AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog => _codeCatalog;
@@ -205,6 +207,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     {
         _shell = shell;
         _dialogs = services.Dialogs;
+        _toasts = services.Toasts;
         _settings = services.Settings;
         _vsa = services.Vsa;
         _codeCatalog = services.CodeCatalog;
@@ -232,10 +235,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _webGisHolen = services.WebGisHolen;
         ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("haltung", () => _shell.Project, Settings,
             () => _shell.IsProjectReady, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
         ObjektakteCommand = Services.ObjektaktenDialog.Befehl("haltung", () => _shell.Project, () => Selected?.Id,
             Settings, () => _shell.IsProjectReady, () => _shell.MarkProjectDirty(), Save, services.ObjektaktenPakete, _dialogs,
-            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung);
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
         _timers = new DataPageTimerController(
             value => SaveStatus = value,
             value => IsSaveStatusVisible = value,
@@ -261,7 +264,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 record,
                 _settings.HydraulikPanel,
                 dn,
-                saveSettings: _settings.Save));
+                saveSettings: _settings.Save),
+            toasts: _toasts,
+            berichtsMarke: services.BerichtsMarke);
         _originalPdfController = new DataPageOriginalPdfController(
             _dialogs,
             EnsureProtocolPath,
@@ -739,7 +744,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
         Selected = record;
         _shell.NavigateToSanierungsMatrix(holding, singleHoldingMode: true, targetRecord: record);
-        _shell.SetStatus($"Sanierungsmaßnahme geöffnet: {holding}");
+        _shell.SetStatus($"Sanierungsmassnahme geöffnet: {holding}");
     }
 
     private void OpenSanierungsmassnahmenWindow(HaltungRecord? record, InitialFocusMode focus)
@@ -843,13 +848,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         {
             var name = record.GetFieldValue(FieldKeys.HoldingName) ?? "(unbekannt)";
             _dialogs.Info(
-                $"Kein Datei- oder Ordnerpfad gefunden fuer Haltung '{name}'.",
+                $"Kein Datei- oder Ordnerpfad gefunden für Haltung '{name}'.",
                 "Ordner");
             return;
         }
 
         if (!_explorerReveal.TryReveal(target, out var error))
-            _dialogs.Warn($"Ordner konnte nicht geoeffnet werden:\n{error}", "Ordner");
+            _dialogs.Warn($"Ordner konnte nicht geöffnet werden:\n{error}", "Ordner");
     }
 
     private SchachtRecord? FindSchachtByNummer(string? nummer)

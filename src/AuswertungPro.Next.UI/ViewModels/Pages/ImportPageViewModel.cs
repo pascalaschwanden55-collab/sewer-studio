@@ -30,6 +30,12 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
     private readonly Func<bool> _saveProjectForActiveImport;
     private readonly IDialogService _dialogs;
 
+    /// <summary>
+    /// Aufgabe 13 (Windows-Integration, 28.09.2026): spiegelt den Fortschritt des
+    /// Ein-Knopf-Imports am Programmsymbol in der Taskleiste.
+    /// </summary>
+    private readonly Services.ITaskbarFortschritt _taskbar;
+
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
     [ObservableProperty] private string _detailsText = "";
@@ -43,6 +49,9 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
     [ObservableProperty] private bool _canCancel;
     [ObservableProperty] private bool _showPreviewFirst;
     [ObservableProperty] private string _catalogStatus = "";
+    /// <summary>Kurzer Anzeigetext (28.09.2026, Aufgabe 9); der volle Pfad steht im ToolTip
+    /// (<see cref="CatalogStatus"/> bleibt dafür unverändert die vollständige Fassung).</summary>
+    [ObservableProperty] private string _catalogStatusKurz = "";
     [ObservableProperty] private bool _isCatalogOk;
     [ObservableProperty] private bool _fillMissingOnly;
 
@@ -78,6 +87,7 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
             _sharedImportState);
         var dialogs = sp.Dialogs;
         _dialogs = dialogs;
+        _taskbar = sp.Taskbar;
         _settings = sp.Settings;
         _projects = sp.Projects;
         _contentSignature = sp.ProjectContentSignature;
@@ -187,12 +197,38 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
         AssignPhotosFromFolderCommand.NotifyCanExecuteChanged();
         ImportKanalProjektCommand.NotifyCanExecuteChanged();
         ProtokollNeuGenerierenCommand.NotifyCanExecuteChanged();
+
+        AktualisiereTaskbarFortschritt();
     }
 
     partial void OnCanCancelChanged(bool value)
     {
         _ = value;
         (CancelImportCommand as RelayCommand)?.NotifyCanExecuteChanged();
+    }
+
+    partial void OnImportProgressPercentChanged(double value) => AktualisiereTaskbarFortschritt();
+
+    partial void OnImportIsIndeterminateChanged(bool value) => AktualisiereTaskbarFortschritt();
+
+    /// <summary>
+    /// Aufgabe 13 (Windows-Integration): spiegelt IsImportInProgress/ImportIsIndeterminate/
+    /// ImportProgressPercent am Programmsymbol in der Taskleiste. Liest die drei Eigenschaften
+    /// bewusst frisch statt Werte durchzureichen - die drei Aenderungsereignisse koennen in
+    /// beliebiger Reihenfolge feuern (siehe SetProgressPercent oben, das beide zusammen setzt).
+    /// </summary>
+    private void AktualisiereTaskbarFortschritt()
+    {
+        if (!IsImportInProgress)
+        {
+            _taskbar.Beenden();
+            return;
+        }
+
+        if (ImportIsIndeterminate)
+            _taskbar.SetzeUnbestimmt();
+        else
+            _taskbar.SetzeFortschritt(ImportProgressPercent / 100d);
     }
 
     public bool ConfirmLeave()
@@ -434,7 +470,24 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
     private void ApplyCatalogStatus(Services.ImportCatalogStatus status)
     {
         CatalogStatus = status.Text;
+        CatalogStatusKurz = KurzerKatalogStatus(status);
         IsCatalogOk = status.IsOk;
+    }
+
+    /// <summary>
+    /// Kurzfassung für die sichtbare Statuszeile (28.09.2026, Aufgabe 9: „Katalogpfad-Zeile
+    /// ersetzen durch kurzen Status"). <see cref="CatalogStatus"/> bleibt die vollständige
+    /// Fassung mit Pfad und steht dafür im ToolTip der Zeile.
+    /// </summary>
+    private static string KurzerKatalogStatus(Services.ImportCatalogStatus status)
+    {
+        if (status.IsOk)
+            return "VSA-Katalog geladen (2019)";
+        if (status.Text.Contains("nicht konfiguriert", StringComparison.Ordinal))
+            return "VSA-Katalog nicht konfiguriert";
+        if (status.Text.Contains("nicht gefunden", StringComparison.Ordinal))
+            return "VSA-Katalog nicht gefunden";
+        return "VSA-Katalog: Problem beim Laden";
     }
 
     private void ReloadCatalog()

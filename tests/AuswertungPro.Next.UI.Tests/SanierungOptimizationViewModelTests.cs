@@ -36,7 +36,7 @@ public sealed class SanierungOptimizationViewModelTests
             Confidence = 0.91,
             Reasoning = "Strukturell geeignet",
             CostEstimate = new CostBand { Min = 10_000m, Expected = 12_000m, Max = 14_000m },
-            RiskFlags = ["Grundwasser pruefen"],
+            RiskFlags = ["Grundwasser prüfen"],
             UsedSignals = "Regel + KI"
         });
         await execution;
@@ -49,7 +49,7 @@ public sealed class SanierungOptimizationViewModelTests
         Assert.True(viewModel.TransferToPrimaryCommand.CanExecute(null));
         Assert.Equal("Inliner DN 300", viewModel.AiMeasure);
         Assert.Equal("12000", viewModel.CostExpected);
-        Assert.Equal("Grundwasser pruefen", viewModel.RiskText);
+        Assert.Equal("Grundwasser prüfen", viewModel.RiskText);
     }
 
     [Fact]

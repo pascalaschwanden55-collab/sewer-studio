@@ -32,8 +32,8 @@ public sealed class PlayerWindowProtocolPdfArchitectureTests
 
         Assert.True(File.Exists(plannerPath), "PDF-Exportvorbereitung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(exportServicePath), "PDF-Exportablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
-        Assert.True(File.Exists(exportServiceFactoryPath), "PDF-Exportablauf soll ueber Factory verdrahtet werden.");
-        Assert.True(File.Exists(fileServicePath), "PDF-Datei schreiben und oeffnen soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(exportServiceFactoryPath), "PDF-Exportablauf soll über Factory verdrahtet werden.");
+        Assert.True(File.Exists(fileServicePath), "PDF-Datei schreiben und öffnen soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(projectFolderResolverPath), "Projektordner-Aufloesung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(saveDialogPath), "PDF-Speicherdialog soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServicePath), "Protokoll-Dialogtexte sollen ausserhalb der PlayerWindow-Partials liegen.");
@@ -44,9 +44,9 @@ public sealed class PlayerWindowProtocolPdfArchitectureTests
         Assert.True(File.Exists(previewCommandWorkflowPath), "Protokoll-Preview-Command-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(previewDisplayWorkflowPath), "Protokoll-Preview-Serviceaufruf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(previewWorkflowServicePath), "Protokoll-Vorschauablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
-        Assert.True(File.Exists(previewWorkflowServiceFactoryPath), "Protokoll-Vorschauablauf soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(previewWorkflowServiceFactoryPath), "Protokoll-Vorschauablauf soll über Factory verdrahtet werden.");
         Assert.True(File.Exists(previewWindowServicePath), "Protokoll-Vorschaufenster soll ausserhalb der PlayerWindow-Partials erzeugt werden.");
-        Assert.True(File.Exists(previewWindowServiceFactoryPath), "Protokoll-Vorschaufenster soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(previewWindowServiceFactoryPath), "Protokoll-Vorschaufenster soll über Factory verdrahtet werden.");
 
         var protocol = File.ReadAllText(protocolPath);
         var planner = File.ReadAllText(plannerPath);
@@ -141,7 +141,7 @@ public sealed class PlayerWindowProtocolPdfArchitectureTests
 
         Assert.True(
             protocolOffenders.Length == 0,
-            "PlayerWindow.Coding.Protocol soll PDF-Export, Preview, Dialoge und Datei-IO ueber Workflows/Services kapseln:\n"
+            "PlayerWindow.Coding.Protocol soll PDF-Export, Preview, Dialoge und Datei-IO über Workflows/Services kapseln:\n"
             + string.Join("\n", protocolOffenders));
 
         var plannerOffenders = FindFileTokenOffenders(
@@ -150,7 +150,7 @@ public sealed class PlayerWindowProtocolPdfArchitectureTests
 
         Assert.True(
             plannerOffenders.Length == 0,
-            "CodingProtocolPdfExportPlanner soll projekt.json unter Projektdateien ueber ProjectFileLocator korrekt auf den Projektroot aufloesen:\n"
+            "CodingProtocolPdfExportPlanner soll projekt.json unter Projektdateien über ProjectFileLocator korrekt auf den Projektroot aufloesen:\n"
             + string.Join("\n", plannerOffenders));
     }
 }

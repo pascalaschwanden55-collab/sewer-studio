@@ -25,6 +25,8 @@ public sealed class OverviewPreviewPdfCommandTests
             loggerFactory);
         var dialogs = new DialogFake(output);
         services.Dialogs = dialogs;
+        string? toastMeldung = null;
+        services.Toasts.AttachSink((message, _, _, _) => toastMeldung = message);
         using var shell = new ShellViewModel(services, new SystemMonitorService(enableHardwareSensorInit: false));
 
         shell.Project.Name = "Projekt A";
@@ -47,8 +49,9 @@ public sealed class OverviewPreviewPdfCommandTests
             && call.DefaultExt == "pdf"
             && call.DefaultFileName is not null
             && call.DefaultFileName.StartsWith("Projektvorschau_Projekt A_", StringComparison.Ordinal));
-        Assert.NotNull(dialogs.LastInfo);
-        Assert.Equal("Projektvorschau", dialogs.LastInfo.Value.Title);
+        // Der blockierende Dialog ist einem Toast gewichen (Aufgabe 2, Erfolgsmeldung ohne Entscheidung).
+        Assert.Null(dialogs.LastInfo);
+        Assert.Contains("erstellt", toastMeldung, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -158,9 +161,9 @@ public sealed class OverviewPreviewPdfCommandTests
         public void Info(string message, string title = "Hinweis") => LastInfo = (message, title);
         public void Warn(string message, string title = "Warnung") { }
         public void Error(string message, string title = "Fehler") => LastError = (message, title);
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.No;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.No;
     }
 
     private sealed class TempDir : IDisposable

@@ -18,7 +18,7 @@ public sealed class CodingOsdMeterControllerTests
         controller.ApplyState(new CodingOsdMeterState(10.74, cachedSeconds, "OSD"));
         var resolution = controller.ResolveMeterWithSource(new(120, null, 121, 200, 20, 0));
         var frame = CodingAnalyzedFrameEvidence.FromResolution([1, 2, 3], TimeSpan.FromSeconds(120), resolution);
-        controller.ApplyState(new CodingOsdMeterState(99, 130, "spaeter"));
+        controller.ApplyState(new CodingOsdMeterState(99, 130, "später"));
         Assert.Equal(expectedMeter, frame.Meter);
         Assert.Equal(isOsd, frame.MeterFromOsd);
         Assert.Equal(source, frame.MeterSource);

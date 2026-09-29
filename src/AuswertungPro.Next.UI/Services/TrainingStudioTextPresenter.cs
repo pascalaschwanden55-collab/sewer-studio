@@ -15,8 +15,8 @@ internal sealed class TrainingStudioTextPresenter
         var normalizedCode = NormalizeCode(code);
         var label = _codeLabelLookup(normalizedCode) ?? normalizedCode;
         return clock.HasValue
-            ? $"{label} bei {clock.Value:0.#} Uhr — Ausmass ergaenzen"
-            : $"{label} — Lage und Ausmass ergaenzen";
+            ? $"{label} bei {clock.Value:0.#} Uhr — Ausmass ergänzen"
+            : $"{label} — Lage und Ausmass ergänzen";
     }
 
     public string BuildKatalogBeschreibung(

@@ -13,8 +13,8 @@ public sealed class PipelineResultPresenterTests
         {
             FramesAnalyzed = 17,
             DetectionCount = 9,
-            StatsText = "unveraendert",
-            TelemetryText = "unveraendert"
+            StatsText = "unverändert",
+            TelemetryText = "unverändert"
         };
 
         var error = Assert.Throws<ArgumentException>(() =>
@@ -27,8 +27,8 @@ public sealed class PipelineResultPresenterTests
         Assert.False(vm.HasError);
         Assert.Equal(17, vm.FramesAnalyzed);
         Assert.Equal(9, vm.DetectionCount);
-        Assert.Equal("unveraendert", vm.StatsText);
-        Assert.Equal("unveraendert", vm.TelemetryText);
+        Assert.Equal("unverändert", vm.StatsText);
+        Assert.Equal("unverändert", vm.TelemetryText);
     }
 
     [Fact]

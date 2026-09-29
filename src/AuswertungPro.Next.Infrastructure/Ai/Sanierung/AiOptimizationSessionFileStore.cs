@@ -93,7 +93,7 @@ public sealed class AiOptimizationSessionFileStore : IAiOptimizationSessionStore
             var json = await File.ReadAllTextAsync(path).ConfigureAwait(false);
             return JsonSerializer.Deserialize<List<AiOptimizationSession>>(json)
                    ?? throw new JsonException(
-                       "KI-Sanierungssitzungen muessen als JSON-Liste gespeichert sein.");
+                       "KI-Sanierungssitzungen müssen als JSON-Liste gespeichert sein.");
         }
         catch (Exception ex)
         {
@@ -103,8 +103,8 @@ public sealed class AiOptimizationSessionFileStore : IAiOptimizationSessionStore
             // unlesbar = Fehler.
             throw new InvalidOperationException(
                 $"Die KI-Sanierungssitzungen sind nicht lesbar ({path}). Der "
-                + $"vorhandene Bestand wurde NICHT veraendert — es wird nichts "
-                + $"gespeichert. {ex.GetType().Name}: {ex.Message}", ex);
+                + $"vorhandene Bestand wurde NICHT verändert — es wird nichts "
+                + "gespeichert.", ex);
         }
     }
 }

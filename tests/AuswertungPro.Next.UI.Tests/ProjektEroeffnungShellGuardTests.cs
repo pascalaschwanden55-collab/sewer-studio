@@ -31,7 +31,7 @@ public sealed class ProjektEroeffnungShellGuardTests
         Assert.Contains("public bool CreateProjectFromDraft", src);
         Assert.Contains("public void EnterWorkspaceOn", src);
         Assert.Contains("NewProjectFolderPlanner.Plan", src);
-        Assert.Contains("SelectFolder(\"Projekte-Verzeichnis waehlen\", @\"D:\\Projekt\")", src);
+        Assert.Contains("SelectFolder(\"Projekte-Verzeichnis wählen\", @\"D:\\Projekt\")", src);
     }
 
 }

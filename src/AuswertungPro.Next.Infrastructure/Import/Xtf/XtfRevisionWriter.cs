@@ -71,7 +71,7 @@ public static class XtfRevisionWriter
         if (organisationen != plan.Organisationen.Count)
         {
             return Fehler(
-                "Eine benoetigte Organisation konnte nicht angelegt werden — es wurde nichts " +
+                "Eine benötigte Organisation konnte nicht angelegt werden — es wurde nichts " +
                 $"geschrieben. Geplant: {plan.Organisationen.Count}, angelegt: {organisationen}.");
         }
 
@@ -126,9 +126,9 @@ public static class XtfRevisionWriter
         if (geaendert != plan.AnzahlGeaendert || neu != plan.AnzahlNeu || entfernt != plan.AnzahlEntfernt)
         {
             return Fehler(
-                "Der Plan konnte nicht vollstaendig angewandt werden — es wurde nichts geschrieben. " +
-                $"Geplant: {plan.AnzahlGeaendert} geaendert, {plan.AnzahlNeu} neu, {plan.AnzahlEntfernt} entfernt. " +
-                $"Angewandt: {geaendert} geaendert, {neu} neu, {entfernt} entfernt.");
+                "Der Plan konnte nicht vollständig angewandt werden — es wurde nichts geschrieben. " +
+                $"Geplant: {plan.AnzahlGeaendert} geändert, {plan.AnzahlNeu} neu, {plan.AnzahlEntfernt} entfernt. " +
+                $"Angewandt: {geaendert} geändert, {neu} neu, {entfernt} entfernt.");
         }
 
         return Speichere(doc, zielPfad, geaendert, neu, entfernt);
@@ -143,15 +143,15 @@ public static class XtfRevisionWriter
             return Fehler("Es wurde kein Zielpfad angegeben.");
 
         if (string.Equals(Path.GetFullPath(originalPfad), Path.GetFullPath(zielPfad), StringComparison.OrdinalIgnoreCase))
-            return Fehler("Die Revision darf das Original nicht ueberschreiben.");
+            return Fehler("Die Revision darf das Original nicht überschreiben.");
 
         if (File.Exists(zielPfad))
-            return Fehler($"Die Zieldatei besteht bereits und wird nicht ueberschrieben: {zielPfad}");
+            return Fehler($"Die Zieldatei besteht bereits und wird nicht überschrieben: {zielPfad}");
 
         if (plan.BrauchtEntscheidung)
         {
             return Fehler(
-                "Der Plan enthaelt offene Faelle, die nicht eindeutig zugeordnet werden konnten. " +
+                "Der Plan enthält offene Fälle, die nicht eindeutig zugeordnet werden konnten. " +
                 "Solange sie offen sind, wird nichts geschrieben.");
         }
 
@@ -524,7 +524,7 @@ public static class XtfRevisionWriter
         var voll = Path.GetFullPath(zielPfad);
         var ordner = Path.GetDirectoryName(voll);
         if (string.IsNullOrWhiteSpace(ordner))
-            return Fehler($"Ungueltiger Zielpfad: {zielPfad}");
+            return Fehler($"Ungültiger Zielpfad: {zielPfad}");
 
         Directory.CreateDirectory(ordner);
         var temp = Path.Combine(ordner, $".{Path.GetFileName(voll)}.{Guid.NewGuid():N}.tmp");

@@ -91,7 +91,7 @@ public sealed record SchachtgrafikAnschluss(
             {
                 // Ein gekuerzter Text bleibt sichtbar gekuerzt: Die weiteren Befunde stehen
                 // im Protokoll nirgends, und eine halbe Angabe darf nicht vollstaendig wirken.
-                teile.Add(Zustand.Trim() + (ZustandUnvollstaendig ? " … (im Protokoll gekuerzt)" : ""));
+                teile.Add(Zustand.Trim() + (ZustandUnvollstaendig ? " … (im Protokoll gekürzt)" : ""));
             }
             if (NurImKataster)
                 teile.Add("nur im Kataster");

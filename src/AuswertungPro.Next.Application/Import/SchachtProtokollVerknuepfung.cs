@@ -70,7 +70,7 @@ public static class SchachtProtokollVerknuepfung
             {
                 meldungen.Add(
                     $"Schacht {Ordnername(schachtOrdner)}: hat bereits ein Protokoll; "
-                    + $"{Dateiname(zielPfad)} liegt zusaetzlich im Ordner.");
+                    + $"{Dateiname(zielPfad)} liegt zusätzlich im Ordner.");
                 continue;
             }
 

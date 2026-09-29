@@ -21,7 +21,7 @@ public sealed class CodingMultiModelQualityGatePolicyTests
 
         Assert.Equal(0.0, result.CompositeConfidence);
         Assert.Equal(TrafficLight.Red, result.TrafficLight);
-        Assert.Equal("QualityGate nicht verfuegbar", result.Explanation);
+        Assert.Equal("QualityGate nicht verfügbar", result.Explanation);
         Assert.Empty(result.WeightsUsed);
     }
 

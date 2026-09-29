@@ -46,7 +46,7 @@ public sealed class CodingSessionService : ICodingSessionService
     public CodingSession StartSession(HaltungRecord haltung, string? videoPath)
     {
         if (_session != null && _session.State == CodingSessionState.Running)
-            throw new InvalidOperationException("Es laeuft bereits eine Codier-Session.");
+            throw new InvalidOperationException("Es läuft bereits eine Codier-Session.");
 
         // Haltungslaenge aus Feldern lesen (Fallback-Kette)
         double endMeter = TryParseLengthField(haltung, "Haltungslaenge_m")
@@ -150,7 +150,7 @@ public sealed class CodingSessionService : ICodingSessionService
             .FilterCodingEvents(_session.Events)
             .OrderBy(e => e.MeterAtCapture)
             .ToList();
-        revision.Comment = $"Codier-Session {_session.StartedAt:yyyy-MM-dd HH:mm} - {acceptedEvents.Count} uebernommene Ereignisse";
+        revision.Comment = $"Codier-Session {_session.StartedAt:yyyy-MM-dd HH:mm} - {acceptedEvents.Count} übernommene Ereignisse";
 
         foreach (var ev in acceptedEvents)
         {
@@ -201,7 +201,7 @@ public sealed class CodingSessionService : ICodingSessionService
             .FilterCodingEvents(_session.Events)
             .OrderBy(e => e.MeterAtCapture)
             .ToList();
-        revision.Comment = $"Codier-Session {_session.StartedAt:yyyy-MM-dd HH:mm} - {acceptedEvents.Count} uebernommene Ereignisse";
+        revision.Comment = $"Codier-Session {_session.StartedAt:yyyy-MM-dd HH:mm} - {acceptedEvents.Count} übernommene Ereignisse";
 
         foreach (var ev in acceptedEvents)
         {

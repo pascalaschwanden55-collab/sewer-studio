@@ -107,7 +107,7 @@ public sealed class SettingsQuarantineStore : ISettingsQuarantineStore
         catch (Exception copyException)
         {
             logAction(
-                "Korrupte settings.json konnte nicht in Quarantaene verschoben werden. Es werden Standardwerte verwendet.",
+                "Korrupte settings.json konnte nicht in Quarantäne verschoben werden. Es werden Standardwerte verwendet.",
                 new AggregateException(
                     originalException,
                     moveException,

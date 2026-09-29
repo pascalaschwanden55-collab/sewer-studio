@@ -21,8 +21,9 @@
                     Margin="8,0,0,0"
                     Style="{StaticResource SecondaryButton}"
                     Click="Detach_Click"
-                    ToolTip="In eigenem Fenster öffnen">
-                <TextBlock Text="&#xE8A7;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
+                    ToolTip="In eigenem Fenster öffnen"
+                    AutomationProperties.Name="In eigenem Fenster öffnen">
+                <ui:FluentIcon Glyph="&#xE8A7;" FontSize="{DynamicResource TextS}"/>
             </Button>
             <TextBlock DockPanel.Dock="Left"
                        Text="Kacheln"

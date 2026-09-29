@@ -92,7 +92,7 @@ public sealed class PlayerWindowCodingConfirmationControllerFactoryTests
             var sessionService = new RecordingCodingSessionService(session, calls);
             sessionOwner.Set(sessionService);
             sessionHost.EventCollection = eventCollection;
-            currentStatusText.Text = "spaeter Status";
+            currentStatusText.Text = "später Status";
             liveAiToggle.IsChecked = true;
             var gate = new QualityGateResult(
                 0.8,
@@ -107,7 +107,7 @@ public sealed class PlayerWindowCodingConfirmationControllerFactoryTests
             Assert.Same(gate, pendingState.GateResult);
             Assert.Equal(CodingSessionState.WaitingForUserInput, session.State);
             Assert.Equal(Visibility.Visible, confirmationPanel.Visibility);
-            Assert.Equal("spaeter Status", statusController.CodingStates[0].Status);
+            Assert.Equal("später Status", statusController.CodingStates[0].Status);
             Assert.Contains("pause:True", calls);
 
             var result = controller.Reject().GetAwaiter().GetResult();

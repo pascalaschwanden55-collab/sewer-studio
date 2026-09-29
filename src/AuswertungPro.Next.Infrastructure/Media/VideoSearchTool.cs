@@ -57,7 +57,7 @@ public sealed class VideoSearchTool
         {
             return new VideoResolveResult(
                 false,
-                $"Mehrere Haltungsordner gefunden ({holdingDirs.Count}). Auto-Relink uebersprungen.",
+                $"Mehrere Haltungsordner gefunden ({holdingDirs.Count}). Auto-Relink übersprungen.",
                 holdingRaw,
                 null,
                 null,
@@ -85,7 +85,7 @@ public sealed class VideoSearchTool
         {
             return new VideoResolveResult(
                 false,
-                $"Mehrdeutige Video-Treffer im Haltungsordner ({directCandidates.Count}). Auto-Relink uebersprungen.",
+                $"Mehrdeutige Video-Treffer im Haltungsordner ({directCandidates.Count}). Auto-Relink übersprungen.",
                 holdingRaw,
                 date,
                 pdf,
@@ -109,7 +109,7 @@ public sealed class VideoSearchTool
         {
             return new VideoResolveResult(
                 false,
-                $"Mehrdeutige Treffer in {_unmatchedFolderName} ({unmatchedCandidates.Count}). Auto-Relink uebersprungen.",
+                $"Mehrdeutige Treffer in {_unmatchedFolderName} ({unmatchedCandidates.Count}). Auto-Relink übersprungen.",
                 holdingRaw,
                 date,
                 pdf,

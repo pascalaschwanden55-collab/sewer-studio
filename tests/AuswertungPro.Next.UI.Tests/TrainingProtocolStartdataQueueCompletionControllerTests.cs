@@ -10,7 +10,7 @@ public sealed class TrainingProtocolStartdataQueueCompletionControllerTests
         var result = new TrainingProtocolStartdataQueueResult(
             AddedCount: 2,
             CandidateCount: 3,
-            StatusText: "2 Protokoll-Startdaten als Kandidaten eingereiht (Freigabe ueber Review).",
+            StatusText: "2 Protokoll-Startdaten als Kandidaten eingereiht (Freigabe über Review).",
             LogText: "Protokoll-Startdaten: 2 Kandidaten eingereiht (von 3 gefiltert).");
         var calls = new List<string>();
 
@@ -30,7 +30,7 @@ public sealed class TrainingProtocolStartdataQueueCompletionControllerTests
             [
                 "reload",
                 "ui-before",
-                "status:2 Protokoll-Startdaten als Kandidaten eingereiht (Freigabe ueber Review).",
+                "status:2 Protokoll-Startdaten als Kandidaten eingereiht (Freigabe über Review).",
                 "ui-after",
                 "log:Protokoll-Startdaten: 2 Kandidaten eingereiht (von 3 gefiltert)."
             ],

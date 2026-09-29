@@ -67,7 +67,7 @@ public sealed partial class LegacyXtfImportService
                     {
                         Level = "Warn",
                         Context = "IMPORT",
-                        Message = $"Nicht unterstuetzte Datei uebersprungen: {Path.GetFileName(path)}"
+                        Message = $"Nicht unterstützte Datei übersprungen: {Path.GetFileName(path)}"
                     });
                     continue;
                 }
@@ -105,7 +105,7 @@ public sealed partial class LegacyXtfImportService
             {
                 Level = "Warn",
                 Context = "XTF-ARCHIV",
-                Message = $"Rohdatenkopie fehlgeschlagen, Import laeuft weiter: {ex.Message}"
+                Message = $"Rohdatenkopie fehlgeschlagen, Import läuft weiter: {ex.Message}"
             });
         }
     }
@@ -133,7 +133,7 @@ public sealed partial class LegacyXtfImportService
             {
                 Level = "Warn",
                 Context = "XTF-ARCHIV",
-                Message = $"Altes XTF-Rohdatenarchiv konnte nicht vollstaendig verschoben werden: {ex.Message}"
+                Message = $"Altes XTF-Rohdatenarchiv konnte nicht vollständig verschoben werden: {ex.Message}"
             });
         }
     }
@@ -240,7 +240,7 @@ public sealed partial class LegacyXtfImportService
                 Context = "XTF",
                 Message = $"{Path.GetFileName(path)}: {ergebnis.Untersuchungen} Untersuchungen gelesen — "
                           + $"{ergebnis.Haltungen.Count} Haltung(en), {beruehrteSchaechte} Schaecht(e), "
-                          + $"{ergebnis.Offene.Count} ungeklaert."
+                          + $"{ergebnis.Offene.Count} ungeklärt."
             });
 
             foreach (var offen in ergebnis.Offene)
@@ -305,7 +305,7 @@ public sealed partial class LegacyXtfImportService
         {
             Level = "Info",
             Context = "M150",
-            Message = $"M150-Details: HG erkannt={hgCount}, HI erkannt={hiCount}, uebernommen={records.Count}, neu={Math.Max(0, createdDelta)}, aktualisiert={Math.Max(0, updatedDelta)}"
+            Message = $"M150-Details: HG erkannt={hgCount}, HI erkannt={hiCount}, übernommen={records.Count}, neu={Math.Max(0, createdDelta)}, aktualisiert={Math.Max(0, updatedDelta)}"
         });
     }
 

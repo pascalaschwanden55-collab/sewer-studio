@@ -168,7 +168,7 @@
                     <CheckBox Content="Nur mit Kosten"
                               IsChecked="{Binding OnlyWithCost, Mode=TwoWay}"
                               Margin="0,0,16,0"/>
-                    <CheckBox Content="Nur mit Maßnahmen"
+                    <CheckBox Content="Nur mit Massnahmen"
                               IsChecked="{Binding OnlyWithMeasures, Mode=TwoWay}"/>
                 </WrapPanel>
             </StackPanel>
@@ -296,7 +296,7 @@
                                                    FontWeight="SemiBold"
                                                    DockPanel.Dock="Right"/>
                                     </DockPanel>
-                                    <ProgressBar Height="8"
+                                    <ProgressBar Style="{StaticResource ProgressBarStandard}"
                                                  Margin="0,2,0,0"
                                                  Minimum="0"
                                                  Maximum="100"
@@ -327,7 +327,7 @@
                                                    FontWeight="SemiBold"
                                                    DockPanel.Dock="Right"/>
                                     </DockPanel>
-                                    <ProgressBar Height="8"
+                                    <ProgressBar Style="{StaticResource ProgressBarStandard}"
                                                  Margin="0,2,0,0"
                                                  Minimum="0"
                                                  Maximum="100"
@@ -396,6 +396,7 @@
                 Style="{StaticResource Card}"
                 Padding="8"
                 Margin="0,0,0,10">
+            <Grid>
             <DataGrid x:Name="RowsGrid"
                       ItemsSource="{Binding Rows}"
                       MinHeight="280"
@@ -467,7 +468,7 @@
                     <!-- Kopf folgt dem Bereich; DataGridColumn liegt ausserhalb des VisualTree
                          und kann darum nicht binden — wird im Code-Behind gesetzt. -->
                     <DataGridTextColumn x:Name="BauteilColumn" Header="Haltung" SortMemberPath="Holding" Binding="{Binding Holding}" Width="170"/>
-                    <DataGridTextColumn Header="Straße" SortMemberPath="Street" Binding="{Binding Street}" Width="170"/>
+                    <DataGridTextColumn Header="Strasse" SortMemberPath="Street" Binding="{Binding Street}" Width="170"/>
                     <DataGridTextColumn Header="Eigentümer" SortMemberPath="Owner" Binding="{Binding Owner}" Width="160"/>
                     <DataGridTextColumn Header="Ausgeführt durch" SortMemberPath="ExecutedBy" Binding="{Binding ExecutedBy}" Width="160"/>
                     <DataGridTextColumn Header="Sanieren" SortMemberPath="Sanieren" Binding="{Binding Sanieren}" Width="90"/>
@@ -475,7 +476,7 @@
                     <DataGridTextColumn Header="Status" SortMemberPath="Status" Binding="{Binding Status}" Width="130"/>
                     <DataGridTextColumn Header="Jahr" SortMemberPath="Year" Binding="{Binding Year}" Width="80"/>
                     <DataGridTextColumn Header="Zustand" SortMemberPath="Zustand" Binding="{Binding Zustand}" Width="90"/>
-                    <DataGridTextColumn Header="Maßnahmen (Vorschau)" SortMemberPath="MeasuresPreview" Binding="{Binding MeasuresPreview}" Width="2*"/>
+                    <DataGridTextColumn Header="Massnahmen (Vorschau)" SortMemberPath="MeasuresPreview" Binding="{Binding MeasuresPreview}" Width="2*"/>
                     <DataGridTextColumn Header="Kostenquelle" SortMemberPath="CostSource" Binding="{Binding CostSource}" Width="140"/>
                     <DataGridTextColumn Header="Netto" SortMemberPath="NetCost" Binding="{Binding NetCostText}" Width="130">
                         <DataGridTextColumn.ElementStyle>
@@ -487,6 +488,23 @@
                     </DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
+
+            <ctrl:EmptyStateControl IsHitTestVisible="False"
+                                    Icon="&#xE8A5;"
+                                    Title="Noch keine Haltungen"
+                                    Message="Importiere Inspektionsdaten, damit hier Druckvorlagen ausgewählt werden können.">
+                <ctrl:EmptyStateControl.Style>
+                    <Style TargetType="ctrl:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems, ElementName=RowsGrid}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ctrl:EmptyStateControl.Style>
+            </ctrl:EmptyStateControl>
+            </Grid>
         </Border>
 
         <Border Grid.Row="4"
@@ -558,8 +576,7 @@
                         <TextBlock Text="{Binding PdfExportProgress}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
-                        <ProgressBar Width="180"
-                                     Height="8"
+                        <ProgressBar Style="{StaticResource ProgressBarStandard}" Width="180"
                                      IsIndeterminate="True"/>
                     </StackPanel>
                     <StackPanel Margin="0,0,12,4"

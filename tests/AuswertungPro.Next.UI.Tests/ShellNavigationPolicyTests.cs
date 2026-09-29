@@ -142,7 +142,7 @@ public sealed class ShellNavigationPolicyTests
     {
         var item = new ShellViewModel.NavItem("", title, () => new object());
 
-        Assert.NotEqual("Ansicht oeffnen.", item.ToolTipDescription);
+        Assert.NotEqual("Ansicht öffnen.", item.ToolTipDescription);
         Assert.Contains(".", item.ToolTipDescription, StringComparison.Ordinal);
     }
 

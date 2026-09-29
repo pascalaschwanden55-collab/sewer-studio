@@ -71,7 +71,7 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
                 .Equals(Path.GetFullPath(projectFolder), StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                "Datei-Staging und Kanal-Verteilung gehoeren nicht zum selben Projekt.");
+                "Datei-Staging und Kanal-Verteilung gehören nicht zum selben Projekt.");
         }
 
         var messages = new List<string>();
@@ -135,7 +135,7 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
                     {
                         messages.Add(
                             $"Protokoll {folderName}: bereits aus einem Einzelprotokoll versorgt; "
-                            + $"die Seite aus dem Sammelprotokoll liegt zusaetzlich im Ordner "
+                            + $"die Seite aus dem Sammelprotokoll liegt zusätzlich im Ordner "
                             + $"({Path.GetFileName(r.DestPdfPath)}).");
                         continue;
                     }

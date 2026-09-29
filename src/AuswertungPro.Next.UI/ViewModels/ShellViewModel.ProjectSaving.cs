@@ -147,7 +147,7 @@ public sealed partial class ShellViewModel
 
         if (!canSave)
         {
-            SetStatus("Der interne Speicherweg ist nur waehrend des aktiven Projektvorgangs erlaubt.");
+            SetStatus("Der interne Speicherweg ist nur während des aktiven Projektvorgangs erlaubt.");
             return false;
         }
 
@@ -258,6 +258,7 @@ public sealed partial class ShellViewModel
         NewProjectCommand?.NotifyCanExecuteChanged();
         SwitchProjectCommand?.NotifyCanExecuteChanged();
         OpenProjectCommand?.NotifyCanExecuteChanged();
+        PruefeDatenVerlaufBeiVorgang();
     }
 
     private void SaveProject()
@@ -376,10 +377,10 @@ public sealed partial class ShellViewModel
     private void ShowProjectSaveError(string path, string? error)
     {
         _sp.Dialogs.Error(
-            "Das Projekt konnte nicht gespeichert werden. Die vorhandene Projektdatei wurde nicht geloescht.\n\n" +
+            "Das Projekt konnte nicht gespeichert werden. Die vorhandene Projektdatei wurde nicht gelöscht.\n\n" +
             $"Ziel: {path}\n" +
             $"Fehler: {error}\n\n" +
-            "Bitte pruefe freien Speicherplatz, Schreibschutz und Zugriffsrechte. " +
+            "Bitte prüfe freien Speicherplatz, Schreibschutz und Zugriffsrechte. " +
             "Versuche danach 'Speichern unter' in einem anderen Ordner.",
             "Projekt nicht gespeichert");
     }

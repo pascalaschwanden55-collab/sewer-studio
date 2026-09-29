@@ -87,7 +87,7 @@ public sealed class StandardAiDecisionPolicy : IAiDecisionPolicy
             return Create(
                 AiDecisionOutcome.Reject,
                 AiDecisionReasonCode.InvalidConfidence,
-                $"Ungueltige Sicherheit ({s.Confidence}) - Datenfehler, kein Wert in 0..1.",
+                $"Ungültige Sicherheit ({s.Confidence}) - Datenfehler, kein Wert in 0..1.",
                 s);
         }
 
@@ -151,7 +151,7 @@ public sealed class StandardAiDecisionPolicy : IAiDecisionPolicy
             return Create(
                 AiDecisionOutcome.Review,
                 AiDecisionReasonCode.KbMissing,
-                "Unabhaengiger Datenbank-Abgleich fehlt.",
+                "Unabhängiger Datenbank-Abgleich fehlt.",
                 s);
         }
 
@@ -167,7 +167,7 @@ public sealed class StandardAiDecisionPolicy : IAiDecisionPolicy
         return Create(
             AiDecisionOutcome.AutoAccept,
             AiDecisionReasonCode.EvidenceConfirmed,
-            "Alle vorhandenen Belege bestaetigt.",
+            "Alle vorhandenen Belege bestätigt.",
             s);
     }
 

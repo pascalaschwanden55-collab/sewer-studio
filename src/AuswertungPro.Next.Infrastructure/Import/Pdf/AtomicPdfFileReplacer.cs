@@ -15,7 +15,7 @@ public static class AtomicPdfFileReplacer
     [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. IAtomicPdfFileReplacer direkt uebergeben.")]
     public static void Use(IAtomicPdfFileReplacer replacer)
         => throw new NotSupportedException(
-            "AtomicPdfFileReplacer ist unveraenderlich. IAtomicPdfFileReplacer direkt uebergeben.");
+            "AtomicPdfFileReplacer ist unveränderlich. IAtomicPdfFileReplacer direkt übergeben.");
 
     internal static void ReplaceValidated(string generatedPdfPath, string targetPdfPath)
         => Current.ReplaceValidated(generatedPdfPath, targetPdfPath);
@@ -30,7 +30,7 @@ public static class AtomicPdfFileReplacer
         if (Current is not AtomicPdfFileReplacementService service)
         {
             throw new InvalidOperationException(
-                "Der aktive PDF-Ersetzungsdienst unterstuetzt den Kompatibilitaets-Fallback nicht.");
+                "Der aktive PDF-Ersetzungsdienst unterstützt den Kompatibilitäts-Fallback nicht.");
         }
 
         service.ReplaceExistingPreservingOriginal(

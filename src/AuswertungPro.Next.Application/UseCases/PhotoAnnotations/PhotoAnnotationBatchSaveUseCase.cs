@@ -105,10 +105,10 @@ public static class PhotoAnnotationBatchSaveUseCase
             return "Es ist keine Fotoannotation zum Speichern vorhanden.";
 
         if (string.IsNullOrWhiteSpace(request.FinalEntry.Code))
-            return "Der bestaetigte VSA-Code fehlt.";
+            return "Der bestätigte VSA-Code fehlt.";
 
         if (string.IsNullOrWhiteSpace(request.ConfirmedByUser))
-            return "Name der pruefenden Person fehlt.";
+            return "Name der prüfenden Person fehlt.";
 
         if (request.Items.Select(item => item.PhotoIndex).Distinct().Count() != request.Items.Count)
             return "Ein Fotoslot ist im Speicherpaket mehrfach enthalten.";

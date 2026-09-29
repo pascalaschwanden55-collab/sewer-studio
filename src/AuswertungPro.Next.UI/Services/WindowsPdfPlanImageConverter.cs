@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.IO;
 using System.Threading;
@@ -104,7 +105,7 @@ public sealed class WindowsPdfPlanImageConverter : IPlanImageConverter
             // Eine nicht lesbare Datei darf das Dossier nicht verhindern; die
             // Stelle bleibt dann leer und sagt warum.
             return PlanImageResult.Failed(
-                "Die Plandatei konnte nicht umgewandelt werden: " + ex.Message);
+                "Die Plandatei konnte nicht umgewandelt werden: " + UserError.DescribeAndReport(ex, "Plandatei umwandeln"));
         }
         finally
         {
@@ -132,7 +133,7 @@ public sealed class WindowsPdfPlanImageConverter : IPlanImageConverter
             .ConfigureAwait(true);
 
         if (dokument.PageCount == 0)
-            throw new InvalidDataException("Die Plandatei enthält keine Seite.");
+            throw new UserFacingException("Die Plandatei enthält keine Seite.");
 
         using var seite = dokument.GetPage(0);
         var einstellungen = new global::Windows.Data.Pdf.PdfPageRenderOptions
@@ -166,7 +167,7 @@ public sealed class WindowsPdfPlanImageConverter : IPlanImageConverter
                 BitmapCacheOption.OnLoad);
 
             if (decoder.Frames.Count == 0)
-                throw new InvalidDataException("Die Bilddatei enthaelt kein Bild.");
+                throw new UserFacingException("Die Bilddatei enthält kein Bild.");
 
             bild = BitmapFrame.Create(decoder.Frames[0]);
             bild.Freeze();

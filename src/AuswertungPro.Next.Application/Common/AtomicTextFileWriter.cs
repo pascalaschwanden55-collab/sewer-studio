@@ -196,7 +196,7 @@ public static class AtomicTextFileWriter
                 if (File.Exists(tempPath))
                     File.Delete(tempPath);
             },
-            "AtomicTextFileWriter Temp-Datei loeschen");
+            "AtomicTextFileWriter Temp-Datei löschen");
 
     private sealed record AtomicWrite(string TargetPath, string TempPath);
 }

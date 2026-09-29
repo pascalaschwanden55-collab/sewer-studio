@@ -58,7 +58,9 @@ public sealed class SelfTrainingRunWorkflowTests
         await SelfTrainingRunWorkflow.RunAsync(request);
 
         Assert.Contains("log:FEHLER: InvalidOperationException: kaputt", calls);
-        Assert.Contains("status:Fehler: kaputt", calls);
+        Assert.Contains(
+            "status:Fehler: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
+            calls);
         Assert.Equal("busy:False", calls[^4]);
         Assert.Equal("running:False", calls[^3]);
         Assert.Equal("set-orchestrator:null", calls[^2]);

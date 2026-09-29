@@ -195,7 +195,7 @@ public sealed class PlayerWindowCoreArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var tracePath = Path.Combine(uiRoot, "Player", "PlayerTrace.cs");
 
-        Assert.True(File.Exists(tracePath), "PlayerWindow-Trace-Ausgaben sollen zentral ueber PlayerTrace laufen.");
+        Assert.True(File.Exists(tracePath), "PlayerWindow-Trace-Ausgaben sollen zentral über PlayerTrace laufen.");
 
         var playerWindowText = string.Join(
             Environment.NewLine,

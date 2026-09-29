@@ -49,9 +49,9 @@ public sealed class PersonalGoldBrainSeparationService : IPersonalGoldBrainSepar
                     || Directory.Exists(declaredPaths.CommitJournalPath)))
             {
                 throw new InvalidDataException(
-                    "Ein offenes Commit-Journal wurde gefunden. Der Prueflauf " +
-                    "veraendert nichts; die Wiederherstellung muss ausdruecklich " +
-                    "im Ausfuehrungsmodus gestartet werden.");
+                    "Ein offenes Commit-Journal wurde gefunden. Der Prüflauf " +
+                    "verändert nichts; die Wiederherstellung muss ausdrücklich " +
+                    "im Ausführungsmodus gestartet werden.");
             }
             await PersonalGoldBrainCommitRecovery
                 .RecoverPendingAsync(request, declaredPaths, cancellationToken)
@@ -64,7 +64,7 @@ public sealed class PersonalGoldBrainSeparationService : IPersonalGoldBrainSepar
                 .ConfigureAwait(false);
             var sourceSamples = JsonSerializer.Deserialize<List<TrainingSample>>(sourceBytes)
                                 ?? throw new InvalidDataException(
-                                    "training_samples.json enthaelt keine Liste.");
+                                    "training_samples.json enthält keine Liste.");
             var selected = PersonalGoldBrainSeparationInput.SelectPersonalGold(
                 sourceSamples,
                 request.ConfirmedByUser);

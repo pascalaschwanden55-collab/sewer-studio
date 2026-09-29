@@ -149,7 +149,7 @@ public partial class DataPage : UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        ExecuteRecordMenuCommand(sender, vm, vm.OpenDichtheitPdfCommand, "Dichtheitspruefung");
+        ExecuteRecordMenuCommand(sender, vm, vm.OpenDichtheitPdfCommand, "Dichtheitsprüfung");
     }
 
     /// <summary>

@@ -30,7 +30,7 @@ internal static class VsaYoloClassMapResolver
             if (semanticMatches.Length > 1)
             {
                 throw new InvalidDataException(
-                    $"VSA-Praefix '{category}' passt zu mehreren versionierten YOLO-Klassen.");
+                    $"VSA-Präfix '{category}' passt zu mehreren versionierten YOLO-Klassen.");
             }
         }
 

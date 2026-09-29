@@ -20,7 +20,7 @@ public sealed class TrainingStudioPdfImportPresentationTests
             [
                 new TrainingPdfReviewImportIssue(
                     "eval_haltung",
-                    "Foto gehoert zum Mess-Set.",
+                    "Foto gehört zum Mess-Set.",
                     1),
             ])
         {

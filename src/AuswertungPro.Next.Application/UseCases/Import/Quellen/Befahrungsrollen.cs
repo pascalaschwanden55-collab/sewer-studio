@@ -181,7 +181,7 @@ public static class Befahrungsrollen
             {
                 vorlaeufig[vorlaeufig.IndexOf(v)] = (v.Beleg, new Befahrungszuordnung(
                     v.Beleg.Pfad, Befahrungsrolle.Ungeklaert,
-                    $"{gegenbefahrungen.Count} Kandidaten fuer die Gegenbefahrung — nicht entscheidbar"));
+                    $"{gegenbefahrungen.Count} Kandidaten für die Gegenbefahrung — nicht entscheidbar"));
             }
         }
 

@@ -72,7 +72,7 @@ public class ProtocolEntryEditorViewModel : INotifyPropertyChanged
                     continue;
 
                 var detail = string.IsNullOrWhiteSpace(parameter.ErrorMessage)
-                    ? "ungueltig"
+                    ? "ungültig"
                     : parameter.ErrorMessage;
                 messages.Add($"{parameter.DisplayName}: {detail}");
             }
@@ -81,7 +81,7 @@ public class ProtocolEntryEditorViewModel : INotifyPropertyChanged
         IsValid = messages.Count == 0;
         ValidationMessages = messages;
         ValidationStatus = IsValid
-            ? "Code gueltig."
+            ? "Code gültig."
             : string.Join(Environment.NewLine, ValidationMessages.Take(8));
         OnPropertyChanged(nameof(IsValid));
         OnPropertyChanged(nameof(ValidationMessages));

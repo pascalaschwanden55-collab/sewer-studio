@@ -233,9 +233,9 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
         var lines = warnings
             .Select(w => $"{w.NpkCode}: Einheiten {string.Join(", ", w.Units)} ({string.Join(", ", w.ItemKeys)})");
         _dialogs.Warn(
-            "Der Katalog enthaelt gleiche NPK-Nummern mit unterschiedlichen Einheiten:\n\n" +
+            "Der Katalog enthält gleiche NPK-Nummern mit unterschiedlichen Einheiten:\n\n" +
             string.Join("\n", lines) +
-            "\n\nBitte fachlich pruefen; Speichern wird nicht blockiert.",
+            "\n\nBitte fachlich prüfen; Speichern wird nicht blockiert.",
             "NPK-Katalog");
     }
 }

@@ -62,7 +62,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var displayPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiButtonDisplayPolicy.cs");
         var settingsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiTimerSettings.cs");
 
-        Assert.True(File.Exists(settingsPath), "Live-AI-Timer-Intervalle muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(settingsPath), "Live-AI-Timer-Intervalle müssen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Nutzung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);

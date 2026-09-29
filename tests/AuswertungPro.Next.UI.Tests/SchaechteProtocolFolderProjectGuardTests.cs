@@ -408,11 +408,11 @@ public sealed class SchaechteProtocolFolderProjectGuardTests
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") => Warnings.Add((message, title));
         public void Error(string message, string title = "Fehler") { }
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
 
         public bool ConfirmWarn(
             string message,
-            string title = "Bestaetigung",
+            string title = "Bestätigung",
             bool defaultNo = true)
         {
             ConfirmWarnCalls++;
@@ -421,7 +421,7 @@ public sealed class SchaechteProtocolFolderProjectGuardTests
 
         public DialogConfirm ConfirmCancel(
             string message,
-            string title = "Bestaetigung")
+            string title = "Bestätigung")
             => DialogConfirm.Cancel;
     }
 }

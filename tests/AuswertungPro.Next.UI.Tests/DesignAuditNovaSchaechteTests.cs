@@ -13,21 +13,73 @@ public sealed class DesignAuditNovaSchaechteTests
     {
         var xaml = Xaml();
         Assert.Contains("x:Name=\"WeitereAktionenDropdown\"", xaml);
-        foreach (var header in new[] { "PDF-Daten", "Aktualisieren", "Leere Felder aus QGIS", "GeoShop-Abgleich (XTF)", "Feldnamen aufräumen", "Strassen", "Hoch", "Runter", "Ansicht anpassen", "Alte Schachtansicht" })
+        // Optikanalyse 28.09.2026, Aufgabe 7: unklare Namen sprechend gemacht ("PDF-Daten" ->
+        // "Stammdaten aus PDFs ergänzen", "Aktualisieren" -> "Protokoll neu einlesen", "Strassen"
+        // -> "Strassennamen ergänzen"); "Hoch"/"Runter" heissen jetzt wie bei den Haltungen
+        // "Nach oben"/"Nach unten" (Reihenfolge-Untermenue).
+        foreach (var header in new[] { "Stammdaten aus PDFs ergänzen", "Protokoll neu einlesen", "Leere Felder aus QGIS", "GeoShop-Abgleich (XTF)", "Feldnamen aufräumen", "Strassennamen ergänzen", "Nach oben", "Nach unten", "Ansicht anpassen" })
             Assert.Contains($"Header=\"{header}\"", xaml);
+        // Aufgabe 8: "Alte Schachtansicht" ist aus dem Menü entfernt (Einstellungen -> Allgemein
+        // -> Frühere Ansichten); das MenuItem bleibt nur unsichtbar als Zustandshalter stehen.
+        Assert.DoesNotContain("Header=\"Alte Schachtansicht\"", xaml);
         Assert.DoesNotContain("<ToggleButton x:Name=\"SchachtansichtToggle\"", xaml);
         Assert.Contains("x:Name=\"ColumnViewChips\"", xaml);
         Assert.Contains("SchaechteColumnViewCatalog.Views", xaml);
     }
 
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 7 (Fix-Runde 1, Controller-Entscheid "Auffindbarkeit
+    /// schlaegt Entdoppelung"): "Weitere Aktionen" ist in denselben fuenf Untermenues gegliedert
+    /// wie bei den Haltungen (Daten abgleichen, Bearbeiten, Reihenfolge, Ansicht, Ausgabe - siehe
+    /// <see cref="WeitereAktionenUntermenueTests"/>). "Sanierungsmassnahmen...", "Protokoll
+    /// (PDF)..." und "Gehe zu Ordner" stehen bewusst SOWOHL im Zeilenmenue (SchachtZeilenMenue)
+    /// ALS AUCH hier unter "Bearbeiten"/"Ausgabe" - derselbe Handler, zwei Wege zur selben
+    /// Aktion, damit sie auch ohne Rechtsklick auffindbar ist.
+    /// </summary>
     [Fact]
     public void Gruppen_im_Menue_trennen_nur_mit_Separator_ohne_deaktivierte_Kopfzeilen()
     {
         var xaml = Xaml();
         Assert.DoesNotContain("IsEnabled=\"False\" Focusable=\"False\"", xaml);
-        Assert.Matches(new Regex("<Separator/>\\s*<MenuItem Header=\"Hoch\""), xaml);
-        Assert.Matches(new Regex("<Separator/>\\s*<MenuItem Header=\"Sanierungsmassnahmen\\.\\.\\.\""), xaml);
-        Assert.Matches(new Regex("<Separator/>\\s*<MenuItem Header=\"Ansicht anpassen\""), xaml);
+        // Zwischen Separator und Menuepunkt darf ein erklaerender XML-Kommentar stehen, sonst
+        // nur Leerraum - kein weiterer Menuepunkt dazwischen.
+        const string kommentar = "(?:\\s*<!--[\\s\\S]*?-->)?\\s*";
+        Assert.Matches(new Regex("<MenuItem Header=\"Daten abgleichen\""), xaml);
+        Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Bearbeiten\""), xaml);
+        Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Reihenfolge\""), xaml);
+        Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Ansicht\""), xaml);
+        Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Ausgabe\""), xaml);
+        Assert.Matches(new Regex("<Separator/>" + kommentar + "<MenuItem Header=\"Ansicht anpassen\""), xaml);
+
+        // Dieselben drei Eintraege stehen bewusst zusaetzlich im Dropdown-Block (Auffindbarkeit) ...
+        var dropdownMenu = ExtractWeitereAktionenMenu(xaml);
+        Assert.Contains("Header=\"Sanierungsmassnahmen...\" Click=\"SanierungsmassnahmenMenu_Click\"", dropdownMenu);
+        Assert.Contains("Header=\"Protokoll (PDF)...\" Click=\"ProtokollMenu_Click\"", dropdownMenu);
+        Assert.Contains("Header=\"Gehe zu Ordner\" Click=\"OpenContainingFolderMenu_Click\"", dropdownMenu);
+        // ... und unveraendert im eigenen Zeilenmenue (SchachtZeilenMenue).
+        var zeilenMenue = ExtractZeilenMenue(xaml);
+        Assert.Contains("Header=\"Sanierungsmassnahmen...\" Click=\"SanierungsmassnahmenMenu_Click\"", zeilenMenue);
+        Assert.Contains("Header=\"Protokoll (PDF)...\" Click=\"ProtokollMenu_Click\"", zeilenMenue);
+        Assert.Contains("Header=\"Gehe zu Ordner\" Click=\"OpenContainingFolderMenu_Click\"", zeilenMenue);
+    }
+
+    private static string ExtractWeitereAktionenMenu(string xaml)
+    {
+        var start = xaml.IndexOf("x:Name=\"WeitereAktionenDropdown\"", System.StringComparison.Ordinal);
+        Assert.True(start >= 0, "WeitereAktionenDropdown nicht gefunden");
+        var contextStart = xaml.IndexOf("<Button.ContextMenu>", start, System.StringComparison.Ordinal);
+        var contextEnd = xaml.IndexOf("</Button.ContextMenu>", contextStart, System.StringComparison.Ordinal);
+        Assert.True(contextStart >= 0 && contextEnd > contextStart, "Button.ContextMenu von WeitereAktionenDropdown nicht gefunden");
+        return xaml[contextStart..contextEnd];
+    }
+
+    private static string ExtractZeilenMenue(string xaml)
+    {
+        var start = xaml.IndexOf("<ContextMenu x:Key=\"SchachtZeilenMenue\">", System.StringComparison.Ordinal);
+        Assert.True(start >= 0, "SchachtZeilenMenue nicht gefunden");
+        var end = xaml.IndexOf("</ContextMenu>", start, System.StringComparison.Ordinal);
+        Assert.True(end > start, "Ende von SchachtZeilenMenue nicht gefunden");
+        return xaml[start..end];
     }
 
     [Fact]
@@ -109,7 +161,10 @@ public sealed class DesignAuditNovaSchaechteTests
     {
         var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
         Assert.Contains("x:Name=\"Leerzustand\"", xaml);
-        Assert.Contains("Kein Schacht gewählt. Links eine Zeile wählen.", xaml);
+        // Optikanalyse 28.09.2026, Aufgabe 11 Fix-Runde 1: der Leerzustand ist auf das gemeinsame
+        // EmptyStateControl umgestellt (Title/Message statt eines einzelnen TextBlock-Textes).
+        Assert.Contains("Title=\"Kein Schacht gewählt\"", xaml);
+        Assert.Contains("Message=\"Links eine Zeile wählen.\"", xaml);
 
         var inhalt = Regex.Match(xaml, @"<ScrollViewer x:Name=""Inhalt""[\s\S]*?</ScrollViewer.Style>");
         Assert.True(inhalt.Success, "Inhalt der Schachtansicht braucht einen eigenen Sichtbarkeitsschalter");
@@ -199,19 +254,30 @@ public sealed class DesignAuditNovaSchaechteTests
 
     /// <summary>
     /// Nova, Aufklapp-Liste (2026-09-08, Task 6 des Plans "Haltungen als Aufklapp-Liste"):
-    /// Die drei Ansichten der Schachtseite (Liste, Tabelle, alte Schachtansicht) sind eine
-    /// Gruppe im Menue "Weitere Aktionen", genau wie bei den Haltungen.
+    /// Aufklapp-Liste und Tabelle sind eine Gruppe im Menue "Weitere Aktionen", genau wie bei den
+    /// Haltungen. Optikanalyse 28.09.2026, Aufgabe 8: Die frühere dritte Gruppengenossin "Alte
+    /// Schachtansicht" ist aus diesem Menü entfernt (Einstellungen -> Allgemein -> Frühere
+    /// Ansichten); das MenuItem SchachtansichtToggle bleibt nur unsichtbar ausserhalb dieses
+    /// Menüs als Zustandshalter fuer SchaechteAnsichtUmschalter stehen.
     /// </summary>
     [Fact]
-    public void Ansicht_Liste_und_Tabelle_stehen_als_Gruppe_neben_der_alten_Schachtansicht()
+    public void Ansicht_Liste_und_Tabelle_stehen_als_Gruppe()
     {
         var xaml = Xaml();
         Assert.Contains("x:Name=\"AnsichtListeMenu\" Header=\"Aufklapp-Liste\" IsCheckable=\"True\" Tag=\"liste\"", xaml);
         Assert.Contains("x:Name=\"AnsichtTabelleMenu\" Header=\"Tabelle\" IsCheckable=\"True\" Tag=\"tabelle\"", xaml);
         Assert.Contains("Click=\"AnsichtMenu_Click\"", xaml);
+        Assert.DoesNotContain("Header=\"Alte Schachtansicht\"", xaml);
+
+        // SchachtansichtToggle steht direkt hinter dem geschlossenen WeitereAktionenDropdown-
+        // Button, ausserhalb jedes Button.ContextMenu.
         Assert.Matches(new Regex(
-            "<MenuItem x:Name=\"AnsichtTabelleMenu\"[\\s\\S]*?/>\\s*<MenuItem x:Name=\"SchachtansichtToggle\""),
+            @"</Button\.ContextMenu>\s*</Button>\s*(?:<!--[\s\S]*?-->\s*)*<MenuItem x:Name=""SchachtansichtToggle"""),
             xaml);
+        var toggle = Regex.Match(xaml, "<MenuItem x:Name=\"SchachtansichtToggle\"[\\s\\S]*?/>");
+        Assert.True(toggle.Success, "SchachtansichtToggle muss ein MenuItem sein");
+        Assert.Contains("Visibility=\"Collapsed\"", toggle.Value);
+        Assert.DoesNotContain("Header=", toggle.Value);
 
         var settings = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "AppSettings.cs"));
         Assert.Contains("public string SchaechteAnsicht { get; set; } = \"liste\";", settings);

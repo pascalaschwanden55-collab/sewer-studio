@@ -111,7 +111,7 @@ public sealed class CodingCodeExplorerWorkflowServiceTests
         var selected = new ProtocolEntry
         {
             Code = "NEW",
-            Beschreibung = "Geaendert",
+            Beschreibung = "Geändert",
             MeterStart = 7,
             Zeit = TimeSpan.FromSeconds(12)
         };
@@ -143,7 +143,7 @@ public sealed class CodingCodeExplorerWorkflowServiceTests
 
         Assert.True(edited);
         Assert.Equal("NEW", entry.Code);
-        Assert.Equal("Geaendert", entry.Beschreibung);
+        Assert.Equal("Geändert", entry.Beschreibung);
         Assert.Equal(7, entry.MeterStart);
         Assert.Equal(TimeSpan.FromSeconds(12), entry.Zeit);
     }

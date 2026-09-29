@@ -6,6 +6,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -22,7 +23,7 @@ public sealed class DataPagePrintControllerTests
             record: null,
             ensureProtocolDocument: _ => throw new InvalidOperationException("document should not be requested"));
 
-        Assert.Equal(("Bitte zuerst eine Haltung auswaehlen.", "Haltungsprotokoll AWU"), dialogs.LastInfo);
+        Assert.Equal(("Bitte zuerst eine Haltung auswählen.", "Haltungsprotokoll AWU"), dialogs.LastInfo);
         Assert.Empty(dialogs.SaveFileCalls);
     }
 
@@ -124,7 +125,7 @@ public sealed class DataPagePrintControllerTests
             ensureProtocolDocument: _ => new ProtocolDocument());
 
         Assert.Equal(
-            ("Fuer diese Haltung liegt kein Haltungsname vor — der Zielordner kann nicht bestimmt werden.", "Haltungsprotokoll AWU"),
+            ("Für diese Haltung liegt kein Haltungsname vor — der Zielordner kann nicht bestimmt werden.", "Haltungsprotokoll AWU"),
             dialogs.LastInfo);
     }
 
@@ -158,7 +159,7 @@ public sealed class DataPagePrintControllerTests
 
         await controller.PrintHydraulikPdfAsync(record: null);
 
-        Assert.Equal(("Bitte zuerst eine Haltung auswaehlen.", "Hydraulik PDF"), dialogs.LastInfo);
+        Assert.Equal(("Bitte zuerst eine Haltung auswählen.", "Hydraulik PDF"), dialogs.LastInfo);
         Assert.Empty(dialogs.SaveFileCalls);
     }
 
@@ -173,7 +174,7 @@ public sealed class DataPagePrintControllerTests
 
         await controller.PrintHydraulikPdfAsync(Record("12/34"));
 
-        Assert.Equal(("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF"), dialogs.LastWarn);
+        Assert.Equal(("Hydraulik-Berechnung konnte nicht durchgeführt werden.\nBitte DN und Gefälle prüfen.", "Hydraulik PDF"), dialogs.LastWarn);
         Assert.Empty(dialogs.SaveFileCalls);
     }
 
@@ -268,6 +269,37 @@ public sealed class DataPagePrintControllerTests
         Assert.Null(dialogs.LastError);
     }
 
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 15: mit injizierter <see cref="IBerichtsMarke"/> gilt
+    /// deren Pfad statt der lokalen baseDirectory/fileExists-Berechnung — auch wenn Letztere
+    /// eine andere Datei als vorhanden meldet.
+    /// </summary>
+    [Fact]
+    public async Task PrintHydraulikPdfAsync_verwendet_die_injizierte_IBerichtsMarke()
+    {
+        var record = Record("12/34");
+        var calc = HydraulikCalc();
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\hydraulik.pdf" };
+        HydraulikPrintOptions? seenOptions = null;
+
+        var controller = CreateController(
+            dialogs,
+            baseDirectory: "C:\\app",
+            fileExists: path => path == "C:\\app\\Assets\\Brand\\abwasser-uri-logo.png",
+            buildHydraulikCalculation: _ => calc,
+            selectHydraulikPrintOptions: () => new HydraulikPrintOptions(),
+            buildHydraulikPdfAsync: (_, _, options) =>
+            {
+                seenOptions = options;
+                return Task.FromResult(new byte[] { 1 });
+            },
+            berichtsMarke: new StubBerichtsMarke(@"D:\Firmenlogos\aktuelles-logo.png"));
+
+        await controller.PrintHydraulikPdfAsync(record);
+
+        Assert.Equal(@"D:\Firmenlogos\aktuelles-logo.png", seenOptions?.LogoPathAbs);
+    }
+
     [Fact]
     public async Task PrintHydraulikPdfAsync_meldet_fehler_ohne_exception()
     {
@@ -296,7 +328,7 @@ public sealed class DataPagePrintControllerTests
 
         await controller.PrintDossierPdfAsync(new Project(), record: null);
 
-        Assert.Equal(("Bitte zuerst eine Haltung auswaehlen.", "Dossier"), dialogs.LastInfo);
+        Assert.Equal(("Bitte zuerst eine Haltung auswählen.", "Dossier"), dialogs.LastInfo);
         Assert.Empty(dialogs.SaveFileCalls);
     }
 
@@ -364,7 +396,7 @@ public sealed class DataPagePrintControllerTests
         var dialogs = new CapturingDialogService();
         var costs = new RecordingProjectCostStoreRepository
         {
-            LoadError = "costs.json ist beschaedigt: invalid json"
+            LoadError = "costs.json ist beschädigt: invalid json"
         };
         var optionsDialogCalled = false;
         var controller = CreateController(
@@ -386,7 +418,7 @@ public sealed class DataPagePrintControllerTests
         Assert.Null(dialogs.LastInfo);
         Assert.NotNull(dialogs.LastError);
         Assert.Equal("Dossier", dialogs.LastError.Value.Title);
-        Assert.Contains("costs.json ist beschaedigt", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("costs.json ist beschädigt", dialogs.LastError.Value.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -409,7 +441,7 @@ public sealed class DataPagePrintControllerTests
         Assert.Empty(dialogs.SaveFileCalls);
         var call = Assert.Single(dialogs.ConfirmWarnCalls);
         Assert.Equal("Dossier", call.Title);
-        Assert.Contains("ungespeicherte Aenderungen", call.Message);
+        Assert.Contains("ungespeicherte Änderungen", call.Message);
         Assert.True(call.DefaultNo);
     }
 
@@ -425,7 +457,7 @@ public sealed class DataPagePrintControllerTests
         await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
 
         Assert.Single(dialogs.SaveFileCalls);
-        Assert.Equal(("Die ausgewaehlte Kombination enthaelt keine druckbaren Inhalte.", "Dossier"), dialogs.LastInfo);
+        Assert.Equal(("Die ausgewählte Kombination enthält keine druckbaren Inhalte.", "Dossier"), dialogs.LastInfo);
         Assert.Null(dialogs.LastError);
     }
 
@@ -450,6 +482,27 @@ public sealed class DataPagePrintControllerTests
         Assert.Equal(1, photoAvailability.Calls);
         Assert.True(buildCalled);
         Assert.Equal(("Dossier wurde erstellt:\nC:\\out\\dossier.pdf", "Dossier"), dialogs.LastInfo);
+    }
+
+    [Fact]
+    public async Task PrintDossierPdfAsync_meldet_erfolg_als_toast_wenn_toastdienst_verfuegbar()
+    {
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
+        var toasts = new ToastFake();
+        var photoAvailability = new RecordingDossierPhotoAvailability(result: true);
+        var controller = CreateController(
+            dialogs,
+            dossierPhotoAvailability: photoAvailability,
+            selectDossierPrintOptions: _ => EmptyDossierOptions() with { IncludeFotos = true },
+            buildDossierPdfAsync: (_, _, _, _, _, _, _) => Task.FromResult(new byte[] { 1 }),
+            toasts: toasts);
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        // Der Toast ersetzt den blockierenden Dialog; "Dossier" darf nicht mehr als Info erscheinen.
+        Assert.Null(dialogs.LastInfo);
+        Assert.Equal("Dossier wurde erstellt.", toasts.Meldung);
+        Assert.Equal("Datei öffnen", toasts.AktionText);
     }
 
     [Fact]
@@ -537,6 +590,33 @@ public sealed class DataPagePrintControllerTests
         Assert.Null(dialogs.LastError);
     }
 
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 15: mit injizierter <see cref="IBerichtsMarke"/> gilt
+    /// deren Pfad statt der lokalen baseDirectory/fileExists-Berechnung.
+    /// </summary>
+    [Fact]
+    public async Task PrintDossierPdfAsync_verwendet_die_injizierte_IBerichtsMarke()
+    {
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
+        DossierPrintOptions? seenOptions = null;
+
+        var controller = CreateController(
+            dialogs,
+            baseDirectory: "C:\\app",
+            fileExists: path => path == "C:\\app\\Assets\\Brand\\abwasser-uri-logo.png",
+            selectDossierPrintOptions: _ => EmptyDossierOptions() with { IncludeDeckblatt = true },
+            buildDossierPdfAsync: (_, _, _, _, _, _, options) =>
+            {
+                seenOptions = options;
+                return Task.FromResult(new byte[] { 1 });
+            },
+            berichtsMarke: new StubBerichtsMarke(@"D:\Firmenlogos\aktuelles-logo.png"));
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        Assert.Equal(@"D:\Firmenlogos\aktuelles-logo.png", seenOptions?.LogoPathAbs);
+    }
+
     [Fact]
     public async Task PrintDossierPdfAsync_originale_allein_werden_ohne_basis_dossier_gemerged()
     {
@@ -601,7 +681,7 @@ public sealed class DataPagePrintControllerTests
 
         await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
 
-        Assert.Equal(("Dossier konnte nicht erstellt werden:\nDie Original-Protokolle konnten nicht zusammengefuehrt werden.", "Dossier"), dialogs.LastError);
+        Assert.Equal(("Dossier konnte nicht erstellt werden:\nDie Original-Protokolle konnten nicht zusammengeführt werden.", "Dossier"), dialogs.LastError);
     }
 
     private static DataPagePrintController CreateController(
@@ -631,7 +711,9 @@ public sealed class DataPagePrintControllerTests
         Func<string, bool>? openPdf = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
-        IProjectCostStoreRepository? projectCosts = null)
+        IProjectCostStoreRepository? projectCosts = null,
+        IToastService? toasts = null,
+        IBerichtsMarke? berichtsMarke = null)
         => new(
             dialogs,
             getProjectFolder: () => projectFolder,
@@ -659,7 +741,9 @@ public sealed class DataPagePrintControllerTests
             regenerateOne: regenerateOne,
             openPdf: openPdf ?? (_ => true),
             dossierPhotoAvailability: dossierPhotoAvailability,
-            inspectionProtocolFiles: inspectionProtocolFiles);
+            inspectionProtocolFiles: inspectionProtocolFiles,
+            toasts: toasts,
+            berichtsMarke: berichtsMarke);
 
     private static HaltungRecord Record(string holding)
     {
@@ -758,6 +842,11 @@ public sealed class DataPagePrintControllerTests
         }
     }
 
+    private sealed class StubBerichtsMarke(string? logoPfad) : IBerichtsMarke
+    {
+        public string? LogoPfad { get; } = logoPfad;
+    }
+
     private sealed class RecordingProjectCostStoreRepository : IProjectCostStoreRepository
     {
         public ProjectCostStore Store { get; } = new();
@@ -820,16 +909,36 @@ public sealed class DataPagePrintControllerTests
         public void Error(string message, string title = "Fehler")
             => LastError = (message, title);
 
-        public bool Confirm(string message, string title = "Bestaetigung")
+        public bool Confirm(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
 
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true)
         {
             ConfirmWarnCalls.Add((message, title, defaultNo));
             return ConfirmWarnResult;
         }
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
+    }
+
+    private sealed class ToastFake : IToastService
+    {
+        public string? Meldung { get; private set; }
+        public string? AktionText { get; private set; }
+        public Action? Aktion { get; private set; }
+
+        public void Success(string message) => Meldung = message;
+
+        public void Success(string message, string aktionText, Action aktion)
+        {
+            Meldung = message;
+            AktionText = aktionText;
+            Aktion = aktion;
+        }
+
+        public void Info(string message) { }
+        public void Warning(string message) { }
+        public void Error(string message) => Assert.Fail(message);
     }
 }

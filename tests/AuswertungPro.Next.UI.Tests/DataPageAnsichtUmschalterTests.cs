@@ -318,7 +318,10 @@ public sealed class DataPageAnsichtUmschalterTests
         public MenuItem ListeSchalter { get; } = new() { IsCheckable = true, Tag = "liste" };
         public MenuItem TabelleSchalter { get; } = new() { IsCheckable = true, Tag = "tabelle" };
         public MenuItem AbdockenSchalter { get; } = new();
-        public MenuItem LoeschenSchalter { get; } = new() { Tag = DataPageAnsichtUmschalter.LoeschenMarke };
+        // Bewusst der Literal-Wert aus DataPage.xaml (Tag="loeschen"), nicht die Konstante
+        // selbst — sonst koennte ein Auseinanderdriften von Konstante und echtem XAML-Tag
+        // nie auffallen (Review Aufgabe 10c1, Fix-Runde 1).
+        public MenuItem LoeschenSchalter { get; } = new() { Tag = "loeschen" };
         public ContextMenu ZeilenMenue { get; } = new();
         public List<(string Feld, string Aktuell, string Eingabe)> KonflikteListe { get; } = [];
         public List<(string Feld, string Aktuell, string Eingabe)> KonflikteSchublade { get; } = [];

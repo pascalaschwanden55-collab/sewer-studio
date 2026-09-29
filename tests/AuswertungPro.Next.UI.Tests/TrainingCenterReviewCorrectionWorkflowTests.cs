@@ -71,7 +71,7 @@ public sealed class TrainingCenterReviewCorrectionWorkflowTests
         var result = await TrainingCenterReviewCorrectionWorkflow.ExecuteAsync(
             new TrainingCenterReviewCorrectionRequest(item, Catalog: null),
             new TrainingCenterReviewCorrectionActions(
-                ShowCodeExplorer: _ => throw new InvalidOperationException("Dialog darf nicht geoeffnet werden."),
+                ShowCodeExplorer: _ => throw new InvalidOperationException("Dialog darf nicht geöffnet werden."),
                 ApplyCorrectionAsync: (_, _, _) => throw new InvalidOperationException("Korrektur darf nicht angewendet werden."),
                 Warn: (message, title) => warnings.Add((message, title))));
 

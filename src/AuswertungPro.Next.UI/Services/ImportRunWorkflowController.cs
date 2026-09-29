@@ -219,7 +219,7 @@ public static class ImportRunWorkflowController
                 catch (Exception ex)
                 {
                     postImportIncomplete = true;
-                    var detail = $"Nacharbeiten unvollständig: {ex.Message}";
+                    var detail = $"Nacharbeiten unvollständig: {UserError.DescribeAndReport(ex, "Import-Nacharbeiten")}";
                     runLog.AddEntry(
                         request.Label,
                         "PostImport",
@@ -329,10 +329,16 @@ public static class ImportRunWorkflowController
         }
         catch (Exception ex)
         {
+            // Aufgabe 9 (28.09.2026): Sichtbar bleibt eine verstaendliche Meldung
+            // (UserError.DescribeAndReport uebersetzt UND loggt die volle Ausnahme ueber
+            // BestEffort). Der technische Volltext (ex.ToString()) geht weiterhin in
+            // DetailsText - dort steht er nur im zugeklappten "Technische Details"-Bereich
+            // der Importseite, nie in der sichtbaren Zusammenfassung.
+            var verstaendlich = UserError.DescribeAndReport(ex, $"Import {request.Label}");
             actions.SetSummaryText(projectCommitted
                 ? actions.GetSummaryText()
                     + "\n  Hinweis: Import wurde übernommen, aber der Abschluss ist fehlgeschlagen."
-                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen: {ex.Message}");
+                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen: {verstaendlich}");
             actions.SetDetailsText(ex.ToString());
             actions.SetStatus(projectCommitted
                 ? $"{request.Label} importiert mit Abschlussfehler"
@@ -345,8 +351,8 @@ public static class ImportRunWorkflowController
             if (!cleanup.StagingCleanupSucceeded && cleanup.StagingCleanupError is { } ex)
             {
                 var detail = projectCommitted
-                    ? $"Datei-Arbeitsordner konnte nicht vollständig aufgeräumt werden: {ex.Message}"
-                    : $"Vorbereitete Importdateien konnten nicht vollständig zurückgenommen werden: {ex.Message}";
+                    ? $"Datei-Arbeitsordner konnte nicht vollständig aufgeräumt werden: {UserError.DescribeAndReport(ex, "Import-Arbeitsordner aufräumen")}"
+                    : $"Vorbereitete Importdateien konnten nicht vollständig zurückgenommen werden: {UserError.DescribeAndReport(ex, "Importdateien zurücknehmen")}";
                 runLog.AddEntry(
                     request.Label,
                     "Datei-Staging",
@@ -401,7 +407,7 @@ public static class ImportRunWorkflowController
                 label,
                 "Speichern",
                 ImportLogStatus.Error,
-                detail: $"Import wurde übernommen, Speichern schlug fehl: {ex.Message}");
+                detail: $"Import wurde übernommen, Speichern schlug fehl: {UserError.DescribeAndReport(ex, "Import speichern")}");
         }
 
         return false;
@@ -440,7 +446,7 @@ public static class ImportRunWorkflowController
                 if (!string.Equals(currentSignature, projectSnapshot.StartSignature, StringComparison.Ordinal))
                 {
                     const string editDetail =
-                        "Waehrend des Imports wurde das Projekt bearbeitet. Das Importergebnis wurde " +
+                        "Während des Imports wurde das Projekt bearbeitet. Das Importergebnis wurde " +
                         "nicht übernommen, damit die manuellen Änderungen erhalten bleiben — " +
                         "bitte erneut importieren.";
                     runLog.AddEntry(label, "Projektinhalt", ImportLogStatus.Error, detail: editDetail);
@@ -456,7 +462,7 @@ public static class ImportRunWorkflowController
         }
 
         const string detail =
-            "Waehrend des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
+            "Während des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
             "Das Importergebnis wurde aus Sicherheitsgründen nicht übernommen.";
         runLog.AddEntry(
             label,
@@ -499,7 +505,7 @@ public static class ImportRunWorkflowController
         if (ImportPlausibilitaetsTor.ZustimmungGiltNoch(request.ZugestimmterFingerabdruck, urteil))
         {
             runLog.AddEntry(request.Label, "Plausibilität", ImportLogStatus.Conflict,
-                detail: "Mengenabweichung in der Vorschau bestätigt — unveraendert übernommen.");
+                detail: "Mengenabweichung in der Vorschau bestätigt — unverändert übernommen.");
             return true;
         }
 
@@ -566,7 +572,7 @@ public static class ImportRunWorkflowController
         }
         catch (Exception ex)
         {
-            return Result<ImportStats>.Fail($"{request.Label}_EXCEPTION", ex.Message);
+            return Result<ImportStats>.Fail($"{request.Label}_EXCEPTION", UserError.DescribeAndReport(ex, $"Import {request.Label}"));
         }
     }
 

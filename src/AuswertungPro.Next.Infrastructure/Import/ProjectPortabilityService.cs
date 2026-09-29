@@ -83,7 +83,7 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
                     if (!dryRun && act is Act.Relinked or Act.Copied)
                         finding.FotoPath = val;
                     if (act == Act.Unresolved)
-                        messages.Add($"Foto: nicht aufgeloest ({finding.FotoPath})");
+                        messages.Add($"Foto: nicht aufgelöst ({finding.FotoPath})");
                     Tally(act);
                 }
             }
@@ -140,7 +140,7 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
         if (!dryRun && act is Act.Relinked or Act.Copied)
             record.SetFieldValue(field, val, FieldSource.Legacy, userEdited: false);
         if (act == Act.Unresolved)
-            messages.Add($"{field}: nicht aufgeloest ({raw})");
+            messages.Add($"{field}: nicht aufgelöst ({raw})");
         tally(act);
     }
 
@@ -165,7 +165,7 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
             var (val, act) = ResolvePortable(p, holdingFolder, projectFolder, typeMatch, copyExternalInto: null, dryRun, assignments);
             newParts.Add(val);
             if (act is Act.Relinked or Act.Copied) changed = true;
-            if (act == Act.Unresolved) messages.Add($"{field}: nicht aufgeloest ({p})");
+            if (act == Act.Unresolved) messages.Add($"{field}: nicht aufgelöst ({p})");
             tally(act);
         }
 
@@ -220,7 +220,7 @@ public sealed class ProjectPortabilityService : IProjectPortabilityService
             if (!dryRun && act is Act.Relinked or Act.Copied)
                 paths[i] = val;
             if (act == Act.Unresolved)
-                messages.Add($"{label}: nicht aufgeloest ({raw})");
+                messages.Add($"{label}: nicht aufgelöst ({raw})");
             tally(act);
         }
     }

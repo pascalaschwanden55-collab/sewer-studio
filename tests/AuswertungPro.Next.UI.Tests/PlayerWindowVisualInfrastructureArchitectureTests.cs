@@ -61,7 +61,7 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Partials sollen Win32-Screenshot-Capture und Toast-Timer ueber Controls/Workflows kapseln:\n"
+            "PlayerWindow-Partials sollen Win32-Screenshot-Capture und Toast-Timer über Controls/Workflows kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -82,7 +82,7 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         var tagsPath = Path.Combine(uiRoot, "Player", "OverlayTags.cs");
 
         Assert.True(File.Exists(rendererPath), "BendMarkerRenderer muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(controllerPath), "Bend-Marker-Aufrufe sollen ueber einen Controller laufen.");
+        Assert.True(File.Exists(controllerPath), "Bend-Marker-Aufrufe sollen über einen Controller laufen.");
 
         var marking = File.ReadAllText(markingPath);
         var segmentationFactory = File.ReadAllText(segmentationFactoryPath);
@@ -118,7 +118,7 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Markierung soll Bend-Marker-Rendering ueber Controller/Renderer kapseln:\n"
+            "PlayerWindow-Markierung soll Bend-Marker-Rendering über Controller/Renderer kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -154,7 +154,7 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow.Coding soll Werkzeug-Badge-Text und Rendering ueber Controller/Renderer kapseln:\n"
+            "PlayerWindow.Coding soll Werkzeug-Badge-Text und Rendering über Controller/Renderer kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -166,7 +166,7 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var statusColorsPath = Path.Combine(uiRoot, "Player", "PlayerStatusColors.cs");
 
-        Assert.True(File.Exists(statusColorsPath), "Player-Statusfarben muessen zentralisiert bleiben.");
+        Assert.True(File.Exists(statusColorsPath), "Player-Statusfarben müssen zentralisiert bleiben.");
 
         var playerWindowText = string.Join(
             Environment.NewLine,
@@ -185,7 +185,7 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Partials sollen Statusfarben ueber PlayerStatusColors statt Inline-RGB nutzen:\n"
+            "PlayerWindow-Partials sollen Statusfarben über PlayerStatusColors statt Inline-RGB nutzen:\n"
             + string.Join("\n", offenders));
     }
 

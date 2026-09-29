@@ -187,7 +187,7 @@ internal static class TrainingInventorySourceReader
                 var teacherRecords = JsonSerializer.Deserialize<List<TeacherAnnotation?>>(json, JsonDefaults.Lenient)
                                      ?? [];
                 if (teacherRecords.Any(record => record is null))
-                    throw new JsonException("Teacher-Quelle enthaelt einen leeren Datensatz.");
+                    throw new JsonException("Teacher-Quelle enthält einen leeren Datensatz.");
                 return new TrainingInventoryTypedRecords(
                     teacherRecords.Select(record => record!).ToArray(),
                     null);
@@ -196,7 +196,7 @@ internal static class TrainingInventorySourceReader
                 var trainingRecords = JsonSerializer.Deserialize<List<TrainingSample?>>(json, JsonDefaults.Lenient)
                                       ?? [];
                 if (trainingRecords.Any(record => record is null))
-                    throw new JsonException("Trainingsquelle enthaelt einen leeren Datensatz.");
+                    throw new JsonException("Trainingsquelle enthält einen leeren Datensatz.");
                 return new TrainingInventoryTypedRecords(
                     null,
                     trainingRecords.Select(record => record!).ToArray());
@@ -214,7 +214,7 @@ internal static class TrainingInventorySourceReader
         {
             var reparsePoint = TrainingInventoryPaths.FindReparsePoint(path);
             if (reparsePoint is not null)
-                throw new IOException($"Quellenpfad enthaelt eine Verknuepfung oder Junction: {reparsePoint}");
+                throw new IOException($"Quellenpfad enthält eine Verknüpfung oder Junction: {reparsePoint}");
 
             _ = File.GetAttributes(path);
             var before = new FileInfo(path);
@@ -242,7 +242,7 @@ internal static class TrainingInventorySourceReader
             }
         }
 
-        throw new IOException("Quelldatei wurde waehrend der Inventur veraendert.");
+        throw new IOException("Quelldatei wurde während der Inventur verändert.");
     }
 }
 

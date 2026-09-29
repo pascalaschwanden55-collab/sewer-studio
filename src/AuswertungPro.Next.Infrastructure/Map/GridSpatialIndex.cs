@@ -19,7 +19,7 @@ public sealed class GridSpatialIndex<T>
     public GridSpatialIndex(double cellSize)
     {
         if (cellSize <= 0)
-            throw new ArgumentOutOfRangeException(nameof(cellSize), "Zellgroesse muss > 0 sein.");
+            throw new ArgumentOutOfRangeException(nameof(cellSize), "Zellgrösse muss > 0 sein.");
         _cellSize = cellSize;
     }
 

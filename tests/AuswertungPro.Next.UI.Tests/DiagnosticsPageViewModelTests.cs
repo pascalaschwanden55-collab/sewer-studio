@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 using System.IO;
 
@@ -67,6 +68,61 @@ public sealed class DiagnosticsPageViewModelTests
         Assert.Contains(destination, viewModel.PackageStatus, StringComparison.Ordinal);
         Assert.Contains("Diagnosepaket erstellt", dialogs.InfoMessage, StringComparison.Ordinal);
         Assert.Null(dialogs.WarningMessage);
+    }
+
+    [Fact]
+    public async Task Diagnosepaket_meldet_toast_statt_dialog_wenn_toastdienst_verfuegbar()
+    {
+        var destination = Path.Combine(Path.GetTempPath(), "SewerStudio-Diagnose-Test.zip");
+        var dialogs = new FakeDialogs { SavePath = destination };
+        var toasts = new ToastFake();
+        var packages = new FakeDiagnosticsPackageService(
+            new DiagnosticsPackageResult(
+                true,
+                destination,
+                2,
+                "Diagnosepaket erstellt (2 Logdateien)."));
+        var viewModel = new DiagnosticsPageViewModel(
+            new FakeLogTailReader(new LogTailReadResult(false, [], null)),
+            packages,
+            dialogs,
+            toasts: toasts);
+
+        await viewModel.CreatePackageCommand.ExecuteAsync(null);
+
+        Assert.Null(dialogs.InfoMessage);
+        Assert.Contains("Diagnosepaket erstellt", toasts.Meldung, StringComparison.Ordinal);
+        Assert.Equal("Datei öffnen", toasts.AktionText);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: Ein Teilerfolg (einzelne Logdateien nicht lesbar) darf nicht zum Toast werden -
+    /// der Benutzer muss die Anzahl der nicht lesbaren Dateien sehen und wegklicken koennen.
+    /// </summary>
+    [Fact]
+    public async Task Diagnosepaket_mit_nicht_lesbaren_logs_bleibt_dialog_auch_mit_toastdienst()
+    {
+        var destination = Path.Combine(Path.GetTempPath(), "SewerStudio-Diagnose-Test.zip");
+        var dialogs = new FakeDialogs { SavePath = destination };
+        var toasts = new ToastFake();
+        var packages = new FakeDiagnosticsPackageService(
+            new DiagnosticsPackageResult(
+                true,
+                destination,
+                2,
+                "Diagnosepaket erstellt (2 Logdatei(en), 1 nicht lesbar).",
+                SkippedLogFileCount: 1));
+        var viewModel = new DiagnosticsPageViewModel(
+            new FakeLogTailReader(new LogTailReadResult(false, [], null)),
+            packages,
+            dialogs,
+            toasts: toasts);
+
+        await viewModel.CreatePackageCommand.ExecuteAsync(null);
+
+        Assert.Null(toasts.Meldung);
+        Assert.Contains("1 nicht lesbar", dialogs.InfoMessage, StringComparison.Ordinal);
+        Assert.Contains(destination, dialogs.InfoMessage, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -146,9 +202,29 @@ public sealed class DiagnosticsPageViewModelTests
         public string[] OpenFiles(string title, string filter) => [];
         public string? SelectFolder(string title, string? initialPath = null) => null;
         public void Error(string message, string title = "Fehler") { }
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Cancel;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Cancel;
+    }
+
+    private sealed class ToastFake : IToastService
+    {
+        public string? Meldung { get; private set; }
+        public string? AktionText { get; private set; }
+        public Action? Aktion { get; private set; }
+
+        public void Success(string message) => Meldung = message;
+
+        public void Success(string message, string aktionText, Action aktion)
+        {
+            Meldung = message;
+            AktionText = aktionText;
+            Aktion = aktion;
+        }
+
+        public void Info(string message) { }
+        public void Warning(string message) { }
+        public void Error(string message) => Assert.Fail(message);
     }
 
     private sealed class FolderOpenFake : IFolderOpenService

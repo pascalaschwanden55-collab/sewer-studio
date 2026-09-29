@@ -71,7 +71,7 @@ public sealed class HaltungCadastreIndex : IHaltungCadastreResolver
     public static void UseProvider(IHaltungCadastreIndexProvider provider) =>
         throw new NotSupportedException(
             "Der globale Kataster-Indexdienst kann nicht mehr ausgetauscht werden. " +
-            "IHaltungCadastreIndexProvider bitte per Konstruktor uebergeben.");
+            "IHaltungCadastreIndexProvider bitte per Konstruktor übergeben.");
 
     /// <summary>
     /// Stellt die feste Tabelle sicher (baut/aktualisiert sie aus der XTF, wenn sie fehlt

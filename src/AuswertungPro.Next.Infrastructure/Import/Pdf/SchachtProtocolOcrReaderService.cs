@@ -38,7 +38,7 @@ public sealed class SchachtProtocolOcrReaderService : ISchachtProtocolOcrReader
         }
         catch (Exception ex)
         {
-            return Failed($"PDF konnte fuer die Texterkennung nicht geoeffnet werden: {ex.Message}");
+            return Failed($"PDF konnte für die Texterkennung nicht geöffnet werden: {ex.Message}");
         }
 
         var pageBudget = PdfImportSafetyPolicy.CheckPageBudget(pageCount, maxPages);

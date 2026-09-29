@@ -18,7 +18,7 @@ internal static class ExcelTemplateExportLimit
 
         return Result.Fail(
             errorCode,
-            $"Excel-Export abgebrochen: {recordCount} {recordLabel} ueberschreiten die sichere " +
+            $"Excel-Export abgebrochen: {recordCount} {recordLabel} überschreiten die sichere " +
             $"Obergrenze von {MaxRecords} Zeilen. Bitte das Projekt oder den Export aufteilen.");
     }
 }

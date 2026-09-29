@@ -48,7 +48,7 @@ internal sealed class QgisBridgeRequestProcessor
             // Nach aussen nur eine neutrale Meldung (Gesamtaudit 2026-08-14, P1-3):
             // interne Ausnahmetexte enthalten Pfade, Dateinamen und Bauteilnamen.
             // Die Einzelheiten bleiben im Programmprotokoll.
-            _logger.LogWarning(ex, "QGIS-Bridge Payload fehlgeschlagen fuer {Path}.", path);
+            _logger.LogWarning(ex, "QGIS-Bridge Payload fehlgeschlagen für {Path}.", path);
             return QgisBridgeEndpointRouter.Error(
                 500,
                 "Anfrage konnte nicht beantwortet werden. Einzelheiten stehen im SewerStudio-Protokoll.");
@@ -69,7 +69,7 @@ internal sealed class QgisBridgeRequestProcessor
         catch (Exception ex)
         {
             // Nach aussen nur eine neutrale Meldung (Gesamtaudit 2026-08-14, P1-3).
-            _logger.LogWarning(ex, "QGIS-Bridge Schreibweg fehlgeschlagen fuer {Path}.", path);
+            _logger.LogWarning(ex, "QGIS-Bridge Schreibweg fehlgeschlagen für {Path}.", path);
             return QgisBridgeEndpointRouter.Error(
                 500,
                 "Anfrage konnte nicht beantwortet werden. Einzelheiten stehen im SewerStudio-Protokoll.");

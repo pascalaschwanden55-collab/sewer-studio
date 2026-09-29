@@ -35,7 +35,7 @@ public static class SanierungsMatrixStoredRowProjection
 
         var emptyOption = measureOptions.FirstOrDefault(option => option.Id is null)
             ?? throw new ArgumentException(
-                "Die Auswahlliste enthaelt keine Option fuer 'keine Massnahme'.",
+                "Die Auswahlliste enthält keine Option für 'keine Massnahme'.",
                 nameof(measureOptions));
 
         if (string.IsNullOrWhiteSpace(holding)

@@ -26,7 +26,7 @@ public static class TrainingBatchImportSamplePersistenceController
         return new TrainingBatchImportSamplePersistenceResult(
             allSamples.Count,
             codesCovered,
-            $"{newSamples.Count} Samples als Kandidaten gespeichert (Status: Neu). Freigabe ueber Review (Modul I) - KEIN Auto-Index.",
+            $"{newSamples.Count} Samples als Kandidaten gespeichert (Status: Neu). Freigabe über Review (Modul I) - KEIN Auto-Index.",
             $"  Gespeichert | Gesamt: {allSamples.Count} Samples, {codesCovered} Codes");
     }
 }

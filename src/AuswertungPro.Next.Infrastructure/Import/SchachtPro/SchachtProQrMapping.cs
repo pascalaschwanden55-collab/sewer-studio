@@ -17,7 +17,7 @@ internal static class SchachtProQrMapping
         if (p["coordinates"] is { } coordinates)
         {
             if (coordinates["crs"]?.GetValue<string>() != "EPSG:2056")
-                throw new InvalidDataException("QR-Koordinatensystem wird nicht unterstuetzt (erwartet LV95).");
+                throw new InvalidDataException("QR-Koordinatensystem wird nicht unterstützt (erwartet LV95).");
             Copy(coordinates, target, "east:lv95East north:lv95North");
         }
         var remarks = new JsonObject();
@@ -37,7 +37,7 @@ internal static class SchachtProQrMapping
         var connections = new JsonArray();
         if (p["connections"] is { } list)
         {
-            if (list.AsArray().Count > 100) throw new InvalidDataException("Zu viele QR-Anschluesse.");
+            if (list.AsArray().Count > 100) throw new InvalidDataException("Zu viele QR-Anschlüsse.");
             foreach (var connection in list.AsArray())
             {
                 if (connection is null) throw new InvalidDataException("Leerer Anschlussdatensatz.");
@@ -54,7 +54,7 @@ internal static class SchachtProQrMapping
         var result = target.Deserialize<ProtocolDto>()!;
         if ((result.Lv95East.HasValue && !double.IsFinite(result.Lv95East.Value))
             || (result.Lv95North.HasValue && !double.IsFinite(result.Lv95North.Value)))
-            throw new InvalidDataException("Ungueltige QR-Koordinaten.");
+            throw new InvalidDataException("Ungültige QR-Koordinaten.");
         return result;
     }
 

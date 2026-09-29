@@ -42,7 +42,7 @@ public sealed class DbfTable
     {
         var daten = File.ReadAllBytes(dbfPath);
         if (daten.Length < 32)
-            throw new InvalidDataException($"DBF-Datei zu kurz fuer einen Header: {dbfPath}");
+            throw new InvalidDataException($"DBF-Datei zu kurz für einen Header: {dbfPath}");
 
         // Header: Byte 0 Version, Bytes 4-7 Record-Anzahl, 8-9 Headerlaenge, 10-11 Recordlaenge
         var version = daten[0];

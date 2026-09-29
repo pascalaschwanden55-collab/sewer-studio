@@ -64,7 +64,7 @@ public sealed class ProjectRestorePointStoreTests : IDisposable
             var result = new ProjectRestorePointStore().TryCreateForProjectFile(projectFile);
 
             Assert.False(result.Created);
-            Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.False(Directory.Exists(Path.Combine(
                 externalProject,
                 ProjectStructure.RestorePoints,
@@ -95,7 +95,7 @@ public sealed class ProjectRestorePointStoreTests : IDisposable
             var result = new ProjectRestorePointStore().TryCreateForProjectFile(projectFile);
 
             Assert.False(result.Created);
-            Assert.Contains("Verknuepfung", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(Directory.EnumerateFileSystemEntries(external));
         }
         finally

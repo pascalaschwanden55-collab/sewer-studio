@@ -19,8 +19,6 @@ public sealed record VsaCodeExplorerColumnTileRenderResources(
 
 public static class VsaCodeExplorerColumnTileRenderer
 {
-    private static readonly FontFamily ConsolasFont = new("Consolas");
-
     public static Brush DefaultInvalidBrush { get; } = CreateFrozenBrush(0x9E, 0xAE, 0xC4);
 
     public static Button CreateButton(
@@ -61,12 +59,12 @@ public static class VsaCodeExplorerColumnTileRenderer
         var codeText = new TextBlock
         {
             Text = presentation.LabelText,
-            FontFamily = ConsolasFont,
             FontSize = 12,
             FontWeight = FontWeights.Bold,
             Foreground = codeBrush,
             VerticalAlignment = VerticalAlignment.Center
         };
+        codeText.SetResourceReference(TextBlock.FontFamilyProperty, "FontMono");
         Grid.SetRow(codeText, 0);
         Grid.SetColumn(codeText, 0);
         contentGrid.Children.Add(codeText);
@@ -169,14 +167,14 @@ public static class VsaCodeExplorerColumnTileRenderer
         var hoverTrigger = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
         hoverTrigger.Setters.Add(new Setter(
             Control.BackgroundProperty,
-            new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F0F4FF")!),
+            findResource("AccentSubtleBrush"),
             "bd"));
         template.Triggers.Add(hoverTrigger);
 
         var pressTrigger = new Trigger { Property = ButtonBase.IsPressedProperty, Value = true };
         pressTrigger.Setters.Add(new Setter(
             Control.BackgroundProperty,
-            new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E0EAFF")!),
+            findResource("SelectionBackgroundBrush"),
             "bd"));
         template.Triggers.Add(pressTrigger);
 
@@ -210,7 +208,7 @@ public static class VsaCodeExplorerColumnTileRenderer
 
     private static Border CreateBadge(string text, string colorHex)
     {
-        var color = (Color)ColorConverter.ConvertFromString(colorHex);
+        var color = ResolveBadgeColor(colorHex);
         return new Border
         {
             CornerRadius = new CornerRadius(3),
@@ -225,6 +223,22 @@ public static class VsaCodeExplorerColumnTileRenderer
                 Foreground = new SolidColorBrush(color)
             }
         };
+    }
+
+    /// <summary>
+    /// Die Badge-Farbe des Presenters ist entweder eine echte Fachfarbe (Klartext-Hex) oder – als
+    /// Ersatzfarbe ohne Fachwert – ein Theme-Token-Name ("AccentBrush"/"SuccessBrush"), der hier gegen
+    /// das aktive Theme aufgeloest wird. Ohne laufende Anwendung (z. B. im Unit-Test) gilt Akzentblau.
+    /// </summary>
+    private static Color ResolveBadgeColor(string colorHexOrTokenKey)
+    {
+        if (colorHexOrTokenKey.StartsWith('#') &&
+            ColorConverter.ConvertFromString(colorHexOrTokenKey) is Color parsed)
+            return parsed;
+
+        return System.Windows.Application.Current?.TryFindResource(colorHexOrTokenKey) is SolidColorBrush themed
+            ? themed.Color
+            : Color.FromRgb(0x25, 0x63, 0xEB);
     }
 
     private static SolidColorBrush CreateFrozenBrush(byte r, byte g, byte b)

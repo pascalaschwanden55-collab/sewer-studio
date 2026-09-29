@@ -108,7 +108,8 @@
                                 Command="{Binding MoveDossierDownCommand}"/>
                     </Grid>
 
-                    <ListBox Grid.Row="2"
+                    <Grid Grid.Row="2">
+                    <ListBox x:Name="DossiersListBox"
                              ItemsSource="{Binding Dossiers}"
                              SelectedItem="{Binding Selected, Mode=TwoWay}"
                              Background="Transparent" BorderThickness="0">
@@ -150,6 +151,23 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+
+                    <ctrl:EmptyStateControl IsHitTestVisible="False"
+                                            Icon="&#xE8F1;"
+                                            Title="Noch keine Liegenschaften"
+                                            Message="«Neue Liegenschaft» legt das erste Eigentümerdossier an.">
+                        <ctrl:EmptyStateControl.Style>
+                            <Style TargetType="ctrl:EmptyStateControl">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasItems, ElementName=DossiersListBox}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ctrl:EmptyStateControl.Style>
+                    </ctrl:EmptyStateControl>
+                    </Grid>
                 </Grid>
             </Border>
 
@@ -165,7 +183,7 @@
                                 Visibility="{Binding HasSelection,
                                     Converter={StaticResource InverseBoolToVis}}"
                                 x:Name="EmptyState">
-                        <TextBlock Text="&#xE8A5;" FontFamily="{DynamicResource FontIcon}"
+                        <ui:FluentIcon Glyph="&#xE8A5;"
                                    FontSize="{DynamicResource IconHero}" HorizontalAlignment="Center"
                                    Foreground="{DynamicResource MutedBrush}"/>
                         <TextBlock Text="Keine Liegenschaft gewählt"
@@ -305,9 +323,9 @@
                                                 <TextBlock Grid.Column="0" Text="{Binding Label}"
                                                            Foreground="{DynamicResource TextBrush}"
                                                            FontSize="{DynamicResource TextS}"/>
-                                                <ProgressBar Grid.Column="1"
+                                                <ProgressBar Grid.Column="1" Style="{StaticResource ProgressBarStandard}"
                                                              Value="{Binding Percent, Mode=OneWay}"
-                                                             Maximum="100" Height="8"
+                                                             Maximum="100"
                                                              VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="2" Text="{Binding Count}"
                                                            Foreground="{DynamicResource MutedBrush}"
