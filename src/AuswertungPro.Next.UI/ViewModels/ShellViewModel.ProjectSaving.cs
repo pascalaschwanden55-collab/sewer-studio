@@ -258,6 +258,7 @@ public sealed partial class ShellViewModel
         NewProjectCommand?.NotifyCanExecuteChanged();
         SwitchProjectCommand?.NotifyCanExecuteChanged();
         OpenProjectCommand?.NotifyCanExecuteChanged();
+        PruefeDatenVerlaufBeiVorgang();
     }
 
     private void SaveProject()

@@ -411,6 +411,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         ProjectGeneration++;
         _project = p;
         EnableCollectionSync(p);
+        BindeDatenVerlauf(p);
         OnPropertyChanged(nameof(Project));
         SetStatus($"Projekt: {p.Name}");
         RefreshTitleAndDirty();

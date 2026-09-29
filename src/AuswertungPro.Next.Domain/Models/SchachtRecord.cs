@@ -236,6 +236,24 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
         return null;
     }
 
+    /// <summary>
+    /// Rueckgaengig/Wiederholen (Optik Aufgabe 16): setzt Wert UND Herkunftsdaten eines Feldes
+    /// zeichengenau auf einen frueheren Zustand zurueck — ohne WebGIS-Umwandlung, ohne neue
+    /// Handmarke, mit dem alten Zeitstempel. Gleiche Regel wie <see cref="HaltungRecord.StelleFeldzustandWiederHer"/>.
+    /// </summary>
+    public void StelleFeldzustandWiederHer(string fieldName, string? value, FieldMetadata? meta)
+    {
+        VirtuelleSpalte.WeiseAb(fieldName, nameof(fieldName));
+        if (value is null) Fields.Remove(fieldName);
+        else Fields[fieldName] = value;
+        if (meta is null) FieldMeta.Remove(fieldName);
+        else FieldMeta[fieldName] = FieldMetadataKopie.Von(meta);
+        ModifiedAtUtc = DateTime.UtcNow;
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Fields)));
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs($"Fields[{fieldName}]"));
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(ModifiedAtUtc)));
+    }
+
     private FeldSchreibErgebnis WriteField(string fieldName, string? value, FieldSource source, bool? userEdited)
     {
         // Nova-Fixwelle 2b, Runde 2: Eine virtuelle Tabellenspalte ist kein Feld und darf

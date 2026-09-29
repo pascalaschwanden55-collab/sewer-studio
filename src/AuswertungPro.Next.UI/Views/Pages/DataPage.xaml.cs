@@ -57,7 +57,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         FilterChips.StartFilterZurueckgesetzt += EntferneStartFilter;
         _haltungDetailItemFactory = new DataPageDetailItemFactory(
             ResolveManagedComboSpec,
-            CommitHaltungDetailField,
+            CommitHaltungDetailFieldMitVerlauf,
             BaueNachschlagBefehl,
             BaueStrassenBefehl,
             MeldeFormularKonflikt);
@@ -207,8 +207,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         var spalten = DataPageHaltungColumnBuilder.Baue(
             NovaLayoutAktiv,
-            ComboBox_LostKeyboardFocus,
-            ComboBox_SelectionChanged);
+            ComboBox_LostKeyboardFocusMitVerlauf,
+            ComboBox_SelectionChangedMitVerlauf);
 
         foreach (var spalte in spalten)
         {
@@ -283,7 +283,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         switch (result.Action)
         {
             case DataPageRightClickAction.ClearColumn:
-                ClearColumn(result.FieldName!, result.DisplayName!);
+                ClearColumnMitVerlauf(result.FieldName!, result.DisplayName!);
                 e.Handled = true;
                 break;
             case DataPageRightClickAction.SelectRow:
@@ -307,7 +307,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (!Dialogs.ConfirmWarn(
             $"ACHTUNG: Alle Werte in Spalte \"{displayName}\" werden gelöscht.\n\n" +
             $"Betroffen: {plan.AffectedCount} von {plan.TotalCount} Haltungen.\n" +
-            "Auch manuell bearbeitete Werte gehen verloren und können nicht rückgängig gemacht werden.\n\n" +
+            "Auch manuell bearbeitete Werte werden gelöscht (Rückgängig mit Strg+Z).\n\n" +
             "Wirklich löschen?",
             "Spalte leeren"))
             return;

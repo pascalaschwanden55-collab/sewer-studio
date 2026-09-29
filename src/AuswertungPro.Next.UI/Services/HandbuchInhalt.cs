@@ -49,6 +49,13 @@ public static class HandbuchInhalt
             "lassen sich Ansichten wie «Kompakt», «Stammdaten», «Bewertung», «Sanierung», «Kosten» " +
             "oder «Alle Spalten» wählen; vier eigene Spalten zeigen KI-Stand, Prüfstand, ob ein Video " +
             "hinterlegt ist und ob ein Protokoll vorliegt. F3 springt in die Suche.\n\n" +
+            "Rückgängig und Wiederholen: Strg+Z nimmt die letzte Eingabe in Tabelle, Formular oder " +
+            "Objektakte zurück, Strg+Y (oder Strg+Umschalt+Z) wendet sie wieder an; dasselbe steht im " +
+            "Menü Bearbeiten mit dem Namen des Schritts. Hat ein Textfeld den Fokus, gilt dort dessen " +
+            "eigenes Rückgängig. Nicht rückgängig machbar sind Umbenennungen (Haltungsname, Schacht oben/" +
+            "unten - sie ziehen Ordner und Dateien mit); sie leeren den Verlauf ebenso wie ein Import, eine " +
+            "Übernahme aus GeoShop, QGIS oder dem WebGIS, neue, gelöschte oder verschobene Haltungen und ein " +
+            "Projektwechsel.\n\n" +
             "Rechtsklick auf eine Zeile öffnet Beobachtungen, startet die Videoanalyse oder das " +
             "Abspielen des Videos, druckt das Protokoll, öffnet das Original-PDF oder die " +
             "Sanierungsmassnahmen. Der Knopf «Weitere Aktionen» bündelt seltenere Wege in fünf " +
@@ -71,7 +78,10 @@ public static class HandbuchInhalt
             "Bearbeiten (Sanierungsmassnahmen), Reihenfolge, Ansicht sowie Ausgabe (Protokoll-PDF, " +
             "Gehe zu Ordner) - Sanierungsmassnahmen, Protokoll-PDF und Gehe zu Ordner stehen bewusst " +
             "sowohl im Rechtsklick-Kontextmenü als auch unter «Weitere Aktionen». Neu, Löschen, " +
-            "Verschieben und die Detailansicht funktionieren wie bei den Haltungen. Auch hier kann " +
+            "Verschieben und die Detailansicht funktionieren wie bei den Haltungen. Strg+Z/Strg+Y " +
+            "(Menü Bearbeiten) nehmen Eingaben zurück bzw. wenden sie wieder an, mit denselben Grenzen wie " +
+            "bei den Haltungen; eine geänderte Schachtnummer benennt Dateien um und ist nicht rückgängig " +
+            "machbar. Auch hier kann " +
             "statt der Tabelle die aufklappbare Listenansicht gewählt werden. Die frühere «Alte " +
             "Schachtansicht» steht ebenfalls nicht mehr in diesem Menü, sondern in Einstellungen -> " +
             "Allgemein -> Frühere Ansichten."),

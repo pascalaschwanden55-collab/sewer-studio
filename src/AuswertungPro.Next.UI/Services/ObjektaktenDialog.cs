@@ -15,7 +15,8 @@ public static class ObjektaktenDialog
     public static Func<Guid, ObjektakteViewModel?> Fabrik(string art, Func<Project> projekt, AppSettings settings,
         Func<bool> bereit, Action geaendert, Action speichern,
         AuswertungPro.Next.Application.Projects.IObjektaktenPaketService pakete, IDialogService dialogs,
-        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null)
+        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null,
+        AuswertungPro.Next.Application.UseCases.Datenaenderungen.IDatenaenderungsVerlauf? verlauf = null)
         => id =>
         {
             if (!bereit()) return null;
@@ -23,7 +24,7 @@ public static class ObjektaktenDialog
             bool DarfSchreiben() => bereit() && ReferenceEquals(p, projekt())
                 && (art == "haltung" ? p.Data.Any(r => r.Id == id) : p.SchaechteData.Any(r => r.Id == id));
             if (!DarfSchreiben()) return null;
-            var bearbeitung = new ObjektaktenBearbeitung(p, id, art, ergaenzungen);
+            var bearbeitung = new ObjektaktenBearbeitung(p, id, art, ergaenzungen) { Verlauf = verlauf };
             bearbeitung.PruefeBestand();
             var paketDialog = new ObjektaktenPaketDialog(pakete, dialogs);
             var geo = geoShop is null ? null : new GeoShopEinzelErgaenzungDialog(geoShop, dialogs, settings, geoShopSicherung);
@@ -39,23 +40,25 @@ public static class ObjektaktenDialog
     public static IRelayCommand Befehl(string art, Func<Project> projekt, Func<Guid?> auswahl, AppSettings settings,
         Func<bool> bereit, Action geaendert, Action speichern,
         AuswertungPro.Next.Application.Projects.IObjektaktenPaketService pakete, IDialogService dialogs,
-        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null)
+        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null,
+        AuswertungPro.Next.Application.UseCases.Datenaenderungen.IDatenaenderungsVerlauf? verlauf = null)
         => new RelayCommand(() =>
         {
             if (!bereit() || auswahl() is not { } id) return;
             var p = projekt();
             Zeige(p, id, art, settings, geaendert, () => bereit() && ReferenceEquals(p, projekt())
                 && (art == "haltung" ? p.Data.Any(r => r.Id == id) : p.SchaechteData.Any(r => r.Id == id)), speichern,
-                pakete, dialogs, ergaenzungen, geoShop, geoShopSicherung);
+                pakete, dialogs, ergaenzungen, geoShop, geoShopSicherung, verlauf);
         });
 
     public static void Zeige(Project projekt, Guid id, string art, AppSettings settings, Action geaendert,
         Func<bool> darfSchreiben, Action speichern,
         AuswertungPro.Next.Application.Projects.IObjektaktenPaketService? pakete = null, IDialogService? dialogs = null,
-        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null)
+        IObjektaktenListenErgaenzungen? ergaenzungen = null, IGeoShopLeser? geoShop = null, IGeoShopSicherung? geoShopSicherung = null,
+        AuswertungPro.Next.Application.UseCases.Datenaenderungen.IDatenaenderungsVerlauf? verlauf = null)
     {
         if (!darfSchreiben()) return;
-        var bearbeitung = new ObjektaktenBearbeitung(projekt, id, art, ergaenzungen);
+        var bearbeitung = new ObjektaktenBearbeitung(projekt, id, art, ergaenzungen) { Verlauf = verlauf };
         bearbeitung.PruefeBestand();
         var paketDialog = pakete is not null && dialogs is not null ? new ObjektaktenPaketDialog(pakete, dialogs) : null;
         var geo = geoShop is not null && dialogs is not null ? new GeoShopEinzelErgaenzungDialog(geoShop, dialogs, settings, geoShopSicherung) : null;

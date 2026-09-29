@@ -23,6 +23,11 @@
              und dadurch nicht betroffen. -->
         <KeyBinding Key="F1" Command="{Binding OpenHandbuchCommand}" CommandParameter="{Binding SelectedNavItem.Title}"/>
         <KeyBinding Key="F1" Modifiers="Control" Command="{Binding OpenTastenkuerzelCommand}"/>
+        <!-- Optik Aufgabe 16: Rueckgaengig/Wiederholen der Haltungs-/Schachtdaten. Hat ein Textfeld den
+             Fokus, gilt dessen eigenes Rueckgaengig (der Befehl ist dann nicht ausfuehrbar). -->
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding RueckgaengigTasteCommand}"/>
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding WiederholenTasteCommand}"/>
+        <KeyBinding Key="Z" Modifiers="Control+Shift" Command="{Binding WiederholenTasteCommand}"/>
     </Window.InputBindings>
     <Grid Background="{DynamicResource BgBrush}">
     <!-- Eigene deckende Grundflaeche: Mica setzt Window.Background auf Transparent.
@@ -220,6 +225,22 @@
                               ToolTip="SewerStudio schliessen.">
                         <MenuItem.Icon>
                             <ui:FluentIcon Glyph="&#xE7E8;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+                <!-- Optik Aufgabe 16: Rueckgaengig/Wiederholen fuer Haltungs- und Schachtdaten. Der Text nennt
+                     den Schritt («Rückgängig: Material 10001-10002»); ausfuehrbar nur auf diesen zwei Seiten. -->
+                <MenuItem Header="_Bearbeiten" Padding="8,6">
+                    <MenuItem Header="{Binding RueckgaengigMenuText}" Command="{Binding RueckgaengigCommand}" InputGestureText="Strg+Z"
+                              ToolTip="Letzte Änderung an Haltungs- oder Schachtdaten der offenen Seite zurücknehmen.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE7A7;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{Binding WiederholenMenuText}" Command="{Binding WiederholenCommand}" InputGestureText="Strg+Y"
+                              ToolTip="Zuletzt zurückgenommene Änderung wieder anwenden.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE7A6;" Foreground="{DynamicResource MutedBrush}"/>
                         </MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
