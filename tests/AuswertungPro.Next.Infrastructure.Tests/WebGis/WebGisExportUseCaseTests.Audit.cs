@@ -109,17 +109,164 @@ public sealed partial class WebGisExportUseCaseTests
     }
 
     [Fact]
-    public async Task Vom_server_bestaetigt_aber_ein_feld_verworfen_bekommt_trotzdem_die_massnahme()
+    public async Task Vom_server_bestaetigt_aber_ein_feld_verworfen_bekommt_keine_massnahme()
     {
-        // Der Server nimmt an und verwirft ein Feld (Tiefe ohne Koten): Das Objekt ist nicht gesperrt.
+        // Entscheid Pascal 28.09.2026 (WG05), ersetzt die fruehere Regel «bekommt trotzdem die Massnahme»:
+        // Hat GEONIS ein geplantes Feld des Elternobjekts nicht uebernommen (Tiefe ohne Koten), wird keine neue
+        // Massnahme angelegt.
         var (plan, eltern, san) = PlanMitMassnahme(mitFeldaenderung: true);
         var client = new FakeClient { Lese = (_, _) => HaltungMitZustand("102"), SchreibenWirkt = false };
 
         await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
 
         Assert.Contains("nicht übernommen", eltern.SchreibFehler);
-        Assert.Equal(1, client.MassnahmenAngelegt);
+        Assert.True(eltern.VomServerBestaetigt);
+        Assert.False(eltern.Nachgeprueft);
+        Assert.Equal(0, client.MassnahmenAngelegt);
+        Assert.False(san.Geschrieben);
+        Assert.Contains("nicht vollständig bestätigt", san.SchreibFehler);
+    }
+
+    [Fact]
+    public async Task Elternobjekt_ohne_nachpruefung_bekommt_keine_massnahme()
+    {
+        // Entscheid Pascal 28.09.2026 (WG05): Liess sich der geschriebene Wert nicht zuruecklesen, ist er nicht
+        // bestaetigt — auch dann keine neue Massnahme.
+        var (plan, eltern, san) = PlanMitMassnahme(mitFeldaenderung: true);
+        var lesungen = 0;
+        var client = new FakeClient
+        {
+            Lese = (_, _) => ++lesungen == 2 ? throw new WebGisAntwortException("WebGIS meldet: Serverfehler") : HaltungMitZustand("102"),
+        };
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
+        Assert.True(eltern.Geschrieben);
+        Assert.False(eltern.Nachgeprueft);
+        Assert.Equal(0, client.MassnahmenAngelegt);
+        Assert.Contains("nicht vollständig bestätigt", san.SchreibFehler);
+    }
+
+    // ---- WG05: Massnahme nach dem Anlegen gegenpruefen (28.09.2026) ----
+
+    [Fact]
+    public async Task Vollstaendig_gespeicherte_massnahme_ist_angelegt_und_nachgeprueft()
+    {
+        var (plan, _, san) = PlanMitMassnahme(mitFeldaenderung: false);
+        san.Felder[WebGisSanierungFeldkarte.SanierungsjahrRef] = "2026-01-01T00:00:00.000Z";
+        var client = new FakeClient { Lese = (_, _) => HaltungMitZustand("102") };
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
         Assert.True(san.Geschrieben, san.SchreibFehler);
+        Assert.True(san.Nachgeprueft, san.Ungeklaert);
+        Assert.Null(san.Ungeklaert);
+        Assert.Equal("M-NEU-1", san.NeueGlobalId);
+        Assert.Equal("66921", san.NeueId);
+        Assert.Equal(1, client.AngelegteGelesen);
+        Assert.Contains("OK, nachgeprüft", WebGisExportBericht.LogZeile(san, DateTime.Now));
+    }
+
+    [Fact]
+    public async Task Server_bestaetigt_aber_verwirft_ein_feld_ist_ungeklaert_und_stoppt_den_lauf()
+    {
+        var (plan, _, san) = PlanMitMassnahme(mitFeldaenderung: false);
+        san.Felder[WebGisSanierungFeldkarte.StatusRef] = "1";
+        var zweite = new WebGisSanierungPosition
+        {
+            Objektart = WebGisObjektart.Haltung, ElternBezeichnung = "H1", ElternGlobalId = "G1", ElternRecordId = san.ElternRecordId,
+        };
+        zweite.Felder["x"] = "2";
+        plan.Sanierungen.Add(zweite);
+        var client = new FakeClient { Lese = (_, _) => HaltungMitZustand("102"), MassnahmenFeldVerworfen = WebGisSanierungFeldkarte.StatusRef };
+        var gemeldet = new List<string>();
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false,
+            nachMassnahme: s => gemeldet.Add(WebGisExportBericht.LogZeile(s, DateTime.Now)));
+
+        Assert.True(san.Geschrieben);                // bestaetigt bleibt bestaetigt …
+        Assert.Null(san.SchreibFehler);              // … nie «nicht angelegt»
+        Assert.False(san.Nachgeprueft);
+        Assert.Contains("Status", san.Ungeklaert);
+        Assert.Equal(1, client.MassnahmenAngelegt); // der Lauf stoppt: keine zweite Massnahme
+        Assert.False(zweite.Geschrieben);
+        Assert.Contains("ungeklärten Ausgang", zweite.SchreibFehler);
+        Assert.Contains(gemeldet, z => z.Contains("UNGEKLÄRT"));
+        Assert.Contains("ungeklärtem Ausgang", WebGisExportBericht.Ergebnis(plan));
+    }
+
+    [Fact]
+    public async Task Keine_neue_zeile_nach_dem_anlegen_ist_ungeklaert()
+    {
+        var (plan, _, san) = PlanMitMassnahme(mitFeldaenderung: false);
+        var client = new FakeClient { Lese = (_, _) => HaltungMitZustand("102"), ListeNachAnlegenOhneNeueZeile = true };
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
+        Assert.True(san.Geschrieben);
+        Assert.False(san.Nachgeprueft);
+        Assert.Contains("keine neue Massnahme", san.Ungeklaert);
+        Assert.Equal(0, client.AngelegteGelesen);
+    }
+
+    [Fact]
+    public async Task Mehrere_neue_zeilen_nach_dem_anlegen_sind_ungeklaert()
+    {
+        var (plan, _, san) = PlanMitMassnahme(mitFeldaenderung: false);
+        var client = new FakeClient { Lese = (_, _) => HaltungMitZustand("102"), ZeilenJeAnlegen = 2 };
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
+        Assert.False(san.Nachgeprueft);
+        Assert.Contains("nicht eindeutig", san.Ungeklaert);
+    }
+
+    [Fact]
+    public async Task Lesefehler_nach_dem_anlegen_ist_ungeklaert_nicht_nicht_angelegt()
+    {
+        var (plan, _, san) = PlanMitMassnahme(mitFeldaenderung: false);
+        var client = new FakeClient { Lese = (_, _) => HaltungMitZustand("102"), AngelegteNichtLesbar = true };
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
+        Assert.True(san.Geschrieben);
+        Assert.Null(san.SchreibFehler);
+        Assert.Contains("nicht lesbar", san.Ungeklaert);
+        Assert.Contains("UNGEKLÄRT", WebGisExportBericht.Details(plan, mitErgebnis: true));
+    }
+
+    [Fact]
+    public async Task Elternobjekt_nach_dem_anlegen_nicht_lesbar_ist_ungeklaert()
+    {
+        var (plan, _, san) = PlanMitMassnahme(mitFeldaenderung: false);
+        var lesungen = 0;
+        var client = new FakeClient
+        {
+            Lese = (_, _) => ++lesungen >= 2 ? throw new WebGisAntwortException("WebGIS meldet: Serverfehler") : HaltungMitZustand("102"),
+        };
+
+        await new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false);
+
+        Assert.Equal(1, client.MassnahmenAngelegt);
+        Assert.True(san.Geschrieben);
+        Assert.Contains("Elternobjekt nach dem Anlegen nicht lesbar", san.Ungeklaert);
+    }
+
+    [Fact]
+    public async Task Abgelaufene_sitzung_bei_der_gegenprobe_bleibt_bestaetigt_und_ungeklaert()
+    {
+        var (plan, _, san) = PlanMitMassnahme(mitFeldaenderung: false);
+        var lesungen = 0;
+        var client = new FakeClient
+        {
+            Lese = (_, _) => ++lesungen >= 2 ? throw new WebGisSitzungException("Token abgelaufen") : HaltungMitZustand("102"),
+        };
+
+        await Assert.ThrowsAsync<WebGisSitzungException>(() => new WebGisExportUseCase(client).FuehreAusAsync(plan, probelauf: false));
+
+        Assert.True(san.Geschrieben);
+        Assert.Null(san.SchreibFehler);
+        Assert.Contains("Sitzung", san.Ungeklaert);
     }
 
     [Fact]

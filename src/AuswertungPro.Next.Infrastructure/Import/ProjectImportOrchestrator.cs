@@ -50,8 +50,8 @@ public sealed record OneClickImportResult(
 ///   7. Medien verteilen
 ///   8. Projekt als geaendert markieren
 ///
-/// Jeder Schritt laeuft in einem try/catch: Fehler werden als Message gesammelt,
-/// der Lauf wird nicht abgebrochen.
+/// Normale Schrittfehler werden als Meldung gesammelt; ein Benutzerabbruch
+/// wird weitergegeben und beendet den Lauf.
 /// </summary>
 public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
 {
@@ -364,11 +364,13 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         if (det.Format == KanalExportFormat.Kins)
         {
             Melde(3, "Quelldaten", "KINS-Angaben ergänzen …");
+            ct.ThrowIfCancellationRequested();
             try
             {
                 // 1. Numerische XTF-Bezeichnungen → "{Schacht_oben}-{Schacht_unten}"
                 //    (merkt die Bezeichnung, raeumt Re-Import-Duplikate ab)
                 var nameResult = Kins.KinsHoldingNameNormalizer.Apply(project, ctx);
+                ct.ThrowIfCancellationRequested();
                 messages.AddRange(nameResult.Messages);
                 if (nameResult.Umbenannt > 0 || nameResult.DuplikateEntfernt > 0)
                     messages.Add($"KINS-Namen: {nameResult.Umbenannt} normalisiert, {nameResult.DuplikateEntfernt} Re-Import-Duplikate entfernt.");
@@ -377,15 +379,18 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                 if (det.KinsDataTxtPath is not null)
                 {
                     var txtResult = _kinsDvdTextEnricher.Apply(project, det.KinsDataTxtPath);
+                    ct.ThrowIfCancellationRequested();
                     messages.AddRange(txtResult.Messages);
                     messages.Add($"KINS-TXT: {txtResult.TimecodesGesetzt} Timecodes, {txtResult.LaengenGesetzt} Längen, {txtResult.DatumGesetzt} Daten gesetzt.");
                 }
 
                 // 3. FoxPro-DBF: Schachtliste + Whitelist fuer leere Stammdaten
                 var dbfResult = _kinsDbfWhitelistEnricher.Apply(project, sourceFolder, ctx);
+                ct.ThrowIfCancellationRequested();
                 messages.AddRange(dbfResult.Messages);
                 messages.Add($"KINS-DBF: {dbfResult.HaltungsfelderGesetzt} Haltungsfelder, {dbfResult.SchaechteNeu} Schaechte neu, {dbfResult.SchaechteAktualisiert} aktualisiert.");
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 MeldeFehler("KINS-Anreicherung", $"KINS-Anreicherung fehlgeschlagen: {ex.Message}");
@@ -439,11 +444,13 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
         if (det.Format == KanalExportFormat.Ikas && det.Sia405XtfPath != null)
         {
             Melde(3, "Quelldaten", "SIA405-Angaben ergänzen …");
+            ct.ThrowIfCancellationRequested();
             try
             {
                 // SIA405-XTF in ein temporaeres Projekt importieren
                 var tmp             = new Project();
                 var sia405Result    = _xtf.ImportXtfFiles(new[] { det.Sia405XtfPath }, tmp, null);
+                ct.ThrowIfCancellationRequested();
 
                 if (sia405Result.Ok && sia405Result.Value is not null)
                 {
@@ -454,6 +461,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
 
                     foreach (var rec in tmp.Data)
                     {
+                        ct.ThrowIfCancellationRequested();
                         var haltungsname = rec.GetFieldValue("Haltungsname");
                         if (string.IsNullOrWhiteSpace(haltungsname))
                             continue;
@@ -472,6 +480,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
 
                     // Anreicherung anwenden
                     var enrichResult = Sia405WhitelistEnricher.Apply(project, sia405ByHaltung);
+                    ct.ThrowIfCancellationRequested();
                     conflictCount += enrichResult.Conflicts.Count;
                     messages.AddRange(enrichResult.Conflicts);
                     messages.Add(
@@ -484,6 +493,7 @@ public sealed class ProjectImportOrchestrator : IOneClickProjectImportService
                         $"SIA405-Import fehlgeschlagen [{sia405Result.ErrorCode}]: {sia405Result.ErrorMessage}");
                 }
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 messages.Add($"SIA405-Anreicherung fehlgeschlagen (nicht kritisch): {ex.Message}");

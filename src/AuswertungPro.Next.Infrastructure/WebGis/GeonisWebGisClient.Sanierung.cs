@@ -78,10 +78,11 @@ public sealed partial class GeonisWebGisClient
                 + (subtyp is null ? "" : "&subtype=" + subtyp)
                 + "&refid=" + refId + "&filter=" + Uri.EscapeDataString(filter) + "&" + z.AuthQuery();
         using var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode) return null;
+        PruefeStatus(resp, "beim Laden einer Auswahlliste");
         var text = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
         using var doc = LiesJsonOderSitzungsfehler(text);
-        if (doc.RootElement.ValueKind != JsonValueKind.Object) return null;
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            throw new WebGisAntwortException("Ungültige Antwort beim Laden einer Auswahlliste (kein Objekt): " + Kurz(text.Trim(), 120));
         if (!doc.RootElement.TryGetProperty("components", out var comps) || comps.ValueKind != JsonValueKind.Array) return null;
         foreach (var comp in comps.EnumerateArray())
         {
@@ -203,10 +204,12 @@ public sealed partial class GeonisWebGisClient
                 + "&senderId=" + elternGlobalId
                 + "&ts=" + Ts() + "&" + z.AuthQuery();
         using var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode) return null;
+        PruefeStatus(resp, "beim Laden der leeren Sanierungsmaske");
         var text = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
         using var doc = LiesJsonOderSitzungsfehler(text);
-        return doc.RootElement.ValueKind == JsonValueKind.Object ? doc.RootElement.Clone() : null;
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            throw new WebGisAntwortException("Ungültige Antwort beim Laden der leeren Sanierungsmaske (kein Objekt): " + Kurz(text.Trim(), 120));
+        return doc.RootElement.Clone();
     }
 
     /// <summary>

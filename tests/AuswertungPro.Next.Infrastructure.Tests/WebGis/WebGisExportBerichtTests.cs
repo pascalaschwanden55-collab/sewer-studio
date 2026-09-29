@@ -65,7 +65,7 @@ public sealed class WebGisExportBerichtTests
     {
         var plan = Plan();
         plan.Positionen[0].Geschrieben = true;
-        plan.Sanierungen[0].Geschrieben = true; plan.Sanierungen[0].NeueId = "66931";
+        plan.Sanierungen[0].Geschrieben = true; plan.Sanierungen[0].Nachgeprueft = true; plan.Sanierungen[0].NeueId = "66931";
 
         var log = WebGisExportBericht.Log(plan, new DateTime(2026, 9, 21, 14, 23, 36), "pascal.aschwanden");
 

@@ -367,6 +367,9 @@ public sealed class ExportWebGisBereich : ObservableObject
                     + "Änderungen stehen im Bericht; vor einem neuen Versuch im WebGIS nachsehen.",
                 WebGisSendenAblauf.Ausgang.ProjektGewechselt =>
                     "\nACHTUNG: Das Projekt war nicht mehr offen — Lauf vor dem nächsten Schreiben gestoppt.",
+                WebGisSendenAblauf.Ausgang.Ungeklaert =>
+                    "\nACHTUNG: Eine Sanierungsmassnahme wurde vom Server bestätigt, liess sich aber nicht sicher nachprüfen — "
+                    + "Lauf gestoppt. Vor einem neuen Versuch im WebGIS nachsehen, nicht erneut anlegen.",
                 _ => string.Empty,
             };
             var pfad = SchreibeBericht(ordner, WebGisExportBericht.Details(frisch, mitErgebnis: true),
@@ -376,7 +379,7 @@ public sealed class ExportWebGisBereich : ObservableObject
             Status = ergebnis + zusatz;
             var fehlgeschlagen = ausgang != WebGisSendenAblauf.Ausgang.Abgeschlossen
                 || frisch.Positionen.Exists(p => p.SchreibFehler is not null)
-                || frisch.Sanierungen.Exists(s => s.SchreibFehler is not null);
+                || frisch.Sanierungen.Exists(s => s.SchreibFehler is not null || s.Ungeklaert is not null);
             if (fehlgeschlagen) _d.Toasts.Warning(ergebnis + zusatz); else _d.Toasts.Success(ergebnis);
 
             // Die Liste zeigt das Ergebnis (geschrieben/bestaetigt) — der geschriebene Stand ist schon uebernommen.

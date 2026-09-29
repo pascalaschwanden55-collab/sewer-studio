@@ -123,11 +123,8 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
             Description = string.Empty
         };
 
-        item.PropertyChanged += OnCodeItemChanged;
         Codes.Add(item);
         SelectedCode = item;
-        _codesView.Refresh();
-        RefreshGroupOptions();
         _hasChanges = true;
     }
 

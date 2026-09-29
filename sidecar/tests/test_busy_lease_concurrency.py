@@ -321,6 +321,9 @@ def test_wrapper_muster_sam(monkeypatch):
         def set_image(self, _arr):
             pass
 
+        def reset_predictor(self):
+            pass
+
         def predict(self, **_kwargs):
             hook.block()
             return np.ones((1, 4, 4), dtype=bool), np.array([0.99]), None

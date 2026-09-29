@@ -58,7 +58,7 @@ public sealed class WebGisAblaufBerichtTests
     public void LogZeile_angelegte_massnahme_nennt_die_neue_id()
     {
         var s = Massnahme("525145-505377");
-        s.Geschrieben = true; s.NeueId = "66931";
+        s.Geschrieben = true; s.Nachgeprueft = true; s.NeueId = "66931";
 
         Assert.Contains("| Haltung 525145-505377 | Sanierungsmassnahme angelegt (ID 66931) | – → Art: Renovierung, Status: Ausgeführt | OK",
             WebGisExportBericht.LogZeile(s, Zeit));

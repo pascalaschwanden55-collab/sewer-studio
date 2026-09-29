@@ -1442,6 +1442,18 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   RueckgaengigSuchText`/`WiederholenSuchText` reichen sie an `GlobaleSucheViewModel` weiter. Nie
   `RueckgaengigMenuText`/`WiederholenMenuText` ausserhalb eines echten Menues verwenden.
 
+## AP07: Ein-Knopf-Import und Medienverteilung (28.09.2026)
+
+- `ProjectImportOrchestrator` steuert weiter den Import. `ImportMediaPhase` bündelt
+  die Medienfolge mit derselben gemeinsamen Fehlergrenze; `HoldingVideoSearch`
+  entscheidet getrennt von der Dateiablage über Standardvideo und Haltung.
+- KINS- und SIA405-Anreicherung reichen einen Benutzerabbruch weiter. Das
+  Abbruchsignal wird vor und nach längeren Schritten geprüft. Ein Abbruch wird
+  weder als KINS-Fehler gezählt noch als unkritischer SIA405-Fehler übergangen.
+- Verhaltenstests schützen die Suche mit einer korrigierten PDF-Haltungsnummer,
+  die Reihenfolge bei mehrdeutigen Videotreffern und beide Abbruchwege.
+  Restgrenzen und Nachweise: `docs/audits/2026-09-27-wartbarkeit/AP07-PROTOKOLL.md`.
+
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 
 Neuer Weg SewerStudio -> WebGIS (GEONIS Attribute Editor, WebOffice) fuer die
@@ -1847,6 +1859,24 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     aber `schacht.sohlenhoehe` usw. Seither nur noch in die Akte (`SchachtNurUeberAkte`). Nicht geholt: Zustand,
     Sanierungsbedarf, Bemerkung (SewerStudio ist Quelle), berechnete/Systemfelder, OBJECTID, die Paare «Bezeichnung
     alter./hist.» und «Rechtswert/Hochwert» (je nur eine refId bekannt). Tests `WebGisImportTypAaTests`.
+- WG05 (28.09.2026, Entscheid Pascal): **Massnahmen nur an nachgeprüften Elternobjekten und nach dem Anlegen
+  gegengeprüft.** Hat GEONIS ein geplantes Feld des Elternobjekts nicht übernommen oder liess es sich nicht
+  zurücklesen (`WebGisExportPosition.Nachgeprueft` false), wird keine Massnahme angelegt (ersetzt den Audit-Test
+  «bekommt trotzdem die Massnahme»). `newId` ist die OBJECTID, nicht die GlobalID (live 28.09.): Nach bestätigtem
+  Anlegen liest `PruefeMassnahmeNachAsync` die Liste am Elternobjekt neu, verlangt GENAU EINE neue GlobalID, liest
+  sie per `LeseMassnahmeAsync` und vergleicht jedes geplante Feld (Sanierungsjahr nur als Jahr). Nur dann
+  `Nachgeprueft`; sonst `Ungeklaert` (Grund) — nie «nicht angelegt», nie automatisch wiederholt, weitere Massnahmen
+  des Laufs werden nicht mehr angelegt, `WebGisSendenAblauf.Ausgang.Ungeklaert`. Bericht/Log/Liste unterscheiden
+  bestätigt / nachgeprüft / ungeklärt. Tests `WebGisExportUseCaseTests.Audit.cs` (WG05-Block).
+- WG06 (28.09.2026): **Holen und Lesefehler.** `GeonisWebGisClient.PruefeStatus`: HTTP 401/403 bei Maske
+  (`getLayoutDataCombined`, auch `LeseMassnahmeAsync`), leerer Sanierungsmaske (`getEmptyData`) und Auswahllisten
+  (`getControlValues`) ist eine `WebGisSitzungException` wie bei der Suche; jeder andere Fehlstatus (5xx …) und eine
+  Maske ohne [Layout, Daten] bzw. kein JSON-Objekt ist eine `WebGisAntwortException` — nie mehr «nicht gefunden».
+  Vor dem Anlegen einer geholten Sanierungsakte prüft `PruefeVorUebernahmeAsync`, dass ihre GlobalID noch in der
+  frisch gelesenen Liste DESSELBEN Elternobjekts steht (umgehängt/gelöscht = Sperre mit Grund). Entscheid Pascal:
+  Unbekannter Status oder unbekanntes Verfahren (kein Treffer in der SewerStudio-Liste, auch ein Schlüssel ohne
+  Eintrag in der WebGIS-Liste) sperrt die GANZE Akte, keine Teilübernahme; übrige Auswahlfelder bleiben Hinweis.
+  Tests `GeonisWebGisClientRobustheitTests` (WG06-Block), `WebGisImportUseCaseTests`, `WebGisSanierungImportTests`.
 - OFFEN / NICHT ERLEDIGT: Abstimmung mit Trigonet (interne Schnittstelle, ein Schreibweg).
   Der reale Schreibweg ist bisher nur manuell im Browser und im Lauf vom 21.09. belegt
   (Haltung 525145-505377: Z4 + Sanierungsbedarf Saniert + Bemerkung; zwei Sanierungsmassnahmen
@@ -2949,6 +2979,11 @@ Temp-Ordner geleert; diese Befundfotos sind verloren.
 - Qwen3-VL laeuft ueber Ollama fuer Bild-/Code-Analyse. GPU-Auto waehlt ab 24 GB VRAM `qwen3-vl:8b-q8`, sonst Default/Fallback `qwen3-vl:2b`; NIE auf qwen2.5 zurueckfallen. Keine Doku-Annahme zu automatischer 8B->32B-Laufzeit-Eskalation treffen.
 - Grounding DINO: on-demand im Sidecar; Loader bevorzugt Swin-B (`grounding_dino_swinb`), Fallback Swin-T OGC (`grounding_dino_1.5`). Swin-B Stresstest 2026-06-20 bestanden (1000 Frames, 0 Timeouts, Forward ~107 ms, VRAM-Peak ~21,3 GB ≪ 29 GB) → behalten.
 - SAM: **SAM 2.1** (`sam2.1_hiera_large.pt` unter `models/sam2.1/`, via `SAM2ImagePredictor`, box-getrieben). SAM-1 `vit_h` ist im Sidecar entfernt. SAM 3 nur deaktivierte Experiment-Option (`sam3_weights_path`, Default aus, kein Wrapper/keine Route); alte `models/sam3/`-Ablage entfernt.
+- `sam_wrapper.segment` setzt nach jeder Anfrage die bildbezogenen SAM-Merkmale
+  innerhalb von Predict-Lock und Busy-Lease zurueck, auch bei Inferenzfehlern.
+  FakePredictor-Tests: `sidecar/tests/test_sam_predictor_cleanup.py`. GPU-Probe
+  mit kuenstlichem 640x480-Bild: 16 MiB weniger `memory_allocated` nach der
+  Anfrage; `memory_reserved` blieb wegen PyTorch-Cache gleich (1858 MiB).
 - Bogen-Geometrie (`bend_geometry.py`, Fluchtpunkt/Bogen-Veto): im HEAD per Default DEAKTIVIERT (`bend_geometry_enabled=false`).
 - Dedup/Merge: C#-framebasiert ueber `TemporalFindingDeduplicator` und `TemporalCodeVotingService`. Keine Annahme zu alten `UpdateActive`-Duplikaten treffen.
 - Kein ByteTrack/OC-SORT und kein echtes Multi-Object-Tracking in HEAD.
@@ -2961,7 +2996,13 @@ Temp-Ordner geleert; diese Befundfotos sind verloren.
 - Thin-AI: C# fuer alle Geschaeftslogik, LLM nur fuer Textgenerierung
 - Kein grosses Refactoring ohne explizite Diskussion
 - Laptop-Mode / Workstation-Mode Hardware-Abstraktion erhalten
-- VRAM-Budget: max 29GB stabil, niemals alle Modelle gleichzeitig
+- VRAM-Budget: max 29GB stabil, niemals alle Modelle gleichzeitig. Der Sidecar
+  begrenzt CUDA-Modellladungen vor und nach dem Laden anhand der geraeteweiten
+  VRAM-Belegung (inklusive anderer Prozesse). Laufende Ladungen zaehlen mit;
+  bei Budget- oder Messfehler wird kontrolliert `insufficient_vram` gemeldet.
+  `SEWER_SIDECAR_VRAM_BUDGET_GB` darf die Grenze nur absenken. Waehrend einer
+  Inferenz kann der Verbrauch weiter wachsen; die Ladepruefung ersetzt keine
+  laufende VRAM-Garantie.
 - QualityGate Green/Yellow/Red muss immer durchlaufen
 - Neue Workflow-/Orchestrierungsklassen (Request/Actions/Result) nach
   `src/AuswertungPro.Next.Application/UseCases/` statt nach `UI/Ai/`; der UI/Ai-Bestand

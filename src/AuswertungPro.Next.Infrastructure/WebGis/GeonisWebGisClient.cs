@@ -259,12 +259,26 @@ public sealed partial class GeonisWebGisClient : IGeonisWebGisClient
         var url = z.EditorBasis + "getLayoutDataCombined?project=" + z.Datenquelle + "&datasource=" + z.Datenquelle
                 + "&table=" + tabelle + "&lang=de&f=pjson&id=" + globalId + "&ts=" + Ts() + "&" + z.AuthQuery();
         using var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
-        if (!resp.IsSuccessStatusCode) return null;
+        PruefeStatus(resp, "beim Lesen der Maske");
         var text = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
         using var doc = LiesJsonOderSitzungsfehler(text);
+        // WG06: Eine Antwort ohne [Layout, Daten] ist ein Antwortfehler dieses Aufrufs, nie «nicht gefunden».
         if (doc.RootElement.ValueKind != JsonValueKind.Array || doc.RootElement.GetArrayLength() < 2)
-            return null;
+            throw new WebGisAntwortException("Ungültige Antwort beim Lesen der Maske (kein [Layout, Daten]): " + Kurz(text.Trim(), 120));
         return new[] { doc.RootElement[0].Clone(), doc.RootElement[1].Clone() };
+    }
+
+    /// <summary>
+    /// HTTP-Status jeder Leseantwort (WG06, 28.09.2026): 401/403 heisst «Sitzung weg» wie bei der Suche und beendet den
+    /// Lauf; jeder andere Fehlstatus (5xx, 404 …) ist ein Antwortfehler genau dieses Aufrufs. Vorher wurde beides zu
+    /// null und damit zu «nicht gefunden» oder «Katalog fehlt» — ein ganzer Lauf aus Scheinsperren statt einer Meldung.
+    /// </summary>
+    internal static void PruefeStatus(HttpResponseMessage resp, string wobei)
+    {
+        if (resp.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
+            throw new WebGisSitzungException($"Das WebGIS hat die Sitzung {wobei} abgewiesen (HTTP {(int)resp.StatusCode}) — bitte abmelden und neu anmelden.");
+        if (!resp.IsSuccessStatusCode)
+            throw new WebGisAntwortException($"Das WebGIS antwortet {wobei} mit HTTP {(int)resp.StatusCode} — bitte Verbindung und Server prüfen.");
     }
 
     private async Task<JsonElement?> SynPostAsync(string query, CancellationToken ct)

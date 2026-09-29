@@ -55,13 +55,14 @@ Auswahl: grösste Änderungshäufigkeit der letzten 90 Tage (Import/Medien vor P
 Rückfall-Zählung erst am Phasenende → 1 rot; Dichtheitsfehler in der Phase still abgefangen
 (Fehlergrenze verteilt) → 1 rot.
 
-## Restbefunde (nicht geändert)
+## Abbruchgrenze (28.09.2026 korrigiert)
 
-- **KINS-Anreicherung und SIA405-Anreicherung fangen auch den Benutzerabbruch.** Beide
-  `catch (Exception)` ohne `OperationCanceledException`-Ausnahme: Ein Abbruch dort wird als
-  Fehler gezählt bzw. still verschluckt, statt den Lauf zu beenden. Das widerspricht der Regel
-  im Code („ein Abbruch ist kein Fehler und wird weitergeworfen“). Eine Korrektur ändert
-  Verhalten und gehört in einen eigenen, getesteten Schritt.
+- KINS- und SIA405-Anreicherung reichen `OperationCanceledException` jetzt wie die
+  übrigen Importphasen weiter. Das Abbruchsignal wird vor und nach längeren
+  Anreicherungsschritten geprüft; bei SIA405 auch zwischen gelesenen Haltungen.
+- Die Tests `Import_Kins_AbbruchInTxtAnreicherung_WirdWeitergegeben` und
+  `Sia405Anreicherung_GibtAbbruchDesXtfLesersWeiter` waren vor der Korrektur rot
+  und sind danach grün. Ein Abbruch wird nicht mehr als normaler Importfehler gemeldet.
 
 ## Schritt 3 und 4 – Video-Suche als eigene Entscheidung, 17 Parameter gruppiert
 
@@ -114,11 +115,18 @@ bytegleich ausfällt; sonst entsteht wie bisher eine zweite Datei. Die Infodatei
 Dass `DistributeCore` die Suchprobleme ins Ergebnis übernimmt, ist nur über den Quelltext geprüft
 (ein echter Suchfehler lässt sich im Test nicht zuverlässig erzeugen).
 
-## Offen in AP07
+## Abschluss und verbleibende Grenzen in AP07
 
-- Ungetestet bleibt der Suchweg „unkorrigierte Protokoll-Haltung“ (braucht eine
-  PDF-Korrektur-Metadatenlage im Projekt) und „mehrdeutig ersetzt nicht gefunden“.
-- Ablageplan und Ausführung im Verteiler könnten als nächster Schritt getrennt werden (Plan-Schritt 3
-  nennt sie ausdrücklich); der Nutzen ist geringer, weil beide bereits linear und durch die
-  Verteilungstests geschützt sind.
-- Restbefund Abbruch in KINS-/SIA405-Anreicherung (oben).
+**Prüfung am 28.09.:** Fokustests 32/32 grün. Vollständiger Release-Build ohne
+Warnungen und Fehler; Infrastruktur 7.617 bestanden/6 übersprungen, Pipeline
+2.882/3, UI 7.496/34, ProjectModernizer 62/0. Kein fehlgeschlagener Test.
+
+- Die Suche über die unkorrigierte Protokoll-Haltung ist mit einer synthetischen
+  PDF-Korrektur-Metadatenlage geprüft. Zwei weitere Fälle halten fest, dass ein
+  mehrdeutiger Seitenwagen-Treffer nur „nicht gefunden“ ersetzt und eine frühere
+  Mehrdeutigkeit nicht verdeckt (`ParsedHoldingDistributionControllerTests`).
+- Ablageplan und Ausführung im Verteiler bleiben zusammen. Beide laufen bereits
+  linear und sind durch Verteilungstests geschützt; eine weitere Aufteilung hätte
+  derzeit keinen belegten Wartungsgewinn.
+- Ein echter Dateisuchfehler in `DistributeCore` lässt sich im Test nicht zuverlässig
+  auslösen. Dieser Pfad ist weiterhin nur durch Codeprüfung belegt (siehe oben).

@@ -36,6 +36,7 @@ public static class WebGisExportBericht
             foreach (var sp in s.Sperren) warnungen.Add($"{objekt}, Sanierungsmassnahme: GESPERRT — {sp}");
             foreach (var h in s.Hinweise) warnungen.Add($"{objekt}, Sanierungsmassnahme: {h}");
             if (s.SchreibFehler is not null) warnungen.Add($"{objekt}, Sanierungsmassnahme: FEHLER — {s.SchreibFehler}");
+            if (s.Ungeklaert is not null) warnungen.Add($"{objekt}, Sanierungsmassnahme: UNGEKLÄRT — {s.Ungeklaert}");
         }
 
         var zusammenfassung =
@@ -58,9 +59,14 @@ public static class WebGisExportBericht
         ArgumentNullException.ThrowIfNull(plan);
         var objOk = plan.Positionen.Count(p => p.Geschrieben);
         var objFehler = plan.Positionen.Count(p => p.SchreibFehler is not null);
-        var sanOk = plan.Sanierungen.Count(s => s.Geschrieben);
+        // WG05: «angelegt» zaehlt nur nachgepruefte Massnahmen; bestaetigt ohne Gegenprobe und ungeklaert getrennt.
+        var sanOk = plan.Sanierungen.Count(s => s.Geschrieben && s.Nachgeprueft);
+        var sanBestaetigt = plan.Sanierungen.Count(s => s.Geschrieben && !s.Nachgeprueft && s.Ungeklaert is null);
+        var sanUngeklaert = plan.Sanierungen.Count(s => s.Ungeklaert is not null);
         var sanFehler = plan.Sanierungen.Count(s => s.SchreibFehler is not null);
-        return $"WebGIS: {objOk} Objekte geschrieben, {sanOk} Sanierungsmassnahmen angelegt"
+        return $"WebGIS: {objOk} Objekte geschrieben, {sanOk} Sanierungsmassnahmen angelegt und nachgeprüft"
+             + (sanBestaetigt > 0 ? $", {sanBestaetigt} vom Server bestätigt (nicht nachgeprüft)" : "")
+             + (sanUngeklaert > 0 ? $", {sanUngeklaert} mit ungeklärtem Ausgang (im WebGIS nachsehen, nicht erneut anlegen)" : "")
              + (objFehler + sanFehler > 0 ? $", {objFehler + sanFehler} fehlgeschlagen (siehe Bericht)." : ".");
     }
 
@@ -96,13 +102,17 @@ public static class WebGisExportBericht
             foreach (var s in plan.Sanierungen)
             {
                 var status = s.Sperren.Count > 0 ? "GESPERRT"
-                    : mitErgebnis ? (s.Geschrieben ? $"ANGELEGT (ID {s.NeueId ?? "?"})" : s.SchreibFehler is not null ? "FEHLER" : "OFFEN")
+                    : mitErgebnis ? (s.Ungeklaert is not null ? $"UNGEKLÄRT (vom Server bestätigt, ID {s.NeueId ?? "?"})"
+                        : s.Geschrieben && s.Nachgeprueft ? $"ANGELEGT UND NACHGEPRÜFT (ID {s.NeueId ?? "?"}, GlobalID {s.NeueGlobalId ?? "?"})"
+                        : s.Geschrieben ? $"ANGELEGT, VOM SERVER BESTÄTIGT (ID {s.NeueId ?? "?"}, nicht nachgeprüft)"
+                        : s.SchreibFehler is not null ? "FEHLER" : "OFFEN")
                     : "ANLEGEN";
                 sb.AppendLine($"[{status}] {Objekt(s.Objektart, s.ElternBezeichnung)}  (Akte {s.AkteId.ToString("N")[..8]})");
                 foreach (var z in s.Anzeige) sb.AppendLine("    " + z);
                 foreach (var sp in s.Sperren) sb.AppendLine($"    !! {sp}");
                 foreach (var h in s.Hinweise) sb.AppendLine($"    ({h})");
                 if (s.SchreibFehler is not null) sb.AppendLine($"    !! {s.SchreibFehler}");
+                if (s.Ungeklaert is not null) sb.AppendLine($"    !! {s.Ungeklaert}");
             }
         }
         return sb.ToString();
@@ -165,8 +175,12 @@ public static class WebGisExportBericht
         var z = Z(zeit);
         var objekt = Objekt(s.Objektart, s.ElternBezeichnung);
         var werte = string.Join(", ", s.Anzeige.ConvertAll(a => a.Split(" (")[0]));
+        if (s.Ungeklaert is not null)
+            return $"{z} | {objekt} | Sanierungsmassnahme vom Server bestätigt (ID {s.NeueId ?? "?"}) | – → {werte} | UNGEKLÄRT: {s.Ungeklaert}";
+        if (s.Geschrieben && s.Nachgeprueft)
+            return $"{z} | {objekt} | Sanierungsmassnahme angelegt (ID {s.NeueId ?? "?"}) | – → {werte} | OK, nachgeprüft (GlobalID {s.NeueGlobalId ?? "?"})";
         if (s.Geschrieben)
-            return $"{z} | {objekt} | Sanierungsmassnahme angelegt (ID {s.NeueId ?? "?"}) | – → {werte} | OK";
+            return $"{z} | {objekt} | Sanierungsmassnahme angelegt (ID {s.NeueId ?? "?"}) | – → {werte} | BESTÄTIGT, nicht nachgeprüft";
         if (s.SchreibFehler is not null)
             return $"{z} | {objekt} | Sanierungsmassnahme | nicht angelegt ({werte}) | FEHLER: {s.SchreibFehler}";
         if (s.Sperren.Count > 0)

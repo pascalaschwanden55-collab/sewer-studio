@@ -199,6 +199,12 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
         }
     }
 
+    private sealed class AbbrechenderKinsDvdTextEnricher : IKinsDvdTextEnricher
+    {
+        public KinsDvdTextEnrichmentResult Apply(Project project, string kiDvDatenPath)
+            => throw new OperationCanceledException("Testabbruch bei KINS-TXT");
+    }
+
     private sealed class RecordingKinsDbfWhitelistEnricher : IKinsDbfWhitelistEnricher
     {
         public int Calls { get; private set; }
@@ -303,6 +309,18 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
         Assert.Contains(
             "KINS-TXT: 7 Timecodes, 8 Längen, 9 Daten gesetzt.",
             result.Messages);
+    }
+
+    [Fact]
+    public void Import_Kins_AbbruchInTxtAnreicherung_WirdWeitergegeben()
+    {
+        var (sourceDir, projectDir) = ErstelleMiniKinsFixture();
+
+        var ex = Assert.Throws<OperationCanceledException>(() =>
+            ErzeugeOrchestrator(new AbbrechenderKinsDvdTextEnricher())
+                .Import(sourceDir, projectDir, new Project()));
+
+        Assert.Contains("KINS-TXT", ex.Message);
     }
 
     [Fact]

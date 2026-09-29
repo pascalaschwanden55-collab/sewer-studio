@@ -185,74 +185,81 @@ def segment(
             # Unload-Race (Paket 3/B): Slot wurde zwischen ensure_loaded und Zugriff
             # entladen -> kontrollierter 503 statt AttributeError/500.
             raise ModelUnloadedError(ModelSlot.SAM.value)
-        predictor.set_image(img_array)
+        try:
+            predictor.set_image(img_array)
 
-        for bbox in bounding_boxes:
-            clamped = clamp_box(bbox.x1, bbox.y1, bbox.x2, bbox.y2, w, h)
-            if clamped is None:
-                skipped_boxes += 1
-                logger.warning("SAM-Box uebersprungen (ausserhalb Bild / Null-Flaeche): %s", bbox)
-                continue
-            bx1, by1, bx2, by2 = clamped
+            for bbox in bounding_boxes:
+                clamped = clamp_box(bbox.x1, bbox.y1, bbox.x2, bbox.y2, w, h)
+                if clamped is None:
+                    skipped_boxes += 1
+                    logger.warning("SAM-Box uebersprungen (ausserhalb Bild / Null-Flaeche): %s", bbox)
+                    continue
+                bx1, by1, bx2, by2 = clamped
+                try:
+                    box_np = np.array([bx1, by1, bx2, by2])
+
+                    pred_masks, scores, _ = predictor.predict(
+                        point_coords=None,
+                        point_labels=None,
+                        box=box_np,
+                        multimask_output=False,
+                    )
+                except Exception as exc:
+                    # OOM/CUDA-Fehler NICHT als uebersprungene Box verschlucken: re-raisen, damit der
+                    # zentrale Handler VRAM freigibt (evict/empty_cache) und 503 fuer Retry/Backoff
+                    # liefert — sonst bleibt der Sidecar im OOM-Zustand und alle Folge-Boxen scheitern.
+                    if looks_like_oom(exc) or looks_like_cuda_failure(exc):
+                        raise
+                    logger.warning("SAM prediction failed for box %s: %s", bbox, exc)
+                    # Ehrlichkeit: die Fehlerursache dem C#-Client sichtbar machen, damit ein
+                    # Inferenzfehler nicht mit einer legitim verworfenen Box verwechselt wird.
+                    if first_error is None:
+                        first_error = f"{type(exc).__name__}: {exc}"
+                    skipped_boxes += 1
+                    continue
+
+                mask = pred_masks[0]  # (H, W) bool
+                score = float(scores[0])
+
+                if score < settings.sam_min_score:
+                    skipped_boxes += 1
+                    low_score_boxes += 1
+                    logger.warning(
+                        "SAM-Maske verworfen (Score %.3f < sam_min_score %.2f) fuer Box %s",
+                        score, settings.sam_min_score, bbox,
+                    )
+                    continue
+
+                mask_area = int(mask.sum())
+                ys, xs = np.where(mask)
+
+                if len(xs) == 0:
+                    skipped_boxes += 1
+                    continue
+
+                mask_h = int(ys.max() - ys.min() + 1)
+                mask_w = int(xs.max() - xs.min() + 1)
+                centroid_x = float(xs.mean())
+                centroid_y = float(ys.mean())
+
+                masks_out.append(MaskResult(
+                    label=bbox.label,
+                    confidence=round(score, 4),
+                    bbox=[bx1, by1, bx2, by2],
+                    mask_rle=_rle_encode(mask.astype(np.uint8)),
+                    mask_area_pixels=mask_area,
+                    image_area_pixels=h * w,
+                    height_pixels=mask_h,
+                    width_pixels=mask_w,
+                    centroid_x=round(centroid_x, 1),
+                    centroid_y=round(centroid_y, 1),
+                ))
+
+        finally:
             try:
-                box_np = np.array([bx1, by1, bx2, by2])
-
-                pred_masks, scores, _ = predictor.predict(
-                    point_coords=None,
-                    point_labels=None,
-                    box=box_np,
-                    multimask_output=False,
-                )
-            except Exception as exc:
-                # OOM/CUDA-Fehler NICHT als uebersprungene Box verschlucken: re-raisen, damit der
-                # zentrale Handler VRAM freigibt (evict/empty_cache) und 503 fuer Retry/Backoff
-                # liefert — sonst bleibt der Sidecar im OOM-Zustand und alle Folge-Boxen scheitern.
-                if looks_like_oom(exc) or looks_like_cuda_failure(exc):
-                    raise
-                logger.warning("SAM prediction failed for box %s: %s", bbox, exc)
-                # Ehrlichkeit: die Fehlerursache dem C#-Client sichtbar machen, damit ein
-                # Inferenzfehler nicht mit einer legitim verworfenen Box verwechselt wird.
-                if first_error is None:
-                    first_error = f"{type(exc).__name__}: {exc}"
-                skipped_boxes += 1
-                continue
-
-            mask = pred_masks[0]  # (H, W) bool
-            score = float(scores[0])
-
-            if score < settings.sam_min_score:
-                skipped_boxes += 1
-                low_score_boxes += 1
-                logger.warning(
-                    "SAM-Maske verworfen (Score %.3f < sam_min_score %.2f) fuer Box %s",
-                    score, settings.sam_min_score, bbox,
-                )
-                continue
-
-            mask_area = int(mask.sum())
-            ys, xs = np.where(mask)
-
-            if len(xs) == 0:
-                skipped_boxes += 1
-                continue
-
-            mask_h = int(ys.max() - ys.min() + 1)
-            mask_w = int(xs.max() - xs.min() + 1)
-            centroid_x = float(xs.mean())
-            centroid_y = float(ys.mean())
-
-            masks_out.append(MaskResult(
-                label=bbox.label,
-                confidence=round(score, 4),
-                bbox=[bx1, by1, bx2, by2],
-                mask_rle=_rle_encode(mask.astype(np.uint8)),
-                mask_area_pixels=mask_area,
-                image_area_pixels=h * w,
-                height_pixels=mask_h,
-                width_pixels=mask_w,
-                centroid_x=round(centroid_x, 1),
-                centroid_y=round(centroid_y, 1),
-            ))
+                predictor.reset_predictor()
+            except Exception:
+                logger.exception("SAM predictor reset failed")
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
 

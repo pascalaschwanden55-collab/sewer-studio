@@ -485,7 +485,7 @@ public sealed class WebGisExportUseCase
             if (!WebGisExportPlanBuilder.GleicherWert(nachher.Feld(a.RefId), a.Neu))
                 verworfen.Add(a.Feld);
 
-        if (verworfen.Count == 0) { pos.Geschrieben = true; return; }
+        if (verworfen.Count == 0) { pos.Geschrieben = true; pos.Nachgeprueft = true; return; }
 
         pos.SchreibFehler =
             string.Join(", ", verworfen) + ": vom WebGIS nicht übernommen — das Feld steht danach unverändert da. "
@@ -540,10 +540,20 @@ public sealed class WebGisExportUseCase
         // Elternobjekte, deren Stand in diesem Lauf schon geprueft wurde: Eine eigene Massnahme kann das
         // Aenderungsdatum des Elternobjekts setzen und darf die naechste Massnahme nicht sperren.
         var geprueft = new HashSet<Guid>();
+        WebGisSanierungPosition? ungeklaert = null;
         foreach (var san in plan.Sanierungen)
         {
             if (!san.Schreibbar) continue;
             if (probelauf) { san.Hinweise.Add("Probelauf — nicht angelegt."); continue; }
+
+            // WG05: Nach einem ungeklaerten Anlegen wird nichts mehr angelegt — erst im WebGIS nachsehen.
+            if (ungeklaert is not null)
+            {
+                san.SchreibFehler = $"Nicht angelegt: Lauf gestoppt, weil die Massnahme an {ungeklaert.ElternBezeichnung} "
+                                    + "einen ungeklärten Ausgang hat — erst im WebGIS nachsehen, dann neu prüfen.";
+                nachMassnahme?.Invoke(san);
+                continue;
+            }
             var eltern = plan.Positionen.Find(p => p.RecordId == san.ElternRecordId && p.Objektart == san.Objektart);
 
             // Audit A05 (23.09.2026): Sollte das Elternobjekt geschrieben werden und hat der Server das nicht
@@ -555,12 +565,29 @@ public sealed class WebGisExportUseCase
                 nachMassnahme?.Invoke(san);
                 continue;
             }
+            // Entscheid Pascal 28.09.2026 (WG05): Hat GEONIS ein geplantes Feld des Elternobjekts nicht uebernommen —
+            // oder liess sich das nicht nachpruefen —, bekommt das Objekt auch keine neue Massnahme.
+            if (eltern is { Schreibbar: true, Nachgeprueft: false })
+            {
+                san.SchreibFehler = "Elternobjekt vom WebGIS nicht vollständig bestätigt ("
+                                    + (eltern.SchreibFehler ?? "geplante Werte beim Zurücklesen nicht nachgewiesen")
+                                    + ") — Massnahme nicht angelegt, bitte Elternobjekt prüfen.";
+                nachMassnahme?.Invoke(san);
+                continue;
+            }
             // Wurde das Elternobjekt eben bestaetigt geschrieben, ist sein Stand soeben geprueft worden.
             var vergleich = eltern is { Schreibbar: false } && !geprueft.Contains(san.ElternRecordId) ? eltern.GelesenerStand : null;
             vorMassnahme?.Invoke(san);
             await GeschuetztAsync(san, s => LegeEineAnAsync(s, eltern?.GespeicherteGlobalId, vergleich, ct),
-                (s, f) => { if (!s.Geschrieben) s.SchreibFehler = f; }, nachMassnahme, ct).ConfigureAwait(false);
+                (s, f) =>
+                {
+                    // Bestaetigt ist bestaetigt: Scheitert danach die Gegenprobe, ist der Ausgang ungeklaert, nie
+                    // «nicht angelegt» (WG05).
+                    if (s.Geschrieben) s.Ungeklaert ??= "Vom Server bestätigt, Gegenprobe gescheitert: " + f;
+                    else s.SchreibFehler = f;
+                }, nachMassnahme, ct).ConfigureAwait(false);
             if (san.Geschrieben) geprueft.Add(san.ElternRecordId);
+            if (san.Ungeklaert is not null) ungeklaert = san;
         }
     }
 
@@ -603,10 +630,124 @@ public sealed class WebGisExportUseCase
             }
         }
 
+        // Die Liste VOR dem Anlegen: Nur so laesst sich danach die neue Zeile finden (newId ist die OBJECTID,
+        // nicht die GlobalID — live belegt 28.09.2026).
+        var vorher = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var z in stand.Sanierungen)
+            if (!string.IsNullOrWhiteSpace(z.GlobalId)) vorher.Add(z.GlobalId.Trim());
+
         var res = await _client.ErstelleSanierungAsync(san.Objektart, san.ElternGlobalId!, san.Felder, ct).ConfigureAwait(false);
         san.Geschrieben = res.Erfolg;
         san.NeueId = res.NeueId;
-        if (!res.Erfolg) san.SchreibFehler = res.Fehler;
+        if (!res.Erfolg) { san.SchreibFehler = res.Fehler; return; }
+        await PruefeMassnahmeNachAsync(san, gespeicherteElternGlobalId, vorher, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gegenprobe nach dem bestaetigten Anlegen (WG05, 28.09.2026): Liste am Elternobjekt erneut lesen, die GENAU
+    /// EINE neu hinzugekommene GlobalID bestimmen, diese Massnahme lesen und jeden geplanten Wert (Art, Status,
+    /// Verfahren, Sanierungsjahr …) vergleichen. Nur dann «angelegt und nachgeprueft». Alles andere — keine oder
+    /// mehrere neue Zeilen, Lesefehler, Abweichung — ist ein ungeklaerter Ausgang: Der Lauf stoppt danach, nichts
+    /// wird wiederholt, und die Massnahme gilt nie als «nicht angelegt».
+    /// </summary>
+    private async Task PruefeMassnahmeNachAsync(
+        WebGisSanierungPosition san, string? gespeicherteElternGlobalId, IReadOnlySet<string> vorher, CancellationToken ct)
+    {
+        WebGisLesestand? eltern;
+        try
+        {
+            eltern = await WebGisObjektLesen.LiesAsync(_client, san.Objektart, san.ElternBezeichnung, gespeicherteElternGlobalId, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            san.Ungeklaert = "Vom Server bestätigt, aber nicht nachgeprüft — Lauf abgebrochen. Vor einem neuen Versuch im WebGIS nachsehen.";
+            throw;
+        }
+        catch (WebGisSitzungException)
+        {
+            san.Ungeklaert = "Vom Server bestätigt, aber nicht nachgeprüft — WebGIS-Sitzung abgelaufen. Vor einem neuen Versuch im WebGIS nachsehen.";
+            throw;
+        }
+        catch (Exception ex)
+        {
+            san.Ungeklaert = Ungeklaert("Elternobjekt nach dem Anlegen nicht lesbar (" + ex.Message + ")");
+            return;
+        }
+        if (eltern is null || !string.Equals(eltern.GlobalId, san.ElternGlobalId, StringComparison.OrdinalIgnoreCase))
+        {
+            san.Ungeklaert = Ungeklaert("Elternobjekt nach dem Anlegen nicht mehr eindeutig lesbar");
+            return;
+        }
+
+        var neu = eltern.Sanierungen
+            .Select(z => (z.GlobalId ?? string.Empty).Trim())
+            .Where(g => g.Length > 0 && !vorher.Contains(g))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (neu.Count != 1)
+        {
+            san.Ungeklaert = Ungeklaert(neu.Count == 0
+                ? "keine neue Massnahme in der Liste des Elternobjekts"
+                : $"{neu.Count} neue Massnahmen in der Liste des Elternobjekts — nicht eindeutig");
+            return;
+        }
+        san.NeueGlobalId = neu[0];
+
+        WebGisLesestand? massnahme;
+        try
+        {
+            massnahme = await _client.LeseMassnahmeAsync(neu[0], ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            san.Ungeklaert = "Vom Server bestätigt, aber nicht nachgeprüft — Lauf abgebrochen. Vor einem neuen Versuch im WebGIS nachsehen.";
+            throw;
+        }
+        catch (WebGisSitzungException)
+        {
+            san.Ungeklaert = "Vom Server bestätigt, aber nicht nachgeprüft — WebGIS-Sitzung abgelaufen. Vor einem neuen Versuch im WebGIS nachsehen.";
+            throw;
+        }
+        catch (Exception ex)
+        {
+            san.Ungeklaert = Ungeklaert($"neue Massnahme {neu[0]} nicht lesbar ({ex.Message})");
+            return;
+        }
+        if (massnahme is null)
+        {
+            san.Ungeklaert = Ungeklaert($"neue Massnahme {neu[0]} nicht lesbar");
+            return;
+        }
+
+        var abweichend = new List<string>();
+        foreach (var (refId, geplant) in san.Felder)
+            if (!GleicherMassnahmenwert(refId, geplant, massnahme.Feld(refId)))
+                abweichend.Add($"{MassnahmenFeldname(refId)} (geplant '{geplant}', im WebGIS '{massnahme.Feld(refId) ?? "leer"}')");
+        if (abweichend.Count > 0)
+        {
+            san.Ungeklaert = Ungeklaert("vom WebGIS anders gespeichert: " + string.Join(", ", abweichend));
+            return;
+        }
+        san.Nachgeprueft = true;
+    }
+
+    private static string Ungeklaert(string grund)
+        => "Vom Server bestätigt, Gegenprobe ohne sicheren Befund: " + grund
+           + ". Ausgang ungeklärt — nicht erneut anlegen, erst im WebGIS nachsehen.";
+
+    /// <summary>Das Sanierungsjahr geht als ISO-Datum hinaus und kommt als «01.01.2026» zurueck: nur das Jahr zaehlt.</summary>
+    private static bool GleicherMassnahmenwert(string refId, string geplant, string? gelesen)
+        => refId == WebGisSanierungFeldkarte.SanierungsjahrRef
+            ? WebGisSanierungFeldkarte.JahrAusDatum(geplant) is { } j && j == WebGisSanierungFeldkarte.JahrAusDatum(gelesen)
+            : WebGisExportPlanBuilder.GleicherWert(gelesen, geplant);
+
+    private static string MassnahmenFeldname(string refId)
+    {
+        if (refId == WebGisSanierungFeldkarte.SanierungsjahrRef) return "Sanierungsjahr";
+        if (refId == WebGisSanierungFeldkarte.BezeichnungRef) return "Bezeichnung";
+        foreach (var (_, r, feld) in WebGisSanierungFeldkarte.ComboFelder)
+            if (r == refId) return feld;
+        return refId;
     }
 
     private static string Anzeige(WebGisSanierungPosition san, string feld)

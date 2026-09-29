@@ -114,6 +114,11 @@ public sealed class WebGisExportPosition
     /// verworfenes Feld findet oder selbst scheitert (Audit A05/A06, 23.09.2026).
     /// </summary>
     public bool VomServerBestaetigt { get; set; }
+    /// <summary>
+    /// Die Nachkontrolle hat jeden geplanten Wert im WebGIS wiedergefunden. Nur dann bekommt das Objekt eine
+    /// neue Sanierungsmassnahme (Entscheid Pascal 28.09.2026, WG05).
+    /// </summary>
+    public bool Nachgeprueft { get; set; }
     /// <summary>Wird vom Ablauf gesetzt: Fehlertext bei fehlgeschlagenem Schreiben.</summary>
     public string? SchreibFehler { get; set; }
 }

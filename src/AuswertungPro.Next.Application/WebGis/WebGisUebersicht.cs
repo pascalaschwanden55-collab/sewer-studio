@@ -141,7 +141,7 @@ public sealed class WebGisUebersicht
                 schonVorhanden++;
                 continue;
             }
-            if (!s.Schreibbar && s.Sperren.Count == 0 && s.Hinweise.Count == 0 && s.SchreibFehler is null) continue;
+            if (!s.Schreibbar && s.Sperren.Count == 0 && s.Hinweise.Count == 0 && s.SchreibFehler is null && s.Ungeklaert is null) continue;
 
             var o = Hole(s.Objektart, s.ElternBezeichnung, s.ElternRecordId);
             if (s.Schreibbar || s.Geschrieben)
@@ -155,6 +155,9 @@ public sealed class WebGisUebersicht
                 o.Zeilen.Add(new WebGisUebersichtZeile(WebGisZeilenart.Hinweis, "Sanierungsmassnahme", null, h));
             if (s.SchreibFehler is not null)
                 o.Zeilen.Add(new WebGisUebersichtZeile(WebGisZeilenart.Fehler, "Sanierungsmassnahme", null, s.SchreibFehler));
+            // WG05: vom Server bestätigt, Gegenprobe ohne sicheren Befund — nie als Fehlschlag, aber sichtbar.
+            if (s.Ungeklaert is not null)
+                o.Zeilen.Add(new WebGisUebersichtZeile(WebGisZeilenart.Fehler, "Sanierungsmassnahme (Ausgang ungeklärt)", null, s.Ungeklaert));
         }
 
         // Karten sortieren: erst was geschrieben wird, dann Sperren, dann reine Hinweise.

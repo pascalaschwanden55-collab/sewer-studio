@@ -288,8 +288,30 @@ public sealed partial class WebGisExportUseCaseTests
         {
             if (stand is not null && _gespeichert.TryGetValue(stand.GlobalId, out var felder))
                 foreach (var (refId, wert) in felder) stand.Felder[refId] = wert;
+            // Angelegte Massnahmen stehen danach in der Liste des Elternobjekts (wie beim echten Server).
+            if (stand is not null && !ListeNachAnlegenOhneNeueZeile)
+                foreach (var (gid, (eltern, felderNeu)) in _angelegt)
+                    if (string.Equals(eltern, stand.GlobalId, StringComparison.OrdinalIgnoreCase))
+                        for (var i = 0; i < ZeilenJeAnlegen; i++)
+                            // Art aus den gesendeten Werten: So gilt eine zweite, andere Massnahme nicht als Doppel.
+                            stand.Sanierungen.Add(new WebGisSanierungZeile
+                            {
+                                GlobalId = i == 0 ? gid : gid + "-" + i, Art = "angelegt:" + string.Join("|", felderNeu.Values),
+                            });
             return stand;
         }
+
+        /// <summary>Angelegte Massnahmen: GlobalID -> (Eltern-GlobalID, gesendete Felder).</summary>
+        private readonly Dictionary<string, (string Eltern, Dictionary<string, string> Felder)> _angelegt = new(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Der Server bestaetigt das Anlegen, die Liste zeigt danach aber keine neue Zeile (WG05).</summary>
+        public bool ListeNachAnlegenOhneNeueZeile { get; set; }
+        /// <summary>Mehr als 1: nach dem Anlegen erscheinen mehrere neue Zeilen (nicht eindeutig).</summary>
+        public int ZeilenJeAnlegen { get; set; } = 1;
+        /// <summary>Feld, das der Server beim Anlegen still verwirft (WG05: «bestätigt, aber ein Feld fehlt»).</summary>
+        public string? MassnahmenFeldVerworfen { get; set; }
+        /// <summary>Lesen der angelegten Massnahme scheitert (WG05: Lesefehler nach dem POST).</summary>
+        public bool AngelegteNichtLesbar { get; set; }
+        public int AngelegteGelesen { get; private set; }
 
         /// <summary>Der zuletzt beim Schreiben uebergebene erwartete Ausgangsstand (Audit A04).</summary>
         public IReadOnlyDictionary<string, string?>? LetzterErwarteterStand { get; private set; }
@@ -318,7 +340,10 @@ public sealed partial class WebGisExportUseCaseTests
         public Task<WebGisSchreibErgebnis> ErstelleSanierungAsync(WebGisObjektart art, string elternGlobalId, IReadOnlyDictionary<string, string> felder, CancellationToken ct = default)
         {
             MassnahmenAngelegt++;
-            return Task.FromResult(WebGisSchreibErgebnis.Ok("1"));
+            var gespeichert = new Dictionary<string, string>(felder, StringComparer.Ordinal);
+            if (MassnahmenFeldVerworfen is not null) gespeichert.Remove(MassnahmenFeldVerworfen);
+            _angelegt["M-NEU-" + MassnahmenAngelegt] = (elternGlobalId, gespeichert);
+            return Task.FromResult(WebGisSchreibErgebnis.Ok("6692" + MassnahmenAngelegt));
         }
 
         /// <summary>Einzelne Massnahme nach GlobalId (Jahr steht nur dort, live 28.09.2026).</summary>
@@ -327,6 +352,16 @@ public sealed partial class WebGisExportUseCaseTests
 
         public Task<WebGisLesestand?> LeseMassnahmeAsync(string globalId, CancellationToken ct = default)
         {
+            if (_angelegt.TryGetValue(globalId, out var angelegt))
+            {
+                AngelegteGelesen++;
+                if (AngelegteNichtLesbar) throw new WebGisAntwortException("WebGIS meldet: Could not load form's default form.");
+                return Task.FromResult<WebGisLesestand?>(new WebGisLesestand
+                {
+                    GlobalId = globalId, Bezeichnung = "",
+                    Felder = angelegt.Felder.ToDictionary(kv => kv.Key, kv => (string?)kv.Value, StringComparer.Ordinal),
+                });
+            }
             MassnahmenGelesen++;
             return Task.FromResult(LeseMassnahme(globalId));
         }

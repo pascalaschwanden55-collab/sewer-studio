@@ -445,7 +445,8 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
                 && string.Equals(errorBody.Code, "insufficient_vram", StringComparison.Ordinal))
             {
                 throw new SidecarInsufficientVramException(
-                    endpoint, errorBody.FreeGb, errorBody.RequiredGb, errorBody.ReservedGb);
+                    endpoint, errorBody.FreeGb, errorBody.RequiredGb, errorBody.ReservedGb,
+                    errorBody.Reason, errorBody.UsedGb, errorBody.BudgetGb);
             }
 
             throw new HttpRequestException(
@@ -472,7 +473,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
     /// Echter Vertrag des Sidecars (main.py exception_handler): code und die Zahlen
     /// stehen auf TOP-EBENE, "detail" ist ein Klartext-String —
     /// {"detail": "insufficient VRAM", "code": "insufficient_vram", "slot"?, "free_gb"?,
-    /// "required_gb"?, "reserved_gb"?}.
+    /// "required_gb"?, "reserved_gb"?, "reason"?, "used_gb"?, "budget_gb"?}.
     /// Toleranz: ein verschachteltes Format {"detail": {"code": ...}} wird ebenfalls
     /// akzeptiert; "detail" als nackter String zaehlt nur, wenn kein Top-Level-Code
     /// existiert. Beschaedigte oder anders geformte Bodys liefern null (= bisheriges
@@ -491,6 +492,9 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
             var free = ReadOptionalGb(root, "free_gb");
             var required = ReadOptionalGb(root, "required_gb");
             var reserved = ReadOptionalGb(root, "reserved_gb");
+            var reason = ReadOptionalString(root, "reason");
+            var used = ReadOptionalGb(root, "used_gb");
+            var budget = ReadOptionalGb(root, "budget_gb");
 
             if (code is null && root.TryGetProperty("detail", out var detail))
             {
@@ -504,12 +508,15 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
                     free ??= ReadOptionalGb(detail, "free_gb");
                     required ??= ReadOptionalGb(detail, "required_gb");
                     reserved ??= ReadOptionalGb(detail, "reserved_gb");
+                    reason ??= ReadOptionalString(detail, "reason");
+                    used ??= ReadOptionalGb(detail, "used_gb");
+                    budget ??= ReadOptionalGb(detail, "budget_gb");
                 }
             }
 
             return code is null && free is null && required is null && reserved is null
                 ? null
-                : new SidecarErrorBody(code, free, required, reserved);
+                : new SidecarErrorBody(code, free, required, reserved, reason, used, budget);
         }
         catch (JsonException)
         {
@@ -530,7 +537,9 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
             ? value
             : null;
 
-    private sealed record SidecarErrorBody(string? Code, double? FreeGb, double? RequiredGb, double? ReservedGb);
+    private sealed record SidecarErrorBody(
+        string? Code, double? FreeGb, double? RequiredGb, double? ReservedGb,
+        string? Reason, double? UsedGb, double? BudgetGb);
 
     private static SidecarTelemetryEvent CreateTelemetryEvent(
         string endpoint,

@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using System.Windows;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.UI.Services;
@@ -7,6 +8,33 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CodeCatalogEditorViewModelTests
 {
+    [Fact]
+    public void Neuer_code_und_seine_aenderung_aktualisieren_die_gruppen_je_einmal()
+    {
+        StaTestRunner.Run(() =>
+        {
+            var viewModel = new CodeCatalogEditorViewModel(
+                new CatalogProvider([]), CreateTestWindow(), new DialogFake());
+            var resets = 0;
+            viewModel.GroupOptions.CollectionChanged += (_, e) =>
+            {
+                if (e.Action == NotifyCollectionChangedAction.Reset)
+                    resets++;
+            };
+
+            viewModel.NewCommand.Execute(null);
+
+            Assert.Equal(1, resets);
+            var newCode = Assert.IsType<CodeDefinitionItem>(viewModel.SelectedCode);
+            Assert.Contains(newCode, viewModel.CodesView.Cast<CodeDefinitionItem>());
+
+            resets = 0;
+            newCode.Title = "Neuer Titel";
+
+            Assert.Equal(1, resets);
+        });
+    }
+
     [Fact]
     public void SaveCommand_blocks_invalid_catalog_and_keeps_dialog_open()
     {

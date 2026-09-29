@@ -57,7 +57,11 @@ public static class WebGisSanierungImportRegel
         string? artCode = null;
         foreach (var (akteKey, refId, anzeige) in WebGisSanierungFeldkarte.ComboFelder)
         {
-            var text = Klartext(massnahme, refId);
+            var text = Klartext(massnahme, refId, out var ohneKlartext);
+            // WG06: Ein gesetzter Schluessel ohne Eintrag in der WebGIS-Liste ist fuer Status/Verfahren ebenso unbekannt.
+            if (text is null && ohneKlartext && Pflicht(akteKey))
+                imp.Sperren.Add($"{anzeige}: Schlüssel «{massnahme.Feld(refId)}» steht nicht in der WebGIS-Liste — "
+                                + "ganze Massnahme nicht übernommen (keine Teilübernahme).");
             if (text is null) continue;
             var feld = katalog.Feld(akteKey);
 
@@ -79,6 +83,9 @@ public static class WebGisSanierungImportRegel
             {
                 var grund = $"{anzeige} «{text}» steht nicht in der SewerStudio-Liste" + (feld.KatalogIdJeEltern is null ? "" : " der Art");
                 if (akteKey == WebGisSanierungFeldkarte.AkteArt) imp.Sperren.Add(grund + " — Massnahme nicht übernommen.");
+                // Entscheid Pascal 28.09.2026 (WG06): Unbekannter Status oder unbekanntes Verfahren sperrt die ganze
+                // Akte — eine halbe Sanierungsakte waere eine falsche Aussage ueber die Massnahme.
+                else if (Pflicht(akteKey)) imp.Sperren.Add(grund + " — ganze Massnahme nicht übernommen (keine Teilübernahme).");
                 else imp.Hinweise.Add(grund + " — Feld leer gelassen.");
                 continue;
             }
@@ -183,13 +190,24 @@ public static class WebGisSanierungImportRegel
 
     private static string? AkteText(ObjektAkte a, string feldId) => a.Werte.GetValueOrDefault(feldId)?.Text;
 
-    private static string? Klartext(WebGisLesestand s, string refId)
+    /// <summary>Status und Verfahren: ohne Treffer in der SewerStudio-Liste keine Akte (WG06, Entscheid Pascal 28.09.2026).</summary>
+    private static bool Pflicht(string akteKey)
+        => akteKey == WebGisSanierungFeldkarte.AkteStatus || akteKey == WebGisSanierungFeldkarte.AkteVerfahren;
+
+    /// <summary>
+    /// Klartext zum Schluessel der Maske; null bei leerem Feld und bei «unbekannt». <paramref name="ohneKlartext"/> ist
+    /// true, wenn ein Schluessel gesetzt ist, die Liste der Maske ihn aber nicht fuehrt (oder keine Liste da ist).
+    /// </summary>
+    private static string? Klartext(WebGisLesestand s, string refId, out bool ohneKlartext)
     {
+        ohneKlartext = false;
         var key = s.Feld(refId);
-        if (string.IsNullOrWhiteSpace(key) || !s.Kataloge.TryGetValue(refId, out var liste)) return null;
+        if (string.IsNullOrWhiteSpace(key)) return null;
+        if (!s.Kataloge.TryGetValue(refId, out var liste)) { ohneKlartext = true; return null; }
         foreach (var (k, t) in liste)
             if (k == key)
                 return string.IsNullOrWhiteSpace(t) || WebGisHandwertKarte.Falte(t) == "unbekannt" ? null : t.Trim();
+        ohneKlartext = true;
         return null;
     }
 
