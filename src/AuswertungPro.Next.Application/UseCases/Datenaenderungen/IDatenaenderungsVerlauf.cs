@@ -47,13 +47,18 @@ public interface IDatenaenderungsVerlauf
     /// <summary>Bindet den Verlauf an das offene Projekt (leert ihn bei einem Wechsel).</summary>
     void Binde(Project? projekt);
 
-    IDisposable Erfasse(HaltungRecord datensatz, string? feld = null);
-    IDisposable Erfasse(SchachtRecord datensatz, string? feld = null);
+    /// <param name="nurFelder">Nur diese Felder gehoeren zum Schritt (Tabellenzelle, siehe
+    /// <see cref="DatenaenderungsVerlauf.ZellSchrittFelder"/>); ohne Angabe alle Felder des Datensatzes.</param>
+    IDisposable Erfasse(HaltungRecord datensatz, string? feld = null, IEnumerable<string>? nurFelder = null);
+    IDisposable Erfasse(SchachtRecord datensatz, string? feld = null, IEnumerable<string>? nurFelder = null);
     IDisposable ErfasseMehrere(IEnumerable<HaltungRecord> datensaetze, string beschreibung);
     IDisposable ErfasseMehrere(IEnumerable<SchachtRecord> datensaetze, string beschreibung);
 
     /// <summary>Eine Eingabe in der Objektakte: Bestandsfelder UND die Aktenwerte des Verbunds.</summary>
     IDisposable ErfasseObjektakte(ObjektaktenBearbeitung bearbeitung, string? feld = null);
+
+    /// <summary>Eine Eingabe ist noch offen (Zelle im Bearbeitungsmodus); bis sie schliesst, wird nichts zurueckgenommen.</summary>
+    bool EingabeOffen { get; }
 
     bool KannRueckgaengig(DatenaenderungsBereich bereich);
     bool KannWiederholen(DatenaenderungsBereich bereich);

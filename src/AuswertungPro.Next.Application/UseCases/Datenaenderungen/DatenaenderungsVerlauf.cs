@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.UseCases.Objektakten;
 using AuswertungPro.Next.Domain.Models;
 
@@ -20,6 +21,19 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
     public const string GrundListe = "Datensätze hinzugefügt, gelöscht oder verschoben";
     public const string GrundUebernahme = "Daten aus GeoShop, QGIS oder dem WebGIS übernommen";
     public const string GrundVorgang = "ein Import, eine Übertragung oder ein Projektwechsel läuft";
+    public const string GrundPaket = "Objektakten aus einer Zusatzdatei übernommen";
+    public const string GrundFehler = "ein Schritt liess sich nicht vollständig anwenden";
+
+    /// <summary>
+    /// Die Felder, die ein Tabellenzellen-Schritt umfasst: das bearbeitete Feld und was genau diese
+    /// Eingabe selbst ableitet (Sanieren Ja/Nein zieht die Kosten-/Mengenfelder nach). Schreibt ein
+    /// anderer Weg waehrend der offenen Zelle ein anderes Feld desselben Datensatzes, gehoert das nicht
+    /// zum Schritt (Fix-Runde 1).
+    /// </summary>
+    public static IReadOnlyCollection<string> ZellSchrittFelder(string feld)
+        => string.Equals(feld, FieldKeys.RenovationDecision, StringComparison.Ordinal)
+            ? [feld, .. SanierungCostFieldMapper.CostFieldNames]
+            : [feld];
 
     private readonly object _gate = new();
     private readonly Dictionary<DatenaenderungsBereich, List<VerlaufEintrag>> _rueck = new()
@@ -36,6 +50,9 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
 
     public event EventHandler? Geaendert;
     public event EventHandler<DatenaenderungsVerlaufGeleertEventArgs>? Geleert;
+
+    /// <summary>Ein Erfassungsbereich ist offen (z. B. eine Zelle im Bearbeitungsmodus): Rueckgaengig wartet.</summary>
+    public bool EingabeOffen { get { lock (_gate) return _offen is not null; } }
 
     public void Binde(Project? projekt)
     {
@@ -60,11 +77,11 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
 
     private void OnListeGeaendert(object? sender, NotifyCollectionChangedEventArgs e) => Leere(GrundListe);
 
-    public IDisposable Erfasse(HaltungRecord datensatz, string? feld = null)
-        => Oeffne(DatenaenderungsBereich.Haltungen, [DatensatzZugriff.Fuer(datensatz)], feld, null, null);
+    public IDisposable Erfasse(HaltungRecord datensatz, string? feld = null, IEnumerable<string>? nurFelder = null)
+        => Oeffne(DatenaenderungsBereich.Haltungen, [DatensatzZugriff.Fuer(datensatz)], feld, null, null, nurFelder);
 
-    public IDisposable Erfasse(SchachtRecord datensatz, string? feld = null)
-        => Oeffne(DatenaenderungsBereich.Schaechte, [DatensatzZugriff.Fuer(datensatz)], feld, null, null);
+    public IDisposable Erfasse(SchachtRecord datensatz, string? feld = null, IEnumerable<string>? nurFelder = null)
+        => Oeffne(DatenaenderungsBereich.Schaechte, [DatensatzZugriff.Fuer(datensatz)], feld, null, null, nurFelder);
 
     public IDisposable ErfasseMehrere(IEnumerable<HaltungRecord> datensaetze, string beschreibung)
         => Oeffne(DatenaenderungsBereich.Haltungen, datensaetze.Select(DatensatzZugriff.Fuer).ToList(), null, beschreibung, null);
@@ -85,7 +102,7 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
     }
 
     private IDisposable Oeffne(DatenaenderungsBereich bereich, IReadOnlyList<DatensatzZugriff> zugriffe,
-        string? feld, string? beschreibung, ObjektaktenBearbeitung? akte)
+        string? feld, string? beschreibung, ObjektaktenBearbeitung? akte, IEnumerable<string>? nurFelder = null)
     {
         lock (_gate)
         {
@@ -97,7 +114,7 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
                 _offen = null;
             var erfassung = _offen ?? (_offen = new Erfassung(this, _projekt, bereich, feld, beschreibung));
             foreach (var z in zugriffe)
-                erfassung.Merke(z);
+                erfassung.Merke(z, nurFelder);
             if (akte is not null)
                 erfassung.MerkeAkten(akte);
             erfassung.Offen++;
@@ -170,18 +187,30 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
             Geaendert?.Invoke(this, EventArgs.Empty);
             return new DatenaenderungsErgebnis(false, $"{titel} nicht möglich: {eintrag.Beschreibung} — {grund}", []);
         }
+        string? fehler;
+        bool zurueckgesetzt;
         try
         {
-            WendeAn(eintrag, rueckwaerts);
+            fehler = WendeAn(eintrag, rueckwaerts, out zurueckgesetzt);
         }
         finally
         {
             lock (_gate)
-            {
                 _wendetAn = false;
-                (rueckwaerts ? _vor[bereich] : _rueck[bereich]).Add(eintrag);
-            }
         }
+        if (fehler is not null)
+        {
+            // Halb angewendet darf nie wiederholbar sein: Der Eintrag faellt weg. Liess sich der Teil nicht
+            // zuruecksetzen, stimmt kein anderer Eintrag mehr sicher - dann ist der ganze Verlauf leer.
+            if (!zurueckgesetzt)
+                Leere(GrundFehler);
+            Geaendert?.Invoke(this, EventArgs.Empty);
+            return new DatenaenderungsErgebnis(false, zurueckgesetzt
+                ? $"{titel} nicht möglich: {eintrag.Beschreibung} — {fehler} Es wurde nichts geändert."
+                : $"{titel} nicht vollständig: {eintrag.Beschreibung} — {fehler} Bitte die Werte prüfen.", []);
+        }
+        lock (_gate)
+            (rueckwaerts ? _vor[bereich] : _rueck[bereich]).Add(eintrag);
         Geaendert?.Invoke(this, EventArgs.Empty);
         return new DatenaenderungsErgebnis(true, $"{titel}: {eintrag.Beschreibung}",
             eintrag.Datensaetze.Select(d => d.Zugriff.Datensatz).ToList());
@@ -215,28 +244,85 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
             foreach (var (feld, vorher, nachher) in a.Werte)
                 if (!AktenWertKopie.Gleich(a.Akte.Werte.GetValueOrDefault(feld), rueckwaerts ? nachher : vorher))
                     return "die Objektakte wurde inzwischen verändert.";
+            var soll = rueckwaerts ? a.VorherVorhanden : a.NachherVorhanden;
+            // Eine Akte wird nur entfernt, wenn sie GANZ dem eigenen Stand entspricht - Quellen, Bezuege,
+            // Unterlisten, Hauptdeckel, Zusatzdaten und alle Werte (auch von nicht erfassten Wegen wie
+            // GeoShop, Zusatzdatei, WebGIS geschrieben). Sonst ginge fremde Arbeit mit verloren.
+            if (vorhanden && !soll
+                && !string.Equals(AktenJson.Von(a.Akte), rueckwaerts ? a.NachherJson : a.VorherJson, StringComparison.Ordinal))
+                return "die Objektakte enthält inzwischen weitere Angaben.";
+            // Wieder anfuegen nur, wenn keine Akte mit derselben Kennung (inzwischen neu entstanden) da ist.
+            if (!vorhanden && soll && eintrag.Projekt.Objektakten.Any(x => x.Id == a.Akte.Id))
+                return "zur Objektakte gibt es inzwischen einen neuen Eintrag.";
         }
         return null;
     }
 
-    private static void WendeAn(VerlaufEintrag eintrag, bool rueckwaerts)
+    /// <summary>
+    /// Wendet einen Schritt an: Aktenwerte, An-/Abmelden der Akte, dann die Felder. Scheitert ein Teil
+    /// (Ausnahme, etwa aus einer Meldung), werden der angefangene und alle schon angewendeten Teile in
+    /// umgekehrter Reihenfolge zurueckgesetzt. Rueckgabe: Fehlertext oder <c>null</c>.
+    /// </summary>
+    private static string? WendeAn(VerlaufEintrag eintrag, bool rueckwaerts, out bool zurueckgesetzt)
     {
+        zurueckgesetzt = true;
+        var teile = new List<(Action Anwenden, Action Zuruecksetzen)>();
         foreach (var a in eintrag.Akten)
         {
+            var akte = a.Akte;
             foreach (var (feld, vorher, nachher) in a.Werte)
             {
                 var ziel = rueckwaerts ? vorher : nachher;
-                if (ziel is null) a.Akte.Werte.Remove(feld);
-                else a.Akte.Werte[feld] = AktenWertKopie.Von(ziel);
+                var bisher = rueckwaerts ? nachher : vorher;
+                teile.Add((() => SetzeAktenWert(akte, feld, ziel), () => SetzeAktenWert(akte, feld, bisher)));
             }
-            var sollVorhanden = rueckwaerts ? a.VorherVorhanden : a.NachherVorhanden;
-            var istVorhanden = eintrag.Projekt.Objektakten.Contains(a.Akte);
-            if (sollVorhanden && !istVorhanden) eintrag.Projekt.Objektakten.Add(a.Akte);
-            else if (!sollVorhanden && istVorhanden) eintrag.Projekt.Objektakten.Remove(a.Akte);
+            var soll = rueckwaerts ? a.VorherVorhanden : a.NachherVorhanden;
+            var ist = rueckwaerts ? a.NachherVorhanden : a.VorherVorhanden;
+            if (soll != ist)
+            {
+                var liste = eintrag.Projekt.Objektakten;
+                teile.Add((() => SetzeVorhanden(liste, akte, soll), () => SetzeVorhanden(liste, akte, ist)));
+            }
         }
         foreach (var d in eintrag.Datensaetze)
+        {
+            var zugriff = d.Zugriff;
             foreach (var f in d.Felder)
-                d.Zugriff.Stelle(f.Feld, rueckwaerts ? f.WertVorher : f.WertNachher, rueckwaerts ? f.MetaVorher : f.MetaNachher);
+                teile.Add((
+                    () => zugriff.Stelle(f.Feld, rueckwaerts ? f.WertVorher : f.WertNachher, rueckwaerts ? f.MetaVorher : f.MetaNachher),
+                    () => zugriff.Stelle(f.Feld, rueckwaerts ? f.WertNachher : f.WertVorher, rueckwaerts ? f.MetaNachher : f.MetaVorher)));
+        }
+
+        for (var i = 0; i < teile.Count; i++)
+        {
+            try
+            {
+                teile[i].Anwenden();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                for (var j = i; j >= 0; j--)
+                {
+                    try { teile[j].Zuruecksetzen(); }
+                    catch (Exception) { zurueckgesetzt = false; }
+                }
+                return ex.Message;
+            }
+        }
+        return null;
+    }
+
+    private static void SetzeAktenWert(ObjektAkte akte, string feld, ObjektFeldWert? wert)
+    {
+        if (wert is null) akte.Werte.Remove(feld);
+        else akte.Werte[feld] = AktenWertKopie.Von(wert);
+    }
+
+    private static void SetzeVorhanden(List<ObjektAkte> liste, ObjektAkte akte, bool vorhanden)
+    {
+        var ist = liste.Contains(akte);
+        if (vorhanden && !ist) liste.Add(akte);
+        else if (!vorhanden && ist) liste.Remove(akte);
     }
 
     public void Leere(string grund)
@@ -288,11 +374,13 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
         public int Offen { get; set; }
         public bool Verworfen { get; set; }
 
-        public void Merke(DatensatzZugriff zugriff)
+        public void Merke(DatensatzZugriff zugriff, IEnumerable<string>? nurFelder)
         {
-            if (_datensaetze.Any(s => ReferenceEquals(s.Zugriff.Datensatz, zugriff.Datensatz)))
-                return;
-            _datensaetze.Add(new DatensatzSchnappschuss(zugriff));
+            var vorhanden = _datensaetze.FirstOrDefault(s => ReferenceEquals(s.Zugriff.Datensatz, zugriff.Datensatz));
+            if (vorhanden is not null)
+                vorhanden.Erweitere(nurFelder);
+            else
+                _datensaetze.Add(new DatensatzSchnappschuss(zugriff, nurFelder));
         }
 
         public void MerkeAkten(ObjektaktenBearbeitung bearbeitung)
@@ -346,7 +434,9 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
                         akte.Werte.TryGetValue(k, out var n) ? AktenWertKopie.Von(n) : null))
                     .ToList();
                 if (felder.Count > 0 || vorhanden != nachherVorhanden)
-                    liste.Add(new AkteAenderung(akte, vorhanden, nachherVorhanden, felder));
+                    liste.Add(new AkteAenderung(akte, vorhanden, nachherVorhanden, felder,
+                        VorherJson: null, // ein Bearbeitungsschritt entfernt nie eine Akte
+                        NachherJson: nachherVorhanden ? AktenJson.Von(akte) : null));
             }
             return liste;
         }

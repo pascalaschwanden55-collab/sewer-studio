@@ -51,8 +51,11 @@ public sealed partial class ShellViewModel
         _ => null,
     };
 
+    /// <summary>Nicht ausfuehrbar waehrend einer offenen Eingabe (z. B. Auswahlzelle im Bearbeitungsmodus):
+    /// Strg+Z wartet dann, statt einen Hinweis «Eingabe noch nicht abgeschlossen» zu zeigen (Fix-Runde 1).</summary>
     private bool KannVerlauf(bool rueckgaengig)
         => IsProjectReady
+           && !DatenVerlauf.EingabeOffen
            && CanLeaveShellContextFromOperationGuards()
            && AktuellerVerlaufBereich is { } bereich
            && (rueckgaengig ? DatenVerlauf.KannRueckgaengig(bereich) : DatenVerlauf.KannWiederholen(bereich));
@@ -78,15 +81,39 @@ public sealed partial class ShellViewModel
         if (!_datenVerlaufVerbunden)
         {
             _datenVerlaufVerbunden = true;
-            DatenVerlauf.Geaendert += (_, _) => AktualisiereVerlaufBefehle();
-            DatenVerlauf.Geleert += (_, e) => _sp.Toasts.Info($"Rückgängig ist nicht mehr möglich: {e.Grund}.");
-            PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName is nameof(CurrentPage) or nameof(IsProjectReady))
-                    AktualisiereVerlaufBefehle();
-            };
+            DatenVerlauf.Geaendert += OnDatenVerlaufGeaendert;
+            DatenVerlauf.Geleert += OnDatenVerlaufGeleert;
+            PropertyChanged += OnVerlaufShellEigenschaft;
         }
         DatenVerlauf.Binde(projekt);
+    }
+
+    private void OnDatenVerlaufGeaendert(object? sender, EventArgs e) => AktualisiereVerlaufBefehle();
+
+    // Kann aus einem Hintergrund-Import kommen (Listenaenderung): auf den UI-Thread.
+    private void OnDatenVerlaufGeleert(object? sender, DatenaenderungsVerlaufGeleertEventArgs e)
+    {
+        void Zeige() => _sp.Toasts.Info($"Rückgängig ist nicht mehr möglich: {e.Grund}.");
+        if (!DatenVerlaufTasten.AufUiThreadVerschoben(Zeige))
+            Zeige();
+    }
+
+    private void OnVerlaufShellEigenschaft(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(CurrentPage) or nameof(IsProjectReady))
+            AktualisiereVerlaufBefehle();
+    }
+
+    /// <summary>Aus <see cref="Dispose"/>: Abos loesen und das Projekt freigeben (ohne Hinweis).</summary>
+    private void LoeseDatenVerlauf()
+    {
+        if (!_datenVerlaufVerbunden)
+            return;
+        _datenVerlaufVerbunden = false;
+        DatenVerlauf.Geaendert -= OnDatenVerlaufGeaendert;
+        DatenVerlauf.Geleert -= OnDatenVerlaufGeleert;
+        PropertyChanged -= OnVerlaufShellEigenschaft;
+        DatenVerlauf.Binde(null);
     }
 
     /// <summary>Aus <see cref="NotifyShellOperationCommands"/>: Ein laufender Projektvorgang (Import,

@@ -12,6 +12,14 @@
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="True">
 
+    <!-- Optik Aufgabe 16: In der abgedockten Haltungstabelle gelten dieselben Kuerzel wie im Hauptfenster
+         (DataContext ist das DataPageViewModel; es reicht die Befehle der Shell durch). -->
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding RueckgaengigTasteCommand}"/>
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding WiederholenTasteCommand}"/>
+        <KeyBinding Key="Z" Modifiers="Control+Shift" Command="{Binding WiederholenTasteCommand}"/>
+    </Window.InputBindings>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

@@ -1236,6 +1236,22 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   keine Handmarke, WebGIS-Begriff zeichengenau, Tiefe, Gruppen, Sperren, Vorbedingung, geloeschter
   Datensatz, Objektakte), `DatenVerlaufShellTests` (UI, echte Shell/Seiten, Projektwechsel, Vorgang,
   Verdrahtung, Menue/Tasten).
+  **Fix-Runde 1:** Eine im Schritt neu angelegte Objektakte wird beim Rueckgaengig nur entfernt, wenn sie
+  GANZ dem eigenen Nachher-Stand entspricht (JSON der ganzen Akte: Werte, Quellen, Bezuege, Unterlisten,
+  Hauptdeckel, Zusatzdaten); Wiederholen fuegt sie nur an, wenn keine Akte mit derselben Kennung existiert —
+  sonst Schritt verworfen, Warnung. Aktenwerte vergleichen Zusatzdaten tief. **Tabellenzelle und
+  Auswahlspalte erfassen nur das eigene Feld plus das, was es ableitet** (`DatenaenderungsVerlauf.
+  ZellSchrittFelder`: Sanieren Ja/Nein → `SanierungCostFieldMapper.CostFieldNames`); Formular, «Spalte
+  leeren» und Objektakte den ganzen Datensatz. Scheitert das Anwenden mitten im Schritt, werden alle
+  angewendeten Teile zurueckgesetzt und der Eintrag faellt weg (nie halb wiederholbar); scheitert auch das,
+  wird der Verlauf geleert (`GrundFehler`). Weitere Uebernahme-Sperren: WebGIS-Holen leert im gemeinsamen
+  `WebGisHolenAblauf` (auch fuer den Export-Einstieg ohne eigenen Rueckruf), Zusatzdatei und
+  GeoShop-Ergaenzung in der Objektakte ueber `ObjektaktenDialog.MitSperre`. Strg+Z ist waehrend einer
+  offenen Eingabe (`EingabeOffen`) nicht ausfuehrbar; «nicht möglich» ist eine Warnung, das Leeren ein
+  Hinweis (auf den UI-Thread verschoben). Das abgedockte Tabellenfenster (`FloatingGridWindow`) hat dieselben
+  Tasten (`DataPageViewModel.RueckgaengigTasteCommand` reicht die Shell-Befehle durch). `ShellViewModel.
+  Dispose` loest alle Abos (`LoeseDatenVerlauf`). Tests `DatenaenderungsVerlaufFixRundeTests`,
+  `DatenVerlaufFixRundeTests`.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

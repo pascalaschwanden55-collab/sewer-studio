@@ -300,6 +300,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         GlobaleSuche?.Dispose();
         _novaStatusBeobachter?.Dispose();
         UnregisterShellOperationGuards();
+        LoeseDatenVerlauf();
         Monitor.Dispose();
         SetCurrentPage(null);
         GC.SuppressFinalize(this);

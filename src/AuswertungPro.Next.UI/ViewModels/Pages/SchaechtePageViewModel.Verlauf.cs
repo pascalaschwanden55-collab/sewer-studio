@@ -20,7 +20,7 @@ public sealed partial class SchaechtePageViewModel
             : Verlauf.Wiederholen(DatenaenderungsBereich.Schaechte);
         if (!ergebnis.Angewendet)
         {
-            _toasts?.Info(ergebnis.Meldung);
+            _toasts?.Warning(ergebnis.Meldung);
             return;
         }
 

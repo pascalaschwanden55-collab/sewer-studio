@@ -11,6 +11,11 @@ public sealed partial class DataPageViewModel
 {
     internal IDatenaenderungsVerlauf Verlauf => _shell.DatenVerlauf;
 
+    /// <summary>Fuer das abgedockte Tabellenfenster: dieselben Tastenbefehle wie im Hauptfenster.</summary>
+    public CommunityToolkit.Mvvm.Input.IRelayCommand RueckgaengigTasteCommand => _shell.RueckgaengigTasteCommand;
+
+    public CommunityToolkit.Mvvm.Input.IRelayCommand WiederholenTasteCommand => _shell.WiederholenTasteCommand;
+
     internal void WendeVerlauf(bool rueckgaengig)
     {
         if (!_shell.IsProjectReady)
@@ -21,7 +26,7 @@ public sealed partial class DataPageViewModel
             : Verlauf.Wiederholen(DatenaenderungsBereich.Haltungen);
         if (!ergebnis.Angewendet)
         {
-            _toasts.Info(ergebnis.Meldung);
+            _toasts.Warning(ergebnis.Meldung);
             return;
         }
 

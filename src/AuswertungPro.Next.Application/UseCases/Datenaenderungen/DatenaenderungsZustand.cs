@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.UseCases.Datenaenderungen;
@@ -69,8 +70,18 @@ internal sealed record FeldAenderung(string Feld, string? WertVorher, FieldMetad
 internal sealed record DatensatzAenderung(DatensatzZugriff Zugriff, IReadOnlyList<FeldAenderung> Felder);
 
 /// <summary>Aktenwerte eines Objektakten-Eintrags vorher/nachher; die Akte kann neu angelegt worden sein.</summary>
+/// <remarks><c>NachherJson</c>: der ganze Stand einer im Schritt neu angelegten Akte; Rueckgaengig entfernt sie
+/// nur, wenn sie noch genau so aussieht (Fix-Runde 1).</remarks>
 internal sealed record AkteAenderung(ObjektAkte Akte, bool VorherVorhanden, bool NachherVorhanden,
-    IReadOnlyList<(string Feld, ObjektFeldWert? Vorher, ObjektFeldWert? Nachher)> Werte);
+    IReadOnlyList<(string Feld, ObjektFeldWert? Vorher, ObjektFeldWert? Nachher)> Werte,
+    string? VorherJson = null, string? NachherJson = null);
+
+/// <summary>Der ganze Inhalt einer Akte als Text fuer den Vergleich (Werte, Quellen, Bezuege, Unterlisten,
+/// Hauptdeckel, Zusatzdaten).</summary>
+internal static class AktenJson
+{
+    public static string Von(ObjektAkte akte) => JsonSerializer.Serialize(akte);
+}
 
 internal sealed record VerlaufEintrag(Project Projekt, DatenaenderungsBereich Bereich, string Beschreibung,
     IReadOnlyList<DatensatzAenderung> Datensaetze, IReadOnlyList<AkteAenderung> Akten);
@@ -81,14 +92,25 @@ internal sealed class DatensatzSchnappschuss
     private readonly Dictionary<string, string> _fields;
     private readonly Dictionary<string, FieldMetadata> _meta;
 
-    public DatensatzSchnappschuss(DatensatzZugriff zugriff)
+    private HashSet<string>? _nurFelder;
+
+    /// <param name="nurFelder">Nur diese Felder gehoeren zum Schritt (Tabellenzelle); <c>null</c> = alle.</param>
+    public DatensatzSchnappschuss(DatensatzZugriff zugriff, IEnumerable<string>? nurFelder = null)
     {
         Zugriff = zugriff;
+        _nurFelder = nurFelder is null ? null : new HashSet<string>(nurFelder, StringComparer.Ordinal);
         _fields = new Dictionary<string, string>(zugriff.Fields, StringComparer.Ordinal);
         _meta = zugriff.Meta.ToDictionary(p => p.Key, p => FieldMetadataKopie.Von(p.Value), StringComparer.Ordinal);
     }
 
     public DatensatzZugriff Zugriff { get; }
+
+    /// <summary>Ein weiterer Bereich am selben Datensatz: seine Felder kommen dazu (ohne Angabe: alle).</summary>
+    public void Erweitere(IEnumerable<string>? nurFelder)
+    {
+        if (nurFelder is null) _nurFelder = null;
+        else _nurFelder?.UnionWith(nurFelder);
+    }
 
     /// <summary>Alle Felder, deren Wert oder Herkunftsdaten sich seit dem Schnappschuss geaendert haben.</summary>
     public List<FeldAenderung> Unterschiede()
@@ -100,6 +122,8 @@ internal sealed class DatensatzSchnappschuss
         var liste = new List<FeldAenderung>();
         foreach (var feld in felder)
         {
+            if (_nurFelder is not null && !_nurFelder.Contains(feld))
+                continue;
             var wertVorher = _fields.TryGetValue(feld, out var v) ? v : null;
             var wertNachher = Zugriff.Fields.TryGetValue(feld, out var n) ? n : null;
             var metaVorher = _meta.GetValueOrDefault(feld);
@@ -133,6 +157,18 @@ internal static class AktenWertKopie
         return a.Text == b.Text && a.KatalogId == b.KatalogId && a.Originalcode == b.Originalcode
                && a.LokalerEintrag == b.LokalerEintrag && a.Bestandswert == b.Bestandswert
                && a.VonHand == b.VonHand && a.GeaendertUtc == b.GeaendertUtc
-               && (a.Zusatzdaten?.Count ?? 0) == (b.Zusatzdaten?.Count ?? 0);
+               && ZusatzGleich(a.Zusatzdaten, b.Zusatzdaten);
+    }
+
+    private static bool ZusatzGleich(Dictionary<string, JsonElement>? a, Dictionary<string, JsonElement>? b)
+    {
+        if ((a?.Count ?? 0) != (b?.Count ?? 0))
+            return false;
+        if (a is null || b is null)
+            return true;
+        foreach (var (schluessel, wert) in a)
+            if (!b.TryGetValue(schluessel, out var anderer) || !JsonElement.DeepEquals(wert, anderer))
+                return false;
+        return true;
     }
 }
