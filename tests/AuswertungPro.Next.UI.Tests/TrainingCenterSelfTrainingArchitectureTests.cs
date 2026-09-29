@@ -622,7 +622,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("request.Ui.Log(\"Selbsttraining abgebrochen.\");", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.Ui.SetStatusText(\"Selbsttraining abgebrochen.\");", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.Ui.Log($\"FEHLER: {ex.GetType().Name}: {ex.Message}\");", workflowSource, StringComparison.Ordinal);
-        Assert.Contains("request.Ui.SetStatusText($\"Fehler: {ex.Message}\");", workflowSource, StringComparison.Ordinal);
+        Assert.Contains("request.Ui.SetStatusText($\"Fehler: {UserError.Describe(ex)}\");", workflowSource, StringComparison.Ordinal);
     }
 
     [Fact]

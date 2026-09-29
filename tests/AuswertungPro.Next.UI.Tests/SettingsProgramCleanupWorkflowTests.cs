@@ -37,7 +37,7 @@ public sealed class SettingsProgramCleanupWorkflowTests
             Assert.True(File.Exists(cacheFile));
             Assert.Equal([true, false], states);
             Assert.Equal("Bereinigung nicht gestartet.", statuses[^1]);
-            Assert.Contains("Geschuetzt bleiben Projektdateien", dialogs.ConfirmWarnMessage);
+            Assert.Contains("Geschützt bleiben Projektdateien", dialogs.ConfirmWarnMessage);
             Assert.Empty(toasts.Messages);
         }
         finally

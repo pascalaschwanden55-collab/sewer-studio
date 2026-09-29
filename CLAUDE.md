@@ -460,6 +460,46 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   in diesem Katalog zwei getrennte Argumente, nie den Schlüssel für die Anzeige kopieren.
   Ae/oe/ue in C#-Laufzeitmeldungen (`UserError.cs` u. a.) und rohe `ex.Message`/`ex.ToString()`
   in der UI sind ein separater Schritt (Aufgabe 10b) und noch offen.
+- **Aufgabe 10b — Ae/oe/ue in C#-Meldungen, rohe `ex.Message` über `UserError`.**
+  `Application/Common/UserError.cs` (`Describe`/`DescribeAndReport`) ist jetzt selbst
+  vollständig umlautrein — alle zwölf Antwortsätze (Zugriff verweigert, Datei/Ordner nicht
+  gefunden, Pfad zu lang, Datei nicht verfügbar, Dienst nicht erreichbar, Daten
+  beschädigt/ungültig, Arbeitsspeicher, nicht unterstützt, generischer Fallback). Dazu
+  bereinigt: `App.xaml.cs` (Bereits-gestartet-Meldung), beide `Settings/*Workflow.cs` und alle
+  `DataPage/*Controller.cs` sowie deren Dialogtitel/-texte (Auswählen-Dialoge, Löschen-Bestätigungen,
+  Fehlermeldungen). **Rein technische/Log-Zeilen (`BestEffort.ReportWarning`, `request.Log`
+  im Training Center) behalten bewusst ae/oe/ue** — sie sind nicht das sichtbare Ziel dieser
+  Aufgabe, nur die kurze Statuszeile/der Dialog daneben wurde umgestellt. Ebenso bewusst
+  unverändert: **Datenwerte, die exakt mit Excel-Farbregeln übereinstimmen müssen**
+  (`DataPageDropdownOptionGroupFactory.cs`, `SchaechteDropdownCommandFactory.cs`,
+  `DropdownOptionsStore.cs`: „Pruefung bestanden" bleibt ae, weil `ExcelReportStyle.Farbregeln`
+  exakt diese Zeichenkette matcht — nur der Listentitel „Pruefungsresultat-Liste" wurde zu
+  „Prüfungsresultat-Liste") und **`[Obsolete(...)]`-Hinweise** (Entwicklertext, kein
+  Nutzertext). `ProjectPathResolver.EnsureWritableProjectPath` wirft absichtlich schon
+  deutschen, umlautrichtigen Klartext als Ausnahmemeldung (`DataPageHoldingRenameController.cs`,
+  `SchaechteShaftRenameController.cs` zeigen `ex.Message` deshalb weiterhin direkt, ohne
+  `UserError` — ein Wrap hätte die spezifische Meldung durch den generischen Fallback ersetzt).
+  **Rohe `ex.Message`/`ex.ToString()` in Dialog-/Status-/Toast-Sinks** (`DossierBatchWindow.xaml.cs`,
+  `DossiersPageViewModel.Actions.cs`, mehrere `Ai/Training/*Workflow.cs`, drei
+  `Ai/Live/LiveDetection*CommandWorkflow.cs`, `CodingEingabemarkerSubmissionWorkflow.cs`,
+  `CodingProtocolPdfExportService.cs`) laufen jetzt durch `UserError.Describe`/
+  `DescribeAndReport`. **Wo daneben schon ein technischer `Log(...)`-Aufruf mit dem vollen
+  `ex.Message` existiert, bleibt der unverändert** (das ist die aufklappbare/Log-Ansicht, die
+  Kurzmeldung daneben wird umgestellt) — kein doppeltes Loggen. `ExportWebGisBereich.cs`,
+  `WebGisVorschauWindow.xaml.cs`, `WebGisHolenWindow.xaml.cs` und alle weiteren `WebGis*`-Dateien
+  sind laut Auftrag geschützt und unangetastet. **~85 weitere `ex.Message`-Stellen bleiben
+  bewusst offen**: eine erste Stichprobe zeigte, dass ein Teil davon (z. B.
+  `CodingSessionStartWorkflow.cs`, `LiveDetectionStartupWorkflow.cs`) deliberate deutsche
+  Domänenmeldungen weiterreicht (`InvalidOperationException`/`SidecarInsufficientVramException`
+  mit eigenem Text) — ein pauschales `UserError`-Wrapping würde dort Informationsverlust
+  bedeuten, und jede Stelle einzeln nachzuverfolgen sprengte den Rahmen dieser Aufgabe.
+  `DesignAuditLaufzeittexteTests` (Application/UI.Tests) hat dafür zwei neue Prüfungen: `UserError.cs`
+  steht jetzt zusätzlich in der vollständigen `Quellen`-Positivliste (jede Zeichenkette dort ist
+  Nutzertext, keine Ausnahmen nötig); für die übrigen, gemischten Dateien liefert
+  `BehobeneEinzeltexte` eine gezielte Rückfall-Sperre je Datei (ein konkreter, tatsächlich
+  behobener Altwert darf nicht wiederkehren) statt der ganzen Datei — die bestehende
+  Quellen-Prüfung verlangt sonst, dass JEDE Zeichenkette der Datei sauber ist, was bei
+  Log-/Obsolete-/Datenwert-Mischdateien falsch rot würde.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

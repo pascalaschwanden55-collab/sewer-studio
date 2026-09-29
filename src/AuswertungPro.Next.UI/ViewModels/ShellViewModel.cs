@@ -577,7 +577,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         var baseDir = _sp.Settings.ProjectsRootDirectory;
         if (string.IsNullOrWhiteSpace(baseDir))
         {
-            baseDir = _sp.Dialogs.SelectFolder("Projekte-Verzeichnis waehlen", @"D:\Projekt");
+            baseDir = _sp.Dialogs.SelectFolder("Projekte-Verzeichnis wählen", @"D:\Projekt");
             if (string.IsNullOrWhiteSpace(baseDir))
                 return false;
 

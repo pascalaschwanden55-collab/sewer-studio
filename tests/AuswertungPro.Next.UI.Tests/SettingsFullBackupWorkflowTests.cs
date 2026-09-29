@@ -46,7 +46,7 @@ public sealed class SettingsFullBackupWorkflowTests
         Assert.Equal(100, state.Percent);
         Assert.Equal("", state.CurrentFile);
         Assert.Equal(
-            "Fertig: 2 kopiert, 2 vollstaendig geprueft, 1 Datenbank-Schnappschuss, 3 unveraendert, 1 entfernt.",
+            "Fertig: 2 kopiert, 2 vollständig geprüft, 1 Datenbank-Schnappschuss, 3 unverändert, 1 entfernt.",
             state.StatusText);
         Assert.Contains(@"E:\Backup", state.LastBackupInfo);
         Assert.Equal(["warning:Datensicherung mit Lücken abgeschlossen – Hinweise prüfen."], toasts.Messages);
@@ -123,7 +123,7 @@ public sealed class SettingsFullBackupWorkflowTests
 
             Assert.Equal(0, backup.AnalyzeCalls);
             Assert.Equal(0, backup.RunCalls);
-            Assert.Equal(["info:Datensicherung laeuft bereits."], toasts.Messages);
+            Assert.Equal(["info:Datensicherung läuft bereits."], toasts.Messages);
         }
         finally
         {

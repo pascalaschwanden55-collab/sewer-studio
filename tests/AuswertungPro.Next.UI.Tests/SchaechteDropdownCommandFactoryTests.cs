@@ -42,9 +42,9 @@ public sealed class SchaechteDropdownCommandFactoryTests
         Assert.Equal(
             [
                 "Sanieren-Liste",
-                "Eigentuemer-Liste",
-                "Pruefungsresultat-Liste",
-                "Referenzpruefung-Liste"
+                "Eigentümer-Liste",
+                "Prüfungsresultat-Liste",
+                "Referenzprüfung-Liste"
             ],
             previews.Select(item => item.Title));
         Assert.Equal(4, saveCalls);

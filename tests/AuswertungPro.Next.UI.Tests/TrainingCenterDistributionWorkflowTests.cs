@@ -95,7 +95,7 @@ public sealed class TrainingCenterDistributionWorkflowTests
         Assert.Contains("  Haltung A: ok", state.Logs);
         Assert.Contains("--- Fertig: 2 Haltungen verteilt, 1 Videos zugeordnet ---", state.Logs);
         Assert.Contains("  1 Chunks ohne Haltungs-ID uebersprungen.", state.Logs);
-        Assert.Contains("Output-Ordner als Trainings-Ordner hinzugefuegt. Klicke 'Scannen' zum Laden.", state.Logs);
+        Assert.Contains("Output-Ordner als Trainings-Ordner hinzugefügt. Klicke 'Scannen' zum Laden.", state.Logs);
     }
 
     [Fact]
@@ -136,7 +136,9 @@ public sealed class TrainingCenterDistributionWorkflowTests
         await TrainingCenterDistributionWorkflow.RunAsync(request);
 
         Assert.False(state.IsBusy);
-        Assert.Equal("Fehler bei Verteilung: kaputt", state.StatusText);
+        Assert.Equal(
+            "Fehler bei Verteilung: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
+            state.StatusText);
         Assert.Contains("Fehler: kaputt", state.Logs);
     }
 

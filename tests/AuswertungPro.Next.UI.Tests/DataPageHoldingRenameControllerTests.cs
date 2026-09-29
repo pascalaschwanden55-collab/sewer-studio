@@ -181,7 +181,7 @@ public sealed class DataPageHoldingRenameControllerTests
             Assert.Equal("B-2", rewriter.NewValue);
             Assert.Equal(
                 ("1 Protokoll-PDF(s) konnten nicht aktualisiert werden.\n" +
-                 "Die bisherigen PDF-Dateien wurden nicht ueberschrieben.", "PDF nicht aktualisiert"),
+                 "Die bisherigen PDF-Dateien wurden nicht überschrieben.", "PDF nicht aktualisiert"),
                 Assert.Single(errors));
         }
         finally

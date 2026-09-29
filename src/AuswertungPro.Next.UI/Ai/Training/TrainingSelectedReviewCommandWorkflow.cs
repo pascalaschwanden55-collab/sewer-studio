@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
@@ -114,6 +115,6 @@ public static class TrainingSelectedReviewCommandWorkflow
         Exception ex)
     {
         log($"{prefix}: {ex.Message}");
-        onUi(() => setReviewStatusText($"Fehler: {ex.Message}"));
+        onUi(() => setReviewStatusText($"Fehler: {UserError.Describe(ex)}"));
     }
 }

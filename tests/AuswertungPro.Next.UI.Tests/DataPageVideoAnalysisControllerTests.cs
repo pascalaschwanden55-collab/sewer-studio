@@ -223,7 +223,7 @@ public sealed class DataPageVideoAnalysisControllerTests
         Assert.False(missing.Ok);
         Assert.Contains("nicht im geladenen Projekt gefunden", missing.Message);
         Assert.True(found.Ok);
-        Assert.Equal("KI-Videoanalyse fuer 'h-01' gestartet.", found.Message);
+        Assert.Equal("KI-Videoanalyse für 'h-01' gestartet.", found.Message);
 
         var action = Assert.Single(scheduled);
         action();

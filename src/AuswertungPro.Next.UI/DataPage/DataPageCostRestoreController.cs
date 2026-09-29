@@ -48,7 +48,7 @@ public sealed class DataPageCostRestoreController
         var projectPath = _getProjectPath();
         if (string.IsNullOrWhiteSpace(projectPath))
         {
-            _dialogs.Info("Projekt bitte zuerst speichern/oeffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen");
+            _dialogs.Info("Projekt bitte zuerst speichern/öffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen");
             return;
         }
 
@@ -57,7 +57,7 @@ public sealed class DataPageCostRestoreController
         {
             var dir = Path.GetDirectoryName(projectPath);
             var storePath = string.IsNullOrWhiteSpace(dir) ? "" : _getStorePath(dir);
-            _dialogs.Info($"Keine gespeicherten Kosten/Massnahmen gefunden fuer:\n{holding}\n\nDatei:\n{storePath}",
+            _dialogs.Info($"Keine gespeicherten Kosten/Massnahmen gefunden für:\n{holding}\n\nDatei:\n{storePath}",
                 "Kosten/Massnahmen");
             return;
         }

@@ -32,18 +32,22 @@ public static class DataPageDropdownOptionGroupFactory
 
         return new DataPageDropdownOptionGroups(
             CreateGroup(options.Sanieren, "Sanieren-Liste", ["Nein", "Ja"], actions),
-            CreateGroup(options.Eigentuemer, "Eigentuemer-Liste", fixedEigentuemerOptions, actions),
+            CreateGroup(options.Eigentuemer, "Eigentümer-Liste", fixedEigentuemerOptions, actions),
             CreateGroup(
                 options.Pruefungsresultat,
-                "Pruefungsresultat-Liste",
+                "Prüfungsresultat-Liste",
                 [
+                    // Datenwert, kein Anzeigetext: identisch zu ExcelReportStyle.Farbregeln,
+                    // DropdownOptionsStore und SchaechteDropdownCommandFactory (Excel-
+                    // Farbzuordnung vergleicht exakt diese Zeichenketten). Bewusst ae/oe statt
+                    // Umlaut, damit gespeicherte Projektwerte weiterhin dieselbe Farbe treffen.
                     "Pruefung bestanden",
                     "Pruefung knapp nicht bestanden",
                     "Pruefung nicht bestanden (grob undicht)",
                     "Keine"
                 ],
                 actions),
-            CreateGroup(options.Referenzpruefung, "Referenzpruefung-Liste", ["Ja", "Nein"], actions),
+            CreateGroup(options.Referenzpruefung, "Referenzprüfung-Liste", ["Ja", "Nein"], actions),
             CreateGroup(
                 options.EmpfohleneSanierungsmassnahmen,
                 "Sanierungsmassnahmen-Liste",

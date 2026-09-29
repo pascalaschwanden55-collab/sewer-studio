@@ -66,7 +66,7 @@ namespace AuswertungPro.Next.UI
                 if (!_singleInstanceGuard.TryAcquire())
                 {
                     DialogHost.Current.Info(
-                        "SewerStudio laeuft bereits. Bitte verwende das geoeffnete Programmfenster.",
+                        "SewerStudio läuft bereits. Bitte verwende das geöffnete Programmfenster.",
                         "SewerStudio bereits gestartet");
                     Shutdown(0);
                     return;

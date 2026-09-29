@@ -37,7 +37,7 @@ public sealed class DataPageVideoRelinkControllerTests
 
         controller.Relink(new HaltungRecord());
 
-        Assert.Equal(("Video auswaehlen", MediaFileTypes.VideoDialogFilter, "C:\\Quelle"), dialogs.LastOpenFile);
+        Assert.Equal(("Video auswählen", MediaFileTypes.VideoDialogFilter, "C:\\Quelle"), dialogs.LastOpenFile);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public sealed class DataPageVideoRelinkControllerTests
 
         controller.Relink(new HaltungRecord());
 
-        Assert.Equal(("Video auswaehlen", MediaFileTypes.VideoDialogFilter, "C:\\Projekt"), dialogs.LastOpenFile);
+        Assert.Equal(("Video auswählen", MediaFileTypes.VideoDialogFilter, "C:\\Projekt"), dialogs.LastOpenFile);
     }
 
     [Fact]

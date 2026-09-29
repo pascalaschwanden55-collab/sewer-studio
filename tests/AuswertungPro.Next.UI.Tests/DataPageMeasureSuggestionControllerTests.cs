@@ -35,7 +35,7 @@ public sealed class DataPageMeasureSuggestionControllerTests
             controller.Suggest(record);
 
             var erwartet = 1250m.ToString("N2", CultureInfo.GetCultureInfo("de-CH"));
-            Assert.Contains($"Geschaetzte Kosten: {erwartet}", dialogs.LastInfo!.Value.Message);
+            Assert.Contains($"Geschätzte Kosten: {erwartet}", dialogs.LastInfo!.Value.Message);
         }
         finally
         {
@@ -58,7 +58,7 @@ public sealed class DataPageMeasureSuggestionControllerTests
 
         controller.Suggest(null);
 
-        Assert.Equal(("Noch keine Vorschlaege verfuegbar. Bitte zuerst einige Haltungen mit Massnahmen bewerten.", "Massnahmen"), dialogs.LastInfo);
+        Assert.Equal(("Noch keine Vorschläge verfügbar. Bitte zuerst einige Haltungen mit Massnahmen bewerten.", "Massnahmen"), dialogs.LastInfo);
         var requested = Assert.Single(service.RequestedRecords);
         Assert.Same(record, requested);
         Assert.Equal(0, dirty);
@@ -93,7 +93,7 @@ public sealed class DataPageMeasureSuggestionControllerTests
         Assert.Equal("Massnahmenvorschlag mit Kostenschätzung gesetzt (1250.00, KI-Modell)", statuses.Single());
         Assert.Equal((3, 1250m), learning.Single());
         Assert.Equal(
-            ("Inliner\nManschette\n\nGeschaetzte Kosten: 1’250.00\n\nQuelle: KI-Modell (3 aehnliche Faelle)", "Empfohlene Sanierungsmassnahmen"),
+            ("Inliner\nManschette\n\nGeschätzte Kosten: 1’250.00\n\nQuelle: KI-Modell (3 ähnliche Fälle)", "Empfohlene Sanierungsmassnahmen"),
             dialogs.LastInfo);
     }
 

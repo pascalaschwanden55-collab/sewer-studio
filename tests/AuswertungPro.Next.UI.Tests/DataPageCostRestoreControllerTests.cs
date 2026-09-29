@@ -33,7 +33,7 @@ public sealed class DataPageCostRestoreControllerTests
 
         controller.Restore(Record("H1"));
 
-        Assert.Equal(("Projekt bitte zuerst speichern/oeffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen"), dialogs.LastInfo);
+        Assert.Equal(("Projekt bitte zuerst speichern/öffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen"), dialogs.LastInfo);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public sealed class DataPageCostRestoreControllerTests
         controller.Restore(Record("H1"));
 
         Assert.Equal(
-            ("Keine gespeicherten Kosten/Massnahmen gefunden fuer:\nH1\n\nDatei:\nC:\\Projekt\\costs\\costs.json", "Kosten/Massnahmen"),
+            ("Keine gespeicherten Kosten/Massnahmen gefunden für:\nH1\n\nDatei:\nC:\\Projekt\\costs\\costs.json", "Kosten/Massnahmen"),
             dialogs.LastInfo);
     }
 

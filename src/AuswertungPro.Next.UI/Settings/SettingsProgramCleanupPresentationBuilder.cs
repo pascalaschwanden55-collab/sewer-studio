@@ -32,11 +32,11 @@ public static class SettingsProgramCleanupPresentationBuilder
         return
             $"Gefunden: {FormatBytes(report.TotalBytes)} in {report.TotalFiles:N0} Dateien.\n\n" +
             string.Join(Environment.NewLine, categories) +
-            "\n\nGroesste Bereiche:\n" +
+            "\n\nGrösste Bereiche:\n" +
             string.Join(Environment.NewLine, largest) +
-            "\n\nGeschuetzt bleiben Projektdateien, Videos, PDF, Modelle, Trainingsdaten, " +
+            "\n\nGeschützt bleiben Projektdateien, Videos, PDF, Modelle, Trainingsdaten, " +
             "Karten, Einstellungen, Sicherungen, Git und Release-Pakete.\n\n" +
-            "Diese temporaeren Daten jetzt endgueltig loeschen?";
+            "Diese temporären Daten jetzt endgültig löschen?";
     }
 
     public static string BuildSuccessText(ProgramCleanupResult result)
@@ -57,7 +57,7 @@ public static class SettingsProgramCleanupPresentationBuilder
     private static string CategoryName(ProgramCleanupCategory category)
         => category switch
         {
-            ProgramCleanupCategory.WorkspaceTemp => "Temporaere Arbeitsdaten",
+            ProgramCleanupCategory.WorkspaceTemp => "Temporäre Arbeitsdaten",
             ProgramCleanupCategory.BuildOutput => "Build-Zwischendaten",
             ProgramCleanupCategory.PythonCache => "Python-Zwischenspeicher",
             _ => "Alte Windows-Temp-Dateien"

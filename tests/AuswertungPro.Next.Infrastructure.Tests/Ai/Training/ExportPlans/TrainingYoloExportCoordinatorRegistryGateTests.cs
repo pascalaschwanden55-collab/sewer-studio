@@ -44,7 +44,7 @@ public sealed class TrainingYoloExportCoordinatorRegistryGateTests
             var notice = Assert.Single(
                 progress.Items,
                 item => item.Stage == TrainingYoloExportProgressStage.RegistryGateNotice);
-            Assert.Contains("1 vollstaendige Goldsamples", notice.Message, StringComparison.Ordinal);
+            Assert.Contains("1 vollständige Goldsamples", notice.Message, StringComparison.Ordinal);
             Assert.Contains("nicht im Freigaberegister", notice.Message, StringComparison.Ordinal);
         }
         finally

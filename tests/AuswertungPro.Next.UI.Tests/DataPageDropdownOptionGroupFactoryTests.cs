@@ -52,9 +52,9 @@ public sealed class DataPageDropdownOptionGroupFactoryTests
             new[]
             {
                 "Sanieren-Liste",
-                "Eigentuemer-Liste",
-                "Pruefungsresultat-Liste",
-                "Referenzpruefung-Liste",
+                "Eigentümer-Liste",
+                "Prüfungsresultat-Liste",
+                "Referenzprüfung-Liste",
                 "Sanierungsmassnahmen-Liste"
             },
             previews.Select(x => x.Title));

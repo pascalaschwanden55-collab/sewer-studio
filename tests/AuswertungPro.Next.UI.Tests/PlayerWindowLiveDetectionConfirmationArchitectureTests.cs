@@ -158,12 +158,12 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.Contains("dependencies.VsaYoloClasses", trainingControllerSetFactory);
         Assert.Contains("var trainingResult = await actions.SaveAcceptedAsync()", acceptCommandWorkflow);
         Assert.Contains("actions.HandleAcceptedResult(trainingResult)", acceptCommandWorkflow);
-        Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2717 Fehler: {ex.Message}\", false)", acceptCommandWorkflow);
+        Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2717 Fehler: {UserError.DescribeAndReport(ex, \"Live-Bestätigung übernehmen\")}\", false)", acceptCommandWorkflow);
         Assert.Contains("actions.ResumeDetection()", acceptCommandWorkflow);
         Assert.Contains("var selectedEntry = actions.SelectCorrection()", correctCommandWorkflow);
         Assert.Contains("var trainingResult = await actions.SaveCorrectedAsync(selectedEntry)", correctCommandWorkflow);
         Assert.Contains("actions.HandleCorrectedResult(trainingResult)", correctCommandWorkflow);
-        Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2717 Fehler: {ex.Message}\", false)", correctCommandWorkflow);
+        Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2717 Fehler: {UserError.DescribeAndReport(ex, \"Live-Korrektur übernehmen\")}\", false)", correctCommandWorkflow);
         Assert.Contains("actions.ResumeDetection()", correctCommandWorkflow);
         Assert.Contains("actions.ResumeDetection()", skipCommandWorkflow);
         Assert.Contains("public static void ShowDetectionConfirmation", statusControls);

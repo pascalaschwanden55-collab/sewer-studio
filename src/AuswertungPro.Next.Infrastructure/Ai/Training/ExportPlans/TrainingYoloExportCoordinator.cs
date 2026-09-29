@@ -93,7 +93,7 @@ public sealed class TrainingYoloExportCoordinator : ITrainingYoloExportCoordinat
             Report(
                 progress,
                 TrainingYoloExportProgressStage.RegistryGateNotice,
-                $"YOLO-Export: {selection.RegistryGateSkippedSampleIds.Count} vollstaendige " +
+                $"YOLO-Export: {selection.RegistryGateSkippedSampleIds.Count} vollständige " +
                 "Goldsamples nicht im Freigaberegister - nicht exportiert.");
         }
 

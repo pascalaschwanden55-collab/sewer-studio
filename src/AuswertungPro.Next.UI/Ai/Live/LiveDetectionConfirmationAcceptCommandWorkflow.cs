@@ -1,3 +1,5 @@
+using AuswertungPro.Next.Application.Common;
+
 namespace AuswertungPro.Next.UI.Ai.Live;
 
 public enum LiveDetectionConfirmationAcceptCommandOutcome
@@ -45,7 +47,7 @@ public static class LiveDetectionConfirmationAcceptCommandWorkflow
         }
         catch (Exception ex)
         {
-            actions.ShowOsdMeterStatus($"\u2717 Fehler: {ex.Message}", false);
+            actions.ShowOsdMeterStatus($"\u2717 Fehler: {UserError.DescribeAndReport(ex, "Live-Bestätigung übernehmen")}", false);
         }
 
         actions.ResumeDetection();

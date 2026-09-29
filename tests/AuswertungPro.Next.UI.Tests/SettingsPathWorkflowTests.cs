@@ -15,7 +15,7 @@ public sealed class SettingsPathWorkflowTests
             @"C:\Alt\Uri Kontrolle.json");
 
         Assert.Equal(@"D:\Projekte\Neu.json", selected);
-        Assert.Equal("Projektpfad waehlen", dialogs.SaveTitle);
+        Assert.Equal("Projektpfad wählen", dialogs.SaveTitle);
         Assert.Equal("Projekt (*.json)|*.json", dialogs.SaveFilter);
         Assert.Equal(".json", dialogs.DefaultExt);
         Assert.Equal("Uri Kontrolle", dialogs.DefaultFileName);
@@ -41,7 +41,7 @@ public sealed class SettingsPathWorkflowTests
             @"D:\QGIS_V4.03\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf");
 
         Assert.Equal(@"D:\QGIS_V4.03\Export_Sewer_Studio\netz.xtf", selected);
-        Assert.Equal("Abwasserkataster-XTF waehlen", dialogs.OpenTitle);
+        Assert.Equal("Abwasserkataster-XTF wählen", dialogs.OpenTitle);
         Assert.Equal("XTF-Dateien (*.xtf)|*.xtf|Alle Dateien|*.*", dialogs.OpenFilter);
         Assert.Equal(@"D:\QGIS_V4.03\Export_Sewer_Studio", dialogs.OpenInitialDirectory);
     }
@@ -98,7 +98,7 @@ public sealed class SettingsPathWorkflowTests
             TryOpen: _ => new SettingsOpenFolderResult(false, "kein Zugriff")));
 
         Assert.Single(dialogs.Errors);
-        Assert.Contains("Ordner konnte nicht geoeffnet werden", dialogs.Errors[0]);
+        Assert.Contains("Ordner konnte nicht geöffnet werden", dialogs.Errors[0]);
         Assert.Contains("Programmlog", dialogs.Errors[0]);
         Assert.DoesNotContain("kein Zugriff", dialogs.Errors[0]);
         Assert.Equal("SewerStudio", dialogs.ErrorTitles[0]);

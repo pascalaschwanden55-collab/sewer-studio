@@ -36,19 +36,19 @@ public static class SettingsFullBackupWorkflow
 
         if (request.Operation.IsRunning)
         {
-            request.Toasts.Info("Datensicherung laeuft bereits.");
+            request.Toasts.Info("Datensicherung läuft bereits.");
             return;
         }
 
         var targetFolder = request.Dialogs.SelectFolder(
-            "Zielordner fuer die Datensicherung waehlen",
+            "Zielordner für die Datensicherung wählen",
             request.Settings.LastFullBackupPath);
         if (targetFolder is null)
             return;
 
         if (!request.Operation.TryBegin(ct, out var runToken))
         {
-            request.Toasts.Info("Datensicherung laeuft bereits.");
+            request.Toasts.Info("Datensicherung läuft bereits.");
             return;
         }
 
@@ -67,7 +67,7 @@ public static class SettingsFullBackupWorkflow
             }
 
             request.FlushPendingSave();
-            request.Operation.SetStatus("Datensicherung laeuft...");
+            request.Operation.SetStatus("Datensicherung läuft...");
 
             var progress = new InlineProgress<FullBackupProgress>(p =>
             {
@@ -98,14 +98,14 @@ public static class SettingsFullBackupWorkflow
             var databaseInfo = result.DatabasesSnapshotted switch
             {
                 1 => ", 1 Datenbank-Schnappschuss",
-                > 1 => $", {result.DatabasesSnapshotted} Datenbank-Schnappschuesse",
+                > 1 => $", {result.DatabasesSnapshotted} Datenbank-Schnappschüsse",
                 _ => string.Empty
             };
             request.Operation.UpdateProgress(
                 100,
                 string.Empty,
-                $"Fertig: {result.FilesCopied} kopiert, {result.FilesVerified} vollstaendig geprueft" +
-                $"{databaseInfo}, {result.FilesUnchanged} unveraendert, " +
+                $"Fertig: {result.FilesCopied} kopiert, {result.FilesVerified} vollständig geprüft" +
+                $"{databaseInfo}, {result.FilesUnchanged} unverändert, " +
                 $"{result.FilesDeleted} entfernt.");
             if (result.SkippedFileTotal > 0 || result.SkippedFiles.Count > 0)
                 request.Toasts.Warning("Datensicherung mit Lücken abgeschlossen – Hinweise prüfen.");

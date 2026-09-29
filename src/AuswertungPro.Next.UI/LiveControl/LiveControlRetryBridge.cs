@@ -40,7 +40,7 @@ public static class LiveControlRetryBridge
             handler = _handler;
 
         return handler is null
-            ? new LiveControlRetryResult(false, "Datenseite nicht geoeffnet – bitte ein Projekt mit Haltungen laden.")
+            ? new LiveControlRetryResult(false, "Datenseite nicht geöffnet – bitte ein Projekt mit Haltungen laden.")
             : handler(haltungsname.Trim());
     }
 }

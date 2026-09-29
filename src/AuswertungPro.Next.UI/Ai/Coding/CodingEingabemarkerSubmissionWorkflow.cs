@@ -1,3 +1,5 @@
+using AuswertungPro.Next.Application.Common;
+
 namespace AuswertungPro.Next.UI.Ai.Coding;
 
 public enum CodingEingabemarkerSubmissionWorkflowOutcome
@@ -88,7 +90,7 @@ public static class CodingEingabemarkerSubmissionWorkflow
         }
         catch (Exception ex)
         {
-            actions.ShowErrorStatus(ex.Message);
+            actions.ShowErrorStatus(UserError.DescribeAndReport(ex, "Eingabemarker übernehmen"));
             return Result(CodingEingabemarkerSubmissionWorkflowOutcome.Error);
         }
         finally

@@ -35,7 +35,7 @@ public sealed class DataPageVideoRelinkController
             return;
 
         var path = _dialogs.OpenFile(
-            "Video auswaehlen",
+            "Video auswählen",
             MediaFileTypes.VideoDialogFilter,
             BuildInitialFolder());
         if (string.IsNullOrWhiteSpace(path))

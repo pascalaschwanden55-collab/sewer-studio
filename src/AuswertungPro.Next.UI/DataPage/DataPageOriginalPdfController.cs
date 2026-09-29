@@ -44,14 +44,14 @@ public sealed class DataPageOriginalPdfController
         {
             var name = record.GetFieldValue("Haltungsname") ?? "(unbekannt)";
             _dialogs.Info(
-                $"Kein PDF gefunden fuer Haltung '{name}'.\n\nPruefen Sie, ob das Protokoll-PDF in der Verteilung liegt.",
+                $"Kein PDF gefunden für Haltung '{name}'.\n\nPrüfen Sie, ob das Protokoll-PDF in der Verteilung liegt.",
                 "Haltungsprotokoll (PDF)");
             return;
         }
 
         var result = _tryOpen(path);
         if (!result.Success)
-            _dialogs.Warn($"PDF konnte nicht geoeffnet werden:\n{result.Error}", "Fehler");
+            _dialogs.Warn($"PDF konnte nicht geöffnet werden:\n{result.Error}", "Fehler");
     }
 
     public static (bool Success, string? Error) TryShellOpen(string? path)

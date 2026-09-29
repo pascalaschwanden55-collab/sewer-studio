@@ -107,7 +107,14 @@ public sealed class CodingEingabemarkerSubmissionWorkflowTests
                 addDirectEvent: (_, _) => throw new InvalidOperationException("append failed")));
 
         Assert.Equal(CodingEingabemarkerSubmissionWorkflowOutcome.Error, result.Outcome);
-        Assert.Equal(["hide", "analyzing", "error:append failed", "cancel"], calls);
+        Assert.Equal(
+            [
+                "hide",
+                "analyzing",
+                "error:Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
+                "cancel"
+            ],
+            calls);
     }
 
     private static CodingEingabemarkerSubmissionWorkflowActions Actions(

@@ -23,7 +23,7 @@ public static class SettingsPathWorkflow
 
     public static string? SelectPdfToText(IDialogService dialogs)
         => dialogs.OpenFile(
-            "pdftotext.exe waehlen",
+            "pdftotext.exe wählen",
             "pdftotext.exe|pdftotext.exe|Alle Dateien|*.*");
 
     public static string? SelectProjectPath(IDialogService dialogs, string? projectPath)
@@ -33,26 +33,26 @@ public static class SettingsPathWorkflow
             : Path.GetFileNameWithoutExtension(projectPath);
 
         return dialogs.SaveFile(
-            "Projektpfad waehlen",
+            "Projektpfad wählen",
             "Projekt (*.json)|*.json",
             ".json",
             currentName);
     }
 
     public static string? SelectVideoFolder(IDialogService dialogs, string? currentPath)
-        => dialogs.SelectFolder("Video-Ordner (Haltungen) waehlen", currentPath);
+        => dialogs.SelectFolder("Video-Ordner (Haltungen) wählen", currentPath);
 
     public static string? SelectProjectsRoot(IDialogService dialogs, string? currentPath)
-        => dialogs.SelectFolder("Projekte-Verzeichnis waehlen", currentPath);
+        => dialogs.SelectFolder("Projekte-Verzeichnis wählen", currentPath);
 
     public static string? SelectAbwasserkatasterXtfPath(IDialogService dialogs, string? currentPath)
         => dialogs.OpenFile(
-            "Abwasserkataster-XTF waehlen",
+            "Abwasserkataster-XTF wählen",
             "XTF-Dateien (*.xtf)|*.xtf|Alle Dateien|*.*",
             InitialDirectoryFromFilePath(currentPath));
 
     public static string? SelectKantonUriXtfDirectory(IDialogService dialogs, string? currentPath)
-        => dialogs.SelectFolder("XTF-Ordner Kanton Uri waehlen", currentPath);
+        => dialogs.SelectFolder("XTF-Ordner Kanton Uri wählen", currentPath);
 
     public static void OpenFolder(string? path, IDialogService dialogs)
         => OpenFolder(path, dialogs, CompatibilityService);
@@ -109,7 +109,7 @@ public static class SettingsPathWorkflow
         catch (Exception ex)
         {
             dialogs.Error(
-                $"Ordner konnte nicht geoeffnet werden:\n{UserError.DescribeAndReport(ex, "Ordner oeffnen")}",
+                $"Ordner konnte nicht geöffnet werden:\n{UserError.DescribeAndReport(ex, "Ordner oeffnen")}",
                 "SewerStudio");
         }
     }

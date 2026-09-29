@@ -29,7 +29,7 @@ internal static class ProjectPageDropdownCommandFactory
         var eigentuemer = new DropdownOptionGroupController(
             eigentuemerOptions,
             new DropdownOptionGroupSettings(
-                "Eigentuemer-Liste",
+                "Eigentümer-Liste",
                 fixedEigentuemerOptions,
                 LockedToResetItems: true),
             actions);

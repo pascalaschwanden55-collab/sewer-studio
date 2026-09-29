@@ -60,12 +60,12 @@ public sealed class UserErrorTests
         { new FileNotFoundException("INTERN-GEHEIM"), "Datei" },
         { new DirectoryNotFoundException("INTERN-GEHEIM"), "Ordner" },
         { new PathTooLongException("INTERN-GEHEIM"), "zu lang" },
-        { new IOException("INTERN-GEHEIM"), "nicht verfuegbar" },
+        { new IOException("INTERN-GEHEIM"), "nicht verfügbar" },
         { new HttpRequestException("INTERN-GEHEIM", null, HttpStatusCode.ServiceUnavailable), "Dienst" },
         { new JsonException("INTERN-GEHEIM"), "Daten" },
         { new InvalidDataException("INTERN-GEHEIM"), "Daten" },
         { new OutOfMemoryException("INTERN-GEHEIM"), "Arbeitsspeicher" },
-        { new NotSupportedException("INTERN-GEHEIM"), "nicht unterstuetzt" },
+        { new NotSupportedException("INTERN-GEHEIM"), "nicht unterstützt" },
         { new InvalidOperationException("INTERN-GEHEIM"), "Programmlog" }
     };
 }

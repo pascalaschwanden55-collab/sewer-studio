@@ -128,7 +128,12 @@ public sealed class LiveDetectionManualMarkTrainingCommandWorkflowTests
         Assert.Equal(LiveDetectionManualMarkTrainingCommandOutcome.Failed, result.Outcome);
         Assert.False(result.Saved);
         Assert.False(result.ReturnValue);
-        Assert.Equal(["select", "status:\u2717 Fehler: kaputt:False"], calls);
+        Assert.Equal(
+            [
+                "select",
+                "status:\u2717 Fehler: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.:False"
+            ],
+            calls);
     }
 
     private static ProtocolEntry Entry(string code)

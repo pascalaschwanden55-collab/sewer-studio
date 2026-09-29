@@ -39,7 +39,7 @@ public sealed class DataPageRecordCommandRouterTests
 
         Assert.False(executed);
         Assert.False(command.WasExecuted);
-        Assert.Equal(("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "PDF"), Assert.Single(dialogs));
+        Assert.Equal(("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswählen.", "PDF"), Assert.Single(dialogs));
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public sealed class DataPageRecordCommandRouterTests
         Assert.False(executed);
         Assert.Null(selected);
         Assert.False(command.WasExecuted);
-        Assert.Equal(("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position"), Assert.Single(dialogs));
+        Assert.Equal(("Keine Zeile erkannt. Bitte zuerst eine Haltung auswählen.", "Position"), Assert.Single(dialogs));
     }
 
     private sealed class RecordingCommand : ICommand

@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
@@ -94,7 +95,7 @@ public static class SelfTrainingRunWorkflow
         catch (Exception ex)
         {
             request.Ui.Log($"FEHLER: {ex.GetType().Name}: {ex.Message}");
-            request.Ui.SetStatusText($"Fehler: {ex.Message}");
+            request.Ui.SetStatusText($"Fehler: {UserError.Describe(ex)}");
         }
         finally
         {

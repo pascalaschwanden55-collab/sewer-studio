@@ -94,7 +94,7 @@ public sealed class DataPageOriginalPdfControllerTests
         controller.Open(Record("12/34"));
 
         Assert.Equal(
-            ("Kein PDF gefunden fuer Haltung '12/34'.\n\nPruefen Sie, ob das Protokoll-PDF in der Verteilung liegt.", "Haltungsprotokoll (PDF)"),
+            ("Kein PDF gefunden für Haltung '12/34'.\n\nPrüfen Sie, ob das Protokoll-PDF in der Verteilung liegt.", "Haltungsprotokoll (PDF)"),
             dialogs.LastInfo);
     }
 
@@ -109,7 +109,7 @@ public sealed class DataPageOriginalPdfControllerTests
 
         controller.Open(Record("12/34"));
 
-        Assert.Equal(("PDF konnte nicht geoeffnet werden:\nDatei nicht gefunden.", "Fehler"), dialogs.LastWarn);
+        Assert.Equal(("PDF konnte nicht geöffnet werden:\nDatei nicht gefunden.", "Fehler"), dialogs.LastWarn);
     }
 
     private static DataPageOriginalPdfController CreateController(

@@ -216,7 +216,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
         Assert.Contains("request.BatchUi.Log(\"Batch-Import abgebrochen durch Benutzer.\");", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.BatchUi.SetStatusText(\"Batch-Import abgebrochen.\");", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.BatchUi.Log($\"FATALER FEHLER: {ex.Message}\");", workflowSource, StringComparison.Ordinal);
-        Assert.Contains("request.BatchUi.SetStatusText($\"Fehler beim Batch-Import: {ex.Message}\");", workflowSource, StringComparison.Ordinal);
+        Assert.Contains("request.BatchUi.SetStatusText($\"Fehler beim Batch-Import: {UserError.Describe(ex)}\");", workflowSource, StringComparison.Ordinal);
     }
 
     [Fact]

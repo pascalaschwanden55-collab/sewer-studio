@@ -1,4 +1,5 @@
 using System.IO;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
@@ -64,7 +65,7 @@ public static class TrainingCenterReviewCorrectionWorkflow
         }
         catch (Exception ex)
         {
-            actions.Warn($"Fehler bei der Korrektur: {ex.Message}", "Korrektur");
+            actions.Warn($"Fehler bei der Korrektur: {UserError.DescribeAndReport(ex, "Review-Korrektur")}", "Korrektur");
             return Result(TrainingCenterReviewCorrectionOutcome.ApplyFailed);
         }
     }

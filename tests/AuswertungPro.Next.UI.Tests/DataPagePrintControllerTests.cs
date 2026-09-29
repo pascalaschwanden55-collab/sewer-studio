@@ -23,7 +23,7 @@ public sealed class DataPagePrintControllerTests
             record: null,
             ensureProtocolDocument: _ => throw new InvalidOperationException("document should not be requested"));
 
-        Assert.Equal(("Bitte zuerst eine Haltung auswaehlen.", "Haltungsprotokoll AWU"), dialogs.LastInfo);
+        Assert.Equal(("Bitte zuerst eine Haltung auswählen.", "Haltungsprotokoll AWU"), dialogs.LastInfo);
         Assert.Empty(dialogs.SaveFileCalls);
     }
 
@@ -125,7 +125,7 @@ public sealed class DataPagePrintControllerTests
             ensureProtocolDocument: _ => new ProtocolDocument());
 
         Assert.Equal(
-            ("Fuer diese Haltung liegt kein Haltungsname vor — der Zielordner kann nicht bestimmt werden.", "Haltungsprotokoll AWU"),
+            ("Für diese Haltung liegt kein Haltungsname vor — der Zielordner kann nicht bestimmt werden.", "Haltungsprotokoll AWU"),
             dialogs.LastInfo);
     }
 
@@ -159,7 +159,7 @@ public sealed class DataPagePrintControllerTests
 
         await controller.PrintHydraulikPdfAsync(record: null);
 
-        Assert.Equal(("Bitte zuerst eine Haltung auswaehlen.", "Hydraulik PDF"), dialogs.LastInfo);
+        Assert.Equal(("Bitte zuerst eine Haltung auswählen.", "Hydraulik PDF"), dialogs.LastInfo);
         Assert.Empty(dialogs.SaveFileCalls);
     }
 
@@ -174,7 +174,7 @@ public sealed class DataPagePrintControllerTests
 
         await controller.PrintHydraulikPdfAsync(Record("12/34"));
 
-        Assert.Equal(("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF"), dialogs.LastWarn);
+        Assert.Equal(("Hydraulik-Berechnung konnte nicht durchgeführt werden.\nBitte DN und Gefälle prüfen.", "Hydraulik PDF"), dialogs.LastWarn);
         Assert.Empty(dialogs.SaveFileCalls);
     }
 
@@ -297,7 +297,7 @@ public sealed class DataPagePrintControllerTests
 
         await controller.PrintDossierPdfAsync(new Project(), record: null);
 
-        Assert.Equal(("Bitte zuerst eine Haltung auswaehlen.", "Dossier"), dialogs.LastInfo);
+        Assert.Equal(("Bitte zuerst eine Haltung auswählen.", "Dossier"), dialogs.LastInfo);
         Assert.Empty(dialogs.SaveFileCalls);
     }
 
@@ -410,7 +410,7 @@ public sealed class DataPagePrintControllerTests
         Assert.Empty(dialogs.SaveFileCalls);
         var call = Assert.Single(dialogs.ConfirmWarnCalls);
         Assert.Equal("Dossier", call.Title);
-        Assert.Contains("ungespeicherte Aenderungen", call.Message);
+        Assert.Contains("ungespeicherte Änderungen", call.Message);
         Assert.True(call.DefaultNo);
     }
 
@@ -426,7 +426,7 @@ public sealed class DataPagePrintControllerTests
         await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
 
         Assert.Single(dialogs.SaveFileCalls);
-        Assert.Equal(("Die ausgewaehlte Kombination enthaelt keine druckbaren Inhalte.", "Dossier"), dialogs.LastInfo);
+        Assert.Equal(("Die ausgewählte Kombination enthält keine druckbaren Inhalte.", "Dossier"), dialogs.LastInfo);
         Assert.Null(dialogs.LastError);
     }
 
@@ -623,7 +623,7 @@ public sealed class DataPagePrintControllerTests
 
         await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
 
-        Assert.Equal(("Dossier konnte nicht erstellt werden:\nDie Original-Protokolle konnten nicht zusammengefuehrt werden.", "Dossier"), dialogs.LastError);
+        Assert.Equal(("Dossier konnte nicht erstellt werden:\nDie Original-Protokolle konnten nicht zusammengeführt werden.", "Dossier"), dialogs.LastError);
     }
 
     private static DataPagePrintController CreateController(

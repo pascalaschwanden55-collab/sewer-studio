@@ -63,7 +63,7 @@ public sealed class PageViewModelLifecycleTests
         var afterDispose = LiveControlRetryBridge.Invoke("06-001");
 
         Assert.Contains("nicht im geladenen Projekt gefunden", beforeDispose.Message);
-        Assert.Contains("Datenseite nicht geoeffnet", afterDispose.Message);
+        Assert.Contains("Datenseite nicht geöffnet", afterDispose.Message);
     }
 
     private static ObservableObject CreatePageViewModel(string page, ShellViewModel shell, ServiceProvider services)

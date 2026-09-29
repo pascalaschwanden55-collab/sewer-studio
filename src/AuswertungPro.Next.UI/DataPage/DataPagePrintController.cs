@@ -337,7 +337,7 @@ public sealed class DataPagePrintController
 
         if (record is null)
         {
-            _dialogs.Info("Bitte zuerst eine Haltung auswaehlen.", "Dossier");
+            _dialogs.Info("Bitte zuerst eine Haltung auswählen.", "Dossier");
             return;
         }
 
@@ -421,7 +421,7 @@ public sealed class DataPagePrintController
             if (!printableSections.HasAnySection)
             {
                 _dialogs.Info(
-                    "Die ausgewaehlte Kombination enthaelt keine druckbaren Inhalte.",
+                    "Die ausgewählte Kombination enthält keine druckbaren Inhalte.",
                     "Dossier");
                 return;
             }
@@ -436,7 +436,7 @@ public sealed class DataPagePrintController
             {
                 pdf = await Task.Run(() => _mergeRequiredOriginals(originalPdfPaths));
                 if (pdf.Length == 0)
-                    throw new UserFacingException("Die Original-Protokolle konnten nicht zusammengefuehrt werden.");
+                    throw new UserFacingException("Die Original-Protokolle konnten nicht zusammengeführt werden.");
 
                 originalsAlreadyMerged = true;
             }
@@ -459,7 +459,7 @@ public sealed class DataPagePrintController
 
     private bool ConfirmDirtyDossierPrint()
         => _dialogs.ConfirmWarn(
-            "ACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt.\n\n" +
+            "ACHTUNG: Es gibt ungespeicherte Änderungen im Projekt.\n\n" +
             "Das Dossier verwendet den zuletzt gespeicherten Stand der Sanierungs-Matrix. Trotzdem drucken?",
             "Dossier",
             defaultNo: true);
@@ -468,14 +468,14 @@ public sealed class DataPagePrintController
     {
         if (record is null)
         {
-            _dialogs.Info("Bitte zuerst eine Haltung auswaehlen.", "Hydraulik PDF");
+            _dialogs.Info("Bitte zuerst eine Haltung auswählen.", "Hydraulik PDF");
             return;
         }
 
         var calc = _buildHydraulikCalculation(record);
         if (calc is null)
         {
-            _dialogs.Warn("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF");
+            _dialogs.Warn("Hydraulik-Berechnung konnte nicht durchgeführt werden.\nBitte DN und Gefälle prüfen.", "Hydraulik PDF");
             return;
         }
 
@@ -526,7 +526,7 @@ public sealed class DataPagePrintController
 
         if (record is null)
         {
-            _dialogs.Info("Bitte zuerst eine Haltung auswaehlen.", "Haltungsprotokoll AWU");
+            _dialogs.Info("Bitte zuerst eine Haltung auswählen.", "Haltungsprotokoll AWU");
             return;
         }
 
@@ -548,7 +548,7 @@ public sealed class DataPagePrintController
             if (string.IsNullOrWhiteSpace(dest))
             {
                 _dialogs.Info(
-                    "Fuer diese Haltung liegt kein Haltungsname vor — der Zielordner kann nicht bestimmt werden.",
+                    "Für diese Haltung liegt kein Haltungsname vor — der Zielordner kann nicht bestimmt werden.",
                     "Haltungsprotokoll AWU");
                 return;
             }

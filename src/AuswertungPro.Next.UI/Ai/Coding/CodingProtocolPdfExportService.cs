@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -59,7 +60,7 @@ public sealed class CodingProtocolPdfExportService
         }
         catch (Exception ex)
         {
-            _showPdfExportFailed(ex.Message);
+            _showPdfExportFailed(UserError.DescribeAndReport(ex, "Haltungsprotokoll-PDF exportieren"));
             return false;
         }
     }

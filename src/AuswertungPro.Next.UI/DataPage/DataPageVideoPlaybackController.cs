@@ -82,7 +82,7 @@ public sealed class DataPageVideoPlaybackController
         {
             var logPath = _writeStartErrorLog(ex, path);
             var nativeHint = ex.Message.Contains("native side", StringComparison.OrdinalIgnoreCase)
-                ? "\n\nHinweis: Bitte pruefen, ob 'VideoLAN.LibVLC.Windows' fuer dieses Projekt/Plattform installiert ist."
+                ? "\n\nHinweis: Bitte prüfen, ob 'VideoLAN.LibVLC.Windows' für dieses Projekt/Plattform installiert ist."
                 : string.Empty;
             var userMessage = UserError.Describe(ex);
             var msg = logPath is null

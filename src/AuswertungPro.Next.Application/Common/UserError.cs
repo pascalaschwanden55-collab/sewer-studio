@@ -30,23 +30,23 @@ public static class UserError
             TimeoutException =>
                 "Der Vorgang hat zu lange gedauert. Bitte erneut versuchen.",
             UnauthorizedAccessException =>
-                "Zugriff wurde verweigert. Bitte Ordnerrechte und Dateischutz pruefen.",
+                "Zugriff wurde verweigert. Bitte Ordnerrechte und Dateischutz prüfen.",
             FileNotFoundException =>
-                "Eine benoetigte Datei wurde nicht gefunden. Bitte Pfad und Datensicherung pruefen.",
+                "Eine benötigte Datei wurde nicht gefunden. Bitte Pfad und Datensicherung prüfen.",
             DirectoryNotFoundException =>
-                "Ein benoetigter Ordner wurde nicht gefunden. Bitte den Speicherort pruefen.",
+                "Ein benötigter Ordner wurde nicht gefunden. Bitte den Speicherort prüfen.",
             PathTooLongException =>
-                "Der Datei- oder Ordnerpfad ist zu lang. Bitte einen kuerzeren Speicherort verwenden.",
+                "Der Datei- oder Ordnerpfad ist zu lang. Bitte einen kürzeren Speicherort verwenden.",
             IOException =>
-                "Eine Datei oder ein Ordner ist momentan nicht verfuegbar. Bitte schliessen Sie andere Zugriffe und versuchen Sie es erneut.",
+                "Eine Datei oder ein Ordner ist momentan nicht verfügbar. Bitte schliessen Sie andere Zugriffe und versuchen Sie es erneut.",
             HttpRequestException =>
-                "Ein benoetigter lokaler Dienst ist nicht erreichbar. Bitte KI-Dienste und Verbindung pruefen.",
+                "Ein benötigter lokaler Dienst ist nicht erreichbar. Bitte KI-Dienste und Verbindung prüfen.",
             JsonException or InvalidDataException =>
-                "Die gelesenen Daten sind beschaedigt oder nicht gueltig. Bitte Original oder Datensicherung pruefen.",
+                "Die gelesenen Daten sind beschädigt oder nicht gültig. Bitte Original oder Datensicherung prüfen.",
             OutOfMemoryException =>
-                "Nicht genuegend Arbeitsspeicher verfuegbar. Bitte andere grosse Vorgaenge schliessen und erneut versuchen.",
+                "Nicht genügend Arbeitsspeicher verfügbar. Bitte andere grosse Vorgänge schliessen und erneut versuchen.",
             NotSupportedException =>
-                "Dieser Vorgang oder Dateityp wird nicht unterstuetzt.",
+                "Dieser Vorgang oder Dateityp wird nicht unterstützt.",
             _ =>
                 "Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog."
         };

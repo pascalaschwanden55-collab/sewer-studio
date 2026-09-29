@@ -70,7 +70,7 @@ public static class SettingsFullBackupPresentationBuilder
         var localTime = DateTime.SpecifyKind(lastBackupUtc.Value, DateTimeKind.Utc).ToLocalTime();
         var size = sizeBytes is long bytes
             ? ByteSizeFormatter.Format(bytes)
-            : "Groesse unbekannt";
+            : "Grösse unbekannt";
 
         return $"Letzte Datensicherung: {localTime:dd.MM.yyyy HH:mm} - {size} - {lastBackupPath}";
     }

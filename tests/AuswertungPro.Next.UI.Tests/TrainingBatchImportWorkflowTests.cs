@@ -54,7 +54,9 @@ public sealed class TrainingBatchImportWorkflowTests
         await TrainingBatchImportWorkflow.RunAsync(request);
 
         Assert.Contains("log:FATALER FEHLER: kaputt", calls);
-        Assert.Contains("status:Fehler beim Batch-Import: kaputt", calls);
+        Assert.Contains(
+            "status:Fehler beim Batch-Import: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
+            calls);
         Assert.Equal("busy:False", calls[^2]);
         Assert.Equal("activity-dispose", calls[^1]);
     }

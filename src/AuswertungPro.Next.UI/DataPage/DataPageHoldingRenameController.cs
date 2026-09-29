@@ -60,7 +60,7 @@ internal static class DataPageHoldingRenameController
         {
             showError(
                 $"{rewrite.Failed} Protokoll-PDF(s) konnten nicht aktualisiert werden.\n" +
-                "Die bisherigen PDF-Dateien wurden nicht ueberschrieben.",
+                "Die bisherigen PDF-Dateien wurden nicht überschrieben.",
                 "PDF nicht aktualisiert");
         }
 

@@ -46,7 +46,7 @@ public sealed class DataPageMeasureSuggestionController
         if (recommendation.Measures.Count == 0)
         {
             _dialogs.Info(
-                "Noch keine Vorschlaege verfuegbar. Bitte zuerst einige Haltungen mit Massnahmen bewerten.",
+                "Noch keine Vorschläge verfügbar. Bitte zuerst einige Haltungen mit Massnahmen bewerten.",
                 "Massnahmen");
             return;
         }
@@ -69,12 +69,12 @@ public sealed class DataPageMeasureSuggestionController
             // Geldbetrag ausdruecklich schweizerisch, nicht nach Rechnerkultur: Sonst zeigt
             // dieselbe Zahl je nach Windows-Einstellung 1'250.00 oder 1,250.00. Dieselbe
             // Festlegung wie in den PDF-Modellen und der ETA-Anzeige.
-            summary += "\n\nGeschaetzte Kosten: "
+            summary += "\n\nGeschätzte Kosten: "
                 + recommendation.EstimatedTotalCost.Value.ToString("N2", SchweizerZahl);
         }
         summary += $"\n\nQuelle: {sourceText}";
         if (recommendation.SimilarCasesCount > 0)
-            summary += $" ({recommendation.SimilarCasesCount} aehnliche Faelle)";
+            summary += $" ({recommendation.SimilarCasesCount} ähnliche Fälle)";
         _dialogs.Info(summary, "Empfohlene Sanierungsmassnahmen");
     }
 

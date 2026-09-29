@@ -279,10 +279,8 @@ public sealed class ImportRunWorkflowControllerTests
                 CancellationToken.None);
 
             // Sichtbar: verstaendliche deutsche Meldung statt Ausnahmetyp/-text.
-            // (UserError.cs formuliert diesen Satz noch ohne echte Umlaute - das ist eine
-            // vorbestehende Eigenheit dieser gemeinsamen Klasse, nicht Teil dieser Aufgabe.)
             Assert.Contains(
-                "Eine Datei oder ein Ordner ist momentan nicht verfuegbar",
+                "Eine Datei oder ein Ordner ist momentan nicht verfügbar",
                 state.Summary,
                 StringComparison.Ordinal);
             Assert.DoesNotContain("IOException", state.Summary, StringComparison.Ordinal);

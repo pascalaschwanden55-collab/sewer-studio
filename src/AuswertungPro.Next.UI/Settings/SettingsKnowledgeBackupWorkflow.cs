@@ -92,7 +92,7 @@ public static class SettingsKnowledgeBackupWorkflow
                     request.Dialogs.Info(
                         $"KI-Wissen erfolgreich exportiert.\n\n" +
                         $"Dateien: {result.FileCount}\n" +
-                        $"Groesse: {sizeMb:F1} MB\n" +
+                        $"Grösse: {sizeMb:F1} MB\n" +
                         $"Pfad: {path}",
                         "SewerStudio");
                 }
@@ -128,7 +128,7 @@ public static class SettingsKnowledgeBackupWorkflow
             return;
 
         var confirm = request.Dialogs.Confirm(
-            "Vorhandene KI-Daten und Einstellungen werden ueberschrieben.\n\n" +
+            "Vorhandene KI-Daten und Einstellungen werden überschrieben.\n\n" +
             "Nach dem Import muss die Anwendung neu gestartet werden.\n\n" +
             "Fortfahren?",
             "SewerStudio");

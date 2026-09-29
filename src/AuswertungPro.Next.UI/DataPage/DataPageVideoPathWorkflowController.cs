@@ -50,7 +50,7 @@ public static class DataPageVideoPathWorkflowController
                 return saveVideoLink(initialResult.VideoPath!, false);
         }
 
-        var folder = selectFolder("Video-Ordner auswaehlen", initialFolder);
+        var folder = selectFolder("Video-Ordner auswählen", initialFolder);
         if (string.IsNullOrWhiteSpace(folder))
             return null;
 
@@ -63,7 +63,7 @@ public static class DataPageVideoPathWorkflowController
         showInfo(selectedResult.Message, "Video");
 
         var manual = openFile(
-            "Video auswaehlen",
+            "Video auswählen",
             MediaFileTypes.VideoDialogFilter,
             folder);
         if (string.IsNullOrWhiteSpace(manual))

@@ -40,9 +40,9 @@ public sealed class DataPageDichtheitPdfControllerTests
         controller.Open(Haltung("12-34"));
 
         Assert.Equal(
-            ("Kein Dichtheitspruefungsprotokoll fuer Haltung '12-34' gefunden.\n" +
+            ("Kein Dichtheitsprüfungsprotokoll für Haltung '12-34' gefunden.\n" +
              "Dichtheitsprotokolle werden beim Kanalfernseh-Import automatisch verteilt (…_DP.pdf).",
-             "Dichtheitspruefung"),
+             "Dichtheitsprüfung"),
             dialogs.LastInfo);
     }
 
@@ -58,7 +58,7 @@ public sealed class DataPageDichtheitPdfControllerTests
         controller.Open(Haltung("12-34"));
 
         Assert.Equal(
-            ("Dichtheitspruefung konnte nicht geoeffnet werden:\nDatei gesperrt.", "Dichtheitspruefung"),
+            ("Dichtheitsprüfung konnte nicht geöffnet werden:\nDatei gesperrt.", "Dichtheitsprüfung"),
             dialogs.LastWarn);
     }
 

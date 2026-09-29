@@ -83,11 +83,11 @@ public static class SettingsProgramSnapshotWorkflow
                 : $"Programm gesichert: {result.FileCount} Dateien, {sizeMb:F1} MB");
 
             var skippedHint = result.SkippedReparsePoints > 0
-                ? $"\nUebersprungene Verknuepfungen: {result.SkippedReparsePoints}"
+                ? $"\nÜbersprungene Verknüpfungen: {result.SkippedReparsePoints}"
                 : string.Empty;
             var checksumHint = string.IsNullOrEmpty(result.ArchiveSha256)
                 ? string.Empty
-                : $"\nPruefsumme: {result.ArchiveSha256[..16]}... (vollstaendig in {Path.GetFileName(path)}.sha256)";
+                : $"\nPrüfsumme: {result.ArchiveSha256[..16]}... (vollständig in {Path.GetFileName(path)}.sha256)";
 
             // Eine Sicherung mit Luecken darf nicht wie eine vollstaendige aussehen.
             if (unreadable.Count > 0)
@@ -102,14 +102,14 @@ public static class SettingsProgramSnapshotWorkflow
                     : string.Empty;
 
                 request.Dialogs.Warn(
-                    "Programm-Momentaufnahme erstellt, aber UNVOLLSTAENDIG.\n\n" +
+                    "Programm-Momentaufnahme erstellt, aber UNVOLLSTÄNDIG.\n\n" +
                     $"Diese {unreadable.Count} Ordner konnten nicht gelesen werden und fehlen:\n" +
                     liste + mehr + "\n\n" +
                     $"Dateien: {result.FileCount}\n" +
-                    $"Groesse: {sizeMb:F1} MB\n" +
+                    $"Grösse: {sizeMb:F1} MB\n" +
                     $"Pfad: {path}{skippedHint}{checksumHint}\n\n" +
                     "Die unersetzlichen Ordner (Quellcode, Tests, Werkzeuge, Sidecar, Git-Verlauf) " +
-                    "sind vollstaendig — sonst waere die Sicherung abgebrochen.",
+                    "sind vollständig — sonst wäre die Sicherung abgebrochen.",
                     DialogTitle);
                 return;
             }
@@ -126,9 +126,9 @@ public static class SettingsProgramSnapshotWorkflow
                 request.Dialogs.Info(
                     "Programm-Momentaufnahme erstellt.\n\n" +
                     $"Dateien: {result.FileCount}\n" +
-                    $"Groesse: {sizeMb:F1} MB\n" +
+                    $"Grösse: {sizeMb:F1} MB\n" +
                     $"Pfad: {path}{skippedHint}{checksumHint}\n\n" +
-                    "Enthalten sind Quellcode, der vollstaendige Git-Verlauf und die Modellgewichte. " +
+                    "Enthalten sind Quellcode, der vollständige Git-Verlauf und die Modellgewichte. " +
                     "Build-Ausgabe, Python-Umgebung und Kartenkacheln fehlen bewusst — sie entstehen neu.",
                     DialogTitle);
             }
