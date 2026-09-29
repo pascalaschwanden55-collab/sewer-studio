@@ -118,11 +118,50 @@ public static class UserError
     private static bool IstEigeneVorsaetzlicheMeldung(Exception exception)
     {
         var typ = exception.GetType();
-        if (typ != typeof(InvalidOperationException) && typ != typeof(ArgumentException))
+        if (!IstEigenerMeldungstyp(typ))
             return false;
 
         var assemblyName = exception.TargetSite?.DeclaringType?.Assembly.GetName().Name;
         return assemblyName is not null
             && Array.IndexOf(EigeneProduktAssemblies, assemblyName) >= 0;
+    }
+
+    /// <summary>
+    /// Aufgabe 10c2: Neben <see cref="InvalidOperationException"/>/<see cref="ArgumentException"/>
+    /// werfen die drei unteren Schichten ihre bewusst formulierten deutschen Saetze auch als
+    /// <see cref="IOException"/> (z. B. <c>ProjectPathResolver</c>: "Ohne gespeichertes Projekt
+    /// dürfen Dateipfade nicht geändert werden."), <see cref="InvalidDataException"/> und
+    /// <see cref="JsonException"/> (Validierung von Register-, Journal- und Manifestdateien) sowie
+    /// als EIGENE Ausnahmetypen (<c>SidecarInsufficientVramException</c> mit den VRAM-Zahlen,
+    /// <c>SidecarRequestTimeoutException</c> mit dem Zeitlimit, <c>TrainingExportPlanException</c>,
+    /// <c>SchachtProArchiveException</c> u. a.). Ohne diese Erkennung wuerden die rund 85 in 10c2
+    /// umgestellten Anzeigestellen genau diese fachliche Auskunft durch den generischen Satz
+    /// ersetzen. Weiterhin gilt der EXAKTE Typ (keine Unterklassen der Framework-Typen wie
+    /// <see cref="FileNotFoundException"/>) und der Wurfort in einer eigenen Schicht: dieselbe
+    /// <see cref="IOException"/> aus <c>File.Copy</c> (Wurfort System.Private.CoreLib) bleibt beim
+    /// generischen Satz. <c>SidecarBadRequestException</c> ist bewusst ausgenommen: Ihr
+    /// Text traegt den rohen Antwortkoerper des Sidecars.
+    /// </summary>
+    private static bool IstEigenerMeldungstyp(Type typ)
+    {
+        if (typ == typeof(InvalidOperationException)
+            || typ == typeof(ArgumentException)
+            || typ == typeof(IOException)
+            || typ == typeof(InvalidDataException)
+            || typ == typeof(JsonException))
+            return true;
+
+        if (typ == typeof(AuswertungPro.Next.Application.Ai.SidecarBadRequestException))
+            return false;
+
+        // Die WebGIS-Ausnahmen (Sitzung, Serverantwort) bleiben beim bisherigen Verhalten: Ihre
+        // Anzeige regeln die (geschuetzten) WebGIS-Ablaeufe selbst, und ihr Text kann eine rohe
+        // Serverantwort tragen.
+        if (typ.Namespace?.Contains(".WebGis", StringComparison.Ordinal) == true)
+            return false;
+
+        var deklariertIn = typ.Assembly.GetName().Name;
+        return deklariertIn is not null
+            && Array.IndexOf(EigeneProduktAssemblies, deklariertIn) >= 0;
     }
 }

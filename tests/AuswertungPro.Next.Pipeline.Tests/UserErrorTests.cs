@@ -208,6 +208,86 @@ public sealed class UserErrorTests
         }
     }
 
+    // Aufgabe 10c2: Die unteren Schichten werfen ihre deutschen Saetze auch als IOException,
+    // InvalidDataException, JsonException und als eigene Ausnahmetypen. Diese Auskunft darf beim
+    // Umstellen der Anzeigen auf UserError nicht verloren gehen — dieselben Typen aus dem Framework
+    // bleiben aber beim generischen Satz.
+
+    [Fact]
+    public void Describe_zeigt_bei_IOException_aus_eigener_Assembly_die_eigene_Meldung()
+    {
+        var geworfen = Assert.Throws<IOException>(
+            () => ProjectPathResolver.EnsureWritableProjectPath("Beilage.pdf", null));
+
+        Assert.Equal(
+            "Ohne gespeichertes Projekt dürfen Dateipfade nicht geändert werden. Technische Details stehen im Programmlog.",
+            UserError.Describe(geworfen));
+    }
+
+    [Fact]
+    public void Describe_zeigt_bei_InvalidDataException_aus_eigener_Assembly_die_eigene_Meldung()
+    {
+        var geworfen = Assert.Throws<InvalidDataException>(
+            () => AuswertungPro.Next.Infrastructure.Import.SchachtPro.SchachtProQrPayload.Parse("kein-qr", CancellationToken.None));
+
+        Assert.Equal(
+            "Kein unterstützter SchachtPro-QR-Code (SPQR1). Technische Details stehen im Programmlog.",
+            UserError.Describe(geworfen));
+    }
+
+    [Fact]
+    public void Describe_zeigt_bei_eigenem_Ausnahmetyp_die_eigene_Meldung()
+    {
+        var pfad = Path.Combine(Path.GetTempPath(), $"usererror-{Guid.NewGuid():N}.json");
+        File.WriteAllText(pfad, "{}");
+        try
+        {
+            var geworfen = Assert.Throws<AuswertungPro.Next.Application.Ai.Training.ClassMaps.TrainingYoloClassMapException>(
+                () => AuswertungPro.Next.Infrastructure.Ai.Training.ClassMaps.TrainingYoloClassMapJsonReader.ReadClassMap(pfad));
+
+            var message = UserError.Describe(geworfen);
+
+            Assert.StartsWith("Der Klassenkarte fehlt", message, StringComparison.Ordinal);
+            Assert.EndsWith("Technische Details stehen im Programmlog.", message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(pfad);
+        }
+    }
+
+    [Fact]
+    public void Describe_zeigt_bei_IOException_aus_dem_Framework_die_generische_Meldung()
+    {
+        var pfad = Path.Combine(Path.GetTempPath(), $"usererror-{Guid.NewGuid():N}.txt");
+        File.WriteAllText(pfad, "vorhanden");
+        try
+        {
+            var geworfen = Assert.Throws<IOException>(() => new FileStream(pfad, FileMode.CreateNew).Dispose());
+
+            var message = UserError.Describe(geworfen);
+
+            Assert.Equal(
+                "Eine Datei oder ein Ordner ist momentan nicht verfügbar. Bitte schliessen Sie andere Zugriffe und versuchen Sie es erneut.",
+                message);
+            Assert.DoesNotContain(pfad, message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            File.Delete(pfad);
+        }
+    }
+
+    [Fact]
+    public void Describe_zeigt_bei_JsonException_aus_dem_Framework_die_generische_Meldung()
+    {
+        var geworfen = Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<int[]>("{"));
+
+        Assert.Equal(
+            "Die gelesenen Daten sind beschädigt oder nicht gültig. Bitte Original oder Datensicherung prüfen.",
+            UserError.Describe(geworfen));
+    }
+
     [Fact]
     public void DescribeAndReport_zeigt_sichere_Meldung_und_loggt_vollen_Fehler()
     {

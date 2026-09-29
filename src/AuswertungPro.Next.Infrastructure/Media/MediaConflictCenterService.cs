@@ -925,7 +925,7 @@ public sealed class MediaConflictCenterService
                 return candidate;
         }
 
-        throw new IOException($"Unable to find free filename for {path}");
+        throw new IOException($"Kein freier Dateiname für {path} gefunden.");
     }
 
     private static IReadOnlyDictionary<string, List<string>> BuildVideoFileIndex(string root)

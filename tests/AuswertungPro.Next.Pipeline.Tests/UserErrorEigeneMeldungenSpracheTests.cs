@@ -46,7 +46,9 @@ public sealed class UserErrorEigeneMeldungenSpracheTests
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex NeueEigeneAusnahme = new(
-        @"new\s+(InvalidOperationException|ArgumentException)\s*\(",
+        // Seit Aufgabe 10c2 zeigt UserError auch eigene IOException/InvalidDataException/
+        // JsonException woertlich — deren Texte muessen deshalb ebenso deutsch sein.
+        @"new\s+(InvalidOperationException|ArgumentException|IOException|InvalidDataException|JsonException)\s*\(",
         RegexOptions.Compiled);
 
     /// <summary>Erstes Argument ist eine Zeichenkette, direkt (ggf. nach Leerraum/$) hinter der Klammer.</summary>
