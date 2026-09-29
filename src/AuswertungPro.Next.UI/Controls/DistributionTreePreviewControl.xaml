@@ -17,7 +17,7 @@
                                 Margin="{Binding Depth, Converter={StaticResource DepthToMargin}}">
                         <ui:FluentIcon x:Name="Icon" Glyph="&#xE8B7;" FontSize="{DynamicResource TextM}"
                                        Foreground="{DynamicResource AccentBrush}" Margin="0,0,7,0"/>
-                        <TextBlock Text="{Binding Label}" FontSize="{DynamicResource TextS}" FontFamily="Consolas"
+                        <TextBlock Text="{Binding Label}" FontSize="{DynamicResource TextS}" FontFamily="{DynamicResource FontMono}"
                                    Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <DataTemplate.Triggers>

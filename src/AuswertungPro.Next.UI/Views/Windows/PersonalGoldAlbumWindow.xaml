@@ -187,7 +187,7 @@
                             <TextBlock Text="{Binding ConfirmedAtUtc, StringFormat={}{0:dd.MM.yyyy HH:mm}}"
                                        Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0"/>
                             <TextBlock Text="{Binding FramePath}" FontSize="{DynamicResource TextXS}"
-                                       FontFamily="Consolas"
+                                       FontFamily="{DynamicResource FontMono}"
                                        Foreground="{DynamicResource MutedBrush}"
                                        TextWrapping="Wrap" Margin="0,8,0,0"/>
                         </StackPanel>

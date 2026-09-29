@@ -587,21 +587,29 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
 
     public static Brush GetConfidenceBrush(double confidence) => confidence switch
     {
-        >= 0.85 => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen
-        >= 0.60 => new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B)), // Gelb
-        _       => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44))  // Rot
+        >= 0.85 => ResolveThemeBrush("SuccessBrush", Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen
+        >= 0.60 => ResolveThemeBrush("WarningBrush", Color.FromRgb(0xF5, 0x9E, 0x0B)), // Gelb
+        _       => ResolveThemeBrush("DangerBrush", Color.FromRgb(0xEF, 0x44, 0x44))   // Rot
     };
 
     public static Brush GetZoneBrush(double confidence) => GetConfidenceBrush(confidence);
 
     public static Brush GetStatusBrush(DefectStatus status) => status switch
     {
-        DefectStatus.AutoAccepted     => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)),
-        DefectStatus.Accepted         => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)),
-        DefectStatus.AcceptedWithEdit => new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B)),
-        DefectStatus.Pending          => new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B)),
-        DefectStatus.ReviewRequired   => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)),
-        DefectStatus.Rejected         => new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8)),
-        _ => Brushes.Gray
+        DefectStatus.AutoAccepted     => ResolveThemeBrush("SuccessBrush", Color.FromRgb(0x22, 0xC5, 0x5E)),
+        DefectStatus.Accepted         => ResolveThemeBrush("SuccessBrush", Color.FromRgb(0x22, 0xC5, 0x5E)),
+        DefectStatus.AcceptedWithEdit => ResolveThemeBrush("WarningBrush", Color.FromRgb(0xF5, 0x9E, 0x0B)),
+        DefectStatus.Pending          => ResolveThemeBrush("WarningBrush", Color.FromRgb(0xF5, 0x9E, 0x0B)),
+        DefectStatus.ReviewRequired   => ResolveThemeBrush("DangerBrush", Color.FromRgb(0xEF, 0x44, 0x44)),
+        DefectStatus.Rejected         => ResolveThemeBrush("MutedBrush", Color.FromRgb(0x94, 0xA3, 0xB8)),
+        _ => ResolveThemeBrush("MutedBrush", Color.FromRgb(0x94, 0xA3, 0xB8))
     };
+
+    /// <summary>
+    /// Loest einen Theme-Token als Pinsel auf – statt eines hartkodierten Hex-Werts, damit Zonen-/
+    /// Status-/Konfidenzfarben im Dunkelmodus stimmen. Ohne laufende Anwendung (z. B. im Unit-Test)
+    /// gilt der Rueckfallwert.
+    /// </summary>
+    private static Brush ResolveThemeBrush(string key, Color fallback)
+        => System.Windows.Application.Current?.TryFindResource(key) as Brush ?? new SolidColorBrush(fallback);
 }

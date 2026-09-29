@@ -46,7 +46,7 @@
                             <Button Command="{Binding RemoveGroupCommand}" 
                                     Padding="8,4" MinWidth="80" Style="{StaticResource SecondaryButton}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
+                                    <ui:FluentIcon Glyph="&#xE74D;" Margin="0,0,6,0"/>
                                     <TextBlock Text="Löschen"/>
                                 </StackPanel>
                             </Button>
@@ -86,7 +86,7 @@
                             <Button Command="{Binding RemovePositionCommand}" 
                                     Padding="8,4" MinWidth="100" Margin="0,0,4,0" Style="{StaticResource SecondaryButton}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
+                                    <ui:FluentIcon Glyph="&#xE74D;" Margin="0,0,6,0"/>
                                     <TextBlock Text="Entfernen"/>
                                 </StackPanel>
                             </Button>
@@ -94,7 +94,7 @@
                                     Padding="8,4" MinWidth="100" Margin="0,0,4,0" Style="{StaticResource SecondaryButton}"
                                     ToolTip="In Wartebox verschieben">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE72A;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
+                                    <ui:FluentIcon Glyph="&#xE72A;" Margin="0,0,6,0"/>
                                     <TextBlock Text="Wartebox"/>
                                 </StackPanel>
                             </Button>

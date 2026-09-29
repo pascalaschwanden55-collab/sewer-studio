@@ -93,7 +93,7 @@
                             </Button>
                             <Button Command="{Binding RemoveDnCommand}" Padding="12,6" Style="{StaticResource SecondaryButton}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
+                                    <ui:FluentIcon Glyph="&#xE74D;" Margin="0,0,6,0"/>
                                     <TextBlock Text="DN löschen"/>
                                 </StackPanel>
                             </Button>
@@ -117,7 +117,7 @@
                 </Button>
                 <Button Command="{Binding RemoveCommand}" Style="{StaticResource SecondaryButton}" Padding="12,6" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" Margin="0,0,6,0"/>
+                        <ui:FluentIcon Glyph="&#xE74D;" Margin="0,0,6,0"/>
                         <TextBlock Text="Löschen"/>
                     </StackPanel>
                 </Button>

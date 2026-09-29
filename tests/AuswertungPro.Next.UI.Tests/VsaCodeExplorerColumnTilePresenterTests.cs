@@ -25,7 +25,7 @@ public sealed class VsaCodeExplorerColumnTilePresenterTests
         Assert.Equal(VsaCodeExplorerColumnTileBrushRole.Group, presentation.MarkerBrushRole);
         Assert.Equal(VsaCodeExplorerColumnTileBrushRole.Group, presentation.CodeBrushRole);
         Assert.Equal(VsaCodeExplorerColumnTileBrushRole.TextSecondary, presentation.DescriptionBrushRole);
-        Assert.Equal([new VsaCodeExplorerColumnTileBadge("ICM", "#2563EB")], presentation.Badges);
+        Assert.Equal([new VsaCodeExplorerColumnTileBadge("ICM", "AccentBrush")], presentation.Badges);
         Assert.False(presentation.ShowSelectedChrome);
         Assert.False(presentation.ShowInvalidChrome);
     }
@@ -61,7 +61,7 @@ public sealed class VsaCodeExplorerColumnTilePresenterTests
         Assert.Equal(VsaCodeExplorerColumnTileBrushRole.Invalid, presentation.MarkerBrushRole);
         Assert.Equal(VsaCodeExplorerColumnTileBrushRole.Invalid, presentation.CodeBrushRole);
         Assert.Equal(VsaCodeExplorerColumnTileBrushRole.Invalid, presentation.DescriptionBrushRole);
-        Assert.Equal([new VsaCodeExplorerColumnTileBadge("End", "#16A34A")], presentation.Badges);
+        Assert.Equal([new VsaCodeExplorerColumnTileBadge("End", "SuccessBrush")], presentation.Badges);
         Assert.True(presentation.ShowInvalidChrome);
         Assert.Equal("Als ungültig markiert - Auswahl ist trotzdem erlaubt.", presentation.InvalidTooltip);
     }

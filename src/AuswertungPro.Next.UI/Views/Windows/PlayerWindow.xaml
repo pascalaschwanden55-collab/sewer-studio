@@ -370,7 +370,7 @@
                         Padding="12,6" Visibility="Collapsed">
                     <TextBlock x:Name="TxtCodingMeasurement"
                                Foreground="White" FontSize="{DynamicResource TextM}"
-                               FontFamily="Consolas, Cascadia Mono" HorizontalAlignment="Center"/>
+                               FontFamily="{DynamicResource FontMono}" HorizontalAlignment="Center"/>
                 </Border>
 
                 <!-- KI-Scan-Overlay: wandernde Linie + Rahmen waehrend Analyse -->
@@ -410,7 +410,7 @@
                         Visibility="Collapsed">
                     <TextBlock x:Name="TxtOsdMeter"
                                Foreground="{DynamicResource AccentBrush}"
-                               FontFamily="Consolas, Cascadia Mono"
+                               FontFamily="{DynamicResource FontMono}"
                                FontSize="{DynamicResource TextL}" FontWeight="Bold"/>
                 </Border>
             </Grid>
@@ -441,7 +441,7 @@
                         <ui:FluentIcon Glyph="&#xE76B;" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource AccentBrush}"/>
                     </Button>
                     <TextBlock x:Name="TxtCodingMeter"
-                               FontFamily="Consolas, Cascadia Mono" FontSize="{DynamicResource TextL}" FontWeight="Bold"
+                               FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                                Foreground="{DynamicResource TextBrush}"
                                VerticalAlignment="Center" Margin="8,0"
                                Text="0.00m"/>
@@ -678,7 +678,7 @@
                     <TextBlock x:Name="OverlayOpacityText"
                                Width="38"
                                Text="100%"
-                               FontFamily="Consolas, Cascadia Mono"
+                               FontFamily="{DynamicResource FontMono}"
                                FontSize="{DynamicResource TextXS}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                VerticalAlignment="Center"
@@ -1072,7 +1072,7 @@
                                 <TextBlock x:Name="VolumeText"
                                            Grid.Column="2"
                                            Text="80%"
-                                           FontFamily="Consolas, Cascadia Mono"
+                                           FontFamily="{DynamicResource FontMono}"
                                            FontSize="{DynamicResource TextXS}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            VerticalAlignment="Center"
@@ -1131,25 +1131,25 @@
                     <UniformGrid Columns="2" Rows="4" Margin="0,0,0,4">
                         <StackPanel Margin="0,0,18,12">
                             <TextBlock Text="Wiedergabe" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                            <TextBlock Text="Space  Play/Pause" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="S      Stop" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="P / R  Pause / Weiter" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="Space  Play/Pause" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="S      Stop" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="P / R  Pause / Weiter" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,0,12">
                             <TextBlock Text="Navigation" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                            <TextBlock Text="← / →  5 Sekunden springen" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="+ / -  Geschwindigkeit" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="← / →  5 Sekunden springen" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="+ / -  Geschwindigkeit" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,18,12">
                             <TextBlock Text="Codierung" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                            <TextBlock Text="D      Live-Erkennung" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="M      Markierwerkzeug" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="Esc    Overlay abbrechen" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="D      Live-Erkennung" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="M      Markierwerkzeug" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="Esc    Overlay abbrechen" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,0,12">
                             <TextBlock Text="Hilfe" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                            <TextBlock Text="F1 / ? Diese Übersicht" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
-                            <TextBlock Text="Esc    Übersicht schliessen" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="F1 / ? Diese Übersicht" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="Esc    Übersicht schliessen" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
                         </StackPanel>
                     </UniformGrid>
                 </StackPanel>

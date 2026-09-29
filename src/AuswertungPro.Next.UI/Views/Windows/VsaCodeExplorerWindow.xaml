@@ -110,7 +110,7 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="1" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="1" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="{DynamicResource FontMono}"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
                             <TextBlock Text="GRUPPE" FontSize="{DynamicResource TextXS}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
@@ -137,7 +137,7 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="2" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="2" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="{DynamicResource FontMono}"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
                             <TextBlock Text="HAUPTCODE" FontSize="{DynamicResource TextXS}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
@@ -164,7 +164,7 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="3" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="3" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="{DynamicResource FontMono}"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
                             <TextBlock Text="CHARAKT. 1" FontSize="{DynamicResource TextXS}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
@@ -191,7 +191,7 @@
                             <SolidColorBrush Color="{StaticResource ColorHeader}"/>
                         </Border.Background>
                         <DockPanel>
-                            <TextBlock Text="4" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="Consolas"
+                            <TextBlock Text="4" FontSize="{DynamicResource TextXS}" FontWeight="Bold" FontFamily="{DynamicResource FontMono}"
                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"
                                        Margin="0,0,6,0" Opacity="0.5"/>
                             <TextBlock Text="CHARAKT. 2" FontSize="{DynamicResource TextXS}" FontWeight="Bold"                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
@@ -221,7 +221,7 @@
                                     Padding="14" Margin="0,0,0,12"
                                     BorderBrush="{StaticResource AccentBrush}" BorderThickness="0,0,0,2">
                                 <StackPanel>
-                                    <TextBlock x:Name="TxtFinalCode" FontFamily="Consolas" FontSize="{DynamicResource TextTitle}"
+                                    <TextBlock x:Name="TxtFinalCode" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextTitle}"
                                                FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
                                     <TextBlock x:Name="TxtFinalLabel" FontSize="{DynamicResource TextS}"
                                                Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"
@@ -254,7 +254,7 @@
                                             <TextBox x:Name="TxtQ1Value" Width="100" DockPanel.Dock="Left" Style="{StaticResource WarmTextBox}"/>
                                             <TextBlock x:Name="TxtQ1Unit" FontSize="{DynamicResource TextS}" FontWeight="Bold"
                                                        Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
-                                                       VerticalAlignment="Center" FontFamily="Consolas"/>
+                                                       VerticalAlignment="Center" FontFamily="{DynamicResource FontMono}"/>
                                             <TextBlock x:Name="TxtQ1Range" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center"/>
@@ -281,7 +281,7 @@
                                             <TextBox x:Name="TxtQ2Value" Width="100" DockPanel.Dock="Left" Style="{StaticResource WarmTextBox}"/>
                                             <TextBlock x:Name="TxtQ2Unit" FontSize="{DynamicResource TextS}" FontWeight="Bold"
                                                        Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
-                                                       VerticalAlignment="Center" FontFamily="Consolas"/>
+                                                       VerticalAlignment="Center" FontFamily="{DynamicResource FontMono}"/>
                                             <TextBlock x:Name="TxtQ2Range" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center"/>
@@ -336,19 +336,19 @@
                                                        Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
                                             <WrapPanel Orientation="Horizontal">
                                                 <Button x:Name="BtnClockScheitel" Content="12 00 Scheitel"
-                                                        Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
+                                                        Style="{StaticResource ToolbarButton}" FontFamily="{DynamicResource FontMono}"
                                                         FontSize="{DynamicResource TextXS}" Padding="5,3" Margin="0,0,3,3" Tag="12,00"/>
                                                 <Button x:Name="BtnClockSohle" Content="06 00 Sohle"
-                                                        Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
+                                                        Style="{StaticResource ToolbarButton}" FontFamily="{DynamicResource FontMono}"
                                                         FontSize="{DynamicResource TextXS}" Padding="5,3" Margin="0,0,3,3" Tag="06,00"/>
                                                 <Button x:Name="BtnClockRechts" Content="09 03 Rechts"
-                                                        Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
+                                                        Style="{StaticResource ToolbarButton}" FontFamily="{DynamicResource FontMono}"
                                                         FontSize="{DynamicResource TextXS}" Padding="5,3" Margin="0,0,3,3" Tag="09,03"/>
                                                 <Button x:Name="BtnClockGesamt" Content="12 12 Gesamt"
-                                                        Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
+                                                        Style="{StaticResource ToolbarButton}" FontFamily="{DynamicResource FontMono}"
                                                         FontSize="{DynamicResource TextXS}" Padding="5,3" Margin="0,0,3,3" Tag="12,12"/>
                                                 <Button x:Name="BtnClockKeine" Content="00 00 Keine"
-                                                        Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
+                                                        Style="{StaticResource ToolbarButton}" FontFamily="{DynamicResource FontMono}"
                                                         FontSize="{DynamicResource TextXS}" Padding="5,3" Margin="0,0,3,3" Tag="00,00"/>
                                             </WrapPanel>
 
@@ -362,7 +362,7 @@
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0">
                                                     <TextBlock Text="VON" FontSize="{DynamicResource TextXS}" Foreground="{StaticResource MutedBrush}"/>
-                                                    <TextBox x:Name="TxtClockVon" Width="45" FontFamily="Consolas" Style="{StaticResource WarmTextBox}"
+                                                    <TextBox x:Name="TxtClockVon" Width="45" FontFamily="{DynamicResource FontMono}" Style="{StaticResource WarmTextBox}"
                                                              FontSize="{DynamicResource TextL}" FontWeight="Bold" Padding="3,3"/>
                                                 </StackPanel>
                                                 <ui:FluentIcon Grid.Column="1" Glyph="&#xE72A;" FontSize="{DynamicResource TextS}"
@@ -371,13 +371,13 @@
                                                                Margin="0,0,0,5"/>
                                                 <StackPanel Grid.Column="2">
                                                     <TextBlock Text="BIS" FontSize="{DynamicResource TextXS}" Foreground="{StaticResource MutedBrush}"/>
-                                                    <TextBox x:Name="TxtClockBis" Width="45" FontFamily="Consolas" Style="{StaticResource WarmTextBox}"
+                                                    <TextBox x:Name="TxtClockBis" Width="45" FontFamily="{DynamicResource FontMono}" Style="{StaticResource WarmTextBox}"
                                                              FontSize="{DynamicResource TextL}" FontWeight="Bold" Padding="3,3"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="3" x:Name="TxtClockTransfer"
                                                            FontSize="{DynamicResource TextXS}" Foreground="{StaticResource MutedBrush}"
                                                            VerticalAlignment="Bottom" Margin="8,0,0,4"
-                                                           FontFamily="Consolas"/>
+                                                           FontFamily="{DynamicResource FontMono}"/>
                                             </Grid>
 
                                             <!-- Bedienhinweis -->
@@ -561,7 +561,7 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Code:" FontSize="{DynamicResource TextS}" Foreground="{StaticResource MutedBrush}"
                                VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <TextBlock x:Name="TxtCodePreview" FontFamily="Consolas" FontSize="{DynamicResource TextL}"
+                    <TextBlock x:Name="TxtCodePreview" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextL}"
                                FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
                                VerticalAlignment="Center"/>
                 </StackPanel>

@@ -46,7 +46,7 @@
                     <Button Content="Objektakte" Command="{Binding ObjektakteCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,8,0" ToolTip="Vollständige Angaben, Deckel und Sanierungen"/>
                         <Button Command="{Binding SaveCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74E;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE74E;" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Speichern" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -60,19 +60,19 @@
                     <Button Command="{Binding ImportProtocolCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Einzelne PDF oder ganzen Ordner einschliesslich Unterordner importieren">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8E5;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE8E5;" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Protokoll importieren" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding AddCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE710;" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Neu" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding RemoveCommand}" Style="{StaticResource ToolbarButtonDanger}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74D;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE74D;" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Löschen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -84,9 +84,9 @@
                             ToolTip="Weitere Aktionen: Daten abgleichen, Bearbeiten, Reihenfolge, Ansicht, Ausgabe"
                             AutomationProperties.Name="Weitere Aktionen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE712;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ui:FluentIcon Glyph="&#xE712;" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Weitere Aktionen" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
+                            <ui:FluentIcon Glyph="&#xE70D;" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <!-- Optikanalyse 28.09.2026, Aufgabe 7 (Fix-Runde 1, Controller-Entscheid
                              "Auffindbarkeit schlaegt Entdoppelung"): dieselben fuenf Untermenue-Titel
@@ -356,8 +356,9 @@
                         <DockPanel>
                             <ui:FluentIcon DockPanel.Dock="Left" Glyph="&#xE721;" Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <Button DockPanel.Dock="Right" Margin="6,0,0,0" Style="{StaticResource IconButton}"
-                                    Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen">
-                                <TextBlock Text="&#xE711;" FontFamily="{DynamicResource FontIcon}" FontSize="{DynamicResource TextS}"/>
+                                    Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen"
+                                    AutomationProperties.Name="Suche zurücksetzen">
+                                <ui:FluentIcon Glyph="&#xE711;" FontSize="{DynamicResource TextS}"/>
                             </Button>
                             <Grid>
                                 <TextBox x:Name="SearchBox" BorderThickness="0" Background="Transparent" MinWidth="150"

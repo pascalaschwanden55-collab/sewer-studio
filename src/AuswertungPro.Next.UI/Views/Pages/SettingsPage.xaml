@@ -596,8 +596,8 @@
                                         Style="{StaticResource SettingsWideActionButton}"
                                         ToolTip="Bekannte temporäre SewerStudio-Daten prüfen und nach Bestätigung entfernen.">
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock FontFamily="{DynamicResource FontIcon}"
-                                                   Text="&#xE74D;"
+                                        <ui:FluentIcon
+                                                   Glyph="&#xE74D;"
                                                    FontSize="{DynamicResource TextL}"
                                                    Margin="0,0,8,0"/>
                                         <TextBlock Text="Prüfen und bereinigen"/>
@@ -672,8 +672,8 @@
                                             Style="{StaticResource SettingsWideActionButton}"
                                             ToolTip="Nur alte, rein erzeugte Codex-Baukopien nach Vorschau und Bestätigung entfernen.">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <TextBlock FontFamily="{DynamicResource FontIcon}"
-                                                       Text="&#xE74D;"
+                                            <ui:FluentIcon
+                                                       Glyph="&#xE74D;"
                                                        FontSize="{DynamicResource TextL}"
                                                        Margin="0,0,8,0"/>
                                             <TextBlock Text="Agenten-Daten prüfen"/>
@@ -973,7 +973,7 @@
                                         Padding="8,4"
                                         Margin="0,0,8,8">
                                     <TextBlock Text="{Binding PipelineYoloConfidence, StringFormat={}{0:P0}}"
-                                               FontFamily="Consolas, Cascadia Mono"
+                                               FontFamily="{DynamicResource FontMono}"
                                                FontSize="{DynamicResource TextXS}"
                                                Foreground="{DynamicResource TextBrush}"
                                                TextAlignment="Center"/>
@@ -1003,7 +1003,7 @@
                                         Padding="8,4"
                                         Margin="0,0,8,8">
                                     <TextBlock Text="{Binding PipelineDinoBoxThreshold, StringFormat={}{0:P0}}"
-                                               FontFamily="Consolas, Cascadia Mono"
+                                               FontFamily="{DynamicResource FontMono}"
                                                FontSize="{DynamicResource TextXS}"
                                                Foreground="{DynamicResource TextBrush}"
                                                TextAlignment="Center"/>
@@ -1033,7 +1033,7 @@
                                         Padding="8,4"
                                         Margin="0,0,8,8">
                                     <TextBlock Text="{Binding PipelineDinoTextThreshold, StringFormat={}{0:P0}}"
-                                               FontFamily="Consolas, Cascadia Mono"
+                                               FontFamily="{DynamicResource FontMono}"
                                                FontSize="{DynamicResource TextXS}"
                                                Foreground="{DynamicResource TextBrush}"
                                                TextAlignment="Center"/>

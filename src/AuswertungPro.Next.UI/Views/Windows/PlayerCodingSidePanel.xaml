@@ -215,7 +215,7 @@
                                                                  Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                         <TextBlock Grid.Column="1"
                                                                    Text="{Binding Entry.Code}"
-                                                                   FontFamily="Consolas"
+                                                                   FontFamily="{DynamicResource FontMono}"
                                                                    FontWeight="Bold" FontSize="{DynamicResource TextXS}"
                                                                    VerticalAlignment="Top"
                                                                    Margin="0,0,4,0"/>
@@ -311,7 +311,7 @@
                                 <StackPanel>
                                     <!-- Kompakte Details: Code + Konfidenz -->
                                     <TextBlock x:Name="TxtInlineDetailCode"
-                                               FontFamily="Consolas" FontSize="{DynamicResource TextL}" FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                                                Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                                     <TextBlock x:Name="TxtInlineDetailDesc"
                                                FontSize="{DynamicResource TextXS}" TextWrapping="Wrap"
@@ -327,14 +327,14 @@
                                             <TextBlock Text="Distanz" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtInlineDetailDistance"
-                                                       FontFamily="Consolas" FontSize="{DynamicResource TextXS}"
+                                                       FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextBrush}"/>
                                         </StackPanel>
                                         <StackPanel>
                                             <TextBlock Text="Konfidenz" FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock x:Name="TxtInlineDetailConfidence"
-                                                       FontFamily="Consolas" FontSize="{DynamicResource TextXS}" FontWeight="Bold"/>
+                                                       FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}" FontWeight="Bold"/>
                                         </StackPanel>
                                     </Grid>
 
@@ -493,7 +493,7 @@
                                                                     Margin="0,0,4,0" VerticalAlignment="Center"/>
                                                             <TextBlock Grid.Column="1"
                                                                        Text="{Binding Entry.Code}"
-                                                                       FontFamily="Consolas"
+                                                                       FontFamily="{DynamicResource FontMono}"
                                                                        FontWeight="Bold" FontSize="{DynamicResource TextXS}"
                                                                        VerticalAlignment="Top"
                                                                        Margin="0,0,4,0"/>

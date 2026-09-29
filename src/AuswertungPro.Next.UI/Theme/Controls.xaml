@@ -956,10 +956,9 @@
                                       ContentSource="Icon"
                                       VerticalAlignment="Center"
                                       HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="Glyph"
+                    <ui:FluentIcon x:Name="Glyph"
                                Grid.Column="0"
-                               Text="&#xE73E;"
-                               FontFamily="{DynamicResource FontIcon}"
+                               Glyph="&#xE73E;"
                                Visibility="Collapsed"
                                Foreground="{DynamicResource AccentBrush}"
                                FontWeight="Bold"
@@ -969,9 +968,8 @@
                                       ContentSource="Header"
                                       RecognizesAccessKey="True"
                                       VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="2"
-                               Text="&#xE76C;"
-                               FontFamily="{DynamicResource FontIcon}"
+                    <ui:FluentIcon Grid.Column="2"
+                               Glyph="&#xE76C;"
                                FontSize="11"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"
@@ -1093,10 +1091,9 @@
                                       ContentSource="Icon"
                                       VerticalAlignment="Center"
                                       HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="Glyph"
+                    <ui:FluentIcon x:Name="Glyph"
                                Grid.Column="0"
-                               Text="&#xE73E;"
-                               FontFamily="{DynamicResource FontIcon}"
+                               Glyph="&#xE73E;"
                                Visibility="Collapsed"
                                Foreground="{DynamicResource AccentBrush}"
                                FontWeight="Bold"
@@ -1577,9 +1574,8 @@
                 <ColumnDefinition Width="24"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0"
-                       Text="{Binding Icon}"
-                       FontFamily="{DynamicResource FontIcon}"
+            <ui:FluentIcon Grid.Column="0"
+                       Glyph="{Binding Icon}"
                        FontSize="15"
                        Foreground="{DynamicResource AccentBrush}"
                        VerticalAlignment="Top"
@@ -1603,7 +1599,7 @@
                         </Border.Style>
                         <TextBlock Text="{Binding Shortcut}"
                                    FontSize="11"
-                                   FontFamily="Consolas"
+                                   FontFamily="{DynamicResource FontMono}"
                                    Foreground="{DynamicResource AccentBrush}"/>
                     </Border>
                     <TextBlock Text="{Binding Title}"
@@ -1743,7 +1739,7 @@
                                     Background="{DynamicResource DangerSubtleBrush}"
                                     BorderBrush="{DynamicResource DangerBrush}" BorderThickness="1"
                                     HorizontalAlignment="Center" Margin="0,0,0,14">
-                                <TextBlock Text="&#xE783;" FontFamily="{DynamicResource FontIcon}"
+                                <ui:FluentIcon Glyph="&#xE783;"
                                            FontSize="30" Foreground="{DynamicResource DangerBrush}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>

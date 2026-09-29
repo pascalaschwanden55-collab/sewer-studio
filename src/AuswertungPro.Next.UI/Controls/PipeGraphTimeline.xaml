@@ -21,7 +21,7 @@
                 <TextBlock x:Name="TxtTotalLength"
                            HorizontalAlignment="Right"
                            FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
-                           FontFamily="Consolas"/>
+                           FontFamily="{DynamicResource FontMono}"/>
             </Grid>
 
             <!-- Timeline-Balken mit Markern + Playhead -->

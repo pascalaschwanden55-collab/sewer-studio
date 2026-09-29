@@ -11,6 +11,12 @@ public enum VsaCodeExplorerColumnTileBrushRole
     TextSecondary
 }
 
+/// <summary>
+/// <see cref="ColorHex"/> ist entweder eine echte Fachfarbe (Klartext-Hex, z. B. eine VSA-Gruppenfarbe)
+/// oder – ohne Fachfarbe – der Name eines Theme-Tokens ("AccentBrush"/"SuccessBrush"), den der Renderer
+/// gegen das aktive Theme aufloest. So bleibt dieser Presenter WPF-frei testbar, ohne eine feste
+/// Ersatzfarbe fuer den Dunkelmodus zu verlieren.
+/// </summary>
 public sealed record VsaCodeExplorerColumnTileBadge(string Text, string ColorHex);
 
 public sealed record VsaCodeExplorerColumnTilePresentation(
@@ -39,10 +45,10 @@ public static class VsaCodeExplorerColumnTilePresenter
         var badges = new List<VsaCodeExplorerColumnTileBadge>();
 
         if (tile.BadgeText is not null)
-            badges.Add(new VsaCodeExplorerColumnTileBadge(tile.BadgeText, tile.BadgeColor ?? "#2563EB"));
+            badges.Add(new VsaCodeExplorerColumnTileBadge(tile.BadgeText, tile.BadgeColor ?? "AccentBrush"));
 
         if (tile.IsFinal && !tile.IsSelected)
-            badges.Add(new VsaCodeExplorerColumnTileBadge("End", "#16A34A"));
+            badges.Add(new VsaCodeExplorerColumnTileBadge("End", "SuccessBrush"));
 
         return new VsaCodeExplorerColumnTilePresentation(
             LabelText: tile.Label,

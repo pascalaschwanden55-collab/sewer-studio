@@ -256,6 +256,12 @@ public sealed class DesignAuditFeinschliffTests
             "PhotoMeasurementWindow.xaml", "StartupSplashWindow.xaml", "PipeGraphTimeline.xaml"
         };
         var festeFarbe = new Regex("\\b(Background|Foreground|BorderBrush|Fill|Stroke)=\"#[0-9A-Fa-f]{6,8}\"", RegexOptions.Compiled);
+        // Aufgabe 12 (Optik-Plan 28.09.2026): Ein Setter schreibt die Farbe nicht als Attributname,
+        // sondern als Wert von Property="Background" ... Value="#hex" — die Regel oben sieht das
+        // nicht. Genau diese Luecke versteckte die fuenf Hex-Werte in SanierungsmassnahmenWindow.xaml.
+        var festeSetterFarbe = new Regex(
+            "Property=\"(Background|Foreground|BorderBrush|Fill|Stroke)\"\\s+Value=\"#[0-9A-Fa-f]{6,8}\"",
+            RegexOptions.Compiled);
         var treffer = new List<string>();
 
         foreach (var datei in AlleXamlDateien())
@@ -267,6 +273,8 @@ public sealed class DesignAuditFeinschliffTests
             for (var i = 0; i < zeilen.Length; i++)
             {
                 foreach (Match m in festeFarbe.Matches(zeilen[i]))
+                    treffer.Add($"{Relativ(datei)}:{i + 1}: {m.Value}");
+                foreach (Match m in festeSetterFarbe.Matches(zeilen[i]))
                     treffer.Add($"{Relativ(datei)}:{i + 1}: {m.Value}");
             }
         }

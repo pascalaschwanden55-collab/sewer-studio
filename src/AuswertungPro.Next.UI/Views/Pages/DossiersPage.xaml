@@ -183,7 +183,7 @@
                                 Visibility="{Binding HasSelection,
                                     Converter={StaticResource InverseBoolToVis}}"
                                 x:Name="EmptyState">
-                        <TextBlock Text="&#xE8A5;" FontFamily="{DynamicResource FontIcon}"
+                        <ui:FluentIcon Glyph="&#xE8A5;"
                                    FontSize="{DynamicResource IconHero}" HorizontalAlignment="Center"
                                    Foreground="{DynamicResource MutedBrush}"/>
                         <TextBlock Text="Keine Liegenschaft gewählt"

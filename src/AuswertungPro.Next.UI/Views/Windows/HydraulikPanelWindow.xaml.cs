@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using AuswertungPro.Next.UI.Services;
@@ -13,35 +14,10 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class HydraulikPanelWindow : Window
 {
-    private static readonly SolidColorBrush GreenBrush = new(Color.FromRgb(0x1A, 0x7F, 0x37));
-    private static readonly SolidColorBrush RedBrush = new(Color.FromRgb(0xCF, 0x22, 0x2E));
-    private static readonly SolidColorBrush YellowBrush = new(Color.FromRgb(0x9A, 0x67, 0x00));
-    private static readonly SolidColorBrush DimBrush = new(Color.FromRgb(0x8C, 0x95, 0x9F));
-    private static readonly SolidColorBrush WarnValueBrush = new(Color.FromRgb(0xCF, 0x22, 0x2E));
-    private static readonly SolidColorBrush GoodValueBrush = new(Color.FromRgb(0x1A, 0x7F, 0x37));
-    private static readonly SolidColorBrush NormalValueBrush = new(Color.FromRgb(0x1F, 0x23, 0x28));
-    private static readonly SolidColorBrush GreenBgBrush = new(Color.FromArgb(0x20, 0x1A, 0x7F, 0x37));
-    private static readonly SolidColorBrush RedBgBrush = new(Color.FromArgb(0x20, 0xCF, 0x22, 0x2E));
-    private static readonly SolidColorBrush PipeWallStroke = new(Color.FromRgb(0x70, 0x70, 0x70));
-    private static readonly SolidColorBrush PipeInteriorBrush = new(Color.FromRgb(0xF0, 0xF0, 0xF0));
-    private static readonly SolidColorBrush WaterLineBrush = new(Color.FromRgb(0x09, 0x69, 0xDA));
-    private static readonly SolidColorBrush LabelDimBrush = new(Color.FromRgb(0x57, 0x60, 0x6A));
-    private static readonly SolidColorBrush LabelDarkBrush = new(Color.FromRgb(0x1F, 0x23, 0x28));
-    private static readonly FontFamily ConsolasFont = new("Consolas");
-    private static readonly LinearGradientBrush PipeWallGradient = new(
-        Color.FromRgb(0xC0, 0xC0, 0xC0), Color.FromRgb(0x90, 0x90, 0x90), 45);
-    private static readonly LinearGradientBrush WaterGradient = new(
-        Color.FromArgb(0xAA, 0x54, 0xAE, 0xFF), Color.FromArgb(0xDD, 0x09, 0x69, 0xDA), 90);
-
-    static HydraulikPanelWindow()
-    {
-        GreenBrush.Freeze(); RedBrush.Freeze(); YellowBrush.Freeze(); DimBrush.Freeze();
-        WarnValueBrush.Freeze(); GoodValueBrush.Freeze(); NormalValueBrush.Freeze();
-        GreenBgBrush.Freeze(); RedBgBrush.Freeze();
-        PipeWallStroke.Freeze(); PipeInteriorBrush.Freeze(); WaterLineBrush.Freeze();
-        LabelDimBrush.Freeze(); LabelDarkBrush.Freeze();
-        PipeWallGradient.Freeze(); WaterGradient.Freeze();
-    }
+    // Vorher feste SolidColorBrush-/FontFamily-Felder mit hartkodierten Hex-Werten (blieben im
+    // Dunkelmodus falsch, da nie themeabhaengig). Farben und Schrift werden jetzt je Zeichnung
+    // ueber SetResourceReference bzw. ResolveColor (fuer selbst gebaute Verlaeufe) aus den
+    // Theme-Tokens gelesen, damit ein Themewechsel wirkt (Aufgabe 12, Optik-Plan 28.09.2026).
 
     public HydraulikPanelWindow()
     {
@@ -79,30 +55,34 @@ public partial class HydraulikPanelWindow : Window
 
     private void UpdateIndicators(HydraulikPanelViewModel vm)
     {
-        IndV.Fill = vm.VelocityOk ? GreenBrush : RedBrush;
-        IndTau.Fill = vm.ShearOk ? GreenBrush : RedBrush;
-        IndAbl.Fill = vm.AblagerungOk ? GreenBrush : RedBrush;
-        IndFr.Fill = vm.FroudeOk ? GreenBrush : YellowBrush;
+        IndV.SetResourceReference(Shape.FillProperty, vm.VelocityOk ? "SuccessBrush" : "DangerBrush");
+        IndTau.SetResourceReference(Shape.FillProperty, vm.ShearOk ? "SuccessBrush" : "DangerBrush");
+        IndAbl.SetResourceReference(Shape.FillProperty, vm.AblagerungOk ? "SuccessBrush" : "DangerBrush");
+        IndFr.SetResourceReference(Shape.FillProperty, vm.FroudeOk ? "SuccessBrush" : "WarningBrush");
 
         // Ablagerung border + verdict
-        AblagerungBorder.BorderBrush = vm.AblagerungOk ? GreenBrush : RedBrush;
+        AblagerungBorder.SetResourceReference(Border.BorderBrushProperty, vm.AblagerungOk ? "SuccessBrush" : "DangerBrush");
 
-        AblagerungVerdict.Background = vm.AblagerungOk ? GreenBgBrush : RedBgBrush;
-        AblagerungVerdictText.Foreground = vm.AblagerungOk ? GreenBrush : RedBrush;
+        AblagerungVerdict.SetResourceReference(Border.BackgroundProperty, vm.AblagerungOk ? "SuccessSubtleBrush" : "DangerSubtleBrush");
+        AblagerungVerdictText.SetResourceReference(TextBlock.ForegroundProperty, vm.AblagerungOk ? "SuccessBrush" : "DangerBrush");
 
         // Conditional result value colors
-        VTeilBlock.Foreground = vm.VelocityOk ? GoodValueBrush : WarnValueBrush;
-        TauBlock.Foreground = vm.ShearOk ? GoodValueBrush : WarnValueBrush;
-        FrBlock.Foreground = vm.FroudeOk ? NormalValueBrush : WarnValueBrush;
+        VTeilBlock.SetResourceReference(TextBlock.ForegroundProperty, vm.VelocityOk ? "SuccessTextBrush" : "DangerTextBrush");
+        TauBlock.SetResourceReference(TextBlock.ForegroundProperty, vm.ShearOk ? "SuccessTextBrush" : "DangerTextBrush");
+        FrBlock.SetResourceReference(TextBlock.ForegroundProperty, vm.FroudeOk ? "TextBrush" : "DangerTextBrush");
 
         // Auslastung color
-        AuslastungRun.Foreground = vm.AuslastungPercent > 80 ? RedBrush : GreenBrush;
+        AuslastungRun.SetResourceReference(TextElement.ForegroundProperty, vm.AuslastungPercent > 80 ? "DangerBrush" : "SuccessBrush");
     }
 
     private void UpdateConditionalColors(HydraulikPanelViewModel vm)
     {
         // Already handled in UpdateIndicators
     }
+
+    /// <summary>Loest einen Theme-Token als Farbe auf (fuer selbst gebaute Verlaeufe); ohne Treffer gilt der Rueckfallwert.</summary>
+    private Color ResolveColor(string key, Color fallback)
+        => TryFindResource(key) is SolidColorBrush solid ? solid.Color : fallback;
 
     // ── Pipe Cross-Section Drawing ────────────────────────────
 
@@ -119,15 +99,19 @@ public partial class HydraulikPanelWindow : Window
         double ratio = dMm > 0 ? Math.Min(hMm / dMm, 1) : 0;
         double waterY = cy + r - ratio * 2 * r;
 
-        // Pipe wall (outer ring)
+        // Pipe wall (outer ring) – Verlauf aus den Rand-Tokens aufgeloest (kein SetResourceReference
+        // auf einem LinearGradientBrush moeglich; wird bei jeder Neuzeichnung frisch aufgeloest).
+        var pipeWallGradient = new LinearGradientBrush(
+            ResolveColor("BorderLightBrush", Color.FromRgb(0xC0, 0xC0, 0xC0)),
+            ResolveColor("BorderBrush", Color.FromRgb(0x90, 0x90, 0x90)), 45);
         var outerRing = new Ellipse
         {
             Width = (r + 6) * 2,
             Height = (r + 6) * 2,
-            Fill = PipeWallGradient,
-            Stroke = PipeWallStroke,
+            Fill = pipeWallGradient,
             StrokeThickness = 1
         };
+        outerRing.SetResourceReference(Shape.StrokeProperty, "BorderBrush");
         Canvas.SetLeft(outerRing, cx - r - 6);
         Canvas.SetTop(outerRing, cy - r - 6);
         canvas.Children.Add(outerRing);
@@ -136,9 +120,9 @@ public partial class HydraulikPanelWindow : Window
         var inner = new Ellipse
         {
             Width = r * 2,
-            Height = r * 2,
-            Fill = PipeInteriorBrush
+            Height = r * 2
         };
+        inner.SetResourceReference(Shape.FillProperty, "CardBrush");
         Canvas.SetLeft(inner, cx - r);
         Canvas.SetTop(inner, cy - r);
         canvas.Children.Add(inner);
@@ -146,11 +130,17 @@ public partial class HydraulikPanelWindow : Window
         // Water level
         if (ratio > 0)
         {
+            var accent = ResolveColor("AccentBrush", Color.FromRgb(0x09, 0x69, 0xDA));
+            var accentHover = ResolveColor("AccentHoverBrush", Color.FromRgb(0x09, 0x69, 0xDA));
+            var waterGradient = new LinearGradientBrush(
+                Color.FromArgb(0xAA, accent.R, accent.G, accent.B),
+                Color.FromArgb(0xDD, accentHover.R, accentHover.G, accentHover.B), 90);
+
             var waterRect = new System.Windows.Shapes.Rectangle
             {
                 Width = r * 2,
                 Height = cy + r - waterY,
-                Fill = WaterGradient
+                Fill = waterGradient
             };
 
             // Clip to circle
@@ -166,7 +156,7 @@ public partial class HydraulikPanelWindow : Window
             var waterPath = new System.Windows.Shapes.Path
             {
                 Data = combined,
-                Fill = WaterGradient
+                Fill = waterGradient
             };
             canvas.Children.Add(waterPath);
 
@@ -183,10 +173,10 @@ public partial class HydraulikPanelWindow : Window
                     Y1 = waterY,
                     X2 = cx + halfChord - 3,
                     Y2 = waterY,
-                    Stroke = WaterLineBrush,
                     StrokeThickness = 1.5,
                     StrokeDashArray = new DoubleCollection(new[] { 4.0, 2.0 })
                 };
+                surfaceLine.SetResourceReference(Shape.StrokeProperty, "AccentBrush");
                 canvas.Children.Add(surfaceLine);
             }
         }
@@ -195,10 +185,10 @@ public partial class HydraulikPanelWindow : Window
         var dnLabel = new TextBlock
         {
             Text = $"DN {dMm:F0}",
-            FontSize = 11,
-            FontFamily = ConsolasFont,
-            Foreground = LabelDimBrush
+            FontSize = 11
         };
+        dnLabel.SetResourceReference(TextBlock.FontFamilyProperty, "FontMono");
+        dnLabel.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
         dnLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         Canvas.SetLeft(dnLabel, cx - dnLabel.DesiredSize.Width / 2);
         Canvas.SetTop(dnLabel, 6);
@@ -210,10 +200,10 @@ public partial class HydraulikPanelWindow : Window
             var hLabel = new TextBlock
             {
                 Text = $"h={hMm:F0} mm",
-                FontSize = 11,
-                FontFamily = ConsolasFont,
-                Foreground = LabelDarkBrush
+                FontSize = 11
             };
+            hLabel.SetResourceReference(TextBlock.FontFamilyProperty, "FontMono");
+            hLabel.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
             hLabel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             double labelY = Math.Max(waterY + 12, cy);
             Canvas.SetLeft(hLabel, cx - hLabel.DesiredSize.Width / 2);

@@ -95,7 +95,7 @@
                                 <Border Background="{Binding Code, Converter={StaticResource CodeGroupBrush}, ConverterParameter=subtle}"
                                         CornerRadius="{DynamicResource RadiusS}" Padding="7,2" Margin="2,3"
                                         HorizontalAlignment="Left" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Code}" FontFamily="Consolas"
+                                    <TextBlock Text="{Binding Code}" FontFamily="{DynamicResource FontMono}"
                                                FontWeight="SemiBold" FontSize="{DynamicResource TextS}"
                                                Foreground="{Binding Code, Converter={StaticResource CodeGroupBrush}}"/>
                                 </Border>
