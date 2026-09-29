@@ -146,6 +146,9 @@ def test_sam_segment_bend_geometry_disabled_returns_neutral_values(monkeypatch):
         def set_image(self, img_array):
             self.shape = img_array.shape[:2]
 
+        def reset_predictor(self):
+            self.shape = None
+
         def predict(self, point_coords=None, point_labels=None, box=None, multimask_output=False):
             h, w = self.shape
             mask = np.zeros((h, w), dtype=bool)

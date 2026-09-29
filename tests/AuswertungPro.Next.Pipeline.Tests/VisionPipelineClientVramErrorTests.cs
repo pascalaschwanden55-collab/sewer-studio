@@ -78,6 +78,23 @@ public class VisionPipelineClientVramErrorTests
     }
 
     [Fact]
+    public async Task Budget_sperre_wird_als_budget_sperre_gemeldet()
+    {
+        var handler = new SequenceHandler((HttpStatusCode.ServiceUnavailable, """
+            {"detail":"insufficient VRAM","code":"insufficient_vram","slot":"sam","free_gb":21.0,"required_gb":18.0,"reserved_gb":12.0,"reason":"budget","used_gb":33.0,"budget_gb":29.0}
+            """));
+        var client = CreateClient(handler);
+
+        var ex = await Assert.ThrowsAsync<SidecarInsufficientVramException>(
+            () => client.SegmentSamAsync(new SamRequest("abc", Array.Empty<SamBoundingBox>(), 300)));
+
+        Assert.Contains("33", ex.Message);
+        Assert.Contains("29", ex.Message);
+        Assert.Contains("Budget", ex.Message);
+        Assert.Equal(1, handler.Calls);
+    }
+
+    [Fact]
     public async Task Verschachteltes_detail_format_wird_toleriert()
     {
         // Toleranz (abwaerts): das alte verschachtelte Testformat bleibt lesbar.

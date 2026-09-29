@@ -67,12 +67,11 @@ app = FastAPI(
 
 @app.exception_handler(InsufficientVramError)
 async def handle_insufficient_vram(request: Request, exc: InsufficientVramError):
-    """VRAM-Zulassung verweigert (Paket 3/B): kontrollierter 503 mit maschinenlesbarem
-    Detail — OHNE dass ein Ladeversuch stattgefunden hat."""
-    logger.warning(
-        "VRAM-Zulassung verweigert fuer %s: %.1f GB frei < %.1f GB benoetigt.",
-        exc.slot.value, exc.free_gb, exc.required_gb,
-    )
+    """VRAM-Zulassung verweigert: kontrollierter 503 mit maschinenlesbarem Detail.
+
+    Ein Budgetfehler kann auch durch die Nachmessung nach dem Laden entstehen.
+    """
+    logger.warning("VRAM-Zulassung verweigert fuer %s: %s", exc.slot.value, exc)
     return JSONResponse(
         {
             "detail": "insufficient VRAM",
@@ -82,6 +81,9 @@ async def handle_insufficient_vram(request: Request, exc: InsufficientVramError)
             "required_gb": round(exc.required_gb, 2),
             # Paket 2: abgezogene Ollama-Reserve im Detail (additiv, abwaertskompatibel).
             "reserved_gb": round(exc.reserved_gb, 2),
+            "reason": exc.reason,
+            "used_gb": round(exc.used_gb, 2) if exc.used_gb is not None else None,
+            "budget_gb": round(exc.budget_gb, 2) if exc.budget_gb is not None else None,
         },
         status_code=503,
     )

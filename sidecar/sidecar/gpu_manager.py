@@ -8,6 +8,7 @@ import enum
 import time
 import threading
 import logging
+import math
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -15,10 +16,19 @@ from typing import Any, Callable, Iterable, Tuple, Optional
 
 logger = logging.getLogger(__name__)
 
-# VRAM-Budget (GB): YOLO/DINO/SAM bleiben bewusst gleichzeitig resident (Tempo). Auf der 32-GB-Karte
-# traegt das; das Budget macht die Grenze im Code SICHTBAR (Warnung) und erlaubt LRU-Eviction bei
-# Bedarf, statt sich nur auf grosszuegige Hardware zu verlassen. (Audit R8)
-VRAM_BUDGET_GB = float(os.environ.get("SEWER_SIDECAR_VRAM_BUDGET_GB", "29"))
+# Hartes Zulassungslimit vor dem Modellladen. Die Einstellung darf es absenken,
+# aber die Projektgrenze von 29 GB niemals anheben.
+MAX_VRAM_BUDGET_GB = 29.0
+
+
+def _configured_vram_budget_gb() -> float:
+    configured = float(os.environ.get("SEWER_SIDECAR_VRAM_BUDGET_GB", "29"))
+    if not math.isfinite(configured) or configured <= 0:
+        raise ValueError("SEWER_SIDECAR_VRAM_BUDGET_GB muss eine positive endliche Zahl sein")
+    return min(configured, MAX_VRAM_BUDGET_GB)
+
+
+VRAM_BUDGET_GB = _configured_vram_budget_gb()
 # Ollama-Reserve (GB), die beim Laden eines Vision-Modells frei bleiben muss (Paket 3/B):
 # Ollama mit qwen3-vl:8b-q8 belegt auf dieser Karte typisch ~9-11 GB (Gewichte + KV-Cache)
 # und waechst bei laengeren Kontexten weiter. Die Reserve verhindert, dass YOLO/DINO/SAM
@@ -70,9 +80,11 @@ class InsufficientVramError(RuntimeError):
     """Kontrollierte Nicht-Zulassung: zu wenig freier VRAM VOR dem Laden.
 
     Traegt slot/free_gb/required_gb/reserved_gb fuer den maschinenlesbaren
-    503-Fehler; es findet KEIN Ladeversuch statt (der bisherige OOM-/Post-Load-Pfad
-    bleibt zweites Netz). reserved_gb ist die bei der Zulassung abgezogene
-    Ollama-Reserve (required_gb = Schaetzung + Reserve).
+    503-Fehler. Bei der Vorab-Sperre findet kein Ladeversuch statt; eine
+    Budgetabweichung kann auch nach dem Laden festgestellt werden.
+    reserved_gb ist die bei der Zulassung abgezogene
+    Ollama-Reserve (required_gb = Schaetzung + Reserve). reason/used_gb/budget_gb
+    erklaeren eine Sperre durch das absolute Budget.
     """
 
     def __init__(
@@ -81,14 +93,26 @@ class InsufficientVramError(RuntimeError):
         free_gb: float,
         required_gb: float,
         reserved_gb: float = VRAM_RESERVE_GB,
+        *,
+        reason: str = "free",
+        used_gb: float | None = None,
+        budget_gb: float | None = None,
     ) -> None:
         self.slot = slot
         self.free_gb = free_gb
         self.required_gb = required_gb
         self.reserved_gb = reserved_gb
+        self.reason = reason
+        self.used_gb = used_gb
+        self.budget_gb = budget_gb
+        detail = (
+            f" used_after_load={used_gb:.1f}GB budget={budget_gb:.1f}GB"
+            if used_gb is not None and budget_gb is not None else ""
+        )
         super().__init__(
             f"insufficient_vram: slot={slot.value} free={free_gb:.1f}GB "
-            f"required={required_gb:.1f}GB reserved={reserved_gb:.1f}GB")
+            f"required={required_gb:.1f}GB reserved={reserved_gb:.1f}GB"
+            f" reason={reason}{detail}")
 
 
 class ModelUnloadedError(RuntimeError):
@@ -207,9 +231,9 @@ class GpuModelManager:
     """Multi-slot persistent model manager.
 
     YOLO/DINO/SAM koennen gleichzeitig resident bleiben (bewusst, fuer Tempo). KEINE
-    automatische Eviction beim Slot-Wechsel. Ein konfigurierbares VRAM-Budget
-    (VRAM_BUDGET_GB) macht die Grenze sichtbar (Warnung beim Ueberschreiten); ueber
-    evict_lru() ist LRU-Eviction moeglich (z.B. nach OOM). (Audit R8)
+    automatische Eviction beim Slot-Wechsel. Vor jeder CUDA-Ladung prueft die
+    Zulassung freie Kapazitaet und das 29-GB-Budget; ueber evict_lru() ist
+    LRU-Eviction moeglich. Die Warnung nach dem Laden bleibt bestehen.
 
     Busy-Verfolgung (Paket 2): pro Slot hoechstens EINE Busy-Lease mit eindeutiger
     Besitzer-ID (_busy-Register). Nur der Besitzer kann seinen Eintrag setzen und
@@ -319,6 +343,33 @@ class GpuModelManager:
                 with self._global_lock:
                     self._inflight_loads.pop(slot, None)
                     self._ladungen_beendet += 1
+
+            # Die Modellschaetzung kann vom echten Verbrauch abweichen. Vor der
+            # Registrierung erneut messen und ein zu grosses Modell freigeben.
+            capacity_error = None
+            if str(device).startswith("cuda"):
+                try:
+                    measured_after = self._device_vram_gb()
+                    if measured_after is not None:
+                        free_after, total_after = measured_after
+                        used_after = total_after - free_after
+                        if used_after > VRAM_BUDGET_GB:
+                            capacity_error = InsufficientVramError(
+                                slot, free_after, MODEL_VRAM_ESTIMATE_GB.get(slot, 0.0)
+                                + VRAM_RESERVE_GB, reason="budget",
+                                used_gb=used_after, budget_gb=VRAM_BUDGET_GB,
+                            )
+                except Exception:
+                    logger.warning("CUDA-VRAM nach dem Laden nicht messbar", exc_info=True)
+                    capacity_error = InsufficientVramError(
+                        slot, 0.0, MODEL_VRAM_ESTIMATE_GB.get(slot, 0.0)
+                        + VRAM_RESERVE_GB, reason="measurement",
+                    )
+            if capacity_error is not None:
+                model = processor = None
+                self._try_empty_cache()
+                gc.collect()
+                raise capacity_error
 
             state = SlotState(
                 model=model,
@@ -604,13 +655,15 @@ class GpuModelManager:
 
         Nutzt torch.cuda.mem_get_info: der GERAETEWEIT freie Speicher, also inklusive
         aller anderen Prozesse auf der Karte (v. a. Ollama/Qwen). Zugelassen wird nur,
-        wenn effektiv frei >= Modellschaetzung + Ollama-Reserve; effektiv frei heisst:
+        wenn effektiv frei >= Modellschaetzung + Ollama-Reserve und die geschaetzte
+        geraeteweite Belegung nach dem Laden <= VRAM_BUDGET_GB ist. Effektiv frei heisst:
         abzueglich gerade laufender Lade-Reservierungen anderer Slots (Paket 2/B4 —
         zwei gleichzeitig ladende Modelle duerfen nicht denselben freien VRAM sehen).
         Bei Nicht-Zulassung zuerst LRU-Eviction freier Slots (niemals busy, niemals den
         Zielslot), dann erneut pruefen; reicht es immer noch nicht: InsufficientVramError
         -> 503 OHNE Ladeversuch. Die bisherige Post-Load-Warnung bleibt als zweites Netz
         bestehen. CPU-Geraete werden nicht begrenzt; ohne CUDA/torch wird wie bisher geladen.
+        Eine fehlgeschlagene VRAM-Messung bei verfuegbarem CUDA sperrt die Ladung.
         reserved_gb im Fehler = Ollama-Reserve + laufende Lade-Reservierungen.
         """
         if not str(device).startswith("cuda"):
@@ -622,14 +675,21 @@ class GpuModelManager:
         while True:
             with self._global_lock:
                 stand = self._ladungen_beendet
-            free = self._device_free_vram_gb()
+            try:
+                measured = self._device_vram_gb()
+            except Exception:
+                logger.warning("CUDA-VRAM konnte nicht gemessen werden; Ladung gesperrt", exc_info=True)
+                raise InsufficientVramError(slot, 0.0, required, reason="measurement")
             with self._global_lock:
                 if self._ladungen_beendet != stand:
                     # Eine fremde Ladung endete waehrend der Messung: neu messen (Audit A11).
                     continue
                 inflight = sum(self._inflight_loads.values())
+                free, total = measured if measured is not None else (None, None)
                 effective = None if free is None else free - inflight
-                if effective is None or effective >= required:
+                used_after_load = None if total is None else total - free + inflight + estimate
+                within_budget = used_after_load is None or used_after_load <= VRAM_BUDGET_GB
+                if (effective is None or effective >= required) and within_budget:
                     self._inflight_loads[slot] = estimate
                     return
                 reserved_gb = VRAM_RESERVE_GB + inflight
@@ -637,14 +697,20 @@ class GpuModelManager:
 
             if not warned:
                 logger.warning(
-                    "VRAM-Zulassung %s: %.1f GB effektiv frei < %.1f GB benoetigt "
-                    "(Schaetzung %.1f GB + Reserve %.1f GB, davon %.1f GB laufende Ladevorgaenge) "
-                    "— versuche LRU-Eviction freier Slots.",
-                    slot.value, effective, required, estimate, VRAM_RESERVE_GB, inflight)
+                    "VRAM-Zulassung %s: effektiv %.1f GB frei (benoetigt %.1f GB), "
+                    "geschaetzt %.1f GB nach Ladung (Budget %.1f GB); "
+                    "versuche LRU-Eviction freier Slots.",
+                    slot.value, effective, required, used_after_load, VRAM_BUDGET_GB)
                 warned = True
 
             if eviction is None:
-                raise InsufficientVramError(slot, free, required, reserved_gb)
+                reason = "budget" if not within_budget else "free"
+                raise InsufficientVramError(
+                    slot, free, required, reserved_gb,
+                    reason=reason,
+                    used_gb=used_after_load if reason == "budget" else None,
+                    budget_gb=VRAM_BUDGET_GB if reason == "budget" else None,
+                )
 
             victim, state = eviction
             self._cleanup_evicted_state(victim, state)
@@ -675,16 +741,20 @@ class GpuModelManager:
         gc.collect()
 
     @staticmethod
-    def _device_free_vram_gb() -> float | None:
-        """Geraeteweit freier VRAM (GB) inkl. Fremdprozesse (z.B. Ollama); None ohne CUDA."""
+    def _device_vram_gb() -> tuple[float, float] | None:
+        """Geraeteweit (frei, gesamt) in GB; None nur ohne CUDA/torch."""
         try:
             import torch
-            if torch.cuda.is_available():
-                free, _total = torch.cuda.mem_get_info(0)
-                return free / (1024**3)
-        except Exception:
-            logger.debug("Freier CUDA-Speicher konnte nicht gelesen werden", exc_info=True)
-        return None
+        except ImportError:
+            return None
+        if not torch.cuda.is_available():
+            return None
+        free, total = torch.cuda.mem_get_info(0)
+        free_gb, total_gb = free / (1024**3), total / (1024**3)
+        if not (math.isfinite(free_gb) and math.isfinite(total_gb)
+                and 0 <= free_gb <= total_gb and total_gb > 0):
+            raise ValueError("Ungueltige CUDA-VRAM-Messung")
+        return free_gb, total_gb
 
     @staticmethod
     def _try_empty_cache() -> None:

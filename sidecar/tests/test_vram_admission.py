@@ -17,12 +17,13 @@ from sidecar.gpu_manager import (
     ModelSlot,
     VRAM_RESERVE_GB,
     MODEL_VRAM_ESTIMATE_GB,
+    _configured_vram_budget_gb,
 )
 
 GIB = 1024**3
 
 
-def _fake_torch(monkeypatch, free_gb_sequence):
+def _fake_torch(monkeypatch, free_gb_sequence, total_gb=32):
     """Installiert ein Fake-torch; mem_get_info liefert die Sequenz (letzter Wert bleibt)."""
     values = list(free_gb_sequence)
     calls = {"n": 0}
@@ -30,13 +31,13 @@ def _fake_torch(monkeypatch, free_gb_sequence):
     def mem_get_info(_device):
         idx = min(calls["n"], len(values) - 1)
         calls["n"] += 1
-        return int(values[idx] * GIB), 32 * GIB
+        return int(values[idx] * GIB), int(total_gb * GIB)
 
     fake_cuda = SimpleNamespace(
         is_available=lambda: True,
         mem_get_info=mem_get_info,
         memory_allocated=lambda _device: 0,
-        get_device_properties=lambda _device: SimpleNamespace(total_memory=32 * GIB),
+        get_device_properties=lambda _device: SimpleNamespace(total_memory=int(total_gb * GIB)),
         empty_cache=lambda: None,
     )
     monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(cuda=fake_cuda))
@@ -79,11 +80,110 @@ def test_zulassung_503_pfad_ohne_ladeversuch(monkeypatch):
     assert "insufficient_vram" in str(exc)
 
 
+def test_29gb_budget_sperrt_ladung_trotz_genug_freiem_vram(monkeypatch):
+    # 48 GB Karte, 27 GB bereits belegt: SAM wuerde 33 GB belegen.
+    # Die 12 GB freie Reserve waere danach noch vorhanden, das 29-GB-Limit nicht.
+    _fake_torch(monkeypatch, [21.0], total_gb=48)
+    m = GpuModelManager()
+    loader_called = []
+
+    with pytest.raises(InsufficientVramError) as excinfo:
+        m.ensure_loaded(
+            ModelSlot.SAM, "cuda:0",
+            lambda: loader_called.append(1) or ("sam", None),
+        )
+
+    assert loader_called == []
+    assert excinfo.value.reason == "budget"
+    assert excinfo.value.used_gb == pytest.approx(33.0)
+    assert excinfo.value.budget_gb == pytest.approx(29.0)
+    from sidecar.main import handle_insufficient_vram
+    request = SimpleNamespace(method="POST", url=SimpleNamespace(path="/segment/sam"))
+    response = asyncio.run(handle_insufficient_vram(request, excinfo.value))
+    body = json.loads(response.body)
+    assert response.status_code == 503
+    assert body["reason"] == "budget"
+    assert body["used_gb"] == 33.0
+    assert body["budget_gb"] == 29.0
+
+
+def test_29gb_budget_erlaubt_ladung_bis_zur_grenze(monkeypatch):
+    # 23 GB belegt + 6 GB SAM-Schaetzung = genau 29 GB.
+    _fake_torch(monkeypatch, [25.0], total_gb=48)
+    m = GpuModelManager()
+
+    state = m.ensure_loaded(ModelSlot.SAM, "cuda:0", lambda: ("sam", None))
+
+    assert state.model == "sam"
+
+
+def test_konfiguration_kann_29gb_budget_nicht_anheben(monkeypatch):
+    monkeypatch.setenv("SEWER_SIDECAR_VRAM_BUDGET_GB", "40")
+    assert _configured_vram_budget_gb() == 29.0
+    monkeypatch.setenv("SEWER_SIDECAR_VRAM_BUDGET_GB", "24")
+    assert _configured_vram_budget_gb() == 24.0
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "0", "-1"])
+def test_ungueltiges_vram_budget_ist_keine_umgehung(monkeypatch, value):
+    monkeypatch.setenv("SEWER_SIDECAR_VRAM_BUDGET_GB", value)
+    with pytest.raises(ValueError):
+        _configured_vram_budget_gb()
+
+
+def test_fehlgeschlagene_cuda_messung_sperrt_ladung(monkeypatch):
+    fake_cuda = SimpleNamespace(
+        is_available=lambda: True,
+        mem_get_info=lambda _device: (_ for _ in ()).throw(RuntimeError("CUDA unavailable")),
+    )
+    monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(cuda=fake_cuda))
+    m = GpuModelManager()
+    loader_called = []
+
+    with pytest.raises(InsufficientVramError) as excinfo:
+        m.ensure_loaded(
+            ModelSlot.SAM, "cuda:0",
+            lambda: loader_called.append(1) or ("sam", None),
+        )
+
+    assert loader_called == []
+    assert excinfo.value.reason == "measurement"
+
+
+def test_budget_evictiert_freien_slot_vor_neuem_ladeversuch(monkeypatch):
+    # YOLO darf zuerst laden. SAM verletzt danach das Budget, bis YOLO entladen ist.
+    _fake_torch(monkeypatch, [25.0, 25.0, 21.0, 25.0, 25.0], total_gb=48)
+    m = GpuModelManager()
+    m.ensure_loaded(ModelSlot.YOLO, "cuda:0", lambda: ("yolo", None))
+
+    state = m.ensure_loaded(ModelSlot.SAM, "cuda:0", lambda: ("sam", None))
+
+    assert state.model == "sam"
+    assert "yolo" not in m.get_status()["loaded_models"]
+
+
+def test_zu_niedrig_geschaetzte_belegung_nach_laden_wird_zurueckgenommen(monkeypatch):
+    # Vorab passt SAM genau ins Budget; der echte Ladevorgang benoetigt mehr.
+    _fake_torch(monkeypatch, [25.0, 15.0], total_gb=48)
+    m = GpuModelManager()
+
+    with pytest.raises(InsufficientVramError) as excinfo:
+        m.ensure_loaded(ModelSlot.SAM, "cuda:0", lambda: ("sam", None))
+
+    assert excinfo.value.reason == "budget"
+    assert excinfo.value.used_gb == pytest.approx(33.0)
+    assert m.get_status()["loaded_models"] == {}
+
+
 def test_zulassung_evict_pfad_laedt_nach_freigabe(monkeypatch):
     required_dino = _required(ModelSlot.DINO)
-    # 1. Aufruf: YOLO-Ladung (genug frei); 2. Aufruf: DINO-Zulassung (zu wenig);
-    # 3. Aufruf: nach Eviction von YOLO wieder genug.
-    _fake_torch(monkeypatch, [_required(ModelSlot.YOLO) + 5.0, required_dino - 2.0, required_dino + 1.0])
+    # YOLO: Vor- und Nachmessung; DINO: vor und nach YOLO-Eviction, dann Nachmessung.
+    free_yolo = _required(ModelSlot.YOLO) + 5.0
+    free_after_eviction = required_dino + 1.0
+    _fake_torch(monkeypatch, [
+        free_yolo, free_yolo, required_dino - 2.0,
+        free_after_eviction, free_after_eviction,
+    ])
     m = GpuModelManager()
     m.ensure_loaded(ModelSlot.YOLO, "cuda:0", lambda: ("yolo", None))
 
