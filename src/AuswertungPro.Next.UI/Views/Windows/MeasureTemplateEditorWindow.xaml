@@ -85,9 +85,11 @@
                                         <!-- Schlusswelle (Optikanalyse 28.09.2026): DynamicResource statt der bisher
                                              bewusst belassenen StaticResource (Fix-Runde 2, Aufgabe 13, MINOR). Die
                                              fruehere Sorge betraf einen Freezable-Vererbungspfad ohne echten Test -
-                                             der neue Waechter DesignAuditKeinStaticResourceThemeTokenTests prueft am
-                                             echten Kindprozess (MeasureTemplateEditorWindowIsolatedSmokeTests), dass
-                                             das Wasserzeichen mit DynamicResource beim Theme-Wechsel mitzieht. -->
+                                             der Waechter DesignAuditKeinStaticResourceThemeTokenTests haelt den
+                                             Quelltext fest (kein StaticResource-Theme-Token mehr ausserhalb von
+                                             Theme/); dass das Wasserzeichen im echten WPF-Kindprozess mit
+                                             DynamicResource tatsaechlich beim Theme-Wechsel mitzieht, belegt
+                                             MeasureTemplateEditorWindowWasserzeichenIsolatedSmokeTests. -->
                                         <VisualBrush Stretch="None" AlignmentX="Left">
                                             <VisualBrush.Visual>
                                                 <TextBlock Text="Suchen..." Foreground="{DynamicResource MutedBrush}" Margin="4,0,0,0"/>

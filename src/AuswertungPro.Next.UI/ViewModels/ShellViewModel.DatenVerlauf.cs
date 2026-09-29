@@ -44,6 +44,16 @@ public sealed partial class ShellViewModel
     public string WiederholenMenuText => DatenVerlaufTasten.MenuText("Wiederholen",
         AktuellerVerlaufBereich is { } b ? DatenVerlauf.WiederholenBeschreibung(b) : null);
 
+    /// <summary>Nachtrag: dieselbe Beschreibung wie <see cref="RueckgaengigMenuText"/>/
+    /// <see cref="WiederholenMenuText"/>, aber OHNE die dort noetige Verdopplung des Unterstrichs -
+    /// fuer die globale Suche (Strg+K), die den Text als reinen <c>TextBlock</c> ohne
+    /// Zugriffstasten anzeigt (<see cref="GlobaleSucheViewModel"/>).</summary>
+    public string RueckgaengigSuchText => DatenVerlaufTasten.SuchText("Rückgängig",
+        AktuellerVerlaufBereich is { } b ? DatenVerlauf.RueckgaengigBeschreibung(b) : null);
+
+    public string WiederholenSuchText => DatenVerlaufTasten.SuchText("Wiederholen",
+        AktuellerVerlaufBereich is { } b ? DatenVerlauf.WiederholenBeschreibung(b) : null);
+
     private DatenaenderungsBereich? AktuellerVerlaufBereich => CurrentPage switch
     {
         Pages.DataPageViewModel => DatenaenderungsBereich.Haltungen,
@@ -137,5 +147,7 @@ public sealed partial class ShellViewModel
         _wiederholenTasteCommand?.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(RueckgaengigMenuText));
         OnPropertyChanged(nameof(WiederholenMenuText));
+        OnPropertyChanged(nameof(RueckgaengigSuchText));
+        OnPropertyChanged(nameof(WiederholenSuchText));
     }
 }

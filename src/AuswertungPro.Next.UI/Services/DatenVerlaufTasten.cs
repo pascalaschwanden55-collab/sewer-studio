@@ -26,6 +26,19 @@ public static class DatenVerlaufTasten
             ? aktion
             : $"{aktion}: {beschreibung.Replace("_", "__", StringComparison.Ordinal)}";
 
+    /// <summary>
+    /// Nachtrag (Optikanalyse 28.09.2026): wie <see cref="MenuText"/>, aber OHNE die Verdopplung
+    /// des Unterstrichs. Die Verdopplung ist nur innerhalb eines WPF-Menues noetig (dort wuerde ein
+    /// einzelner Unterstrich sonst als Zugriffstaste-Zeichen verschluckt); ausserhalb eines Menues
+    /// - etwa in der Trefferliste der globalen Suche (Strg+K) - wird der Text als reiner
+    /// <c>TextBlock</c> angezeigt, der keine Zugriffstasten kennt. Dort waere ein verdoppelter
+    /// Unterstrich ein sichtbarer Darstellungsfehler statt einer Schutzmassnahme.
+    /// </summary>
+    public static string SuchText(string aktion, string? beschreibung)
+        => string.IsNullOrWhiteSpace(beschreibung)
+            ? aktion
+            : $"{aktion}: {beschreibung}";
+
     /// <summary>true, wenn die Aktion auf den UI-Thread verschoben wurde (und hier nichts mehr zu tun ist).</summary>
     public static bool AufUiThreadVerschoben(Action aktion)
     {

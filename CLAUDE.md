@@ -1410,6 +1410,37 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `docs/reviews/2026-09-28-optik/bilder/`); Haltungen, Schaechte, Player und Training Studio
   brauchen fuer neue Bildschirmfotos entweder eine tiefere Reparatur dieses Werkzeugs (echtes
   `InitializeComponent()` statt nachgebautem XAML) oder eine Sichtpruefung im echten Programm.
+- **Nachtrag zur Schlusswelle — drei Regeln, die nicht zurueckfallen duerfen.**
+  **`DatenaenderungsErgebnis.Teilweise`:** Scheitert ein Rueckgaengig/Wiederholen NACH dem
+  Anwenden beim Rueckbau eines Teils (`DatenaenderungsVerlauf.Wende`, `zurueckgesetzt=false`),
+  koennen an den betroffenen Datensaetzen bereits Feldwerte stehen geblieben sein, obwohl
+  `Angewendet=false` bleibt — ein Aufrufer, der nur auf `Angewendet` prueft, wuerde Projekt/
+  Anzeige NICHT aktualisieren, obwohl sich Daten geaendert haben. `Teilweise=true` traegt in
+  diesem Fall zusaetzlich die betroffenen Datensaetze mit, damit Dirty-Markierung und Anzeige
+  trotzdem nachziehen; im echten "nichts geaendert"-Fall (`zurueckgesetzt=true`) bleibt es beim
+  leeren `[]`/`Teilweise=false`. **Verschachtelte Erfassung eines fremden Datensatzes wird NICHT
+  in den aeusseren Schritt gemischt:** Ein innerer `Erfasse(...)`/`ErfasseObjektakte(...)`-Bereich
+  waehrend eines bereits offenen aeusseren wird nur dann Teil desselben Strg+Z-Schritts, wenn er
+  ausschliesslich Datensaetze betrifft, die der aeussere Bereich bereits kennt (abhaengiges Feld,
+  Auswahlfeld in derselben offenen Zelle — immer dasselbe Objekt). Oeffnet er waehrenddessen einen
+  dem aeusseren VOELLIG fremden Datensatz, wird diese innere Erfassung ignoriert (kein eigener
+  zweiter Verlaufseintrag) — der eigentliche Schreibvorgang laeuft unveraendert weiter, landet nur
+  nicht im Rueckgaengig-Verlauf; sonst wuerde ein Strg+Z ein unabhaengiges zweites Objekt
+  mitreissen (`DatenaenderungsVerlauf.Oeffne`, `istFremderDatensatz`).
+  **Der StaticResource-Theme-Token-Waechter (`DesignAuditKeinStaticResourceThemeTokenTests`)
+  nimmt nur noch die drei Theme-DEFINITIONSDATEIEN aus, nicht mehr den ganzen `Theme/`-Ordner:**
+  `Theme.xaml`/`ThemeLight.xaml`/`ThemeHighContrast.xaml` legen die Tokens fest (dort ist ein
+  `StaticResource`-Verweis auf ein anderes Token derselben Datei unproblematisch), aber
+  `Theme/Controls.xaml` baut nur Steuerelement-Stile aus diesen Tokens und muss deshalb wie jede
+  andere XAML-Datei zeigen, dass sie Farben ausschliesslich als `{DynamicResource ...}` bezieht —
+  die urspruengliche Ausnahme des ganzen Ordners haette einen kuenftigen `StaticResource`-Fehler
+  genau dort nicht gefunden. Ausserdem: `DatenVerlaufTasten.MenuText` verdoppelt einen Unterstrich
+  in der Beschreibung bewusst (WPF-Menue-Zugriffstaste) — das gilt NUR fuer echte Menuepunkte.
+  Ein reiner `TextBlock` ausserhalb eines Menues (die Trefferliste der globalen Suche, Strg+K)
+  kennt keine Zugriffstasten und wuerde die Verdopplung sichtbar falsch anzeigen;
+  `DatenVerlaufTasten.SuchText` ist die unescapte Fassung dafuer, `ShellViewModel.
+  RueckgaengigSuchText`/`WiederholenSuchText` reichen sie an `GlobaleSucheViewModel` weiter. Nie
+  `RueckgaengigMenuText`/`WiederholenMenuText` ausserhalb eines echten Menues verwenden.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

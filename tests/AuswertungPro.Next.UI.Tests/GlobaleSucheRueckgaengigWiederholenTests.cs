@@ -112,6 +112,25 @@ public sealed class GlobaleSucheRueckgaengigWiederholenTests : IDisposable
         Assert.Equal("PVC", h.GetFieldValue(FieldKeys.PipeMaterial));
     }
 
+    /// <summary>Nachtrag: Traegt die Beschreibung selbst einen Unterstrich (moeglich bei einer
+    /// Sammelbearbeitung mit eigenem Beschreibungstext), zeigt die Trefferliste ihn UNVERAENDERT -
+    /// anders als <see cref="ShellViewModel.RueckgaengigMenuText"/> fuer das Menue «_Bearbeiten»,
+    /// das ihn wegen der WPF-Zugriffstaste verdoppeln muss.</summary>
+    [Fact]
+    public void Rueckgaengig_treffer_verdoppelt_keinen_unterstrich_in_der_beschreibung()
+    {
+        var h = OeffneHaltungen();
+        using (_services.DatenaenderungsVerlauf.ErfasseMehrere([h], "Sammelbearbeitung: Feld_Name 10001-10002"))
+            h.SetFieldValue(FieldKeys.PipeMaterial, "PVC", FieldSource.Manual, userEdited: true);
+        var suche = _shell.GlobaleSuche;
+
+        suche.Text = "rückgängig";
+
+        var treffer = Assert.Single(suche.Treffer, t => t.Art == GlobaleSucheArt.Befehl);
+        Assert.Equal("Rückgängig: Sammelbearbeitung: Feld_Name 10001-10002", treffer.Text);
+        Assert.Contains("Feld__Name", _shell.RueckgaengigMenuText);
+    }
+
     /// <summary>Verschwindet der Verlaufseintrag (z. B. Projektwechsel), waehrend die Trefferliste
     /// bereits offen ist, verschwindet auch der «Rückgängig»-Treffer selbststaendig - dieselbe
     /// Live-Kopplung wie bei «Speichern» und einem Betriebs-Schutz.</summary>

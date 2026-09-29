@@ -20,17 +20,28 @@ public sealed class WindowsThemeFollowService : IDisposable
     private readonly Func<string?> _readPreference;
     private readonly Action<string> _applyResolvedTheme;
     private readonly Dispatcher _dispatcher;
+    private readonly Func<string> _readCurrentTheme;
+    private readonly Func<int?> _readWindowsAppsUseLightTheme;
+    private readonly object _gate = new();
     private bool _subscribed;
     private bool _disposed;
+    private bool _anwendungEingereiht;
 
     public WindowsThemeFollowService(
         Func<string?> readPreference,
         Action<string> applyResolvedTheme,
-        Dispatcher dispatcher)
+        Dispatcher dispatcher,
+        Func<string>? readCurrentTheme = null,
+        Func<int?>? readWindowsAppsUseLightTheme = null)
     {
         _readPreference = readPreference ?? throw new ArgumentNullException(nameof(readPreference));
         _applyResolvedTheme = applyResolvedTheme ?? throw new ArgumentNullException(nameof(applyResolvedTheme));
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+        // Beide Reader sind injizierbar (Nachtrag, Schlusswelle-Item 1): fuer die Produktion
+        // bleiben es dieselben statischen/Registry-Quellen wie bisher, ein Test kann sie ersetzen,
+        // ohne die bestehenden drei-argumentigen Aufrufer (z. B. App.xaml.cs) anzupassen.
+        _readCurrentTheme = readCurrentTheme ?? (() => ThemeManager.CurrentTheme);
+        _readWindowsAppsUseLightTheme = readWindowsAppsUseLightTheme ?? WindowsThemeRegistry.ReadAppsUseLightTheme;
     }
 
     public void Start()
@@ -44,30 +55,62 @@ public sealed class WindowsThemeFollowService : IDisposable
 
     private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
     {
-        // Entscheidungslogik liegt in WindowsThemeFollowPolicy (pure, ohne SystemEvents/
-        // Dispatcher testbar). Fix-Runde 1, MINOR 6: kein Neuanwenden, wenn das aufgeloeste
-        // Theme bereits ThemeManager.CurrentTheme entspricht - unnoetiges Neuzeichnen aller
-        // offenen Fenster bei einer Windows-Einstellung, die Hell/Dunkel gar nicht betrifft.
-        if (!WindowsThemeFollowPolicy.SollNeuAnwenden(
-                e.Category,
-                _readPreference(),
-                ThemeManager.CurrentTheme,
-                WindowsThemeRegistry.ReadAppsUseLightTheme,
-                out var resolved))
+        // Der billige, unveraenderliche Teil (welche Kategorie ueberhaupt Hell/Dunkel betreffen
+        // kann) darf schon hier auf dem SystemEvents-Thread entschieden werden - er haengt an
+        // keinem Wert, der bis zum Dispatch noch veraltet sein koennte.
+        if (!WindowsThemeFollowPolicy.IstRelevanteKategorie(e.Category))
+            return;
+
+        if (_dispatcher.CheckAccess())
         {
+            WendeAnFallsNoetig(e.Category);
             return;
         }
 
-        // Schlusswelle (Item 6): Dispatcher.Invoke blockiert den SystemEvents-Thread (ein
-        // WinForms-Botschaftsfenster-Thread ausserhalb von WPF) synchron, bis die UI-Thread-
-        // Warteschlange den Aufruf abgearbeitet hat - bei einem beschaeftigten UI-Thread haelt das
-        // den Windows-Benachrichtigungsmechanismus unnoetig auf. BeginInvoke reiht nur ein
-        // (fire-and-forget); das Skip-wenn-unveraendert oben (SollNeuAnwenden) bleibt unveraendert
-        // VOR dem Dispatch, damit gar nicht erst unnoetig auf den UI-Thread eingereiht wird.
-        if (_dispatcher.CheckAccess())
+        // Nachtrag (Schlusswelle-Item 1): Die eigentliche Entscheidung (SollNeuAnwenden - liest
+        // die gespeicherte Praeferenz UND ThemeManager.CurrentTheme) darf NICHT mehr hier auf dem
+        // SystemEvents-Thread (ein WinForms-Botschaftsfenster-Thread ausserhalb von WPF)
+        // vorausberechnet und dann als fertiger Wert in die BeginInvoke-Lambda gelegt werden:
+        // Zwischen dem Einreihen und der tatsaechlichen Ausfuehrung auf dem UI-Thread kann der
+        // Benutzer selbst eine neuere, bewusste Design-Wahl getroffen haben (z. B. in den
+        // Einstellungen fest auf Dunkel gewechselt) - eine bereits veraltete Vorab-Entscheidung
+        // wuerde diese neuere Wahl sonst stillschweigend ueberschreiben. Deshalb reiht dieser
+        // Zweig nur noch den Dispatch selbst ein; SollNeuAnwenden laeuft ERST in der Lambda, also
+        // auf dem UI-Thread, mit dem dann aktuellen Stand.
+        //
+        // Mehrere kurz aufeinanderfolgende Windows-Meldungen (z. B. General UND Color fuer
+        // denselben Wechsel) reihen dabei nur EINEN Dispatch ein (Coalescing): Solange ein
+        // bereits eingereihter Dispatch noch nicht gelaufen ist, wird kein zweiter eingereiht -
+        // der eine ausstehende Dispatch liest beim Ausfuehren ohnehin den dann aktuellen Stand.
+        lock (_gate)
+        {
+            if (_anwendungEingereiht)
+                return;
+            _anwendungEingereiht = true;
+        }
+
+        _dispatcher.BeginInvoke(() =>
+        {
+            lock (_gate)
+                _anwendungEingereiht = false;
+            WendeAnFallsNoetig(e.Category);
+        });
+    }
+
+    /// <summary>Liest Praeferenz, aktuelles Theme und Windows-Registry-Wert JETZT (auf dem Thread
+    /// des Aufrufers - im Fremd-Thread-Zweig also erst innerhalb der Dispatcher-Lambda, also auf
+    /// dem UI-Thread) und wendet nur bei einer tatsaechlich noch gueltigen Entscheidung an.</summary>
+    private void WendeAnFallsNoetig(UserPreferenceCategory kategorie)
+    {
+        if (WindowsThemeFollowPolicy.SollNeuAnwenden(
+                kategorie,
+                _readPreference(),
+                _readCurrentTheme(),
+                _readWindowsAppsUseLightTheme,
+                out var resolved))
+        {
             _applyResolvedTheme(resolved);
-        else
-            _dispatcher.BeginInvoke(() => _applyResolvedTheme(resolved));
+        }
     }
 
     public void Dispose()

@@ -166,8 +166,11 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposabl
         // ("R\u00FCckg\u00E4ngig: Material 10001-10002") wie dort - Verfuegbar kommt aus dem echten
         // CanExecute des Shell-Befehls, die Ausfuehrung prueft ihn per Befehl() ein zweites Mal
         // unmittelbar vor dem Klick.
-        befehle.Add(Befehl("Rueckgaengig", _shell.RueckgaengigMenuText, "\uE7A7", _shell.RueckgaengigCommand));
-        befehle.Add(Befehl("Wiederholen", _shell.WiederholenMenuText, "\uE7A6", _shell.WiederholenCommand));
+        // Nachtrag: NICHT RueckgaengigMenuText/WiederholenMenuText - die verdoppeln einen
+        // Unterstrich im Namen fuer die Zugriffstaste des WPF-Menues; die Trefferliste zeigt den
+        // Text als reinen TextBlock ohne Zugriffstasten und braucht deshalb die unescapte Fassung.
+        befehle.Add(Befehl("Rueckgaengig", _shell.RueckgaengigSuchText, "\uE7A7", _shell.RueckgaengigCommand));
+        befehle.Add(Befehl("Wiederholen", _shell.WiederholenSuchText, "\uE7A6", _shell.WiederholenCommand));
 
         befehle.Add(Befehl("Handbuch", "Handbuch", "\uE736", _shell.OpenHandbuchCommand, _shell.SelectedNavItem?.Title));
         befehle.Add(Befehl("Tastenkuerzel", "Tastenkürzel", "\uE765", _shell.OpenTastenkuerzelCommand));
