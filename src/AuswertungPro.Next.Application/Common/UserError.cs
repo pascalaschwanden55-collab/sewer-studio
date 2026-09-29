@@ -17,10 +17,37 @@ public sealed class UserFacingException : Exception
 /// <summary>Uebersetzt technische Ausnahmen in kurze, sichere Nutzerhinweise.</summary>
 public static class UserError
 {
+    /// <summary>
+    /// Die drei unteren Schichten, exakt beim Assembly-Namen genannt statt per Praefix: ein
+    /// Praefix "AuswertungPro" traefe auch jedes Testprojekt (<c>AuswertungPro.Next.UI.Tests</c>
+    /// usw.) und das Werkzeug <c>tools/AuswertungPro.MeasureCatalogCli</c> - beide sind NICHT das
+    /// Produkt. Die UI-Assembly heisst zudem nicht "AuswertungPro.Next.UI", sondern "SewerStudio"
+    /// (siehe <c>AuswertungPro.Next.UI.csproj</c>, <c>&lt;AssemblyName&gt;</c>) und bleibt hier
+    /// bewusst AUSSEN VOR: Ein realer Fall (<c>SettingsPathWorkflow.OpenFolderCore</c>) wirft dort
+    /// <c>throw new InvalidOperationException(result.Error ?? "Unbekannter Fehler")</c> - eine
+    /// dynamische Weiterreichung, deren <c>result.Error</c> aus <c>FolderOpenService</c> im
+    /// Fehlerfall ein rohes <c>ex.Message</c> eines fremden/OS-Fehlers sein kann, kein von uns
+    /// verfasster Satz. In der UI-Schicht lassen sich solche durchgereichten Fremdtexte von
+    /// echten eigenen Meldungen nicht am Assembly-Namen allein unterscheiden; die drei unteren
+    /// Schichten werfen dagegen ausschliesslich fest verfasste deutsche Saetze als
+    /// <see cref="InvalidOperationException"/>/<see cref="ArgumentException"/> (siehe die beiden
+    /// namentlich geprueften Faelle in CodingSessionService und DocxPlaceholderFiller, beide
+    /// Infrastructure).
+    /// </summary>
+    private static readonly string[] EigeneProduktAssemblies =
+    [
+        "AuswertungPro.Next.Domain",
+        "AuswertungPro.Next.Application",
+        "AuswertungPro.Next.Infrastructure"
+    ];
+
     public static string Describe(Exception exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
         var relevant = Unwrap(exception);
+
+        if (relevant is not UserFacingException && IstEigeneVorsaetzlicheMeldung(relevant))
+            return $"{relevant.Message} Technische Details stehen im Programmlog.";
 
         return relevant switch
         {
@@ -65,5 +92,25 @@ public static class UserError
         while (exception is AggregateException { InnerExceptions.Count: 1 } aggregate)
             exception = aggregate.InnerExceptions[0];
         return exception;
+    }
+
+    /// <summary>
+    /// Erkennt eine im eigenen Code bewusst formulierte deutsche Meldung: eine
+    /// <see cref="InvalidOperationException"/> oder <see cref="ArgumentException"/>, die
+    /// nachweislich in einer eigenen SewerStudio-Assembly geworfen wurde (nicht im .NET-Framework
+    /// oder in einer Drittbibliothek). Nur dort ist der Ausnahmetext selbst der Nutzertext -
+    /// anderswo (z. B. <c>ArgumentNullException.ThrowIfNull</c>, das im Framework wirft, oder ein
+    /// von einer fremden Bibliothek geworfener Fehler) bleibt es beim generischen Satz.
+    /// <see cref="Exception.TargetSite"/> zeigt die Methode, in der tatsaechlich geworfen wurde;
+    /// fehlt sie (kein Stacktrace), bleibt die Erkennung fail-safe beim generischen Satz.
+    /// </summary>
+    private static bool IstEigeneVorsaetzlicheMeldung(Exception exception)
+    {
+        if (exception is not (InvalidOperationException or ArgumentException))
+            return false;
+
+        var assemblyName = exception.TargetSite?.DeclaringType?.Assembly.GetName().Name;
+        return assemblyName is not null
+            && Array.IndexOf(EigeneProduktAssemblies, assemblyName) >= 0;
     }
 }

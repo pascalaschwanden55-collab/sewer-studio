@@ -52,7 +52,7 @@ namespace AuswertungPro.Next.UI
         private const int LogRetentionDays = 60;
 
         public static IServiceProvider Services
-            => _services ?? throw new InvalidOperationException("Services are not initialized.");
+            => _services ?? throw new InvalidOperationException("Dienste sind noch nicht initialisiert.");
 
         protected override async void OnStartup(StartupEventArgs e)
         {

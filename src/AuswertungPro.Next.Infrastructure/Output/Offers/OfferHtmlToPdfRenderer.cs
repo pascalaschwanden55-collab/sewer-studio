@@ -61,7 +61,7 @@ public sealed class OfferHtmlToPdfRenderer
         if (template.HasErrors)
         {
             var msg = string.Join("; ", template.Messages.Select(m => m.Message));
-            throw new InvalidOperationException("Template errors: " + msg);
+            throw new InvalidOperationException("Fehler in der Vorlage: " + msg);
         }
 
         SetLogoDataUri(

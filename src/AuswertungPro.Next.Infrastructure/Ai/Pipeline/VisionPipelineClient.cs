@@ -455,7 +455,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
         }
 
         var result = JsonSerializer.Deserialize<TResponse>(body, JsonOpts)
-            ?? throw new InvalidOperationException($"Failed to deserialize response from {endpoint}");
+            ?? throw new InvalidOperationException($"Antwort von {endpoint} konnte nicht gelesen werden.");
 
         if (result is YoloResponse yolo)
             await WriteTelemetryBestEffortAsync(

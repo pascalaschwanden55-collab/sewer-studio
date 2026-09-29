@@ -500,6 +500,47 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   behobener Altwert darf nicht wiederkehren) statt der ganzen Datei — die bestehende
   Quellen-Prüfung verlangt sonst, dass JEDE Zeichenkette der Datei sauber ist, was bei
   Log-/Obsolete-/Datenwert-Mischdateien falsch rot würde.
+- **Aufgabe 10b Fix-Runde 1 (Review) — `UserError.Describe` zeigt eigene Meldungen zentral,
+  nicht mehr pro Aufrufstelle.** Zwei konkrete Regressionen aus der Prüfung: `CodingSessionService`
+  wirft „Keine Codier-Session aktiv."/„Session ist nicht aktiv (…)." und
+  `DocxPlaceholderFiller`/`DocxImagePlaceholderFiller` werfen „Die Word-Vorlage hat keinen
+  Hauptteil." — beide `InvalidOperationException` mit fertigem deutschem Text, beide gingen durch
+  das simple `UserError.Describe`-Fallback verloren. Statt jede der zwölf Aufrufstellen einzeln zu
+  flicken, prüft `Describe` jetzt VOR dem `switch`, ob eine `InvalidOperationException`/
+  `ArgumentException` nachweislich aus einer der drei unteren SewerStudio-Schichten geworfen wurde
+  (`Exception.TargetSite?.DeclaringType?.Assembly`-Name exakt `AuswertungPro.Next.Domain`,
+  `.Application` oder `.Infrastructure` — eine Allowlist mit den echten Assembly-Namen, kein
+  Präfix): dann `"{ex.Message} Technische Details stehen im Programmlog."`, sonst wie gehabt die
+  typbasierte Übersetzung. `UserFacingException` bleibt unverändert vorrangig (ihr Text ist immer
+  der Nutzertext, ohne den technischen Zusatz).
+  **Ein Präfix-Vergleich auf „AuswertungPro" reicht NICHT** — geprüft und verworfen: Er hätte auch
+  jedes Testprojekt getroffen (`AuswertungPro.Next.UI.Tests` fängt ebenfalls mit „AuswertungPro"
+  an) und `tools/AuswertungPro.MeasureCatalogCli`; umgekehrt heisst die UI-Assembly nicht
+  „AuswertungPro.Next.UI", sondern „SewerStudio" (`AssemblyName` in der csproj).
+  **Die UI-Schicht ist bewusst NICHT in der Allowlist**, obwohl ihre Assembly „SewerStudio" leicht
+  ergänzbar gewesen wäre: `SettingsPathWorkflow.OpenFolderCore` wirft
+  `throw new InvalidOperationException(result.Error ?? "Unbekannter Fehler")` — `result.Error`
+  kommt aus `FolderOpenService.EnsureAndOpen` und kann im Fehlerfall ein rohes `ex.Message` eines
+  fremden/OS-Fehlers sein, kein von uns verfasster Satz. Mit „SewerStudio" in der Liste wäre genau
+  dieser durchgereichte Fremdtext ungefiltert erschienen (belegt: der bestehende Test
+  `SettingsPathWorkflowTests.OpenFolder_failure_shows_error_dialog` schlug fehl, bis die Zeile
+  wieder entfernt wurde). Die drei unteren Schichten werfen dagegen durchgehend fest verfasste
+  Sätze, keine durchgereichten Fremdfehler — deshalb dort sicher, in der UI-Schicht nicht.
+  **Vor der Umstellung wurden alle eigenen `throw new InvalidOperationException(`/
+  `throw new ArgumentException(` in `src/` auf Englisch/Technik durchsucht** (383 Fundstellen);
+  sechs echte Treffer wurden auf Deutsch übersetzt, weil sie sonst durch die neue Regel
+  ungefiltert sichtbar geworden wären: `VisionPipelineClient.cs` („Failed to deserialize
+  response…"), `CategoryWeights.cs` („Expected 8 weights."), `VideoFrameStream.cs` („Failed to
+  start ffmpeg process."), `OfferHtmlToPdfRenderer.cs` („Template errors: "), `App.xaml.cs`
+  („Services are not initialized."), `CodingAiController.cs` („Pipeline health monitor has not
+  been started."). Neue Tests `UserErrorTests` (Pipeline.Tests): eigene `InvalidOperationException`
+  (`Project.AddRecord`, Domain) und eigene `ArgumentException` (`CategoryWeights.FromArray`,
+  Infrastructure) zeigen ihre Meldung + Hinweis; eine echt geworfene Framework-
+  `InvalidOperationException` (`Enumerable.First()` auf leerer Liste) bleibt generisch. Eine
+  Ausnahme, die nur KONSTRUIERT, nie GEWORFEN wird (`new InvalidOperationException(...)` ohne
+  `throw`+`catch`), hat kein `TargetSite` und bleibt ebenfalls generisch — das deckt zugleich den
+  Fall ab, dass eine in einer Test-Fixture geworfene Exception (Testassembly, nicht gelistet)
+  korrekt generisch bleibt.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

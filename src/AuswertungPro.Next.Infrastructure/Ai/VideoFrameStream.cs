@@ -76,7 +76,7 @@ public sealed class VideoFrameStream : IVideoFrameSource
         psi.ArgumentList.Add("pipe:1");
 
         var process = Process.Start(psi)
-            ?? throw new InvalidOperationException("Failed to start ffmpeg process.");
+            ?? throw new InvalidOperationException("ffmpeg-Prozess konnte nicht gestartet werden.");
 
         var stream = new VideoFrameStream(process, stepSeconds, duration);
 

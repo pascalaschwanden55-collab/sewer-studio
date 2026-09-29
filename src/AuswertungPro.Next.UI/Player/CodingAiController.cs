@@ -104,7 +104,7 @@ public sealed class CodingAiController : IDisposable
     public Task<PipelineHealthStatus> RefreshHealthOnceAsync(CancellationToken ct = default)
     {
         if (_healthMonitor is null)
-            throw new InvalidOperationException("Pipeline health monitor has not been started.");
+            throw new InvalidOperationException("Die Pipeline-Zustandsüberwachung wurde noch nicht gestartet.");
 
         return _healthMonitor.RefreshOnceAsync(ct);
     }

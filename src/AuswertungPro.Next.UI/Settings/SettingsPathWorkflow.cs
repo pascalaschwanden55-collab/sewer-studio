@@ -109,7 +109,7 @@ public static class SettingsPathWorkflow
         catch (Exception ex)
         {
             dialogs.Error(
-                $"Ordner konnte nicht geöffnet werden:\n{UserError.DescribeAndReport(ex, "Ordner oeffnen")}",
+                $"Ordner konnte nicht geöffnet werden:\n{UserError.DescribeAndReport(ex, "Ordner öffnen")}",
                 "SewerStudio");
         }
     }
