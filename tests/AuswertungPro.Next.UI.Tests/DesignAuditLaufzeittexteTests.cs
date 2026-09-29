@@ -171,40 +171,71 @@ public sealed class DesignAuditLaufzeittexteTests
     /// unberuehrt, weil der Unterstrich selbst ein Wortzeichen ist und die Wortgrenze direkt
     /// davor/danach aufhebt.
     ///
+    /// Geprueft wird NUR eine Zeichenkette, die (nach Entfernen von <c>{...}</c>-Ausdruecken)
+    /// mindestens ein Leerzeichen enthaelt — derselbe Grundsatz wie beim bestehenden
+    /// <see cref="Sichtbare_Laufzeittexte_tragen_echte_Umlaute"/>-Waechter. Ein einzelnes
+    /// ASCII-Wort ohne Leerzeichen ist im ganzen Projekt viel eher ein Schluessel/Tag/Datenwert
+    /// als ein Anzeigetext (siehe Fix-Runde 1: <c>DataPageAnsichtUmschalter.LoeschenMarke</c>,
+    /// <c>CostCalculatorLineOrderController.GroupOrder</c>, <c>LiveControlColorParser.NamedColors</c>
+    /// waren genau deshalb faelschlich betroffen) und wird deshalb bewusst NICHT automatisch
+    /// geprueft.
+    ///
+    /// Ausgenommen sind ausserdem: Kommentarzeilen (<c>//</c> am Zeilenanfang) UND ein
+    /// anhaengender Zeilenkommentar hinter echtem Code (derselbe naive, aber im Projekt bereits
+    /// etablierte Ansatz wie in <see cref="DesignAuditFeinschliffTests"/>: der Text ab dem
+    /// ersten <c>//</c> wird abgeschnitten, bevor nach Zeichenketten gesucht wird),
+    /// <c>[Obsolete(...)]</c>-Hinweise (Entwicklertext), der Inhalt von Interpolations-/
+    /// Formatausdruecken <c>{...}</c> (C#-Code wie <c>{result.BereitsVollstaendig}</c>, keine
+    /// Beschriftung) sowie die drei Excel-Farbregel-Werte in
+    /// <see cref="GeschuetzteGanzeZeichenketten"/>, die absichtlich „Pruefung" statt „Prüfung"
+    /// schreiben, weil <c>ExcelReportStyle.Farbregeln</c> exakt diese Zeichenketten matcht.
+    /// Zeichenketten-Literale mit ESCAPETEN Anfuehrungszeichen (<c>\"...\"</c>, wie sie
+    /// Architektur-Tests verwenden, die Quellcode als Text vergleichen) werden korrekt als EIN
+    /// Literal erkannt, nicht an der ersten escapten Anfuehrung abgeschnitten — sonst waeren
+    /// genau solche Stellen (siehe Fix-Runde 1: <c>ObservationCatalogWindowInputNormalizerArchitectureTests</c>,
+    /// <c>SchaechtePageArchitectureGuardTests</c>) fuer den Waechter unsichtbar.
+    ///
     /// WICHTIG fuer diesen Waechter selbst: <see cref="Aufgabe10c1BereinigteWoerter"/> MUSS die
     /// ALTE Ersatzschreibweise (ASCII) enthalten, nicht die neue Umlautschreibweise — der Test
     /// prueft ja, dass die ASCII-Form NICHT mehr vorkommt. Ein automatisches Bereinigungsskript
     /// darf diese Liste (und <see cref="BehobeneEinzeltexte"/> weiter oben) deshalb nie anfassen.
     ///
-    /// Ausgenommen sind: Kommentarzeilen (<c>//</c>), <c>[Obsolete(...)]</c>-Hinweise
-    /// (Entwicklertext), der Inhalt von Interpolations-/Formatausdruecken <c>{...}</c>
-    /// (C#-Code wie <c>{result.BereitsVollstaendig}</c>, keine Beschriftung) sowie die drei
-    /// Excel-Farbregel-Werte in <see cref="GeschuetzteGanzeZeichenketten"/>, die absichtlich
-    /// „Pruefung" statt „Prüfung" schreiben, weil <c>ExcelReportStyle.Farbregeln</c> exakt
-    /// diese Zeichenketten matcht.
-    ///
-    /// Bewusst NICHT in der Wortliste (bleiben ASCII, kein Rueckfall zu pruefen): „Ausgefuehrt"/
-    /// „ausgefuehrt" (Feldschluessel-Alias auch ohne Unterstrich, siehe
-    /// <c>SchachtSanierungPflichtfeldValidator.AusgefuehrtDurchAliases</c>), „Schaechte"/
-    /// „Uebersicht" (ASCII-Navigationsschluessel, <see cref="AuswertungPro.Next.UI.ViewModels.ShellNavigationTitles"/>),
+    /// Bewusst NICHT in der Wortliste (bleiben ASCII, kein Rueckfall zu pruefen — Fix-Runde 1
+    /// nach Review hat mehrere davon ueberhaupt erst als echte Regressionen aufgedeckt):
+    /// „Ausgefuehrt"/„ausgefuehrt" (Feldschluessel-Alias auch ohne Unterstrich, siehe
+    /// <c>SchachtSanierungPflichtfeldValidator.AusgefuehrtDurchAliases</c>, und der Fallback-
+    /// Spaltenschluessel in <c>SchaechtePageViewModel.cs</c>), „Schaechte"/„Uebersicht" (ASCII-
+    /// Navigationsschluessel, <see cref="AuswertungPro.Next.UI.ViewModels.ShellNavigationTitles"/>),
     /// „Eigentuemer" (dokumentierter ASCII-Feldname, siehe <c>SchaechtePageViewModel.cs</c>
-    /// Kommentar „das Feld heisst Eigentuemer — beides ist dieselbe Spalte"), „Pruefungsresultat"/
-    /// „Referenzpruefung" (Feldschluessel), „geschaetzt"/„Gefuellt" (interne Datenwerte,
-    /// keine Beschriftung), „Massnahme(n)" (schon ohne Umlaut korrekt geschrieben), „gruen"/
-    /// „gruene" (bleibt ASCII als Eingabe-Alias-Schluessel in
-    /// <c>LiveControlColorParser.NamedColors</c>, dieselbe Ausnahme wie das dort dokumentierte
-    /// „weiss"/„weiß"-Paar — echte Fliesstextfaelle wie „gruene Treffer" sind bereits einzeln
-    /// bereinigt und brauchen keinen dauerhaften Waechter).
+    /// Kommentar „das Feld heisst Eigentuemer — beides ist dieselbe Spalte" — AUSSER in echter
+    /// PDF-Fliesstext-Prosa wie <c>CostCalculatorPdfExportModelBuilder.cs</c>, dort gilt die
+    /// Ausnahme bewusst NICHT), „Pruefungsresultat"/„Referenzpruefung" (Feldschluessel),
+    /// „geschaetzt"/„Gefuellt" (interne Datenwerte, keine Beschriftung), „Massnahme(n)" (schon
+    /// ohne Umlaut korrekt geschrieben), „gruen"/„gruene" (bleibt ASCII als Eingabe-Alias-
+    /// Schluessel in <c>LiveControlColorParser.NamedColors</c>, dieselbe Ausnahme wie das dort
+    /// dokumentierte „weiss"/„weiß"-Paar), „Aenderungen"/„Aenderung" (Dossier-Feld-/Spaltenschluessel,
+    /// siehe <c>DossierPreviewFieldCatalog</c> Application, <c>DossierWordTemplateExportService</c>
+    /// Infrastructure — beide bleiben ASCII), „loeschen" (Menue-Marke <c>DataPageAnsichtUmschalter.LoeschenMarke</c>,
+    /// muss das XAML-<c>Tag="loeschen"</c> treffen; „Loeschen"/„Löschen" gross geschrieben sind
+    /// dagegen unproblematische reine Anzeigetexte und bleiben in der Liste), „Qualitaet"
+    /// (Gruppenname in <c>CostCalculatorLineOrderController.GroupOrder</c>, spiegelt
+    /// <c>CatalogItemGrouping</c> Infrastructure und <c>position_templates.json</c>), „Schaeden"
+    /// (steckt als Wortbestandteil in der Feld-Alias-Zeichenkette „Primaere Schaeden" in
+    /// <c>SchachtDamageLineBuilder.DamageFieldCandidates</c>, geschrieben von
+    /// <c>SchachtProtocolApplier</c>/<c>SchachtProFieldNames.PrimaereSchaedenAscii</c>
+    /// Infrastructure), „hoehe" (steckt in mehreren Punkt-getrennten Datenfeldschluesseln wie
+    /// <c>vsa.hoehe.mm</c>, <c>deckel.hoehe</c>, <c>haltungspunkt.hoehe</c> — ein Punkt ist kein
+    /// Wortzeichen und haette die Wortgrenzenpruefung nicht automatisch geschuetzt).
     /// </summary>
     private static readonly string[] Aufgabe10c1BereinigteWoerter =
     [
         "waehlen", "Waehlen", "waehle", "Waehle", "fuer", "Fuer",
-        "verfuegbar", "pruefen", "Pruefen", "pruefe", "Pruefe", "Schaeden",
+        "verfuegbar", "pruefen", "Pruefen", "pruefe", "Pruefe",
         "ungueltig", "Ungueltig", "ungueltige", "Ungueltige", "ungueltigen", "ungueltiges",
-        "Aenderungen", "Aenderung", "aendern", "Aendern", "geaendert", "Geaendert",
+        "aendern", "Aendern", "geaendert", "Geaendert",
         "geaenderte", "veraendert", "unveraendert", "unveraenderlich", "uebernommen", "uebernommene",
         "Uebernommen", "uebernehmen", "Uebernehmen", "uebergeben", "Uebernahme", "Goldpruefung",
-        "Goldpruefungs", "Goldfaelle", "Pruefung", "laeuft", "loeschen", "Loeschen",
+        "Goldpruefungs", "Goldfaelle", "Pruefung", "laeuft", "Loeschen",
         "geloescht", "Haltungslaenge", "geoeffnet", "geoeffneten", "Oeffner", "oeffnen",
         "Oeffnen", "geprueft", "gepruefte", "ueber", "uebersprungen", "Uebersprungen",
         "Uebersprungene", "Eintraege", "Protokolleintraege", "Laenge", "bestaetigt", "bestaetigen",
@@ -217,14 +248,14 @@ public sealed class DesignAuditLaufzeittexteTests
         "moegliche", "naeherung", "Naeherung", "noetig", "persoenliches", "Persoenliche",
         "spaetere", "spaeter", "uebrigen", "uebrige", "vollstaendig", "zusaetzlichen",
         "Zusaetzliche", "Abhaengigkeitspaket", "Bildflaeche", "Bildgroesse", "Dichtheitspruefung", "Flaeche",
-        "Geraetesicherheit", "hashgeprueften", "hoehe", "klaeren", "Kostenuebersicht", "Maskenflaeche",
+        "Geraetesicherheit", "hashgeprueften", "klaeren", "Kostenuebersicht", "Maskenflaeche",
         "Nettobetraege", "Preisaenderungen", "Pruefplatz", "Pruefspur", "Pruefungsfortschritt", "Qualitaetspruefung",
         "Vorschlaege", "Zugehoerige", "zugehoerige", "zugehoerigen", "Zuruecksetzen", "ausdruecklich",
         "ausgefuellt", "gehaengt", "geschuetzt", "geschuetzte", "geschuetzten", "rueckgaengig",
         "temporaere", "temporaeren", "unterstuetzt", "verstaendlich", "wuerde", "zurueckgegeben",
         "zurueckgehaltene", "zuruecknehmen", "naechsten", "Naechstes", "naeher", "benoetigt",
         "enthaelt", "muessen", "laesst", "koennen", "Schaerfe", "trainingsfaehig",
-        "Anschluesse", "Fuellung", "laedt", "Laeufe", "Qualitaet", "Aufraeumen",
+        "Anschluesse", "Fuellung", "laedt", "Laeufe", "Aufraeumen",
         "nachgeruestet", "aufloesbar", "Eigentuemerdossiers", "Saetze", "Saetzen", "Verfuegung",
         "aufgeloest", "schlaegt", "Zeitueberschreitung", "duerfen", "Schaetzung",
     ];
@@ -241,7 +272,8 @@ public sealed class DesignAuditLaufzeittexteTests
         "Pruefung nicht bestanden (grob undicht)",
     ];
 
-    private static readonly Regex Aufgabe10c1ZeichenkettenLiteral = new("\"([^\"\\n]*)\"", RegexOptions.Compiled);
+    private static readonly Regex Aufgabe10c1ZeichenkettenLiteral =
+        new("\"((?:[^\"\\\\]|\\\\.)*)\"", RegexOptions.Compiled);
 
     private static readonly Regex Aufgabe10c1WortRegex = new(
         @"\b(" + string.Join("|", Aufgabe10c1BereinigteWoerter.Distinct().Select(Regex.Escape)) + @")\b",
@@ -268,13 +300,32 @@ public sealed class DesignAuditLaufzeittexteTests
                     getrimmt.StartsWith("[Obsolete(", System.StringComparison.Ordinal))
                     continue;
 
-                foreach (Match m in Aufgabe10c1ZeichenkettenLiteral.Matches(zeilen[i]))
+                // Ein anhaengender Zeilenkommentar wird vor der Literalsuche abgeschnitten —
+                // derselbe naive, im Projekt bereits etablierte Ansatz wie in
+                // DesignAuditFeinschliffTests. Ein Kommentar ueber ein bereits erledigtes
+                // Wort ("// war Ausfuehrt...") darf den Waechter sonst nicht anschlagen lassen.
+                var zeileOhneKommentar = zeilen[i];
+                var kommentarAb = zeileOhneKommentar.IndexOf("//", System.StringComparison.Ordinal);
+                if (kommentarAb >= 0)
+                    zeileOhneKommentar = zeileOhneKommentar[..kommentarAb];
+
+                foreach (Match m in Aufgabe10c1ZeichenkettenLiteral.Matches(zeileOhneKommentar))
                 {
                     var inhalt = m.Groups[1].Value;
                     if (GeschuetzteGanzeZeichenketten.Contains(inhalt))
                         continue;
 
                     var pruefbar = Aufgabe10c1OhneAusdruecke(inhalt);
+
+                    // Nur ein Leerzeichen im pruefbaren Rest deutet auf einen echten
+                    // Anzeigetext hin — derselbe Grundsatz wie in
+                    // Sichtbare_Laufzeittexte_tragen_echte_Umlaute. Ein einzelnes Wort ohne
+                    // Leerzeichen ist im ganzen Projekt viel eher ein Schluessel/Tag/Datenwert
+                    // (siehe Fix-Runde 1 der Aufgabe-10c1-Review) und wird deshalb hier bewusst
+                    // nicht automatisch geprueft.
+                    if (!pruefbar.Contains(' '))
+                        continue;
+
                     foreach (Match wort in Aufgabe10c1WortRegex.Matches(pruefbar))
                         treffer.Add($"{Path.GetFileName(datei)}:{i + 1}: \"{wort.Value}\" in \"{inhalt}\"");
                 }

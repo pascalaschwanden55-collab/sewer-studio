@@ -32,15 +32,15 @@ public sealed class DossierRevisionRowFocusTests
             panel.Baue(ChangePage(), [ChangeField()]);
 
             Assert.Single(dossier.Changes);
-            Assert.True(panel.Kennt(DossierPreviewTarget.Row("Änderungen", 0)));
+            Assert.True(panel.Kennt(DossierPreviewTarget.Row("Aenderungen", 0)));
             Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(
-                "Änderungen", 0, "Version")));
+                "Aenderungen", 0, "Version")));
             Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(
-                "Änderungen", 0, "Datum")));
+                "Aenderungen", 0, "Datum")));
             Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(
-                "Änderungen", 0, "Visum")));
+                "Aenderungen", 0, "Visum")));
             Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(
-                "Änderungen", 0, "Änderung")));
+                "Aenderungen", 0, "Aenderung")));
             Assert.Equal(4, Nachfahren(host).OfType<RichTextBox>().Count());
             var entfernen = Assert.Single(Nachfahren(host)
                 .OfType<Button>()
@@ -55,6 +55,46 @@ public sealed class DossierRevisionRowFocusTests
             Assert.False(DossierChangeRows.HasContent(ersatz));
             Assert.Equal(1, DossierChangeRows.RemoveEmpty(dossier));
             Assert.Empty(dossier.Changes);
+        });
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (Review Aufgabe 10c1): Die Panel-Schalter (Rows/Fields/Preview-
+    /// Fenster/Zeilenformatierung) vergleichen den Feldschluessel als Zeichenkette
+    /// gegen die feste ASCII-Form „Aenderungen". Der KATALOG (Application,
+    /// <see cref="DossierPreviewFieldCatalog"/>) ist die einzige Stelle, die diesen
+    /// Schluessel tatsaechlich vergibt. Dieser Test baut das Feld NICHT von Hand
+    /// nach (wie <see cref="ChangeField"/>), sondern liest es aus dem echten Katalog
+    /// — driftet der Katalog-Schluessel je auseinander von dem, was die Panel-Schalter
+    /// erwarten, faellt das hier auf, statt dass „Kennt" still false liefert.
+    /// </summary>
+    [Fact]
+    public void Katalogschluessel_fuer_Aenderungen_wird_vom_Panel_erkannt()
+    {
+        RunOnSta(() =>
+        {
+            var host = new StackPanel();
+            var dossier = new DossierDefinition();
+            var area = new DossierAreaSettings();
+            var panel = CreatePanel(host, dossier, area);
+
+            var felder = DossierPreviewFieldCatalog.Build(area, dossier);
+            var aenderungenFeld = Assert.Single(
+                felder.Where(f => f.Kind == DossierPreviewFieldKind.Rows && f.Label == "Änderungswesen"));
+
+            var seite = new DossierPreviewPage(
+                1, "Deckblatt",
+                new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.Zero),
+                [], [aenderungenFeld.Key]);
+
+            panel.Baue(seite, [aenderungenFeld]);
+
+            Assert.Single(dossier.Changes);
+            Assert.True(panel.Kennt(DossierPreviewTarget.Row(aenderungenFeld.Key, 0)));
+            Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(aenderungenFeld.Key, 0, "Version")));
+            Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(aenderungenFeld.Key, 0, "Datum")));
+            Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(aenderungenFeld.Key, 0, "Visum")));
+            Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(aenderungenFeld.Key, 0, "Aenderung")));
         });
     }
 
@@ -92,7 +132,7 @@ public sealed class DossierRevisionRowFocusTests
                 window.Show();
 
                 Assert.True(panel.SpringeZu(DossierPreviewTarget.RowCell(
-                    "Änderungen", 0, "Datum")));
+                    "Aenderungen", 0, "Datum")));
                 PumpDispatcherFor(TimeSpan.FromMilliseconds(300));
 
                 Assert.All(editors.Take(4), editor =>
@@ -310,7 +350,7 @@ public sealed class DossierRevisionRowFocusTests
 
     private static DossierPreviewField ChangeField()
         => new(
-            "Änderungen",
+            "Aenderungen",
             "Änderungswesen",
             DossierPreviewFieldKind.Rows,
             () => string.Empty,
@@ -322,7 +362,7 @@ public sealed class DossierRevisionRowFocusTests
             "Deckblatt",
             new DossierPreviewGeometry(794, 1123, DossierPreviewEdges.Zero),
             [],
-            ["Änderungen"]);
+            ["Aenderungen"]);
 
     private static DossierPreviewField TopicField()
         => new(

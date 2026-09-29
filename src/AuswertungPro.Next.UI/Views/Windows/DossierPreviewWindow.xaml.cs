@@ -303,7 +303,7 @@ public partial class DossierPreviewWindow : Window
     {
         "Themen" => DossierWordTemplateExportService.BuildTopicRows(_area, _dossier, _values),
         "Eigentuemer" => DossierWordTemplateExportService.BuildOwnerRows(_dossier),
-        "Änderungen" => DossierWordTemplateExportService.BuildChangeRows(_dossier),
+        "Aenderungen" => DossierWordTemplateExportService.BuildChangeRows(_dossier),
         "Haltungen" => DossierWordTemplateExportService.BuildHoldingRows(_snapshot),
         _ => Array.Empty<IReadOnlyDictionary<string, string>>()
     };

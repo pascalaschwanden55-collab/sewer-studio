@@ -451,7 +451,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         // Bestandsdateien bleibt der Rueckfall als editierbare Dropdown-Spalte erhalten.
         if (!Columns.Any(c => c.IndexOf("usgef", StringComparison.OrdinalIgnoreCase) >= 0
                            && c.IndexOf("durch", StringComparison.OrdinalIgnoreCase) >= 0))
-            Columns.Add("Ausgeführt durch");
+            Columns.Add("Ausgefuehrt durch");
 
         // Belastungsklasse der Abdeckung (EN 124). Aeltere Vorlagen fuehren an dieser
         // Stelle nur eine Spalte mit der Ueberschrift "0", die als reine Ziffer

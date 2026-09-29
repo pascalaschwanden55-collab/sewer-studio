@@ -677,7 +677,7 @@ internal sealed partial class DossierPreviewFieldPanel
                     (z, w) => ((DossierOwnerRow)z).Occupancy = w)
             }),
 
-        "Änderungen" => new ZeilenTyp(
+        "Aenderungen" => new ZeilenTyp(
             _dossier.Changes,
             () => new DossierChangeRow(),
             new[]

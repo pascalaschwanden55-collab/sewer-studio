@@ -92,7 +92,7 @@ public sealed class DossierExactPreviewPageRendererTests
             var bitmap = new WriteableBitmap(100, 150, 96, 96, PixelFormats.Bgra32, null);
             var page = new DossierOutputPreviewPage(2, 612, 792, string.Empty, []);
             var target = DossierPreviewTarget.RowCell(
-                "Änderungen", 0, "Datum");
+                "Aenderungen", 0, "Datum");
             var area = new DossierOutputPreviewHitArea(
                 target, 40, 620, 120, 650);
 

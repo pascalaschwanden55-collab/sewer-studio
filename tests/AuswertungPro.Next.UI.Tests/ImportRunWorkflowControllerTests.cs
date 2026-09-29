@@ -304,7 +304,7 @@ public sealed class ImportRunWorkflowControllerTests
     public async Task RunAsync_project_switch_during_import_discards_result_before_post_processing()
     {
         var originalProject = new Project { Name = "Original" };
-        var openedProject = new Project { Name = "Spaeter geöffnet" };
+        var openedProject = new Project { Name = "Spaeter geoeffnet" };
         var activeProject = originalProject;
         var activePath = @"C:\Projekte\Original\projekt.json";
         var calls = new List<string>();
@@ -382,7 +382,7 @@ public sealed class ImportRunWorkflowControllerTests
     public async Task RunAsync_project_switch_in_post_processing_stops_before_commit()
     {
         var originalProject = new Project { Name = "Original" };
-        var openedProject = new Project { Name = "Spaeter geöffnet" };
+        var openedProject = new Project { Name = "Spaeter geoeffnet" };
         var activeProject = originalProject;
         var calls = new List<string>();
         var state = new UiState();
@@ -420,7 +420,7 @@ public sealed class ImportRunWorkflowControllerTests
     public async Task RunAsync_confirmed_preview_keeps_original_project_identity()
     {
         var originalProject = new Project { Name = "Original" };
-        var openedProject = new Project { Name = "Spaeter geöffnet" };
+        var openedProject = new Project { Name = "Spaeter geoeffnet" };
         var activeProject = originalProject;
         var activePath = @"C:\Projekte\Original\projekt.json";
         var importCalls = 0;

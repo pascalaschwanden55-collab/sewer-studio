@@ -9,7 +9,7 @@ public static class SchachtDamageLineBuilder
     private static readonly string[] DamageFieldCandidates =
     [
         "Prim\u00e4re Sch\u00e4den",
-        "Primaere Schäden",
+        "Primaere Schaeden",
         "Primaere_Schaeden",
         "Prim\u00c3\u00a4re Sch\u00c3\u00a4den"
     ];
