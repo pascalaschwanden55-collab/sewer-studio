@@ -28,6 +28,26 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposabl
     {
         _shell = shell;
         _shell.PropertyChanged += OnShellGeaendert;
+
+        // Fix-Runde 1, Befund 1: Diese vier Befehle haengen an einem Betriebs-Schutz
+        // (Import/Export laeuft), der sich AUCH aendern kann, waehrend die Trefferliste bereits
+        // offen ist. Ohne diese Anbindung bliebe ein zuvor sichtbarer, inzwischen gesperrter
+        // Treffer bis zum naechsten Tastendruck sichtbar stehen.
+        _shell.SaveCommand.CanExecuteChanged += OnBefehlsVerfuegbarkeitGeaendert;
+        _shell.SaveAsProjectCommand.CanExecuteChanged += OnBefehlsVerfuegbarkeitGeaendert;
+        _shell.NewProjectCommand.CanExecuteChanged += OnBefehlsVerfuegbarkeitGeaendert;
+        _shell.OpenProjectCommand.CanExecuteChanged += OnBefehlsVerfuegbarkeitGeaendert;
+    }
+
+    /// <summary>
+    /// Aktualisiert die Trefferliste, wenn sich die Verfuegbarkeit eines Betriebs-gebundenen
+    /// Befehls aendert (Fix-Runde 1, Befund 1) - z. B. weil waehrend die Suche offen ist ein
+    /// Import/Export startet oder endet. Nur relevant, solange ueberhaupt gesucht wird.
+    /// </summary>
+    private void OnBefehlsVerfuegbarkeitGeaendert(object? sender, EventArgs e)
+    {
+        if (Text.Trim().Length > 0)
+            AktualisiereTreffer(Text);
     }
 
     /// <summary>
@@ -59,14 +79,18 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposabl
         OnPropertyChanged(nameof(LeerText));
     }
 
-    partial void OnTextChanged(string value)
+    partial void OnTextChanged(string value) => AktualisiereTreffer(value);
+
+    /// <summary>Baut die Trefferliste neu auf - bei Texteingabe und bei einer geaenderten
+    /// Befehlsverfuegbarkeit (siehe <see cref="OnBefehlsVerfuegbarkeitGeaendert"/>).</summary>
+    private void AktualisiereTreffer(string value)
     {
         Treffer.Clear();
         var haltungen = _shell.IsProjectReady ? _shell.Project.Data : Enumerable.Empty<HaltungRecord>();
         var schaechte = _shell.IsProjectReady ? _shell.Project.SchaechteData : Enumerable.Empty<SchachtRecord>();
         var treffer = GlobaleSucheRegel.Suche(value, haltungen, schaechte, SchaechteColumnPolicy.GetSchachtNumber, BaueBefehle());
 
-        // Die reine Regel liefert nie einen Gruppenkopf (Domain-fern) — die UI setzt ihn davor,
+        // Die reine Regel liefert nie einen Gruppenkopf (Domain-fern) - die UI setzt ihn davor,
         // sobald der erste Befehlstreffer kommt. Erscheinen Befehle zuerst (Reihenfolge-Regel bei
         // Wortsuchen), steht die Ueberschrift ganz oben; kommen sie nach den Datentreffern, steht
         // sie an der Nahtstelle.
@@ -90,7 +114,7 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposabl
     /// Baut den Befehlskatalog frisch aus dem aktuellen Shell-Zustand: alle Seiten der Leiste
     /// («Gehe zu: …», Glyph und Verfuegbarkeit vom jeweiligen <c>NavItem</c>) und die
     /// Hauptbefehle. <c>Verfuegbar</c> kommt ueberall vom echten <c>CanExecute</c> bzw. von
-    /// <c>NavItem.IsAvailable</c> — ein Befehl ohne offenes Projekt taucht dann gar nicht erst
+    /// <c>NavItem.IsAvailable</c> - ein Befehl ohne offenes Projekt taucht dann gar nicht erst
     /// in der Trefferliste auf, statt nur deaktiviert zu erscheinen. Die Ausfuehrung ruft
     /// ausschliesslich vorhandene ShellViewModel-Befehle/-Methoden auf.
     /// </summary>
@@ -115,10 +139,14 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposabl
                 "ImportStarten", "Import starten", importSeite.Icon, importSeite.IsAvailable,
                 () => _shell.NavigateTo("Import")));
 
-        befehle.Add(Befehl("NeuesProjekt", "Neues Projekt", "", _shell.NewProjectCommand));
-        befehle.Add(Befehl("ProjektOeffnen", "Projekt öffnen", "", _shell.OpenProjectCommand));
-        befehle.Add(Befehl("Speichern", "Speichern", "", _shell.SaveCommand));
-        befehle.Add(Befehl("SpeichernUnter", "Speichern unter", "", _shell.SaveAsProjectCommand));
+        // Glyphen sind dieselben Segoe-Fluent-Codepunkte wie im Menue Datei/Hilfe (MainWindow.xaml
+        // &#xE710; usw.) - ein Befehl in der Suche zeigt so dasselbe Symbol wie im Menue
+        // (Fix-Runde 1, Befund 2: waren bereits als rohe, im Editor unsichtbare PUA-Zeichen
+        // gesetzt, jetzt als lesbare \uXXXX-Escapes mit identischem Codepunkt).
+        befehle.Add(Befehl("NeuesProjekt", "Neues Projekt", "\uE710", _shell.NewProjectCommand));
+        befehle.Add(Befehl("ProjektOeffnen", "Projekt öffnen", "\uE838", _shell.OpenProjectCommand));
+        befehle.Add(Befehl("Speichern", "Speichern", "\uE74E", _shell.SaveCommand));
+        befehle.Add(Befehl("SpeichernUnter", "Speichern unter", "\uE792", _shell.SaveAsProjectCommand));
 
         var einstellungenSeite = _shell.NavItems.FirstOrDefault(n => n.Title == "Einstellungen");
         if (einstellungenSeite is not null)
@@ -126,16 +154,30 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposabl
                 "Einstellungen", "Einstellungen", einstellungenSeite.Icon, einstellungenSeite.IsAvailable,
                 () => _shell.NavigateTo("Einstellungen")));
 
-        befehle.Add(Befehl("Handbuch", "Handbuch", "", _shell.OpenHandbuchCommand, _shell.SelectedNavItem?.Title));
-        befehle.Add(Befehl("Tastenkuerzel", "Tastenkürzel", "", _shell.OpenTastenkuerzelCommand));
-        befehle.Add(Befehl("UeberSewerStudio", "Über SewerStudio", "", _shell.ShowAboutCommand));
-        befehle.Add(Befehl("Fokusmodus", "Fokusmodus", "", _shell.ToggleFocusModeCommand));
+        befehle.Add(Befehl("Handbuch", "Handbuch", "\uE736", _shell.OpenHandbuchCommand, _shell.SelectedNavItem?.Title));
+        befehle.Add(Befehl("Tastenkuerzel", "Tastenkürzel", "\uE765", _shell.OpenTastenkuerzelCommand));
+        befehle.Add(Befehl("UeberSewerStudio", "Über SewerStudio", "\uE946", _shell.ShowAboutCommand));
+        // Fokusmodus hat im Menue keinen Eintrag mit Glyph (er ist dort ein checkbarer
+        // Menuepunkt ohne Icon, siehe CLAUDE.md-Regel zu Menue-Icons) - dasselbe "gross
+        // anzeigen"-Symbol wie der vorhandene Vollflaechen-Umschalter (HaltungFelderDrawer.xaml).
+        befehle.Add(Befehl("Fokusmodus", "Fokusmodus", "\uE740", _shell.ToggleFocusModeCommand));
 
         return befehle;
     }
 
+    /// <summary>
+    /// Fix-Runde 1, Befund 1: <c>Verfuegbar</c> ist der beim Bauen der Liste erfasste Stand - er
+    /// entscheidet nur, ob der Treffer ueberhaupt erscheint. Die Ausfuehrung prueft
+    /// <c>CanExecute</c> UNMITTELBAR vor <c>Execute</c> ein zweites Mal: Wird ein Betriebs-Schutz
+    /// aktiv, waehrend die Trefferliste bereits offen ist (Import/Export startet zwischen Anzeige
+    /// und Klick), fuehrt ein Klick auf einen inzwischen gesperrten Treffer nichts mehr aus.
+    /// </summary>
     private static GlobaleSucheBefehlEintrag Befehl(string schluessel, string anzeigename, string glyph, ICommand command, object? parameter = null)
-        => new(schluessel, anzeigename, glyph, command.CanExecute(parameter), () => command.Execute(parameter));
+        => new(schluessel, anzeigename, glyph, command.CanExecute(parameter), () =>
+        {
+            if (command.CanExecute(parameter))
+                command.Execute(parameter);
+        });
 
     /// <summary>Treffer waehlen: fuehrt einen Befehl aus oder navigiert zur passenden Seite,
     /// schliesst die Liste und leert das Feld. Ein Gruppenkopf ist nie auswaehlbar.</summary>
@@ -236,5 +278,9 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposabl
             return;
         _disposed = true;
         _shell.PropertyChanged -= OnShellGeaendert;
+        _shell.SaveCommand.CanExecuteChanged -= OnBefehlsVerfuegbarkeitGeaendert;
+        _shell.SaveAsProjectCommand.CanExecuteChanged -= OnBefehlsVerfuegbarkeitGeaendert;
+        _shell.NewProjectCommand.CanExecuteChanged -= OnBefehlsVerfuegbarkeitGeaendert;
+        _shell.OpenProjectCommand.CanExecuteChanged -= OnBefehlsVerfuegbarkeitGeaendert;
     }
 }

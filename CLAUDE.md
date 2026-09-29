@@ -1198,6 +1198,20 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `GlobaleSucheBefehleTests` (echtes `ShellViewModel`, kein Fake: Befehl fuehrt wirklich aus,
   Navigation trifft die echte Seite, «Speichern» ist ohne offenes Projekt kein Treffer, Gruppenkopf
   nur bei Befehlstreffer, Pfeiltasten ueberspringen ihn).
+  **Fix-Runde 1 (29.09.2026):** `Verfuegbar` ist nur der beim Bauen der Liste erfasste Stand —
+  zwischen Anzeige und Klick kann ein Betriebs-Schutz (Import/Export laeuft) aktiv werden. Der
+  `Befehl(...)`-Helfer prueft `CanExecute` deshalb UNMITTELBAR vor `Execute` ein zweites Mal;
+  ein inzwischen gesperrter Treffer fuehrt beim Klick nichts mehr aus. Zusaetzlich abonniert
+  `GlobaleSucheViewModel` `CanExecuteChanged` von `SaveCommand`/`SaveAsProjectCommand`/
+  `NewProjectCommand`/`OpenProjectCommand`: Aendert sich deren Verfuegbarkeit, waehrend die Liste
+  bereits offen ist, baut sie sich sofort neu auf — ein jetzt gesperrter Treffer verschwindet von
+  selbst, statt bis zum naechsten Tastendruck stehen zu bleiben. Die sieben Hauptbefehle-Glyphen
+  (dieselben Segoe-Fluent-Codepunkte wie `MainWindow.xaml`) waren von Anfang an korrekt gesetzt,
+  standen im Quelltext aber als rohe, in den meisten Editoren unsichtbare PUA-Unicode-Zeichen statt
+  als lesbare `\uXXXX`-Escapes — inhaltlich unveraendert, jetzt aber auch im Diff/Review erkennbar.
+  Tests: `Speichern_fuehrt_nichts_mehr_aus_wenn_waehrend_der_anzeige_ein_betriebs_schutz_aktiv_wird`,
+  `Ein_treffer_verschwindet_aus_der_offenen_liste_sobald_ein_betriebs_schutz_aktiv_wird`,
+  `Jeder_hauptbefehl_hat_ein_sichtbares_glyph` (Theory, alle acht Hauptbefehle).
 - **Aufgabe 15 — Gemeinsame Quelle fuer das Logo in Berichten.** `IBerichtsMarke`
   (`Application/Reports`, reine Daten: `LogoPfad`) ersetzt die rund sieben Stellen, die den
   Programmordner-Pfad `Assets/Brand/abwasser-uri-logo.png` je einzeln zusammensetzten und
