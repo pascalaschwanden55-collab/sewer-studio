@@ -324,7 +324,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClie
 
         return JsonSerializer.Deserialize<TResponse>(body, JsonOpts)
             ?? throw new InvalidOperationException(
-                $"Failed to deserialize response from {endpoint}");
+                $"Antwort von {endpoint} konnte nicht gelesen werden.");
     }
 
     /// <summary>

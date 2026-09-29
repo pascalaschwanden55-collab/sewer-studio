@@ -541,6 +541,28 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `throw`+`catch`), hat kein `TargetSite` und bleibt ebenfalls generisch — das deckt zugleich den
   Fall ab, dass eine in einer Test-Fixture geworfene Exception (Testassembly, nicht gelistet)
   korrekt generisch bleibt.
+- **Aufgabe 10b Fix-Runde 2 — der erste Audit-Sweep (Fix-Runde 1) suchte nur zeilenweise und
+  übersah dadurch eine zweite Stelle.** `VisionPipelineClient.GetAsync` (eine kleine
+  Sidecar-Metadaten-Route neben der schon übersetzten `PostAsync`-Route) warf ebenfalls
+  `"Failed to deserialize response from {endpoint}"`, aber mit der Zeichenkette in einer
+  EIGENEN Zeile hinter `throw new InvalidOperationException(` — genau das Muster, das der
+  ursprüngliche zeilenbasierte `grep`-Audit nicht fand. Übersetzt wie die Schwesterstelle:
+  `"Antwort von {endpoint} konnte nicht gelesen werden."`.
+  **Neuer Wächter `UserErrorEigeneMeldungenSpracheTests`** (Pipeline.Tests, WPF-frei) macht
+  diese Fehlerklasse strukturell unmöglich statt sie erneut per Stichprobe zu suchen: Er
+  durchsucht ALLE `new InvalidOperationException(`/`new ArgumentException(`-Konstruktionen in
+  `Domain`/`Application`/`Infrastructure` (regex-basiert, klammer-/zeilenumbruch-tolerant —
+  die Zeichenkette darf beliebig weit hinter der öffnenden Klammer stehen, solange sie das
+  ERSTE Argument direkt ist) und schlägt fehl, sobald der Text mit einem typischen englischen
+  Wort beginnt (`Failed|Cannot|Can't|Could not|Unable|Invalid|Unknown|Missing|Expected|No |
+  The |Not |Only |Must |Value |Unexpected|Error`, gross-/kleinschreibungsunabhängig — Vorgabe
+  des Reviews). Ein Fund muss entweder übersetzt oder in der Datei-Konstante `Ausnahmen` mit
+  Begründung eingetragen werden (aktuell leer: kein bekannter Fund brauchte eine Ausnahme).
+  Ein zweiter Test prüft, dass die Ausnahmenliste keine toten Einträge behält. Sabotageprobe
+  bestanden: Die ursprüngliche englische Zeichenkette an `VisionPipelineClient.cs:326` wieder
+  eingesetzt → Wächter meldet exakt Datei, Zeile und Text; danach zurückgesetzt.
+  **Nie wieder ein rein zeilenbasierter `grep`-Audit für diese Fehlerklasse** — der Wächter
+  läuft bei jedem Testlauf automatisch mit und ersetzt die einmalige Stichprobe dauerhaft.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 
