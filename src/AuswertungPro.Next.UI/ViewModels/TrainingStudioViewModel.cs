@@ -167,8 +167,8 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
             if (Suggestion is null) return string.Empty;
             if (!Suggestion.ModelAvailable)
                 return string.IsNullOrWhiteSpace(Suggestion.UnavailableReason)
-                    ? "KI-Modell nicht verfuegbar."
-                    : $"KI-Modell nicht verfuegbar: {Suggestion.UnavailableReason}";
+                    ? "KI-Modell nicht verfügbar."
+                    : $"KI-Modell nicht verfügbar: {Suggestion.UnavailableReason}";
             if (!Suggestion.FrameUsable) return $"Frame nicht verwertbar: {Suggestion.QualityReason}";
             if (Suggestion.IsBend) return "Bogen erkannt — hier kein BCE (Rohrende) codieren.";
             return string.Empty;
@@ -223,7 +223,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         {
             StatusText =
                 "Auf dem aktuellen Bild ist bereits mindestens ein Ereignis gespeichert. " +
-                "Bitte den zusaetzlichen Befund speichern oder verwerfen und danach 'Bild fertig' waehlen.";
+                "Bitte den zusätzlichen Befund speichern oder verwerfen und danach 'Bild fertig' wählen.";
             return false;
         }
 
@@ -264,7 +264,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         {
             StatusText =
                 "Dieses Ereignis ist bereits gespeichert. Bitte 'Weiteres Ereignis auf diesem Bild' " +
-                "oder 'Bild fertig' waehlen.";
+                "oder 'Bild fertig' wählen.";
             return;
         }
 
@@ -294,7 +294,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
     {
         if (_ensureAiReady is null)
         {
-            StatusText = "KI-Start ist nur im laufenden SewerStudio verfuegbar.";
+            StatusText = "KI-Start ist nur im laufenden SewerStudio verfügbar.";
             return;
         }
 
@@ -345,7 +345,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         {
             StatusText =
                 "Dieses Ereignis ist bereits gespeichert. Bitte 'Weiteres Ereignis auf diesem Bild' " +
-                "oder 'Bild fertig' waehlen.";
+                "oder 'Bild fertig' wählen.";
             return;
         }
 
@@ -354,17 +354,17 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
             return;
         if (_isRunningPreviewDetection)
         {
-            StatusText = "Der Modelltest laeuft noch. Bitte kurz warten und die Box danach erneut ziehen.";
+            StatusText = "Der Modelltest läuft noch. Bitte kurz warten und die Box danach erneut ziehen.";
             return;
         }
         if (_saveInProgress)
         {
-            StatusText = "Speichern laeuft noch. Bitte die Box danach erneut ziehen.";
+            StatusText = "Speichern läuft noch. Bitte die Box danach erneut ziehen.";
             return;
         }
         if (_isCheckingPhoto)
         {
-            StatusText = "Die allgemeine Foto-Pruefung laeuft noch. Bitte kurz warten.";
+            StatusText = "Die allgemeine Foto-Prüfung läuft noch. Bitte kurz warten.";
             return;
         }
         if (_isStartingAi)
@@ -477,7 +477,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         {
             StatusText =
                 "Das gespeicherte Ereignis kann hier nicht verworfen werden. Bitte 'Bild fertig' " +
-                "oder 'Weiteres Ereignis auf diesem Bild' waehlen.";
+                "oder 'Weiteres Ereignis auf diesem Bild' wählen.";
             return;
         }
 
@@ -494,16 +494,16 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
             IsAwaitingImageCompletion = true;
             StatusText = persistedDraft
                 ? "Markierung geschlossen. Der bereits gespeicherte Entwurf bleibt unter " +
-                  "'Unvollstaendige Goldframes' fuer eine spaetere Reparatur erhalten. " +
-                  "Das bestaetigte Ereignis auf diesem Bild bleibt ebenfalls erhalten."
-                : "Zusaetzliche Markierung verworfen. Das bereits gespeicherte Ereignis bleibt erhalten. " +
-                  "Jetzt erneut 'Weiteres Ereignis auf diesem Bild' oder 'Bild fertig' waehlen.";
+                  "'Unvollständige Goldframes' für eine spätere Reparatur erhalten. " +
+                  "Das bestätigte Ereignis auf diesem Bild bleibt ebenfalls erhalten."
+                : "Zusätzliche Markierung verworfen. Das bereits gespeicherte Ereignis bleibt erhalten. " +
+                  "Jetzt erneut 'Weiteres Ereignis auf diesem Bild' oder 'Bild fertig' wählen.";
         }
         else
         {
             StatusText = persistedDraft
                 ? "Markierung geschlossen. Der bereits gespeicherte Entwurf bleibt unter " +
-                  "'Unvollstaendige Goldframes' fuer eine spaetere Reparatur erhalten."
+                  "'Unvollständige Goldframes' für eine spätere Reparatur erhalten."
                 : "Markierung verworfen.";
         }
     }
@@ -516,7 +516,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         {
             StatusText =
                 "Dieses Ereignis ist bereits gespeichert. Bitte 'Weiteres Ereignis auf diesem Bild' " +
-                "oder 'Bild fertig' waehlen.";
+                "oder 'Bild fertig' wählen.";
             return;
         }
 
@@ -538,7 +538,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         if (IsAwaitingImageCompletion)
         {
             StatusText =
-                "Bitte zuerst 'Bild fertig' oder 'Weiteres Ereignis auf diesem Bild' waehlen.";
+                "Bitte zuerst 'Bild fertig' oder 'Weiteres Ereignis auf diesem Bild' wählen.";
             return;
         }
 
@@ -557,7 +557,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         Suggestion = null;
         _isCheckingPhoto = true;
         IsBusy = true;
-        StatusText = "Das ganze Foto wird mit KI geprueft …";
+        StatusText = "Das ganze Foto wird mit KI geprüft …";
         try
         {
             var suggestion = await _workbench
@@ -576,7 +576,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
                 var reason = string.IsNullOrWhiteSpace(suggestion.UnavailableReason)
                     ? "Das Klassifikationsmodell ist nicht geladen."
                     : suggestion.UnavailableReason;
-                StatusText = $"KI-Modell nicht verfuegbar: {reason} Nichts gespeichert.";
+                StatusText = $"KI-Modell nicht verfügbar: {reason} Nichts gespeichert.";
                 return;
             }
             if (!suggestion.FrameUsable)
@@ -596,12 +596,12 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
 
             StatusText =
                 $"KI-Vorschlag: {_textPresenter.NormalizeCode(top.VsaCode)} — {_textPresenter.ResolveCodeLabel(top.VsaCode)} " +
-                $"({top.Confidence:P0}). Zum Uebernehmen anklicken. Nichts gespeichert.";
+                $"({top.Confidence:P0}). Zum Übernehmen anklicken. Nichts gespeichert.";
         }
         catch (OperationCanceledException)
         {
             if (ReferenceEquals(CurrentItem, item))
-                StatusText = "Foto-Pruefung abgebrochen. Nichts gespeichert.";
+                StatusText = "Foto-Prüfung abgebrochen. Nichts gespeichert.";
         }
         catch (IOException ex)
         {
@@ -609,23 +609,23 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
             if (ReferenceEquals(CurrentItem, item))
             {
                 StatusText =
-                    "Foto konnte nicht gelesen werden. Bitte die Datei pruefen. Nichts gespeichert.";
+                    "Foto konnte nicht gelesen werden. Bitte die Datei prüfen. Nichts gespeichert.";
             }
         }
         catch (SidecarUnavailableException ex)
         {
-            UserError.DescribeAndReport(ex, "Training-Studio allgemeine Foto-Pruefung");
+            UserError.DescribeAndReport(ex, "Training-Studio allgemeine Foto-Prüfung");
             if (ReferenceEquals(CurrentItem, item))
             {
                 StatusText =
-                    "Lokaler KI-Dienst ist nicht erreichbar. Bitte oben 'KI starten' waehlen. Nichts gespeichert.";
+                    "Lokaler KI-Dienst ist nicht erreichbar. Bitte oben 'KI starten' wählen. Nichts gespeichert.";
             }
         }
         catch (Exception ex)
         {
-            var error = UserError.DescribeAndReport(ex, "Training-Studio allgemeine Foto-Pruefung");
+            var error = UserError.DescribeAndReport(ex, "Training-Studio allgemeine Foto-Prüfung");
             if (ReferenceEquals(CurrentItem, item))
-                StatusText = "Foto-Pruefung fehlgeschlagen: " + error;
+                StatusText = "Foto-Prüfung fehlgeschlagen: " + error;
         }
         finally
         {
@@ -642,7 +642,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         {
             StatusText =
                 "Dieses Ereignis ist bereits gespeichert. Bitte 'Weiteres Ereignis auf diesem Bild' " +
-                "oder 'Bild fertig' waehlen.";
+                "oder 'Bild fertig' wählen.";
             return;
         }
 
@@ -655,8 +655,8 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         if (IsAwaitingImageCompletion)
         {
             StatusText =
-                "Das Ereignis ist gespeichert. Bitte ausdruecklich 'Bild fertig' oder " +
-                "'Weiteres Ereignis auf diesem Bild' waehlen.";
+                "Das Ereignis ist gespeichert. Bitte ausdrücklich 'Bild fertig' oder " +
+                "'Weiteres Ereignis auf diesem Bild' wählen.";
             return;
         }
 
@@ -664,7 +664,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         {
             StatusText =
                 "Ein weiteres Ereignis auf diesem Bild ist noch offen. Bitte speichern oder verwerfen; " +
-                "danach 'Bild fertig' waehlen.";
+                "danach 'Bild fertig' wählen.";
             return;
         }
 
@@ -711,7 +711,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         if (IsAwaitingImageCompletion)
         {
             StatusText =
-                "Bitte zuerst 'Bild fertig' oder 'Weiteres Ereignis auf diesem Bild' waehlen.";
+                "Bitte zuerst 'Bild fertig' oder 'Weiteres Ereignis auf diesem Bild' wählen.";
             return;
         }
 
@@ -719,7 +719,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         {
             StatusText =
                 "Ein weiteres Ereignis auf diesem Bild ist noch offen. Bitte speichern oder verwerfen; " +
-                "danach 'Bild fertig' waehlen.";
+                "danach 'Bild fertig' wählen.";
             return;
         }
 
@@ -746,7 +746,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         else if (CurrentIndex > 0)
         {
             StatusText =
-                "Die vorherigen Bilder sind bereits abgeschlossen. Fertige Goldfaelle werden hier nicht erneut geoeffnet.";
+                "Die vorherigen Bilder sind bereits abgeschlossen. Fertige Goldfälle werden hier nicht erneut geöffnet.";
         }
     }
 
@@ -756,7 +756,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         {
             StatusText =
                 "Dieses Ereignis ist bereits gespeichert. Bitte 'Weiteres Ereignis auf diesem Bild' " +
-                "oder 'Bild fertig' waehlen.";
+                "oder 'Bild fertig' wählen.";
             return;
         }
 
@@ -770,14 +770,14 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
 
         if (_isRunningPreviewDetection)
         {
-            StatusText = "Der Modelltest laeuft noch. Bitte vor dem Speichern kurz warten.";
+            StatusText = "Der Modelltest läuft noch. Bitte vor dem Speichern kurz warten.";
             return;
         }
 
         // Akzeptieren/Korrigieren ist erst moeglich, wenn Maske und Vorschlag fertig sind.
         if (_boxRunActive)
         {
-            StatusText = "Segmentierung laeuft noch — bitte kurz warten.";
+            StatusText = "Segmentierung läuft noch — bitte kurz warten.";
             return;
         }
 
@@ -785,13 +785,13 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
         // darf denselben Fund nicht zweimal durch den Gold-Pfad schieben.
         if (_saveInProgress)
         {
-            StatusText = "Speichern laeuft bereits — bitte kurz warten.";
+            StatusText = "Speichern läuft bereits — bitte kurz warten.";
             return;
         }
 
         if (IsBusy)
         {
-            StatusText = "Ein anderer KI-Schritt laeuft noch. Bitte vor dem Speichern kurz warten.";
+            StatusText = "Ein anderer KI-Schritt läuft noch. Bitte vor dem Speichern kurz warten.";
             return;
         }
 
@@ -853,7 +853,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
                             || string.IsNullOrWhiteSpace(item.ExistingSampleId))
                         {
                             throw new InvalidOperationException(
-                                "Die aktive Goldpruefungs-Sitzung ist nicht vollstaendig gebunden.");
+                                "Die aktive Goldprüfungs-Sitzung ist nicht vollständig gebunden.");
                         }
 
                         await _goldQualityReview.MarkCompletedAsync(
@@ -866,9 +866,9 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
                     catch (Exception ex)
                     {
                         StatusText =
-                            "Das Goldsample wurde gespeichert, aber der Pruefungsfortschritt nicht. " +
-                            "Bitte die Goldpruefung neu laden und diesen Fall erneut bestaetigen: " +
-                            UserError.DescribeAndReport(ex, "Training-Studio Goldpruefung abschliessen");
+                            "Das Goldsample wurde gespeichert, aber der Prüfungsfortschritt nicht. " +
+                            "Bitte die Goldprüfung neu laden und diesen Fall erneut bestätigen: " +
+                            UserError.DescribeAndReport(ex, "Training-Studio Goldprüfung abschliessen");
                         await RefreshGoldProgressCoreAsync(CancellationToken.None);
                         return;
                     }
@@ -878,9 +878,9 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
                     ? $"Gespeichert + {result.KbIndexState}."
                     : $"Gespeichert ({result.KbIndexState}) — Hinweis: {result.RefusalReason}";
                 if (wasCorrected)
-                    savedStatus = $"Korrektur gespeichert und an die Lerndaten zurueckgegeben. {savedStatus}";
+                    savedStatus = $"Korrektur gespeichert und an die Lerndaten zurückgegeben. {savedStatus}";
                 else if (asCorrection)
-                    savedStatus = $"Code entspricht dem KI-Vorschlag und wurde bestaetigt. {savedStatus}";
+                    savedStatus = $"Code entspricht dem KI-Vorschlag und wurde bestätigt. {savedStatus}";
 
                 await RefreshGoldProgressCoreAsync(CancellationToken.None);
                 BindOpenPdfReferencesToStoredImage(item, result.StoredImageSha256);
@@ -893,7 +893,7 @@ public sealed partial class TrainingStudioViewModel : ObservableObject, IDisposa
                     if (!TryMarkCurrentQueueItemCompleted())
                     {
                         StatusText =
-                            "Dieses Bild war bereits abgeschlossen und wurde nicht doppelt gezaehlt.";
+                            "Dieses Bild war bereits abgeschlossen und wurde nicht doppelt gezählt.";
                         return;
                     }
                     QueueDoneCount = Math.Min(QueueDoneCount + 1, QueueTotalCount);

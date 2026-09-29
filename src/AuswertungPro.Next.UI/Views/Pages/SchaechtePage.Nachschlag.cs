@@ -46,7 +46,7 @@ public partial class SchaechtePage
         if (string.IsNullOrWhiteSpace(schachtnummer))
         {
             _vm?.Dialogs?.Info(
-                "Ohne Schachtnummer laesst sich beim Kanton nichts nachschlagen.",
+                "Ohne Schachtnummer lässt sich beim Kanton nichts nachschlagen.",
                 "Beim Kanton nachschlagen");
             return;
         }
@@ -93,7 +93,7 @@ public partial class SchaechtePage
         {
             Dialogs.Info(
                 $"Das Feld \"{feldname}\" hat inzwischen einen Wert. "
-                + "Der Nachschlag ueberschreibt nichts.",
+                + "Der Nachschlag überschreibt nichts.",
                 "Beim Kanton nachschlagen");
             return;
         }

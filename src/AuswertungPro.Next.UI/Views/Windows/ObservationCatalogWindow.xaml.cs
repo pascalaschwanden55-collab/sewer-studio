@@ -232,7 +232,7 @@ public partial class ObservationCatalogWindow : Window
 
         var codeSelected = _vm.SelectedCode is not null;
         if (!codeSelected)
-            errors.Add("Bitte einen Code auswaehlen.");
+            errors.Add("Bitte einen Code auswählen.");
 
         foreach (var parameter in _vm.Parameters)
         {
@@ -291,7 +291,7 @@ public partial class ObservationCatalogWindow : Window
 
         vsaDistanzOk = ProtocolEntryInputNormalizer.TryParseOptionalDouble(VsaDistanzTextBox.Text, out var distanz);
         if (!vsaDistanzOk)
-            errors.Add("VSA: Distanz ist ungueltig.");
+            errors.Add("VSA: Distanz ist ungültig.");
         else if (codeSelected && !distanz.HasValue)
         {
             vsaDistanzOk = false;
@@ -300,7 +300,7 @@ public partial class ObservationCatalogWindow : Window
 
         vsaVideoOk = ProtocolEntryInputNormalizer.TryParseOptionalTimeSpan(VsaVideoTextBox.Text, out _);
         if (!vsaVideoOk)
-            errors.Add("VSA: Uhrzeit (Video) ist ungueltig.");
+            errors.Add("VSA: Uhrzeit (Video) ist ungültig.");
 
         vsaUhrVonOk = ProtocolEntryInputNormalizer.TryNormalizeClockPosition(
             VsaUhrVonComboBox.Text,
@@ -318,11 +318,11 @@ public partial class ObservationCatalogWindow : Window
 
         vsaQ1Ok = ProtocolEntryInputNormalizer.TryParseOptionalDouble(VsaQ1TextBox.Text, out _);
         if (!vsaQ1Ok)
-            errors.Add("VSA: Quantifizierung 1 ist ungueltig.");
+            errors.Add("VSA: Quantifizierung 1 ist ungültig.");
 
         vsaQ2Ok = ProtocolEntryInputNormalizer.TryParseOptionalDouble(VsaQ2TextBox.Text, out _);
         if (!vsaQ2Ok)
-            errors.Add("VSA: Quantifizierung 2 ist ungueltig.");
+            errors.Add("VSA: Quantifizierung 2 ist ungültig.");
 
         vsaStreckeOk = ProtocolEntryInputNormalizer.TryNormalizeStrecke(
             VsaStreckeTextBox.Text,
@@ -367,13 +367,13 @@ public partial class ObservationCatalogWindow : Window
             if (!hasQuant1 && !string.IsNullOrWhiteSpace(VsaQ1TextBox.Text))
             {
                 vsaQ1Ok = false;
-                errors.Add("VSA: Quantifizierung 1 ist fuer diesen Code nicht vorgesehen.");
+                errors.Add("VSA: Quantifizierung 1 ist für diesen Code nicht vorgesehen.");
             }
 
             if (!hasQuant2 && !string.IsNullOrWhiteSpace(VsaQ2TextBox.Text))
             {
                 vsaQ2Ok = false;
-                errors.Add("VSA: Quantifizierung 2 ist fuer diesen Code nicht vorgesehen.");
+                errors.Add("VSA: Quantifizierung 2 ist für diesen Code nicht vorgesehen.");
             }
         }
 

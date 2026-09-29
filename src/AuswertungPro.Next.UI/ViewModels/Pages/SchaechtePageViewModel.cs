@@ -433,7 +433,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
 
         if (!result.TemplateFound)
         {
-            LastResult = "Schaechte-Vorlage nicht gefunden.";
+            LastResult = "Schächte-Vorlage nicht gefunden.";
             return;
         }
 
@@ -451,7 +451,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
         // Bestandsdateien bleibt der Rueckfall als editierbare Dropdown-Spalte erhalten.
         if (!Columns.Any(c => c.IndexOf("usgef", StringComparison.OrdinalIgnoreCase) >= 0
                            && c.IndexOf("durch", StringComparison.OrdinalIgnoreCase) >= 0))
-            Columns.Add("Ausgefuehrt durch");
+            Columns.Add("Ausgeführt durch");
 
         // Belastungsklasse der Abdeckung (EN 124). Aeltere Vorlagen fuehren an dieser
         // Stelle nur eine Spalte mit der Ueberschrift "0", die als reine Ziffer
@@ -497,7 +497,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmL
             return;
 
         var ok = _shell.TrySaveProject();
-        LastResult = ok ? "Schaechte gespeichert." : "Speichern fehlgeschlagen.";
+        LastResult = ok ? "Schächte gespeichert." : "Speichern fehlgeschlagen.";
     }
 
     private void AddOptionIfMissing(ObservableCollection<string> options, string value)

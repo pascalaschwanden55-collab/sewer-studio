@@ -60,8 +60,8 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     [JsonIgnore]
     public string? PersistenceBlockedWarning => _loadError is null
         ? null
-        : "Die Einstellungsdatei konnte nicht gelesen werden. Aenderungen an den " +
-          "Einstellungen werden bis zum naechsten Programmstart NICHT gespeichert, damit " +
+        : "Die Einstellungsdatei konnte nicht gelesen werden. Änderungen an den " +
+          "Einstellungen werden bis zum nächsten Programmstart NICHT gespeichert, damit " +
           "die vorhandene Datei nicht durch Standardwerte ersetzt wird.\n" +
           $"Datei: {SettingsPath}\n" +
           $"Fehler: {_loadError}";
@@ -478,7 +478,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
             var json = File.ReadAllText(SettingsPath);
             var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions)
-                ?? throw new JsonException("settings.json enthaelt kein gueltiges Settings-Objekt.");
+                ?? throw new JsonException("settings.json enthält kein gültiges Settings-Objekt.");
             return NormalizeAfterLoad(settings);
         }
         catch (JsonException ex)
@@ -622,7 +622,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         if (migrationResult.Error is not null)
         {
             TryAppendSettingsLog(
-                "Alte Einstellungen konnten nicht uebernommen werden.",
+                "Alte Einstellungen konnten nicht übernommen werden.",
                 migrationResult.Error);
         }
     }

@@ -33,7 +33,7 @@ internal sealed partial class DossierPreviewFieldPanel
         // besitzen; eine leere Eingabehilfe wird vor dem Speichern entfernt.
         if (string.Equals(feld.Key, "Eigentuemer", StringComparison.OrdinalIgnoreCase))
             DossierOwnerRows.EnsureStarter(_dossier);
-        else if (string.Equals(feld.Key, "Aenderungen", StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(feld.Key, "Änderungen", StringComparison.OrdinalIgnoreCase))
             DossierChangeRows.EnsureStarter(_dossier);
 
         var typ = ZeilenTypFuer(feld.Key);

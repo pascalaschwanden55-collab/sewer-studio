@@ -80,7 +80,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
     {
         // AsyncRelayCommand sperrt Mehrfachstarts bereits selbst (CanExecute waehrend des Laufs).
         IsBusy = true;
-        Summary = "VSA-Bewertung laeuft, bitte warten...";
+        Summary = "VSA-Bewertung läuft, bitte warten...";
         _setStatus("VSA-Bewertung läuft...");
         try
         {

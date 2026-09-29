@@ -847,13 +847,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         {
             var name = record.GetFieldValue(FieldKeys.HoldingName) ?? "(unbekannt)";
             _dialogs.Info(
-                $"Kein Datei- oder Ordnerpfad gefunden fuer Haltung '{name}'.",
+                $"Kein Datei- oder Ordnerpfad gefunden für Haltung '{name}'.",
                 "Ordner");
             return;
         }
 
         if (!_explorerReveal.TryReveal(target, out var error))
-            _dialogs.Warn($"Ordner konnte nicht geoeffnet werden:\n{error}", "Ordner");
+            _dialogs.Warn($"Ordner konnte nicht geöffnet werden:\n{error}", "Ordner");
     }
 
     private SchachtRecord? FindSchachtByNummer(string? nummer)

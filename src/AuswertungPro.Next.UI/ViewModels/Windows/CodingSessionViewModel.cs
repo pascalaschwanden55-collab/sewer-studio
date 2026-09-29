@@ -127,7 +127,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     public string StatusText => SessionState switch
     {
         CodingSessionState.NotStarted => "Bereit",
-        CodingSessionState.Running => "Codierung laeuft",
+        CodingSessionState.Running => "Codierung läuft",
         CodingSessionState.Paused => "Pausiert",
         CodingSessionState.WaitingForUserInput => "KI-Vorschlag – bitte bestätigen",
         CodingSessionState.Completed => "Abgeschlossen",
@@ -385,9 +385,9 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
 
     public string ScanModeDescription => ScanMode switch
     {
-        CodingScanMode.Assist => "KI schlaegt vor, Sie bestätigen",
+        CodingScanMode.Assist => "KI schlägt vor, Sie bestätigen",
         CodingScanMode.Fast   => "Green-Zone wird automatisch akzeptiert",
-        CodingScanMode.Full   => "Alle Detektionen werden geprueft",
+        CodingScanMode.Full   => "Alle Detektionen werden geprüft",
         _ => ""
     };
 
@@ -487,7 +487,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         CodingEventDecisionPolicy.ApplyManualReviewDecision(
             SelectedDefect,
             CodingUserDecision.Accepted,
-            "Manuell bestaetigt");
+            "Manuell bestätigt");
         OnSelectedDefectChanged(SelectedDefect);
         RefreshStatistics();
         RecordFeedbackIfAiEvent(SelectedDefect, wasAiEvent);

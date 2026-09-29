@@ -127,8 +127,8 @@ public static class SettingsFullBackupWorkflow
                 // tatsaechliche Zahl, damit eine grosse Luecke nicht klein aussieht.
                 var anzahl = Math.Max(result.SkippedFileTotal, result.SkippedFiles.Count);
                 foreach (var uebersprungen in result.SkippedFiles)
-                    log($"[Datensicherung] Uebersprungen: {uebersprungen}");
-                log($"[Datensicherung] Uebersprungene Dateien insgesamt: {anzahl}");
+                    log($"[Datensicherung] Übersprungen: {uebersprungen}");
+                log($"[Datensicherung] Übersprungene Dateien insgesamt: {anzahl}");
 
                 var sample = string.Join(Environment.NewLine, result.SkippedFiles.Take(10));
                 request.Dialogs.Warn(

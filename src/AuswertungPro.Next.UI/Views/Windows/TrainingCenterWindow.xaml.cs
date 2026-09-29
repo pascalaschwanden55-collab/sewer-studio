@@ -107,7 +107,7 @@ public partial class TrainingCenterWindow : Window
         _services = services;
         _dialogs = dependencies.Dialogs
             ?? throw new ArgumentException(
-                "Das Abhaengigkeitspaket enthaelt keinen Dialogdienst.",
+                "Das Abhängigkeitspaket enthält keinen Dialogdienst.",
                 nameof(dependencies));
         _teacherGalleryService = new TeacherAnnotationGalleryService(
             services?.TeacherAnnotations ?? TeacherAnnotationStore.Current);
@@ -372,7 +372,7 @@ public partial class TrainingCenterWindow : Window
             if (result.Outcome != TrainingReviewSamOutcome.Completed)
             {
                 if (result.Outcome == TrainingReviewSamOutcome.MissingFrame)
-                    Dialogs.Warn(result.UserHint ?? "Der Review-Frame ist nicht verfuegbar.", "SAM");
+                    Dialogs.Warn(result.UserHint ?? "Der Review-Frame ist nicht verfügbar.", "SAM");
                 else
                     Dialogs.Info(result.UserHint ?? "SAM kann noch nicht gestartet werden.", "SAM");
 
@@ -527,7 +527,7 @@ public partial class TrainingCenterWindow : Window
             return;
         }
         if (!Dialogs.ConfirmWarn(
-            $"{n} Protokoll-Startdaten freigeben?\n\nDas schreibt {n} gepruefte Eintraege in die Knowledge Base (ueber Review, kein Auto-Index).",
+            $"{n} Protokoll-Startdaten freigeben?\n\nDas schreibt {n} geprüfte Einträge in die Knowledge Base (über Review, kein Auto-Index).",
             "Sammel-Freigabe")) return;
         try { await Vm.ApproveAllStartdataAsync(); }
         catch (Exception ex)
@@ -678,9 +678,9 @@ public partial class TrainingCenterWindow : Window
         if (_selectedTeacherAnnotation is null) return;
 
         if (!Dialogs.ConfirmWarn(
-            $"Annotation '{_selectedTeacherAnnotation.VsaCode}' bei {_selectedTeacherAnnotation.MeterPosition:F1}m wirklich loeschen?\n\n" +
-            "Zugehoerige Dateien (Frame, Crop, YOLO-Label) werden ebenfalls entfernt.",
-            "Annotation loeschen")) return;
+            $"Annotation '{_selectedTeacherAnnotation.VsaCode}' bei {_selectedTeacherAnnotation.MeterPosition:F1}m wirklich löschen?\n\n" +
+            "Zugehörige Dateien (Frame, Crop, YOLO-Label) werden ebenfalls entfernt.",
+            "Annotation löschen")) return;
 
         try
         {
@@ -691,8 +691,8 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            var userMessage = UserError.DescribeAndReport(ex, "Lehrer-Annotation loeschen");
-            Dialogs.Error($"Fehler beim Loeschen: {userMessage}", "Lehrer");
+            var userMessage = UserError.DescribeAndReport(ex, "Lehrer-Annotation löschen");
+            Dialogs.Error($"Fehler beim Löschen: {userMessage}", "Lehrer");
         }
     }
 

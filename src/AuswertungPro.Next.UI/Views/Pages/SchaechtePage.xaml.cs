@@ -28,7 +28,7 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 public partial class SchaechtePage : UserControl
 {
     private SchaechtePageViewModel Vm => DataContext as SchaechtePageViewModel
-        ?? throw new InvalidOperationException("SchaechtePage benoetigt SchaechtePageViewModel als DataContext.");
+        ?? throw new InvalidOperationException("SchaechtePage benötigt SchaechtePageViewModel als DataContext.");
     private AppSettings Settings => Vm.Settings;
     private IDialogService Dialogs => Vm.Dialogs;
 
@@ -534,7 +534,7 @@ public partial class SchaechtePage : UserControl
 
         var record = ResolveRecordFromComboBox(combo);
         if (record is null
-            || !vm.CanMutateRecord(record, "Schachtfeld aendern"))
+            || !vm.CanMutateRecord(record, "Schachtfeld ändern"))
             return;
 
         var value = DataGridEditedTextValueResolver.ResolveComboBoxValue(combo);
@@ -573,7 +573,7 @@ public partial class SchaechtePage : UserControl
 
         if (e.Row?.Item is not SchachtRecord record
             || DataContext is not SchaechtePageViewModel vm
-            || vm.CanMutateRecord(record, "Schachtfeld aendern"))
+            || vm.CanMutateRecord(record, "Schachtfeld ändern"))
         {
             return;
         }
@@ -593,7 +593,7 @@ public partial class SchaechtePage : UserControl
         if (e.Row?.Item is not SchachtRecord record)
             return;
         if (DataContext is not SchaechtePageViewModel vm
-            || !vm.CanMutateRecord(record, "Schachtfeld aendern"))
+            || !vm.CanMutateRecord(record, "Schachtfeld ändern"))
         {
             e.Cancel = true;
             return;
@@ -670,8 +670,8 @@ public partial class SchaechtePage : UserControl
 
         var schacht = GetSchachtNumber(record);
         var title = string.IsNullOrWhiteSpace(schacht)
-            ? "Primaere Schaeden"
-            : $"Primaere Schaeden - Schacht {schacht}";
+            ? "Primäre Schäden"
+            : $"Primäre Schäden - Schacht {schacht}";
 
         ShowTextPreview(title, content);
         e.Handled = true;
@@ -818,7 +818,7 @@ public partial class SchaechtePage : UserControl
     private void CommitSchachtDetailKonsolidiert(SchachtRecord record, KonsolidiertesSchachtFeld feld, string? value)
     {
         if (_vm is null
-            || !_vm.CanMutateRecord(record, "Schachtdetail aendern"))
+            || !_vm.CanMutateRecord(record, "Schachtdetail ändern"))
         {
             return;
         }

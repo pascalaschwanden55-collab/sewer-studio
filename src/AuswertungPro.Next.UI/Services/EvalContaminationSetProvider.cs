@@ -42,7 +42,7 @@ public static class EvalContaminationSetProvider
         if (loadedSets.ImageHashes.Count == 0 && loadedSets.HaltungKeys.Count == 0)
         {
             throw new InvalidDataException(
-                $"Der konfigurierte Eval-Schutzordner enthaelt keine lesbaren Schutzdaten: {fullRoot}");
+                $"Der konfigurierte Eval-Schutzordner enthält keine lesbaren Schutzdaten: {fullRoot}");
         }
 
         // Der Snapshot ist die gemeinsame semantische Grenze: Nur echte
@@ -64,8 +64,8 @@ public static class EvalContaminationSetProvider
             && sets.HaltungKeys.Count == 0)
         {
             throw new InvalidDataException(
-                "Der konfigurierte Eval-Schutz enthaelt keine gueltigen Haltungskennungen. " +
-                "PDF-Fotos duerfen ohne Haltungs-Schutz nicht importiert werden, weil ihre Bildfarben normalisiert werden koennen.");
+                "Der konfigurierte Eval-Schutz enthält keine gültigen Haltungskennungen. " +
+                "PDF-Fotos dürfen ohne Haltungs-Schutz nicht importiert werden, weil ihre Bildfarben normalisiert werden können.");
         }
 
         return new TrainingPdfReviewProtectionSnapshot(

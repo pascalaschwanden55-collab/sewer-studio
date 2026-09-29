@@ -24,7 +24,7 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 public partial class DataPage : System.Windows.Controls.UserControl
 {
     private DataPageViewModel Vm => DataContext as DataPageViewModel
-        ?? throw new InvalidOperationException("DataPage benoetigt DataPageViewModel als DataContext.");
+        ?? throw new InvalidOperationException("DataPage benötigt DataPageViewModel als DataContext.");
     private IDialogService Dialogs => Vm.Dialogs;
     private IToastService Toasts => Vm.Toasts;
     private AppSettings Settings => Vm.Settings;
@@ -305,10 +305,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         }
 
         if (!Dialogs.ConfirmWarn(
-            $"ACHTUNG: Alle Werte in Spalte \"{displayName}\" werden geloescht.\n\n" +
+            $"ACHTUNG: Alle Werte in Spalte \"{displayName}\" werden gelöscht.\n\n" +
             $"Betroffen: {plan.AffectedCount} von {plan.TotalCount} Haltungen.\n" +
-            "Auch manuell bearbeitete Werte gehen verloren und koennen nicht rueckgaengig gemacht werden.\n\n" +
-            "Wirklich loeschen?",
+            "Auch manuell bearbeitete Werte gehen verloren und können nicht rückgängig gemacht werden.\n\n" +
+            "Wirklich löschen?",
             "Spalte leeren"))
             return;
 
@@ -711,7 +711,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         if (!Vm.ShellOpen.TryOpen(plan.ResolvedPath!, out var error))
         {
-            Dialogs.Error($"Foto konnte nicht geoeffnet werden:\n{error}", "Foto");
+            Dialogs.Error($"Foto konnte nicht geöffnet werden:\n{error}", "Foto");
         }
     }
 
@@ -723,7 +723,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = vm.Selected;
         if (record is null)
         {
-            Dialogs.Info("Bitte zuerst eine Haltung waehlen.", "Video");
+            Dialogs.Info("Bitte zuerst eine Haltung wählen.", "Video");
             return;
         }
 

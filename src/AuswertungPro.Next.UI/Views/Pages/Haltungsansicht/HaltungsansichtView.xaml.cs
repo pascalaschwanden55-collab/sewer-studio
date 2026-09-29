@@ -240,14 +240,14 @@ public partial class HaltungsansichtView : UserControl
         if (HaltungList.SelectedItem is not HaltungRecord record || DetailBuilder is null)
         {
             Detail.Header = "Keine Haltung gewählt";
-            Detail.SubHeader = "Links eine Haltung waehlen.";
+            Detail.SubHeader = "Links eine Haltung wählen.";
             Detail.Groups = Array.Empty<RecordDetailGroup>();
             return;
         }
 
         var name = record.GetFieldValue("Haltungsname");
         Detail.Header = string.IsNullOrWhiteSpace(name) ? "Haltungsdetails" : $"Haltung {name}";
-        Detail.SubHeader = "Alle Felder editierbar - Aenderungen erscheinen sofort in der Tabelle.";
+        Detail.SubHeader = "Alle Felder editierbar - Änderungen erscheinen sofort in der Tabelle.";
         Detail.Groups = RecordDetailLayoutApplier.Apply(
             DetailBuilder(record),
             RecordDetailLayoutSettingsMapper.ToLayout(_settings?.DataPageLayout?.DetailLayout));

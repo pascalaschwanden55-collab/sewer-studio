@@ -30,7 +30,7 @@ internal sealed class DossierPlanWorkSession : IDisposable
     internal DossierPlanWorkSession(string temporaryRoot)
     {
         if (string.IsNullOrWhiteSpace(temporaryRoot))
-            throw new ArgumentException("Der temporaere Stammordner fehlt.", nameof(temporaryRoot));
+            throw new ArgumentException("Der temporäre Stammordner fehlt.", nameof(temporaryRoot));
 
         var root = Path.GetFullPath(temporaryRoot);
         Directory.CreateDirectory(root);
@@ -71,7 +71,7 @@ internal sealed class DossierPlanWorkSession : IDisposable
         catch (Exception ex)
         {
             return DossierPlanPublicationResult.Failed(
-                "Der Planpfad ist ungueltig: " + ex.Message);
+                "Der Planpfad ist ungültig: " + ex.Message);
         }
 
         // Ein bereits gespeicherter, nicht bearbeiteter Plan gehoert nicht der
@@ -97,7 +97,7 @@ internal sealed class DossierPlanWorkSession : IDisposable
             if (IsSameOrBelow(fullTargetFolder, _workFolder))
             {
                 return DossierPlanPublicationResult.Failed(
-                    "Der Dossierordner darf nicht im temporaeren Arbeitsordner liegen.");
+                    "Der Dossierordner darf nicht im temporären Arbeitsordner liegen.");
             }
 
             return publications.Publish(projectRoot, sourcePath, fullTargetFolder);
@@ -105,7 +105,7 @@ internal sealed class DossierPlanWorkSession : IDisposable
         catch (Exception ex)
         {
             return DossierPlanPublicationResult.Failed(
-                "Der bearbeitete Plan konnte nicht uebernommen werden: " + ex.Message);
+                "Der bearbeitete Plan konnte nicht übernommen werden: " + ex.Message);
         }
     }
 

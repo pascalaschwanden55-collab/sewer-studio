@@ -26,6 +26,6 @@ public sealed class CodingModeDialogService
 
     public void ShowImportFrameCaptureFailed()
         => _warn(
-            "Frame konnte nicht aufgenommen werden.\nBitte pruefen Sie ob das Video laeuft.",
-            "Import bestaetigen");
+            "Frame konnte nicht aufgenommen werden.\nBitte prüfen Sie ob das Video läuft.",
+            "Import bestätigen");
 }

@@ -446,7 +446,7 @@ public static class ImportRunWorkflowController
                 if (!string.Equals(currentSignature, projectSnapshot.StartSignature, StringComparison.Ordinal))
                 {
                     const string editDetail =
-                        "Waehrend des Imports wurde das Projekt bearbeitet. Das Importergebnis wurde " +
+                        "Während des Imports wurde das Projekt bearbeitet. Das Importergebnis wurde " +
                         "nicht übernommen, damit die manuellen Änderungen erhalten bleiben — " +
                         "bitte erneut importieren.";
                     runLog.AddEntry(label, "Projektinhalt", ImportLogStatus.Error, detail: editDetail);
@@ -462,7 +462,7 @@ public static class ImportRunWorkflowController
         }
 
         const string detail =
-            "Waehrend des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
+            "Während des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
             "Das Importergebnis wurde aus Sicherheitsgründen nicht übernommen.";
         runLog.AddEntry(
             label,
@@ -505,7 +505,7 @@ public static class ImportRunWorkflowController
         if (ImportPlausibilitaetsTor.ZustimmungGiltNoch(request.ZugestimmterFingerabdruck, urteil))
         {
             runLog.AddEntry(request.Label, "Plausibilität", ImportLogStatus.Conflict,
-                detail: "Mengenabweichung in der Vorschau bestätigt — unveraendert übernommen.");
+                detail: "Mengenabweichung in der Vorschau bestätigt — unverändert übernommen.");
             return true;
         }
 

@@ -27,7 +27,7 @@ public sealed partial class SchaechtePageViewModel
 
     private void Remove()
     {
-        if (!CanMutateRecord(Selected, "Schacht loeschen"))
+        if (!CanMutateRecord(Selected, "Schacht löschen"))
             return;
 
         if (!RecordCollectionController.TryRemove(Selected, out var nextSelection))

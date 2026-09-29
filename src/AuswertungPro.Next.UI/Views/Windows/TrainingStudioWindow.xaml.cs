@@ -152,7 +152,7 @@ public partial class TrainingStudioWindow : Window
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Fotos fuer den Pruefplatz waehlen",
+            Title = "Fotos für den Prüfplatz wählen",
             Filter = "Bilder (*.jpg;*.jpeg;*.png)|*.jpg;*.jpeg;*.png",
             Multiselect = true,
         };
@@ -425,7 +425,7 @@ public partial class TrainingStudioWindow : Window
             if (!_vm.LoadItems(items))
                 return;
             if (items.Count == 0)
-                _vm.StatusText = "Keine offenen Review-Faelle (Yellow/Red, noch nicht beurteilt).";
+                _vm.StatusText = "Keine offenen Review-Fälle (Yellow/Red, noch nicht beurteilt).";
         }
         catch (Exception ex)
         {
@@ -527,7 +527,7 @@ public partial class TrainingStudioWindow : Window
     {
         if (_services is null)
         {
-            _vm.StatusText = "Training Center ist nur im laufenden SewerStudio verfuegbar.";
+            _vm.StatusText = "Training Center ist nur im laufenden SewerStudio verfügbar.";
             return;
         }
 
@@ -542,7 +542,7 @@ public partial class TrainingStudioWindow : Window
         var catalog = _services?.CodeSelectionCatalog;
         if (catalog is null)
         {
-            _vm.StatusText = "VSA-Katalog nicht verfuegbar (kein Codier-Kontext).";
+            _vm.StatusText = "VSA-Katalog nicht verfügbar (kein Codier-Kontext).";
             return;
         }
 

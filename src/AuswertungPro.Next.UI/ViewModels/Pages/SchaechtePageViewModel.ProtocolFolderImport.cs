@@ -265,7 +265,7 @@ public sealed partial class SchaechtePageViewModel
             if (targetRemovedBeforeApply)
             {
                 failures.Add(
-                    $"{Path.GetFileName(candidate.PdfPath)}: Zielschacht wurde waehrend des Imports entfernt");
+                    $"{Path.GetFileName(candidate.PdfPath)}: Zielschacht wurde während des Imports entfernt");
                 continue;
             }
 
@@ -320,14 +320,14 @@ public sealed partial class SchaechtePageViewModel
         if (!saveSucceeded)
         {
             summary +=
-                "\n\nAenderungen uebernommen, aber nicht gespeichert. Bitte erneut speichern.";
+                "\n\nAenderungen übernommen, aber nicht gespeichert. Bitte erneut speichern.";
         }
 
         LastResult = !saveSucceeded
-            ? $"Ordnerimport uebernommen, aber nicht gespeichert: {created} neu, {updated} aktualisiert."
+            ? $"Ordnerimport übernommen, aber nicht gespeichert: {created} neu, {updated} aktualisiert."
             : $"Ordnerimport: {created} neu, {updated} aktualisiert, {failures.Count} Fehler.";
         _shell.SetStatus(!saveSucceeded
-            ? "Ordnerimport uebernommen, aber nicht gespeichert"
+            ? "Ordnerimport übernommen, aber nicht gespeichert"
             : $"Ordnerimport abgeschlossen: {created} neu, {updated} aktualisiert, {failures.Count} Fehler");
 
         if (failures.Count > 0 || !saveSucceeded)

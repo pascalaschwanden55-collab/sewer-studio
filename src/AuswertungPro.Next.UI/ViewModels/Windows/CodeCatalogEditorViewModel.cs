@@ -138,8 +138,8 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
 
         var label = string.IsNullOrWhiteSpace(SelectedCode.Code) ? SelectedCode.Title : SelectedCode.Code;
         var confirmed = _dialogs.Confirm(
-            $"Code '{label}' wirklich loeschen?",
-            "Code loeschen");
+            $"Code '{label}' wirklich löschen?",
+            "Code löschen");
 
         if (!confirmed)
             return;
@@ -203,7 +203,7 @@ public sealed partial class CodeCatalogEditorViewModel : ObservableObject
         if (_hasChanges)
         {
             var confirmed = _dialogs.Confirm(
-                "Aenderungen verwerfen?",
+                "Änderungen verwerfen?",
                 "Code-Katalog");
 
             if (!confirmed)

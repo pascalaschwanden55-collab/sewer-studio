@@ -142,12 +142,12 @@ namespace AuswertungPro.Next.UI.Dialogs
                 var value = (item ?? string.Empty).Trim();
                 if (string.IsNullOrEmpty(value))
                 {
-                    _dialogs.Warn("Leere Eintraege sind nicht erlaubt.", "Ungueltige Liste");
+                    _dialogs.Warn("Leere Einträge sind nicht erlaubt.", "Ungültige Liste");
                     return false;
                 }
                 if (!seen.Add(value))
                 {
-                    _dialogs.Warn("Doppelte Eintraege sind nicht erlaubt.", "Ungueltige Liste");
+                    _dialogs.Warn("Doppelte Einträge sind nicht erlaubt.", "Ungültige Liste");
                     return false;
                 }
             }

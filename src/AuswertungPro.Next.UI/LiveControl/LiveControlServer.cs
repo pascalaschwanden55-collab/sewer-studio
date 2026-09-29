@@ -182,7 +182,7 @@ public sealed class LiveControlServer : IDisposable
         }
         catch (OperationCanceledException)
         {
-            TryLogWarning(null, "Live-Control Request wegen Zeitueberschreitung beendet.");
+            TryLogWarning(null, "Live-Control Request wegen Zeitüberschreitung beendet.");
         }
         catch (Exception ex)
         {
@@ -207,7 +207,7 @@ public sealed class LiveControlServer : IDisposable
         var headerLines = await begrenzt.ReadHeaderLinesAsync(cancellationToken).ConfigureAwait(false);
         if (headerLines is null)
         {
-            _logger.LogWarning("Live-Control Request abgelehnt: Kopfteil ueber der Grenze.");
+            _logger.LogWarning("Live-Control Request abgelehnt: Kopfteil über der Grenze.");
             return null;
         }
 
@@ -332,9 +332,9 @@ public sealed class LiveControlServer : IDisposable
     private object ApplyResourceBrush(SetResourceBrushRequest command)
     {
         if (!LiveControlRequestValidator.IsSafeResourceKey(command.Key))
-            return new { ok = false, error = "Resource-Key ist ungueltig oder unsicher." };
+            return new { ok = false, error = "Resource-Key ist ungültig oder unsicher." };
         if (!LiveControlColorParser.TryParse(command.Color, out var color))
-            return new { ok = false, error = "Farbe ist ungueltig. Nutze z.B. gelb, yellow, #F59E0B." };
+            return new { ok = false, error = "Farbe ist ungültig. Nutze z.B. gelb, yellow, #F59E0B." };
 
         var dictionary = FindDictionaryWithKey(_app.Resources, command.Key!);
         if (dictionary is null)
@@ -355,7 +355,7 @@ public sealed class LiveControlServer : IDisposable
     private object ApplyButtonBackground(SetButtonBackgroundRequest command)
     {
         if (!LiveControlColorParser.TryParse(command.Color, out var color))
-            return new { ok = false, error = "Farbe ist ungueltig. Nutze z.B. gelb, yellow, #F59E0B." };
+            return new { ok = false, error = "Farbe ist ungültig. Nutze z.B. gelb, yellow, #F59E0B." };
 
         var maxMatches = command.MaxMatches is > 0 and <= 500 ? command.MaxMatches.Value : 50;
         var target = command.Target?.Trim();

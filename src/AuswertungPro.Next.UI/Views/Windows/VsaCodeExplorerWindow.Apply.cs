@@ -59,10 +59,10 @@ public partial class VsaCodeExplorerWindow
             var confirmed = DialogHost.Current.Confirm(
                 $"Die {count} sichtbare{(count == 1 ? "" : "n")} SAM-Maske"
                 + $"{(count == 1 ? "" : "n")} mit dem finalen Code "
-                + $"'{selectedPreview.Code}' als persoenliches KI-Goldbeispiel speichern?\n\n"
+                + $"'{selectedPreview.Code}' als persönliches KI-Goldbeispiel speichern?\n\n"
                 + "Ja = Originalbild, Box, Maske und Code in Goldbestand und KB speichern.\n"
-                + "Nein = Beobachtung ohne KI-Lernen uebernehmen.",
-                "KI-Beispiel bestaetigen");
+                + "Nein = Beobachtung ohne KI-Lernen übernehmen.",
+                "KI-Beispiel bestätigen");
 
             if (!confirmed)
             {
@@ -114,7 +114,7 @@ public partial class VsaCodeExplorerWindow
                         DialogHost.Current.Warn(
                             batchResult.FailureMessage
                             + "\n\nDie Beobachtung bleibt offen. "
-                            + "Bitte die Markierung pruefen oder ohne KI-Lernen uebernehmen.",
+                            + "Bitte die Markierung prüfen oder ohne KI-Lernen übernehmen.",
                             "KI-Beispiel nicht gespeichert");
                         return;
                     }
@@ -134,7 +134,7 @@ public partial class VsaCodeExplorerWindow
                             ? "KI-Beispiel wurde"
                             : "KI-Beispiele wurden")
                         + " bereits sicher gespeichert. "
-                        + "Die Beobachtung wird deshalb unveraendert mit dem angezeigten Code uebernommen.",
+                        + "Die Beobachtung wird deshalb unverändert mit dem angezeigten Code übernommen.",
                         "KI-Beispiel teilweise gespeichert");
                 }
                 else
@@ -142,7 +142,7 @@ public partial class VsaCodeExplorerWindow
                     MarkPhotoAnnotationHandled(
                         selectedPreview,
                         batchResult.SampleIds,
-                        "Fotoannotation wurde separat ueber den geschuetzten Gold-/KB-Weg gespeichert.");
+                        "Fotoannotation wurde separat über den geschützten Gold-/KB-Weg gespeichert.");
                 }
 
                 if (batchResult.Warnings.Count > 0)
@@ -190,9 +190,9 @@ public partial class VsaCodeExplorerWindow
         {
             var meldung = Application.Common.UserError.DescribeAndReport(
                 ex,
-                "Beobachtung uebernehmen");
+                "Beobachtung übernehmen");
             DialogHost.Current.Warn(
-                $"Die Beobachtung konnte nicht uebernommen werden:\n{meldung}",
+                $"Die Beobachtung konnte nicht übernommen werden:\n{meldung}",
                 "VSA-Codierung");
         }
     }

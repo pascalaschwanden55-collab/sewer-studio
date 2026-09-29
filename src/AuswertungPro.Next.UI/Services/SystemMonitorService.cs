@@ -432,7 +432,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             if (result.Status == HwInfoReadStatus.InvalidSignature)
             {
                 _hwInfoAvailable = false;
-                Log("HWiNFO: Shared Memory Signatur ungueltig");
+                Log("HWiNFO: Shared Memory Signatur ungültig");
                 return;
             }
 
@@ -488,12 +488,12 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             // HWiNFO not running or Shared Memory not enabled — retry next cycle
             if (!_hwInfoLogged)
             {
-                Log("HWiNFO: Shared Memory nicht gefunden (HWiNFO laeuft nicht oder SM nicht aktiviert)");
+                Log("HWiNFO: Shared Memory nicht gefunden (HWiNFO läuft nicht oder SM nicht aktiviert)");
                 _hwInfoLogged = true;
 
                 if (IsSensorBlocked)
                 {
-                    SensorBlockedReason += "\nTipp: HWiNFO64 starten mit Shared Memory Support fuer Temp-Anzeige trotz HVCI.";
+                    SensorBlockedReason += "\nTipp: HWiNFO64 starten mit Shared Memory Support für Temp-Anzeige trotz HVCI.";
                 }
 
                 SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: HWiNFO Shared Memory ist nicht aktiv oder LHM liefert keinen CPU-Temperatursensor.");
@@ -576,14 +576,14 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 });
 
                 if (_wmiTempSkip <= 6)
-                    Log($"PerfCounter CPU-Temp: {celsius} °C (kein Admin noetig)");
+                    Log($"PerfCounter CPU-Temp: {celsius} °C (kein Admin nötig)");
                 return;
             }
 
             if (Interlocked.Increment(ref _perfCounterTempFailCount) >= 3)
             {
                 _perfCounterTempAvailable = false;
-                Log("PerfCounter CPU-Temp: nicht verfuegbar, versuche ACPI Fallback...");
+                Log("PerfCounter CPU-Temp: nicht verfügbar, versuche ACPI Fallback...");
                 SetCpuTempUnavailable("CPU-Temperatur noch nicht verfügbar: Windows Thermal-Zone-Fallback wird geprüft.");
             }
         }
@@ -636,7 +636,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             if (Interlocked.Increment(ref _wmiTempFailCount) >= 3)
             {
                 _wmiTempAvailable = false;
-                Log("ACPI CPU-Temp: nicht verfuegbar auf diesem System");
+                Log("ACPI CPU-Temp: nicht verfügbar auf diesem System");
                 SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: Windows liefert keinen nutzbaren CPU-Thermalsensor.");
             }
         }

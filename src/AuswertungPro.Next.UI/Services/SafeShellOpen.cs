@@ -15,7 +15,7 @@ public static class SafeShellOpen
     [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. ISafeShellOpenService direkt uebergeben.")]
     internal static void Use(ISafeShellOpenService service)
         => throw new NotSupportedException(
-            "SafeShellOpen ist unveraenderlich. ISafeShellOpenService direkt uebergeben.");
+            "SafeShellOpen ist unveränderlich. ISafeShellOpenService direkt übergeben.");
 
     public static bool TryOpen(string? path, out string? error)
     {

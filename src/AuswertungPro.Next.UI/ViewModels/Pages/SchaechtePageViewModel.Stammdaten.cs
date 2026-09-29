@@ -57,7 +57,7 @@ public sealed partial class SchaechtePageViewModel
 
     private async Task ErgaenzeStammdatenAusPdfsCoreAsync()
     {
-        const string dialogTitle = "PDF-Stammdaten ergaenzen";
+        const string dialogTitle = "PDF-Stammdaten ergänzen";
         var projectContext = new ProjectOperationContext(
             _shell.Project,
             _settings.LastProjectPath);
@@ -65,13 +65,13 @@ public sealed partial class SchaechtePageViewModel
         var projektOrdner = ProjectFileLocator.ProjectRootFromFile(projectContext.ProjectPath);
         if (string.IsNullOrWhiteSpace(projektOrdner))
         {
-            _dialogs.Info("Kein Projekt geoeffnet.", dialogTitle);
+            _dialogs.Info("Kein Projekt geöffnet.", dialogTitle);
             return;
         }
 
         if (!_dialogs.ConfirmWarn(
-                "Fehlende Schachtform, Dimension und Schachttiefe werden aus den bereits vorhandenen PDFs ergaenzt.\n\n" +
-                "Vorhandene Eintraege bleiben unveraendert. Der Vorgang kann bei vielen PDFs einige Minuten dauern.",
+                "Fehlende Schachtform, Dimension und Schachttiefe werden aus den bereits vorhandenen PDFs ergänzt.\n\n" +
+                "Vorhandene Einträge bleiben unverändert. Der Vorgang kann bei vielen PDFs einige Minuten dauern.",
                 dialogTitle))
             return;
 
@@ -96,7 +96,7 @@ public sealed partial class SchaechtePageViewModel
         var cancellationToken = _stammdatenErgaenzungCts.Token;
         IsStammdatenErgaenzungInProgress = true;
         StammdatenErgaenzungProgress = 0;
-        StammdatenErgaenzungText = "Vorhandene Schacht-PDFs werden geprueft ...";
+        StammdatenErgaenzungText = "Vorhandene Schacht-PDFs werden geprüft ...";
 
         var progress = new Progress<SchachtStammdatenErgaenzungsFortschritt>(p =>
         {
@@ -147,7 +147,7 @@ public sealed partial class SchaechtePageViewModel
                 if (!_saveProjectForProtocolImport())
                 {
                     _dialogs.Warn(
-                        "Die Werte wurden in der geoeffneten Ansicht ergaenzt, konnten aber noch nicht gespeichert werden. Bitte erneut speichern.",
+                        "Die Werte wurden in der geöffneten Ansicht ergänzt, konnten aber noch nicht gespeichert werden. Bitte erneut speichern.",
                         dialogTitle);
                 }
             }
@@ -159,12 +159,12 @@ public sealed partial class SchaechtePageViewModel
         }
         catch (OperationCanceledException)
         {
-            LastResult = "PDF-Stammdaten: Vorgang abgebrochen. Es wurden keine Werte uebernommen.";
+            LastResult = "PDF-Stammdaten: Vorgang abgebrochen. Es wurden keine Werte übernommen.";
             StammdatenErgaenzungText = LastResult;
         }
         catch (Exception ex)
         {
-            LastResult = "PDF-Stammdaten konnten nicht ergaenzt werden: "
+            LastResult = "PDF-Stammdaten konnten nicht ergänzt werden: "
                          + UserError.DescribeAndReport(ex, "Schacht-PDF-Stammdaten");
             StammdatenErgaenzungText = LastResult;
             _dialogs.Warn(LastResult, dialogTitle);

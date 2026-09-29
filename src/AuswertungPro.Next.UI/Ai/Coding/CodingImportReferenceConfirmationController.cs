@@ -39,7 +39,7 @@ public sealed class CodingImportReferenceConfirmationController
         CodingEventDecisionPolicy.ApplyManualReviewDecision(
             selectedEvent,
             CodingUserDecision.Accepted,
-            "Import bestaetigt (ins Brain)");
+            "Import bestätigt (ins Brain)");
         CodingTrainingSamplePersistenceResult persistence;
         try
         {

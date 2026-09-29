@@ -56,7 +56,7 @@ public static class SelfTrainingRunPreparationWorkflow
         var selectedCase = selection.Case;
         if (selectedCase is null)
         {
-            request.SetStatusText("Keine Faelle mit Protokoll vorhanden. Bitte zuerst Ordner waehlen und scannen.");
+            request.SetStatusText("Keine Fälle mit Protokoll vorhanden. Bitte zuerst Ordner wählen und scannen.");
             return Stop();
         }
 

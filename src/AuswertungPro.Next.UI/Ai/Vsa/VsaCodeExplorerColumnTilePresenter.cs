@@ -56,7 +56,7 @@ public static class VsaCodeExplorerColumnTilePresenter
             ShowSelectedChrome: tile.IsSelected,
             ShowInvalidChrome: tile.IsInvalid,
             InvalidTooltip: tile.IsInvalid
-                ? "Als ungueltig markiert - Auswahl ist trotzdem erlaubt."
+                ? "Als ungültig markiert - Auswahl ist trotzdem erlaubt."
                 : null);
     }
 

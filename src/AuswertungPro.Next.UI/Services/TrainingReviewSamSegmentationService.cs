@@ -131,20 +131,20 @@ public sealed class TrainingReviewSamSegmentationService : ITrainingReviewSamSeg
                     out var reason))
             {
                 throw new InvalidDataException(
-                    $"SAM lieferte eine ungueltige Maske: {reason}");
+                    $"SAM lieferte eine ungültige Maske: {reason}");
             }
 
             if (mask.ImageAreaPixels != expectedImageArea)
             {
                 throw new InvalidDataException(
-                    "SAM-Bildflaeche passt nicht zum Originalbild "
+                    "SAM-Bildfläche passt nicht zum Originalbild "
                     + $"({mask.ImageAreaPixels} statt {expectedImageArea} Pixel).");
             }
 
             if (mask.MaskAreaPixels != foregroundPixels)
             {
                 throw new InvalidDataException(
-                    "SAM-Maskenflaeche passt nicht zur RLE "
+                    "SAM-Maskenfläche passt nicht zur RLE "
                     + $"({mask.MaskAreaPixels} statt {foregroundPixels} Pixel).");
             }
         }
@@ -159,9 +159,9 @@ public sealed class TrainingReviewSamSegmentationService : ITrainingReviewSamSeg
         int? pipeDiameterMm)
     {
         if (imageBytes.Length == 0)
-            throw new ArgumentException("Bilddaten duerfen nicht leer sein.", nameof(imageBytes));
+            throw new ArgumentException("Bilddaten dürfen nicht leer sein.", nameof(imageBytes));
         if (imageWidth <= 0 || imageHeight <= 0)
-            throw new ArgumentOutOfRangeException(nameof(imageWidth), "Bildbreite/-hoehe muessen positiv sein.");
+            throw new ArgumentOutOfRangeException(nameof(imageWidth), "Bildbreite/-höhe müssen positiv sein.");
 
         var x1 = ClampPixel((box.XCenter - box.Width / 2.0) * imageWidth, 0, imageWidth);
         var y1 = ClampPixel((box.YCenter - box.Height / 2.0) * imageHeight, 0, imageHeight);

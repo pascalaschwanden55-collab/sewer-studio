@@ -8,7 +8,7 @@ public static class TrainingCenterRootFolderDialogSelector
     {
         var dlg = new OpenFolderDialog
         {
-            Title = "Trainings-Ordner waehlen (Mehrfachauswahl moeglich)",
+            Title = "Trainings-Ordner wählen (Mehrfachauswahl möglich)",
             Multiselect = true
         };
 

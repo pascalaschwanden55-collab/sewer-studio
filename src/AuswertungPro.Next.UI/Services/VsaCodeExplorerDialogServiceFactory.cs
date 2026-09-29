@@ -28,7 +28,7 @@ public static class VsaCodeExplorerDialogServiceFactory
                 {
                     DialogHost.Current.Warn(
                         "Die Foto-Segmentierung konnte nicht vorbereitet werden. "
-                        + "Die normale Codierung bleibt verfuegbar.\n\n"
+                        + "Die normale Codierung bleibt verfügbar.\n\n"
                         + UserError.DescribeAndReport(ex, "Foto-Segmentierung vorbereiten"),
                         "KI-Segmentierung");
                 }

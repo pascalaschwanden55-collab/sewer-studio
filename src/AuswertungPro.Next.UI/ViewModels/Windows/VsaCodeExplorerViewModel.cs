@@ -510,15 +510,15 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
 
         // Meter
         if (!string.IsNullOrWhiteSpace(MeterStart) && !TryParseDouble(MeterStart, out _))
-            errors.Add("Meter Start: ungueltige Zahl.");
+            errors.Add("Meter Start: ungültige Zahl.");
         if (!string.IsNullOrWhiteSpace(MeterEnd) && !TryParseDouble(MeterEnd, out _))
-            errors.Add("Meter Ende: ungueltige Zahl.");
+            errors.Add("Meter Ende: ungültige Zahl.");
         if (string.IsNullOrWhiteSpace(MeterStart))
             errors.Add("Meter Start ist erforderlich.");
 
         // Zeit
         if (!string.IsNullOrWhiteSpace(Zeit) && !TryParseTime(Zeit, out _))
-            errors.Add("Zeit: ungueltiges Format (mm:ss oder hh:mm:ss).");
+            errors.Add("Zeit: ungültiges Format (mm:ss oder hh:mm:ss).");
 
         // Clock
         if (ClockMode != "none")
@@ -840,7 +840,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         ShowFinalResult(finalCode, SelectedChar1Key, key);
         if (invalidCombo)
         {
-            var invalidMsg = "Kombination im Katalog als ungueltig markiert - manuelle Pruefung erforderlich.";
+            var invalidMsg = "Kombination im Katalog als ungültig markiert - manuelle Prüfung erforderlich.";
             WarnMessage = string.IsNullOrWhiteSpace(WarnMessage)
                 ? invalidMsg
                 : $"{WarnMessage} {invalidMsg}";

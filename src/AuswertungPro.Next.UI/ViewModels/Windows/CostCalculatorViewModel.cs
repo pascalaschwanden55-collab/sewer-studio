@@ -177,13 +177,13 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         _store = _costRepo.Load(projectPath, out _storeLoadError);
         if (_storeLoadError is not null)
             _dialogs.Warn(
-                $"Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit vorhandene Kosten nicht ueberschrieben werden.",
+                $"Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit vorhandene Kosten nicht überschrieben werden.",
                 "Kosten");
         var calculationLoadError = BuildCalculationLoadError();
         if (calculationLoadError is not null)
             _dialogs.Error(
                 $"{calculationLoadError}\n\n" +
-                "Berechnung, Uebernahme, Export und Speichern sind gesperrt, damit keine leeren Ersatzdaten verwendet werden.",
+                "Berechnung, Übernahme, Export und Speichern sind gesperrt, damit keine leeren Ersatzdaten verwendet werden.",
                 "Kosten");
         InitializeOwnerLookup(projectRecords, haltungRecord);
 
@@ -287,7 +287,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         if (_storeLoadError is not null)
         {
             _dialogs.Error(
-                $"Speichern gesperrt: Die bestehende costs.json konnte beim Oeffnen nicht gelesen werden.\n{_storeLoadError}\n\nBitte Datei pruefen (costs\\costs.json bzw. .bak) und das Fenster neu oeffnen.",
+                $"Speichern gesperrt: Die bestehende costs.json konnte beim Öffnen nicht gelesen werden.\n{_storeLoadError}\n\nBitte Datei prüfen (costs\\costs.json bzw. .bak) und das Fenster neu öffnen.",
                 "Kosten");
             return;
         }
@@ -328,12 +328,12 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     private void ApplyTotal()
     {
-        if (!EnsureCalculationInputsReady("Uebernahme"))
+        if (!EnsureCalculationInputsReady("Übernahme"))
             return;
 
         if (_applyTotal is null)
         {
-            _dialogs.Info("Kosten/Massnahmen koennen hier nicht in die Zeile uebernommen werden.", "Kosten/Massnahmen");
+            _dialogs.Info("Kosten/Massnahmen können hier nicht in die Zeile übernommen werden.", "Kosten/Massnahmen");
             return;
         }
 
@@ -347,7 +347,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
         if (SelectedMeasures.Count == 0)
         {
-            _dialogs.Info("Bitte zuerst Massnahmen hinzufuegen.", "PDF-Export");
+            _dialogs.Info("Bitte zuerst Massnahmen hinzufügen.", "PDF-Export");
             return;
         }
 
@@ -383,7 +383,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             }
 
             var exporter = _offerPdfExport
-                ?? throw new InvalidOperationException("PDF-Export ist ohne ServiceProvider nicht verfuegbar.");
+                ?? throw new InvalidOperationException("PDF-Export ist ohne ServiceProvider nicht verfügbar.");
             await exporter.ExportAsync(pdfExport.Model, output);
 
             _dialogs.Info($"PDF-Kostenzusammenstellung wurde erstellt:\n{output}", "PDF-Export");
@@ -563,7 +563,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             return;
         }
 
-        _dialogs.Info("Vorlage gespeichert. Gilt fuer neue Projekte.", "Vorlage");
+        _dialogs.Info("Vorlage gespeichert. Gilt für neue Projekte.", "Vorlage");
     }
 
     private HoldingCost? GetExistingCost()
@@ -675,7 +675,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         {
             _dialogs.Error(
                 $"{action} gesperrt: {loadError}\n\n" +
-                "Bitte Kostenkatalog/Massnahmenvorlagen pruefen und das Fenster neu oeffnen.",
+                "Bitte Kostenkatalog/Massnahmenvorlagen prüfen und das Fenster neu öffnen.",
                 "Kosten");
             return false;
         }
@@ -689,7 +689,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             if (hasLengthText && !lengthIsValid)
             {
                 _dialogs.Error(
-                    $"{action} gesperrt: Die Laenge bei '{measure.MeasureName}' ist nicht lesbar " +
+                    $"{action} gesperrt: Die Länge bei '{measure.MeasureName}' ist nicht lesbar " +
                     $"(\"{measure.LengthText}\"). Bitte den Wert korrigieren.",
                     "Kosten");
                 return false;
@@ -700,8 +700,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             if (hasSelectedMeterLine && (!lengthIsValid || length <= 0m))
             {
                 _dialogs.Error(
-                    $"{action} gesperrt: Ausgewaehlte Meterpositionen bei '{measure.MeasureName}' " +
-                    "brauchen eine Laenge groesser als 0 m. Bitte den Wert korrigieren.",
+                    $"{action} gesperrt: Ausgewählte Meterpositionen bei '{measure.MeasureName}' " +
+                    "brauchen eine Länge grösser als 0 m. Bitte den Wert korrigieren.",
                     "Kosten");
                 return false;
             }
@@ -711,7 +711,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             if (negativeQuantityLine is not null)
             {
                 _dialogs.Error(
-                    $"{action} gesperrt: Die ausgewaehlte Position '{negativeQuantityLine.Text}' " +
+                    $"{action} gesperrt: Die ausgewählte Position '{negativeQuantityLine.Text}' " +
                     "hat eine negative Menge. Bitte den Wert korrigieren.",
                     "Kosten");
                 return false;
@@ -722,7 +722,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             if (negativePriceLine is not null)
             {
                 _dialogs.Error(
-                    $"{action} gesperrt: Die ausgewaehlte Position '{negativePriceLine.Text}' " +
+                    $"{action} gesperrt: Die ausgewählte Position '{negativePriceLine.Text}' " +
                     "hat einen negativen Preis. Bitte den Wert korrigieren.",
                     "Kosten");
                 return false;

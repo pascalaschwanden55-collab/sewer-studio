@@ -54,8 +54,8 @@ internal static class DossierEditableRowFormatting
             ("Eigentuemer", "Phone") => "Telefon",
             ("Eigentuemer", "Mail") => "Mail",
             ("Eigentuemer", "Occupancy") => "Objektbewohner",
-            ("Aenderungen", "Date") => "Datum",
-            ("Aenderungen", "Change") => "Aenderung",
+            ("Änderungen", "Date") => "Datum",
+            ("Änderungen", "Change") => "Änderung",
             _ => styleKey
         };
 

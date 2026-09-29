@@ -23,7 +23,7 @@ internal sealed class DpapiProtectedStringJsonConverter : JsonConverter<string?>
         if (reader.TokenType == JsonTokenType.Null)
             return null;
         if (reader.TokenType != JsonTokenType.String)
-            throw new JsonException("Das geschuetzte Einstellungsfeld muss Text enthalten.");
+            throw new JsonException("Das geschützte Einstellungsfeld muss Text enthalten.");
 
         var persistedValue = reader.GetString();
         if (persistedValue is null
@@ -46,8 +46,8 @@ internal sealed class DpapiProtectedStringJsonConverter : JsonConverter<string?>
                                    or PlatformNotSupportedException)
         {
             BestEffort.ReportWarning(
-                "[Einstellungen] Der geschuetzte Sidecar-Token konnte nicht gelesen werden. " +
-                "Die uebrigen Einstellungen bleiben erhalten; den Token bitte neu eingeben.");
+                "[Einstellungen] Der geschützte Sidecar-Token konnte nicht gelesen werden. " +
+                "Die übrigen Einstellungen bleiben erhalten; den Token bitte neu eingeben.");
             return null;
         }
     }

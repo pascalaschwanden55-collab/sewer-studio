@@ -148,9 +148,9 @@ public sealed partial class SchaechtePageViewModel
             LastResult =
                 "Projekt wurde gewechselt: PDF-Verteilung abgeschlossen; Projektdaten übernommen, aber nicht gespeichert.";
             _dialogs.Warn(
-                "Das Projekt wurde während der Uebernahme gewechselt. " +
+                "Das Projekt wurde während der Übernahme gewechselt. " +
                 "Mindestens eine PDF-Datei wurde bereits in das zuvor gestartete Projekt kopiert. " +
-                "Die zugehoerigen Projektdaten wurden übernommen, aber nicht gespeichert. " +
+                "Die zugehörigen Projektdaten wurden übernommen, aber nicht gespeichert. " +
                 "Bitte prüfen Sie die kopierten Dateien; die ungespeicherten Projektdaten " +
                 "können nach dem Wechsel nicht automatisch übernommen werden.",
                 dialogTitle);
@@ -162,7 +162,7 @@ public sealed partial class SchaechtePageViewModel
             LastResult =
                 "Projekt wurde gewechselt: Änderungen wurden übernommen, aber nicht gespeichert.";
             _dialogs.Warn(
-                "Das Projekt wurde während der Uebernahme gewechselt. " +
+                "Das Projekt wurde während der Übernahme gewechselt. " +
                 "Die Änderungen im zuvor gestarteten Projekt wurden nicht gespeichert.",
                 dialogTitle);
             return false;

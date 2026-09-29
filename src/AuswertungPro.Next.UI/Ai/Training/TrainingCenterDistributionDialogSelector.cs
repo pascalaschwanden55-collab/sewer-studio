@@ -8,7 +8,7 @@ public static class TrainingCenterDistributionDialogSelector
     {
         var dlg = new OpenFileDialog
         {
-            Title = "Haltungs-PDF waehlen",
+            Title = "Haltungs-PDF wählen",
             Filter = "PDF (*.pdf)|*.pdf"
         };
 
@@ -19,7 +19,7 @@ public static class TrainingCenterDistributionDialogSelector
     {
         var dlg = new OpenFolderDialog
         {
-            Title = "Video-Ordner waehlen (Film-Ordner mit Haltungs-Videos)"
+            Title = "Video-Ordner wählen (Film-Ordner mit Haltungs-Videos)"
         };
 
         return dlg.ShowDialog() == true ? dlg.FolderName : null;

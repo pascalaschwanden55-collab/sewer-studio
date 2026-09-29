@@ -102,7 +102,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 MaskImageWidth: resp.ImageWidth,
                 MaskImageHeight: resp.ImageHeight,
                 AreaPercent: null,
-                StatusText: "Keine verwertbare Maske — bitte Box pruefen.",
+                StatusText: "Keine verwertbare Maske — bitte Box prüfen.",
                 Degraded: true);
         }
 
@@ -122,7 +122,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 1)
             : null;
 
-        var statusText = degraded ? "Teil-Segmentierung — pruefen." : "Maske erstellt.";
+        var statusText = degraded ? "Teil-Segmentierung — prüfen." : "Maske erstellt.";
         return new WorkbenchSegmentation(
             MaskRle: mask.MaskRle,
             MaskImageWidth: resp.ImageWidth,
@@ -158,7 +158,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (allowedCodes.Length == 0)
-            return UnavailablePhotoSuggestion("Der VSA-Codekatalog ist nicht verfuegbar.");
+            return UnavailablePhotoSuggestion("Der VSA-Codekatalog ist nicht verfügbar.");
 
         var projectFolder = Path.GetDirectoryName(item.FramePath);
         if (string.IsNullOrWhiteSpace(projectFolder))
@@ -339,7 +339,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         if (confirmedByUser.Length == 0)
         {
             return Rejected(
-                "Persoenliche Bestaetigung fehlt. Ohne Bearbeiter wird kein Goldsample gespeichert.");
+                "Persönliche Bestätigung fehlt. Ohne Bearbeiter wird kein Goldsample gespeichert.");
         }
         if (beschreibung.Length < 10)
             return Rejected("Beschreibung zu kurz (mindestens 10 Zeichen).");
@@ -376,7 +376,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                            != item.ExpectedConfirmedAtUtc.Value.ToUniversalTime()))
                 {
                     return Rejected(
-                        "Goldsample wurde inzwischen in einem anderen Arbeitsablauf geaendert. Bitte die Goldpruefung neu laden.");
+                        "Goldsample wurde inzwischen in einem anderen Arbeitsablauf geändert. Bitte die Goldprüfung neu laden.");
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -411,7 +411,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         if (!isPdfPhoto && !isManualCoding)
         {
             return Rejected(
-                "Die gespeicherte Herkunft ist nicht als persoenliches Gold zugelassen. Es wurde nichts gespeichert.");
+                "Die gespeicherte Herkunft ist nicht als persönliches Gold zugelassen. Es wurde nichts gespeichert.");
         }
         if (isPdfPhoto
             && (!PdfGoldProvenancePolicy.IsValid(sourceNote)
@@ -419,7 +419,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 || string.IsNullOrWhiteSpace(sourceReferenceDescription)))
         {
             return Rejected(
-                "PDF-Goldsample kann nicht gespeichert werden: Die Operateurreferenz oder PDF-Pruefspur ist unvollstaendig oder ungueltig.");
+                "PDF-Goldsample kann nicht gespeichert werden: Die Operateurreferenz oder PDF-Prüfspur ist unvollständig oder ungültig.");
         }
         if (existingSample is null
             && item.SourceSuggestion is not null
@@ -482,7 +482,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                     StringComparison.OrdinalIgnoreCase))
             {
                 return Rejected(
-                    "Das Bild wurde seit dem Laden der Goldpruefung geaendert. Bitte die Goldpruefung neu laden.");
+                    "Das Bild wurde seit dem Laden der Goldprüfung geändert. Bitte die Goldprüfung neu laden.");
             }
         }
 
@@ -495,7 +495,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Rejected($"Eval-Schutz nicht verfuegbar: {ex.Message}");
+            return Rejected($"Eval-Schutz nicht verfügbar: {ex.Message}");
         }
         // Beim Foto-Assistenten ist dies genau eine Arbeitskopie des beim
         // Segmentieren gebundenen Originals. Dieselben Bytes gehen unten an
@@ -515,7 +515,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         if (verdict != EvalContaminationGuard.ExportContaminationResult.Clean)
         {
             return Rejected(
-                $"Eval-Schutz: Bild gehoert zum eingefrorenen Mess-Set ({verdict}). Nicht speicherbar.");
+                $"Eval-Schutz: Bild gehört zum eingefrorenen Mess-Set ({verdict}). Nicht speicherbar.");
         }
 
         // 3) Das angenommene Bild zuerst unveraendert ins KI-Brain uebernehmen.
@@ -618,7 +618,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             return new WorkbenchSaveResult(
                 true,
                 CombineWarnings(
-                    "Entwurf gespeichert: ohne gepruefte SAM-Maske kein Goldsample. Das Sample landet in 'Unvollstaendige Goldframes' und kann dort mit Maske nachgeruestet werden.",
+                    "Entwurf gespeichert: ohne geprüfte SAM-Maske kein Goldsample. Das Sample landet in 'Unvollständige Goldframes' und kann dort mit Maske nachgerüstet werden.",
                     replaceWarning),
                 sampleId,
                 "Entwurf",
@@ -712,7 +712,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return (null, Rejected(
-                $"Goldbild konnte nach dem Speichern nicht bytegenau geprueft werden: {ex.Message}"));
+                $"Goldbild konnte nach dem Speichern nicht bytegenau geprüft werden: {ex.Message}"));
         }
 
         return (new StoredGoldImage(storedFramePath, storedImageSha256), null);
@@ -755,7 +755,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                     if (!added)
                     {
                         return (null, Rejected(
-                            "Goldsample wurde nicht gespeichert: Die Signatur gehoert bereits zu einem anderen Datensatz."));
+                            "Goldsample wurde nicht gespeichert: Die Signatur gehört bereits zu einem anderen Datensatz."));
                     }
                 }
             }
@@ -783,7 +783,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             if (!added)
             {
                 return (null, Rejected(
-                    "Bereits als Goldsample vorhanden (gleiche Haltung, Code, Meter und Box). Zum Aendern den Eintrag ueber 'Unvollstaendige Goldframes' oder das Goldalbum laden."));
+                    "Bereits als Goldsample vorhanden (gleiche Haltung, Code, Meter und Box). Zum Ändern den Eintrag über 'Unvollständige Goldframes' oder das Goldalbum laden."));
             }
         }
 
@@ -902,7 +902,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
                 if (!added)
                 {
                     throw new InvalidOperationException(
-                        "Die Signatur gehoert bereits zu einem anderen Gold-Datensatz.");
+                        "Die Signatur gehört bereits zu einem anderen Gold-Datensatz.");
                 }
             }
         }
@@ -946,7 +946,7 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
             else if (legacy.Count > 1)
                 warning = CombineWarnings(
                     warning,
-                    $"{legacy.Count} alte Teacher-Eintraege unklar zugeordnet — bitte manuell pruefen.");
+                    $"{legacy.Count} alte Teacher-Einträge unklar zugeordnet — bitte manuell prüfen.");
 
             foreach (var annotation in stale)
                 await _teacherStore.DeleteAsync(annotation.AnnotationId).ConfigureAwait(false);

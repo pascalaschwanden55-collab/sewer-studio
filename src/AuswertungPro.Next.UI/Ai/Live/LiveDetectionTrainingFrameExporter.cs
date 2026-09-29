@@ -39,7 +39,7 @@ public sealed class LiveDetectionTrainingFrameExporter
         }
         finally
         {
-            BestEffort.Try(() => File.Delete(tempFrame), "Detection-Training: Temp-Frame loeschen");
+            BestEffort.Try(() => File.Delete(tempFrame), "Detection-Training: Temp-Frame löschen");
         }
     }
 

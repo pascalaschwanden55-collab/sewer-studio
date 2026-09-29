@@ -94,7 +94,7 @@ public sealed partial class ServiceProvider
             if (!knowledgeHealth.IsHealthy)
             {
                 KnowledgeRootStartupWarning =
-                    "Die Wissensdatenbank ist beschaedigt oder nicht lesbar. Die App arbeitet vorerst ohne KB-Kontext.\n" +
+                    "Die Wissensdatenbank ist beschädigt oder nicht lesbar. Die App arbeitet vorerst ohne KB-Kontext.\n" +
                     $"Datei: {KnowledgeDbPath}\n" +
                     $"Fehler: {knowledgeHealth.Error}\n" +
                     "Bitte stelle die Datei aus einer Datensicherung wieder her.";

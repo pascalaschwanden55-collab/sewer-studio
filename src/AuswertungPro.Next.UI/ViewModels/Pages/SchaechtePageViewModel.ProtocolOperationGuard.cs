@@ -82,7 +82,7 @@ public sealed partial class SchaechtePageViewModel
         if (!CanMutateShaftData)
         {
             ReportBlockedShaftDataMutation(
-                $"{operationName} ist waehrend einer Schacht-PDF-Verarbeitung gesperrt.");
+                $"{operationName} ist während einer Schacht-PDF-Verarbeitung gesperrt.");
             return false;
         }
 
@@ -96,7 +96,7 @@ public sealed partial class SchaechtePageViewModel
         }
 
         ReportBlockedShaftDataMutation(
-            $"{operationName} nicht ausgefuehrt: Der Schacht gehoert nicht mehr zum aktuellen Projekt.");
+            $"{operationName} nicht ausgefuehrt: Der Schacht gehört nicht mehr zum aktuellen Projekt.");
         return false;
     }
 
@@ -110,7 +110,7 @@ public sealed partial class SchaechtePageViewModel
             return true;
 
         ReportBlockedShaftDataMutation(
-            $"{operationName} ist waehrend einer Schacht-PDF-Verarbeitung gesperrt.");
+            $"{operationName} ist während einer Schacht-PDF-Verarbeitung gesperrt.");
         return false;
     }
 
@@ -183,7 +183,7 @@ public sealed partial class SchaechtePageViewModel
 
         LastResult = disposed
             ? $"{operationName} nicht gestartet: Die Schachtseite wurde geschlossen."
-            : $"{operationName} nicht gestartet: Es laeuft bereits ein anderer Projektvorgang.";
+            : $"{operationName} nicht gestartet: Es läuft bereits ein anderer Projektvorgang.";
         _shell.SetStatus(LastResult);
         return false;
     }

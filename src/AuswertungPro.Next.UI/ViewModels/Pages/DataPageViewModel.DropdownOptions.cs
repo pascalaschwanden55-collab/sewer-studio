@@ -161,7 +161,7 @@ public sealed partial class DataPageViewModel
         {
             _dialogs.Info(
                 $"„{text.Trim()}\" ist ein fest eingebautes Rohrmaterial und kann nicht entfernt werden.\n\n" +
-                "Der XTF-Import liefert genau diese Schreibweise. Ohne den Eintrag wuerde das Feld bei " +
+                "Der XTF-Import liefert genau diese Schreibweise. Ohne den Eintrag würde das Feld bei " +
                 "importierten Haltungen leer erscheinen.",
                 "Rohrmaterial");
             return;

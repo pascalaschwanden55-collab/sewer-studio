@@ -61,7 +61,7 @@ public sealed class CodingSnapshotCaptureService
                     if (File.Exists(snapFile))
                         File.Delete(snapFile);
                 },
-                "Snapshot: Temp loeschen");
+                "Snapshot: Temp löschen");
         }
     }
 

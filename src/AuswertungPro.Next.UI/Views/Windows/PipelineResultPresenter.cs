@@ -20,7 +20,7 @@ internal static class PipelineResultPresenter
         ArgumentNullException.ThrowIfNull(result);
 
         if (!result.IsSuccess)
-            throw new ArgumentException("Nur erfolgreiche Pipeline-Ergebnisse koennen dargestellt werden.", nameof(result));
+            throw new ArgumentException("Nur erfolgreiche Pipeline-Ergebnisse können dargestellt werden.", nameof(result));
 
         var rawDetections = result.Detections ?? Array.Empty<RawVideoDetection>();
         ApplyStatistics(viewModel, result.Stats, rawDetections);

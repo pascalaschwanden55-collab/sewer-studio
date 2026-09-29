@@ -44,7 +44,7 @@ public static class TrainingCenterReviewCorrectionWorkflow
         var catalog = request.Catalog;
         if (catalog is null)
         {
-            actions.Warn("Code-Katalog nicht verfuegbar.", "Korrektur");
+            actions.Warn("Code-Katalog nicht verfügbar.", "Korrektur");
             return Result(TrainingCenterReviewCorrectionOutcome.CatalogUnavailable);
         }
 

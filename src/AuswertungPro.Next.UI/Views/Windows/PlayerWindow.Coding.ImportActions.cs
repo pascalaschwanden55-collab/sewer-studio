@@ -49,13 +49,13 @@ public partial class PlayerWindow
                     TimeSpan.FromSeconds(3)),
                 PersistTrainingSampleAsync: _codingTrainingPersistenceContext.PersistSingleEventAsync,
                 ShowSuccess: () => ShowOverlay(
-                    "Ins KI-Brain uebernommen.",
+                    "Ins KI-Brain übernommen.",
                     TimeSpan.FromSeconds(2)),
                 RefreshProtocolMatch: () => _codingProtocolMatchController.RunMatch(),
                 PersistTrainingSampleWithResultAsync:
                     _codingTrainingPersistenceContext.PersistSingleEventAsync,
                 ShowPersistenceError: error => ShowOverlay(
-                    $"Nicht ins KI-Brain uebernommen: {error}",
+                    $"Nicht ins KI-Brain übernommen: {error}",
                     TimeSpan.FromSeconds(5))));
     }
 }

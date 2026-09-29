@@ -395,7 +395,7 @@ public partial class StartupSplashWindow : Window
             return;
 
         _skipRequested = true;
-        StatusText.Text = "Startanimation uebersprungen…";
+        StatusText.Text = "Startanimation übersprungen…";
         ProgressBar.BeginAnimation(WidthProperty, null);
         ProgressBar.Width = _progressFullWidth;
         _progressDone.TrySetResult(true);

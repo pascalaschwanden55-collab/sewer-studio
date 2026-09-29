@@ -67,7 +67,7 @@ public static class CodingMultiModelAnalysisResultWorkflow
         if ((!result.IsRelevant || !result.HasDetections) && (result.Degraded || classifierHint != null))
         {
             SetAiState(
-                result.Degraded ? "KI-Ergebnis unvollstaendig – manuell pruefen" : "Befund nicht lokalisiert",
+                result.Degraded ? "KI-Ergebnis unvollständig – manuell prüfen" : "Befund nicht lokalisiert",
                 PlayerStatusColors.Warning,
                 result.Degraded
                     ? result.DegradedReason ?? "Ein KI-Modell ist nicht qualifiziert oder ausgefallen."
@@ -120,7 +120,7 @@ public static class CodingMultiModelAnalysisResultWorkflow
         if (findingSummary.HasOnlyAheadFindings)
         {
             SetAiState(
-                "Ereignis voraus erkannt - naeher heranfahren",
+                "Ereignis voraus erkannt - näher heranfahren",
                 PlayerStatusColors.Warning,
                 $"{findingSummary.VorausCount} voraus",
                 false);
@@ -131,7 +131,7 @@ public static class CodingMultiModelAnalysisResultWorkflow
 
         SetAiState(
             result.Degraded
-                ? findingSummary.DetectedStatusText + " – manuell pruefen"
+                ? findingSummary.DetectedStatusText + " – manuell prüfen"
                 : findingSummary.DetectedStatusText,
             result.Degraded ? PlayerStatusColors.Warning : PlayerStatusColors.Success,
             result.Degraded

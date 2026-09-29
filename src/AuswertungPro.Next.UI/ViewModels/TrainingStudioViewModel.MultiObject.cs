@@ -97,7 +97,7 @@ public sealed partial class TrainingStudioViewModel
         IsAwaitingImageCompletion = true;
         StatusText =
             $"{savedStatus} Ereignis {SavedEventCountForCurrentImage} ist gespeichert. " +
-            "Jetzt 'Weiteres Ereignis auf diesem Bild' oder 'Bild fertig' waehlen.";
+            "Jetzt 'Weiteres Ereignis auf diesem Bild' oder 'Bild fertig' wählen.";
     }
 
     [RelayCommand(CanExecute = nameof(CanChooseImageCompletion))]
@@ -119,7 +119,7 @@ public sealed partial class TrainingStudioViewModel
         ResetAnnotationForAdditionalObject();
         StatusText =
             $"Weiteres Ereignis {SavedEventCountForCurrentImage + 1} auf demselben Bild: " +
-            "neue Box um genau diese Situation ziehen, SAM-Maske pruefen und separat codieren.";
+            "neue Box um genau diese Situation ziehen, SAM-Maske prüfen und separat codieren.";
     }
 
     [RelayCommand(CanExecute = nameof(CanChooseImageCompletion))]
@@ -130,14 +130,14 @@ public sealed partial class TrainingStudioViewModel
     {
         if (!CanChooseImageCompletion())
         {
-            StatusText = "'Bild fertig' ist erst nach einem erfolgreich gespeicherten Goldereignis moeglich.";
+            StatusText = "'Bild fertig' ist erst nach einem erfolgreich gespeicherten Goldereignis möglich.";
             return false;
         }
 
         var savedCount = SavedEventCountForCurrentImage;
         if (!TryMarkCurrentQueueItemCompleted())
         {
-            StatusText = "Dieses Bild ist bereits abgeschlossen und kann nicht doppelt gezaehlt werden.";
+            StatusText = "Dieses Bild ist bereits abgeschlossen und kann nicht doppelt gezählt werden.";
             return false;
         }
 
@@ -158,7 +158,7 @@ public sealed partial class TrainingStudioViewModel
         {
             CurrentIndex = nextIndex;
             ResetForCurrent();
-            StatusText = $"{completedText} Naechstes Bild: {CurrentIndex + 1} von {Items.Count}.";
+            StatusText = $"{completedText} Nächstes Bild: {CurrentIndex + 1} von {Items.Count}.";
         }
         else
         {
@@ -175,8 +175,8 @@ public sealed partial class TrainingStudioViewModel
         CancelBoxRunForImageChange();
         PreviewDetections = new();
         PreviewDetectionSummary = SelectedPreviewModel is null
-            ? "Bitte ein Modell waehlen."
-            : $"{SelectedPreviewModel.DisplayName}: bereit fuer einen reinen Fototest.";
+            ? "Bitte ein Modell wählen."
+            : $"{SelectedPreviewModel.DisplayName}: bereit für einen reinen Fototest.";
         CurrentBox = null;
         Segmentation = null;
         Suggestion = null;

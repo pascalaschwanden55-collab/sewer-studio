@@ -298,7 +298,7 @@ public partial class ProtocolEntryEditorDialog : Window
         SetControlValidationState(MeterStartTextBox, result.MeterStartOk, "Numerischer Wert erwartet.");
         SetControlValidationState(MeterEndTextBox, result.MeterEndOk, "Numerischer Wert erwartet.");
         SetControlValidationState(ZeitTextBox, result.ZeitOk, "Erlaubt: mm:ss oder hh:mm:ss.");
-        SetControlValidationState(StreckenschadenCheckBox, result.StreckenschadenOk, "Streckenschaden benötigt gueltige Meter von/bis.");
+        SetControlValidationState(StreckenschadenCheckBox, result.StreckenschadenOk, "Streckenschaden benötigt gültige Meter von/bis.");
         SetControlValidationState(VsaDistanzTextBox, result.Vsa.DistanzOk, "Numerischer Wert erwartet.");
         SetControlValidationState(VsaVideoTextBox, result.Vsa.VideoOk, "Erlaubt: mm:ss oder hh:mm:ss.");
         SetControlValidationState(VsaUhrVonComboBox, result.Vsa.UhrVonOk, "Erlaubt: 00 bis 12.");

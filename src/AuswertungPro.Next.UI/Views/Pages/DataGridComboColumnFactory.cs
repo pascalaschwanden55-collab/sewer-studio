@@ -197,8 +197,8 @@ public static class DataGridComboColumnFactory
 
         contextMenu.Items.Add(CreateCommandMenuItem("Liste bearbeiten...", commands.EditCommand, false));
         contextMenu.Items.Add(CreateCommandMenuItem("Vorschau", commands.PreviewCommand, false));
-        contextMenu.Items.Add(CreateCommandMenuItem("Zuruecksetzen auf Standard", commands.ResetCommand, false));
-        contextMenu.Items.Add(CreateCommandMenuItem("Wert hinzufuegen", commands.AddCommand, true));
+        contextMenu.Items.Add(CreateCommandMenuItem("Zurücksetzen auf Standard", commands.ResetCommand, false));
+        contextMenu.Items.Add(CreateCommandMenuItem("Wert hinzufügen", commands.AddCommand, true));
         contextMenu.Items.Add(CreateCommandMenuItem("Wert entfernen", commands.RemoveCommand, true));
         return contextMenu;
     }

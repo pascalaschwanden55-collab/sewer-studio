@@ -96,7 +96,7 @@ public sealed partial class TrainingStudioViewModel
         {
             PreviewDetectionSummary =
                 "Das Ereignis ist bereits gespeichert. Bitte zuerst 'Bild fertig' oder " +
-                "'Weiteres Ereignis auf diesem Bild' waehlen.";
+                "'Weiteres Ereignis auf diesem Bild' wählen.";
             StatusText = PreviewDetectionSummary;
             return;
         }
@@ -152,7 +152,7 @@ public sealed partial class TrainingStudioViewModel
                     MarkStandardModelUnavailable();
                     PreviewDetectionSummary =
                         string.IsNullOrWhiteSpace(qualification?.Reason)
-                            ? "Standardmodell gesperrt: Der Qualifikationsstatus konnte nicht sicher geprueft werden."
+                            ? "Standardmodell gesperrt: Der Qualifikationsstatus konnte nicht sicher geprüft werden."
                             : $"Standardmodell gesperrt: {qualification.Reason}";
                     StatusText = PreviewDetectionSummary;
                     return;

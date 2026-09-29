@@ -68,15 +68,15 @@ public sealed class ProtocolEntryEditorValidationViewModel
             input.MeterEnd ?? string.Empty,
             out var meterEnd);
         if (!meterStartOk)
-            errors.Add("MeterStart ist ungueltig.");
+            errors.Add("MeterStart ist ungültig.");
         if (!meterEndOk)
-            errors.Add("MeterEnd ist ungueltig.");
+            errors.Add("MeterEnd ist ungültig.");
 
         var zeitOk = ProtocolEntryInputNormalizer.TryParseOptionalTimeSpan(
             input.Zeit ?? string.Empty,
             out _);
         if (!zeitOk)
-            errors.Add("Zeit ist ungueltig.");
+            errors.Add("Zeit ist ungültig.");
 
         var streckenschadenOk = true;
         if (input.IsStreckenschaden)
@@ -89,7 +89,7 @@ public sealed class ProtocolEntryEditorValidationViewModel
             else if (meterEnd < meterStart)
             {
                 streckenschadenOk = false;
-                errors.Add("Streckenschaden: MeterEnde muss groesser/gleich MeterStart sein.");
+                errors.Add("Streckenschaden: MeterEnde muss grösser/gleich MeterStart sein.");
             }
         }
 

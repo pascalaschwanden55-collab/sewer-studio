@@ -454,16 +454,16 @@ namespace AuswertungPro.Next.UI
             if (knowledgeResolution.Source == KnowledgeBasePaths.RootSource.EnvironmentOverride)
             {
                 Logger.LogInformation(
-                    "Wissensdatenbank-Override {EnvironmentVariable} ist fuer diesen Start aktiv: {KnowledgeRoot}",
+                    "Wissensdatenbank-Override {EnvironmentVariable} ist für diesen Start aktiv: {KnowledgeRoot}",
                     KnowledgeBasePaths.EnvironmentVariableName,
                     KnowledgeRoot);
             }
             var knowledgeConfigurationWarning = knowledgeResolution.HasEnvironmentSettingsMismatch
-                ? "Fuer diesen Start ist ein anderer Wissensordner ueber die Umgebungsvariable " +
+                ? "Für diesen Start ist ein anderer Wissensordner über die Umgebungsvariable " +
                   $"{KnowledgeBasePaths.EnvironmentVariableName} aktiv.\n" +
                   $"Gespeichert: {knowledgeResolution.PersistedSettingsRoot}\n" +
                   $"Jetzt aktiv: {KnowledgeRoot}\n" +
-                  "Der gespeicherte Pfad wird nicht ueberschrieben. Pruefe bitte, ob diese Abweichung gewollt ist."
+                  "Der gespeicherte Pfad wird nicht überschrieben. Prüfe bitte, ob diese Abweichung gewollt ist."
                 : null;
 
             // Statische Fassaden auf dieselben Instanzen zeigen lassen (Konsumenten ohne DI).
@@ -854,7 +854,7 @@ namespace AuswertungPro.Next.UI
             }
             catch (Exception ex)
             {
-                Logger.LogInformation(ex, "KI-Schiedsrichter fuer Import ist nicht verfuegbar.");
+                Logger.LogInformation(ex, "KI-Schiedsrichter für Import ist nicht verfügbar.");
                 return null;
             }
         }

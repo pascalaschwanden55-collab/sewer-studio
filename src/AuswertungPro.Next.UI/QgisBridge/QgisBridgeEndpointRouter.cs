@@ -93,7 +93,7 @@ internal sealed class QgisBridgeEndpointRouter
     {
         var position = QgisBridgeVideoPosition.Lies();
         if (position is null)
-            return Error(404, "Zurzeit laeuft kein Video mit bestimmbarem Meterstand.");
+            return Error(404, "Zurzeit läuft kein Video mit bestimmbarem Meterstand.");
 
         return Json(200, new
         {
@@ -169,10 +169,10 @@ internal sealed class QgisBridgeEndpointRouter
         return grund switch
         {
             VideoSprungGrund.Bereit => Json(200, new { ok = true }),
-            VideoSprungGrund.KeinVideo => Error(404, "Zurzeit laeuft kein Video."),
+            VideoSprungGrund.KeinVideo => Error(404, "Zurzeit läuft kein Video."),
             VideoSprungGrund.KeinAuftrag => Error(400, "Der Auftrag nennt keine Haltung."),
             VideoSprungGrund.UngueltigerMeter => Error(400, "Der Meterwert ist keine brauchbare Zahl."),
-            VideoSprungGrund.FremdeHaltung => Error(409, "Im Video laeuft eine andere Haltung."),
+            VideoSprungGrund.FremdeHaltung => Error(409, "Im Video läuft eine andere Haltung."),
             VideoSprungGrund.NichtBestimmbar => Error(409, "Zu dieser Stelle ist keine Videozeit bestimmbar."),
             _ => Error(409, "Der Sprung wurde nicht ausgefuehrt.")
         };

@@ -184,7 +184,7 @@ internal sealed class ImportOneClickProjectController
             {
                 var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
                 _dialogs.Error(
-                    "Waehrend des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
+                    "Während des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
                     "Das Importergebnis wurde aus Sicherheitsgründen nicht übernommen." + rollback,
                     "Import Kanalfernseh-Projekt");
                 return;
@@ -403,7 +403,7 @@ internal sealed class ImportOneClickProjectController
         }
         catch (Exception ex)
         {
-            var userMessage = UserError.DescribeAndReport(ex, "Importdateien zuruecknehmen");
+            var userMessage = UserError.DescribeAndReport(ex, "Importdateien zurücknehmen");
             return $"\n\nAchtung: Die angelegten Dateien konnten nicht zurückgenommen werden: {userMessage}";
         }
     }

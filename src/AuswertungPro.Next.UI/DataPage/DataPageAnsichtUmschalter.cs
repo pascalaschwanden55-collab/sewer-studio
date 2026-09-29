@@ -32,7 +32,7 @@ public sealed class DataPageAnsichtUmschalter
     public const string LoeschenListe = "Haltung löschen";
 
     /// <summary>Kennzeichnet den Loeschpunkt im geteilten Zeilenmenue (statt eines Namens im Ressourcenteil).</summary>
-    public const string LoeschenMarke = "loeschen";
+    public const string LoeschenMarke = "löschen";
 
     /// <summary>Die benannten Elemente der Haltungsseite aus DataPage.xaml.</summary>
     public sealed record Elemente(

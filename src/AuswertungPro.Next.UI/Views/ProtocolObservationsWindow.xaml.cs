@@ -56,8 +56,8 @@ public partial class ProtocolObservationsWindow : Window
 
         _doc = EnsureDocument(record);
         Kopf.Title = string.IsNullOrWhiteSpace(record.GetFieldValue("Haltungsname"))
-            ? "Beobachtungen / Schaeden"
-            : $"Beobachtungen / Schaeden - {record.GetFieldValue("Haltungsname")}";
+            ? "Beobachtungen / Schäden"
+            : $"Beobachtungen / Schäden - {record.GetFieldValue("Haltungsname")}";
         RefreshRevisionHeader();
 
         LoadEntries();
@@ -143,7 +143,7 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Protokoll");
             return;
         }
 
@@ -172,11 +172,11 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Protokoll");
             return;
         }
 
-        if (!_sp.Dialogs.Confirm("Beobachtung wirklich loeschen?", "Protokoll"))
+        if (!_sp.Dialogs.Confirm("Beobachtung wirklich löschen?", "Protokoll"))
             return;
 
         entry.IsDeleted = true;
@@ -246,7 +246,7 @@ public partial class ProtocolObservationsWindow : Window
     {
         if (_sp.CodeSelectionCatalog is null)
         {
-            _sp.Dialogs.Info("Code-Katalog ist nicht verfuegbar.", "Protokoll");
+            _sp.Dialogs.Info("Code-Katalog ist nicht verfügbar.", "Protokoll");
             return false;
         }
 
@@ -288,13 +288,13 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Protokoll");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(_videoPath))
         {
-            _sp.Dialogs.Info("Kein Video verlinkt. Bitte zuerst Video verknuepfen.", "Video");
+            _sp.Dialogs.Info("Kein Video verlinkt. Bitte zuerst Video verknüpfen.", "Video");
             return;
         }
 
@@ -366,7 +366,7 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Training");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Training");
             return;
         }
 

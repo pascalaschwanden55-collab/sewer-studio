@@ -50,7 +50,7 @@ public partial class DataPage
         if (string.IsNullOrWhiteSpace(haltungsname))
         {
             Dialogs.Info(
-                "Ohne Haltungsnamen laesst sich beim Kanton nichts nachschlagen.",
+                "Ohne Haltungsnamen lässt sich beim Kanton nichts nachschlagen.",
                 "Beim Kanton nachschlagen");
             return;
         }
@@ -95,7 +95,7 @@ public partial class DataPage
         {
             Dialogs.Info(
                 $"Das Feld \"{feldname}\" hat inzwischen einen Wert. "
-                + "Der Nachschlag ueberschreibt nichts.",
+                + "Der Nachschlag überschreibt nichts.",
                 "Beim Kanton nachschlagen");
             return;
         }

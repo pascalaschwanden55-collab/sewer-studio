@@ -54,7 +54,7 @@ public static class LiveDetectionMarkSamMaskRenderWorkflow
         }
         catch (Exception ex)
         {
-            actions.TraceError($"[Mark-SAM] Masken-Render uebersprungen: {ex.Message}");
+            actions.TraceError($"[Mark-SAM] Masken-Render übersprungen: {ex.Message}");
             return Result(LiveDetectionMarkSamMaskRenderOutcome.Failed);
         }
     }

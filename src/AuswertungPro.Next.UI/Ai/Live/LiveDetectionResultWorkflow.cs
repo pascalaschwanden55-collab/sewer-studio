@@ -72,7 +72,7 @@ public static class LiveDetectionResultWorkflow
         actions.SetLiveDetectionBadge(
             "Befund erkannt",
             PlayerStatusColors.Warning,
-            $"{compactModelName} | Warte auf Bestaetigung");
+            $"{compactModelName} | Warte auf Bestätigung");
 
         return new LiveDetectionResultWorkflowResult(
             LiveDetectionResultWorkflowOutcome.ConfirmationRequested);

@@ -27,7 +27,7 @@ internal static class TrainingStudioMaskOverlayRenderer
             || imageArea.Width <= 0
             || imageArea.Height <= 0)
         {
-            return new RenderResult(false, "Segmentierung ist vorhanden, aber ihre Bildgroesse ist ungueltig.");
+            return new RenderResult(false, "Segmentierung ist vorhanden, aber ihre Bildgrösse ist ungültig.");
         }
 
         try

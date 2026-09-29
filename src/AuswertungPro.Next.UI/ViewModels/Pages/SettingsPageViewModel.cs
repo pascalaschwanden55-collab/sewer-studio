@@ -102,8 +102,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private string _backupStatusText = string.Empty;
     [ObservableProperty] private bool _includeProjectVideosInFullBackup;
     [ObservableProperty] private string _aiStartupStatusText = string.Empty;
-    [ObservableProperty] private string _programCleanupStatusText = "Noch nicht geprueft.";
-    [ObservableProperty] private string _codexArtifactCleanupStatusText = "Noch nicht geprueft.";
+    [ObservableProperty] private string _programCleanupStatusText = "Noch nicht geprüft.";
+    [ObservableProperty] private string _codexArtifactCleanupStatusText = "Noch nicht geprüft.";
     [ObservableProperty] private bool _isProgramCleanupRunning;
     // true, solange "KI starten" laeuft -> Fortschrittsbalken sichtbar, Knopf gesperrt.
     [ObservableProperty] private bool _isAiStarting;

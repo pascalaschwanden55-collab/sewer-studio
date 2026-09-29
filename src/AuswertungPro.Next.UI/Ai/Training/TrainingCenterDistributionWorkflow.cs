@@ -55,7 +55,7 @@ public static class TrainingCenterDistributionWorkflow
             request.Log($"--- Fertig: {result.Distributed} Haltungen verteilt, {result.VideosMatched} Videos zugeordnet ---");
 
             if (result.Uncertain > 0)
-                request.Log($"  {result.Uncertain} Chunks ohne Haltungs-ID uebersprungen.");
+                request.Log($"  {result.Uncertain} Chunks ohne Haltungs-ID übersprungen.");
 
             request.SetStatusText($"Verteilt: {result.Distributed} Haltungen, {result.VideosMatched} Videos -> {result.OutputFolder}");
 

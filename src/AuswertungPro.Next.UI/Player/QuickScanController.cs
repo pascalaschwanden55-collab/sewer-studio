@@ -99,7 +99,7 @@ public sealed class QuickScanController
 
         if (_createQuickScanSession is null)
         {
-            _dialogs.Warn("KI-Schnellscan ist nicht verfuegbar.", "Schnell-Scan");
+            _dialogs.Warn("KI-Schnellscan ist nicht verfügbar.", "Schnell-Scan");
             _quickScanButton.IsChecked = false;
             return;
         }

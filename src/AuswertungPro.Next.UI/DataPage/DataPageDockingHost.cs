@@ -135,7 +135,7 @@ public sealed class DataPageDockingHost
                 }
                 catch (Exception closeEx)
                 {
-                    BestEffort.ReportWarning($"[DataPage] Aufraeumen des abgedockten Fensters fehlgeschlagen: {closeEx}");
+                    BestEffort.ReportWarning($"[DataPage] Aufräumen des abgedockten Fensters fehlgeschlagen: {closeEx}");
                 }
                 _fenster = null;
             }

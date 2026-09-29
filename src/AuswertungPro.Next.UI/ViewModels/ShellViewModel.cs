@@ -464,7 +464,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         // Ausdruecklicher Sprung: in der Aufklapp-Liste klappt die Haltung dabei auf.
         dataPage.ZeigeHaltung(record);
         var name = record.GetFieldValue(FieldKeys.HoldingName) ?? "(ohne Name)";
-        SetStatus($"Haltung geoeffnet: {name}");
+        SetStatus($"Haltung geöffnet: {name}");
     }
 
     /// <summary>Oeffnet die Schachtseite und waehlt dort genau diesen Schacht aus.</summary>
@@ -479,7 +479,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
         shaftPage.Selected = record;
         var number = SchaechteColumnPolicy.GetSchachtNumber(record);
-        SetStatus($"Schacht geoeffnet: {number}");
+        SetStatus($"Schacht geöffnet: {number}");
     }
 
     public void NavigateToSanierungsMatrix(string? holding, bool singleHoldingMode = false, HaltungRecord? targetRecord = null)
@@ -784,22 +784,22 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             // Nicht beschaedigt, sondern zu neu oder gerade nicht lesbar: kein Ruecksetzen,
             // keine Quarantaene, keine irrefuehrende Beschaedigungsmeldung.
             _sp.Dialogs.Error(
-                "Das Projekt wurde nicht geoeffnet.\n\n" +
+                "Das Projekt wurde nicht geöffnet.\n\n" +
                 $"Datei: {path}\n\n" +
                 $"{res.ErrorMessage}\n\n" +
-                "Die Datei wurde NICHT veraendert, und es wurde keine Sicherung eingespielt.",
-                "Projekt nicht geoeffnet");
-            SetStatus($"Nicht geoeffnet: {res.ErrorMessage}");
+                "Die Datei wurde NICHT verändert, und es wurde keine Sicherung eingespielt.",
+                "Projekt nicht geöffnet");
+            SetStatus($"Nicht geöffnet: {res.ErrorMessage}");
             return false;
         }
         else
         {
             _sp.Dialogs.Error(
-                "Das Projekt konnte nicht geoeffnet werden, und es wurde keine gueltige Sicherungskopie gefunden.\n\n" +
+                "Das Projekt konnte nicht geöffnet werden, und es wurde keine gültige Sicherungskopie gefunden.\n\n" +
                 $"Datei: {path}\n" +
                 $"Fehler: {res.ErrorMessage}\n\n" +
-                "Die Originaldatei wurde NICHT veraendert. Bitte pruefe eine Datensicherung.",
-                "Projekt beschaedigt");
+                "Die Originaldatei wurde NICHT verändert. Bitte prüfe eine Datensicherung.",
+                "Projekt beschädigt");
             SetStatus($"Fehler: {res.ErrorMessage}");
             return false;
         }
@@ -813,7 +813,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 == AuswertungPro.Next.Application.Import.ImportRecoveryOutcome.Blocked)
             {
                 var message = importRecovery.Message
-                    ?? "Die Import-Wiederherstellung konnte nicht sicher geprueft werden.";
+                    ?? "Die Import-Wiederherstellung konnte nicht sicher geprüft werden.";
                 // Der Zusatz "nicht veraendert" darf nur stehen, wenn er stimmt. Frueher hing
                 // er pauschal an jeder gesperrten Meldung - auch neben "3 Datei(en)
                 // zurueckgenommen". Eine Box, die sich selbst widerspricht, glaubt der Leser
@@ -825,9 +825,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 var projektOrdnerWurdeVeraendert = importRecovery.ProjectFolderModified
                     || !string.IsNullOrWhiteSpace(recovery?.QuarantinedPath);
                 var nachsatz = projektOrdnerWurdeVeraendert
-                    ? "\n\nDas Projekt wurde nicht geoeffnet. Im Projektordner wurde bereits "
-                      + "etwas veraendert - bitte den obigen Hinweis pruefen."
-                    : "\n\nDas Projekt wurde nicht geoeffnet und nicht veraendert.";
+                    ? "\n\nDas Projekt wurde nicht geöffnet. Im Projektordner wurde bereits "
+                      + "etwas verändert - bitte den obigen Hinweis prüfen."
+                    : "\n\nDas Projekt wurde nicht geöffnet und nicht verändert.";
                 _sp.Dialogs.Error(
                     message + nachsatz,
                     "Import-Wiederherstellung gesperrt");
@@ -849,12 +849,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         if (recovery is { Recovered: true, Project: not null })
         {
             _sp.Dialogs.Warn(
-                "Das Projekt war beschaedigt und wurde aus einer Sicherungskopie wiederhergestellt.\n\n" +
+                "Das Projekt war beschädigt und wurde aus einer Sicherungskopie wiederhergestellt.\n\n" +
                 $"Wiederhergestellt aus: {recovery.RecoveredFromPath}\n" +
                 (recovery.QuarantinedPath is null
                     ? string.Empty
-                    : $"Beschaedigte Datei gesichert als: {recovery.QuarantinedPath}\n") +
-                "\nBitte pruefe das Projekt und speichere es.",
+                    : $"Beschädigte Datei gesichert als: {recovery.QuarantinedPath}\n") +
+                "\nBitte prüfe das Projekt und speichere es.",
                 "Projekt wiederhergestellt");
         }
 
@@ -918,9 +918,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             return true;
 
         var answer = _sp.Dialogs.ConfirmCancel(
-            "Das aktuelle Projekt hat ungespeicherte Aenderungen.\n\n" +
+            "Das aktuelle Projekt hat ungespeicherte Änderungen.\n\n" +
             "Vor dem Fortfahren speichern?",
-            "Ungespeicherte Aenderungen");
+            "Ungespeicherte Änderungen");
 
         return answer switch
         {

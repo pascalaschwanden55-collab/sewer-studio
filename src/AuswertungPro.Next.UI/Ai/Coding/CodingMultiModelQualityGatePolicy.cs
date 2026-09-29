@@ -37,9 +37,9 @@ public static class CodingMultiModelQualityGatePolicy
                 0.0,
                 TrafficLight.Red,
                 new Dictionary<string, double>(),
-                "QualityGate nicht verfuegbar");
+                "QualityGate nicht verfügbar");
         return requiresReview && result.TrafficLight == TrafficLight.Green
-            ? result with { TrafficLight = TrafficLight.Yellow, Explanation = result.Explanation + " — Modellnachweis unvollstaendig; manuell pruefen." }
+            ? result with { TrafficLight = TrafficLight.Yellow, Explanation = result.Explanation + " — Modellnachweis unvollständig; manuell prüfen." }
             : result;
     }
 

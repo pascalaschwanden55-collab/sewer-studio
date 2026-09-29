@@ -137,7 +137,7 @@ public static class FullBackupSourcesFactory
     public static void Use(IFullBackupSourcesProvider provider) =>
         throw new NotSupportedException(
             "Die globale Sicherungsquellen-Suche kann nicht mehr ausgetauscht werden. " +
-            "IFullBackupSourcesProvider bitte per Konstruktor uebergeben.");
+            "IFullBackupSourcesProvider bitte per Konstruktor übergeben.");
 
     public static FullBackupSources ErmittleAktuelleQuellen(AppSettings? settings = null) =>
         Current.Resolve(settings);

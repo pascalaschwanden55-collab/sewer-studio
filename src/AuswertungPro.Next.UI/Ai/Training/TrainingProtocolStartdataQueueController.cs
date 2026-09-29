@@ -48,7 +48,7 @@ public static class TrainingProtocolStartdataQueueController
         return new TrainingProtocolStartdataQueueResult(
             added,
             candidates.Count,
-            $"{added} Protokoll-Startdaten als Kandidaten eingereiht (Freigabe ueber Review).",
+            $"{added} Protokoll-Startdaten als Kandidaten eingereiht (Freigabe über Review).",
             $"Protokoll-Startdaten: {added} Kandidaten eingereiht (von {candidates.Count} gefiltert).");
     }
 }

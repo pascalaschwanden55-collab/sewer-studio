@@ -21,7 +21,7 @@ public sealed partial class BuilderPageViewModel
         if (oldRates.Count == 0)
             return "";
 
-        return "Hinweis: Diese Ausgabe enthaelt gespeicherte MwSt-Saetze "
+        return "Hinweis: Diese Ausgabe enthält gespeicherte MwSt-Sätze "
             + string.Join(", ", oldRates)
             + $"; aktueller Katalogsatz ist {FormatVatRate(currentVatRate)}. "
             + "Kosten neu berechnen, wenn der aktuelle Satz gelten soll.";
@@ -40,11 +40,11 @@ public sealed partial class BuilderPageViewModel
     private static string BuildVatRecomputePrompt(
         IReadOnlyList<decimal> oldRates,
         decimal currentVatRate)
-        => "Die gefilterte Ausgabe enthaelt gespeicherte Kosten mit altem MwSt-Satz "
+        => "Die gefilterte Ausgabe enthält gespeicherte Kosten mit altem MwSt-Satz "
            + string.Join(", ", oldRates.Select(FormatVatRate))
            + $".\nAktueller Katalogsatz ist {FormatVatRate(currentVatRate)}.\n\n"
            + "Ja = alle gespeicherten Sanierungskosten jetzt mit aktuellem Katalog/MwSt neu berechnen\n"
-           + "Nein = Ausgabe mit gespeicherten Saetzen fortsetzen\n"
+           + "Nein = Ausgabe mit gespeicherten Sätzen fortsetzen\n"
            + "Abbrechen = Export abbrechen\n\n"
            + "Manuelle Preis-Overrides bleiben unangetastet.";
 

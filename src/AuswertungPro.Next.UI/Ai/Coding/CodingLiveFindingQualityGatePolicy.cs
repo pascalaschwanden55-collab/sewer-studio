@@ -22,6 +22,6 @@ public static class CodingLiveFindingQualityGatePolicy
                 0.0,
                 TrafficLight.Red,
                 new Dictionary<string, double>(),
-                "QualityGate nicht verfuegbar");
+                "QualityGate nicht verfügbar");
     }
 }

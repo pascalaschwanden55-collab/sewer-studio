@@ -354,7 +354,7 @@ public partial class PlayerWindow : Window
                 GetEventCollection: () => _codingSessionHost.EventCollection,
                 AddAutomaticBoundaryEvent: entry =>
                     (_codingSessionRuntimeOwner.Service
-                     ?? throw new InvalidOperationException("Codiersitzung ist nicht verfuegbar."))
+                     ?? throw new InvalidOperationException("Codiersitzung ist nicht verfügbar."))
                     .AddEvent(entry),
                 GetEvents: () => _codingSessionHost.Events,
                 IsCodingMode: () => _codingModeState.IsCodingMode,

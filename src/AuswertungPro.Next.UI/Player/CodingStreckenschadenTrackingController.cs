@@ -15,7 +15,7 @@ public interface ICodingStreckenschadenTrackingController
 
     IReadOnlyCollection<SegmentedFinding> ApplyTracking(IReadOnlyList<SegmentedFinding> segmented,
         double meter, TimeSpan videoTime, Action<ProtocolEntry> attachExactFramePhoto)
-        => throw new NotSupportedException("Bildgebundene Streckenablage wird nicht unterstuetzt.");
+        => throw new NotSupportedException("Bildgebundene Streckenablage wird nicht unterstützt.");
 
     void CloseTracked(double endMeter);
 

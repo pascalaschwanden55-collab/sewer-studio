@@ -166,7 +166,7 @@ public sealed class WindowsPdfPlanImageConverter : IPlanImageConverter
                 BitmapCacheOption.OnLoad);
 
             if (decoder.Frames.Count == 0)
-                throw new InvalidDataException("Die Bilddatei enthaelt kein Bild.");
+                throw new InvalidDataException("Die Bilddatei enthält kein Bild.");
 
             bild = BitmapFrame.Create(decoder.Frames[0]);
             bild.Freeze();

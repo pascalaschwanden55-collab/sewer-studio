@@ -351,25 +351,25 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
 
         if (SelectedCode is null)
         {
-            ValidationMessage = "Bitte einen Code auswaehlen.";
+            ValidationMessage = "Bitte einen Code auswählen.";
             return false;
         }
 
         if (!ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterStartText, out var meterStart))
         {
-            ValidationMessage = "MeterStart ist ungueltig.";
+            ValidationMessage = "MeterStart ist ungültig.";
             return false;
         }
 
         if (!ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterEndText, out var meterEnd))
         {
-            ValidationMessage = "MeterEnd ist ungueltig.";
+            ValidationMessage = "MeterEnd ist ungültig.";
             return false;
         }
 
         if (!ProtocolEntryInputNormalizer.TryParseOptionalTimeSpan(ZeitText, out var zeit))
         {
-            ValidationMessage = "Zeit ist ungueltig.";
+            ValidationMessage = "Zeit ist ungültig.";
             return false;
         }
 

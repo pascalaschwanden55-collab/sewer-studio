@@ -13,7 +13,7 @@ public static class CodingToolBadgeTextPolicy
         {
             OverlayToolType.Line => "Linie",
             OverlayToolType.Arc => "Bogen",
-            OverlayToolType.Rectangle => "Flaeche",
+            OverlayToolType.Rectangle => "Fläche",
             OverlayToolType.Point => "Punkt",
             OverlayToolType.Stretch => "Strecke",
             OverlayToolType.PipeBend => "Bogen",
