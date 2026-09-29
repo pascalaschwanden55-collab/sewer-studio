@@ -1161,9 +1161,9 @@
                     <UniformGrid Columns="2" Rows="4" Margin="0,0,0,4">
                         <StackPanel Margin="0,0,18,12">
                             <TextBlock Text="Wiedergabe" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-                            <TextBlock Text="Space  Play/Pause" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
-                            <TextBlock Text="S      Stop" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
-                            <TextBlock Text="P / R  Pause / Weiter" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="Leertaste  Abspielen/Pause" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="S          Stopp" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
+                            <TextBlock Text="P / R      Pause / Weiter" Foreground="{DynamicResource TextBrush}" FontFamily="{DynamicResource FontMono}"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,0,12">
                             <TextBlock Text="Navigation" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>

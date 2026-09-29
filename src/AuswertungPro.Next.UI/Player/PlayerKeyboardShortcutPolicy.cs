@@ -36,7 +36,7 @@ public static class PlayerKeyboardShortcutPolicy
 {
     public static IReadOnlyList<PlayerShortcutBeschreibung> Beschreibungen { get; } =
     [
-        new(PlayerKeyboardAction.TogglePlayPause, "Wiedergabe", "Leertaste", "Play/Pause umschalten"),
+        new(PlayerKeyboardAction.TogglePlayPause, "Wiedergabe", "Leertaste", "Abspielen/Pause umschalten"),
         new(PlayerKeyboardAction.Stop, "Wiedergabe", "S", "Video stoppen"),
         new(PlayerKeyboardAction.Pause, "Wiedergabe", "P", "Video pausieren"),
         new(PlayerKeyboardAction.Resume, "Wiedergabe", "R", "Video fortsetzen"),
