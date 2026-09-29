@@ -1,6 +1,6 @@
 # Status und Projektprüfung
 
-Stand: 16.09.2026
+Stand: 29.09.2026
 
 ## Status richtig lesen
 
@@ -20,6 +20,8 @@ Die Übersicht zählt nach denselben Regeln. Erledigt-Markierungen aktualisieren
 
 In der Projektübersicht **Projekt prüfen** anklicken. Die Prüfung liest eine Kopie
 des aktuellen, auch ungespeicherten Projektstands. Sie verändert keine Projektdaten oder Originaldateien.
+Die Kopie entsteht in kurzen Abschnitten; **Abbrechen** beendet den Lauf ohne
+vollständiges Ergebnis. Die Befundliste bleibt auch bei vielen Hinweisen bedienbar.
 
 | Bereich | Was wird geprüft? |
 |---|---|
@@ -30,9 +32,12 @@ des aktuellen, auch ungespeicherten Projektstands. Sie verändert keine Projektd
 | Eingabefelder | Im Feldkatalog belegte Pflichtangaben, Textlängen sowie Datums- und Zahlenformate der bearbeitbaren Objektfelder. Verbundene Unterakten werden einbezogen. |
 
 Jeder Hinweis enthält das betroffene Objekt und **Zur Stelle**.
-Der Knopf öffnet das betreffende Feld in der Objektakte oder markiert den Befund
-im Protokollfenster. Ein schreibgeschützter Dateipfad wird über den vorhandenen
-Medien-/PDF-Zuordnungsweg korrigiert.
+Der Knopf öffnet das betreffende Feld in der Objektakte mit Fokus auf dem Editor
+oder markiert den Befund im Protokollfenster. Nach dem Protokollfenster führt der
+Weg zurück zur Prüfung und wählt den bisherigen Hinweis. **Enter** öffnet den
+gewählten Hinweis, **Alt+P** startet die Prüfung und **Escape** bricht sie ab. Ein
+schreibgeschützter Dateipfad wird über den vorhandenen Medien-/PDF-Zuordnungsweg
+korrigiert.
 
 Nach einer Korrektur erneut **Projekt prüfen** anklicken. Änderungen oder ein
 Projektwechsel verwerfen die alten Ergebnisse. Vor dem Öffnen eines Hinweises wird
@@ -46,16 +51,45 @@ wird nicht als vollständiges Ergebnis angezeigt.
 - Netzwerkpfade und Dateiverknüpfungen werden mit einem Hinweis als nicht prüfbar ausgewiesen.
   Relative Pfade benötigen einen gültigen Projektordner.
 - Die Prüfung überwacht Dateien nicht dauerhaft. Nach externen Dateiänderungen erneut prüfen.
+- Stille Änderungen ohne Datensatzmeldung werden beim Abschluss eines Prüflaufs und
+  vor einem Sprung durch einen vollständigen Vergleich der tatsächlich geprüften
+  Daten erkannt. Zwischen diesen Zeitpunkten kann eine bereits angezeigte Liste
+  vorübergehend veraltet sein. Nicht synchronisierte Hintergrundschreiber sind
+  durch den UI-Thread-Vergleich nicht atomar geschützt.
 - Null Hinweise sind keine fachliche Freigabe. Die vollständige XTF-Normprüfung bleibt beim Export.
 - Das Ergebnis gilt für den angezeigten Stand und wird nicht als Prüfprotokoll gespeichert.
 
 ## Technischer Nachweis
 
 Die Regeln liegen in `Application/UseCases/ProjektPruefung`. Der registrierte
-`IProjektPruefung`-Dienst prüft Dateien lesend in Infrastructure. Das ViewModel
-verwendet die bestehende Projektkopie und Inhalts-Signatur für den Hintergrundlauf.
+`IProjektPruefung`-Dienst prüft Dateien lesend in Infrastructure. Die neue
+`ProjektPruefdatenKopie` kopiert in abbrechbaren UI-Abschnitten nur Werte, die
+die fünf Regeln verwenden: aktuelle Haltungsprotokolle, Haltungs- und Schachtfelder,
+Schacht-Handmarkierungen und GEONIS-Knoten sowie Objektaktenwerte, Bezüge und
+Quellbelege. Ein anschliessender durchgehender Vergleich auf dem UI-Thread
+verwirft gemischte Kopien; derselbe Vergleich läuft nach der Hintergrundprüfung
+und vor **Zur Stelle**. Unbenutzte Metadaten und Protokollhistorien werden nicht
+verglichen. Der neue Öffnungsweg löst Video-Pfade und persönliche Objektaktenlisten
+vor dem Fenster im Hintergrund auf und bestätigt die Aktualität danach erneut.
+Der bisherige synchrone `Open`-Aufruf und das Speicherverhalten bleiben erhalten.
 Die gespeicherten Datenformate bleiben unverändert.
 
-Verhaltenstests: `ProjektPruefungTests`, `ProjektPruefstatusTests`,
-`ProjektPruefungViewModelTests`, `ProjektPruefungUiTests`,
+Ein synthetischer fokussierter Lauf mit 100 / 1'000 / 10'000 Schachtdatensätzen
+ergab für die Kopie 0,1 / 0,5 / 8,2 ms Gesamtzeit. Der längste gemessene
+Kopierabschnitt dauerte 0,0 / 0,1 / 5,3 ms, der durchgehende Vergleich
+0,0 / 0,1 / 3,3 ms. Das ist ein Testlauf mit einfacher Pausenfunktion, keine
+WPF-Frame- oder Referenzgeräte-Abnahme. Ein weiterer Test prüft 10'000 Befunde
+in einer Haltung. Die 100-ms-Zielgrenze ist damit für die echte Oberfläche
+noch nicht belegt.
+
+Die isolierte Sichtprobe der Ergebnisliste zeigte Hell/Dunkel bei 550 und
+1'100 DIP mit vollständig erreichbaren Bedienelementen. Das gebaute EXE-Manifest
+enthält `asInvoker` und PerMonitorV2 mit PerMonitor-Rückfall. Auf dem Testgerät
+waren zwei Monitore nur bei 96 DPI verfügbar; ein echter DPI-Monitorwechsel,
+Narrator und Windows-Kontrastumschaltung sind nicht geprüft.
+Persönliche Einstellungen liegen standardmässig unter `LocalAppData`; der
+bestehende ausdrückliche Override `SEWERSTUDIO_APPDATA_DIR` bleibt möglich.
+
+Verhaltenstests: `ProjektPruefungTests`, `ProjektPruefdatenKopieTests`,
+`ProjektPruefstatusTests`, `ProjektPruefungViewModelTests`, `ProjektPruefungUiTests`,
 `DataPageProtocolWindowControllerTests` und die bestehenden Status-/Übersichtstests.

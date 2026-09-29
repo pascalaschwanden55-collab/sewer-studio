@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using AuswertungPro.Next.Application.Diagnostics;
@@ -32,7 +34,7 @@ public sealed class ProjektPruefungUiTests
     {
         StaTestRunner.Run(() =>
         {
-            Environment.SetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR", TestRepoPaths.RepoFile(".tmp", "projektpruefung-ui-settings"));
+            Environment.SetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR", TestAblage("settings"));
             // Echte Ressourcen, aber kein App.OnStartup beim Pumpen des Dispatchers.
             var app = new System.Windows.Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             foreach (var resource in new[] { "Theme/ThemeLight.xaml", "Theme/Controls.xaml", "Controls/NovaPageHeader.xaml" })
@@ -54,35 +56,90 @@ public sealed class ProjektPruefungUiTests
             vm.Meldung = "5 Hinweise · 12 Haltungen und 4 Schächte geprüft · Stand 10:42.";
             vm.Punkte = new[]
             {
-                new ProjektPruefpunkt(ProjektPruefbereich.Dateien, "haltung", Guid.NewGuid(), "10001-10002", "Videos/10001-10002.mp4: Datei fehlt."),
+                new ProjektPruefpunkt(ProjektPruefbereich.Dateien, "haltung", Guid.NewGuid(), "10001-10002 – Hauptleitung West mit langem Namen", "Videos/10001-10002.mp4: Datei fehlt."),
                 new ProjektPruefpunkt(ProjektPruefbereich.KiBefunde, "haltung", Guid.NewGuid(), "10001-10002", "BAB: KI-Vorschlag noch nicht bestätigt."),
                 new ProjektPruefpunkt(ProjektPruefbereich.Meterangaben, "haltung", Guid.NewGuid(), "10003-10004", "BAB bei 24 m liegt hinter der Haltungslänge 20 m (Toleranz 1 m)."),
                 new ProjektPruefpunkt(ProjektPruefbereich.Schachthoehen, "schacht", Guid.NewGuid(), "10005", "Deckelhöhe, Sohlenhöhe und Tiefe passen nicht zusammen."),
                 new ProjektPruefpunkt(ProjektPruefbereich.Eingabefelder, "haltung", Guid.NewGuid(), "10006-10007", "Bauwerksteil: Bezeichnung darf nicht leer sein.")
             };
             var view = new ProjektPruefungView { DataContext = vm, Margin = new Thickness(24) };
-            var window = new Window { Content = view, Height = 650, Width = 1100, ShowActivated = false,
+            // Wie die echte Projektübersicht: ein äußerer Seiten-ScrollViewer. Die Prüfliste
+            // bindet ihre Höhe an dessen Viewport und behält deshalb ihre eigene Virtualisierung.
+            var seitenScroll = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Content = view
+            };
+            var window = new Window { Content = seitenScroll, Height = 650, Width = 1100, ShowActivated = false,
                 ShowInTaskbar = false, Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual };
             window.SetResourceReference(Window.BackgroundProperty, "BgBrush");
+            seitenScroll.SetResourceReference(Control.BackgroundProperty, "BgBrush");
             window.Show();
             foreach (var theme in new[] { "Light", "Dark" })
             {
                 app.Resources.MergedDictionaries[0] = new ResourceDictionary { Source = new Uri("/SewerStudio;component/Theme/" + (theme == "Light" ? "ThemeLight.xaml" : "Theme.xaml"), UriKind.Relative) };
-                foreach (var width in new[] { 1100, 800 })
+                // Das ist kein Wechsel der Monitor-DPI. Die Breiten bilden nur nach, wie viel
+                // Platz bei 100/125/150/200 % Skalierung in DIPs effektiv uebrig bleibt.
+                foreach (var (skalierung, width) in new[] { (100, 1100d), (125, 880d), (150, 733d), (200, 550d) })
                 {
                     window.Width = width; window.UpdateLayout(); WpfBindungsPumpe.Leeren();
                     var grid = Assert.Single(VisualTreeSafe.FindDescendants<DataGrid>(view));
                     Assert.Equal(5, grid.Items.Count); Assert.True(grid.IsVisible);
                     Assert.Same(app.FindResource("HeaderBrush"), grid.AlternatingRowBackground);
+                    Assert.Equal(DataGridSelectionUnit.FullRow, grid.SelectionUnit);
+                    Assert.True(VirtualizingPanel.GetIsVirtualizing(grid));
+                    Assert.Equal(VirtualizationMode.Recycling, VirtualizingPanel.GetVirtualizationMode(grid));
+                    Assert.All(grid.Columns.Take(3), column => Assert.Equal(DataGridLengthUnitType.Star, column.Width.UnitType));
+                    Assert.True(grid.Columns[1].Width.Value > grid.Columns[0].Width.Value,
+                        "Der Objektname erhält im schmalen Layout mehr Platz als der Bereich.");
+                    Assert.Equal(DataGridLengthUnitType.Auto, grid.Columns[3].Width.UnitType);
+                    Assert.True(grid.MaxHeight > 0);
+                    Assert.Equal(seitenScroll.ViewportHeight, grid.MaxHeight, 3);
+                    Assert.Equal(ScrollBarVisibility.Disabled, seitenScroll.HorizontalScrollBarVisibility);
+                    Assert.True(view.ActualWidth > seitenScroll.ViewportWidth * .75,
+                        "Die Karte muss im Seiten-Viewport die verfügbare Breite nutzen.");
                     var buttons = VisualTreeSafe.FindDescendants<Button>(view).ToArray();
-                    Assert.Contains(buttons, b => Equals(b.Content, "Projekt prüfen") && b.Command == vm.PruefenCommand);
+                    var pruefen = Assert.Single(buttons.Where(b => Equals(b.Content, "Projekt prüfen") && b.Command == vm.PruefenCommand));
+                    var abbrechen = Assert.Single(buttons.Where(b => Equals(b.Content, "Abbrechen") && b.Command == vm.AbbrechenCommand));
+                    Assert.True(Kontrast(pruefen) >= 4.5,
+                        "Der aktive Primärknopf braucht zwischen Schrift und Hintergrund mindestens 4,5:1 Kontrast.");
+                    Assert.Equal("Projektprüfung starten", AutomationProperties.GetName(pruefen));
+                    Assert.Equal("Projektprüfung abbrechen", AutomationProperties.GetName(abbrechen));
                     Assert.Equal(5, buttons.Count(b => Equals(b.Content, "Zur Stelle") && b.Command == vm.OeffnenCommand));
+                    Assert.All(buttons.Where(b => Equals(b.Content, "Zur Stelle")), b => Assert.Equal("Hinweis öffnen", AutomationProperties.GetName(b)));
+                    Assert.All(buttons.Where(b => Equals(b.Content, "Zur Stelle")), b => Assert.Equal(VerticalAlignment.Top, b.VerticalAlignment));
+                    Assert.Equal("Hinweise der Projektprüfung", AutomationProperties.GetName(grid));
+                    Assert.Equal(2, grid.TabIndex);
+                    Assert.True(grid.IsTabStop);
+                    Assert.True(pruefen.IsTabStop); Assert.Equal(0, pruefen.TabIndex);
+                    Assert.True(abbrechen.IsTabStop); Assert.Equal(1, abbrechen.TabIndex);
+                    var status = Assert.Single(VisualTreeSafe.FindDescendants<TextBlock>(view)
+                        .Where(t => AutomationProperties.GetName(t) == "Status der Projektprüfung"));
+                    Assert.Equal(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(status));
+                    var start = Assert.Single(view.InputBindings.OfType<KeyBinding>().Where(b => b.Key == Key.P && b.Modifiers == ModifierKeys.Alt));
+                    var stop = Assert.Single(view.InputBindings.OfType<KeyBinding>().Where(b => b.Key == Key.Escape));
+                    var open = Assert.Single(grid.InputBindings.OfType<KeyBinding>().Where(b => b.Key == Key.Enter));
+                    Assert.Same(vm.PruefenCommand, start.Command); Assert.Same(vm.AbbrechenCommand, stop.Command); Assert.Same(vm.OeffnenCommand, open.Command);
+                    Assert.NotNull(view.Resources["ProjektPruefungCard"]);
+                    Assert.NotNull(view.Resources["ProjektPruefungPrimaryButton"]);
+                    Assert.NotNull(view.Resources["ProjektPruefungGrid"]);
+                    vm.FokusPunkt = vm.Punkte[3]; WpfBindungsPumpe.Leeren(); window.UpdateLayout();
+                    Assert.Same(vm.Punkte[3], grid.SelectedItem);
+                    Assert.True(grid.IsKeyboardFocusWithin);
+                    Assert.Null(vm.FokusPunkt);
                     foreach (var row in VisualTreeSafe.FindDescendants<DataGridRow>(grid))
                     foreach (var text in VisualTreeSafe.FindDescendants<TextBlock>(row).Where(t => t.TextWrapping == TextWrapping.Wrap))
                         Assert.True(text.DesiredSize.Height <= row.ActualHeight, "Der Hinweis muss vollstaendig in die Zeile passen.");
-                    Zeichne(view, window.Background, $"projektpruefung-{theme}-{width}");
+                    Zeichne(seitenScroll, $"projektpruefung-{theme}-{skalierung}");
                 }
             }
+            vm.Punkte = Enumerable.Range(0, 600).Select(i => new ProjektPruefpunkt(
+                ProjektPruefbereich.Dateien, "haltung", Guid.NewGuid(), $"Haltung {i}", $"Hinweis {i}")).ToArray();
+            window.UpdateLayout(); WpfBindungsPumpe.Leeren();
+            var virtualisierteListe = Assert.Single(VisualTreeSafe.FindDescendants<DataGrid>(view));
+            Assert.True(VisualTreeSafe.FindDescendants<DataGridRow>(virtualisierteListe).Count() < vm.Punkte.Count,
+                "Die Ergebnisliste darf im äußeren Seiten-ScrollViewer nicht alle Befunde erzeugen.");
             vm.Punkte = []; window.UpdateLayout(); WpfBindungsPumpe.Leeren();
             Assert.False(VisualTreeSafe.FindDescendants<DataGrid>(view).Single().IsVisible);
             window.Close();
@@ -104,18 +161,36 @@ public sealed class ProjektPruefungUiTests
         });
     }
 
-    private static void Zeichne(FrameworkElement host, Brush hintergrund, string name)
+    private static void Zeichne(FrameworkElement host, string name)
     {
         var bitmap = new RenderTargetBitmap((int)host.ActualWidth, (int)host.ActualHeight, 96, 96, PixelFormats.Pbgra32);
-        var visual = new DrawingVisual();
-        using (var c = visual.RenderOpen())
-        {
-            var rect = new Rect(0, 0, host.ActualWidth, host.ActualHeight);
-            c.DrawRectangle(hintergrund, null, rect); c.DrawRectangle(new VisualBrush(host), null, rect);
-        }
-        bitmap.Render(visual);
+        bitmap.Render(host);
         var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
-        Directory.CreateDirectory(TestRepoPaths.RepoFile(".tmp"));
-        using var output = File.Create(TestRepoPaths.RepoFile(".tmp", name + ".png")); png.Save(output);
+        var ordner = TestAblage("renders");
+        Directory.CreateDirectory(ordner);
+        using var output = File.Create(Path.Combine(ordner, name + ".png")); png.Save(output);
+    }
+
+    private static string TestAblage(string teil)
+        => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp", "SewerStudio", "Tests", "ProjektPruefung", teil);
+
+    private static double Kontrast(Control control)
+    {
+        var hintergrund = Assert.IsType<SolidColorBrush>(control.Background).Color;
+        var vordergrund = Assert.IsType<SolidColorBrush>(control.Foreground).Color;
+        var hell = Math.Max(Luminanz(hintergrund), Luminanz(vordergrund));
+        var dunkel = Math.Min(Luminanz(hintergrund), Luminanz(vordergrund));
+        return (hell + .05) / (dunkel + .05);
+    }
+
+    private static double Luminanz(Color farbe)
+    {
+        static double Linear(byte kanal)
+        {
+            var sRgb = kanal / 255d;
+            return sRgb <= .04045 ? sRgb / 12.92 : Math.Pow((sRgb + .055) / 1.055, 2.4);
+        }
+
+        return .2126 * Linear(farbe.R) + .7152 * Linear(farbe.G) + .0722 * Linear(farbe.B);
     }
 }

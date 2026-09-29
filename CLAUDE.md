@@ -1053,22 +1053,36 @@ Anlass: Acht KIT-PDFs, null Erfolge. Drei Ursachen, die nichts miteinander zu tu
   sperrt Netzwerk-/Verknüpfungspfade; nicht prüfbare, fehlende oder leere Dateien
   bleiben als Hinweise sichtbar. Kein rekursives Suchen, kein Schreiben.
   Neue Registrierung `IProjektPruefung` im vorhandenen ServiceProvider: 167 Dienste.
-- `ProjektPruefungViewModel` prüft eine `Projects.DeepCopy` im Hintergrund, mit
-  Abbruch und `ProjectContentSignature`-Vergleich nach dem Lauf und vor Navigation.
-  Alte Ergebnisse werden bei Projektwechsel/Änderungen verworfen. Der neue
-  `ProjektPruefungView` steht in der Nova-Projektübersicht.
-- `ProjektPruefpunktNavigation` öffnet die richtige Objektakte mit Feldsuche oder
-  das Protokoll mit markierter `EntryId`. Der bestehende Controller erhält dafür
-  einen zusätzlichen `Open`-Overload; der bisherige Aufruf bleibt erhalten.
+- `ProjektPruefdatenKopie.ErfasseAsync` kopiert nur die von den fünf Regeln gelesenen
+  Projektwerte in kurzen UI-Abschnitten und lässt dazwischen Bedienung und Abbruch zu.
+  `ProjektPruefungViewModel` führt danach einen einzigen durchgehenden, synchronen
+  Vergleich dieser Werte auf dem UI-Thread aus; erst dann prüft der bestehende
+  `IProjektPruefung`-Dienst die abgelöste Kopie im Hintergrund. Nach dem Lauf und
+  unmittelbar vor einem Sprung wird derselbe Vergleich wiederholt. Auch stille
+  Änderungen an aktuellem Protokoll, Objektakten, Schacht-Metadaten und GEONIS-Bezug
+  werden so an diesen Grenzen erkannt. Beliebige, nicht synchronisierte
+  Hintergrundschreiber bleiben ausserhalb dieses UI-Thread-Vertrags. Andere
+  Projektmetadaten und Protokollhistorien gehen nicht in die fünf Regeln ein.
+  Projektwechsel oder geänderte Prüfdaten verwerfen das Ergebnis. Der
+  `ProjektPruefungView` steht in der Nova-Projektübersicht; er virtualisiert die
+  Hinweise und hält die Befehle per Tastatur erreichbar.
+- `ProjektPruefpunktNavigation.OeffneAsync` öffnet die passende Objektakte mit
+  Feldfokus oder das Protokoll mit markierter `EntryId`. Die neue Öffnung löst
+  Medienpfade und persönliche Listenergänzungen vor dem Fenster ausserhalb des
+  UI-Threads auf und prüft das Ziel nach dem Warten erneut. Nach dem Protokollfenster
+  kehrt die Shell zur Übersicht mit dem zuvor gewählten Hinweis zurück.
+  `DataPageProtocolWindowController.Open` und dessen bisherige Aufrufer bleiben
+  kompatibel. Der bestehende Speichervorgang im Dialog ist davon nicht betroffen.
   `ProjektDatensatzBeobachter` meldet Listen-/Datensatzänderungen und löst seine
   Abonnements bei Wechsel/Dispose. Shell-Aufgabe und Übersicht reagieren dadurch
   sofort auf Erledigt-Markierungen. Viele Importmeldungen werden je UI-Runde
   gebündelt. Statusbindungen beobachten weiterhin die Felder für Medienänderungen.
 - Keine neuen Pakete oder Änderungen am Projektformat. Die erste Prüfung ist kein
   Freigabeprotokoll und ersetzt keine vollständige XTF-Normprüfung beim Export.
-  Umfang/Bedienung: `docs/PROJEKTPRUEFUNG.md`. Tests: `ProjektPruefungTests`,
-  `ProjektPruefstatusTests`, `ProjektPruefungViewModelTests`, `ProjektPruefungUiTests`
-  sowie die vorhandenen Status-, Kennzahlen- und Protokollcontroller-Tests.
+  Umfang, Messungen und Grenzen: `docs/PROJEKTPRUEFUNG.md`. Tests:
+  `ProjektPruefungTests`, `ProjektPruefdatenKopieTests`, `ProjektPruefstatusTests`,
+  `ProjektPruefungViewModelTests`, `ProjektPruefungUiTests`,
+  `DataPageProtocolWindowControllerTests` sowie bestehende Status-/Kennzahlentests.
 
 ## Robuster GeoShop-XTF-Export (14.09.2026)
 

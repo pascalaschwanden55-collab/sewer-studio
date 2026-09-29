@@ -1,5 +1,7 @@
 using AuswertungPro.Next.Domain.Models;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
@@ -63,5 +65,31 @@ public sealed class DataPageProtocolWindowController
 
         _syncObservationsToHoldingFields(record);
         _refreshSelectedProtocolEntriesIfSelected(record);
+    }
+
+    /// <summary>Bereitet die Dateiauflösung im Hintergrund vor und prüft das Sprungziel vor dem Fenster erneut.</summary>
+    public async Task<bool> OpenAsync(HaltungRecord? record, Guid? eintragId, CancellationToken ct = default,
+        Func<bool>? istAktuell = null)
+    {
+        if (record is null) return false;
+        var project = _getProject();
+        var projectPath = _getLastProjectPath();
+        var link = record.GetFieldValue("Link");
+        var projectFolder = string.IsNullOrWhiteSpace(projectPath)
+            ? null
+            : (AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(projectPath)
+               ?? Path.GetDirectoryName(projectPath));
+        var resolvedVideoPath = await Task.Run(() => _resolveExistingPath(link), ct);
+        ct.ThrowIfCancellationRequested();
+        if (!ReferenceEquals(project, _getProject()) || projectPath != _getLastProjectPath()
+            || !project.Data.Contains(record) || record.GetFieldValue("Link") != link
+            || eintragId is { } id && record.Protocol?.Current?.Entries.Exists(e => e.EntryId == id && !e.IsDeleted) != true
+            || istAktuell is not null && !istAktuell())
+            return false;
+        _showProtocolWindow(new DataPageProtocolWindowRequest(record, project, resolvedVideoPath,
+            projectFolder, _markDirty, eintragId));
+        _syncObservationsToHoldingFields(record);
+        _refreshSelectedProtocolEntriesIfSelected(record);
+        return true;
     }
 }
