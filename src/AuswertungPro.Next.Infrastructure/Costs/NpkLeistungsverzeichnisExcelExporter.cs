@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Costs;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using ClosedXML.Excel;
 
@@ -23,6 +24,14 @@ namespace AuswertungPro.Next.Infrastructure.Costs;
 /// </summary>
 public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsverzeichnisExcelExporter
 {
+    // Gemeinsame Quelle fuer das Logo (Optikanalyse 28.09.2026, Aufgabe 15); ohne
+    // Injektion (Kompatibilitaetsweg ueber NpkLeistungsverzeichnisExcelExporter.Current)
+    // gilt weiter der bisherige feste Standardpfad in ResolveLogoPath.
+    private readonly IBerichtsMarke? _berichtsMarke;
+
+    public NpkLeistungsverzeichnisExcelExportService(IBerichtsMarke? berichtsMarke = null)
+        => _berichtsMarke = berichtsMarke;
+
     private const int ColNpk = 1;
     // D/16-Praxisnummer (heutige Ausgabe) direkt neben der Revisions-Nummer,
     // damit das LV mit echten Unternehmer-Offerten vergleichbar ist.
@@ -343,11 +352,16 @@ public sealed class NpkLeistungsverzeichnisExcelExportService : INpkLeistungsver
         setup.Footer.Right.AddText(XLHFPredefinedText.NumberOfPages, XLHFOccurrence.AllPages);
     }
 
-    // Logo wie bei den AWU-Protokollen: explizit uebergeben oder Standard-Ablage der App.
-    private static string? ResolveLogoPath(string? logoPathAbs)
+    // Logo wie bei den AWU-Protokollen: explizit uebergeben, sonst die gemeinsame
+    // Quelle (Einstellung oder Standardlogo); ohne Injektion der bisherige feste Pfad.
+    // internal statt private: testbar ohne den ganzen Pfad ueber BuildWorkbook/ClosedXML
+    // mit einer echten Bilddatei.
+    internal string? ResolveLogoPath(string? logoPathAbs)
     {
         if (!string.IsNullOrWhiteSpace(logoPathAbs) && File.Exists(logoPathAbs))
             return logoPathAbs;
+        if (_berichtsMarke is not null)
+            return _berichtsMarke.LogoPfad;
         var appLogo = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
         return File.Exists(appLogo) ? appLogo : null;
     }

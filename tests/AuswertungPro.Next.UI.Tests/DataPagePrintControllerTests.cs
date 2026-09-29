@@ -269,6 +269,37 @@ public sealed class DataPagePrintControllerTests
         Assert.Null(dialogs.LastError);
     }
 
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 15: mit injizierter <see cref="IBerichtsMarke"/> gilt
+    /// deren Pfad statt der lokalen baseDirectory/fileExists-Berechnung — auch wenn Letztere
+    /// eine andere Datei als vorhanden meldet.
+    /// </summary>
+    [Fact]
+    public async Task PrintHydraulikPdfAsync_verwendet_die_injizierte_IBerichtsMarke()
+    {
+        var record = Record("12/34");
+        var calc = HydraulikCalc();
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\hydraulik.pdf" };
+        HydraulikPrintOptions? seenOptions = null;
+
+        var controller = CreateController(
+            dialogs,
+            baseDirectory: "C:\\app",
+            fileExists: path => path == "C:\\app\\Assets\\Brand\\abwasser-uri-logo.png",
+            buildHydraulikCalculation: _ => calc,
+            selectHydraulikPrintOptions: () => new HydraulikPrintOptions(),
+            buildHydraulikPdfAsync: (_, _, options) =>
+            {
+                seenOptions = options;
+                return Task.FromResult(new byte[] { 1 });
+            },
+            berichtsMarke: new StubBerichtsMarke(@"D:\Firmenlogos\aktuelles-logo.png"));
+
+        await controller.PrintHydraulikPdfAsync(record);
+
+        Assert.Equal(@"D:\Firmenlogos\aktuelles-logo.png", seenOptions?.LogoPathAbs);
+    }
+
     [Fact]
     public async Task PrintHydraulikPdfAsync_meldet_fehler_ohne_exception()
     {
@@ -559,6 +590,33 @@ public sealed class DataPagePrintControllerTests
         Assert.Null(dialogs.LastError);
     }
 
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 15: mit injizierter <see cref="IBerichtsMarke"/> gilt
+    /// deren Pfad statt der lokalen baseDirectory/fileExists-Berechnung.
+    /// </summary>
+    [Fact]
+    public async Task PrintDossierPdfAsync_verwendet_die_injizierte_IBerichtsMarke()
+    {
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
+        DossierPrintOptions? seenOptions = null;
+
+        var controller = CreateController(
+            dialogs,
+            baseDirectory: "C:\\app",
+            fileExists: path => path == "C:\\app\\Assets\\Brand\\abwasser-uri-logo.png",
+            selectDossierPrintOptions: _ => EmptyDossierOptions() with { IncludeDeckblatt = true },
+            buildDossierPdfAsync: (_, _, _, _, _, _, options) =>
+            {
+                seenOptions = options;
+                return Task.FromResult(new byte[] { 1 });
+            },
+            berichtsMarke: new StubBerichtsMarke(@"D:\Firmenlogos\aktuelles-logo.png"));
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        Assert.Equal(@"D:\Firmenlogos\aktuelles-logo.png", seenOptions?.LogoPathAbs);
+    }
+
     [Fact]
     public async Task PrintDossierPdfAsync_originale_allein_werden_ohne_basis_dossier_gemerged()
     {
@@ -654,7 +712,8 @@ public sealed class DataPagePrintControllerTests
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
         IProjectCostStoreRepository? projectCosts = null,
-        IToastService? toasts = null)
+        IToastService? toasts = null,
+        IBerichtsMarke? berichtsMarke = null)
         => new(
             dialogs,
             getProjectFolder: () => projectFolder,
@@ -683,7 +742,8 @@ public sealed class DataPagePrintControllerTests
             openPdf: openPdf ?? (_ => true),
             dossierPhotoAvailability: dossierPhotoAvailability,
             inspectionProtocolFiles: inspectionProtocolFiles,
-            toasts: toasts);
+            toasts: toasts,
+            berichtsMarke: berichtsMarke);
 
     private static HaltungRecord Record(string holding)
     {
@@ -780,6 +840,11 @@ public sealed class DataPagePrintControllerTests
             List<string> paths)
         {
         }
+    }
+
+    private sealed class StubBerichtsMarke(string? logoPfad) : IBerichtsMarke
+    {
+        public string? LogoPfad { get; } = logoPfad;
     }
 
     private sealed class RecordingProjectCostStoreRepository : IProjectCostStoreRepository

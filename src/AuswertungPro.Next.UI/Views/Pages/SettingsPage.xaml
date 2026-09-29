@@ -4,9 +4,11 @@
              xmlns:settings="clr-namespace:AuswertungPro.Next.UI.Settings"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
-             xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages">
+             xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
+             xmlns:windows="clr-namespace:AuswertungPro.Next.UI.Views.Windows">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <windows:FileToImageConverter x:Key="BerichtsLogoVorschauConverter"/>
         <pages:ThemePreferenceToBoolConverter x:Key="ThemeToBool"/>
         <Style x:Key="SettingsSectionGroupBox" TargetType="{x:Type GroupBox}">
             <Setter Property="Margin" Value="0,0,0,12"/>
@@ -407,6 +409,58 @@
                                           Style="{StaticResource SettingsFieldCheckBox}"
                                           ToolTip="Zeigt bei offenem Projekt wieder die bisherige Übersicht mit Projektliste, Vorschau und Vorschau-PDF. Wirkt beim nächsten Öffnen der Übersicht-Seite."/>
                             </StackPanel>
+                        </GroupBox>
+
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 15: gemeinsame Quelle für das Logo in
+                             PDF-/Excel-Berichten und im Eigentümerdossier (IBerichtsMarke). Leer =
+                             das mitgelieferte Standardlogo neben dem Programm gilt weiter. -->
+                        <GroupBox Header="Berichte" Style="{StaticResource SettingsSectionGroupBox}">
+                            <Grid Style="{StaticResource SettingsFormGrid}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Logo für Berichte" Style="{StaticResource SettingsFieldLabel}"/>
+                                <TextBox Grid.Row="0" Grid.Column="1"
+                                         Text="{Binding BerichtsLogoAnzeige, Mode=OneWay}"
+                                         IsReadOnly="True"
+                                         Style="{StaticResource SettingsTextInput}"
+                                         ToolTip="Wird in erzeugten PDF-/Excel-Berichten und im Eigentümerdossier verwendet. Ohne eigenes Logo gilt das mitgelieferte Standardlogo neben dem Programm."/>
+                                <Button Grid.Row="0" Grid.Column="2"
+                                        Command="{Binding BrowseBerichtsLogoCommand}"
+                                        Style="{StaticResource SettingsBrowseButton}"
+                                        ToolTip="Logo-Bilddatei auswählen (PNG oder JPG)."
+                                        AutomationProperties.Name="Logo für Berichte auswählen">
+                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                </Button>
+                                <Button Grid.Row="0" Grid.Column="3"
+                                        Content="Zurücksetzen"
+                                        Command="{Binding ResetBerichtsLogoCommand}"
+                                        Style="{StaticResource SettingsActionButton}"
+                                        ToolTip="Eigenes Logo entfernen; danach gilt wieder das mitgelieferte Standardlogo."
+                                        AutomationProperties.Name="Logo für Berichte zurücksetzen"/>
+
+                                <Border Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,2,0,8" Padding="10,8"
+                                        Background="{DynamicResource CardBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="{DynamicResource RadiusS}"
+                                        Visibility="{Binding HatBerichtsLogoVorschau, Converter={StaticResource BoolToVis}}">
+                                    <Image Source="{Binding BerichtsLogoVorschauPfad, Converter={StaticResource BerichtsLogoVorschauConverter}}"
+                                           Height="44" MaxWidth="240"
+                                           Stretch="Uniform"
+                                           ToolTip="Vorschau des aktuell verwendeten Logos."/>
+                                </Border>
+                            </Grid>
                         </GroupBox>
 
                         <GroupBox Header="Speichern" Style="{StaticResource SettingsSectionGroupBox}">

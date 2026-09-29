@@ -370,7 +370,9 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("KinsDbfWhitelistEnrichment,", provider);
         Assert.Contains("KinsGesamtprotokolle,", provider);
         Assert.Contains("ImportMediaDistribution);", provider);
-        Assert.Contains("var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter)", provider);
+        // Optikanalyse 28.09.2026, Aufgabe 15: BerichtsMarke ist die gemeinsame Quelle fuer
+        // das Logo (statt eines fest eingetragenen Pfads) und wird seither mitgegeben.
+        Assert.Contains("var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter, BerichtsMarke)", provider);
         Assert.Contains("ProtocolRegeneration = protocolRegeneration", provider);
         Assert.Contains("ProtocolSingleRegeneration = protocolRegeneration", provider);
         Assert.Contains("_importAiHttp", provider);

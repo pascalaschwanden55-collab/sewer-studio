@@ -197,6 +197,7 @@ internal static class ServiceProviderRegistrationMap
             [typeof(IPipelineEnvironmentOptions)] = services.PipelineEnvironment,
             [typeof(IProtocolService)] = services.Protocols,
             [typeof(IProtocolPdfLayoutSettings)] = services.ProtocolPdfLayoutSettings,
+            [typeof(IBerichtsMarke)] = services.BerichtsMarke,
             [typeof(IPdfMergeService)] = services.PdfMerge,
             [typeof(AuswertungPro.Next.Application.Output.IOfferPdfExportService)] = services.OfferPdfExport,
             [typeof(AuswertungPro.Next.Application.Output.INpkOfferPdfExportService)] = services.NpkOfferPdfExport,

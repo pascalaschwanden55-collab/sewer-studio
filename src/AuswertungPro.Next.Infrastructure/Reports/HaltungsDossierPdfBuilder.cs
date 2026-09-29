@@ -588,8 +588,10 @@ public static class HaltungsDossierPdfBuilder
             candidates.Add(Path.Combine(projectRootAbs, "logo.png"));
         }
 
-        var appLogo = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-        candidates.Add(appLogo);
+        // Gemeinsame Quelle des Standardpfads (Optikanalyse 28.09.2026, Aufgabe 15). Der
+        // eigentliche, einstellungsbewusste Wert kommt bereits als logoPath vom Aufrufer
+        // (DataPagePrintController); dies bleibt nur der letzte Rueckfall ohne Aufrufer-Logo.
+        candidates.Add(BerichtsLogoResolver.DefaultLogoPath(AppContext.BaseDirectory));
 
         foreach (var p in candidates)
         {

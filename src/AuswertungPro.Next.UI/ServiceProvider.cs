@@ -268,6 +268,9 @@ namespace AuswertungPro.Next.UI
         public IDistributionDirectoryTreeResolver DistributionDirectoryTree { get; }
         public IProtocolService Protocols { get; }
         public IProtocolPdfLayoutSettings ProtocolPdfLayoutSettings { get; }
+        // Gemeinsame Quelle fuer das Logo in Berichten (PDF-/Excel-Export, Dossier);
+        // liest live aus den Einstellungen (Optikanalyse 28.09.2026, Aufgabe 15).
+        public IBerichtsMarke BerichtsMarke { get; }
         public ProtocolPdfExporter ProtocolPdfExporter { get; }
         public IProtocolPdfExporter ProtocolPdfExports => ProtocolPdfExporter;
         public IPdfMergeService PdfMerge { get; }
@@ -560,11 +563,12 @@ namespace AuswertungPro.Next.UI
                 VsaCatalogPaths,
                 catalogPaths.KekManifestPath,
                 catalogPaths.XmlCatalogPaths);
+            BerichtsMarke = new AppSettingsBerichtsMarke(Settings);
             ProtocolPdfLayoutSettings = new AppSettingsProtocolPdfLayoutSettings(Settings);
             ProtocolPdfExporter = new ProtocolPdfExporter(new ProtocolPdfAssetFileResolver(), ProtocolPdfLayoutSettings, CodeCatalog);
             PdfMerge = new PdfMergeService();
-            OfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.OfferPdfExportService();
-            NpkOfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.NpkOfferPdfExportService();
+            OfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.OfferPdfExportService(BerichtsMarke);
+            NpkOfferPdfExport = new AuswertungPro.Next.Infrastructure.Output.Offers.NpkOfferPdfExportService(BerichtsMarke);
             PdfPrint = new AuswertungPro.Next.Infrastructure.Output.Offers.PdfPrintService();
             DossierPhotoAvailability = new DossierPhotoFileAvailabilityService();
             StoredImportFiles = new StoredImportFileService();
@@ -583,7 +587,7 @@ namespace AuswertungPro.Next.UI
                 () => Settings.SearchChApiKey);
             DichtheitProtocolFiles = new DichtheitProtocolFileLocator();
             SchachtFileTargets = new SchachtFileTargetPathResolver();
-            var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter);
+            var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter, BerichtsMarke);
             ProtocolRegeneration = protocolRegeneration;
             ProtocolSingleRegeneration = protocolRegeneration;
             OneClickImportReports = new OneClickImportReportWriter(Logger);
@@ -597,7 +601,7 @@ namespace AuswertungPro.Next.UI
             DistributionPatterns = new DistributionPatternResolver();
             DistributionDirectoryTree = new DistributionDirectoryTreeResolver(DistributionPatterns);
             ExcelExport = new ExcelTemplateExportService();
-            NpkExcelExport = new NpkLeistungsverzeichnisExcelExportService();
+            NpkExcelExport = new NpkLeistungsverzeichnisExcelExportService(BerichtsMarke);
             CostFieldSync = new AuswertungPro.Next.Application.DataPage.DerivedCostFieldSynchronizer();
 
             // Register protocol/photo/pdf services (Protocols oben schon gebaut und injiziert)

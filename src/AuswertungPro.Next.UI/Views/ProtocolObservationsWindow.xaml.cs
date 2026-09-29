@@ -389,10 +389,9 @@ public partial class ProtocolObservationsWindow : Window
         try
         {
             ExportPdfButton.IsEnabled = false;
-            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
             var options = new HaltungsprotokollPdfOptions
             {
-                LogoPathAbs = File.Exists(logoPath) ? logoPath : null
+                LogoPathAbs = _sp.BerichtsMarke.LogoPfad
             };
 
             var root = _projectFolder;

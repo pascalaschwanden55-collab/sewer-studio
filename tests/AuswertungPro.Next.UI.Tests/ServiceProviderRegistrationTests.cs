@@ -138,9 +138,11 @@ public sealed class ServiceProviderRegistrationTests
         // «Verteilen» statt mehrerer Ja/Nein-Dialoge auf der Export-Seite, 28.09.2026).
         // 174 -> 175: ITaskbarFortschritt zeigt den Fortschritt langer Laeufe am Programmsymbol
         // in der Windows-Taskleiste (Aufgabe 13, Windows-Integration, 28.09.2026).
+        // 175 -> 176: IBerichtsMarke liefert Logo-Pfad und Fusszeile fuer PDF-/Excel-Export
+        // und Dossier aus einer gemeinsamen Quelle (Aufgabe 15, Optikanalyse 28.09.2026).
         Assert.True(
-            registrations.Count == 175,
-            $"Erwartet 175 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 176,
+            $"Erwartet 176 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergänzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(services.XtfLieferungen,

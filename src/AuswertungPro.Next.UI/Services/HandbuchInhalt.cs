@@ -156,7 +156,11 @@ public static class HandbuchInhalt
             "Windows-Einstellung und wechselt sofort mit, wenn diese sich während des Programmlaufs " +
             "ändert. Die Wahl wirkt sofort in allen offenen Fenstern und wird sofort gespeichert; " +
             "ein Neustart ist dafür nicht nötig. Ist in Windows der Hochkontrast-Modus aktiv, " +
-            "übernimmt SewerStudio automatisch die Windows-Kontrastfarben."),
+            "übernimmt SewerStudio automatisch die Windows-Kontrastfarben.\n\n" +
+            "Berichte: eigenes Logo für PDF-/Excel-Berichte und das Eigentümerdossier über " +
+            "«Auswählen…» (PNG/JPG). «Zurücksetzen» entfernt es wieder - dann gilt das " +
+            "mitgelieferte Standardlogo. Eine Vorschau zeigt das aktuell verwendete Logo. Fehlt " +
+            "die gewählte Datei später, greift ohne Fehlermeldung der Standard."),
 
         new(FachleuteSchluessel, "Für Fachleute (technisch)",
             "Dieser Abschnitt richtet sich an Entwickler und Techniker, nicht an den täglichen " +

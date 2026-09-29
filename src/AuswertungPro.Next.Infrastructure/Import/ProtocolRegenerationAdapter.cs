@@ -11,9 +11,15 @@ namespace AuswertungPro.Next.Infrastructure.Import;
 public sealed class ProtocolRegenerationAdapter : IProtocolRegenerationService, IProtocolSingleRegenerationService
 {
     private readonly IProtocolPdfExporter _pdfExporter;
+    // Gemeinsame Quelle fuer das Logo (Optikanalyse 28.09.2026, Aufgabe 15); ohne
+    // Injektion gilt weiter der bisherige feste Standardpfad.
+    private readonly IBerichtsMarke? _berichtsMarke;
 
-    public ProtocolRegenerationAdapter(IProtocolPdfExporter? pdfExporter = null)
-        => _pdfExporter = pdfExporter ?? new ProtocolPdfExporter();
+    public ProtocolRegenerationAdapter(IProtocolPdfExporter? pdfExporter = null, IBerichtsMarke? berichtsMarke = null)
+    {
+        _pdfExporter = pdfExporter ?? new ProtocolPdfExporter();
+        _berichtsMarke = berichtsMarke;
+    }
 
     public ProtocolRegenerationResult RegenerateAll(
         Project project,
@@ -74,12 +80,12 @@ public sealed class ProtocolRegenerationAdapter : IProtocolRegenerationService, 
         Directory.CreateDirectory(directory);
 
         var stamp = KanalImportDistributor.ResolveDateStamp(record);
-        var logo = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+        var logo = ResolveLogoPath();
         var options = new HaltungsprotokollPdfOptions
         {
             IncludePhotos = true,
             CodeCatalog = codeCatalog,
-            LogoPathAbs = File.Exists(logo) ? logo : null
+            LogoPathAbs = logo
         };
 
         var pdf = _pdfExporter.BuildHaltungsprotokollPdf(
@@ -129,5 +135,14 @@ public sealed class ProtocolRegenerationAdapter : IProtocolRegenerationService, 
             userEdited: false);
 
         return destination;
+    }
+
+    private string? ResolveLogoPath()
+    {
+        if (_berichtsMarke is not null)
+            return _berichtsMarke.LogoPfad;
+
+        var logo = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+        return File.Exists(logo) ? logo : null;
     }
 }

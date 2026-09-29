@@ -58,4 +58,27 @@ public sealed class CodingProtocolPdfExportPlannerTests
         Assert.Equal("", plan.ProjectRoot);
         Assert.Null(plan.Options.LogoPathAbs);
     }
+
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 15: mit gereichtem <c>resolveLogoPath</c> (die
+    /// gemeinsame Quelle) gilt dessen Wert statt der lokalen baseDirectory/fileExists-Berechnung
+    /// darueber.
+    /// </summary>
+    [Fact]
+    public void Build_verwendet_resolveLogoPath_statt_der_lokalen_Berechnung_wenn_gereicht()
+    {
+        var record = new HaltungRecord();
+
+        var plan = CodingProtocolPdfExportPlanner.Build(
+            record,
+            lastProjectPath: "",
+            baseDirectory: @"C:\App",
+            now: new DateTime(2026, 1, 2),
+            // Wuerde ohne resolveLogoPath fuer den Standardpfad true liefern - resolveLogoPath
+            // muss trotzdem gewinnen.
+            fileExists: _ => true,
+            resolveLogoPath: () => @"D:\Firmenlogos\aktuelles-logo.png");
+
+        Assert.Equal(@"D:\Firmenlogos\aktuelles-logo.png", plan.Options.LogoPathAbs);
+    }
 }

@@ -234,7 +234,8 @@ public sealed partial class BuilderPageViewModel
                 _settings.HydraulikPanel,
                 dn,
                 saveSettings: _settings.Save),
-            toasts: _toasts);
+            toasts: _toasts,
+            berichtsMarke: _berichtsMarke);
 
     private SchachtRecord? FindSchachtByNummer(string? nummer)
     {

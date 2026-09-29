@@ -75,6 +75,14 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     /// </summary>
     public int ProtocolPhotosPerPage { get; set; } =
         AuswertungPro.Next.Application.Reports.ProtocolPdfPhotoLayout.DefaultPhotosPerPage;
+
+    /// <summary>
+    /// Eigenes Logo fuer Berichte (PDF-/Excel-Export, Dossier). Leer oder nicht
+    /// (mehr) vorhanden = das mitgelieferte Standardlogo
+    /// <c>Assets/Brand/abwasser-uri-logo.png</c> neben dem Programm gilt weiter
+    /// (<see cref="AuswertungPro.Next.Application.Reports.BerichtsLogoResolver"/>).
+    /// </summary>
+    public string? BerichtsLogoPfad { get; set; }
     public string? LastProjectPath { get; set; }
 
     // Basisverzeichnis fuer neu angelegte Projekte. Leer = beim ersten Anlegen

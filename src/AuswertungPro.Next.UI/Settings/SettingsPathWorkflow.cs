@@ -54,6 +54,12 @@ public static class SettingsPathWorkflow
     public static string? SelectKantonUriXtfDirectory(IDialogService dialogs, string? currentPath)
         => dialogs.SelectFolder("XTF-Ordner Kanton Uri wählen", currentPath);
 
+    public static string? SelectBerichtsLogoPfad(IDialogService dialogs, string? currentPath)
+        => dialogs.OpenFile(
+            "Logo für Berichte wählen",
+            "Bilddateien (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg|Alle Dateien|*.*",
+            InitialDirectoryFromFilePath(currentPath));
+
     public static void OpenFolder(string? path, IDialogService dialogs)
         => OpenFolder(path, dialogs, CompatibilityService);
 

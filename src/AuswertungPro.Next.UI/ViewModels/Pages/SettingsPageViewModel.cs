@@ -47,6 +47,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly IAiPlatformSettingsResolver _aiSettings;
     private readonly ISidecarScriptLocator _sidecarScripts;
     private readonly ISidecarTokenResolver _sidecarTokens;
+    // Gemeinsame Quelle fuer das Logo in Berichten (Optikanalyse 28.09.2026, Aufgabe 15).
+    // Liefert die Vorschau; die Einstellung selbst steht in AppSettings.BerichtsLogoPfad.
+    private readonly IBerichtsMarke _berichtsMarke;
 
     /// <summary>
     /// Aufgabe 13 (Windows-Integration, 28.09.2026): spiegelt den Fortschritt der Datensicherung
@@ -99,6 +102,29 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private bool _alteHaltungsansicht;
     [ObservableProperty] private bool _alteSchachtansicht;
     [ObservableProperty] private bool _klassischeProjektuebersicht;
+
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 15: eigenes Logo fuer Berichte (PDF-/Excel-Export,
+    /// Dossier). Leer = das mitgelieferte Standardlogo gilt weiter. Setzt sofort
+    /// <see cref="AppSettings.BerichtsLogoPfad"/> und speichert sofort (Muster wie
+    /// ReduceMotion oben); "Auswählen…" und "Zurücksetzen" sind die einzigen Schreibwege,
+    /// deshalb genügt das — kein Speichern je Tastenanschlag.
+    /// </summary>
+    [ObservableProperty] private string? _berichtsLogoPfad;
+
+    /// <summary>Anzeige unter dem Pfadfeld: eigener Pfad oder Hinweis auf das Standardlogo.</summary>
+    public string BerichtsLogoAnzeige => string.IsNullOrWhiteSpace(BerichtsLogoPfad)
+        ? "Standardlogo wird verwendet"
+        : BerichtsLogoPfad;
+
+    /// <summary>
+    /// Tatsächlich verwendetes Logo (Einstellung oder Standard) für die Vorschau; liest live
+    /// über dieselbe Quelle, die auch die Exporte verwenden. Null = kein Logo gefunden
+    /// (weder eingestellt noch Standardlogo vorhanden) — dann zeigt die Vorschau nichts.
+    /// </summary>
+    public string? BerichtsLogoVorschauPfad => _berichtsMarke.LogoPfad;
+
+    public bool HatBerichtsLogoVorschau => !string.IsNullOrWhiteSpace(BerichtsLogoVorschauPfad);
 
     /// <summary>Anzahl Fotos je Seite in den selbst erzeugten Haltungsprotokollen.</summary>
     [ObservableProperty] private int _protocolPhotosPerPage;
@@ -164,6 +190,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     public IRelayCommand BrowseAbwasserkatasterXtfPathCommand { get; }
     public IRelayCommand BrowseVideoFolderCommand { get; }
     public IRelayCommand BrowseKantonUriXtfDirectoryCommand { get; }
+    public IRelayCommand BrowseBerichtsLogoCommand { get; }
+    public IRelayCommand ResetBerichtsLogoCommand { get; }
     public IRelayCommand OpenDataFolderCommand { get; }
     public IRelayCommand OpenLogsFolderCommand { get; }
     public IRelayCommand OpenRestorePointsFolderCommand { get; }
@@ -201,7 +229,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             sidecarTokens: sp.SidecarTokens,
             programSnapshot: sp.ProgramSnapshot,
             backupAdditionalFolders: sp.BackupAdditionalFolders,
-            taskbar: sp.Taskbar)
+            taskbar: sp.Taskbar,
+            berichtsMarke: sp.BerichtsMarke)
     {
     }
 
@@ -294,7 +323,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         ISidecarTokenResolver? sidecarTokens = null,
         IProgramSnapshotService? programSnapshot = null,
         IBackupAdditionalFolders? backupAdditionalFolders = null,
-        ITaskbarFortschritt? taskbar = null)
+        ITaskbarFortschritt? taskbar = null,
+        IBerichtsMarke? berichtsMarke = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
@@ -323,6 +353,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _sidecarTokens = sidecarTokens
             ?? Infrastructure.Ai.Pipeline.SidecarTokenResolver.Current;
         _taskbar = taskbar;
+        // Ohne Injektion (Alt-/Testkonstruktoren) selbst aufbauen: _settings ist hier immer
+        // vorhanden, anders als bei Diensten, die ohne ServiceProvider entstehen koennen.
+        _berichtsMarke = berichtsMarke ?? new AppSettingsBerichtsMarke(_settings);
 
         EnableDiagnostics = _settings.EnableDiagnostics;
         PdfToTextPath = _settings.PdfToTextPath;
@@ -352,6 +385,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         // Direkt ins Feld: ueber die Eigenschaft wuerde das blosse Oeffnen der Seite
         // die Einstellungen ohne Aenderung neu schreiben.
         _protocolPhotosPerPage = ProtocolPdfPhotoLayout.Normalize(_settings.ProtocolPhotosPerPage);
+        // Direkt ins Feld (gleicher Grund wie ProtocolPhotosPerPage oben).
+        _berichtsLogoPfad = _settings.BerichtsLogoPfad;
         StartAiOnProgramStart = _settings.AiStartOnProgramStart;
         CodingSuggestionsEnabled = _settings.CodingSuggestionsEnabled;
         var pipelineConfig = AiSettingsFactory
@@ -372,6 +407,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         BrowseAbwasserkatasterXtfPathCommand = new RelayCommand(BrowseAbwasserkatasterXtfPath);
         BrowseVideoFolderCommand = new RelayCommand(BrowseVideoFolder);
         BrowseKantonUriXtfDirectoryCommand = new RelayCommand(BrowseKantonUriXtfDirectory);
+        BrowseBerichtsLogoCommand = new RelayCommand(BrowseBerichtsLogo);
+        ResetBerichtsLogoCommand = new RelayCommand(() => BerichtsLogoPfad = null);
         OpenDataFolderCommand = new RelayCommand(OpenDataFolder);
         OpenLogsFolderCommand = new RelayCommand(OpenLogsFolder);
         OpenRestorePointsFolderCommand = new RelayCommand(OpenRestorePointsFolder);
@@ -461,6 +498,18 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         _settings.SaveImmediate();
     }
 
+    partial void OnBerichtsLogoPfadChanged(string? value)
+    {
+        // Sofort speichern (Muster wie ReduceMotion oben); der Wert kommt nur ueber
+        // "Auswählen…"/"Zurücksetzen", nie ueber Tippen. Vorschau und Anzeigetext lesen
+        // dieselbe Quelle (IBerichtsMarke) frisch nach und werden deshalb hier gemeldet.
+        _settings.BerichtsLogoPfad = value;
+        _settings.SaveImmediate();
+        OnPropertyChanged(nameof(BerichtsLogoAnzeige));
+        OnPropertyChanged(nameof(BerichtsLogoVorschauPfad));
+        OnPropertyChanged(nameof(HatBerichtsLogoVorschau));
+    }
+
     partial void OnProtocolPhotosPerPageChanged(int value)
     {
         // Sofort speichern (Muster wie der Backup-Schalter). Bereits erzeugte PDFs bleiben
@@ -544,6 +593,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         var p = SettingsPathWorkflow.SelectKantonUriXtfDirectory(_dialogs, KantonUriXtfDirectory);
         if (p is null) return;
         KantonUriXtfDirectory = p;
+    }
+
+    private void BrowseBerichtsLogo()
+    {
+        var p = SettingsPathWorkflow.SelectBerichtsLogoPfad(_dialogs, BerichtsLogoPfad);
+        if (p is null) return;
+        BerichtsLogoPfad = p;
     }
 
     private void Save()

@@ -265,7 +265,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 _settings.HydraulikPanel,
                 dn,
                 saveSettings: _settings.Save),
-            toasts: _toasts);
+            toasts: _toasts,
+            berichtsMarke: services.BerichtsMarke);
         _originalPdfController = new DataPageOriginalPdfController(
             _dialogs,
             EnsureProtocolPath,

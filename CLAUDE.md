@@ -1198,6 +1198,60 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `GlobaleSucheBefehleTests` (echtes `ShellViewModel`, kein Fake: Befehl fuehrt wirklich aus,
   Navigation trifft die echte Seite, «Speichern» ist ohne offenes Projekt kein Treffer, Gruppenkopf
   nur bei Befehlstreffer, Pfeiltasten ueberspringen ihn).
+- **Aufgabe 15 — Gemeinsame Quelle fuer das Logo in Berichten.** `IBerichtsMarke`
+  (`Application/Reports`, reine Daten: `LogoPfad`) ersetzt die rund sieben Stellen, die den
+  Programmordner-Pfad `Assets/Brand/abwasser-uri-logo.png` je einzeln zusammensetzten und
+  pruefen. `BerichtsLogoResolver.Resolve(configuredPath, appBaseDirectory, fileExists)`
+  (`Application/Reports`, reine Regel ohne echten Dateizugriff) ist die eine Aufloesung:
+  eine gesetzte UND vorhandene Einstellung geht vor, sonst das mitgelieferte Standardlogo,
+  sonst kein Logo (`null`) — nie ein erfundener Pfad. `AppSettingsBerichtsMarke`
+  (`UI/Services`, Infrastruktur kann `AppSettings` aus der UI-Schicht nicht referenzieren)
+  liest `AppSettings.BerichtsLogoPfad` bei JEDEM Zugriff frisch (Muster wie
+  `AppSettingsProtocolPdfLayoutSettings`), damit eine geaenderte Einstellung ohne
+  Programmneustart beim naechsten Export wirkt; ein Lesefehler liefert `null` statt
+  abzustuerzen. Registriert im `ServiceProvider` als `BerichtsMarke` (175 -> 176,
+  `ServiceProviderRegistrationMap`).
+  Neue Einstellung «Logo für Berichte» in Einstellungen ▸ Allgemein ▸ Gruppe «Berichte»
+  (direkt unter «Frühere Ansichten»): Pfadanzeige (nur lesbar — «Auswählen…»/«Zurücksetzen»
+  sind die einzigen Schreibwege, kein Speichern je Tastenanschlag), Vorschau-Miniatur
+  (`FileToImageConverter`, bereits vorhanden aus dem Training Center) zeigt das gerade
+  WIRKSAME Logo (Einstellung oder Standard). `SettingsPageViewModel.OnBerichtsLogoPfadChanged`
+  speichert sofort (Muster wie `ReduceMotion`) und meldet `BerichtsLogoVorschauPfad`/
+  `BerichtsLogoAnzeige` neu, damit die Vorschau sofort nachzieht.
+  **Alle sieben Alt-Stellen sind umgestellt**, ohne Layout/Feldnamen zu aendern — jede behaelt
+  ihren bisherigen Rueckfall, wenn keine `IBerichtsMarke` injiziert ist (Alt-/Testkonstruktoren):
+  `DataPagePrintController` (Dossier- UND Hydraulik-PDF, neuer privater `ResolveLogoPath()`),
+  `ProtocolObservationsWindow.xaml.cs` (liest direkt `_sp.BerichtsMarke`),
+  `ProtocolRegenerationAdapter` (Infrastructure, neuer optionaler Konstruktorparameter),
+  `NpkLeistungsverzeichnisExcelExportService.ResolveLogoPath` (von `private static` zu
+  `internal` fuer Testbarkeit ohne echte Bilddatei/ClosedXML), `OfferPdfExportService`/
+  `NpkOfferPdfExportService` ueber den gemeinsamen `OfferPdfTemplateExport.RenderAsync(...,
+  berichtsMarke)`. **`CodingProtocolPdfExportPlanner.Build`** (Coding-Modus, «Als PDF
+  exportieren») ist die EINE bewusste Ausnahme, die nur den Standardpfad-STRING teilt
+  (`BerichtsLogoResolver.DefaultLogoPath(...)`), nicht die Einstellung: `UI/Ai` ist fuer neue
+  Ablaufklassen eingefroren, und `UiArchitectureGuardTests.Ui_code_accesses_App_Services_only_
+  at_composition_root` erlaubt den zentralen Dienstecontainer wortwoertlich nur in
+  `MainWindow.xaml.cs` — erst real gemessen, weil der erste Versuch (Zugriff ueber
+  `CodingProtocolPdfExportServiceFactory`) genau diesen Waechter rot schlug. Ein optionaler
+  `resolveLogoPath`-Parameter bleibt an `Build` fuer Tests/spaetere Verdrahtung, wird aber vom
+  produktiven Aufrufer nicht gesetzt. Zwei weitere tiefere Fallback-Stellen
+  (`HaltungsDossierPdfBuilder.ResolveLogoBytes`, projektinterner Rueckfall wenn der Aufrufer
+  gar keinen Pfad liefert; `ProtocolPdfAssetFileResolver.BuildLogoCandidates`, sucht NUR
+  projektrelative Logo-Ueberschreibungen, nie den App-Standardpfad) bleiben aus demselben Grund
+  (statische Klasse ohne DI) bewusst bei der reinen Zeichenkette — `HaltungsDossierPdfBuilder`s
+  App-Basis-Rueckfall verwendet dafuer ebenfalls `BerichtsLogoResolver.DefaultLogoPath(...)`
+  statt einer eigenen Literalkopie. **Eine per Einstellung ausgetauschte Logodatei wirkt daher
+  ueberall AUSSER im Coding-Modus-PDF-Export** (dort weiterhin nur das mitgelieferte
+  Standardlogo neben dem Programm) — ein groesserer Umbau des `UI/Ai`-Composition-Roots waere
+  fuer diese eine Stelle noetig und war nicht Teil dieser Aufgabe. Layout/Aussehen der
+  PDFs/Excel/Dossiers ist unveraendert — nur die Pfadquelle ist zentral. Tests:
+  `BerichtsLogoResolverTests` (Standard/Einstellung/fehlende Datei/leere Einstellung),
+  `AppSettingsBerichtsMarkeTests`, `SettingsPageViewModelBerichtsLogoTests`
+  (Auswaehlen/Zuruecksetzen/Vorschau/Sofortspeicherung), plus je ein Fall in
+  `DataPagePrintControllerTests`, `ProtocolRegenerationServiceTests`,
+  `NpkLeistungsverzeichnisExcelExporterTests` und `OfferPdfExportServiceTests`, der die
+  injizierte `IBerichtsMarke` tatsaechlich ankommen sieht, sowie ein Fall in
+  `CodingProtocolPdfExportPlannerTests` fuer den optionalen `resolveLogoPath`-Parameter.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

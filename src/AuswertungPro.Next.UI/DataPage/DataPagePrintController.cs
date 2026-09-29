@@ -57,6 +57,10 @@ public sealed class DataPagePrintController
     private readonly IProjectCostStoreRepository _projectCosts;
     private readonly IProtocolPdfLayoutSettings? _protocolPdfLayoutSettings;
     private readonly IToastService? _toasts;
+    // Gemeinsame Quelle fuer das Logo in Berichten (Optikanalyse 28.09.2026, Aufgabe 15).
+    // Ohne Injektion (Alt-/Testkonstruktoren) gilt weiter die bisherige feste
+    // Berechnung ueber _baseDirectory/_fileExists.
+    private readonly IBerichtsMarke? _berichtsMarke;
 
     [Obsolete("Kompatibilitaetskonstruktor. Neue Aufrufer muessen einen sicheren PDF-Oeffner injizieren.")]
     public DataPagePrintController(
@@ -130,7 +134,8 @@ public sealed class DataPagePrintController
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
         IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null,
-        IToastService? toasts = null)
+        IToastService? toasts = null,
+        IBerichtsMarke? berichtsMarke = null)
         : this(
             dialogs,
             getProjectFolder,
@@ -148,7 +153,8 @@ public sealed class DataPagePrintController
             dossierPhotoAvailability: dossierPhotoAvailability,
             inspectionProtocolFiles: inspectionProtocolFiles,
             protocolPdfLayoutSettings: protocolPdfLayoutSettings,
-            toasts: toasts)
+            toasts: toasts,
+            berichtsMarke: berichtsMarke)
     {
     }
 
@@ -167,7 +173,8 @@ public sealed class DataPagePrintController
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
         IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null,
-        IToastService? toasts = null)
+        IToastService? toasts = null,
+        IBerichtsMarke? berichtsMarke = null)
         : this(
             dialogs,
             protocolPdfExporter,
@@ -182,7 +189,8 @@ public sealed class DataPagePrintController
             dossierPhotoAvailability,
             inspectionProtocolFiles,
             protocolPdfLayoutSettings,
-            toasts)
+            toasts,
+            berichtsMarke)
     {
         _pdfMerge = pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge));
     }
@@ -275,7 +283,8 @@ public sealed class DataPagePrintController
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
         IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null,
-        IToastService? toasts = null)
+        IToastService? toasts = null,
+        IBerichtsMarke? berichtsMarke = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
@@ -329,6 +338,7 @@ public sealed class DataPagePrintController
         _projectCosts = projectCosts ?? throw new ArgumentNullException(nameof(projectCosts));
         _protocolPdfLayoutSettings = protocolPdfLayoutSettings;
         _toasts = toasts;
+        _berichtsMarke = berichtsMarke;
     }
 
     public async Task PrintDossierPdfAsync(Project project, HaltungRecord? record)
@@ -400,10 +410,9 @@ public sealed class DataPagePrintController
             if (selectedOptions.IncludeHydraulik && hydraulikAvailable)
                 calcResult = _buildDossierHydraulikCalculation(record, hydraulikAvailability.DnMm);
 
-            var logoPath = Path.Combine(_baseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
             var options = selectedOptions with
             {
-                LogoPathAbs = _fileExists(logoPath) ? logoPath : null,
+                LogoPathAbs = ResolveLogoPath(),
                 HoldingCost = selectedOptions.IncludeKostenschaetzung ? holdingCost : null,
                 OriginalPdfPaths = selectedOptions.IncludeOriginalProtokolle ? originalPdfPaths : null,
             };
@@ -457,6 +466,18 @@ public sealed class DataPagePrintController
         }
     }
 
+    // Gemeinsame Quelle (Optikanalyse 28.09.2026, Aufgabe 15): mit injizierter
+    // IBerichtsMarke gilt die Einstellung "Logo für Berichte"; ohne Injektion
+    // (Alt-/Testkonstruktoren) bleibt die bisherige feste Berechnung erhalten.
+    private string? ResolveLogoPath()
+    {
+        if (_berichtsMarke is not null)
+            return _berichtsMarke.LogoPfad;
+
+        var logoPath = Path.Combine(_baseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+        return _fileExists(logoPath) ? logoPath : null;
+    }
+
     private bool ConfirmDirtyDossierPrint()
         => _dialogs.ConfirmWarn(
             "ACHTUNG: Es gibt ungespeicherte Änderungen im Projekt.\n\n" +
@@ -495,10 +516,9 @@ public sealed class DataPagePrintController
 
         try
         {
-            var logoPath = Path.Combine(_baseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
             var options = selectedOptions with
             {
-                LogoPathAbs = _fileExists(logoPath) ? logoPath : null
+                LogoPathAbs = ResolveLogoPath()
             };
 
             var pdf = await _buildHydraulikPdfAsync(record, calc, options);
