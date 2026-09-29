@@ -174,6 +174,11 @@ public sealed class DatenaenderungsVerlaufFixRundeTests
         Assert.Equal("300", h.GetFieldValue("Lichte_Breite_mm"));
         Assert.False(verlauf.KannRueckgaengig(H));
         Assert.False(verlauf.KannWiederholen(H));
+
+        // Schlusswelle (Item 4): "Es wurde nichts geändert" ist der echte No-op - Teilweise bleibt
+        // false und es werden keine Datensaetze zur Aktualisierung gemeldet.
+        Assert.False(ergebnis.Teilweise);
+        Assert.Empty(ergebnis.Datensaetze);
     }
 
     [Fact]
@@ -200,6 +205,12 @@ public sealed class DatenaenderungsVerlaufFixRundeTests
         Assert.Contains("nicht vollständig", ergebnis.Meldung);
         Assert.Equal(DatenaenderungsVerlauf.GrundFehler, grund);
         Assert.False(verlauf.KannRueckgaengig(H));
+
+        // Schlusswelle (Item 4): "nicht vollständig" heisst, an h koennen trotz Angewendet=false
+        // Feldwerte stehen geblieben sein (der Rueckbau selbst ist gescheitert) - Teilweise=true und
+        // der betroffene Datensatz wird gemeldet, damit ein Aufrufer Projekt/Anzeige aktualisiert.
+        Assert.True(ergebnis.Teilweise);
+        Assert.Contains(h, ergebnis.Datensaetze);
     }
 
     [Fact]

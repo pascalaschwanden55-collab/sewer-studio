@@ -21,6 +21,15 @@ public sealed partial class SchaechtePageViewModel
         if (!ergebnis.Angewendet)
         {
             _toasts?.Warning(ergebnis.Meldung);
+            // Schlusswelle (Item 4): "nicht vollständig" (Teilweise=true) - Feldwerte koennen an den
+            // betroffenen Datensaetzen stehen geblieben sein, obwohl der Schritt selbst nicht als
+            // Rueckgaengig-Eintrag zaehlt. Siehe DataPageViewModel.WendeVerlauf fuer denselben Fall.
+            if (ergebnis.Teilweise)
+            {
+                _shell.MarkProjectDirty();
+                ScheduleAutoSave();
+                FelderExternErgaenzt?.Invoke();
+            }
             return;
         }
 

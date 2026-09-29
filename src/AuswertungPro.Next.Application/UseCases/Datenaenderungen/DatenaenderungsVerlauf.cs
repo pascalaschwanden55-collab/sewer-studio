@@ -112,11 +112,24 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
             // des aeusseren: eine Benutzeraktion, ein Schritt.
             if (_offen is not null && !ReferenceEquals(_offen.Projekt, _projekt))
                 _offen = null;
+            var warBereitsOffen = _offen is not null;
             var erfassung = _offen ?? (_offen = new Erfassung(this, _projekt, bereich, feld, beschreibung));
-            foreach (var z in zugriffe)
-                erfassung.Merke(z, nurFelder);
-            if (akte is not null)
-                erfassung.MerkeAkten(akte);
+            // Schlusswelle (Item 7): "ein innerer Bereich wird Teil des aeusseren" gilt nur fuer
+            // Datensaetze, die der aeussere Bereich bereits kennt (abhaengiges Feld, Auswahlfeld in
+            // einer offenen Zelle - immer DASSELBE Objekt). Oeffnet waehrend eines bereits offenen
+            // aeusseren Bereichs eine weitere Erfassung fuer einen dem aeusseren VOELLIG fremden
+            // Datensatz, wuerde ein Rueckgaengig sonst ein unabhaengiges Objekt mitreissen. Diese
+            // innere Erfassung wird deshalb ignoriert (kein eigener zweiter Schritt, damit ein
+            // Strg+Z je Benutzeraktion bleibt): der eigentliche Schreibvorgang laeuft unveraendert
+            // weiter, er landet nur nicht im Rueckgaengig-Verlauf.
+            var istFremderDatensatz = warBereitsOffen && zugriffe.Any(z => !erfassung.Kennt(z.Datensatz));
+            if (!istFremderDatensatz)
+            {
+                foreach (var z in zugriffe)
+                    erfassung.Merke(z, nurFelder);
+                if (akte is not null)
+                    erfassung.MerkeAkten(akte);
+            }
             erfassung.Offen++;
             return new Griff(erfassung);
         }
@@ -205,9 +218,16 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
             if (!zurueckgesetzt)
                 Leere(GrundFehler);
             Geaendert?.Invoke(this, EventArgs.Empty);
+            // Schlusswelle (Item 4): Im "nicht vollständig"-Fall (zurueckgesetzt=false) koennen an den
+            // betroffenen Datensaetzen tatsaechlich Feldwerte stehen geblieben sein - Teilweise=true UND
+            // die betroffenen Datensaetze werden mitgegeben, damit der Aufrufer Projekt/Anzeige trotz
+            // Angewendet=false aktualisiert. Im "nichts geändert"-Fall (zurueckgesetzt=true) ist das
+            // echte No-op weiterhin [] / Teilweise=false.
             return new DatenaenderungsErgebnis(false, zurueckgesetzt
                 ? $"{titel} nicht möglich: {eintrag.Beschreibung} — {fehler} Es wurde nichts geändert."
-                : $"{titel} nicht vollständig: {eintrag.Beschreibung} — {fehler} Bitte die Werte prüfen.", []);
+                : $"{titel} nicht vollständig: {eintrag.Beschreibung} — {fehler} Bitte die Werte prüfen.",
+                zurueckgesetzt ? [] : eintrag.Datensaetze.Select(d => d.Zugriff.Datensatz).ToList(),
+                Teilweise: !zurueckgesetzt);
         }
         lock (_gate)
             (rueckwaerts ? _vor[bereich] : _rueck[bereich]).Add(eintrag);
@@ -382,6 +402,10 @@ public sealed class DatenaenderungsVerlauf : IDatenaenderungsVerlauf
             else
                 _datensaetze.Add(new DatensatzSchnappschuss(zugriff, nurFelder));
         }
+
+        /// <summary>Schlusswelle (Item 7): true, wenn dieser Bereich den Datensatz bereits vor
+        /// diesem Aufruf kannte (siehe <see cref="Oeffne"/>-Guard gegen fremde Datensaetze).</summary>
+        public bool Kennt(object datensatz) => _datensaetze.Any(s => ReferenceEquals(s.Zugriff.Datensatz, datensatz));
 
         public void MerkeAkten(ObjektaktenBearbeitung bearbeitung)
         {

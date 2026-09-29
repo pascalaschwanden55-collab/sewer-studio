@@ -105,6 +105,15 @@ public sealed class DesignAuditKnopfleistenTests
     private static readonly Regex PrimaerklassigMuster =
         new(@"Style=""\{(?:Static|Dynamic)Resource (?:PrimaryButton|SuccessButton)\}""", RegexOptions.Compiled);
 
+    /// <summary>
+    /// Schlusswelle (Item 8): ein <c>&lt;Button</c>-Oeffnungstag, quote-bewusst bis zum
+    /// tatsaechlichen Tag-Ende. <c>[^>]*</c> allein bricht zu frueh ab, sobald ein Attributwert
+    /// selbst ein <c>&gt;</c> enthaelt (z. B. ein Bindungs-<c>StringFormat</c> wie
+    /// <c>"{}{0} &gt; {1}"</c>); ein <c>&gt;</c> INNERHALB von <c>"..."</c> oder <c>'...'</c>
+    /// zaehlt hier deshalb nicht als Tag-Ende.
+    /// </summary>
+    private const string ButtonTagMuster = @"<Button\b(?:[^>""']|""[^""]*""|'[^']*')*>";
+
     private static Regel AusnahmeFuer(string dateiname)
     {
         var eintrag = Ausnahmen.FirstOrDefault(a => string.Equals(a.Datei, dateiname, StringComparison.OrdinalIgnoreCase));
@@ -189,7 +198,10 @@ public sealed class DesignAuditKnopfleistenTests
         foreach (var pfad in GeprueftePfade(Regel.B_IsCancelDirektLinksVomIsDefault))
         {
             var xaml = File.ReadAllText(pfad);
-            var tags = Regex.Matches(xaml, @"<Button\b[^>]*>", RegexOptions.Singleline)
+            // Schlusswelle (Item 8): quote-bewusstes Muster - ein rohes [^>]* endete zu frueh, wenn
+            // ein Attributwert selbst ein ">" enthaelt (z. B. StringFormat="{}{0} > {1}"); jetzt
+            // zaehlt ein ">" innerhalb von "..." oder '...' nicht als Tag-Ende.
+            var tags = Regex.Matches(xaml, ButtonTagMuster, RegexOptions.Singleline)
                 .Select(m => m.Value)
                 .ToList();
 
@@ -226,6 +238,33 @@ public sealed class DesignAuditKnopfleistenTests
             "Lokale Style x:Key=... TargetType=\"Button\"-Definition gefunden in: " + string.Join(", ", verstoesse));
     }
 
+    /// <summary>
+    /// Schlusswelle (Item 8), Sabotageprobe fuer das quote-bewusste Tag-Muster: ein
+    /// Attributwert mit eingebettetem <c>&gt;</c> (z. B. ein <c>StringFormat</c>) darf das
+    /// Tag-Ende nicht vortaeuschen. Mit dem alten <c>[^&gt;]*</c>-Muster haette der Regelverstoss
+    /// (<c>Background=</c> nach dem eingebetteten <c>&gt;</c>) den Waechter NIE erreicht, weil das
+    /// Muster dort faelschlich schon geschlossen haette - dieselbe Sabotage-Erwartung wie bei den
+    /// vier oben dokumentierten Regelverstoessen (Klassenkommentar), nur fuer das Tag-Muster selbst.
+    /// </summary>
+    [Fact]
+    public void Button_tag_muster_endet_nicht_vorzeitig_an_einem_groesser_zeichen_im_attributwert()
+    {
+        const string xaml = """
+            <Button Content="{Binding Wert, StringFormat='{}{0} > {1}'}" Background="Red">
+                <TextBlock Text="Beschriftung"/>
+            </Button>
+            """;
+
+        var treffer = Regex.Matches(xaml, ButtonTagMuster, RegexOptions.Singleline);
+
+        var tag = Assert.Single(treffer);
+        // Das gesamte Oeffnungstag inklusive des eingebetteten ">" gehoert zum Treffer -
+        // sonst waere "Background=" ausserhalb des gefundenen Tags gelandet und die Regel
+        // Kein_Background_direkt_an_einem_Button_Tag haette den Verstoss uebersehen.
+        Assert.Contains("Background=\"Red\"", tag.Value);
+        Assert.Matches(@"\bBackground=""", tag.Value);
+    }
+
     [Fact]
     public void Kein_Background_direkt_an_einem_Button_Tag()
     {
@@ -233,7 +272,7 @@ public sealed class DesignAuditKnopfleistenTests
         foreach (var pfad in GeprueftePfade(Regel.D_KeinBackgroundAmButton))
         {
             var xaml = File.ReadAllText(pfad);
-            foreach (Match tag in Regex.Matches(xaml, @"<Button\b[^>]*>", RegexOptions.Singleline))
+            foreach (Match tag in Regex.Matches(xaml, ButtonTagMuster, RegexOptions.Singleline))
             {
                 if (Regex.IsMatch(tag.Value, @"\bBackground="""))
                 {

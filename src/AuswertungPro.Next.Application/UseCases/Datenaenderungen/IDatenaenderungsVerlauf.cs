@@ -11,10 +11,18 @@ public enum DatenaenderungsBereich
 }
 
 /// <summary>Ergebnis eines Rueckgaengig-/Wiederholen-Schritts.</summary>
-/// <param name="Angewendet">true, wenn Werte zurueckgesetzt bzw. erneut gesetzt wurden.</param>
+/// <param name="Angewendet">true, wenn der Schritt VOLLSTAENDIG zurueckgesetzt bzw. erneut gesetzt
+/// wurde und als neuer Eintrag im Gegenstapel steht.</param>
 /// <param name="Meldung">Klartext fuer die Statuszeile oder einen Hinweis.</param>
 /// <param name="Datensaetze">Die betroffenen Haltungen/Schaechte (fuer die Aktualisierung der Anzeige).</param>
-public sealed record DatenaenderungsErgebnis(bool Angewendet, string Meldung, IReadOnlyList<object> Datensaetze);
+/// <param name="Teilweise">Schlusswelle (Item 4): true nur im Sonderfall "nicht vollständig" — das
+/// Anwenden schlug mitten im Schritt fehl UND der anschliessende Rueckbau der bereits geschriebenen
+/// Teile schlug ebenfalls fehl (<see cref="DatenaenderungsVerlauf.GrundFehler"/>, der ganze Verlauf
+/// wird dabei geleert). <see cref="Angewendet"/> bleibt dann false (der Schritt ist NICHT als
+/// Gegen-Eintrag wiederholbar), aber an den genannten <see cref="Datensaetze"/> koennen einzelne
+/// Felder tatsaechlich einen neuen Wert tragen — Aufrufer muessen Projekt/Anzeige trotzdem
+/// aktualisieren, statt den Fall wie einen reinen No-op ("Es wurde nichts geändert.") zu behandeln.</param>
+public sealed record DatenaenderungsErgebnis(bool Angewendet, string Meldung, IReadOnlyList<object> Datensaetze, bool Teilweise = false);
 
 /// <summary>Der Verlauf wurde geleert, obwohl er Eintraege hatte.</summary>
 public sealed class DatenaenderungsVerlaufGeleertEventArgs(string grund) : EventArgs

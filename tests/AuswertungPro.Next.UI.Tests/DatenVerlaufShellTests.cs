@@ -79,6 +79,39 @@ public sealed class DatenVerlaufShellTests : IDisposable
         Assert.Equal("PVC", h.GetFieldValue(FieldKeys.PipeMaterial));
     }
 
+    /// <summary>
+    /// Schlusswelle (Item 4): Scheitert das Anwenden mitten im Schritt UND der anschliessende
+    /// Rueckbau ebenfalls (<c>DatenaenderungsErgebnis.Teilweise=true</c>, "nicht vollständig"),
+    /// bleiben an der Haltung trotzdem tatsaechlich geaenderte Feldwerte stehen. Die Seite muss das
+    /// Projekt dann TROTZDEM als geaendert markieren und die Anzeige nachziehen — vorher hing das
+    /// allein an <c>Angewendet</c> und dieser Fall wurde stillschweigend uebergangen.
+    /// </summary>
+    [Fact]
+    public void Nicht_vollstaendiger_Rueckbau_markiert_das_Projekt_trotzdem_als_geaendert()
+    {
+        var h = OeffneHaltungen();
+        var seite = Assert.IsType<DataPageViewModel>(_shell.CurrentPage);
+        using (_services.DatenaenderungsVerlauf.Erfasse(h))
+        {
+            h.SetFieldValue("DN_mm", "300", FieldSource.Manual, true);
+            h.SetFieldValue("Lichte_Breite_mm", "300", FieldSource.Manual, true);
+        }
+        h.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == "Fields[Lichte_Breite_mm]")
+                throw new InvalidOperationException("Anzeige gestört");
+        };
+        _shell.Project.Dirty = false;
+        var felderErgaenztAufgerufen = false;
+        seite.FelderExternErgaenzt += () => felderErgaenztAufgerufen = true;
+
+        _shell.RueckgaengigCommand.Execute(null);
+
+        Assert.True(_shell.Project.Dirty);
+        Assert.True(felderErgaenztAufgerufen);
+        Assert.False(_shell.RueckgaengigCommand.CanExecute(null)); // Verlauf ist geleert (GrundFehler)
+    }
+
     [Fact]
     public void Projektwechsel_leert_den_Verlauf()
     {

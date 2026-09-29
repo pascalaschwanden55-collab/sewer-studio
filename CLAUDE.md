@@ -38,6 +38,16 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   Test `NovaDialogWindowIsolatedSmokeTests` (Kindprozess-Muster) prueft Knopfbeschriftungen,
   Reihenfolge, Standard-/Abbrechen-Knopf, Rueckgabewerte per programmatischem Klick und die
   Darstellung im Dunkeltheme (Hintergrund = `CardBrush` des Dunkeltheme).
+- **Aufgabe 2 — Toast statt Dialog fuer reine Erfolgsmeldungen.** Regel: eine reine, vollstaendige
+  Erfolgsmeldung (nichts zu entscheiden, nichts wurde ausgelassen) wird ein Toast mit optionaler
+  Aktion «Ordner öffnen»/«Datei öffnen», nie ein Dialog. Ein TEILerfolg, eine Warnung oder etwas,
+  das eine bewusste Entscheidung braucht, bleibt ein Dialog — ein Toast verschwindet von selbst
+  und darf so etwas nicht verschlucken. Beispiel `DiagnosticsPageViewModel.CreatePackageAsync`
+  (Fix-Runde 1): `result.Success && result.SkippedLogFileCount == 0` (kein Teilerfolg — keine
+  einzelne Logdatei musste ausgelassen werden) toastet ueber `IToastService.Success(...)` mit der
+  Aktion «Datei öffnen» (`ExplorerRevealService.TryReveal`); `result.Success` mit ausgelassenen
+  Logdateien bleibt `_dialogs.Info(...)`, ein Fehlschlag `_dialogs.Warn(...)`. Diese Unterscheidung
+  gilt programmweit als Vorbild fuer neue Erfolgs-/Fehlermeldungen, nicht nur an dieser Stelle.
 - **Aufgabe 3 — Fensterregel: gemeinsamer Kopf und Knopfleiste (Teil 1, Grundlage +
   Dossier-Fenster).** Regel fuer JEDES Fenster im Programm: **Seiten verwenden
   `NovaPageHeader`** (Titel + Untertitel INLINE nebeneinander, kein Zeilenumbruch, Ellipsis —
@@ -1266,6 +1276,61 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `NpkLeistungsverzeichnisExcelExporterTests` und `OfferPdfExportServiceTests`, der die
   injizierte `IBerichtsMarke` tatsaechlich ankommen sieht, sowie ein Fall in
   `CodingProtocolPdfExportPlannerTests` fuer den optionalen `resolveLogoPath`-Parameter.
+- **Aufgabe 16 — Rückgängig/Wiederholen für Haltungs- und Schachtdaten.** `IDatenaenderungsVerlauf` /
+  `DatenaenderungsVerlauf` (Application/UseCases/Datenaenderungen, WPF-frei, 177. Registrierung — 176 war
+  bereits an Aufgabe 15/`IBerichtsMarke` vergeben) haelt je
+  Bereich (Haltungen, Schaechte) einen Stapel, Tiefe 100; eine neue Eingabe leert Wiederholen.
+  **Erfasst wird als BEREICH, nicht je Schreibweg:** `using (verlauf.Erfasse(datensatz, feld))` merkt VOR
+  der Eingabe Wert UND `FieldMeta` aller Felder (Kopie, `FieldMetadataKopie` — die Schreibwege aendern Meta
+  an Ort und Stelle) und vergleicht beim Schliessen. Alles darin ist EIN Schritt (Sanieren+Kosten,
+  DN+Breite, «Spalte leeren» ueber `ErfasseMehrere`, Objektakte samt `ZieheAbhaengigeFelderNach`); ein
+  innerer Bereich wird Teil des aeusseren. Ein blosses Nachstempeln ohne Wertaenderung ist kein Schritt.
+  Eingaenge: Tabellenzelle (Beginn beim OEFFNEN — `PreparingCellForEdit`/`BeginningEdit`, die
+  Zustandsklassen-Marke schreibt vor dem Schliessen —, Ende nach dem Commit mit Input-Prioritaet ueber
+  `DatenVerlaufZellErfassung`), Auswahlfelder der Tabelle, Formular/Aufklappliste (Commit-Delegate), «Spalte
+  leeren» und die Objektakte (`ObjektaktenBearbeitung.Verlauf`, gesetzt in `ObjektaktenDialog`; erfasst auch
+  die Aktenwerte des Verbunds und entfernt eine erst dabei angelegte Wurzelakte wieder). Die Seiten haben
+  dafuer Huellen `…MitVerlauf` (`DataPage.Verlauf.cs`, `SchaechtePage.Verlauf.cs`); XAML und Konstruktor
+  zeigen auf die Huellen, die alten Handler bleiben unveraendert (SchaechtePage.xaml.cs steht bei 1000
+  Zeilen). **Wiederherstellen** laeuft ueber `HaltungRecord/SchachtRecord.StelleFeldzustandWiederHer`:
+  Wert und Meta zeichengenau (keine WebGIS-Umwandlung, keine neue Handmarke, alter Zeitstempel; `null` =
+  Feld/Meta gab es nicht). Den Schutz der Schreibwege ersetzt die **Vorbedingung**: zurueckgesetzt wird nur,
+  wenn das Feld noch exakt den eigenen Stand traegt (Wert, Herkunft, Handmarke, Konfliktnotiz — Zeitstempel
+  ausgenommen) und der Datensatz noch im gebundenen Projekt ist; sonst wird der Eintrag verworfen, nichts
+  geschrieben, Hinweis. So ueberschreibt Rueckgaengig nie einen Wert eines anderen Schreibers.
+  **Sperren (Verlauf leer, Toast nur wenn er Eintraege hatte):** Umbenennungsfelder (Haltungsname,
+  Schacht_oben/_unten, Schachtnummer — Aenderung wird nie erfasst), Projektwechsel (`ShellViewModel.
+  ReplaceProject` → `Binde`), jede Listenaenderung von `Data`/`SchaechteData` (neu, loeschen, verschieben,
+  auch aus Importen), jeder laufende Projektvorgang (`NotifyShellOperationCommands` →
+  `PruefeDatenVerlaufBeiVorgang`: Import, Verteilung, WebGIS, Laden) und Uebernahmen (GeoShop, QGIS,
+  WebGIS-Holen ueber `MeldeFelderExternErgaenzt`/`MeldeUebernahme`). Nicht erfasst (Vorbedingung schuetzt):
+  Nachschlagen, Strassennamen, Durchnummerieren, GeoShop-Einzelergaenzung in der Akte.
+  **Bedienung:** Menue «_Bearbeiten» zwischen Datei und Werkzeuge («Rückgängig: Rohrmaterial 10001-10002»,
+  Unterstrich im Namen verdoppelt), Strg+Z / Strg+Y / Strg+Umschalt+Z als Fenster-KeyBindings; die
+  Tastenbefehle sind nicht ausfuehrbar, solange ein `TextBoxBase`/`PasswordBox` den Fokus hat (dann gilt
+  dessen eigenes Rueckgaengig). Nur auf Haltungen/Schaechte und ohne laufenden Vorgang ausfuehrbar; die Shell
+  reicht an `DataPageViewModel/SchaechtePageViewModel.WendeVerlauf` weiter (MarkProjectDirty, vorhandener
+  Autosave, `FelderExternErgaenzt` fuer Formular/Objektakte). Tastenkuerzel-Fenster (Gruppe «Haltungen und
+  Schächte») und Handbuch nennen es. Tests: `DatenaenderungsVerlaufTests` (Infrastructure, 18: exakte Meta,
+  keine Handmarke, WebGIS-Begriff zeichengenau, Tiefe, Gruppen, Sperren, Vorbedingung, geloeschter
+  Datensatz, Objektakte), `DatenVerlaufShellTests` (UI, echte Shell/Seiten, Projektwechsel, Vorgang,
+  Verdrahtung, Menue/Tasten).
+  **Fix-Runde 1:** Eine im Schritt neu angelegte Objektakte wird beim Rueckgaengig nur entfernt, wenn sie
+  GANZ dem eigenen Nachher-Stand entspricht (JSON der ganzen Akte: Werte, Quellen, Bezuege, Unterlisten,
+  Hauptdeckel, Zusatzdaten); Wiederholen fuegt sie nur an, wenn keine Akte mit derselben Kennung existiert —
+  sonst Schritt verworfen, Warnung. Aktenwerte vergleichen Zusatzdaten tief. **Tabellenzelle und
+  Auswahlspalte erfassen nur das eigene Feld plus das, was es ableitet** (`DatenaenderungsVerlauf.
+  ZellSchrittFelder`: Sanieren Ja/Nein → `SanierungCostFieldMapper.CostFieldNames`); Formular, «Spalte
+  leeren» und Objektakte den ganzen Datensatz. Scheitert das Anwenden mitten im Schritt, werden alle
+  angewendeten Teile zurueckgesetzt und der Eintrag faellt weg (nie halb wiederholbar); scheitert auch das,
+  wird der Verlauf geleert (`GrundFehler`). Weitere Uebernahme-Sperren: WebGIS-Holen leert im gemeinsamen
+  `WebGisHolenAblauf` (auch fuer den Export-Einstieg ohne eigenen Rueckruf), Zusatzdatei und
+  GeoShop-Ergaenzung in der Objektakte ueber `ObjektaktenDialog.MitSperre`. Strg+Z ist waehrend einer
+  offenen Eingabe (`EingabeOffen`) nicht ausfuehrbar; «nicht möglich» ist eine Warnung, das Leeren ein
+  Hinweis (auf den UI-Thread verschoben). Das abgedockte Tabellenfenster (`FloatingGridWindow`) hat dieselben
+  Tasten (`DataPageViewModel.RueckgaengigTasteCommand` reicht die Shell-Befehle durch). `ShellViewModel.
+  Dispose` loest alle Abos (`LoeseDatenVerlauf`). Tests `DatenaenderungsVerlaufFixRundeTests`,
+  `DatenVerlaufFixRundeTests`.
 - **Aufgabe 17 — Kleinigkeiten und Endkontrolle.** Uebersicht: `ProjektUebersichtPageViewModel.
   BaueZustandLegende` sortiert jetzt Z0 (sofort) zuerst bis Z4 (kein Handlungsbedarf) zuletzt —
   vorher stand die dringendste Klasse ganz unten, im Widerspruch zur KPI-Karte "Dringend
@@ -1345,60 +1410,6 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   `docs/reviews/2026-09-28-optik/bilder/`); Haltungen, Schaechte, Player und Training Studio
   brauchen fuer neue Bildschirmfotos entweder eine tiefere Reparatur dieses Werkzeugs (echtes
   `InitializeComponent()` statt nachgebautem XAML) oder eine Sichtpruefung im echten Programm.
-- **Aufgabe 16 — Rückgängig/Wiederholen für Haltungs- und Schachtdaten.** `IDatenaenderungsVerlauf` /
-  `DatenaenderungsVerlauf` (Application/UseCases/Datenaenderungen, WPF-frei, 176. Registrierung) haelt je
-  Bereich (Haltungen, Schaechte) einen Stapel, Tiefe 100; eine neue Eingabe leert Wiederholen.
-  **Erfasst wird als BEREICH, nicht je Schreibweg:** `using (verlauf.Erfasse(datensatz, feld))` merkt VOR
-  der Eingabe Wert UND `FieldMeta` aller Felder (Kopie, `FieldMetadataKopie` — die Schreibwege aendern Meta
-  an Ort und Stelle) und vergleicht beim Schliessen. Alles darin ist EIN Schritt (Sanieren+Kosten,
-  DN+Breite, «Spalte leeren» ueber `ErfasseMehrere`, Objektakte samt `ZieheAbhaengigeFelderNach`); ein
-  innerer Bereich wird Teil des aeusseren. Ein blosses Nachstempeln ohne Wertaenderung ist kein Schritt.
-  Eingaenge: Tabellenzelle (Beginn beim OEFFNEN — `PreparingCellForEdit`/`BeginningEdit`, die
-  Zustandsklassen-Marke schreibt vor dem Schliessen —, Ende nach dem Commit mit Input-Prioritaet ueber
-  `DatenVerlaufZellErfassung`), Auswahlfelder der Tabelle, Formular/Aufklappliste (Commit-Delegate), «Spalte
-  leeren» und die Objektakte (`ObjektaktenBearbeitung.Verlauf`, gesetzt in `ObjektaktenDialog`; erfasst auch
-  die Aktenwerte des Verbunds und entfernt eine erst dabei angelegte Wurzelakte wieder). Die Seiten haben
-  dafuer Huellen `…MitVerlauf` (`DataPage.Verlauf.cs`, `SchaechtePage.Verlauf.cs`); XAML und Konstruktor
-  zeigen auf die Huellen, die alten Handler bleiben unveraendert (SchaechtePage.xaml.cs steht bei 1000
-  Zeilen). **Wiederherstellen** laeuft ueber `HaltungRecord/SchachtRecord.StelleFeldzustandWiederHer`:
-  Wert und Meta zeichengenau (keine WebGIS-Umwandlung, keine neue Handmarke, alter Zeitstempel; `null` =
-  Feld/Meta gab es nicht). Den Schutz der Schreibwege ersetzt die **Vorbedingung**: zurueckgesetzt wird nur,
-  wenn das Feld noch exakt den eigenen Stand traegt (Wert, Herkunft, Handmarke, Konfliktnotiz — Zeitstempel
-  ausgenommen) und der Datensatz noch im gebundenen Projekt ist; sonst wird der Eintrag verworfen, nichts
-  geschrieben, Hinweis. So ueberschreibt Rueckgaengig nie einen Wert eines anderen Schreibers.
-  **Sperren (Verlauf leer, Toast nur wenn er Eintraege hatte):** Umbenennungsfelder (Haltungsname,
-  Schacht_oben/_unten, Schachtnummer — Aenderung wird nie erfasst), Projektwechsel (`ShellViewModel.
-  ReplaceProject` → `Binde`), jede Listenaenderung von `Data`/`SchaechteData` (neu, loeschen, verschieben,
-  auch aus Importen), jeder laufende Projektvorgang (`NotifyShellOperationCommands` →
-  `PruefeDatenVerlaufBeiVorgang`: Import, Verteilung, WebGIS, Laden) und Uebernahmen (GeoShop, QGIS,
-  WebGIS-Holen ueber `MeldeFelderExternErgaenzt`/`MeldeUebernahme`). Nicht erfasst (Vorbedingung schuetzt):
-  Nachschlagen, Strassennamen, Durchnummerieren, GeoShop-Einzelergaenzung in der Akte.
-  **Bedienung:** Menue «_Bearbeiten» zwischen Datei und Werkzeuge («Rückgängig: Rohrmaterial 10001-10002»,
-  Unterstrich im Namen verdoppelt), Strg+Z / Strg+Y / Strg+Umschalt+Z als Fenster-KeyBindings; die
-  Tastenbefehle sind nicht ausfuehrbar, solange ein `TextBoxBase`/`PasswordBox` den Fokus hat (dann gilt
-  dessen eigenes Rueckgaengig). Nur auf Haltungen/Schaechte und ohne laufenden Vorgang ausfuehrbar; die Shell
-  reicht an `DataPageViewModel/SchaechtePageViewModel.WendeVerlauf` weiter (MarkProjectDirty, vorhandener
-  Autosave, `FelderExternErgaenzt` fuer Formular/Objektakte). Tastenkuerzel-Fenster (Gruppe «Haltungen und
-  Schächte») und Handbuch nennen es. Tests: `DatenaenderungsVerlaufTests` (Infrastructure, 18: exakte Meta,
-  keine Handmarke, WebGIS-Begriff zeichengenau, Tiefe, Gruppen, Sperren, Vorbedingung, geloeschter
-  Datensatz, Objektakte), `DatenVerlaufShellTests` (UI, echte Shell/Seiten, Projektwechsel, Vorgang,
-  Verdrahtung, Menue/Tasten).
-  **Fix-Runde 1:** Eine im Schritt neu angelegte Objektakte wird beim Rueckgaengig nur entfernt, wenn sie
-  GANZ dem eigenen Nachher-Stand entspricht (JSON der ganzen Akte: Werte, Quellen, Bezuege, Unterlisten,
-  Hauptdeckel, Zusatzdaten); Wiederholen fuegt sie nur an, wenn keine Akte mit derselben Kennung existiert —
-  sonst Schritt verworfen, Warnung. Aktenwerte vergleichen Zusatzdaten tief. **Tabellenzelle und
-  Auswahlspalte erfassen nur das eigene Feld plus das, was es ableitet** (`DatenaenderungsVerlauf.
-  ZellSchrittFelder`: Sanieren Ja/Nein → `SanierungCostFieldMapper.CostFieldNames`); Formular, «Spalte
-  leeren» und Objektakte den ganzen Datensatz. Scheitert das Anwenden mitten im Schritt, werden alle
-  angewendeten Teile zurueckgesetzt und der Eintrag faellt weg (nie halb wiederholbar); scheitert auch das,
-  wird der Verlauf geleert (`GrundFehler`). Weitere Uebernahme-Sperren: WebGIS-Holen leert im gemeinsamen
-  `WebGisHolenAblauf` (auch fuer den Export-Einstieg ohne eigenen Rueckruf), Zusatzdatei und
-  GeoShop-Ergaenzung in der Objektakte ueber `ObjektaktenDialog.MitSperre`. Strg+Z ist waehrend einer
-  offenen Eingabe (`EingabeOffen`) nicht ausfuehrbar; «nicht möglich» ist eine Warnung, das Leeren ein
-  Hinweis (auf den UI-Thread verschoben). Das abgedockte Tabellenfenster (`FloatingGridWindow`) hat dieselben
-  Tasten (`DataPageViewModel.RueckgaengigTasteCommand` reicht die Shell-Befehle durch). `ShellViewModel.
-  Dispose` loest alle Abos (`LoeseDatenVerlauf`). Tests `DatenaenderungsVerlaufFixRundeTests`,
-  `DatenVerlaufFixRundeTests`.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

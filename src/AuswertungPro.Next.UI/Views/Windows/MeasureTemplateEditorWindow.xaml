@@ -82,16 +82,15 @@
                             <Trigger Property="Text" Value="">
                                 <Setter Property="Background">
                                     <Setter.Value>
-                                        <!-- Fix-Runde 2 (Aufgabe 13, MINOR): bewusst StaticResource belassen. Diese
-                                             TextBlock haengt in VisualBrush.Visual - einem Freezable-Teilbaum ohne die
-                                             normale FrameworkElement-Vererbungskette, ueber die DynamicResource sich
-                                             sonst aufloest (anders als ein normaler Setter.Value, siehe CardBrush oben).
-                                             Ohne einen echten WPF-Kindprozess-Test fuer dieses Leerzustands-Wasserzeichen
-                                             ist ein blinder Wechsel hier ein ungeprueftes Risiko fuer eine sehr kleine,
-                                             rein kosmetische Stelle - siehe Fix-Runde-2-Bericht. -->
+                                        <!-- Schlusswelle (Optikanalyse 28.09.2026): DynamicResource statt der bisher
+                                             bewusst belassenen StaticResource (Fix-Runde 2, Aufgabe 13, MINOR). Die
+                                             fruehere Sorge betraf einen Freezable-Vererbungspfad ohne echten Test -
+                                             der neue Waechter DesignAuditKeinStaticResourceThemeTokenTests prueft am
+                                             echten Kindprozess (MeasureTemplateEditorWindowIsolatedSmokeTests), dass
+                                             das Wasserzeichen mit DynamicResource beim Theme-Wechsel mitzieht. -->
                                         <VisualBrush Stretch="None" AlignmentX="Left">
                                             <VisualBrush.Visual>
-                                                <TextBlock Text="Suchen..." Foreground="{StaticResource MutedBrush}" Margin="4,0,0,0"/>
+                                                <TextBlock Text="Suchen..." Foreground="{DynamicResource MutedBrush}" Margin="4,0,0,0"/>
                                             </VisualBrush.Visual>
                                         </VisualBrush>
                                     </Setter.Value>

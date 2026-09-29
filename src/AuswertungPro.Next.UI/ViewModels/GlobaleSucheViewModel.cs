@@ -37,6 +37,13 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposabl
         _shell.SaveAsProjectCommand.CanExecuteChanged += OnBefehlsVerfuegbarkeitGeaendert;
         _shell.NewProjectCommand.CanExecuteChanged += OnBefehlsVerfuegbarkeitGeaendert;
         _shell.OpenProjectCommand.CanExecuteChanged += OnBefehlsVerfuegbarkeitGeaendert;
+
+        // Schlusswelle (Item 2): Rueckgaengig/Wiederholen aendern ihre Verfuegbarkeit nicht nur
+        // ueber CanExecute, sondern auch ueber Seitenwechsel/Verlaufsstand (AktualisiereVerlaufBefehle
+        // in ShellViewModel.DatenVerlauf.cs feuert NotifyCanExecuteChanged) - dasselbe Muster wie die
+        // vier Befehle oben.
+        _shell.RueckgaengigCommand.CanExecuteChanged += OnBefehlsVerfuegbarkeitGeaendert;
+        _shell.WiederholenCommand.CanExecuteChanged += OnBefehlsVerfuegbarkeitGeaendert;
     }
 
     /// <summary>
@@ -153,6 +160,14 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposabl
             befehle.Add(new GlobaleSucheBefehlEintrag(
                 "Einstellungen", "Einstellungen", einstellungenSeite.Icon, einstellungenSeite.IsAvailable,
                 () => _shell.NavigateTo("Einstellungen")));
+
+        // Schlusswelle (Item 2): dieselben zwei Befehle wie im Menue "_Bearbeiten" (gleiche Glyphen
+        // &#xE7A7;/&#xE7A6; wie in MainWindow.xaml), mit demselben beschreibenden Text
+        // ("R\u00FCckg\u00E4ngig: Material 10001-10002") wie dort - Verfuegbar kommt aus dem echten
+        // CanExecute des Shell-Befehls, die Ausfuehrung prueft ihn per Befehl() ein zweites Mal
+        // unmittelbar vor dem Klick.
+        befehle.Add(Befehl("Rueckgaengig", _shell.RueckgaengigMenuText, "\uE7A7", _shell.RueckgaengigCommand));
+        befehle.Add(Befehl("Wiederholen", _shell.WiederholenMenuText, "\uE7A6", _shell.WiederholenCommand));
 
         befehle.Add(Befehl("Handbuch", "Handbuch", "\uE736", _shell.OpenHandbuchCommand, _shell.SelectedNavItem?.Title));
         befehle.Add(Befehl("Tastenkuerzel", "Tastenkürzel", "\uE765", _shell.OpenTastenkuerzelCommand));
@@ -282,5 +297,7 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposabl
         _shell.SaveAsProjectCommand.CanExecuteChanged -= OnBefehlsVerfuegbarkeitGeaendert;
         _shell.NewProjectCommand.CanExecuteChanged -= OnBefehlsVerfuegbarkeitGeaendert;
         _shell.OpenProjectCommand.CanExecuteChanged -= OnBefehlsVerfuegbarkeitGeaendert;
+        _shell.RueckgaengigCommand.CanExecuteChanged -= OnBefehlsVerfuegbarkeitGeaendert;
+        _shell.WiederholenCommand.CanExecuteChanged -= OnBefehlsVerfuegbarkeitGeaendert;
     }
 }

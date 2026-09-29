@@ -58,10 +58,16 @@ public sealed class WindowsThemeFollowService : IDisposable
             return;
         }
 
+        // Schlusswelle (Item 6): Dispatcher.Invoke blockiert den SystemEvents-Thread (ein
+        // WinForms-Botschaftsfenster-Thread ausserhalb von WPF) synchron, bis die UI-Thread-
+        // Warteschlange den Aufruf abgearbeitet hat - bei einem beschaeftigten UI-Thread haelt das
+        // den Windows-Benachrichtigungsmechanismus unnoetig auf. BeginInvoke reiht nur ein
+        // (fire-and-forget); das Skip-wenn-unveraendert oben (SollNeuAnwenden) bleibt unveraendert
+        // VOR dem Dispatch, damit gar nicht erst unnoetig auf den UI-Thread eingereiht wird.
         if (_dispatcher.CheckAccess())
             _applyResolvedTheme(resolved);
         else
-            _dispatcher.Invoke(() => _applyResolvedTheme(resolved));
+            _dispatcher.BeginInvoke(() => _applyResolvedTheme(resolved));
     }
 
     public void Dispose()
