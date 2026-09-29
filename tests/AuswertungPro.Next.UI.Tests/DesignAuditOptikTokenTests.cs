@@ -56,6 +56,10 @@ public sealed class DesignAuditOptikTokenTests
     /// Regressionswaechter: HydraulikPanelWindow zeichnete den Rohrquerschnitt frueher mit 17
     /// statischen, im Konstruktor gefrorenen Pinseln (Zeilen 16-34) — nie themefaehig. Jetzt
     /// werden alle Farben je Zeichnung ueber SetResourceReference/ResolveColor aufgeloest.
+    /// Fix-Runde 1 (Review 29.09.2026): Die selbst gebauten Farbverlaeufe (Rohrwand, Wasser) sind
+    /// Momentaufnahmen — ein Themewechsel bei offenem Fenster zog sie ohne Neuzeichnen nicht nach.
+    /// Das Fenster haengt sich deshalb an ThemeManager.ThemeChanged und meldet sich beim Schliessen
+    /// wieder ab (wie RohrquerschnittControl fuer denselben Fall).
     /// </summary>
     [Fact]
     public void HydraulikPanelWindow_friert_keine_statischen_Pinsel_mehr_ein()
@@ -66,12 +70,18 @@ public sealed class DesignAuditOptikTokenTests
         Assert.DoesNotContain("static HydraulikPanelWindow()", text, StringComparison.Ordinal);
         Assert.DoesNotContain("FontFamily = ConsolasFont", text, StringComparison.Ordinal);
         Assert.Contains("SetResourceReference(", text, StringComparison.Ordinal);
+        Assert.Contains("ThemeManager.ThemeChanged += ", text, StringComparison.Ordinal);
+        Assert.Contains("ThemeManager.ThemeChanged -= ", text, StringComparison.Ordinal);
     }
 
     /// <summary>
     /// Regressionswaechter: Die fuenf Hex-Werte und die zwei "White"-Vorgaben aus
     /// SanierungsmassnahmenWindow.xaml (Konsistenz-Kontrolle, Uebertrag-Markierung) sind auf
-    /// Theme-Tokens umgestellt.
+    /// Theme-Tokens umgestellt. Fix-Runde 1 (Review 29.09.2026): StatusBadgeTextBrush ist auf
+    /// DangerBrush/WarningBrush in beiden Themes zu kontrastarm (3,97:1/3,82:1 hell) — die beiden
+    /// Zaehler-Abzeichen verwenden seither die dafuer verifizierten DangerBadgeTextBrush/
+    /// WarningBadgeTextBrush; ausserdem war der Danger-Abzeichenhintergrund noch StaticResource
+    /// (folgt keinem spaeteren Themewechsel).
     /// </summary>
     [Fact]
     public void SanierungsmassnahmenWindow_xaml_hat_keine_Hex_Ersatzfarben_mehr()
@@ -81,6 +91,10 @@ public sealed class DesignAuditOptikTokenTests
         foreach (var alterWert in new[] { "#33FF4444", "#33FF8C00", "\"#FF8C00\"", "#D7F5DD", "#0F3D1F" })
             Assert.DoesNotContain(alterWert, text, StringComparison.Ordinal);
         Assert.DoesNotContain("Foreground=\"White\"", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Background=\"{StaticResource DangerBrush}\"", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Foreground=\"{DynamicResource StatusBadgeTextBrush}\"", text, StringComparison.Ordinal);
+        Assert.Contains("Foreground=\"{DynamicResource DangerBadgeTextBrush}\"", text, StringComparison.Ordinal);
+        Assert.Contains("Foreground=\"{DynamicResource WarningBadgeTextBrush}\"", text, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -100,7 +114,9 @@ public sealed class DesignAuditOptikTokenTests
 
     /// <summary>
     /// Regressionswaechter: Konfidenz-/Status-/Zonenfarben kamen frueher als zehn direkt
-    /// konstruierte SolidColorBrush-Werte ohne Themebezug.
+    /// konstruierte SolidColorBrush-Werte ohne Themebezug. Fix-Runde 1 (Review 29.09.2026):
+    /// GetConfidenceBrush wird nur fuer Text verwendet (Foreground der Konfidenzanzeige) — dafuer
+    /// gelten die *TextBrush-Varianten, nicht die Fuellfarben SuccessBrush/WarningBrush/DangerBrush.
     /// </summary>
     [Fact]
     public void CodingSessionViewModel_konstruiert_keine_Pinsel_mehr_direkt()
@@ -109,6 +125,8 @@ public sealed class DesignAuditOptikTokenTests
 
         Assert.DoesNotContain("new SolidColorBrush(Color.FromRgb(", text, StringComparison.Ordinal);
         Assert.Contains("ResolveThemeBrush(", text, StringComparison.Ordinal);
+        foreach (var token in new[] { "\"SuccessTextBrush\"", "\"WarningTextBrush\"", "\"DangerTextBrush\"" })
+            Assert.Contains(token, text, StringComparison.Ordinal);
     }
 
     /// <summary>Regressionswaechter: die anfaengliche Bereitschaftsfarbe war fest grau.</summary>
@@ -120,15 +138,33 @@ public sealed class DesignAuditOptikTokenTests
         Assert.Contains("Application.Current?.TryFindResource(\"MutedBrush\")", text, StringComparison.Ordinal);
     }
 
-    /// <summary>Regressionswaechter: die vier Bereitschaftsfarben der Wissensdatenbank kamen frueher fest aus Rgb(...) ohne Themebezug.</summary>
+    /// <summary>
+    /// Regressionswaechter: die vier Bereitschaftsfarben der Wissensdatenbank kamen frueher fest
+    /// aus Rgb(...) ohne Themebezug. Fix-Runde 1 (Review 29.09.2026): Der Builder liefert seither
+    /// nur noch den Token-NAMEN (kein TryFindResource mehr im Builder selbst) — er wird nach einem
+    /// <c>ConfigureAwait(false)</c> auf einem Threadpool-Thread aufgerufen, und WPF-Ressourcen
+    /// duerfen nur vom UI-Thread gelesen werden. Aufgeloest wird der Token erst in
+    /// TrainingKnowledgeBasePresentationController.ApplyStatus, das ueber OnUi(...) auf dem
+    /// UI-Thread laeuft.
+    /// </summary>
     [Fact]
-    public void TrainingKnowledgeBaseStatusPresentationBuilder_nutzt_Theme_Tokens()
+    public void TrainingKnowledgeBaseStatusPresentationBuilder_liefert_nur_Token_Namen_kein_TryFindResource()
     {
-        var text = File.ReadAllText(Path.Combine(
+        var builderText = File.ReadAllText(Path.Combine(
             UiRoot, "Ai", "Training", "TrainingKnowledgeBaseStatusPresentationBuilder.cs"));
+        var controllerText = File.ReadAllText(Path.Combine(
+            UiRoot, "Ai", "Training", "TrainingKnowledgeBasePresentationController.cs"));
 
-        foreach (var token in new[] { "SuccessBrush", "WarningBrush", "DangerBrush", "MutedBrush" })
-            Assert.Contains($"ResolveBrush(\"{token}\"", text, StringComparison.Ordinal);
+        // Nicht auf das blosse Wort "Application"/"TryFindResource" pruefen — beide stehen bewusst
+        // im XML-Doc-Kommentar (erklaert WARUM) und im using-Namensraum. Massgeblich ist der
+        // tatsaechliche Aufruf.
+        Assert.DoesNotContain("TryFindResource(", builderText, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Windows.Application", builderText, StringComparison.Ordinal);
+        foreach (var token in new[] { "\"SuccessBrush\"", "\"WarningBrush\"", "\"DangerBrush\"", "\"MutedBrush\"" })
+            Assert.Contains(token, builderText, StringComparison.Ordinal);
+
+        Assert.Contains("TryFindResource(key)", controllerText, StringComparison.Ordinal);
+        Assert.Contains("presentation.ReadinessBrushKey", controllerText, StringComparison.Ordinal);
     }
 
     /// <summary>

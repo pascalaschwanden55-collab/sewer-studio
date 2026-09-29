@@ -118,6 +118,87 @@ public sealed class DesignAuditContrastTests
             $"{themeFile}: DangerTextBrush erreicht auf CardBrush keine 4,5:1.");
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (Review 29.09.2026, Aufgabe 12): Vier neu eingefuehrte Text-/Hintergrund-
+    /// Paarungen, jede in beiden Themes. SuccessTextBrush auf CardBrush fehlte bisher als
+    /// eigener Test (nur Warning/Danger waren geprueft) und wird jetzt fuer
+    /// CodingSessionViewModel.GetConfidenceBrush und HydraulikPanelWindow.AuslastungRun gebraucht.
+    /// </summary>
+    [Theory]
+    [InlineData("Theme.xaml")]
+    [InlineData("ThemeLight.xaml")]
+    public void Success_button_text_reaches_normal_text_contrast_on_card(string themeFile)
+    {
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+
+        Assert.True(
+            Contrast(ReadSolidColorBrush(xaml, "SuccessTextBrush"), ReadColor(xaml, "ColorCard")) >= 4.5,
+            $"{themeFile}: SuccessTextBrush erreicht auf CardBrush keine 4,5:1.");
+    }
+
+    /// <summary>
+    /// TrainingStudioWindow.QualityWarning stand auf WarningBrush mit weisser Schrift (2,52:1 im
+    /// Dunkelmodus). Die Kombination WarningTextBrush auf WarningSubtleBrush ist die schon
+    /// etablierte "farbige Subtle-Flaeche + *TextBrush"-Badge-Form.
+    /// </summary>
+    [Theory]
+    [InlineData("Theme.xaml")]
+    [InlineData("ThemeLight.xaml")]
+    public void Warning_text_reaches_normal_text_contrast_on_warning_subtle(string themeFile)
+    {
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+
+        Assert.True(
+            Contrast(ReadSolidColorBrush(xaml, "WarningTextBrush"), ReadSolidColorBrush(xaml, "WarningSubtleBrush")) >= 4.5,
+            $"{themeFile}: WarningTextBrush erreicht auf WarningSubtleBrush keine 4,5:1.");
+    }
+
+    /// <summary>
+    /// HydraulikPanelWindow.AblagerungVerdictText sitzt auf SuccessSubtleBrush/DangerSubtleBrush.
+    /// SuccessTextBrush/DangerTextBrush waeren hier NICHT durchgehend sicher — DangerTextBrush
+    /// erreicht auf DangerSubtleBrush im Hellmodus nur 3,95:1. Die normale TextBrush (die
+    /// Standard-Schriftfarbe) erreicht auf beiden Subtle-Flaechen in beiden Themes komfortabel
+    /// ueber 9:1, weil die Subtle-Flaechen wie CardBrush je Theme hell bzw. dunkel sind.
+    /// </summary>
+    [Theory]
+    [InlineData("Theme.xaml")]
+    [InlineData("ThemeLight.xaml")]
+    public void Text_brush_reaches_normal_text_contrast_on_success_and_danger_subtle(string themeFile)
+    {
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+        var text = ReadColor(xaml, "ColorTextPrimary");
+
+        Assert.True(
+            Contrast(text, ReadSolidColorBrush(xaml, "SuccessSubtleBrush")) >= 4.5,
+            $"{themeFile}: TextBrush erreicht auf SuccessSubtleBrush keine 4,5:1.");
+        Assert.True(
+            Contrast(text, ReadSolidColorBrush(xaml, "DangerSubtleBrush")) >= 4.5,
+            $"{themeFile}: TextBrush erreicht auf DangerSubtleBrush keine 4,5:1.");
+    }
+
+    /// <summary>
+    /// SanierungsmassnahmenWindow-Zaehler-Abzeichen: weder "White" (3,35:1/2,52:1 dunkel) noch
+    /// StatusBadgeTextBrush (3,97:1/3,82:1 hell — der Token ist fuer die theme-gleichen
+    /// Zustandsklassen-Abzeichen Z0-Z4 gedacht, nicht fuer DangerBrush/WarningBrush) erreichen
+    /// 4,5:1 in beiden Themes. DangerBadgeTextBrush/WarningBadgeTextBrush sind dafuer eigens
+    /// verifiziert (dunkel: nahezu schwarz, hell: weiss — je nachdem wie hell die Flaeche im
+    /// jeweiligen Theme ist).
+    /// </summary>
+    [Theory]
+    [InlineData("Theme.xaml")]
+    [InlineData("ThemeLight.xaml")]
+    public void Badge_text_reaches_normal_text_contrast_on_danger_and_warning_fill(string themeFile)
+    {
+        var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+
+        Assert.True(
+            Contrast(ReadSolidColorBrush(xaml, "DangerBadgeTextBrush"), ReadColor(xaml, "ColorDanger")) >= 4.5,
+            $"{themeFile}: DangerBadgeTextBrush erreicht auf DangerBrush keine 4,5:1.");
+        Assert.True(
+            Contrast(ReadSolidColorBrush(xaml, "WarningBadgeTextBrush"), ReadColor(xaml, "ColorWarning")) >= 4.5,
+            $"{themeFile}: WarningBadgeTextBrush erreicht auf WarningBrush keine 4,5:1.");
+    }
+
     private static string WarningTextColor(string xaml) => ReadSolidColorBrush(xaml, "WarningTextBrush");
 
     private static string DangerTextColor(string xaml) => ReadSolidColorBrush(xaml, "DangerTextBrush");

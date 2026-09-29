@@ -37,9 +37,15 @@ public static class TrainingKnowledgeBasePresentationController
         ui.SetCodesCovered(presentation.CodesCovered);
         ui.SetLastUpdateText(presentation.LastUpdateText);
         ui.SetReadinessLabel(presentation.ReadinessLabel);
-        ui.SetReadinessBrush(presentation.ReadinessBrush);
+        // Der Token wird erst HIER aufgeloest, nicht im Builder: ApplyStatus laeuft ueber OnUi(...)
+        // auf dem UI-Thread, der Builder dagegen nach ConfigureAwait(false) auf einem Threadpool-
+        // Thread. TryFindResource ausserhalb des UI-Threads waere nicht threadsicher.
+        ui.SetReadinessBrush(ResolveBrush(presentation.ReadinessBrushKey, presentation.ReadinessFallbackColor));
         ui.SetTopCodesText(presentation.TopCodesText);
     }
+
+    private static Brush ResolveBrush(string key, Color fallback)
+        => System.Windows.Application.Current?.TryFindResource(key) as Brush ?? new SolidColorBrush(fallback);
 
     public static void ApplyQuality(
         TrainingKnowledgeBaseQualityPresentation presentation,

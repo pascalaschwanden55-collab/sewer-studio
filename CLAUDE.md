@@ -801,88 +801,70 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   Inhaltsverzeichnis ist eine feste, im Programm eingebaute Liste und kann nie leer sein — ebenfalls
   weiterhin ausgenommen (kein eigener Waechter noetig, da keine bare-construction-Falle).
 - **Aufgabe 12 — Feste Farben und Schriften auf Tokens.** Fachfarben (Zustandsklassen,
-  Nutzungsarten, SVG-Grafik, PDF/Excel-Berichte) sind unveraendert und bleiben von dieser Regel
-  ausgenommen — nur UI-Chrome ohne eigene Fachregel wandert auf Theme-Tokens.
-  **HydraulikPanelWindow** zeichnete den Rohrquerschnitt bisher mit 17 statischen, im
-  Klassenkonstruktor eingefrorenen SolidColorBrush-/FontFamily-Feldern (nie themefaehig) — jetzt
-  loest jede Zeichnung ihre Farben ueber `SetResourceReference` (persistente Elemente:
-  Indikatorpunkte, Ablagerung-Rahmen/Badge, Ergebnistexte) bzw. eine `ResolveColor`-Hilfsmethode
-  (fuer selbst gebaute Farbverlaeufe, die `SetResourceReference` nicht unterstuetzen) frisch auf:
-  Gruen/Rot/Gelb -> `SuccessBrush`/`DangerBrush`/`WarningBrush` (Text-Varianten
-  `SuccessTextBrush`/`DangerTextBrush` fuer Ergebniswerte), die Rohrwand-/Wasserverlauf-Farben ->
-  `BorderLightBrush`/`BorderBrush`/`AccentBrush`/`AccentHoverBrush`, das Roehreninnere ->
-  `CardBrush` (blendet mit dem Fensterhintergrund statt eines festen Hellgrau).
-  **SanierungsmassnahmenWindow.xaml** hatte fuenf Hex-Ersatzfarben: die Severity-Zeilenfarben
-  `#33FF4444`/`#33FF8C00` -> `DangerSubtleBrush`/`WarningSubtleBrush`, `#FF8C00` (Warnung-Text) ->
-  `WarningTextBrush`, die Uebertrag-Markierungszeile `#D7F5DD`/`#0F3D1F` -> `MarkierungGruenBrush`
-  (Hintergrund, passt sich dem Theme an) + `TextBrush` (Vordergrund, kein eigener Text-Ton noetig —
-  Vorbild: die bestehenden `Markierung*Brush`-Nutzungen setzen nie eine eigene Vordergrundfarbe
-  daneben); dazu zwei `Foreground="White"`-Badges -> `StatusBadgeTextBrush` (derselbe
-  Kontrast-Text-Token, den `TrainingStudioWindow.AddOverlayBadge` schon fuer Text auf
-  `DangerBrush`-Flaechen verwendet). Im zugehoerigen .xaml.cs liefen zwei
-  Aufmerksamkeits-Blitze (Randlinie/Zeile beim Springen zu einer Warnung) mit festem Cyan
-  (`#00DDFF`) bzw. Blau (`#2563EB` + Alpha) unabhaengig vom Theme; `ResolveAccentBrush(alpha)`
-  liest jetzt `AccentBrush` und setzt nur noch die Deckkraft je Aufrufer. **`CodingSessionViewModel`**
-  hatte zehn direkt konstruierte SolidColorBrush-Werte fuer Konfidenz-/Zonen-/Statusfarben
-  (`GetConfidenceBrush`/`GetZoneBrush`/`GetStatusBrush`, statische Methoden ohne WPF-Elementkontext)
-  — `ResolveThemeBrush(key, fallback)` liest `System.Windows.Application.Current?.TryFindResource(key)`,
-  mit dem alten Hex-Wert als Rueckfall fuer den Fall ohne laufende Anwendung (Unit-Test).
-  **`TrainingCenterViewModel`**s anfaengliche `KbReadinessBrush` (fest Grau) und
-  **`TrainingKnowledgeBaseStatusPresentationBuilder`**s vier Bereitschaftsfarben (`Rgb(...)`-Aufrufe
-  ohne Themebezug) folgen demselben Muster (`ResolveBrush`/`TryFindResource("MutedBrush")`); der
-  bestehende Test `TrainingKnowledgeBaseStatusPresentationBuilderTests` bleibt gruen, weil ohne
-  laufende Application (Testprozess) derselbe Rueckfallwert wie vorher greift. **`VsaCodeExplorer`**:
-  Hover-/Press-Farben der Kachel-Knoepfe (`#F0F4FF`/`#E0EAFF`, fest hellblau, im Dunkelmodus falsch)
-  -> `AccentSubtleBrush`/`SelectionBackgroundBrush` ueber denselben `findResource`-Weg, den
-  `CreateButtonStyle` schon fuer `CardBrush`/`TextBrush`/`BorderBrush` nutzt. Die Badge-Ersatzfarben
-  des Presenters (`"#2563EB"`/`"#16A34A"`, wenn `tile.BadgeColor`/die VSA-Gruppenfarbe fehlt) sind
-  jetzt Token-Namen (`"AccentBrush"`/`"SuccessBrush"`) statt Hex: **`VsaCodeExplorerColumnTileBadge.ColorHex`
-  traegt entweder eine echte Fachfarbe (Klartext-Hex-Vorgabe, z. B. eine VSA-Gruppenfarbe) oder,
-  ohne Fachwert, einen Theme-Token-Namen** — der Presenter bleibt dadurch WPF-frei testbar, der
-  Renderer (`ResolveBadgeColor`) probiert zuerst #-Hex, sonst `TryFindResource`. Der zweite
-  `VsaCodeExplorerWindow`-eigene ConsolasFont-Fall (Breadcrumb) ist auf denselben
-  einmalig-in-`CacheBrushes()`-aufgeloesten Cache umgestellt wie die anderen elf Theme-Werte des
-  Fensters (`_fontMono = (FontFamily)FindResource("FontMono")`) — bewusst NICHT
-  `SetResourceReference`, weil das ganze Fenster diesem Cache-einmal-Muster folgt und ein zweites
-  Muster daneben keinen Mehrwert haette.
-  FontFamily="Consolas"/"Consolas, Cascadia Mono"/"Consolas, Cascadia Mono, Segoe UI" (alle
-  Schreibweisen, 89 Fundstellen in 21 Dateien inkl. der vier Video-Fenster PlayerWindow,
-  PlayerWindow.Resources.xaml, PlayerCodingSidePanel, PipeGraphTimeline — die Farb-Ausnahme der
-  sechs Video-Dateien gilt NICHT fuer die Schriftart) -> `{DynamicResource FontMono}` (XAML) bzw.
-  `SetResourceReference(TextBlock.FontFamilyProperty, "FontMono")` (C#, `DamageMarkerController`/
-  `PipeGraphTimeline.xaml.cs`, beide POCO-nahe Codepfade ohne eigenen FindResource-Cache). Die drei
-  etablierten Rueckfallausdruecke `TryFindResource("FontMono") ?? new FontFamily("Consolas")`
-  (`DataGridStandardTextColumnFactory`/`DataGridWrappingTextColumnFactory`) und
-  `_fontMono ?? new FontFamily("Consolas")` (`VsaCodeExplorerWindow`) bleiben unveraendert bestehen
-  — sie greifen nur, wenn keine Application laeuft.
-  86x FontFamily=FontIcon + Text="&#xNNNN;"/Text="{Binding ...}" in TextBlocks -> `ui:FluentIcon
-  Glyph="..."` (Video-Fenster PlayerWindow/PlayerCodingSidePanel bewusst ausgenommen, wie in der
-  Aufgabenbeschreibung vorgesehen — `FluentIcon` ist eine TextBlock-Unterklasse, die
-  FontFamily/FontSize/Ausrichtung selbst setzt). Drei Faelle mit `<TextBlock.Style>`-Trigger
-  (bindungsgetriebene Pfeil-/Trendfarbe in VideoAnalysisPipelineWindow/TrainingCenterWindow)
-  brauchten die Property-Element-Syntax `<ui:FluentIcon.Style>` statt `<TextBlock.Style>`, weil ein
-  Style mit TargetType="TextBlock" gueltig auf einer FluentIcon-Instanz sitzt (Unterklasse), das
-  Element selbst aber ui:FluentIcon heissen muss. **Drei XAML-Dateien ohne
-  xmlns:ui="clr-namespace:AuswertungPro.Next.UI" bekamen die Zeile ergaenzt**
-  (EmptyStateControl.xaml, SystemMonitorPanel.xaml, ImportPage.xaml) — vorher stand dort noch keine
-  ui:FluentIcon-Nutzung. **Sieben Icon-Knoepfe, die vor der Umstellung fuer den bestehenden
-  Waechter DesignAuditAccessibilityTests.Icon_Knoepfe_haben_einen_vorlesbaren_Namen_und_einen_Tooltip
-  unsichtbar waren** (der Waechter sucht `<Button><ui:FluentIcon/></Button>` woertlich und sah reine
-  TextBlock-Icons vorher gar nicht), bekamen dabei sichtbar einen fehlenden
-  AutomationProperties.Name nachgetragen — die betroffenen Knoepfe (PhotoGalleryPanel/
-  SystemMonitorPanel „in eigenem Fenster oeffnen", je 1x „Suche zuruecksetzen" in DataPage (2x) und
-  SchaechtePage, OverviewPage „Projektliste ein-/ausklappen"/„Suche loeschen") hatten schon einen
-  ToolTip, nur keinen vorlesbaren Namen. **Waechter:**
-  `DesignAuditOptikTokenTests.Kein_Consolas_ausserhalb_des_FontMono_Tokens` prueft das ganze
-  UI-Projekt (XAML+C#) — erlaubt ist "Consolas" nur auf der x:Key="FontMono"-Zeile in
-  Theme/Controls.xaml und den drei oben genannten Rueckfallausdruecken; sieben weitere Tests
-  derselben Datei sind Regressionswaechter je bereinigter Datei (exakte alte Hex-/Konstrukt-Werte
-  duerfen nicht zurueckkehren). Der bestehende Waechter
-  `DesignAuditFeinschliffTests.Feste_Farben_gibt_es_nur_in_Video_Fenstern` ist um ein zweites
-  Regex-Muster ergaenzt (Property="(Background|Foreground|BorderBrush|Fill|Stroke)" Value="#hex" in
-  einem Setter), weil genau diese Schreibweise die fuenf Hex-Werte in
-  SanierungsmassnahmenWindow.xaml vor dem alten Muster (nur Attribut="#hex") verborgen hatte — ein
-  Setter schreibt die Farbe als Wert von Value, nicht als Attributname.
+  Nutzungsarten, SVG-Grafik, PDF/Excel-Berichte) bleiben unveraendert von dieser Regel ausgenommen.
+  Betroffen: `HydraulikPanelWindow` (17 im Konstruktor gefrorene Pinsel/Font-Felder, nie
+  themefaehig — jetzt `SetResourceReference` je Zeichnung, selbst gebaute Farbverlaeufe ueber
+  `ResolveColor`), `SanierungsmassnahmenWindow.xaml`/`.xaml.cs` (5 Hex + 2 feste Blitzfarben),
+  `CodingSessionViewModel` (10 direkt konstruierte Pinsel), `TrainingCenterViewModel`/
+  `TrainingKnowledgeBaseStatusPresentationBuilder` (feste Bereitschaftsfarben) und
+  `VsaCodeExplorer` (Hover/Press/Badge-Ersatzfarben). Muster durchgehend: ein Theme-Token-Name
+  wird ueber `TryFindResource`/`SetResourceReference` aufgeloest, der alte Hex-Wert bleibt nur
+  Rueckfall fuer den Fall ohne laufende `Application` (Unit-Test).
+  Alle **89 Fundstellen** von `FontFamily="Consolas"` (alle Schreibweisen, in 21 Dateien inkl. der
+  vier Video-Fenster PlayerWindow/PlayerWindow.Resources/PlayerCodingSidePanel/PipeGraphTimeline —
+  die Farb-Ausnahme der sechs Video-Dateien gilt NICHT fuer die Schriftart) zeigen jetzt auf
+  `{DynamicResource FontMono}`/`SetResourceReference(..., "FontMono")`. Die drei etablierten
+  Rueckfallausdruecke (`DataGridStandardTextColumnFactory`/`DataGridWrappingTextColumnFactory`/
+  `VsaCodeExplorerWindow`: `TryFindResource("FontMono") ?? new FontFamily("Consolas")`) bleiben.
+  Alle **89 Fundstellen** `FontFamily=FontIcon`+`Text="..."` in `TextBlock` (Video-Fenster
+  PlayerWindow/PlayerCodingSidePanel ausgenommen) sind `ui:FluentIcon Glyph="..."` (`FluentIcon`
+  ist eine `TextBlock`-Unterklasse). Drei Faelle mit `<TextBlock.Style>`-Trigger brauchten
+  `<ui:FluentIcon.Style>` statt `<TextBlock.Style>` (ein `Style TargetType="TextBlock"` gilt auch
+  auf der Unterklasse, nur das Element selbst muss `ui:FluentIcon` heissen). Drei XAML-Dateien ohne
+  `xmlns:ui` bekamen die Zeile ergaenzt (`EmptyStateControl`, `SystemMonitorPanel`, `ImportPage`).
+  **Sieben Icon-Knoepfe, die dem bestehenden Waechter `Icon_Knoepfe_haben_einen_vorlesbaren_Namen_
+  und_einen_Tooltip` vor der Umstellung als reine `TextBlock`-Icons unsichtbar waren**, bekamen
+  dabei einen fehlenden `AutomationProperties.Name` nachgetragen (hatten schon einen `ToolTip`).
+  **Waechter:** `DesignAuditOptikTokenTests` (kein "Consolas" ausserhalb `FontMono`-Token/
+  Rueckfallausdruecke, plus Regressionswaechter je bereinigter Datei) und
+  `DesignAuditFeinschliffTests.Feste_Farben_gibt_es_nur_in_Video_Fenstern` (zweites Regex-Muster
+  fuer `<Setter Property="..." Value="#hex">` — diese Schreibweise verbarg die fuenf Hex-Werte in
+  SanierungsmassnahmenWindow.xaml vor dem alten Muster, das nur `Attribut="#hex"` sah).
+  **Fix-Runde 1 (Review 29.09.2026) — fuenf Nachbesserungen:**
+  (1) `TrainingStudioWindow.xaml`s `QualityWarning`-Anzeige stand auf `WarningBrush` mit
+  `Foreground="White"` (2,52:1 im Dunkelmodus) — jetzt `WarningSubtleBrush`-Hintergrund +
+  `WarningTextBrush`-Text (4,51/4,53:1).
+  (2) Drei Text-auf-Fuellfarbe-Kontrastregressionen behoben: `GetConfidenceBrush` (nur fuer
+  Text verwendet) nutzt `SuccessTextBrush`/`WarningTextBrush`/`DangerTextBrush` statt der
+  Fuellfarben; `HydraulikPanelWindow.AuslastungRun` ebenso; `AblagerungVerdictText` (sitzt auf
+  `SuccessSubtleBrush`/`DangerSubtleBrush`) nutzt bewusst die normale `TextBrush` statt
+  `SuccessTextBrush`/`DangerTextBrush` — Letzteres erreicht auf `DangerSubtleBrush` im Hellmodus
+  nur 3,95:1, `TextBrush` dagegen 9,8-14,6:1 in beiden Themes (Subtle-Flaechen sind wie
+  `CardBrush` je Theme hell bzw. dunkel).
+  (3) `SanierungsmassnahmenWindow`s Fehler-/Warnungs-Zaehlerabzeichen: weder "White" noch
+  `StatusBadgeTextBrush` erreichen auf `DangerBrush`/`WarningBrush` 4,5:1 in beiden Themes
+  (`StatusBadgeTextBrush` ist fuer die theme-gleichen Zustandsklassen-Abzeichen Z0-Z4 gedacht,
+  nicht fuer theme-abhaengige Fuellfarben) — neue Tokens `DangerBadgeTextBrush`/
+  `WarningBadgeTextBrush` (dunkel nahezu schwarz, hell weiss, siehe Theme.xaml-Kommentar); dazu
+  war der Danger-Abzeichenhintergrund noch `StaticResource` statt `DynamicResource`.
+  (4) `HydraulikPanelWindow`s zwei selbst gebauten Farbverlaeufe sind Momentaufnahmen aus
+  `ResolveColor` — das Fenster haengt sich jetzt an `ThemeManager.ThemeChanged` (neu zeichnen)
+  und meldet sich beim `Closed` wieder ab, wie `RohrquerschnittControl` es fuer denselben Fall tut.
+  (5) `TrainingKnowledgeBaseStatusPresentationBuilder.Build` lief nach einem
+  `ConfigureAwait(false)` auf einem Threadpool-Thread und rief dort `Application.Current.
+  TryFindResource` auf — nicht threadsicher. `Build` liefert seither nur noch `ReadinessBrushKey`
+  (Token-Name) + `ReadinessFallbackColor`; aufgeloest wird erst in
+  `TrainingKnowledgeBasePresentationController.ApplyStatus`, das ueber `OnUi(...)` auf dem
+  UI-Thread laeuft.
+  Dazu: `VideoAnalysisPipelineWindow`s `StartButton` hatte weisses Icon+Text, aber das
+  `ui:FluentIcon`-Glyph im StackPanel-Inhalt verlor die Vererbung an den impliziten
+  `TextBlock`-Stil (dieselbe B7-Falle wie bei den vier grossen Knopfvorlagen) — die
+  `ContentPresenter.Resources`-Weiterleitung ist ergaenzt. `VsaCodeExplorerColumnTileBadge.ColorHex`
+  traegt entweder eine echte Fachfarbe (Klartext-Hex) oder, ohne Fachwert, einen
+  Theme-Token-Namen (Doku am Record); `ResolveBadgeColor` hat jetzt einen eigenen
+  Verhaltenstest (Hex bleibt Hex, Token-Name loest gegen das Theme auf).
+  Vier neue Testmethoden in `DesignAuditContrastTests` (je beide Themes) decken die sechs neu
+  eingefuehrten Text-/Hintergrund-Paarungen ab.
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

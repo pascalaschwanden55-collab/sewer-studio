@@ -278,9 +278,9 @@
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                                     <!-- Error badge -->
                                     <Border CornerRadius="{DynamicResource RadiusL}" Padding="6,2" Margin="0,0,4,0"
-                                            Background="{StaticResource DangerBrush}"
+                                            Background="{DynamicResource DangerBrush}"
                                             Visibility="{Binding ErrorCount, Converter={StaticResource IntToVis}}">
-                                        <TextBlock Foreground="{DynamicResource StatusBadgeTextBrush}" FontSize="{DynamicResource TextXS}" FontWeight="Bold">
+                                        <TextBlock Foreground="{DynamicResource DangerBadgeTextBrush}" FontSize="{DynamicResource TextXS}" FontWeight="Bold">
                                             <Run Text="{Binding ErrorCount, Mode=OneWay}"/>
                                             <Run Text="Fehler"/>
                                         </TextBlock>
@@ -289,7 +289,7 @@
                                     <Border CornerRadius="{DynamicResource RadiusL}" Padding="6,2"
                                             Background="{DynamicResource WarningBrush}"
                                             Visibility="{Binding WarningCount, Converter={StaticResource IntToVis}}">
-                                        <TextBlock Foreground="{DynamicResource StatusBadgeTextBrush}" FontSize="{DynamicResource TextXS}" FontWeight="Bold">
+                                        <TextBlock Foreground="{DynamicResource WarningBadgeTextBrush}" FontSize="{DynamicResource TextXS}" FontWeight="Bold">
                                             <Run Text="{Binding WarningCount, Mode=OneWay}"/>
                                             <Run Text="Warnungen"/>
                                         </TextBlock>

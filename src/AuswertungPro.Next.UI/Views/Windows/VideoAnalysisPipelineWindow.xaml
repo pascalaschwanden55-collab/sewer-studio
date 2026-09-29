@@ -371,7 +371,17 @@
                                                     Padding="{TemplateBinding Padding}"
                                                     Background="{DynamicResource AccentBrush}">
                                                 <ContentPresenter HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center"/>
+                                                                  VerticalAlignment="Center">
+                                                    <!-- Das Glyph im StackPanel-Inhalt ist ein ui:FluentIcon (TextBlock-Unterklasse); der
+                                                         implizite TextBlock-Stil des Theme setzt Foreground selbst und schlaegt damit die
+                                                         Vererbung vom Knopf (dieselbe Falle wie bei den vier grossen Knopfvorlagen, siehe
+                                                         Nova-Fixwelle B7) — Symbol und "Start"-Text liefen dadurch in zwei Farben auseinander. -->
+                                                    <ContentPresenter.Resources>
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                            <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                                        </Style>
+                                                    </ContentPresenter.Resources>
+                                                </ContentPresenter>
                                             </Border>
                                         </ControlTemplate>
                                     </Button.Template>

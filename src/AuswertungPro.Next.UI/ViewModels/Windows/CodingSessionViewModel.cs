@@ -585,11 +585,15 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     public static bool CanActOnDefect(CodingEvent? ev)
         => DefectStatusPolicy.CanAct(ev);
 
+    // Nur fuer Text verwendet (Foreground der Konfidenz-/Zonen-Prozentanzeige, siehe
+    // CodingEventListItemControls/CodingInlineDefectDetailControls) — deshalb die *TextBrush-
+    // Varianten statt der Fuellfarben: SuccessBrush/WarningBrush/DangerBrush sind auf CardBrush
+    // teils zu kontrastarm (Fix-Runde 1, Review 29.09.2026).
     public static Brush GetConfidenceBrush(double confidence) => confidence switch
     {
-        >= 0.85 => ResolveThemeBrush("SuccessBrush", Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen
-        >= 0.60 => ResolveThemeBrush("WarningBrush", Color.FromRgb(0xF5, 0x9E, 0x0B)), // Gelb
-        _       => ResolveThemeBrush("DangerBrush", Color.FromRgb(0xEF, 0x44, 0x44))   // Rot
+        >= 0.85 => ResolveThemeBrush("SuccessTextBrush", Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen
+        >= 0.60 => ResolveThemeBrush("WarningTextBrush", Color.FromRgb(0xF5, 0x9E, 0x0B)), // Gelb
+        _       => ResolveThemeBrush("DangerTextBrush", Color.FromRgb(0xEF, 0x44, 0x44))   // Rot
     };
 
     public static Brush GetZoneBrush(double confidence) => GetConfidenceBrush(confidence);

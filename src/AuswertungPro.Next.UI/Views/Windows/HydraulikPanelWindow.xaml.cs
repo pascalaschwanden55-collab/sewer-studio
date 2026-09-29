@@ -30,7 +30,21 @@ public partial class HydraulikPanelWindow : Window
         DataContext = vm;
         vm.PropertyChanged += Vm_PropertyChanged;
         Loaded += (_, _) => UpdateAll(vm);
-        Closed += (_, _) => vm.PropertyChanged -= Vm_PropertyChanged;
+
+        // Die im Code gebauten Farbverlaeufe der Rohrquerschnitt-Zeichnung (Rohrwand-Schimmer,
+        // Wasserfuellung) sind Momentaufnahmen aus ResolveColor — SetResourceReference greift bei
+        // einem LinearGradientBrush nicht. Ein Themewechsel waehrend das Fenster offen ist, wuerde
+        // sie sonst nicht nachziehen. Neu zeichnen wie RohrquerschnittControl es fuer denselben
+        // Fall schon tut; statisches Event -> beim Schliessen wieder abbestellen (Fix-Runde 1,
+        // Review 29.09.2026).
+        void OnThemeChanged(string _) => Dispatcher.Invoke(() => UpdateAll(vm));
+        ThemeManager.ThemeChanged += OnThemeChanged;
+
+        Closed += (_, _) =>
+        {
+            vm.PropertyChanged -= Vm_PropertyChanged;
+            ThemeManager.ThemeChanged -= OnThemeChanged;
+        };
     }
 
     private void Vm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -64,15 +78,20 @@ public partial class HydraulikPanelWindow : Window
         AblagerungBorder.SetResourceReference(Border.BorderBrushProperty, vm.AblagerungOk ? "SuccessBrush" : "DangerBrush");
 
         AblagerungVerdict.SetResourceReference(Border.BackgroundProperty, vm.AblagerungOk ? "SuccessSubtleBrush" : "DangerSubtleBrush");
-        AblagerungVerdictText.SetResourceReference(TextBlock.ForegroundProperty, vm.AblagerungOk ? "SuccessBrush" : "DangerBrush");
+        // Nicht SuccessTextBrush/DangerTextBrush: DangerTextBrush erreicht auf DangerSubtleBrush im
+        // Hellmodus nur 3,95:1 (unter 4,5:1) — SuccessTextBrush waere zwar knapp gueltig, aber
+        // unterschiedliche Tokens fuer Erfolg/Fehler auf derselben Subtle-Flaeche waeren
+        // inkonsistent. TextBrush erreicht auf beiden Subtle-Flaechen in beiden Themes 9,8-14,6:1
+        // (Fix-Runde 1, Review 29.09.2026).
+        AblagerungVerdictText.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
 
         // Conditional result value colors
         VTeilBlock.SetResourceReference(TextBlock.ForegroundProperty, vm.VelocityOk ? "SuccessTextBrush" : "DangerTextBrush");
         TauBlock.SetResourceReference(TextBlock.ForegroundProperty, vm.ShearOk ? "SuccessTextBrush" : "DangerTextBrush");
         FrBlock.SetResourceReference(TextBlock.ForegroundProperty, vm.FroudeOk ? "TextBrush" : "DangerTextBrush");
 
-        // Auslastung color
-        AuslastungRun.SetResourceReference(TextElement.ForegroundProperty, vm.AuslastungPercent > 80 ? "DangerBrush" : "SuccessBrush");
+        // Auslastung color — *TextBrush statt der Fuellfarben: derselbe Grund wie bei GetConfidenceBrush.
+        AuslastungRun.SetResourceReference(TextElement.ForegroundProperty, vm.AuslastungPercent > 80 ? "DangerTextBrush" : "SuccessTextBrush");
     }
 
     private void UpdateConditionalColors(HydraulikPanelViewModel vm)

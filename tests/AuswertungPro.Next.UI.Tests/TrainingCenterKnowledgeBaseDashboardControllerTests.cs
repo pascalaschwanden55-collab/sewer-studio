@@ -11,10 +11,10 @@ public sealed class TrainingCenterKnowledgeBaseDashboardControllerTests
     {
         var state = new DashboardState();
         var controller = CreateController(state);
-        var brush = new SolidColorBrush(Colors.LimeGreen);
+        var fallback = Colors.LimeGreen;
 
         controller.ApplyStatus(new TrainingKnowledgeBaseStatusPresentation(
-            120, 2, 7, 118, 34, "heute", "bereit", brush, "BAB: 50"));
+            120, 2, 7, 118, 34, "heute", "bereit", "SuccessBrush", fallback, "BAB: 50"));
 
         Assert.Equal(120, state.SampleCount);
         Assert.Equal(2, state.ErrorCount);
@@ -23,7 +23,9 @@ public sealed class TrainingCenterKnowledgeBaseDashboardControllerTests
         Assert.Equal(34, state.CodesCovered);
         Assert.Equal("heute", state.LastUpdate);
         Assert.Equal("bereit", state.ReadinessLabel);
-        Assert.Same(brush, state.ReadinessBrush);
+        // Kein Application.Current im Testprozess -> Rueckfallwert.
+        var resolved = Assert.IsType<SolidColorBrush>(state.ReadinessBrush);
+        Assert.Equal(fallback, resolved.Color);
         Assert.Equal("BAB: 50", state.TopCodesText);
     }
 

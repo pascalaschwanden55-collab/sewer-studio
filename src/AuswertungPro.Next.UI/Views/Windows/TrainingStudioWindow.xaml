@@ -402,10 +402,10 @@
                                     Command="{Binding FotoMitKiPruefenCommand}"
                                     ToolTip="Prüft das ganze Foto und zeigt allgemeine VSA-Vorschläge. Deine Handdaten werden nicht verändert oder gespeichert."
                                     HorizontalAlignment="Left" Margin="0,0,0,6"/>
-                            <Border Background="{DynamicResource WarningBrush}" CornerRadius="{DynamicResource RadiusS}" Padding="8,4"
+                            <Border Background="{DynamicResource WarningSubtleBrush}" CornerRadius="{DynamicResource RadiusS}" Padding="8,4"
                                     Margin="0,0,0,6"
                                     Visibility="{Binding ShowQualityWarning, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="{Binding QualityWarning}" Foreground="White" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding QualityWarning}" Foreground="{DynamicResource WarningTextBrush}" TextWrapping="Wrap"/>
                             </Border>
                             <ItemsControl ItemsSource="{Binding SuggestionCandidates}">
                                 <ItemsControl.ItemTemplate>

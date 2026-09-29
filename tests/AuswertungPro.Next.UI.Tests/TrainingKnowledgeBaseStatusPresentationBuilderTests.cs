@@ -6,13 +6,14 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class TrainingKnowledgeBaseStatusPresentationBuilderTests
 {
     [Theory]
-    [InlineData(100, "KI-Modell einsatzbereit", 0x4A, 0xDE, 0x80)]
-    [InlineData(25, "Lernbasis grundlegend", 0xFA, 0xCC, 0x15)]
-    [InlineData(1, "Lernbasis unzureichend", 0xF8, 0x71, 0x71)]
-    [InlineData(0, "Keine Trainingsdaten", 0x94, 0xA3, 0xB8)]
-    public void Build_keeps_existing_readiness_labels_and_colors(
+    [InlineData(100, "KI-Modell einsatzbereit", "SuccessBrush", 0x4A, 0xDE, 0x80)]
+    [InlineData(25, "Lernbasis grundlegend", "WarningBrush", 0xFA, 0xCC, 0x15)]
+    [InlineData(1, "Lernbasis unzureichend", "DangerBrush", 0xF8, 0x71, 0x71)]
+    [InlineData(0, "Keine Trainingsdaten", "MutedBrush", 0x94, 0xA3, 0xB8)]
+    public void Build_keeps_existing_readiness_labels_and_brush_keys(
         int sampleCount,
         string expectedLabel,
+        string expectedBrushKey,
         byte expectedRed,
         byte expectedGreen,
         byte expectedBlue)
@@ -21,10 +22,15 @@ public sealed class TrainingKnowledgeBaseStatusPresentationBuilderTests
 
         var result = TrainingKnowledgeBaseStatusPresentationBuilder.Build(status);
 
+        // Build() liest keinen Theme-Token mehr (thread-sicher, laeuft nach ConfigureAwait(false)
+        // ggf. auf einem Threadpool-Thread) — es liefert nur noch den Token-Namen und den
+        // Rueckfallwert. Die eigentliche Aufloesung passiert erst in
+        // TrainingKnowledgeBasePresentationController.ApplyStatus auf dem UI-Thread.
         Assert.Equal(expectedLabel, result.ReadinessLabel);
-        Assert.Equal(expectedRed, result.ReadinessBrush.Color.R);
-        Assert.Equal(expectedGreen, result.ReadinessBrush.Color.G);
-        Assert.Equal(expectedBlue, result.ReadinessBrush.Color.B);
+        Assert.Equal(expectedBrushKey, result.ReadinessBrushKey);
+        Assert.Equal(expectedRed, result.ReadinessFallbackColor.R);
+        Assert.Equal(expectedGreen, result.ReadinessFallbackColor.G);
+        Assert.Equal(expectedBlue, result.ReadinessFallbackColor.B);
     }
 
     [Fact]

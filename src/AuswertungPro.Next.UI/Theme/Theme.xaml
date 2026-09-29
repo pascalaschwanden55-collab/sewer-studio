@@ -90,6 +90,14 @@
     <SolidColorBrush x:Key="SuccessTextBrush" Color="#FF56D364"/>
     <SolidColorBrush x:Key="DangerTextBrush" Color="#FFFF7B72"/>
     <SolidColorBrush x:Key="WarningTextBrush" Color="#FFD29922"/>
+    <!-- Schrift DIREKT AUF der gesaettigten DangerBrush/WarningBrush-Flaeche (z. B. ein Zaehler-
+         Abzeichen), nicht zu verwechseln mit StatusBadgeTextBrush (nur fuer die theme-gleichen
+         Zustandsklassen-Abzeichen Z0-Z4 gedacht). Weder StatusBadgeTextBrush noch "White" erreichen
+         in beiden Themes 4,5:1 auf DangerBrush/WarningBrush (Review 29.09.2026: 3,97/3,82 bzw.
+         3,35/2,52): dunkel nahezu schwarz, hell weiss, je nachdem wie hell die Flaeche im
+         jeweiligen Theme ist. -->
+    <SolidColorBrush x:Key="DangerBadgeTextBrush" Color="#FF0A0F1A"/>
+    <SolidColorBrush x:Key="WarningBadgeTextBrush" Color="#FF0A0F1A"/>
     <SolidColorBrush x:Key="InfoTextBrush" Color="#FF79C0FF"/>
     <SolidColorBrush x:Key="KiBrush" Color="{StaticResource ColorKi}"/>
     <SolidColorBrush x:Key="KiSubtleBrush" Color="{StaticResource ColorKiSubtle}"/>
