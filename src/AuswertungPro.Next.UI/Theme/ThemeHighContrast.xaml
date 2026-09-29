@@ -1,0 +1,62 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Optikanalyse 28.09.2026, Aufgabe 13 (Windows-Integration): Hochkontrast-Ueberlagerung.
+
+        Ist SystemParameters.HighContrast wahr, haengt ThemeManager DIESES Woerterbuch zusaetzlich
+        VOR das normale Hell-/Dunkel-Theme (Theme.xaml/ThemeLight.xaml bleiben darunter geladen).
+        Es ersetzt NUR die hier genannten Kern-Tokens (Text, Hintergrund, Karte, Kopf, Rand,
+        Akzent, Auswahl, Erfolgs-/Warn-/Fehlertext) durch SystemColors - alles, was hier NICHT
+        aufgefuehrt ist, faellt automatisch auf den darunterliegenden Wert des normalen Themes
+        zurueck (WPF-Ressourcensuche geht die MergedDictionaries-Liste durch, bis ein Schluessel
+        gefunden wird). So kann kein fehlender Schluessel je einen Absturz ausloesen, und diese
+        Liste muss NICHT jeden der rund 150 Tokens des normalen Themes duplizieren.
+
+        Color="{DynamicResource {x:Static SystemColors.XyzColorKey}}" statt x:Static direkt auf
+        die Brush: WPF haelt SystemColors-Farben selbst dynamisch aktuell und tauscht sie beim
+        naechsten Systemfarbwechsel aus - ein einmal mit x:Static eingefrorener Wert wuerde das
+        NICHT mehr mitbekommen.
+
+        Erfolgs-/Warn-/Fehlertext bekommen bewusst KEINE eigene Farbe (kein rot/gelb/gruen aus
+        SystemColors - die gibt es dort nicht, und ein geratener Schluessel koennte zufaellig mit
+        Highlight/Accent kollidieren und dadurch irrefuehrend wirken). Sie fallen auf denselben
+        Fenstertext wie der Rest; die Unterscheidung traegt in Hochkontrast bewusst der Text
+        selbst (Beschriftung/Symbol), nicht die Farbe allein - das deckt sich mit der Windows-
+        eigenen Hochkontrast-Praxis, sich nie allein auf Farbe zu verlassen.
+    -->
+
+    <!-- Text -->
+    <SolidColorBrush x:Key="TextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+    <SolidColorBrush x:Key="HeaderTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
+    <SolidColorBrush x:Key="FaintBrush" Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
+
+    <!-- Hintergrund / Karte / Kopf -->
+    <SolidColorBrush x:Key="BgLightBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="CardBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="CardGlassBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="HeaderBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+
+    <!-- Rand -->
+    <SolidColorBrush x:Key="BorderBrush" Color="{DynamicResource {x:Static SystemColors.WindowFrameColorKey}}"/>
+    <SolidColorBrush x:Key="BorderLightBrush" Color="{DynamicResource {x:Static SystemColors.ActiveBorderColorKey}}"/>
+    <SolidColorBrush x:Key="InputBorderBrush" Color="{DynamicResource {x:Static SystemColors.WindowFrameColorKey}}"/>
+    <SolidColorBrush x:Key="GlassBorderBrush" Color="{DynamicResource {x:Static SystemColors.WindowFrameColorKey}}"/>
+
+    <!-- Akzent -->
+    <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="AccentSubtleBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="AccentTextBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
+
+    <!-- Auswahl -->
+    <SolidColorBrush x:Key="SelectionBackgroundBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="SelectionTextBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
+    <SolidColorBrush x:Key="SelectionBorderBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+
+    <!-- Erfolg/Warnung/Fehler (Text) -->
+    <SolidColorBrush x:Key="SuccessTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+    <SolidColorBrush x:Key="WarningTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+    <SolidColorBrush x:Key="DangerTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+</ResourceDictionary>

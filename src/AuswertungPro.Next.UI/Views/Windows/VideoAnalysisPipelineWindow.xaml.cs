@@ -25,23 +25,35 @@ public partial class VideoAnalysisPipelineWindow : Window
     private PipelinePipeRadarMode _overlayMode = PipelinePipeRadarMode.Detail;
     private LiveFrameWindow? _liveFrameWindow;
 
+    /// <summary>
+    /// Aufgabe 13 (Windows-Integration, 28.09.2026): spiegelt den Fortschritt der Videoanalyse
+    /// am Programmsymbol in der Taskleiste - sichtbar auch, wenn dieses Fenster von anderen
+    /// verdeckt oder minimiert ist. Optional (null bei Aufrufern ohne ServiceProvider).
+    /// </summary>
+    private readonly ITaskbarFortschritt? _taskbar;
+
     private PipelineResult? _result;
     public PipelineResult? Result => _result;
 
     public VideoAnalysisPipelineViewModel Vm { get; }
 
-    public VideoAnalysisPipelineWindow(PipelineRequest request, IVideoAnalysisPipelineService pipeline)
+    public VideoAnalysisPipelineWindow(
+        PipelineRequest request,
+        IVideoAnalysisPipelineService pipeline,
+        ITaskbarFortschritt? taskbar = null)
     {
         InitializeComponent();
         WindowStateManager.Track(this);
 
         _request = request;
         _pipeline = pipeline;
+        _taskbar = taskbar;
 
         Vm = new VideoAnalysisPipelineViewModel();
         DataContext = Vm;
 
         Vm.Detections.CollectionChanged += OnDetectionsChanged;
+        Vm.PropertyChanged += OnVmPropertyChangedForTaskbar;
         PipeRadarCanvas.SizeChanged += (_, _) => RenderPipeRadar();
         LiveFrameOverlayCanvas.SizeChanged += (_, _) => RenderLiveFrameOverlay();
 
@@ -50,8 +62,36 @@ public partial class VideoAnalysisPipelineWindow : Window
             _cts.Cancel();
             _cts.Dispose();
             Vm.Detections.CollectionChanged -= OnDetectionsChanged;
+            Vm.PropertyChanged -= OnVmPropertyChangedForTaskbar;
+            _taskbar?.Beenden();
             CloseLiveFrameWindow();
         };
+    }
+
+    private void OnVmPropertyChangedForTaskbar(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_taskbar is null)
+            return;
+
+        if (Vm.HasError)
+        {
+            _taskbar.Fehler();
+            return;
+        }
+
+        if (Vm.IsDone)
+        {
+            _taskbar.Beenden();
+            return;
+        }
+
+        // Zwei nacheinander laufende Phasen (Video, dann Mapping) - solange die Videophase noch
+        // nicht fertig ist, zeigt ihr eigener Anteil den Fortschritt, danach der der Mapping-Phase.
+        var anteil = Vm.VideoPhaseDone ? Vm.MappingProgressPct : Vm.VideoProgressPct;
+        if (anteil > 0)
+            _taskbar.SetzeFortschritt(anteil / 100d);
+        else
+            _taskbar.SetzeUnbestimmt();
     }
 
     private async void Start_Click(object sender, RoutedEventArgs e)

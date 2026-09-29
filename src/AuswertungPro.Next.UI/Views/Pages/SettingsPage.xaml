@@ -3,9 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:settings="clr-namespace:AuswertungPro.Next.UI.Settings"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
-             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls">
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
+             xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <pages:ThemePreferenceToBoolConverter x:Key="ThemeToBool"/>
         <Style x:Key="SettingsSectionGroupBox" TargetType="{x:Type GroupBox}">
             <Setter Property="Margin" Value="0,0,0,12"/>
             <Setter Property="Padding" Value="12,10"/>
@@ -335,73 +337,42 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
+                                <!-- Aufgabe 13 (Windows-Integration): dritte Wahl "Wie Windows" neben Hell/Dunkel.
+                                     Jede Auswahl wendet sich sofort an und speichert sofort (SettingsThemeWorkflow.ApplyTheme
+                                     ueber OnUiThemeChanged) - kein getrennter "Anwenden"-Knopf und kein Neustart-Hinweis mehr:
+                                     Das Design wird ueber DynamicResource in allen offenen Fenstern sofort neu gezeichnet. -->
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Design" Style="{StaticResource SettingsFieldLabel}"/>
-                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
-                                        <TextBlock Text="Hell · Glas" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0"/>
-                                        <ToggleButton IsChecked="{Binding IsDarkTheme, Mode=TwoWay}" Width="64" Height="30">
-                                            <ToggleButton.Template>
-                                                <ControlTemplate TargetType="ToggleButton">
-                                                    <Border x:Name="Track"
-                                                            Background="{DynamicResource SurfaceSubtleBrush}"
-                                                            BorderBrush="{DynamicResource BorderBrush}"
-                                                            BorderThickness="1"
-                                                            CornerRadius="{DynamicResource RadiusXXL}">
-                                                        <Grid>
-                                                            <Ellipse x:Name="Thumb"
-                                                                     Width="24"
-                                                                     Height="24"
-                                                                     Margin="3"
-                                                                     HorizontalAlignment="Left"
-                                                                     Fill="{DynamicResource CardBrush}"/>
-                                                        </Grid>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsChecked" Value="True">
-                                                            <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                                            <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                                            <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
-                                                        </Trigger>
-                                                        <Trigger Property="IsEnabled" Value="False">
-                                                            <Setter Property="Opacity" Value="0.5"/>
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </ToggleButton.Template>
-                                        </ToggleButton>
-                                        <TextBlock Text="Dunkel · Cockpit" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="8,0,0,0"/>
+                                <StackPanel Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2"
+                                            Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
+                                    <RadioButton Content="Hell · Glas" GroupName="Design" Margin="0,0,20,0"
+                                                 IsChecked="{Binding UiTheme, Converter={StaticResource ThemeToBool}, ConverterParameter=Light, Mode=TwoWay}"
+                                                 ToolTip="Helles Design, unabhängig von der Windows-Einstellung."/>
+                                    <RadioButton Content="Dunkel · Cockpit" GroupName="Design" Margin="0,0,20,0"
+                                                 IsChecked="{Binding UiTheme, Converter={StaticResource ThemeToBool}, ConverterParameter=Dark, Mode=TwoWay}"
+                                                 ToolTip="Dunkles Design, unabhängig von der Windows-Einstellung."/>
+                                    <RadioButton Content="Wie Windows" GroupName="Design"
+                                                 IsChecked="{Binding UiTheme, Converter={StaticResource ThemeToBool}, ConverterParameter=System, Mode=TwoWay}"
+                                                 ToolTip="Folgt der Windows-Einstellung Hell/Dunkel und wechselt sofort mit, wenn sie sich während des Programmlaufs ändert."/>
                                 </StackPanel>
-                                <Button Grid.Row="0" Grid.Column="2"
-                                        Content="Anwenden"
-                                        Command="{Binding ApplyThemeCommand}"
-                                        Style="{StaticResource SettingsActionButton}"
-                                        ToolTip="Hell-/Dunkel-Design anwenden."/>
-                                <TextBlock Text="Hinweis: für volle Umstellung ist ein Neustart nötig."
-                                           Grid.Row="1"
-                                           Grid.Column="1"
-                                           Grid.ColumnSpan="2"
-                                           Margin="0,-2,0,8"
-                                           Foreground="{DynamicResource MutedBrush}"
-                                           FontSize="{DynamicResource TextXS}"/>
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Bewegung" Style="{StaticResource SettingsFieldLabel}"/>
-                                <CheckBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Bewegung" Style="{StaticResource SettingsFieldLabel}"/>
+                                <CheckBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
                                           Content="Dauer-Animationen reduzieren (Puls- und Leuchteffekte aus)"
                                           IsChecked="{Binding ReduceMotion}"
                                           Style="{StaticResource SettingsFieldCheckBox}"
                                           ToolTip="Schaltet dauerhafte Puls- und Leuchteffekte ab. Rückmeldung beim Zeigen und Klicken bleibt erhalten. Wirkt ab dem nächsten Fensteraufbau. Nicht angehakt: SewerStudio folgt der Windows-Einstellung für Animationen."/>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Hintergrund" Style="{StaticResource SettingsFieldLabel}"/>
-                                <CheckBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Hintergrund" Style="{StaticResource SettingsFieldLabel}"/>
+                                <CheckBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
                                           Content="Hintergrund-Engine (Leitungsnetz im Hintergrund, nur Optik)"
                                           IsChecked="{Binding HintergrundEngine}"
                                           Style="{StaticResource SettingsFieldCheckBox}"
                                           ToolTip="Zeichnet ein leises, sich bewegendes Leitungsnetz hinter der Oberfläche. Reine Optik, reagiert nicht auf Eingaben. Pausiert automatisch bei reduzierter Bewegung und wenn ein Dialog im Vordergrund steht."/>
 
-                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Diagnose" Style="{StaticResource SettingsFieldLabel}"/>
-                                <CheckBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2"
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Diagnose" Style="{StaticResource SettingsFieldLabel}"/>
+                                <CheckBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
                                           Content="Fehlercodes anzeigen"
                                           IsChecked="{Binding EnableDiagnostics}"
                                           Style="{StaticResource SettingsFieldCheckBox}"/>

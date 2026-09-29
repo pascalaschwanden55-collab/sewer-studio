@@ -48,6 +48,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly ISidecarScriptLocator _sidecarScripts;
     private readonly ISidecarTokenResolver _sidecarTokens;
 
+    /// <summary>
+    /// Aufgabe 13 (Windows-Integration, 28.09.2026): spiegelt den Fortschritt der Datensicherung
+    /// am Programmsymbol in der Taskleiste. Optional (null in Alt-/Testkonstruktoren ohne
+    /// ServiceProvider) - dann bleibt die Taskleiste unberuehrt.
+    /// </summary>
+    private readonly ITaskbarFortschritt? _taskbar;
+
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
 
@@ -71,8 +78,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private int _videoNetworkCachingMs;
     [ObservableProperty] private int _videoCodecThreads;
     [ObservableProperty] private string _videoOutput = "direct3d11";
+
+    /// <summary>
+    /// Design-Wahl Hell/Dunkel/"Wie Windows" (<see cref="ThemeManager.System"/>). Aufgabe 13:
+    /// wird beim Setzen sofort angewendet UND gespeichert (<see cref="OnUiThemeChanged"/>) - kein
+    /// getrennter "Anwenden"-Knopf mehr.
+    /// </summary>
     [ObservableProperty] private string _uiTheme = ThemeManager.Light;
-    [ObservableProperty] private bool _isDarkTheme;
     [ObservableProperty] private bool _reduceMotion;
     [ObservableProperty] private bool _hintergrundEngine;
 
@@ -107,7 +119,6 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty] private bool _isProgramCleanupRunning;
     // true, solange "KI starten" laeuft -> Fortschrittsbalken sichtbar, Knopf gesperrt.
     [ObservableProperty] private bool _isAiStarting;
-    private bool _syncingThemeState;
 
     public IReadOnlyList<IntOption> ProtocolPhotosPerPageOptions { get; } =
         ProtocolPdfPhotoLayout.AllowedValues
@@ -156,7 +167,6 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     public IRelayCommand OpenDataFolderCommand { get; }
     public IRelayCommand OpenLogsFolderCommand { get; }
     public IRelayCommand OpenRestorePointsFolderCommand { get; }
-    public IRelayCommand ApplyThemeCommand { get; }
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand ResetYoloConfidenceCommand { get; }
     public IRelayCommand ResetDinoBoxThresholdCommand { get; }
@@ -190,7 +200,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             sidecarScripts: sp.SidecarScripts,
             sidecarTokens: sp.SidecarTokens,
             programSnapshot: sp.ProgramSnapshot,
-            backupAdditionalFolders: sp.BackupAdditionalFolders)
+            backupAdditionalFolders: sp.BackupAdditionalFolders,
+            taskbar: sp.Taskbar)
     {
     }
 
@@ -282,7 +293,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         ISidecarScriptLocator? sidecarScripts = null,
         ISidecarTokenResolver? sidecarTokens = null,
         IProgramSnapshotService? programSnapshot = null,
-        IBackupAdditionalFolders? backupAdditionalFolders = null)
+        IBackupAdditionalFolders? backupAdditionalFolders = null,
+        ITaskbarFortschritt? taskbar = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
@@ -310,6 +322,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             ?? Infrastructure.Ai.Startup.SidecarScriptLocator.Current;
         _sidecarTokens = sidecarTokens
             ?? Infrastructure.Ai.Pipeline.SidecarTokenResolver.Current;
+        _taskbar = taskbar;
 
         EnableDiagnostics = _settings.EnableDiagnostics;
         PdfToTextPath = _settings.PdfToTextPath;
@@ -328,8 +341,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         VideoNetworkCachingMs = SettingsSaveWorkflow.ClampCaching(_settings.VideoNetworkCachingMs);
         VideoCodecThreads = SettingsSaveWorkflow.ClampCodecThreads(_settings.VideoCodecThreads);
         VideoOutput = SettingsSaveWorkflow.NormalizeVideoOutput(_settings.VideoOutput);
-        UiTheme = ThemeManager.NormalizeTheme(_settings.UiTheme);
-        IsDarkTheme = string.Equals(UiTheme, ThemeManager.Dark, StringComparison.Ordinal);
+        // Direkt ins Feld, wie ProtocolPhotosPerPage oben: ueber die Eigenschaft wuerde das
+        // blosse Oeffnen der Seite OnUiThemeChanged ausloesen und damit sofort erneut speichern.
+        _uiTheme = ThemeManager.NormalizePreference(_settings.UiTheme);
         ReduceMotion = _settings.ReduceMotion;
         HintergrundEngine = _settings.HintergrundEngine;
         AlteHaltungsansicht = !_settings.ShowHaltungenNovaLayout;
@@ -361,7 +375,6 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         OpenDataFolderCommand = new RelayCommand(OpenDataFolder);
         OpenLogsFolderCommand = new RelayCommand(OpenLogsFolder);
         OpenRestorePointsFolderCommand = new RelayCommand(OpenRestorePointsFolder);
-        ApplyThemeCommand = new RelayCommand(ApplyTheme);
         SaveCommand = new RelayCommand(Save);
         ResetYoloConfidenceCommand = new RelayCommand(() => PipelineYoloConfidence = DefaultYoloConfidence);
         ResetDinoBoxThresholdCommand = new RelayCommand(() => PipelineDinoBoxThreshold = DefaultDinoBoxThreshold);
@@ -472,14 +485,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         CleanCodexArtifactsCommand?.NotifyCanExecuteChanged();
     }
 
+    /// <summary>
+    /// Aufgabe 13: die Design-Wahl (Radioknoepfe Hell/Dunkel/Wie Windows) wendet sich sofort an
+    /// und speichert sofort - kein getrennter "Anwenden"-Knopf mehr.
+    /// </summary>
     partial void OnUiThemeChanged(string value)
     {
-        SettingsThemeWorkflow.SyncUiThemeChanged(value, ThemeUi());
-    }
-
-    partial void OnIsDarkThemeChanged(bool value)
-    {
-        SettingsThemeWorkflow.SyncIsDarkThemeChanged(value, ThemeUi());
+        SettingsThemeWorkflow.ApplyTheme(_settings, value, _settings.SaveImmediate);
     }
 
     private void OpenDataFolder() => OpenFolder(DataFolderPath);
@@ -583,20 +595,6 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             _sidecarTokens).ConfigureAwait(true);
     }
 
-    private void ApplyTheme()
-    {
-        SettingsThemeWorkflow.ApplyTheme(_settings, UiTheme, _settings.SaveImmediate);
-    }
-
-    private SettingsThemeWorkflowUi ThemeUi()
-        => new(
-            () => _syncingThemeState,
-            value => _syncingThemeState = value,
-            () => UiTheme,
-            value => UiTheme = value,
-            () => IsDarkTheme,
-            value => IsDarkTheme = value);
-
     private async Task ExportBackupAsync()
     {
         await SettingsKnowledgeBackupWorkflow.ExportAsync(
@@ -646,7 +644,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
                 FullBackupOperation,
                 AppSettings.FlushPendingSave,
                 _settings.SaveImmediate,
-                () => DateTime.UtcNow),
+                () => DateTime.UtcNow,
+                Taskbar: _taskbar),
             ct).ConfigureAwait(true);
     }
 

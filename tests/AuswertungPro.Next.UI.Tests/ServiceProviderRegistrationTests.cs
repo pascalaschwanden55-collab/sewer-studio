@@ -136,9 +136,11 @@ public sealed class ServiceProviderRegistrationTests
         // 171 -> 172: IVerteilberichtAblage legt nach jeder Verteilung einen Bericht ab (28.09.2026).
         // 172 -> 174: IVerteilVorschau (schreibfreie Vorschau) und IVerteilenDialog (ein Fenster
         // «Verteilen» statt mehrerer Ja/Nein-Dialoge auf der Export-Seite, 28.09.2026).
+        // 174 -> 175: ITaskbarFortschritt zeigt den Fortschritt langer Laeufe am Programmsymbol
+        // in der Windows-Taskleiste (Aufgabe 13, Windows-Integration, 28.09.2026).
         Assert.True(
-            registrations.Count == 174,
-            $"Erwartet 174 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
+            registrations.Count == 175,
+            $"Erwartet 175 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
             "Dienst die Registrierung in ServiceProviderRegistrationMap ergänzen und diese Zahl " +
             "bewusst anpassen.");
         Assert.Same(services.XtfLieferungen,

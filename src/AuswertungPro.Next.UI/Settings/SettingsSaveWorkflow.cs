@@ -70,7 +70,9 @@ public static class SettingsSaveWorkflow
         settings.VideoNetworkCachingMs = ClampCaching(values.VideoNetworkCachingMs);
         settings.VideoCodecThreads = ClampCodecThreads(values.VideoCodecThreads);
         settings.VideoOutput = NormalizeVideoOutput(values.VideoOutput);
-        settings.UiTheme = ThemeManager.NormalizeTheme(values.UiTheme);
+        // NormalizePreference statt NormalizeTheme: "Speichern" darf die Design-Wahl "Wie
+        // Windows" nicht auf Hell zurueckstellen.
+        settings.UiTheme = ThemeManager.NormalizePreference(values.UiTheme);
         settings.AiStartOnProgramStart = values.StartAiOnProgramStart;
         settings.CodingSuggestionsEnabled = values.CodingSuggestionsEnabled;
         settings.PipelineYoloConfidence = ClampThreshold(values.PipelineYoloConfidence);

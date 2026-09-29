@@ -30,6 +30,12 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
     private readonly Func<bool> _saveProjectForActiveImport;
     private readonly IDialogService _dialogs;
 
+    /// <summary>
+    /// Aufgabe 13 (Windows-Integration, 28.09.2026): spiegelt den Fortschritt des
+    /// Ein-Knopf-Imports am Programmsymbol in der Taskleiste.
+    /// </summary>
+    private readonly Services.ITaskbarFortschritt _taskbar;
+
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _summaryText = "";
     [ObservableProperty] private string _detailsText = "";
@@ -81,6 +87,7 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
             _sharedImportState);
         var dialogs = sp.Dialogs;
         _dialogs = dialogs;
+        _taskbar = sp.Taskbar;
         _settings = sp.Settings;
         _projects = sp.Projects;
         _contentSignature = sp.ProjectContentSignature;
@@ -190,12 +197,38 @@ public sealed partial class ImportPageViewModel : ObservableObject, IConfirmLeav
         AssignPhotosFromFolderCommand.NotifyCanExecuteChanged();
         ImportKanalProjektCommand.NotifyCanExecuteChanged();
         ProtokollNeuGenerierenCommand.NotifyCanExecuteChanged();
+
+        AktualisiereTaskbarFortschritt();
     }
 
     partial void OnCanCancelChanged(bool value)
     {
         _ = value;
         (CancelImportCommand as RelayCommand)?.NotifyCanExecuteChanged();
+    }
+
+    partial void OnImportProgressPercentChanged(double value) => AktualisiereTaskbarFortschritt();
+
+    partial void OnImportIsIndeterminateChanged(bool value) => AktualisiereTaskbarFortschritt();
+
+    /// <summary>
+    /// Aufgabe 13 (Windows-Integration): spiegelt IsImportInProgress/ImportIsIndeterminate/
+    /// ImportProgressPercent am Programmsymbol in der Taskleiste. Liest die drei Eigenschaften
+    /// bewusst frisch statt Werte durchzureichen - die drei Aenderungsereignisse koennen in
+    /// beliebiger Reihenfolge feuern (siehe SetProgressPercent oben, das beide zusammen setzt).
+    /// </summary>
+    private void AktualisiereTaskbarFortschritt()
+    {
+        if (!IsImportInProgress)
+        {
+            _taskbar.Beenden();
+            return;
+        }
+
+        if (ImportIsIndeterminate)
+            _taskbar.SetzeUnbestimmt();
+        else
+            _taskbar.SetzeFortschritt(ImportProgressPercent / 100d);
     }
 
     public bool ConfirmLeave()

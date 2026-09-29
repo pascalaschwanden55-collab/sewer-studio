@@ -865,6 +865,97 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   Verhaltenstest (Hex bleibt Hex, Token-Name loest gegen das Theme auf).
   Vier neue Testmethoden in `DesignAuditContrastTests` (je beide Themes) decken die sechs neu
   eingefuehrten Text-/Hintergrund-Paarungen ab.
+- **Aufgabe 13 — Windows-Integration.** Drei unabhaengige Bausteine.
+  **Design "Wie Windows":** `ThemeManager.System` ist eine dritte, GESPEICHERTE Design-Wahl neben
+  `Light`/`Dark` (`AppSettings.UiTheme` kennt jetzt drei Werte). `NormalizeTheme` bleibt
+  zweiwertig (fuer alles, was eine konkrete ladbare Ressource braucht — Fenster-Rand, dunkle
+  Titelleiste); `NormalizePreference` ist die dreiwertige Fassung fuer die gespeicherte Wahl;
+  `ResolveEffectiveTheme(preference, reader?)` loest "System" ueber die reine Regel
+  `WindowsThemePreferenceRule.Resolve(int? AppsUseLightTheme)` auf (0 = Dunkel, alles andere
+  inkl. fehlendem Wert = Hell — Windows' eigener Standard). Der echte Registry-Zugriff liegt
+  getrennt in `WindowsThemeRegistry.ReadAppsUseLightTheme()`
+  (`HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`), damit die Regel ohne
+  Registry testbar bleibt (ein `Func<int?>` ersetzt sie in Tests). `WindowsThemeFollowService`
+  (App.xaml.cs, `IDisposable`, in `OnExit` abgemeldet) haengt an
+  `Microsoft.Win32.SystemEvents.UserPreferenceChanged` (Kategorie General ODER Color — welche
+  genau feuert ist nicht belegt, deshalb beide) und wendet bei aktiver "System"-Wahl sofort neu
+  an; da dieses Ereignis nicht sicher auf dem UI-Thread feuert, marshallt es ueber den
+  uebergebenen `Dispatcher` (`Dispatcher.Invoke`, wie das bestehende
+  `ThemeManager.ThemeChanged`-Abonnement in `HydraulikPanelWindow`).
+  **Ein Weg statt zwei:** Der fruehere Hell/Dunkel-Umschalter (`IsDarkTheme`, bi-state) samt
+  eigenem "Anwenden"-Knopf und `SettingsThemeWorkflow.SyncUiThemeChanged`/
+  `SyncIsDarkThemeChanged` ist entfernt — ein bi-state-Umschalter kann keine drei Zustaende
+  abbilden. Drei `RadioButton` (Hell/Dunkel/Wie Windows, `ThemePreferenceToBoolConverter`,
+  ConverterParameter = Zielwert) binden direkt an `UiTheme`; `OnUiThemeChanged` ruft
+  `SettingsThemeWorkflow.ApplyTheme` (speichert die Wahl sofort UND wendet das aufgeloeste Theme
+  sofort an) — die Design-Wahl wirkt beim Klick, kein Neustart-Hinweis mehr. Geprueft (nicht nur
+  behauptet): `WindowBackdropHelper.ApplyToOpenWindows` malt alle offenen Fenster live um,
+  `Fluent.OnBackdropChanged`/`ApplyOnLoaded` liest fuer NEUE Fenster immer `ThemeManager.
+  CurrentTheme` frisch, drei Renderer (`RohrquerschnittControl`, `HydraulikPanelWindow`, dieselbe
+  Stelle testet `ThemeChanged`) haengen bereits an `ThemeManager.ThemeChanged` — nichts im
+  geprueften Bestand haelt eine Theme-Momentaufnahme fest, die einen Neustart brauchen wuerde.
+  **Beim Initialisieren des ViewModels wird `_uiTheme` DIREKT ins Feld geschrieben** (wie
+  `_protocolPhotosPerPage` daneben) — ueber die Eigenschaft wuerde das blosse Oeffnen der Seite
+  sofort erneut speichern.
+  **Hochkontrast:** `Theme/ThemeHighContrast.xaml` ist eine UEBERLAGERUNG, kein drittes
+  Vollthema: `ThemeManager.SetHighContrastOverlay` haengt sie IMMER NACH dem normalen Hell-/
+  Dunkel-Theme in `MergedDictionaries` ein (hoeherer Index = hoehere Prioritaet bei der
+  WPF-Ressourcensuche) und ersetzt nur 23 Kern-Tokens (Text, Hintergrund, Karte, Kopf, Rand,
+  Akzent, Auswahl, Erfolgs-/Warn-/Fehlertext) durch `{DynamicResource {x:Static
+  SystemColors.XyzColorKey}}`. **Alles NICHT genannte faellt automatisch auf den Wert des
+  darunterliegenden Hell-/Dunkel-Themes zurueck** — kein fehlender Schluessel kann je einen
+  Absturz ausloesen, und die Liste muss nicht alle rund 150 Tokens des normalen Themes
+  duplizieren (bewusste, dokumentierte Teilmenge statt Vollstaendigkeit). Erfolgs-/Warn-/
+  Fehlertext bekommen bewusst KEINE eigene SystemColors-Farbe (die gibt es dort nicht; ein
+  geratener Schluessel koennte zufaellig mit Highlight/Accent kollidieren) — die Unterscheidung
+  traegt in Hochkontrast der Text/das Symbol, nicht die Farbe allein. `HighContrastFollowService`
+  (App.xaml.cs) haengt an `SystemParameters.StaticPropertyChanged` (WPF-eigen, feuert bereits auf
+  dem UI-Thread, kein Marshalling noetig) und wendet/entfernt die Ueberlagerung bei jedem
+  Hochkontrast-Wechsel WAEHREND SewerStudio laeuft. Ein Design-Wechsel (Hell -> Dunkel) laesst
+  eine aktive Ueberlagerung unangetastet (verschiedene Indizes in `MergedDictionaries`).
+  **`ThemeManager.GetThemeUri`/die Ueberlagerungs-URI sind vollqualifizierte pack-URIs**
+  (`pack://application:,,,/<Assembly>;component/<Pfad>`) statt blosser relativer URIs: Eine
+  relative URI haengt an `System.Windows.Application.ResourceAssembly` — einem prozessweiten,
+  nur EINMAL setzbaren Wert, der im echten `SewerStudio.exe` zufaellig passt (Einstiegs-Assembly
+  = UI-Assembly), aber z. B. im isolierten WPF-Testprozess (`testhost.exe`) bereits falsch
+  fixiert ist, bevor eigener Code eingreifen kann (real beim Schreiben dieses Tests
+  aufgetreten). Die vollqualifizierte URI braucht diesen globalen Zustand gar nicht erst.
+  **DPI:** `SewerStudio.exe` trug bisher KEIN `dpiAware`/`dpiAwareness`-Element im eingebetteten
+  Manifest — belegt durch Auslesen des gebauten `SewerStudio.exe` per
+  `LoadLibraryEx(..., LOAD_LIBRARY_AS_DATAFILE)` + `FindResource(RT_MANIFEST)` (keine Ausfuehrung
+  des Programms): Der .NET-SDK-Standardweg bettet ohne `app.manifest` nur ein leeres
+  Platzhaltermanifest ein. Neues `src/AuswertungPro.Next.UI/app.manifest`
+  (`<dpiAwareness>PerMonitorV2</dpiAwareness>` + `dpiAware=true/PM` + `gdiScaling=true`,
+  Windows-10/11-`supportedOS`) + `<ApplicationManifest>app.manifest</ApplicationManifest>` im
+  csproj; nach dem Build zeigt derselbe Auslesevorgang das Element korrekt eingebettet.
+  **Taskleistenfortschritt:** `ITaskbarFortschritt` (`UI/Services`, 175. ServiceProvider-
+  Registrierung) mit vier Methoden (`SetzeFortschritt(0..1)`, `SetzeUnbestimmt`, `Fehler` =
+  roter Zustand, `Beenden`). `TaskbarFortschritt` traegt `Window.TaskbarItemInfo` erst bei
+  Bedarf am Hauptfenster nach (`??=`, kein XAML-Eintrag noetig) und loest das Fenster ueber einen
+  `Func<Window?>` bei JEDEM Aufruf neu auf (`Application.Current?.MainWindow` als Standard) —
+  die Dienste entstehen im `ServiceProvider`, bevor `MainWindow` existiert. `ServiceProvider.
+  Taskbar` ist wie `Dialogs` `{ get; internal set; }` mit Feldinitialisierer, damit Tests einen
+  Fake einsetzen koennen (`new ServiceProvider(...) { Taskbar = fake }`). Angebunden: Vollsicherung
+  (`SettingsFullBackupWorkflowRequest.Taskbar`, optional; unbestimmt waehrend der Groessenanalyse,
+  dann Fortschritt aus dem Kopiervorgang; bei Fehlschlag/Ausnahme `Fehler()` OHNE anschliessendes
+  `Beenden()` — der rote Zustand bleibt sichtbar stehen, sonst saehe der Benutzer den
+  Fehlschlag am Symbol nicht mehr; bei Erfolg/Abbruch `Beenden()`), Ein-Knopf-Import
+  (`ImportPageViewModel`: `AktualisiereTaskbarFortschritt()` liest `IsImportInProgress`/
+  `ImportIsIndeterminate`/`ImportProgressPercent` bei JEDEM der drei zugehoerigen
+  `OnXChanged`-Ereignisse frisch neu, statt Werte durchzureichen — die drei Ereignisse koennen in
+  beliebiger Reihenfolge feuern) und das Videoanalyse-Fenster (`VideoAnalysisPipelineWindow`,
+  liegt unter `Views/Windows`, NICHT im eingefrorenen `UI/Ai` — optionaler dritter
+  Konstruktorparameter, `DataPageWindowLauncher` reicht `_services.Taskbar` durch; zwei
+  Phasen Video/Mapping, `VideoPhaseDone` entscheidet welcher Prozentwert gilt). Kein roter
+  Fehlerzustand fuer den Ein-Knopf-Import (kein dediziertes Fehler-Flag am ViewModel ohne
+  groesseren Eingriff; bewusst ausgelassen, siehe Bericht).
+  Tests: `WindowsThemePreferenceRuleTests`, `ThemeManagerPreferenceTests` (Reader injiziert, kein
+  echter Registry-Zugriff), `ThemeHighContrastIsolatedSmokeTests` (echter WPF-Kindprozess, laedt
+  die echte `Theme/ThemeHighContrast.xaml`), `SettingsThemeWorkflowTests`,
+  `SettingsFullBackupWorkflowTests` (vier neue Faelle mit `FakeTaskbarFortschritt`),
+  `ImportPageViewModelTaskbarTests`. `ProjektEroeffnungSettingsGuardTests.
+  SettingsPageViewModel_delegates_theme_workflow` ist an die neue Architektur angepasst
+  (`Sync*`-Methoden existieren nicht mehr).
 
 ## WebGIS-Export: Zustand + Sanierung nach GEONIS (21.09.2026, erste Stufe)
 

@@ -23,7 +23,13 @@ public sealed record SettingsFullBackupWorkflowRequest(
     /// die Ursache nur im Dialog sichtbar und nach dem Wegklicken verloren.
     /// null verwendet den zentralen Logkanal.
     /// </summary>
-    Action<string>? Log = null);
+    Action<string>? Log = null,
+    /// <summary>
+    /// Aufgabe 13 (Windows-Integration, 28.09.2026): spiegelt den Fortschritt zusaetzlich am
+    /// Programmsymbol in der Taskleiste. Optional, damit bestehende Aufrufer/Tests unveraendert
+    /// bleiben; null bedeutet "keine Anzeige".
+    /// </summary>
+    ITaskbarFortschritt? Taskbar = null);
 
 public static class SettingsFullBackupWorkflow
 {
@@ -52,6 +58,9 @@ public static class SettingsFullBackupWorkflow
             return;
         }
 
+        var taskbar = request.Taskbar;
+        taskbar?.SetzeUnbestimmt();
+
         try
         {
             var report = await Task.Run(
@@ -63,6 +72,7 @@ public static class SettingsFullBackupWorkflow
             if (!request.Dialogs.Confirm(confirmText, "Datensicherung erstellen"))
             {
                 request.Operation.SetStatus("Datensicherung nicht gestartet.");
+                taskbar?.Beenden();
                 return;
             }
 
@@ -76,6 +86,7 @@ public static class SettingsFullBackupWorkflow
                     presentation.Percent,
                     presentation.CurrentFileName,
                     presentation.StatusText);
+                taskbar?.SetzeFortschritt(presentation.Percent / 100d);
             });
 
             var result = await Task.Run(
@@ -91,6 +102,7 @@ public static class SettingsFullBackupWorkflow
                     $"{result.Error ?? "ohne Angabe"}");
                 request.Operation.SetStatus($"Fehler: {result.Error}");
                 request.Toasts.Error("Datensicherung fehlgeschlagen.");
+                taskbar?.Fehler();
                 request.Dialogs.Error(result.Error ?? "Datensicherung fehlgeschlagen.", "Datensicherung");
                 return;
             }
@@ -138,6 +150,8 @@ public static class SettingsFullBackupWorkflow
                     "Die vollständige Liste steht im Sicherungsprotokoll «SewerStudio_Sicherung_Protokoll.txt» neben dem Sicherungsordner.",
                     "Datensicherung");
             }
+
+            taskbar?.Beenden();
         }
         catch (OperationCanceledException)
         {
@@ -146,12 +160,14 @@ public static class SettingsFullBackupWorkflow
                 string.Empty,
                 "Abgebrochen - vorheriger Sicherungsstand wiederhergestellt.");
             request.Toasts.Info("Datensicherung abgebrochen.");
+            taskbar?.Beenden();
         }
         catch (Exception ex)
         {
             var userMessage = UserError.DescribeAndReport(ex, "Datensicherung");
             request.Operation.SetStatus($"Fehler: {userMessage}");
             request.Toasts.Error("Datensicherung fehlgeschlagen.");
+            taskbar?.Fehler();
             request.Dialogs.Error($"Datensicherung fehlgeschlagen:\n{userMessage}", "Datensicherung");
         }
         finally

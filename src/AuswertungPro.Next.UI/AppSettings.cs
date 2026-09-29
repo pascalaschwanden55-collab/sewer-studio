@@ -664,7 +664,9 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         settings.QgisHaltungenGpkgPath ??= DefaultQgisHaltungenGpkgPath;
         settings.QgisSchaechteGpkgPath ??= DefaultQgisSchaechteGpkgPath;
         settings.KatasterKennungenGpkgPath ??= DefaultKatasterKennungenGpkgPath;
-        settings.UiTheme = ThemeManager.NormalizeTheme(settings.UiTheme);
+        // NormalizePreference statt NormalizeTheme: die dritte Design-Wahl "Wie Windows"
+        // (ThemeManager.System) muss die Migration ueberleben, nicht auf Hell zurueckfallen.
+        settings.UiTheme = ThemeManager.NormalizePreference(settings.UiTheme);
         settings.PhotoGalleryTileSize = Math.Clamp(settings.PhotoGalleryTileSize, 80d, 260d);
         settings.PlayerVolume = Math.Clamp(settings.PlayerVolume, 0, 100);
         settings.PlayerOverlayOpacity = Math.Clamp(settings.PlayerOverlayOpacity, 0.35d, 1d);

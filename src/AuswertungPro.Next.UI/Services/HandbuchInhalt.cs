@@ -151,7 +151,12 @@ public static class HandbuchInhalt
             "alte Haltungs-/Schachtansicht oder die klassische Projektübersicht), Projektpfade und " +
             "Ordner, Sicherung (automatische Speicherung, Wiederherstellungspunkte, Vollsicherung), " +
             "Video-Player, KI-Verbindung sowie dieser Hilfe-Bereich. Ein Suchfeld oben findet die " +
-            "passende Gruppe über Stichworte, auch bei Umlauten."),
+            "passende Gruppe über Stichworte, auch bei Umlauten.\n\n" +
+            "Design: Hell · Glas, Dunkel · Cockpit oder «Wie Windows» - dann folgt SewerStudio der " +
+            "Windows-Einstellung und wechselt sofort mit, wenn diese sich während des Programmlaufs " +
+            "ändert. Die Wahl wirkt sofort in allen offenen Fenstern und wird sofort gespeichert; " +
+            "ein Neustart ist dafür nicht nötig. Ist in Windows der Hochkontrast-Modus aktiv, " +
+            "übernimmt SewerStudio automatisch die Windows-Kontrastfarben."),
 
         new(FachleuteSchluessel, "Für Fachleute (technisch)",
             "Dieser Abschnitt richtet sich an Entwickler und Techniker, nicht an den täglichen " +

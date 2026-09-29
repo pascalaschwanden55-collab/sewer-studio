@@ -102,6 +102,12 @@ namespace AuswertungPro.Next.UI
         public ISettingsQuarantineStore SettingsQuarantine { get; }
         public ISettingsMigrationService SettingsMigration { get; }
         public IExplorerRevealService ExplorerReveal { get; }
+
+        /// <summary>
+        /// Aufgabe 13 (Windows-Integration, 28.09.2026). Settable (wie <see cref="Dialogs"/>) fuer
+        /// Tests, die einen Fake einsetzen wollen (`new ServiceProvider(...) { Taskbar = fake }`).
+        /// </summary>
+        public ITaskbarFortschritt Taskbar { get; internal set; } = new TaskbarFortschritt();
         public AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilberichtAblage Verteilberichte { get; }
         public IXtfExportVorschauDialog XtfExportVorschau { get; }
         public ISafeShellOpenService ShellOpen { get; }

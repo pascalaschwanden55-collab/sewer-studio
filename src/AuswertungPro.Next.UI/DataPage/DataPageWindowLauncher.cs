@@ -76,7 +76,7 @@ internal sealed class DataPageWindowLauncher : IDataPageWindowLauncher
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(pipeline);
 
-        var window = new VideoAnalysisPipelineWindow(request, pipeline)
+        var window = new VideoAnalysisPipelineWindow(request, pipeline, _services.Taskbar)
         {
             Owner = System.Windows.Application.Current?.MainWindow
         };

@@ -181,11 +181,17 @@ public sealed class ProjektEroeffnungSettingsGuardTests
     [Fact]
     public void SettingsPageViewModel_delegates_theme_workflow()
     {
+        // Aufgabe 13 (Windows-Integration, 28.09.2026): Die Design-Wahl ist von einem
+        // Hell/Dunkel-Umschalter mit eigenem "Anwenden"-Knopf auf drei Radioknoepfe
+        // (Hell/Dunkel/"Wie Windows") umgestellt, die sofort anwenden UND speichern.
+        // Der bisherige zweigleisige Abgleich SyncUiThemeChanged/SyncIsDarkThemeChanged
+        // (fuer den entfallenen bi-state IsDarkTheme-Umschalter) gibt es deshalb nicht mehr;
+        // OnUiThemeChanged ruft SettingsThemeWorkflow.ApplyTheme direkt.
         var vm = Vm();
 
-        Assert.Contains("SettingsThemeWorkflow.SyncUiThemeChanged", vm);
-        Assert.Contains("SettingsThemeWorkflow.SyncIsDarkThemeChanged", vm);
         Assert.Contains("SettingsThemeWorkflow.ApplyTheme", vm);
+        Assert.DoesNotContain("SettingsThemeWorkflow.SyncUiThemeChanged", vm);
+        Assert.DoesNotContain("SettingsThemeWorkflow.SyncIsDarkThemeChanged", vm);
         Assert.DoesNotContain("_sp.Settings.UiTheme =", vm);
         Assert.DoesNotContain("System.Windows.Application.Current", vm);
         Assert.DoesNotContain("ThemeManager.ApplyTheme", vm);

@@ -47,6 +47,8 @@ namespace AuswertungPro.Next.UI
         private LiveControlServer? _liveControlServer;
         private QgisBridgeServer? _qgisBridgeServer;
         private SingleInstanceGuard? _singleInstanceGuard;
+        private WindowsThemeFollowService? _windowsThemeFollow;
+        private HighContrastFollowService? _highContrastFollow;
 
         // Tageslogs aelter als dieser Wert werden beim Start geloescht (Aufbewahrung).
         private const int LogRetentionDays = 60;
@@ -94,7 +96,20 @@ namespace AuswertungPro.Next.UI
                 ButtonFx.RegisterGlobal();
                 if (settings.AiStartOnProgramStart && AiStartupService.ApplyRuntimeDefaults(settings))
                     settings.SaveImmediate();
-                ThemeManager.ApplyTheme(Resources, settings.UiTheme);
+                ThemeManager.ApplyTheme(Resources, ThemeManager.ResolveEffectiveTheme(settings.UiTheme));
+
+                // Aufgabe 13 (Windows-Integration): bei Design "Wie Windows" auf einen spaeteren
+                // Hell/Dunkel-Wechsel in den Windows-Einstellungen reagieren, ohne Neustart.
+                _windowsThemeFollow = new WindowsThemeFollowService(
+                    () => settings.UiTheme,
+                    theme => ThemeManager.ApplyTheme(Resources, theme),
+                    Dispatcher);
+                _windowsThemeFollow.Start();
+
+                // Hochkontrast ueberlagert Hell/Dunkel/Wie Windows unabhaengig von der
+                // Design-Wahl, solange Windows selbst im Hochkontrast-Modus laeuft.
+                _highContrastFollow = new HighContrastFollowService(Resources);
+                _highContrastFollow.Start();
 
                 // Logging
                 var logDir = Path.Combine(AppSettings.AppDataDir, "logs");
@@ -275,6 +290,8 @@ namespace AuswertungPro.Next.UI
             _services?.AiStartedProcesses.StopAllStartedProcesses();
             try
             {
+                _windowsThemeFollow?.Dispose();
+                _highContrastFollow?.Dispose();
                 _services?.KnowledgeRealtimeMirror.Dispose();
                 _qgisBridgeServer?.Dispose();
                 _liveControlServer?.Dispose();
