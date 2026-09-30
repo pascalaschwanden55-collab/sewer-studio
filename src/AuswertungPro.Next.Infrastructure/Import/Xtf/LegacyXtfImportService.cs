@@ -1,14 +1,11 @@
 ﻿using System.Text;
 using System.Xml.Linq;
-using System.Text.RegularExpressions;
 using System.Text.Json.Nodes;
 using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
 using ImportLogStatus = AuswertungPro.Next.Application.Import.ImportLogStatus;
 using ImportProgress = AuswertungPro.Next.Application.Import.ImportProgress;
 using IVsaMediaPathResolver = AuswertungPro.Next.Application.Import.IVsaMediaPathResolver;
-using System.Globalization;
 using AuswertungPro.Next.Application.Common;
-using AuswertungPro.Next.Application.Xtf;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 using AuswertungPro.Next.Infrastructure.Import.Xtf.Sia405;
@@ -408,215 +405,17 @@ public sealed partial class LegacyXtfImportService
     // ===================== SIA405 =====================
     private static List<HaltungRecord> ParseSia405(XDocument doc)
     {
-        // Schritt 1: Objekte lesen (Sia405ObjektLeser). Die Verweise bleiben Kennungen.
-        // Schritt 2: Bezuege aufloesen (Sia405Beziehungen): Kanal, Rohrprofil,
-        // Organisationen, Schachtnamen.
+        // Drei getrennte Schritte, damit eine neue Feldregel nur die Abbildung beruehrt:
+        // 1. Objekte lesen — die Verweise bleiben Kennungen,
+        // 2. Bezuege aufloesen — Kanal, Rohrprofil, Organisationen, Schachtnamen,
+        // 3. fachlich abbilden — welche Angabe in welches Programmfeld geht.
+        // Die Uebernahme ins Projekt (Handwertschutz, Konflikte) macht danach
+        // MergeRecordIntoProject.
         var bestand = Sia405ObjektLeser.Lies(doc);
-
-        var records = new List<HaltungRecord>();
-        foreach (var h in Sia405Beziehungen.Loese(bestand))
-        {
-            var hd = h.Haltung;
-            var kanal = h.Kanal;
-            var haltungsname = h.Haltungsname;
-
-            var material = NormalizeSiaMaterial(hd.Material);
-            var nutzungsart = kanal is null ? "" : NormalizeNutzungsart(kanal.Nutzungsart);
-
-            var rec = new HaltungRecord();
-            rec.SetFieldValue("Haltungsname", haltungsname, FieldSource.Xtf405, userEdited: false);
-            rec.SetFieldValue(FieldKeys.CadastreObjectId, hd.Tid, FieldSource.Xtf405, userEdited: false);
-
-            // Ein Normwert aus der Datei, so wie er dort steht. "unbekannt" ist keine
-            // Angabe und wuerde nur einen besseren Wert aus einer anderen Quelle blockieren.
-            void Uebernimm(string feld, string? wert, bool unbekanntIstLeer = true)
-            {
-                var text = (wert ?? "").Trim();
-                if (text.Length == 0
-                    || (unbekanntIstLeer
-                        && string.Equals(text, "unbekannt", StringComparison.OrdinalIgnoreCase)))
-                    return;
-                rec.SetFieldValue(feld, text, FieldSource.Xtf405, userEdited: false);
-            }
-            if (!string.IsNullOrWhiteSpace(hd.Laenge)) rec.SetFieldValue("Haltungslaenge_m", hd.Laenge, FieldSource.Xtf405, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(material)) rec.SetFieldValue("Rohrmaterial", material, FieldSource.Xtf405, userEdited: false);
-
-            var dn = !string.IsNullOrWhiteSpace(hd.LichteHoehe) ? hd.LichteHoehe : hd.LichteBreite;
-            if (!string.IsNullOrWhiteSpace(dn)) rec.SetFieldValue("DN_mm", dn, FieldSource.Xtf405, userEdited: false);
-
-            // Die zweite Dimension: Profiltyp und Hoehen-Breiten-Verhaeltnis stehen am
-            // verwiesenen Rohrprofil. Aus Hoehe und Verhaeltnis entsteht die Breite;
-            // beim Kreisprofil ist sie gleich der Hoehe (rund = beide gleich).
-            if (h.Rohrprofil is { } profil)
-            {
-                var profiltyp = (profil.Profiltyp ?? "").Trim();
-                if (profiltyp.Length > 0)
-                {
-                    rec.SetFieldValue(
-                        FieldKeys.ProfileType,
-                        ProfiltypVokabular.Normalisieren(profiltyp),
-                        FieldSource.Xtf405,
-                        userEdited: false);
-                }
-
-                var breite = XtfRohrprofilVerhaeltnis.Breite(dn, profil.Verhaeltnis)
-                             ?? (string.Equals(profiltyp, "Kreisprofil", StringComparison.OrdinalIgnoreCase)
-                                 ? SiaAbmessung.NachMillimeter(dn)
-                                 : null);
-                if (breite is > 0)
-                    rec.SetFieldValue(FieldKeys.ClearWidthMm, breite.Value.ToString(CultureInfo.InvariantCulture), FieldSource.Xtf405, userEdited: false);
-            }
-            else if (!string.IsNullOrWhiteSpace(hd.LichteHoehe) && !string.IsNullOrWhiteSpace(hd.LichteBreite))
-            {
-                // Aeltere Modellfassungen fuehren die Breite direkt an der Haltung.
-                rec.SetFieldValue(FieldKeys.ClearWidthMm, hd.LichteBreite.Trim(), FieldSource.Xtf405, userEdited: false);
-            }
-
-            // Keine Inspektionsrichtung: SIA405 ist der Kataster-Bestand und kennt keine Untersuchung.
-            // Sie kommt aus der VSA-KEK-Untersuchung (<Fliessrichtung>), siehe ParseVsaKek.
-
-            // Letzte_Aenderung ist das Aenderungsdatum des Datensatzes im Kataster, kein
-            // Inspektionsdatum. Bis 2026-09-03 landete es in "Datum_Jahr" und ueberschrieb
-            // dort das echte Inspektionsdatum aus WinCan: Aus 06.10.2025 wurde 03.09.2026.
-            // Es gehoert in das Herkunftsfeld, das auch das QGIS-Nachfuellen verwendet.
-            var letzteAenderung = NormalizeDate_yyyymmdd(hd.LetzteAenderung);
-            if (!string.IsNullOrWhiteSpace(letzteAenderung))
-                rec.SetFieldValue(FieldKeys.CadastreLastChange, letzteAenderung, FieldSource.Xtf405, userEdited: false);
-
-            if (!string.IsNullOrWhiteSpace(hd.Lagebestimmung) && !string.Equals(hd.Lagebestimmung.Trim(), "unbekannt", StringComparison.OrdinalIgnoreCase))
-                rec.SetFieldValue(FieldKeys.PositionAccuracy, hd.Lagebestimmung.Trim(), FieldSource.Xtf405, userEdited: false);
-
-            if (kanal is not null)
-            {
-                if (!string.IsNullOrWhiteSpace(kanal.Standortname)) rec.SetFieldValue("Strasse", kanal.Standortname, FieldSource.Xtf405, userEdited: false);
-                if (!string.IsNullOrWhiteSpace(nutzungsart)) rec.SetFieldValue("Nutzungsart", nutzungsart, FieldSource.Xtf405, userEdited: false);
-                if (!string.IsNullOrWhiteSpace(kanal.Bemerkung)) rec.SetFieldValue("Bemerkungen", kanal.Bemerkung, FieldSource.Xtf405, userEdited: false);
-                // Der Rohwert der XTF ("Abwasser Uri") faerbt die Eigentuemerspalte der
-                // Excel-Vorlage nicht - sie vergleicht exakt gegen "AWU".
-                var eigentuemer = EigentumVokabular.Normalisieren(
-                    string.IsNullOrWhiteSpace(kanal.Eigentuemer) ? h.EigentuemerAusVerweis : kanal.Eigentuemer);
-                if (!string.IsNullOrWhiteSpace(eigentuemer)) rec.SetFieldValue("Eigentuemer", eigentuemer, FieldSource.Xtf405, userEdited: false);
-
-                Uebernimm(FieldKeys.DataOwner, h.Datenherr, unbekanntIstLeer: false);
-                Uebernimm(FieldKeys.DataSupplier, h.Datenlieferant, unbekanntIstLeer: false);
-
-                // FunktionHierarchisch -> Katalog-Combo "PAA.<Suffix>" / "SAA.<Suffix>" (speist u.a. VSA-Zustandsnote B4)
-                var funktion = NormalizeFunktionHierarchisch(kanal.Funktion);
-                if (!string.IsNullOrWhiteSpace(funktion)) rec.SetFieldValue("FunktionHierarchisch", funktion, FieldSource.Xtf405, userEdited: false);
-
-                // Baujahr ist das Baujahr, kein Inspektionsdatum. Bis 2026-09-03 fuellte es
-                // ersatzweise "Datum_Jahr"; jetzt geht es in das Feld, das der Export liest.
-                Uebernimm(FieldKeys.ConstructionYear, kanal.Baujahr);
-
-                // Die uebrigen Kanalfelder, die der Export selbst hinausschreibt. Ohne sie
-                // verlor die Rundreise Export, Import, Vergleich genau diese Werte.
-                Uebernimm(FieldKeys.OperatingStatus, kanal.Status);
-                Uebernimm(FieldKeys.RehabilitationNeed, kanal.Sanierungsbedarf);
-                Uebernimm(FieldKeys.HydraulicFunction, kanal.FunktionHydraulisch);
-                Uebernimm(FieldKeys.ConnectionType, kanal.Verbindungsart);
-                Uebernimm(FieldKeys.BeddingEncasement, kanal.BettungUmhuellung);
-                Uebernimm(FieldKeys.GrossCost, kanal.Bruttokosten);
-
-                // Status -> offen/abgeschlossen (wie PS)
-                var status = kanal.Status ?? "";
-                if (!string.IsNullOrWhiteSpace(status))
-                {
-                    if (Regex.IsMatch(status, "(?i)in_Betrieb|aktiv"))
-                        rec.SetFieldValue("Offen_abgeschlossen", "abgeschlossen", FieldSource.Xtf405, userEdited: false);
-                    else if (Regex.IsMatch(status, "(?i)ausser_Betrieb|stillgelegt"))
-                        rec.SetFieldValue("Offen_abgeschlossen", "offen", FieldSource.Xtf405, userEdited: false);
-                }
-
-                // Zustandsklasse aus der Datei uebernehmen. Sie gewinnt beim Import
-                // bewusst gegen jede eigene Rechnung: Nur so sind die Daten in GEONIS
-                // und in SewerStudio nach einem Austausch identisch.
-                var zustand = ZustandsklasseAusXtf(kanal.BaulicherZustand);
-                if (zustand is not null)
-                    rec.SetFieldValue("Zustandsklasse", zustand, FieldSource.Xtf405, userEdited: false);
-
-                // Zugaenglichkeit als Bemerkung ergänzen
-                if (!string.IsNullOrWhiteSpace(kanal.Zugaenglichkeit) && !string.Equals(kanal.Zugaenglichkeit, "unbekannt", StringComparison.OrdinalIgnoreCase))
-                {
-                    var existing = rec.GetFieldValue("Bemerkungen") ?? "";
-                    var add = $"Zugaenglichkeit: {kanal.Zugaenglichkeit}";
-                    rec.SetFieldValue("Bemerkungen", string.IsNullOrWhiteSpace(existing) ? add : (existing + "\n" + add), FieldSource.Xtf405, userEdited: false);
-                }
-            }
-
-            // Schacht-Labels (optional, für Debug/Logging)
-            if (!string.IsNullOrWhiteSpace(h.SchachtOben)) rec.SetFieldValue("Schacht_oben", h.SchachtOben, FieldSource.Xtf405, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(h.SchachtUnten)) rec.SetFieldValue("Schacht_unten", h.SchachtUnten, FieldSource.Xtf405, userEdited: false);
-
-            records.Add(rec);
-        }
-
-        return records;
+        return Sia405Beziehungen.Loese(bestand)
+            .Select(Sia405HaltungAbbildung.BaueRecord)
+            .ToList();
     }
-
-    /// <summary>
-    /// "Z0" bis "Z4" aus der XTF zur Ziffer, die das Programm fuehrt. Alles andere —
-    /// "unbekannt", leer, ein unerwarteter Text — liefert <c>null</c> und setzt nichts.
-    /// </summary>
-    private static string? ZustandsklasseAusXtf(string? roh)
-    {
-        var wert = (roh ?? "").Trim();
-        if (wert.Length != 2 || (wert[0] != 'Z' && wert[0] != 'z'))
-            return null;
-
-        return wert[1] is >= '0' and <= '4' ? wert[1].ToString() : null;
-    }
-
-    // Bekannte FunktionHierarchisch-Suffixe (ohne "PAA."-Praefix), passend zu FieldCatalog.ComboItems.
-    private static readonly string[] FunktionHierarchischSuffixe =
-    {
-        "Sammelkanal", "Hauptsammelkanal", "Hauptsammelkanal_regional",
-        "Liegenschaftsentwaesserung", "Sanierungsleitung",
-        "Strassenentwaesserung", "Gewaesser"
-    };
-
-    /// <summary>
-    /// Normalisiert die SIA405-Funktion (Funktionhierarchisch) auf einen GUELTIGEN Katalog-Combo-Wert
-    /// "PAA.&lt;Suffix&gt;". Verarbeitet gaengige Rohformen (mit/ohne "PAA."-Praefix, Sub-Level-Trenner "."
-    /// wie "Hauptsammelkanal.regional", Umlaute). Liefert leer, wenn der Rohwert keinem bekannten Suffix
-    /// entspricht — dann wird das Feld NICHT gesetzt (kein ungueltiger Combo-Wert im Datagrid).
-    /// </summary>
-    private static string NormalizeFunktionHierarchisch(string? raw)
-    {
-        var v = (raw ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(v))
-            return "";
-
-        // Ein Normwert wie "SAA.Liegenschaftsentwaesserung" geht unveraendert durch.
-        // Frueher wurde jeder Wert auf "PAA." umgeschrieben; die sekundaere Anlage (SAA)
-        // fiel dabei heraus, obwohl der Kataster sie fuehrt und der Export sie schreibt.
-        var norm = SiaKanalVokabular.FunktionHierarchisch.NachNorm(v);
-        if (norm is not null && !norm.EndsWith(".unbekannt", StringComparison.OrdinalIgnoreCase))
-            return norm;
-
-        if (v.StartsWith("PAA.", StringComparison.OrdinalIgnoreCase))
-            v = v.Substring(4);
-
-        // Sub-Level-Trenner "." -> "_" (Hauptsammelkanal.regional -> Hauptsammelkanal_regional)
-        v = v.Replace('.', '_');
-        // Umlaute -> ASCII (Katalog nutzt ...entwaesserung)
-        v = v.Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue")
-             .Replace("Ä", "Ae").Replace("Ö", "Oe").Replace("Ü", "Ue");
-
-        foreach (var known in FunktionHierarchischSuffixe)
-            if (string.Equals(v, known, StringComparison.OrdinalIgnoreCase))
-                return "PAA." + known;
-
-        return "";
-    }
-
-    // Delegation: Logik liegt jetzt in XtfValueNormalizer
-    private static string NormalizeSiaMaterial(string material)
-        => XtfValueNormalizer.NormalizeSiaMaterial(material);
-
-    // Delegation: Logik liegt jetzt in XtfValueNormalizer
-    private static string NormalizeNutzungsart(string v)
-        => XtfValueNormalizer.NormalizeNutzungsart(v);
-
 
     // Delegation: Logik liegt jetzt in XtfValueNormalizer
     private static bool TryParseDouble(string? s, out double value)

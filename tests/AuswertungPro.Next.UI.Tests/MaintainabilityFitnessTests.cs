@@ -59,7 +59,6 @@ public sealed class MaintainabilityFitnessTests
         ["AuswertungPro.Next.UI.ViewModels.Pages.BuilderPageViewModel"] = 1_964,
         ["AuswertungPro.Next.UI.ViewModels.TrainingStudioViewModel"] = 1_951,
         ["AuswertungPro.Next.UI.ViewModels.Pages.SchaechtePageViewModel"] = 1_921,
-        ["AuswertungPro.Next.Infrastructure.Import.Xtf.LegacyXtfImportService"] = 1_617,
         ["AuswertungPro.Next.UI.ViewModels.Pages.ExportPageViewModel"] = 1_889,
         ["AuswertungPro.Next.Infrastructure.Import.WinCan.WinCanDbImportService"] = 1_821,
         ["AuswertungPro.Next.UI.ViewModels.ShellViewModel"] = 1_783,
