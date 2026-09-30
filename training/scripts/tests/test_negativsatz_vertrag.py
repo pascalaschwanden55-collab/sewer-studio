@@ -677,6 +677,23 @@ def _tausche_bildinhalt(staging: Path) -> None:
     bild.write_bytes(daten[:-1] + (b"y" if daten[-1:] != b"y" else b"z"))
 
 
+def _satz_zweck_zurueck(manifest: dict) -> None:
+    proto = manifest["pilot"] == "protokoll_negative"
+    manifest["purpose"] = "proto_reviewed_negative_set" if proto else "bcc_reviewed_negative_set"
+
+
+def _queue_zweck_zurueck(queue_manifest: dict) -> None:
+    proto = queue_manifest["pilot"] == "protokoll_negative"
+    queue_manifest["purpose"] = (
+        "proto_hard_negative_review_queue" if proto else "bcc_hard_negative_review_queue"
+    )
+
+
+def _queue_pilot_zurueck(queue_manifest: dict) -> None:
+    proto = queue_manifest["purpose"].startswith("proto")
+    queue_manifest["pilot"] = "protokoll_negative" if proto else "BCC_bogen"
+
+
 def _zusatzbeleg(staging: Path) -> None:
     (staging / "receipts" / "extra.json").write_text("{}", encoding="utf-8")
 
@@ -754,6 +771,12 @@ FAELLE: list[tuple[str, dict[str, Any], dict[str, str | None]]] = [
     (
         "semantik_falsche_rolle",
         {"semantic": _setze("role", "eval_set")},
+        {"bcc": genau("Manifest und semantischer Negativsatz-Beleg widersprechen sich."),
+         "proto": genau("Manifest und semantischer Proto-Beleg widersprechen sich.")},
+    ),
+    (
+        "semantik_falscher_zweck",
+        {"semantic": _setze("purpose", "fremd"), "manifest": _satz_zweck_zurueck},
         {"bcc": genau("Manifest und semantischer Negativsatz-Beleg widersprechen sich."),
          "proto": genau("Manifest und semantischer Proto-Beleg widersprechen sich.")},
     ),
@@ -973,6 +996,19 @@ FAELLE: list[tuple[str, dict[str, Any], dict[str, str | None]]] = [
          "proto": genau("Der Proto-Queue-Beleg ist nicht fest an die Queue-ID gebunden.")},
     ),
     (
+        # Nur die Queue-Semantik weicht ab; das Queue-Manifest behaelt seinen Zweck.
+        "queue_semantik_falscher_zweck",
+        {"queue_semantic": _setze("purpose", "fremd"), "queue_manifest": _queue_zweck_zurueck},
+        {"bcc": genau("Der Queue-Beleg ist nicht fest an die Queue-ID gebunden."),
+         "proto": genau("Der Proto-Queue-Beleg ist nicht fest an die Queue-ID gebunden.")},
+    ),
+    (
+        "queue_semantik_falscher_pilot",
+        {"queue_semantic": _setze("pilot", "fremd"), "queue_manifest": _queue_pilot_zurueck},
+        {"bcc": genau("Der Queue-Beleg ist nicht fest an die Queue-ID gebunden."),
+         "proto": genau("Der Proto-Queue-Beleg ist nicht fest an die Queue-ID gebunden.")},
+    ),
+    (
         "queue_id_passt_nicht_zur_semantik",
         {"queue_manifest": lambda q: q["semantic"].__setitem__("sources", ["nachtraeglich"])},
         {"bcc": genau("Der Queue-Beleg ist nicht fest an die Queue-ID gebunden."),
@@ -1151,6 +1187,13 @@ FAELLE: list[tuple[str, dict[str, Any], dict[str, str | None]]] = [
          "proto": r"^Proto-Queue-Bildbeleg proto-hn-[0-9a-f]{20} ist ungueltig\.$"},
     ),
     (
+        # Format und Zieldatei passen zueinander, das Format ist aber nicht erlaubt.
+        "proto_queue_item_format_mit_zieldatei",
+        {"queue_items": lambda liste: liste[0].update(
+            {"image_format": "gif", "target_file_name": liste[0]["target_file_name"].replace(".png", ".gif")})},
+        {"bcc": None, "proto": r"^Proto-Queue-Bildbeleg proto-hn-[0-9a-f]{20} ist ungueltig\.$"},
+    ),
+    (
         "proto_queue_item_zieldatei",
         {"queue_items": _setze("0.target_file_name", "anders.png")},
         {"bcc": None, "proto": r"^Proto-Queue-Bildbeleg proto-hn-[0-9a-f]{20} ist ungueltig\.$"},
@@ -1194,6 +1237,11 @@ FAELLE: list[tuple[str, dict[str, Any], dict[str, str | None]]] = [
             ("trigger_ohne_box", "bcc_detection_count", 0),
         )
     ],
+    (
+        "queue_vorhersage_anzahl_kommazahl",
+        {"queue_items": _setze("0.predictions.0.bcc_detection_count", 1.5)},
+        {"bcc": r"^Queue-Vorhersage bcc-hn-[0-9a-f]{16} ist ungueltig\.$", "proto": None},
+    ),
     (
         "queue_ohne_bcc_trigger",
         {"queue_items": _setze("0.predictions.0.predicted_bcc", False)},
@@ -1322,6 +1370,12 @@ FAELLE: list[tuple[str, dict[str, Any], dict[str, str | None]]] = [
     (
         "review_altes_holdout_urteil",
         {"review": _nicht_klassenfrei},
+        {"bcc": r"^Review-Entscheidung bcc-hn-[0-9a-f]{16} ist nicht erlaubt\.$",
+         "proto": r"^Review-Entscheidung proto-hn-[0-9a-f]{20} ist nicht erlaubt\.$"},
+    ),
+    (
+        "review_kommentar_kein_text",
+        {"review": lambda r: next(iter(r["decisions"].values())).__setitem__("comment", 5)},
         {"bcc": r"^Review-Entscheidung bcc-hn-[0-9a-f]{16} ist nicht erlaubt\.$",
          "proto": r"^Review-Entscheidung proto-hn-[0-9a-f]{20} ist nicht erlaubt\.$"},
     ),

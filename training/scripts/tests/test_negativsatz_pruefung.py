@@ -539,3 +539,16 @@ def test_negativbild_eintrag_und_provenienz_behalten_das_berichtsformat() -> Non
         "candidates_sha256", "review_sha256", "class_map_version", "class_map_sha256",
         "vsa_manifest_hash", "images", "train_images", "validation_images",
     ]
+
+
+def test_negative_boxanzahl_ist_auch_ohne_bcc_ausloesung_ungueltig() -> None:
+    """Ein zweites Modell loest aus; die negative Anzahl des ersten bleibt verboten."""
+    item = _bcc_item(0, "100-200")
+    item["predictions"] = [
+        {"model_id": "m", "predicted_bcc": False, "bcc_detection_count": -1, "max_bcc_confidence": None},
+        {"model_id": "n", "predicted_bcc": True, "bcc_detection_count": 1, "max_bcc_confidence": 0.5},
+    ]
+    with pytest.raises(ValueError, match=r"^Queue-Vorhersage bcc-hn-[0-9a-f]{16} ist ungueltig\.$"):
+        NP.pruefe_bcc_queue_bilder([item], {"m", "n"}, _physisch)
+    item["predictions"][0]["bcc_detection_count"] = 0
+    assert len(NP.pruefe_bcc_queue_bilder([item], {"m", "n"}, _physisch)) == 1
