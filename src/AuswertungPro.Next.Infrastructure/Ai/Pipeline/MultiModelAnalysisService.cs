@@ -38,6 +38,7 @@ public sealed partial class MultiModelAnalysisService
     // Checkpoint-Journal (Resume): null = ohne Journal (Tests/aeltere Aufrufer).
     private readonly IAnalysisCheckpointJournal? _checkpointJournal;
     // Ausgelagerte Modellschritte (AP05b); ohne eigenen Laufzustand, daher je Dienst einmal.
+    private readonly MultiModelClsVorfilter _clsVorfilter;
     private readonly MultiModelYoloSchritt _yoloSchritt;
     private readonly MultiModelDinoSchritt _dinoSchritt;
     private readonly MultiModelSamSchritt _samSchritt;
@@ -127,6 +128,7 @@ public sealed partial class MultiModelAnalysisService
         _expectedYoloModel = options.ExpectedYoloModel();
         _checkpointJournal = checkpointJournal;
         _sidecarRestart = sidecarRestart;
+        _clsVorfilter = new MultiModelClsVorfilter(client, _logger);
         _yoloSchritt = new MultiModelYoloSchritt(client, config, _minClassConfidence, _expectedYoloModel, _logger);
         _dinoSchritt = new MultiModelDinoSchritt(client, config, _logger);
         _samSchritt = new MultiModelSamSchritt(client, _logger);
@@ -367,67 +369,14 @@ public sealed partial class MultiModelAnalysisService
         if (yoloUmgehung.QualifikationGesperrt)
             MarkTraceDegraded(trace, "detector_unqualified");
 
-        // ── YOLO-cls Vorfilter + Frame-Quality-Gate (CPU-billig) ──
-        // Gilt bewusst AUCH fuer Sweep-/BCD-/BCE-Frames: vorher konnten schwarze
-        // oder strukturlose Bypass-Frames ungefiltert bis zu Qwen (120s-Cap) laufen.
+        // ── YOLO-cls Vorfilter + Frame-Quality-Gate (CPU-billig, eigene Regeln im Vorfilter) ──
         YoloClassifyResponse? clsResult = null;
-        if (UseClsPrefilter) try
+        if (UseClsPrefilter)
         {
-            clsResult = await _client.ClassifyYoloAsync(
-                new YoloClassifyRequest(frameBase64, 3), ct).ConfigureAwait(false);
-
-            if (ClsPrefilterRule.Decide(clsResult, ClassifierDecisionEnabled) is { } skip)
-            {
-                run.SkippedFrames++;
-                if (skip.EmptyPrediction is { } empty)
-                {
-                    run.CodeVoting.RegisterAndVote(null, estimatedMeter);   // Fenster altern lassen
-                    trace.ClassifierCode = "LEER";
-                    trace.ClassifierConfidence = empty.Confidence;
-                    trace.ClassifierModel = ClassifierModelTag(clsResult);
-                }
-                _logger.LogDebug("Frame {Frame}: cls-Vorfilter {Reason} → skip", run.FrameIndex, skip.ProgressText);
-                progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
-                    $"Frame {run.FrameIndex}/{totalFrames} – {skip.ProgressText} → skip"));
-                telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, 0, 0, 0, 0,
-                    frameSw.ElapsedMilliseconds, Skipped: true));
-                trace.Path = skip.TracePath;
-                trace.YoloRelevant = false;
-                trace.DropReason = skip.DropReason;
-                return MultiModelBildErgebnis.Uebersprungen(estimatedMeter);
-            }
-
-            var topPred = clsResult.Predictions.Count > 0 ? clsResult.Predictions[0] : null;
-
-            if (topPred != null)
-                _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → weiter zur Detektion",
-                    run.FrameIndex, topPred.ClassName, topPred.Confidence * 100);
-            if (ClassifierDecisionEnabled && !clsResult.ClassifierLoaded)
-            {
-                MarkTraceDegraded(trace, "classifier_not_loaded");
-                _logger.LogWarning("Frame {Frame}: YOLO-cls Modell nicht geladen - Klassifikator-Code wird nicht angewendet.",
-                    run.FrameIndex);
-            }
-
-            if (ClassifierDecisionEnabled && clsResult.BendVetoFailed)
-            {
-                MarkTraceDegraded(trace, "bend_veto_failed");
-                _logger.LogWarning("Frame {Frame}: Bogen-Veto fehlgeschlagen - is_bend=false wird nicht fuer Klassifikator-Code vertraut.",
-                    run.FrameIndex);
-            }
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            // Nutzerabbruch: sofort weiterwerfen, nie als Fehler zaehlen.
-            throw;
-        }
-        catch (Exception ex)
-        {
-            // cls-Modell nicht verfuegbar → normal weiter (kein harter Fehler)
-            if (ClassifierDecisionEnabled)
-                _logger.LogWarning(ex, "Frame {Frame}: YOLO-cls im Klassifikator-Entscheidungsmodus nicht verfuegbar; falle auf Detektionspfad zurueck", run.FrameIndex);
-            else
-                _logger.LogDebug(ex, "Frame {Frame}: YOLO-cls nicht verfuegbar, ueberspringe Vorfilter", run.FrameIndex);
+            var cls = await _clsVorfilter.PruefeAsync(run, bild, ClassifierDecisionEnabled, ct).ConfigureAwait(false);
+            if (cls.Abschluss is { } clsAbschluss)
+                return clsAbschluss;
+            clsResult = cls.Antwort;
         }
 
         // ── Step 1: YOLO Pre-Screening (Umgehung, Qualifikation, Klassenschwellen, COCO-Warnung im YOLO-Schritt) ──
