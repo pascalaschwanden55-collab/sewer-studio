@@ -3,6 +3,7 @@ using AuswertungPro.Next.Application.Xtf;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Common;
+using AuswertungPro.Next.Infrastructure.Import.Xtf.Sia405;
 using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
@@ -30,7 +31,7 @@ public sealed partial class LegacyXtfImportService
         ArgumentNullException.ThrowIfNull(doc);
 
         var elemente = new List<XtfNormschachtElement>();
-        var organisationen = LiesOrganisationen(doc);
+        var organisationen = Sia405ObjektLeser.LiesOrganisationen(doc);
 
         foreach (var node in doc.Descendants())
         {
@@ -76,40 +77,6 @@ public sealed partial class LegacyXtfImportService
         }
 
         return elemente;
-    }
-
-    /// <summary>
-    /// Die Organisationen der Datei als Kennung -> Bezeichnung.
-    ///
-    /// In SIA405 ist der Eigentuemer kein Text, sondern ein Verweis auf ein Objekt im
-    /// Topic <c>Administration</c>. Wer nur nach einem Element <c>Eigentuemer</c> sucht,
-    /// findet in einer normkonformen Datei nichts — und der Eigentuemer geht beim Import
-    /// verloren. Genau der fehlt dann beim naechsten Export wieder, denn dort ist er
-    /// Pflicht.
-    /// </summary>
-    private static Dictionary<string, string> LiesOrganisationen(XDocument doc)
-    {
-        var jeTid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var node in doc.Descendants())
-        {
-            var lokal = node.Name.LocalName;
-            if (!lokal.Equals("Organisation", StringComparison.OrdinalIgnoreCase)
-                && !lokal.EndsWith(".Organisation", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var tid = (string?)node.Attribute("TID");
-            var bezeichnung = node.Elements()
-                .FirstOrDefault(e => e.Name.LocalName.Equals("Bezeichnung", StringComparison.OrdinalIgnoreCase))
-                ?.Value?.Trim();
-
-            if (!string.IsNullOrWhiteSpace(tid) && !string.IsNullOrWhiteSpace(bezeichnung))
-                jeTid[tid!] = bezeichnung!;
-        }
-
-        return jeTid;
     }
 
     /// <summary>Die Bezeichnung hinter einem Verweis, oder <c>null</c>.</summary>

@@ -11,6 +11,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Xtf;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
+using AuswertungPro.Next.Infrastructure.Import.Xtf.Sia405;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
@@ -405,209 +406,17 @@ public sealed partial class LegacyXtfImportService
         => Common.HoldingKeyNormalizer.Normalize(value);
 
     // ===================== SIA405 =====================
-    private sealed class KanalData
-    {
-        public string Tid { get; init; } = "";
-        public string Bezeichnung { get; set; } = "";
-        public string Standortname { get; set; } = "";
-        public string Status { get; set; } = "";
-        public string Nutzungsart { get; set; } = "";
-        public string Bemerkung { get; set; } = "";
-        public string Zugaenglichkeit { get; set; } = "";
-
-        /// <summary>
-        /// Die Zustandsklasse aus der Datei (Z0 bis Z4). Sie wurde frueher nicht gelesen,
-        /// wodurch jeder Import den Zustand verlor: Die nachlaufende VSA-Bewertung fand in
-        /// einer Stammdaten-XTF keine Befunde und setzte "Leitung i.O." (Klasse 4). Aus
-        /// einem exportierten Z0 wurde so beim Zurueckimportieren eine 4.
-        /// </summary>
-        public string BaulicherZustand { get; set; } = "";
-        public string Eigentuemer { get; set; } = "";
-
-        /// <summary>Die Kennung der verwiesenen Organisation.</summary>
-        public string EigentuemerRef { get; set; } = "";
-        public string DatenherrRef { get; set; } = "";
-        public string DatenlieferantRef { get; set; } = "";
-        public string Baujahr { get; set; } = "";
-        public string Rohrlaenge { get; set; } = "";
-        public string Funktion { get; set; } = "";
-        // Die uebrigen Kanalfelder, die SewerStudio selbst hinausschreibt. Bis 2026-09-03
-        // wurden sie nicht gelesen; die Rundreise Export, Import, Vergleich verlor sie.
-        public string FunktionHydraulisch { get; set; } = "";
-        public string Sanierungsbedarf { get; set; } = "";
-        public string Verbindungsart { get; set; } = "";
-        public string BettungUmhuellung { get; set; } = "";
-        public string Bruttokosten { get; set; } = "";
-    }
-
-    private sealed class HaltungData
-    {
-        public string Tid { get; init; } = "";
-        public string Bezeichnung { get; set; } = "";
-        public string Laenge { get; set; } = "";
-        public string LichteHoehe { get; set; } = "";
-        public string LichteBreite { get; set; } = "";
-        public string Material { get; set; } = "";
-        public string KanalRef { get; set; } = "";
-        public string VonRef { get; set; } = "";
-        public string NachRef { get; set; } = "";
-        public string LetzteAenderung { get; set; } = "";
-        /// <summary>Die Kennung des Rohrprofils, das Profiltyp und Hoehen-Breiten-Verhaeltnis traegt.</summary>
-        public string RohrprofilRef { get; set; } = "";
-        public string Lagebestimmung { get; set; } = "";
-    }
-
     private static List<HaltungRecord> ParseSia405(XDocument doc)
     {
-        var kanaele = new Dictionary<string, KanalData>(StringComparer.OrdinalIgnoreCase);
-        var kanaeleByBez = new Dictionary<string, KanalData>(StringComparer.OrdinalIgnoreCase);
-        var haltungen = new Dictionary<string, HaltungData>(StringComparer.OrdinalIgnoreCase);
-        var haltungspunkte = new Dictionary<string, (string Bezeichnung, string? AbwassernetzelementRef)>(StringComparer.OrdinalIgnoreCase);
-        var abwasserknoten = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var rohrprofile = new Dictionary<string, (string Profiltyp, string Verhaeltnis)>(StringComparer.OrdinalIgnoreCase);
-
-        // Die Organisationen der Datei, damit EigentuemerRef aufgeloest werden kann.
-        // Sie stehen im Topic "Administration", also ausserhalb der Fachdaten-Baskets —
-        // deshalb ueber das ganze Dokument gelesen.
-        var organisationen = LiesOrganisationen(doc);
-
-        var baskets = doc.Descendants()
-            .Where(e => e.Name.LocalName.EndsWith("SIA405_Abwasser.SIA405_Abwasser", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        var scope = baskets.Count > 0 ? baskets.SelectMany(b => b.Descendants()) : doc.Descendants();
-
-        foreach (var node in scope)
-        {
-            var local = node.Name.LocalName;
-
-            // Kanal
-            if (local.Equals("Kanal", StringComparison.OrdinalIgnoreCase) || local.EndsWith(".Kanal", StringComparison.OrdinalIgnoreCase))
-            {
-                var tid = (string?)node.Attribute("TID");
-                if (string.IsNullOrWhiteSpace(tid)) continue;
-                var kd = new KanalData { Tid = tid! };
-                foreach (var child in node.Elements())
-                {
-                    switch (child.Name.LocalName)
-                    {
-                        case "Bezeichnung": kd.Bezeichnung = child.Value; break;
-                        case "Standortname": kd.Standortname = child.Value; break;
-                        case "Status": kd.Status = child.Value; break;
-                        case "Nutzungsart_Ist": kd.Nutzungsart = child.Value; break;
-                        case "Bemerkung": kd.Bemerkung = child.Value; break;
-                        case "Zugaenglichkeit": kd.Zugaenglichkeit = child.Value; break;
-                        case "BaulicherZustand": kd.BaulicherZustand = child.Value; break;
-                        case "Eigentuemer": kd.Eigentuemer = child.Value; break;
-                        // In SIA405 ist der Eigentuemer ein Verweis, kein Text. Die
-                        // Kennung wird gemerkt und spaeter gegen die Organisationen der
-                        // Datei aufgeloest — ohne das ging der Eigentuemer bei jedem
-                        // Import verloren, und beim naechsten Export fehlte genau er.
-                        case "EigentuemerRef":
-                            kd.EigentuemerRef = (string?)child.Attribute("REF") ?? "";
-                            break;
-                        case "DatenherrRef":
-                            kd.DatenherrRef = (string?)child.Attribute("REF") ?? "";
-                            break;
-                        case "DatenlieferantRef":
-                            kd.DatenlieferantRef = (string?)child.Attribute("REF") ?? "";
-                            break;
-                        case "Baujahr": kd.Baujahr = child.Value; break;
-                        case "Rohrlaenge": kd.Rohrlaenge = child.Value; break;
-                        // Das Modell schreibt "FunktionHierarchisch" mit grossem H. Die zwei
-                        // anderen Schreibweisen stammen aus aelteren Lieferungen; bis
-                        // 2026-09-03 fehlte ausgerechnet die des Modells.
-                        case "FunktionHierarchisch": kd.Funktion = child.Value; break;
-                        case "Funktionhierarchisch": kd.Funktion = child.Value; break;
-                        case "Funktion_hierarchisch": kd.Funktion = child.Value; break;
-                        case "FunktionHydraulisch": kd.FunktionHydraulisch = child.Value; break;
-                        case "Sanierungsbedarf": kd.Sanierungsbedarf = child.Value; break;
-                        case "Verbindungsart": kd.Verbindungsart = child.Value; break;
-                        case "Bettung_Umhuellung": kd.BettungUmhuellung = child.Value; break;
-                        case "Bruttokosten": kd.Bruttokosten = child.Value; break;
-                    }
-                }
-                kanaele[tid!] = kd;
-                if (!string.IsNullOrWhiteSpace(kd.Bezeichnung))
-                    kanaeleByBez[kd.Bezeichnung] = kd;
-            }
-
-            // Haltung
-            if (local.Equals("Haltung", StringComparison.OrdinalIgnoreCase) || local.EndsWith(".Haltung", StringComparison.OrdinalIgnoreCase))
-            {
-                var tid = (string?)node.Attribute("TID");
-                if (string.IsNullOrWhiteSpace(tid)) continue;
-                var hd = new HaltungData { Tid = tid! };
-                foreach (var child in node.Elements())
-                {
-                    switch (child.Name.LocalName)
-                    {
-                        case "Bezeichnung": hd.Bezeichnung = child.Value; break;
-                        case "LaengeEffektiv": hd.Laenge = child.Value; break;
-                        case "Lichte_Hoehe": hd.LichteHoehe = child.Value; break;
-                        case "Lichte_Breite": hd.LichteBreite = child.Value; break;
-                        case "Material": hd.Material = child.Value; break;
-                        case "Letzte_Aenderung": hd.LetzteAenderung = child.Value; break;
-                        case "AbwasserbauwerkRef": hd.KanalRef = (string?)child.Attribute("REF") ?? ""; break;
-                        case "vonHaltungspunktRef": hd.VonRef = (string?)child.Attribute("REF") ?? ""; break;
-                        case "nachHaltungspunktRef": hd.NachRef = (string?)child.Attribute("REF") ?? ""; break;
-                        case "RohrprofilRef": hd.RohrprofilRef = (string?)child.Attribute("REF") ?? ""; break;
-                        case "Lagebestimmung": hd.Lagebestimmung = child.Value; break;
-                    }
-                }
-                haltungen[tid!] = hd;
-            }
-
-            // Rohrprofil: Profiltyp und Hoehen-Breiten-Verhaeltnis haengen nicht an der
-            // Haltung, sondern an diesem Objekt. Ohne es kaeme die Breite eines Rechteck-
-            // oder Eiprofils nie im Programm an.
-            if (local.Equals("Rohrprofil", StringComparison.OrdinalIgnoreCase) || local.EndsWith(".Rohrprofil", StringComparison.OrdinalIgnoreCase))
-            {
-                var tid = (string?)node.Attribute("TID");
-                if (string.IsNullOrWhiteSpace(tid)) continue;
-                string profiltyp = "", verhaeltnis = "";
-                foreach (var child in node.Elements())
-                {
-                    switch (child.Name.LocalName)
-                    {
-                        case "Profiltyp": profiltyp = child.Value; break;
-                        case "HoehenBreitenverhaeltnis": verhaeltnis = child.Value; break;
-                    }
-                }
-                rohrprofile[tid!] = (profiltyp, verhaeltnis);
-            }
-
-            // Haltungspunkt
-            if (local.Equals("Haltungspunkt", StringComparison.OrdinalIgnoreCase) || local.EndsWith(".Haltungspunkt", StringComparison.OrdinalIgnoreCase))
-            {
-                var tid = (string?)node.Attribute("TID");
-                if (string.IsNullOrWhiteSpace(tid)) continue;
-                string bezeichnung = "";
-                string? abwRef = null;
-                foreach (var child in node.Elements())
-                {
-                    switch (child.Name.LocalName)
-                    {
-                        case "Bezeichnung": bezeichnung = child.Value; break;
-                        case "AbwassernetzelementRef": abwRef = (string?)child.Attribute("REF"); break;
-                    }
-                }
-                haltungspunkte[tid!] = (bezeichnung, abwRef);
-            }
-
-            // Abwasserknoten
-            if (local.Equals("Abwasserknoten", StringComparison.OrdinalIgnoreCase) || local.EndsWith(".Abwasserknoten", StringComparison.OrdinalIgnoreCase))
-            {
-                var tid = (string?)node.Attribute("TID");
-                if (string.IsNullOrWhiteSpace(tid)) continue;
-                string bezeichnung = "";
-                foreach (var child in node.Elements())
-                {
-                    if (child.Name.LocalName == "Bezeichnung")
-                        bezeichnung = child.Value;
-                }
-                abwasserknoten[tid!] = bezeichnung;
-            }
-        }
+        // Schritt 1: Objekte lesen (Sia405ObjektLeser). Die Verweise bleiben Kennungen.
+        var bestand = Sia405ObjektLeser.Lies(doc);
+        var kanaele = bestand.Kanaele;
+        var kanaeleByBez = bestand.KanaeleNachBezeichnung;
+        var haltungen = bestand.Haltungen;
+        var haltungspunkte = bestand.Haltungspunkte;
+        var abwasserknoten = bestand.Abwasserknoten;
+        var rohrprofile = bestand.Rohrprofile;
+        var organisationen = bestand.Organisationen;
 
         // Hilfsfunktion für Schacht-Label
         string? ResolveSchachtLabel(string? refTid, string haltungsname, bool oben)
@@ -661,7 +470,7 @@ public sealed partial class LegacyXtfImportService
         var records = new List<HaltungRecord>();
         foreach (var hd in haltungen.Values)
         {
-            KanalData? kanal = null;
+            Sia405KanalObjekt? kanal = null;
             if (!string.IsNullOrWhiteSpace(hd.KanalRef) && kanaele.TryGetValue(hd.KanalRef, out var kdByRef))
                 kanal = kdByRef;
             else if (!string.IsNullOrWhiteSpace(hd.Bezeichnung) && kanaeleByBez.TryGetValue(hd.Bezeichnung, out var kdByBez))
