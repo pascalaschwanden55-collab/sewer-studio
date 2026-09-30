@@ -44,6 +44,9 @@ Bericht `docs/audits/2026-09-23-code-grafik-plan/AUDIT-UND-PLAN.md`. Regeln, die
 
 ## Gebundene Bild-/Zeit-/Meterbelege im Player (20.09.2026)
 
+> Seit AP09 (30.09.2026) bildet `CodingEinzelbildAnalyseUseCase` (Application/UseCases/CodingEinzelbild) den
+> Beleg; `ExecuteAnalyzedFrameAsync` ist entfernt. Aufrufweg: `docs/architektur/player-einzelbild-ablauf.md`.
+
 - `CodingMultiModelInferenceWorkflow.ExecuteAnalyzedFrameAsync` bildet vor der
   Inferenz einen `CodingAnalyzedFrameEvidence` aus PNG, Aufnahmezeit und einmalig
   aufgeloestem Meter. Structural, BCE und TrackerCreateOpen verwenden diesen

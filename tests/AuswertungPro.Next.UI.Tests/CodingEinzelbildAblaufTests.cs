@@ -1,4 +1,5 @@
 using System.Windows.Media;
+using AuswertungPro.Next.Application.UseCases.CodingEinzelbild;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
@@ -9,6 +10,8 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Haelt den ganzen Player-Weg «gebundenes Einzelbild analysieren» fest (AP09): Reihenfolge der
 /// Schritte, Statuszeilen samt Farbe und die Aufnahmebindung. Der Weg wird ohne Fenster mit
 /// Attrappen so zusammengesetzt, wie <c>PlayerWindow.RunCodingMultiModelAnalysisAsync</c> es tut.
+/// Die Erwartungen wurden am Stand vor dem Umbau (Commit 104013548, damals gegen Command-, Start-,
+/// Endmeter- und Inferenz-Workflow) aufgenommen und blieben unverändert.
 /// </summary>
 public sealed class CodingEinzelbildAblaufTests
 {
@@ -211,41 +214,29 @@ public sealed class CodingEinzelbildAblaufTests
             f.Log);
     }
 
-    // Setzt den Weg so zusammen wie PlayerWindow.Coding.Ai.MultiModel.cs.
+    // Setzt den Weg so zusammen wie PlayerWindow.Coding.Ai.MultiModel.cs: Anwendungsfall plus Statusanzeige.
     private static Task AusfuehrenAsync(Attrappen f)
-        => CodingMultiModelAnalysisCommandWorkflow.ExecuteAsync(
-            new CodingMultiModelAnalysisCommandRequest<object>(
+        => CodingEinzelbildAnalyseUseCase.ExecuteAsync(
+            new CodingEinzelbildAnfrage<object>(
                 f.MitMehrmodell ? new object() : null,
-                f.MitAbbruchquelle ? f.Abbruch : null),
-            new CodingMultiModelAnalysisCommandActions<object>(
-                StartAnalysisAsync: cancellationToken => CodingMultiModelAnalysisStartWorkflow.ExecuteAsync(
-                    new CodingMultiModelAnalysisStartWorkflowRequest(Aktivitaet, 12.3, cancellationToken),
-                    new CodingMultiModelAnalysisStartWorkflowActions(
-                        SetCodingAiState: f.Status,
-                        CaptureSnapshotAsync: f.BildAufnehmenAsync,
-                        StoreAnalyzedFrame: f.BildMerken,
-                        TryReadAnalyzedFrameOsdMeterAsync: f.OsdLesenAsync,
-                        UpdateFrameReadiness: f.BereitschaftAktualisieren,
-                        IsFrameReady: f.IstBereit)),
-                ResolveEndMeter: () => CodingEndMeterResolveWorkflow.Execute(
-                    new CodingEndMeterResolveRequest(f.HatSitzung()),
-                    new CodingEndMeterResolveActions(ResolveEndMeter: f.Endmeter)).EndMeter,
-                RunInferenceAsync: (_, start, endMeter, cancellationToken) => CodingMultiModelInferenceWorkflow.ExecuteAnalyzedFrameAsync(
-                    new CodingMultiModelInferenceWorkflowRequest(
-                        Aktivitaet,
-                        start.FrameBytes!,
-                        12.3,
-                        start.FrameOsdMeter,
-                        f.NennweiteLesen(),
-                        endMeter,
-                        cancellationToken),
-                    new CodingMultiModelAnalyzedFrameInferenceActions(
-                        ResolveCurrentMeter: f.MeterAufloesen,
-                        AnalyzeFrameAsync: (bild, eingabe, token) => f.AnalysierenAsync(bild, eingabe.NominalDiameterMm, eingabe.CurrentMeter, eingabe.ReachLength, token),
-                        SetCodingAiState: f.Status,
-                        TryHandleBoundaryClassifierResultAsync: f.GrenzeAsync,
-                        TryHandleStructuralClassifierResult: f.Struktur,
-                        HandleAnalysisResult: f.Ergebnis))));
+                f.MitAbbruchquelle ? f.Abbruch : null,
+                12.3),
+            new CodingEinzelbildSchritte<object, SingleFrameResult>(
+                Melden: meldung => CodingEinzelbildStatusAnzeige.Zeigen(meldung, Aktivitaet, f.Status),
+                BildAufnehmenAsync: f.BildAufnehmenAsync,
+                AnalysebildMerken: f.BildMerken,
+                OsdMeterLesenAsync: f.OsdLesenAsync,
+                BildbereitschaftAktualisieren: f.BereitschaftAktualisieren,
+                IstBildBereit: f.IstBereit,
+                HatCodiersitzung: f.HatSitzung,
+                EndmeterLesen: f.Endmeter,
+                NennweiteLesen: f.NennweiteLesen,
+                MeterAufloesen: f.MeterAufloesen,
+                AnalysierenAsync: (_, bild, eingabe, token) => f.AnalysierenAsync(bild, eingabe.NominalDiameterMm, eingabe.CurrentMeter, eingabe.ReachLength, token),
+                FehlerLesen: result => result.Error,
+                GrenzeBehandelnAsync: f.GrenzeAsync,
+                StrukturBehandeln: f.Struktur,
+                ErgebnisBehandeln: f.Ergebnis));
 
     private sealed class Attrappen
     {
