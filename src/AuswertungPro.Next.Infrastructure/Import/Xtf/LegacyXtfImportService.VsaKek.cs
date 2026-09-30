@@ -26,9 +26,6 @@ public sealed partial class LegacyXtfImportService
         IReadOnlyList<ProtocolEntry> Eintraege,
         string? ImportFingerprint = null);
 
-    /// <summary>Eine Untersuchung, deren Bauwerksart sich nicht belegen liess.</summary>
-    internal sealed record XtfOffeneUntersuchung(string Bezeichnung, string Grund);
-
     /// <summary>
     /// Was eine VSA-KEK-Datei fachlich hergibt — nach Bauwerksart getrennt.
     /// <paramref name="Weitere"/> sind die Untersuchungen einer Haltung neben ihrer
@@ -45,151 +42,36 @@ public sealed partial class LegacyXtfImportService
         IVsaMediaPathResolver mediaPaths)
     {
         var bestand = VsaKekObjektLeser.Lies(doc);
+        var bezuege = VsaKekBeziehungen.Loese(bestand, sourcePath, mediaPaths);
         var modellName = bestand.ModellName;
-        var untersuchungen = bestand.Untersuchungen;
-        // Befunde je Untersuchungs-TID. Bis 30.09.2026 je Bezeichnung: Dann trug eine
-        // Haltung mit Hin- und Gegenbefahrung die Befunde beider Untersuchungen.
-        var findingsJeUntersuchung = new Dictionary<string, List<VsaFinding>>(StringComparer.Ordinal);
-        var findingsByObjId = new Dictionary<string, VsaFinding>(StringComparer.OrdinalIgnoreCase);
-        var findingsByTid = new Dictionary<string, VsaFinding>(StringComparer.OrdinalIgnoreCase);
-        // Video-Pfad je Untersuchungs-TID (KEK.Datei mit Klasse=Untersuchung)
-        var videoByUntersuchungTid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var kanalschaden in bestand.Kanalschaeden)
-        {
-            var refTid = kanalschaden.UntersuchungRef;
-            if (string.IsNullOrWhiteSpace(refTid) || !untersuchungen.TryGetValue(refTid!, out var u))
-                continue;
-
-            var schadenTid = kanalschaden.Tid;
-            var s = kanalschaden.Werte;
-            var finding = kanalschaden.Befund;
-
-            u.Schaeden.Add(s);
-            if (!string.IsNullOrWhiteSpace(s.ObjId))
-                findingsByObjId[s.ObjId] = finding;
-            // XTF-Variante nutzt Datei.Objekt = Kanalschaden-TID (kein OBJ_ID-Element vorhanden) — auch nach TID indizieren.
-            if (!string.IsNullOrWhiteSpace(schadenTid))
-                findingsByTid[schadenTid!] = finding;
-            // Zuordnung ueber den Bezug (UntersuchungRef), nicht ueber den Namen.
-            if (!findingsJeUntersuchung.TryGetValue(refTid!, out var list))
-            {
-                list = new List<VsaFinding>();
-                findingsJeUntersuchung[refTid!] = list;
-            }
-            list.Add(finding);
-        }
-
-        foreach (var normschachtschaden in bestand.Normschachtschaeden)
-        {
-            var refTid = normschachtschaden.UntersuchungRef;
-            // Ein verwaister Verweis darf den Import nicht stoppen; er wird gezaehlt,
-            // aber keiner Untersuchung untergeschoben.
-            if (string.IsNullOrWhiteSpace(refTid) || !untersuchungen.TryGetValue(refTid!, out var zielUntersuchung))
-                continue;
-
-            zielUntersuchung.Schachtschaeden.Add(normschachtschaden.Werte);
-        }
-
-        foreach (var (art, klasse, objekt, bezeichnung, relativpfad) in bestand.Dateien)
-        {
-            // --- Untersuchungs-Video (Klasse=Untersuchung, zentral bekanntes Video ODER relativpfad=Film) ---
-            if (klasse.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)
-                && !string.IsNullOrWhiteSpace(objekt))
-            {
-                var istVideo = MediaFileTypes.HasVideoExtension(bezeichnung)
-                               || relativpfad.Contains("Film", StringComparison.OrdinalIgnoreCase);
-                if (istVideo)
-                {
-                    var videoPfad = mediaPaths.ResolveVideo(sourcePath, relativpfad, bezeichnung);
-                    if (!string.IsNullOrWhiteSpace(videoPfad)
-                        && !videoByUntersuchungTid.ContainsKey(objekt))
-                    {
-                        videoByUntersuchungTid[objekt] = videoPfad;
-                    }
-                }
-                continue;
-            }
-
-            if (!art.Contains("Foto", StringComparison.OrdinalIgnoreCase))
-                continue;
-            if (!klasse.Contains("Kanalschaden", StringComparison.OrdinalIgnoreCase))
-                continue;
-            // Datei.Objekt referenziert den Kanalschaden — je nach XTF-Variante via OBJ_ID ODER TID.
-            if (string.IsNullOrWhiteSpace(objekt)
-                || !(findingsByObjId.TryGetValue(objekt, out var finding)
-                     || findingsByTid.TryGetValue(objekt, out finding)))
-                continue;
-
-            var fotoPath = mediaPaths.ResolvePhoto(sourcePath, relativpfad, bezeichnung);
-            if (string.IsNullOrWhiteSpace(fotoPath))
-                continue;
-
-            if (string.IsNullOrWhiteSpace(finding.FotoPath))
-                finding.FotoPath = fotoPath;
-        }
 
         var records = new List<HaltungRecord>();
         var schaechte = new List<XtfSchachtUntersuchung>();
-        var offene = new List<XtfOffeneUntersuchung>();
-        var haltungsuntersuchungen = new List<VsaKekUntersuchung>();
-        var bauwerksarten = bestand.Bauwerksarten;
-
-        foreach (var u in untersuchungen.Values)
+        foreach (var u in bezuege.Schachtbegehungen)
         {
-            if (string.IsNullOrWhiteSpace(u.Bezeichnung))
-                continue;
-
-            // Haltung oder Schacht? Die Datei sagt es an mehreren Stellen; widersprechen
-            // sie sich, bleibt der Fall offen statt geraten.
-            var belege = new VsaKekUntersuchungsBelege(
-                HatVonBisPunkt: !string.IsNullOrWhiteSpace(u.VonPunkt) || !string.IsNullOrWhiteSpace(u.BisPunkt),
-                Erfassungsart: u.Erfassungsart,
-                Kanalschaeden: u.Schaeden.Count,
-                Normschachtschaeden: u.Schachtschaeden.Count,
-                Bauwerksverweis: bauwerksarten.TryGetValue(u.AbwasserbauwerkRef ?? "", out var verweisart)
-                    ? verweisart
-                    : VsaKekBauteilart.Unklar)
-            {
-                Bezeichnung = u.Bezeichnung
-            };
-
-            var artErgebnis = VsaKekUntersuchungsart.Bestimme(belege);
-            if (artErgebnis.Art == VsaKekBauteilart.Unklar)
-            {
-                offene.Add(new XtfOffeneUntersuchung(u.Bezeichnung, artErgebnis.Grund));
-                continue;
-            }
-
-            if (artErgebnis.Art == VsaKekBauteilart.Schacht)
-            {
-                schaechte.Add(new XtfSchachtUntersuchung(
-                    u.Bezeichnung,
-                    NormalizeDate_yyyymmdd(u.Zeitpunkt),
-                    u.Operateur,
-                    u.Erfassungsart,
-                    BaueSchachteintraege(u),
-                    Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-                        System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(u)))));
-                continue;
-            }
-
-            haltungsuntersuchungen.Add(u);
+            schaechte.Add(new XtfSchachtUntersuchung(
+                u.Bezeichnung,
+                NormalizeDate_yyyymmdd(u.Zeitpunkt),
+                u.Operateur,
+                u.Erfassungsart,
+                BaueSchachteintraege(u),
+                Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                    System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(u)))));
         }
 
         // Je Haltung eine Haupt-Untersuchung (die vollstaendigste). Nur sie liefert Felder,
         // Befunde und Primaere_Schaeden; jede weitere wird danach als Protokollfassung abgelegt.
         var weitere = new List<XtfWeitereUntersuchung>();
-        foreach (var gruppe in VsaKekUntersuchungsWahl.Waehle(haltungsuntersuchungen, u => u.Bezeichnung, Merkmale))
+        foreach (var gruppe in VsaKekUntersuchungsWahl.Waehle(bezuege.Haltungsuntersuchungen, u => u.Bezeichnung, Merkmale))
         {
-            findingsJeUntersuchung.TryGetValue(gruppe.Haupt.Tid, out var findings);
-            videoByUntersuchungTid.TryGetValue(gruppe.Haupt.Tid, out var videoLink);
+            bezuege.BefundeJeUntersuchung.TryGetValue(gruppe.Haupt.Tid, out var findings);
+            bezuege.VideoJeUntersuchung.TryGetValue(gruppe.Haupt.Tid, out var videoLink);
             records.Add(BaueHaltung(gruppe.Haupt, findings, videoLink, sourcePath, modellName));
 
             foreach (var w in gruppe.Weitere)
             {
-                findingsJeUntersuchung.TryGetValue(w.Tid, out var befunde);
-                videoByUntersuchungTid.TryGetValue(w.Tid, out var video);
+                bezuege.BefundeJeUntersuchung.TryGetValue(w.Tid, out var befunde);
+                bezuege.VideoJeUntersuchung.TryGetValue(w.Tid, out var video);
                 weitere.Add(new XtfWeitereUntersuchung(
                     gruppe.Haltung, gruppe.Haupt.Tid, gruppe.Haupt.Zeitpunkt, findings?.Count ?? 0,
                     w.Tid, w.Zeitpunkt, befunde ?? new List<VsaFinding>(), video,
@@ -199,7 +81,7 @@ public sealed partial class LegacyXtfImportService
             }
         }
 
-        return new XtfVsaKekErgebnis(records, schaechte, offene, untersuchungen.Count, weitere);
+        return new XtfVsaKekErgebnis(records, schaechte, bezuege.Offene.ToList(), bezuege.Untersuchungen, weitere);
     }
 
     /// <summary>
