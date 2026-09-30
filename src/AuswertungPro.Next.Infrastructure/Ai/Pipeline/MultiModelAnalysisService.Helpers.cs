@@ -66,12 +66,6 @@ public sealed partial class MultiModelAnalysisService
     private static string DeriveFfprobePath(string ffmpegPath) =>
         FfmpegLocator.DeriveFfprobeFrom(ffmpegPath);
 
-    /// <summary>
-    /// Normalisiert Clock-Positionen — delegiert an kanonische Implementierung in VsaCodeResolver.
-    /// </summary>
-    private static string? NormalizeClockPosition(string? clock) =>
-        VsaCodeResolver.NormalizeClock(clock);
-
     private static bool CanUseClassifierDecision(YoloClassifyResponse cls)
         => cls.ClassifierLoaded && !cls.BendVetoFailed;
 
@@ -198,22 +192,6 @@ public sealed partial class MultiModelAnalysisService
     /// <summary>Frame-Record ans Checkpoint-Journal anhaengen (No-op ohne Journal).</summary>
     private Task AppendCheckpointAsync(AnalysisCheckpointFrame frame, CancellationToken ct)
         => _checkpointJournal?.AppendFrameAsync(frame, ct) ?? Task.CompletedTask;
-
-    private bool RecordSamCompletion(MultiModelRunCompleteness completeness, SamResponse response,
-        int requestedBoxes, int frameIndex, int totalFrames, PipelineFrameTrace trace,
-        IProgress<VideoAnalysisProgress>? progress)
-    {
-        var failed = completeness.RecordSam(response, requestedBoxes);
-        if (response.Degraded || failed)
-        {
-            _logger.LogWarning("Frame {Frame}: SAM – {Skipped}/{Requested} Boxen nicht segmentiert (Review).",
-                frameIndex, response.SkippedBoxes, requestedBoxes);
-            progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                $"Frame {frameIndex} – SAM: {response.SkippedBoxes} Box(en) nicht segmentiert – Review nötig"));
-            MarkTraceDegraded(trace, $"sam_skipped_{response.SkippedBoxes}_of_{requestedBoxes}");
-        }
-        return failed;
-    }
 
     private static void ReportCompletion(IProgress<VideoAnalysisProgress>? progress, int totalFrames,
         int skippedFrames, VideoAnalysisResult result)

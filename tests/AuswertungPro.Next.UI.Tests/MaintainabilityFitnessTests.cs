@@ -36,7 +36,6 @@ public sealed class MaintainabilityFitnessTests
         ["src/AuswertungPro.Next.Infrastructure/Import/WinCan/WinCanDbImportService.cs"] = 958,
         ["src/AuswertungPro.Next.Infrastructure/Ai/OverlayToolService.cs"] = 954,
         ["src/AuswertungPro.Next.Infrastructure/Media/MediaConflictCenterService.cs"] = 954,
-        ["src/AuswertungPro.Next.Infrastructure/Ai/Pipeline/MultiModelAnalysisService.cs"] = 952,
         ["src/AuswertungPro.Next.Infrastructure/Dossiers/DossierWordTemplateExportService.cs"] = 948,
         ["src/AuswertungPro.Next.UI/ViewModels/Pages/BuilderPageViewModel.cs"] = 948,
         ["src/AuswertungPro.Next.UI/ServiceProvider.cs"] = 939,
