@@ -69,4 +69,15 @@ public sealed class WebGisSanierungPosition
     /// angelegt» ausgeben: Vor einem neuen Versuch im WebGIS nachsehen.
     /// </summary>
     public string? Ungeklaert { get; set; }
+
+    /// <summary>
+    /// Schreibausgang aus den Flags (WG-D). Reihenfolge wie bisher in Bericht, Log und Vergleichsliste: ungeklaert,
+    /// angelegt und nachgeprueft, angelegt (vom Server bestaetigt), Fehler, offen.
+    /// </summary>
+    public WebGisSchreibAusgang Ausgang =>
+        Ungeklaert is not null ? WebGisSchreibAusgang.Ungeklaert
+        : Geschrieben && Nachgeprueft ? WebGisSchreibAusgang.Nachgeprueft
+        : Geschrieben ? WebGisSchreibAusgang.VomServerBestaetigt
+        : SchreibFehler is not null ? WebGisSchreibAusgang.Fehler
+        : WebGisSchreibAusgang.Offen;
 }

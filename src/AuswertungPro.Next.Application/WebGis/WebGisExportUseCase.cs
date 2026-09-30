@@ -266,7 +266,7 @@ public sealed class WebGisExportUseCase
         foreach (var (feldName, text) in werte)
         {
             if (WebGisHandwertKarte.IstEigeneRegel(feldName) || WebGisHandwertKarte.NichtFuerKataster(feldName)
-                || WebGisHandwertKarte.WebGisFuehrt(feldName)) continue;
+                || WebGisFuehrungsfelder.NieSenden(feldName)) continue;
             var karte = WebGisHandwertKarte.Finde(e.Objektart, feldName);
             if (karte is null || karte.HauptRefId is null || karte.Typ != WebGisHandwertTyp.Combo) continue;
             var wert = (text ?? string.Empty).Trim();

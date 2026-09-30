@@ -207,9 +207,9 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     (Informativ-Faelle), `WebGisImportUebernahmeTests`.
     **ENTSCHEID PASCAL 24.09.2026 fuer EIGENTUEMER/BETREIBER** («muss perfekt von WebGIS übernommen werden, diese
     Werte ändern sich sehr selten»): Das WebGIS FUEHRT beide. Der WebGIS-Wert ersetzt beim Holen jeden vorhandenen
-    Wert zeichengenau — GeoShop wie Kanalfirma (`WebGisImportPlanBuilder.FuehrtWebGis`; bei der Uebernahme
+    Wert zeichengenau — GeoShop wie Kanalfirma (`WebGisImportPlanBuilder.PlaneFuehrungswert`; bei der Uebernahme
     `DarfErsetzen`). SEIT 24.09.2026 ABENDS (Entscheid Pascal «Eigentuemer und Betreiber duerfen vom WebGIS
-    ueberschrieben werden») weicht auch eine Handeingabe, bewusst leer eingeschlossen: `WebGisImportUseCase.WebGisFuehrt`
+    ueberschrieben werden») weicht auch eine Handeingabe, bewusst leer eingeschlossen: `WebGisFuehrungsfelder.HolenUeberschreibtHand`
     laesst Eigentuemer ueber die Handmarke, `GibHandmarkeFrei` nimmt sie vor dem Schreiben weg (scheitert das Schreiben,
     kommt sie zurueck), `SchreibeAkteGruppe` ersetzt den Betreiber auch mit `VonHand`. Danach ist der Wert ein Katasterwert
     ohne Handmarke. Der Konfliktschutz bleibt: Wurde der Wert seit der Vorschau geaendert, bleibt er. Die Haltungslaenge

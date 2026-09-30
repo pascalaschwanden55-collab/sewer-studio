@@ -28,14 +28,23 @@ public static class WebGisSanierungFeldkarte
     public const string RelationSchluesselfeld = "globalid";
 
     // --- refIds der Maske "Sanierungsmassnahme" (layout-, nicht objektbezogen) ---
+    /// <summary>Bezeichnung (EditBox). Status: offen (mitgeschnittener Anlege-Aufruf 21.09.2026; Wert am Objekt in webgis.md nicht einzeln belegt).</summary>
     public const string BezeichnungRef = "7f25415d-f1b3-5064-5004-69e99676deda";   // EditBox
+    /// <summary>Art (Combo). Status: live geprueft (Anlegen 21.09.2026: 80480-80478 -> 66921 Renovierung, Schacht 80478 -> 66922 Reparatur).</summary>
     public const string ArtRef = "a8835985-0736-5de2-261b-76a0848ae9de";           // Combo
+    /// <summary>Feld «Status» (Combo). Status: offen (mitgeschnittener Anlege-Aufruf 21.09.2026; Wert am Objekt in webgis.md nicht einzeln belegt).</summary>
     public const string StatusRef = "35c9f3c7-13e1-b6eb-d5d9-7683b1184b1b";        // Combo
+    /// <summary>Verfahren (Combo, Liste je Art). Status: offen (mitgeschnittener Anlege-Aufruf 21.09.2026; Wert am Objekt in webgis.md nicht einzeln belegt).</summary>
     public const string VerfahrenRef = "8573dac2-8c36-00fe-44a7-91a29b5a7f13";     // Combo
+    /// <summary>Umfang (Combo). Status: offen (mitgeschnittener Anlege-Aufruf 21.09.2026; Wert am Objekt in webgis.md nicht einzeln belegt).</summary>
     public const string UmfangRef = "d89b27b2-dd75-dd2c-291a-dfa72bb1ce57";        // Combo
+    /// <summary>Sanierungsjahr (DateBox). Status: offen (mitgeschnittener Anlege-Aufruf 21.09.2026; Wert am Objekt in webgis.md nicht einzeln belegt).</summary>
     public const string SanierungsjahrRef = "e1b9c707-31c4-260f-36db-e9fe7e4c889e"; // DateBox (TT.MM.JJJJ)
+    /// <summary>Profiltyp (Combo). Status: offen (mitgeschnittener Anlege-Aufruf 21.09.2026; Wert am Objekt in webgis.md nicht einzeln belegt).</summary>
     public const string ProfiltypRef = "e4b24ff9-87f9-34db-c750-8521630591b2";     // Combo
+    /// <summary>Fabrikat (Combo). Status: offen (mitgeschnittener Anlege-Aufruf 21.09.2026; Wert am Objekt in webgis.md nicht einzeln belegt).</summary>
     public const string FabrikatRef = "47502f6b-fa14-8869-9489-3344cc5b3397";      // Combo
+    /// <summary>Hersteller (Combo). Status: offen (mitgeschnittener Anlege-Aufruf 21.09.2026; Wert am Objekt in webgis.md nicht einzeln belegt).</summary>
     public const string HerstellerRef = "01b89043-9b30-f067-f7f6-55621c94b56d";    // Combo
 
     // --- Akte-Schluessel in SewerStudio (ObjektAkte.Werte) ---
@@ -69,7 +78,10 @@ public static class WebGisSanierungFeldkarte
         _ => throw new ArgumentOutOfRangeException(nameof(art))
     };
 
-    /// <summary>refId der Liste "Sanierungsmassnahmen" (GListBox) in der Elternmaske.</summary>
+    /// <summary>
+    /// refId der Liste "Sanierungsmassnahmen" (GListBox) in der Elternmaske. Status: live geprueft (Probelauf Buerglen
+    /// 21.09.2026: vorhandene Massnahmen erkannt; Liste live gelesen 28.09.2026, siehe <see cref="WebGisSanierungZeile.Beginn"/>).
+    /// </summary>
     public static string ListeRef(WebGisObjektart art) => art switch
     {
         WebGisObjektart.Haltung => "406ab302-0d93-eb1f-6824-e7ff7ff47fe5",

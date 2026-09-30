@@ -17,6 +17,11 @@ namespace AuswertungPro.Next.Application.WebGis;
 /// Die refIds stammen aus der Masken-Inventur v2 (nur Rotation, Gelaende-/Sohlenhoehe, Ebene, Lagebestimmung
 /// und Funktion hierarchisch sind live geprueft). Jede Auswahlliste zaehlt deshalb nur, wenn die gelesene
 /// Liste zur Liste der Akte passt; ohne bekannte refId wird die EINE passende Liste der Maske gesucht.
+///
+/// SCHACHT-AKTENKARTE (Wartbarkeitsaudit 30.09.2026, WG-A): Die Tabelle <c>Schacht</c> unten ist eine eigene Karte
+/// Schachtmaske -> Schachtakte und fuehrt ihre refIds bewusst selbst, nicht ueber <see cref="WebGisFeldkarte"/>.
+/// Status: Inventur v2, live nur teilweise geprueft (siehe oben). Sechs refIds stehen gleichlautend auch in der
+/// <see cref="WebGisHandwertKarte"/> (Funktion hierarchisch, Lagebestimmung, Ebene, Rotation, Gelaende-, Sohlenhoehe).
 /// </summary>
 public static class WebGisImportAktenfelder
 {

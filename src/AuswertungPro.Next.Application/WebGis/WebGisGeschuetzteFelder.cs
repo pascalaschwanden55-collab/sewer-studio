@@ -26,7 +26,7 @@ public static class WebGisGeschuetzteFelder
         [WebGisFeldkarte.HaltungLaengeRohrRef] = "Rohr-/Haltungslänge",
         [WebGisFeldkarte.HaltungEigentuemerRef] = "Eigentümer",
         [WebGisFeldkarte.HaltungBetreiberRef] = "Betreiber",
-        ["e2fddd0d-b1f0-bc99-bc54-95bc6d2d5b1a"] = "Baujahr/Ersatzjahr",
+        [WebGisFeldkarte.HaltungBaujahrErsatzjahrRef] = "Baujahr/Ersatzjahr",
     };
 
     private static readonly IReadOnlyDictionary<string, string> SchachtNie = new Dictionary<string, string>(StringComparer.Ordinal)
