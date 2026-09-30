@@ -71,7 +71,7 @@ public sealed class DesignAuditKnopfleistenTests
         ("NovaDialogWindow.xaml", Regel.C_KeinLokalerButtonStyle,
             "NUR Regel (c): der lokale Style \"NovaDialogDangerButton\" (Aufgabe 1) ist die danger-" +
             "gestylte Ja-Variante für ConfirmWarn(defaultNo) - optisch identisch mit dem programmweiten " +
-            "DangerButton, aber laut CLAUDE.md-Entscheid Aufgabe 1 bewusst NICHT dorthin verschoben " +
+            "DangerButton, aber laut Entscheid Aufgabe 1 (docs/architektur/oberflaeche.md) bewusst NICHT dorthin verschoben " +
             "(\"Aufgabe 1 bleibt unangetastet\"). IsDefault/IsCancel werden hier vollständig im " +
             "Code-Behind gesetzt (ConfirmCancel/ConfirmWarn), nicht in XAML - Regel (b) hat dadurch " +
             "nichts zu prüfen und ist real erfuellt. Regeln (a) und (d) sind ebenfalls sauber " +

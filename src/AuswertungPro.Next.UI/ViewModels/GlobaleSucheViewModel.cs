@@ -176,7 +176,7 @@ public sealed partial class GlobaleSucheViewModel : ObservableObject, IDisposabl
         befehle.Add(Befehl("Tastenkuerzel", "Tastenkürzel", "\uE765", _shell.OpenTastenkuerzelCommand));
         befehle.Add(Befehl("UeberSewerStudio", "Über SewerStudio", "\uE946", _shell.ShowAboutCommand));
         // Fokusmodus hat im Menue keinen Eintrag mit Glyph (er ist dort ein checkbarer
-        // Menuepunkt ohne Icon, siehe CLAUDE.md-Regel zu Menue-Icons) - dasselbe "gross
+        // Menuepunkt ohne Icon, siehe docs/architektur/oberflaeche.md, Regel zu Menue-Icons) - dasselbe "gross
         // anzeigen"-Symbol wie der vorhandene Vollflaechen-Umschalter (HaltungFelderDrawer.xaml).
         befehle.Add(Befehl("Fokusmodus", "Fokusmodus", "\uE740", _shell.ToggleFocusModeCommand));
 

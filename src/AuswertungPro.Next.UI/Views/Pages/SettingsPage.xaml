@@ -808,7 +808,7 @@
                         </GroupBox>
 
                         <!-- Optikanalyse 28.09.2026, Aufgabe 10a: pdftotext.exe ist ein
-                             Entwickler-/Support-Werkzeug (siehe CLAUDE.md «Der PDF-Textleser
+                             Entwickler-/Support-Werkzeug (siehe docs/architektur/schaechte.md «Der PDF-Textleser
                              wird geprueft gewaehlt»), keine normale Importquelle. -->
                         <Expander Header="Erweitert (für Fachleute)" IsExpanded="False" Margin="0,4,0,0">
                             <GroupBox Header="Werkzeuge" Style="{StaticResource SettingsSectionGroupBox}">

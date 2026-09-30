@@ -12,7 +12,7 @@ public static class WindowsThemeFollowPolicy
 {
     /// <summary>
     /// Der Windows-Hell/Dunkel-Umschalter meldet sich ueber General ODER Color - welche der
-    /// beiden genau feuert, ist nicht am echten Windows-Dialog verifiziert (siehe CLAUDE.md);
+    /// beiden genau feuert, ist nicht am echten Windows-Dialog verifiziert (siehe docs/architektur/oberflaeche.md, Aufgabe 13);
     /// beide werden zugelassen statt zu raten. Andere Kategorien (Schriftgroesse, Sprache, ...)
     /// gehen SewerStudio hier nichts an.
     /// </summary>

@@ -4,9 +4,11 @@ Immer einfach und ehrlich antworten. Denken und Antworten immer auf Deutsch.
 
 ## Verbindliche Projektbeschreibung
 
-Vor Änderungen zuerst [`CLAUDE.md`](CLAUDE.md) vollständig lesen. Dort stehen der
-aktuelle Aufbau, die KI-Pipeline, wichtige Klassen und fachliche Regeln. Diese Datei
-ist bewusst nur der kurze Einstieg und dupliziert die Architektur nicht.
+Vor Änderungen zuerst [`CLAUDE.md`](CLAUDE.md) vollständig lesen. Dort stehen Aufbau,
+Architekturprinzipien, Querschnittsregeln und Fachbegriffe. Die Fachregeln der einzelnen
+Bereiche (Import, XTF, WebGIS, Dossiers, KI, Training, Oberfläche …) stehen in
+[`docs/architektur/`](docs/architektur/); vor Arbeit in einem Bereich die passende Datei
+lesen. Diese Datei ist bewusst nur der kurze Einstieg und dupliziert die Architektur nicht.
 
 SewerStudio ist heute eine Windows-WPF-Anwendung auf .NET 10. Zum System gehören
 unter anderem:
