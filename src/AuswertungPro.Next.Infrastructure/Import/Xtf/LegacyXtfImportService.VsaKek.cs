@@ -3,6 +3,7 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Import.Xtf.VsaKek;
 using AuswertungPro.Next.Infrastructure.Media;
 using IVsaMediaPathResolver = AuswertungPro.Next.Application.Import.IVsaMediaPathResolver;
 
@@ -16,47 +17,6 @@ namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 public sealed partial class LegacyXtfImportService
 {
     // ===================== VSA_KEK =====================
-    private sealed class Untersuchung
-    {
-        public string Tid { get; init; } = "";
-        public string Bezeichnung { get; set; } = "";
-        public string Ausfuehrender { get; set; } = "";
-        public string Zeitpunkt { get; set; } = "";
-        public string InspizierteLaenge { get; set; } = "";
-        public string Erfassungsart { get; set; } = "";
-        public string Fahrzeug { get; set; } = "";
-        public string Geraet { get; set; } = "";
-        public string Witterung { get; set; } = "";
-        public string Grund { get; set; } = "";
-        public string VonPunkt { get; set; } = "";
-        public string BisPunkt { get; set; } = "";
-        /// <summary>Rohwert aus der XTF: "in_Fliessrichtung" / "gegen_Fliessrichtung".</summary>
-        public string Fliessrichtung { get; set; } = "";
-        public string Operateur { get; set; } = "";
-        /// <summary>REF aus <c>AbwasserbauwerkRef</c>; leer, wenn nicht angegeben.</summary>
-        public string AbwasserbauwerkRef { get; set; } = "";
-        public List<Schaden> Schaeden { get; } = new();
-        /// <summary>Schachtschaeden derselben Untersuchung — bis 2026-09-05 nie gelesen.</summary>
-        public List<Schachtschaden> Schachtschaeden { get; } = new();
-    }
-
-    /// <summary>
-    /// Ein <c>Normschachtschaden</c>. Bewusst getrennt von <see cref="Schaden"/>:
-    /// Er traegt einen eigenen Codebereich (D..) und einen Schachtbereich statt eines
-    /// Meterwerts entlang einer Haltung.
-    /// </summary>
-    private sealed class Schachtschaden
-    {
-        public string Schadencode { get; set; } = "";
-        public string Distanz { get; set; } = "";
-        public string Anmerkung { get; set; } = "";
-        public string Einzelschadenklasse { get; set; } = "";
-        public string Schachtbereich { get; set; } = "";
-        public string Videozaehlerstand { get; set; } = "";
-        public string Quantifizierung1 { get; set; } = "";
-        public string Quantifizierung2 { get; set; } = "";
-    }
-
     /// <summary>Eine Schachtbegehung samt ihren Schachtschaeden.</summary>
     internal sealed record XtfSchachtUntersuchung(
         string Nummer,
@@ -81,37 +41,12 @@ public sealed partial class LegacyXtfImportService
         int Untersuchungen,
         List<XtfWeitereUntersuchung> Weitere);
 
-    private sealed class Schaden
-    {
-        public string ObjId { get; set; } = "";
-        public string Schadencode { get; set; } = "";
-        public string Distanz { get; set; } = "";
-        public string Anmerkung { get; set; } = "";
-        public string Einzelschadenklasse { get; set; } = "";
-        public string Streckenschaden { get; set; } = "";
-        public string Quantifizierung1 { get; set; } = "";
-        public string Quantifizierung2 { get; set; } = "";
-        public string SchadenlageAnfang { get; set; } = "";
-        public string SchadenlageEnde { get; set; } = "";
-        public double LL { get; set; }
-    }
-
-    /// <summary>
-    /// Liest den Modellnamen aus der HEADERSECTION (erstes MODEL-Element). Fehlt er,
-    /// bleibt die Angabe leer — sie ist eine Zusatzinformation und darf keinen Import stoppen.
-    /// </summary>
-    private static string ReadModelName(XDocument doc)
-    {
-        var model = doc.Descendants()
-            .FirstOrDefault(e => string.Equals(e.Name.LocalName, "MODEL", StringComparison.OrdinalIgnoreCase));
-        return (string?)model?.Attribute("NAME") ?? "";
-    }
-
     private static XtfVsaKekErgebnis ParseVsaKek(XDocument doc, string sourcePath,
         IVsaMediaPathResolver mediaPaths)
     {
-        var modellName = ReadModelName(doc);
-        var untersuchungen = new Dictionary<string, Untersuchung>(StringComparer.Ordinal);
+        var bestand = VsaKekObjektLeser.Lies(doc);
+        var modellName = bestand.ModellName;
+        var untersuchungen = bestand.Untersuchungen;
         // Befunde je Untersuchungs-TID. Bis 30.09.2026 je Bezeichnung: Dann trug eine
         // Haltung mit Hin- und Gegenbefahrung die Befunde beider Untersuchungen.
         var findingsJeUntersuchung = new Dictionary<string, List<VsaFinding>>(StringComparer.Ordinal);
@@ -120,132 +55,15 @@ public sealed partial class LegacyXtfImportService
         // Video-Pfad je Untersuchungs-TID (KEK.Datei mit Klasse=Untersuchung)
         var videoByUntersuchungTid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var node in doc.Descendants().Where(e => e.Name.LocalName.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)))
+        foreach (var kanalschaden in bestand.Kanalschaeden)
         {
-            var tid = (string?)node.Attribute("TID");
-            if (string.IsNullOrWhiteSpace(tid))
-                continue;
-
-            var u = new Untersuchung { Tid = tid! };
-
-            foreach (var child in node.Elements())
-            {
-                switch (child.Name.LocalName)
-                {
-                    case "Bezeichnung": u.Bezeichnung = child.Value; break;
-                    case "Ausfuehrender": u.Ausfuehrender = child.Value; break;
-                    case "Zeitpunkt": u.Zeitpunkt = child.Value; break;
-                    case "Inspizierte_Laenge": u.InspizierteLaenge = child.Value; break;
-                    case "Erfassungsart": u.Erfassungsart = child.Value; break;
-                    case "Fahrzeug": u.Fahrzeug = child.Value; break;
-                    case "Geraet": u.Geraet = child.Value; break;
-                    case "Witterung": u.Witterung = child.Value; break;
-                    case "Grund": u.Grund = child.Value; break;
-                    case "vonPunktBezeichnung": u.VonPunkt = child.Value; break;
-                    case "bisPunktBezeichnung": u.BisPunkt = child.Value; break;
-                    case "Fliessrichtung": u.Fliessrichtung = child.Value; break;
-                    case "Operateur": u.Operateur = child.Value; break;
-                    case "AbwasserbauwerkRef":
-                        u.AbwasserbauwerkRef = (string?)child.Attribute("REF") ?? "";
-                        break;
-                }
-            }
-
-            untersuchungen[tid!] = u;
-        }
-
-        foreach (var node in doc.Descendants().Where(e => e.Name.LocalName.Contains("Kanalschaden", StringComparison.OrdinalIgnoreCase)))
-        {
-            // UntersuchungRef/@REF
-            var refNode = node.Elements().FirstOrDefault(e => e.Name.LocalName == "UntersuchungRef");
-            var refTid = (string?)refNode?.Attribute("REF");
+            var refTid = kanalschaden.UntersuchungRef;
             if (string.IsNullOrWhiteSpace(refTid) || !untersuchungen.TryGetValue(refTid!, out var u))
                 continue;
 
-            var schadenTid = (string?)node.Attribute("TID");
-            var s = new Schaden();
-            var finding = new VsaFinding
-            {
-                // Herkunft festhalten, solange sie bekannt ist: Nur damit laesst sich
-                // spaeter genau dieses Element in der Originaldatei wiederfinden.
-                KanalschadenTid = string.IsNullOrWhiteSpace(schadenTid) ? null : schadenTid,
-                UntersuchungTid = refTid
-            };
-            foreach (var child in node.Elements())
-            {
-                switch (child.Name.LocalName)
-                {
-                    case "OBJ_ID":
-                        s.ObjId = child.Value;
-                        break;
-                    case "KanalSchadencode":
-                        s.Schadencode = child.Value;
-                        finding.KanalSchadencode = child.Value;
-                        break;
-                    case "Distanz":
-                        s.Distanz = child.Value;
-                        if (TryParseDouble(child.Value, out var meter))
-                            finding.MeterStart = meter;
-                        break;
-                    case "Videozaehlerstand":
-                        // Sekunde ab Dateianfang (SN EN 13508-2, Kapitel 3.1.10).
-                        // Wurde bis 2026-08-13 nie eingelesen, obwohl die ganze
-                        // Weiterverarbeitung dahinter steht: finding.MPEG ->
-                        // entry.Mpeg/entry.Zeit -> CodingBoundaryImportReferencePolicy.
-                        // Ohne diesen Wert fiel die Videoreferenz von Rohranfang und
-                        // Rohrende dort still auf TimeSpan.Zero zurueck.
-                        finding.MPEG = child.Value;
-                        break;
-                    case "Anmerkung":
-                        s.Anmerkung = child.Value;
-                        finding.Raw = child.Value;
-                        break;
-                    case "Einzelschadenklasse":
-                        s.Einzelschadenklasse = child.Value;
-                        if (int.TryParse(child.Value, out var ez))
-                        {
-                            // Best-effort: wenn keine Regel vorhanden, nutze Einzelschadenklasse für alle Anforderungen
-                            if (ez < 0) ez = 0;
-                            if (ez > 4) ez = 4;
-                            finding.EZD = ez;
-                            finding.EZS = ez;
-                            finding.EZB = ez;
-                        }
-                        break;
-                    case "Streckenschaden":
-                        s.Streckenschaden = child.Value;
-                        break;
-                    case "Quantifizierung1":
-                        s.Quantifizierung1 = child.Value;
-                        finding.Quantifizierung1 = child.Value;
-                        break;
-                    case "Quantifizierung2":
-                        s.Quantifizierung2 = child.Value;
-                        finding.Quantifizierung2 = child.Value;
-                        break;
-                    case "SchadenlageAnfang":
-                        s.SchadenlageAnfang = child.Value;
-                        if (double.TryParse(child.Value.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var anfang))
-                            finding.SchadenlageAnfang = anfang;
-                        break;
-                    case "SchadenlageEnde":
-                        s.SchadenlageEnde = child.Value;
-                        if (double.TryParse(child.Value.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var ende))
-                            finding.SchadenlageEnde = ende;
-                        break;
-                }
-            }
-
-            // SchadenlageAnfang/-Ende sind Uhrlagen im Rohrquerschnitt und keine
-            // Laengenpositionen. Eine Streckenlaenge darf daraus nie entstehen.
-            double ll = 0.0;
-            if (string.Equals(s.Streckenschaden, "true", StringComparison.OrdinalIgnoreCase)
-                && TryParseDouble(s.Quantifizierung1, out var q1))
-            {
-                ll = q1;
-            }
-            s.LL = ll;
-            finding.LL = ll;
+            var schadenTid = kanalschaden.Tid;
+            var s = kanalschaden.Werte;
+            var finding = kanalschaden.Befund;
 
             u.Schaeden.Add(s);
             if (!string.IsNullOrWhiteSpace(s.ObjId))
@@ -262,74 +80,19 @@ public sealed partial class LegacyXtfImportService
             list.Add(finding);
         }
 
-        // Normschachtschaeden. Bis 2026-09-05 wurden sie ueberhaupt nicht gelesen: Die
-        // 132 Schachtschaeden aus Andermatt Zone 2.11 verschwanden ersatzlos, und ihre
-        // Begehungen landeten als Haltungen in der Haltungsliste.
-        foreach (var node in doc.Descendants()
-                     .Where(e => e.Name.LocalName.EndsWith(".Normschachtschaden", StringComparison.OrdinalIgnoreCase)
-                                 || e.Name.LocalName.Equals("Normschachtschaden", StringComparison.OrdinalIgnoreCase)))
+        foreach (var normschachtschaden in bestand.Normschachtschaeden)
         {
-            var refNode = node.Elements().FirstOrDefault(e => e.Name.LocalName == "UntersuchungRef");
-            var refTid = (string?)refNode?.Attribute("REF");
+            var refTid = normschachtschaden.UntersuchungRef;
             // Ein verwaister Verweis darf den Import nicht stoppen; er wird gezaehlt,
             // aber keiner Untersuchung untergeschoben.
             if (string.IsNullOrWhiteSpace(refTid) || !untersuchungen.TryGetValue(refTid!, out var zielUntersuchung))
                 continue;
 
-            var schachtschaden = new Schachtschaden();
-            foreach (var child in node.Elements())
-            {
-                switch (child.Name.LocalName)
-                {
-                    // Beide Schreibweisen: Der WinCan-VX-Export schreibt
-                    // "SchachtSchadencode", neuere Modellfassungen "NormschachtSchadencode".
-                    case "SchachtSchadencode":
-                    case "NormschachtSchadencode":
-                        schachtschaden.Schadencode = child.Value;
-                        break;
-                    case "Distanz": schachtschaden.Distanz = child.Value; break;
-                    case "Anmerkung": schachtschaden.Anmerkung = child.Value; break;
-                    case "Einzelschadenklasse": schachtschaden.Einzelschadenklasse = child.Value; break;
-                    case "Schachtbereich": schachtschaden.Schachtbereich = child.Value; break;
-                    case "Videozaehlerstand": schachtschaden.Videozaehlerstand = child.Value; break;
-                    case "Quantifizierung1": schachtschaden.Quantifizierung1 = child.Value; break;
-                    case "Quantifizierung2": schachtschaden.Quantifizierung2 = child.Value; break;
-                }
-            }
-
-            zielUntersuchung.Schachtschaeden.Add(schachtschaden);
+            zielUntersuchung.Schachtschaeden.Add(normschachtschaden.Werte);
         }
 
-        foreach (var node in doc.Descendants().Where(e => e.Name.LocalName.Contains("Datei", StringComparison.OrdinalIgnoreCase)))
+        foreach (var (art, klasse, objekt, bezeichnung, relativpfad) in bestand.Dateien)
         {
-            string art = "";
-            string klasse = "";
-            string objekt = "";
-            string bezeichnung = "";
-            string relativpfad = "";
-
-            foreach (var child in node.Elements())
-            {
-                switch (child.Name.LocalName)
-                {
-                    case "Art":
-                        art = child.Value;
-                        break;
-                    case "Klasse":
-                        klasse = child.Value;
-                        break;
-                    case "Objekt":
-                        objekt = child.Value;
-                        break;
-                    case "Bezeichnung":
-                        bezeichnung = child.Value;
-                        break;
-                    case "Relativpfad":
-                        relativpfad = child.Value;
-                        break;
-                }
-            }
-
             // --- Untersuchungs-Video (Klasse=Untersuchung, zentral bekanntes Video ODER relativpfad=Film) ---
             if (klasse.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)
                 && !string.IsNullOrWhiteSpace(objekt))
@@ -369,8 +132,8 @@ public sealed partial class LegacyXtfImportService
         var records = new List<HaltungRecord>();
         var schaechte = new List<XtfSchachtUntersuchung>();
         var offene = new List<XtfOffeneUntersuchung>();
-        var haltungsuntersuchungen = new List<Untersuchung>();
-        var bauwerksarten = LiesBauwerksarten(doc);
+        var haltungsuntersuchungen = new List<VsaKekUntersuchung>();
+        var bauwerksarten = bestand.Bauwerksarten;
 
         foreach (var u in untersuchungen.Values)
         {
@@ -444,7 +207,7 @@ public sealed partial class LegacyXtfImportService
     /// Abbruchcode BDC* (die Datei kennt kein eigenes Abbruchfeld). Die Strecke ist
     /// <c>Inspizierte_Laenge</c>, ohne sie die groesste Schadensdistanz.
     /// </summary>
-    private static VsaKekUntersuchungsWahl.Merkmale Merkmale(Untersuchung u)
+    private static VsaKekUntersuchungsWahl.Merkmale Merkmale(VsaKekUntersuchung u)
     {
         var abgebrochen = u.Schaeden.Any(s => (s.Schadencode ?? "").Trim()
             .StartsWith(ProtocolBoundaryService.AbortPrefix, StringComparison.OrdinalIgnoreCase));
@@ -457,7 +220,7 @@ public sealed partial class LegacyXtfImportService
     /// <summary>
     /// Baut den Haltungsdatensatz aus genau einer Untersuchung, ihren Befunden und ihrem Video.
     /// </summary>
-    private static HaltungRecord BaueHaltung(Untersuchung u, List<VsaFinding>? findings,
+    private static HaltungRecord BaueHaltung(VsaKekUntersuchung u,List<VsaFinding>? findings,
         string? videoLink, string sourcePath, string modellName)
     {
         var zeitpunkt = NormalizeDate_yyyymmdd(u.Zeitpunkt);
@@ -549,50 +312,11 @@ public sealed partial class LegacyXtfImportService
     }
 
     /// <summary>
-    /// Welche Bauwerke die Datei selbst mitliefert, nach TID und OBJ_ID nachschlagbar.
-    ///
-    /// WinCan-Exporte enthalten diese Objekte meist NICHT — dann bleibt die Karte leer
-    /// und die Einordnung stuetzt sich auf Schadensart und Untersuchungsform. Liegt das
-    /// Objekt aber vor, ist es der staerkste Beleg.
-    /// </summary>
-    private static Dictionary<string, VsaKekBauteilart> LiesBauwerksarten(XDocument doc)
-    {
-        var karte = new Dictionary<string, VsaKekBauteilart>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var node in doc.Descendants())
-        {
-            var lokal = node.Name.LocalName;
-            VsaKekBauteilart art;
-            if (EndetAuf(lokal, "Normschacht"))
-                art = VsaKekBauteilart.Schacht;
-            else if (EndetAuf(lokal, "Kanal") || EndetAuf(lokal, "Haltung"))
-                art = VsaKekBauteilart.Haltung;
-            else
-                continue;
-
-            var tid = (string?)node.Attribute("TID");
-            if (!string.IsNullOrWhiteSpace(tid))
-                karte[tid!] = art;
-
-            var objId = node.Elements()
-                .FirstOrDefault(e => e.Name.LocalName.Equals("OBJ_ID", StringComparison.OrdinalIgnoreCase))?.Value;
-            if (!string.IsNullOrWhiteSpace(objId))
-                karte[objId!] = art;
-        }
-
-        return karte;
-
-        static bool EndetAuf(string elementname, string klasse)
-            => elementname.Equals(klasse, StringComparison.OrdinalIgnoreCase)
-               || elementname.EndsWith("." + klasse, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
     /// Macht aus den Schachtschaeden einer Begehung Protokolleintraege.
     /// Der Meterwert eines Schachtschadens ist die Tiefe im Schacht, nicht eine
     /// Position entlang einer Haltung — er wird als Punktbefund uebernommen.
     /// </summary>
-    private static List<ProtocolEntry> BaueSchachteintraege(Untersuchung u)
+    private static List<ProtocolEntry> BaueSchachteintraege(VsaKekUntersuchung u)
     {
         var eintraege = new List<ProtocolEntry>();
 
