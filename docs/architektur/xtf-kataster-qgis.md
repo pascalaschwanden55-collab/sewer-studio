@@ -15,6 +15,7 @@
 - GeoShop-Abgleich aus Original-XTF (09.09.2026, Testfassung)
 - Redesign-Feldkorrekturen (08.09.2026)
 - (Fortsetzung aus «Begleitprotokolle der Sanierung und Videodopplung (Bürglen, 09.09.2026)»)
+- Aufbau des SIA405-Rueckwegs (30.09.2026, Wartbarkeitspaket AP08)
 
 ## Robuster GeoShop-XTF-Export (14.09.2026)
 
@@ -701,4 +702,20 @@ traegt fuer Schaechte `xtf_id` = `ch24gwkd` + dieselben acht Objektzeichen wie d
 GEONIS-Kennung; fuer Haltungen fehlt sie dort. Die GEONIS-Konfiguration
 (`D:\Fachwissen\ArcGis\GEONIS_AWU_2022`) enthaelt einen FME-Import im
 UPDATE-Modus (Match ueber GlobalId, keine Geometrie) fuer SIA405 2015.
+
+## Aufbau des SIA405-Rueckwegs (30.09.2026, Wartbarkeitspaket AP08)
+
+`LegacyXtfImportService.ParseSia405` ist nur noch die Abfolge von drei Klassen unter
+`Infrastructure/Import/Xtf/Sia405/`: `Sia405ObjektLeser` liest Kanal, Haltung,
+Rohrprofil, Haltungspunkt, Abwasserknoten und Organisation mit ihren Rohwerten und
+Kennungen (auch fuer den Normschacht-Leser); `Sia405Beziehungen` loest Kanal,
+Rohrprofil, Organisationen und Schachtnamen auf und laesst Fehlendes sichtbar leer
+(`Sia405KanalBezug.Fehlt`, `RohrprofilVerweisOhneZiel`); `Sia405HaltungAbbildung`
+enthaelt die fachlichen Feldregeln dieses Abschnitts. Eine neue Feldregel gehoert in die
+Abbildung, ein neues Dateiobjekt in den Leser. Die Uebernahme ins Projekt
+(Handwertschutz, Konflikte) bleibt in `MergeRecordIntoProject`. VSA-KEK ist noch nicht
+so getrennt. Waechter: `XtfReferenzfallTests` vergleicht fuer synthetische Dateien unter
+`tests/Fixtures/XtfReferenz/` das vollstaendige Projektergebnis mit einem Schnappschuss,
+der vor dem Umbau aufgenommen wurde; ein neuer Schnappschuss entsteht nur, wenn die
+Datei fehlt, und muss dann bewusst geprueft werden.
 
