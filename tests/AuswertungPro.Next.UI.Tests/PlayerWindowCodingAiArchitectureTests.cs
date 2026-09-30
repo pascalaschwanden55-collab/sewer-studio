@@ -394,7 +394,10 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("CodingMultiModelClassifierInputPolicy.Build", multiModelInferenceWorkflow);
         Assert.Contains("actions.TryHandleBoundaryClassifierResult", multiModelInferenceWorkflow);
         Assert.Contains("actions.TryHandleStructuralClassifierResult", multiModelInferenceWorkflow);
-        Assert.Contains("actions.HandleAnalysisResult(result)", multiModelInferenceWorkflow);
+        Assert.Contains("actions.HandleAnalysisResult(analysis)", multiModelInferenceWorkflow);
+        // Die Verteilung Fehler -> Grenze -> Struktur -> Ergebnis liegt im Anwendungsfall;
+        // Verhalten: CodingEinzelbildAnalyseUseCaseTests.
+        Assert.Contains("CodingEinzelbildAnalyseUseCase.AuswertenAsync", multiModelInferenceWorkflow);
     }
 
     [Fact]

@@ -1,5 +1,4 @@
-using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Ai.Coding;
+using AuswertungPro.Next.Application.UseCases.CodingEinzelbild;
 
 namespace AuswertungPro.Next.UI.Tests;
 
