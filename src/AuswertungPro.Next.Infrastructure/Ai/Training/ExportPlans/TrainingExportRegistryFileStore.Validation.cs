@@ -488,6 +488,32 @@ public sealed partial class TrainingExportRegistryFileStore
                     .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
                 StringComparison.OrdinalIgnoreCase);
 
+    private (string SetRoot, string FileName) ResolveBoundNegativeSetLocation(string imagePath, string setId)
+    {
+        // Der Set-Ordner wird aus dem registrierten Bildpfad gelesen und danach streng
+        // geprueft: direktes Kind von training/negatives/sets ueber die images/-Ebene,
+        // erlaubtes Praefix (bcc_hn_/proto_hn_) und Endung auf die ersten 12 Zeichen der Set-ID.
+        var setsRoot = Path.GetFullPath(Path.Combine(_knowledgeRoot, "training", "negatives", "sets"));
+        var actualImagesRoot = Path.GetDirectoryName(imagePath);
+        var setRoot = actualImagesRoot is null ? null : Path.GetDirectoryName(actualImagesRoot);
+        var setParent = setRoot is null ? null : Path.GetDirectoryName(setRoot);
+        var setFolderName = setRoot is null ? null : Path.GetFileName(setRoot);
+        var fileName = Path.GetFileName(imagePath);
+        if (string.IsNullOrWhiteSpace(actualImagesRoot)
+            || !string.Equals(Path.GetFileName(actualImagesRoot), "images", StringComparison.Ordinal)
+            || setRoot is null
+            || setParent is null
+            || !PathsEqual(setParent, setsRoot)
+            || !IsAllowedNegativeSetFolderName(setFolderName, setId)
+            || string.IsNullOrWhiteSpace(fileName)
+            || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new TrainingExportPlanException(
+                $"Gebundenes Negativbild liegt nicht in einem erlaubten Set-Ordner unter '{setsRoot}'.");
+        }
+        return (Path.GetFullPath(setRoot), fileName);
+    }
+
     private static NegativeBinding NormalizeNegativeBinding(
         TrainingExportNegativeImageFileDocument entry)
     {

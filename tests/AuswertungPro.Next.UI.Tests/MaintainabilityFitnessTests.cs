@@ -41,8 +41,8 @@ public sealed class MaintainabilityFitnessTests
         ["src/AuswertungPro.Next.UI/ViewModels/Pages/BuilderPageViewModel.cs"] = 948,
         ["src/AuswertungPro.Next.UI/ServiceProvider.cs"] = 939,
         ["src/AuswertungPro.Next.UI/Services/SystemMonitorService.cs"] = 937,
-        ["src/AuswertungPro.Next.Infrastructure/Ai/Training/ExportPlans/TrainingExportRegistryFileStore.cs"] = 935,
-        ["src/AuswertungPro.Next.UI/ViewModels/Pages/DossiersPageViewModel.Actions.cs"] = 910
+        ["src/AuswertungPro.Next.UI/ViewModels/Pages/DossiersPageViewModel.Actions.cs"] = 910,
+        ["src/AuswertungPro.Next.Infrastructure/Ai/Training/ExportPlans/TrainingExportRegistryFileStore.cs"] = 909
     };
 
     /// <summary>
