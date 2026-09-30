@@ -9,6 +9,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 using AuswertungPro.Next.Infrastructure.Import.Xtf.Sia405;
+using AuswertungPro.Next.Infrastructure.Import.Xtf.VsaKek;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
@@ -425,11 +426,21 @@ public sealed partial class LegacyXtfImportService
             .ToList();
     }
 
-    // Delegation: Logik liegt jetzt in XtfValueNormalizer
-    private static bool TryParseDouble(string? s, out double value)
-        => XtfValueNormalizer.TryParseDouble(s, out value);
-
-    // Delegation: Logik liegt jetzt in XtfValueNormalizer
-    private static string NormalizeDate_yyyymmdd(string? yyyymmdd)
-        => XtfValueNormalizer.NormalizeDate_yyyymmdd(yyyymmdd);
+    // ===================== VSA_KEK =====================
+    private static XtfVsaKekErgebnis ParseVsaKek(XDocument doc, string sourcePath,
+        IVsaMediaPathResolver mediaPaths)
+    {
+        // Gleiche drei Schritte wie bei SIA405:
+        // 1. Objekte lesen — Untersuchung, Kanal-/Normschachtschaden, Datei, Bauwerke,
+        // 2. Bezuege aufloesen — Schaden und Datei zur Untersuchung ueber die TID, dann
+        //    Haltung, Schacht oder ungeklaert; danach je Haltung die Haupt-Untersuchung
+        //    waehlen (die vollstaendigste, die weiteren werden Protokollfassungen),
+        // 3. fachlich abbilden — Haltungsfelder, Schachtprotokoll, Importbeleg.
+        // Die Uebernahme ins Projekt machen danach MergeRecordIntoProject,
+        // MergeVsaKekSchaechteIntoProject und VsaKekWeitereUntersuchungen.
+        var bestand = VsaKekObjektLeser.Lies(doc);
+        var bezuege = VsaKekBeziehungen.Loese(bestand, sourcePath, mediaPaths);
+        var gruppen = VsaKekUntersuchungsWahl.Waehle(bezuege.Haltungsuntersuchungen, u => u.Bezeichnung, VsaKekAbbildung.Merkmale);
+        return VsaKekAbbildung.Baue(bezuege, gruppen, sourcePath, bestand.ModellName);
+    }
 }

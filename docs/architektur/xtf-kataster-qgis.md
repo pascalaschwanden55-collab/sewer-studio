@@ -714,11 +714,27 @@ Rohrprofil, Organisationen und Schachtnamen auf und laesst Fehlendes sichtbar le
 (`Sia405KanalBezug.Fehlt`, `RohrprofilVerweisOhneZiel`); `Sia405HaltungAbbildung`
 enthaelt die fachlichen Feldregeln dieses Abschnitts. Eine neue Feldregel gehoert in die
 Abbildung, ein neues Dateiobjekt in den Leser. Die Uebernahme ins Projekt
-(Handwertschutz, Konflikte) bleibt in `MergeRecordIntoProject`. VSA-KEK ist noch nicht
-so getrennt. Waechter: `XtfReferenzfallTests` vergleicht fuer synthetische Dateien unter
+(Handwertschutz, Konflikte) bleibt in `MergeRecordIntoProject`. VSA-KEK ist seit AP08b
+gleich aufgebaut (siehe unten). Waechter: `XtfReferenzfallTests` vergleicht fuer synthetische Dateien unter
 `tests/Fixtures/XtfReferenz/` das vollstaendige Projektergebnis mit einem Schnappschuss,
 der vor dem Umbau aufgenommen wurde; ein neuer Schnappschuss entsteht nur, wenn die
 Datei fehlt, und muss dann bewusst geprueft werden.
+
+**VSA-KEK (AP08b, 30.09.2026).** `ParseVsaKek` steht neben `ParseSia405` und ist nur noch
+die Abfolge unter `Infrastructure/Import/Xtf/VsaKek/`: `VsaKekObjektLeser` liest
+Untersuchung, Kanal- und Normschachtschaden, Datei und mitgelieferte Bauwerke mit Rohwerten
+und Kennungen; `VsaKekBeziehungen` ordnet Schaeden und Fotos/Videos ueber die TID
+(`UntersuchungRef`, `Datei.Objekt` als OBJ_ID oder TID) zu und teilt die Untersuchungen
+ueber `VsaKekUntersuchungsart` in Haltung, Schacht und ungeklaert; danach waehlt
+`VsaKekUntersuchungsWahl` je Haltung die Haupt-Untersuchung; `VsaKekAbbildung` setzt die
+Haltungsfelder, baut die Schachtprotokollzeilen und den Importbeleg. Nicht Zuordenbares
+(Untersuchung ohne Bezeichnung, verwaiste Schaeden, Foto ohne Befund) steht sichtbar in
+`VsaKekBezuege`, wird aber wie bisher nicht gemeldet. **Importbeleg:** Der gespeicherte
+`ImportFingerprint` von Schachtbegehung und weiterer Untersuchung ist SHA-256 ueber die
+JSON-Form von `VsaKekUntersuchung` samt `VsaKekKanalschaden`/`VsaKekSchachtschaden`.
+Diese drei Klassen nie umbenennen, umordnen oder ergaenzen (Eigenschaften), sonst erkennt
+ein Wiederholungsimport bestehende Begehungen nicht mehr; Waechter:
+`XtfVsaKekFingerabdruckTests` (fester Wert) und `vsakek-referenz`.
 
 ## XTF-Import: nichts still vermischen (30.09.2026)
 
