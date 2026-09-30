@@ -63,90 +63,8 @@ public sealed class ServiceProviderRegistrationTests
 
         Assert.NotNull(field);
         var registrations = Assert.IsAssignableFrom<IReadOnlyDictionary<Type, object>>(field!.GetValue(services));
-        // Bewusster Tripwire: die Zahl zwingt bei jedem neuen/entfernten Dienst zu einer
-        // Entscheidung. Die Meldung nennt den Grund, statt nur eine nackte Zahl-Abweichung
-        // zu zeigen (frueherer Kritikpunkt: nichtssagend).
-        // 132 -> 135: Bogen-Vorschlaege (Auftrag Paket 4): IBendSuggestionScanService,
-        // ICodingSuggestionExposure, IVideoClipExtractor.
-        // 135 -> 136: ISchachtProtocolFileLocator (Schachtprotokoll "Aktualisieren" findet die
-        // PDF auch bei absoluter Verknuepfung oder umbenannter Datei im eigenen Schachtordner).
-        // 136 -> 137: IXtfRevisionExportService (revidierte XTF aus dem aktuellen Projektstand).
-        // 137 -> 138: IProgramSnapshotService (Programmstand als eine ZIP-Datei fuer Ziele,
-        // an denen hunderttausende Einzeldateien nicht taugen, z. B. ein Cloud-Ordner).
-        // 138 -> 139: IImportedFileLedger (Gesamtaudit 2026-08-14, P1-5: nimmt die Dateien
-        // eines verworfenen Ein-Knopf-Imports zurueck, statt sie unbemerkt liegen zu lassen).
-        // 139 -> 140: IShaftDistributionService kapselt die transaktionale manuelle
-        // Schachtverteilung (grosser Audit-Umbau 2026-08-14).
-        // 140 -> 141: ITrainingCenterDocumentStore verschiebt die JSON-Dateiarbeit
-        // aus der eingefrorenen UI-Fassade in die Infrastructure.
-        // 141 -> 143: INpkOfferPdfExportService und IPdfPrintService (Wiederholungsaudit
-        // 2026-08-14, P2-3: der NPK-Weg baute Vorlagenpfade selbst, erzeugte direkt einen
-        // Renderer und startete Process.Start im ViewModel).
-        // 143 -> 144: IImportPdfReferenceResolver ordnet Herstellernamen wie
-        // "Section_8_892037-74091.pdf" einer bereits vorhandenen Haltung/einem Schacht zu.
-        // Ohne ihn fielen im Projekt Hellgasse alle 38 Haltungsprotokolle still heraus.
-        // 144 -> 145: IProtocolPdfDateReader liest das Protokolldatum mit derselben
-        // Textquelle wie die Verteilung. Vorher hiess dieselbe Datei je nach Weg anders
-        // ("20231010_80783.pdf" nach dem Verteilen, "00000000_80783.pdf" nach dem Import).
-        // 145 -> 146: IDistributionReconciliationService ("Abgleichen") verschiebt aus
-        // Haltungen_Verteilt und Schaechte_Verteilt alles ohne Gegenstueck im Projekt in
-        // den Papierkorb.
-        // 146 -> 150: Eigentuemerdossier (IDossierStore, IDossierWordExportService,
-        // IDossierAttachmentService, IDossierPdfAssemblyService). Buendelt mehrere
-        // Haltungen einer Liegenschaft zu einem Dossier fuer den Eigentuemer.
-        // 150 -> 151: IDossierOutputPreviewService erzeugt die Vorschau aus dem
-        // echten Word-/PDF-Weg statt aus einer nachgezeichneten WPF-Seite.
-        // 151 -> 152: IDossierPlanPublicationService veroeffentlicht einen bearbeiteten
-        // Plan nur innerhalb des Projekts und liefert den sicheren Rueckbau-Beleg.
-        // 152 -> 153: IProtocolPdfLayoutSettings liefert Exporter und Dossierdialog
-        // dieselbe Live-Einstellung, ohne settings.json beim Klick erneut zu laden.
-        // 153 -> 154: IDossierComponentListExportService erzeugt Haltungs- und
-        // Schachtlisten bewusst aus dem aktuellen Stand des Eigentuemerdossiers.
-        // 154 -> 152: Kartenansicht entfernt (IOfflineBasemapPathResolver,
-        // IKarteBasemapLayerFactory). Die raeumliche Arbeit laeuft ueber QGIS.
-        // 152 -> 153: IQgisBestandLeser liest die lokalen GeoPackage-Kopien des
-        // Abwassernetzes fuer "Leere Felder aus QGIS ergaenzen" — offline, ohne den
-        // gedrosselten Netzdienst des Kantons.
-        // 153 -> 154: IXtfNeuExportService schreibt eine NEUE SIA405-Datei fuer Objekte
-        // ohne Katastervorlage. Der Revisionsweg braucht eine Originaldatei; private
-        // Anschlussleitungen haben keine.
-        // 154 -> 155: IXtfExportVorschauDialog zeigt vor dem XTF-Schreiben die Alt/Neu-Tabelle
-        // im eigenen Fenster; der Ablauf liegt im UseCase, das ViewModel verdrahtet nur.
-        // 155 -> 156: IPipeEndSuggestionScanService fragt die freigegebenen Bild-Einordner
-        // fuer Rohranfang und Rohrende (Sidecar /classify/lernstufe) im Vorabdurchlauf des
-        // Training Studios — derselbe Weg wie der Bogen-Copilot, ohne eigenen Client.
-        // 156 -> 157: IKatasterKennungLeser liest die SIA405-Kennungen aus der GEONIS-Kopie
-        // fuer "Katasterkennungen ergaenzen" — die QGIS-Kopien (Lisag-WFS) tragen nur eine Lisag-Nummer,
-        // die beim Veroeffentlichen wechselt; ohne die GEONIS-Kennung legt ein Import Duplikate an.
-        // 157 -> 158: ICodingSuggestionScanService fuehrt im Codiermodus den Vorabdurchlauf
-        // (Bogen, dann Rohranfang/Rohrende) und setzt das Sitzungsgedaechtnis — der Player
-        // kennt nur diesen Vertrag, keine Modellwahl.
-        // 168 -> 169: ISchachtProQrImportService liest SPQR1 aus Bildern.
-        // 169 -> 170: IGeonisWebGisClient schreibt Zustand/Sanierungsbedarf/Bemerkung
-        // in den GEONIS-Attributeditor (WebGIS-Export). Laengen werden nie geschrieben;
-        // saniert gilt nur bei ausgefuehrter Sanierungs-Akte.
-        // 170 -> 171: IWebGisZugangQuelle liefert die im sichtbaren Browser angemeldete
-        // WebOffice-Sitzung (Playwright-Chromium, kein Passwort in SewerStudio).
-        // 158 -> 159: ICodingSuggestionRegistry merkt den letzten Vorabdurchlauf je Haltung
-        // (Sitzungsgedaechtnis fuer die Karte "KI-Vorabdurchlauf" in der Uebersicht, Nova-Etappe 2).
-        // 159 -> 160: IGeoShopLeser liefert Original-XTF-TIDs und Leerfelder fuer die neue Vorschau.
-        // 160 -> 161: IBackupAdditionalFolders speichert zusätzliche Sicherungsquellen getrennt.
-        // 167 -> 168: ISchachtLageQuelle liefert Schachtpunkt und Leitungsrichtungen aus den
-        // QGIS-Kopien fuer den Grundriss der Schachtgrafik (Stammkarte, 19.09.2026).
-        // 171 -> 172: IVerteilberichtAblage legt nach jeder Verteilung einen Bericht ab (28.09.2026).
-        // 172 -> 174: IVerteilVorschau (schreibfreie Vorschau) und IVerteilenDialog (ein Fenster
-        // «Verteilen» statt mehrerer Ja/Nein-Dialoge auf der Export-Seite, 28.09.2026).
-        // 174 -> 175: ITaskbarFortschritt zeigt den Fortschritt langer Laeufe am Programmsymbol
-        // in der Windows-Taskleiste (Aufgabe 13, Windows-Integration, 28.09.2026).
-        // 175 -> 176: IBerichtsMarke liefert den Logo-Pfad fuer PDF-/Excel-Export
-        // und Dossier aus einer gemeinsamen Quelle (Aufgabe 15, Optikanalyse 28.09.2026).
-        // 176 -> 177: IDatenaenderungsVerlauf haelt Rueckgaengig/Wiederholen fuer Haltungs- und
-        // Schachtdaten (Aufgabe 16, 29.09.2026).
-        Assert.True(
-            registrations.Count == 177,
-            $"Erwartet 177 Registrierungen, tatsaechlich {registrations.Count}. Bei einem neuen " +
-            "Dienst die Registrierung in ServiceProviderRegistrationMap ergänzen und diese Zahl " +
-            "bewusst anpassen.");
+        // Keine feste Zahl: ob jeder Dienst eingetragen ist, prueft
+        // Jede_Schnittstellen_Eigenschaft_ist_registriert (Abgleich per Reflection).
         Assert.Same(services.XtfLieferungen,
             registrations[typeof(AuswertungPro.Next.Application.Xtf.Lieferung.IXtfLieferungsAblage)]);
         Assert.Same(services.BackupAdditionalFolders,
@@ -257,6 +175,146 @@ public sealed class ServiceProviderRegistrationTests
                 $"Registrierung {registration.Key.Name} -> {registration.Value.GetType().Name} " +
                 "passt nicht zum Vertragstyp.");
         });
+    }
+
+    /// <summary>
+    /// Oeffentliche ServiceProvider-Eigenschaften mit Schnittstellentyp, die NICHT in der
+    /// Registrierungskarte stehen (Stand 30.09.2026). Grund fuer alle: Die Dienste werden nur ueber
+    /// ihre Eigenschaft gelesen, kein Aufrufer fragt sie per GetService(Typ) ab. Neue Dienste gehoeren
+    /// in die Karte, nicht in diese Liste. Wird ein Eintrag registriert oder entfernt, verlangt
+    /// Ausnahmeliste_enthaelt_keine_verwaisten_Eintraege, ihn hier zu streichen - die Liste sinkt nur.
+    /// </summary>
+    private static readonly HashSet<string> NichtRegistriert = new(StringComparer.Ordinal)
+    {
+        "Dialogs",
+        "DropdownOptions",
+        "PlaywrightInstaller",
+        "LogTailReader",
+        "KnowledgeBackup",
+        "CodexArtifactCleanup",
+        "ProjectContentSignature",
+        "ProtocolAi",
+        "Retrieval",
+        "MeasureRecommendation",
+        "VideoAnalysisPipelines",
+        "SanierungOptimizations",
+        "SchachtMassnahmenKatalog",
+        "SchattenStore",
+        "CostFieldSync",
+        "ImportTransactionJournal",
+        "ImportTransactionRecovery",
+        "PhotoImport",
+        "ProjectPortability",
+        "ProjectPhotoAssignment",
+        "HoldingRename",
+        "ShaftRename",
+        "PlanPdfImport",
+        "ProtocolRegeneration",
+        "ProtocolSingleRegeneration",
+        "OneClickImportReports",
+        "ImportSummaryExporter",
+        "ProjectRestorePoints",
+        "ProjectRecovery",
+        "ImportSourceArchiver",
+        "DichtheitImportDistributor",
+        "KanalImportDistributor",
+        "ProtocolPdfExports",
+        "DossierParcels",
+        "DossierLandRegistry",
+        "DossierSewerNetwork",
+        "DossierSchachtNetz",
+        "DossierDirectory",
+        "DossierPlanImages",
+        "DossierPlanAdjuster",
+        "DossierPreviewPages"
+    };
+
+    [Fact]
+    public void Jede_Schnittstellen_Eigenschaft_ist_registriert()
+    {
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = CreateServices(loggerFactory);
+        var registrations = LeseRegistrierungen(services);
+        var eigenschaften = OeffentlicheEigenschaften();
+
+        var fehlend = eigenschaften
+            .Where(p => p.PropertyType.IsInterface
+                && !NichtRegistriert.Contains(p.Name)
+                && !IstRegistriert(p, services, registrations))
+            .Select(p => $"{p.Name} ({p.PropertyType.Name})")
+            .ToList();
+
+        Assert.True(
+            fehlend.Count == 0,
+            "Diese Dienst-Eigenschaften fehlen in ServiceProviderRegistrationMap: " +
+            string.Join(", ", fehlend) + ". In ServiceProviderRegistrationMap eintragen.");
+    }
+
+    [Fact]
+    public void Jeder_Karteneintrag_gehoert_zu_einer_Eigenschaft()
+    {
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = CreateServices(loggerFactory);
+        var registrations = LeseRegistrierungen(services);
+        var werte = OeffentlicheEigenschaften()
+            .Select(p => p.GetValue(services))
+            .Where(v => v is not null)
+            .ToList();
+
+        var verwaist = registrations
+            .Where(r => !werte.Any(w => ReferenceEquals(w, r.Value)))
+            .Select(r => r.Key.Name)
+            .ToList();
+
+        Assert.True(
+            verwaist.Count == 0,
+            "Diese Karteneintraege gehoeren zu keiner oeffentlichen Eigenschaft: " +
+            string.Join(", ", verwaist));
+    }
+
+    [Fact]
+    public void Ausnahmeliste_enthaelt_keine_verwaisten_Eintraege()
+    {
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = CreateServices(loggerFactory);
+        var registrations = LeseRegistrierungen(services);
+        var eigenschaften = OeffentlicheEigenschaften().ToDictionary(p => p.Name, StringComparer.Ordinal);
+
+        foreach (var name in NichtRegistriert)
+        {
+            Assert.True(
+                eigenschaften.TryGetValue(name, out var eigenschaft) && eigenschaft.PropertyType.IsInterface,
+                $"Ausnahme {name} ist keine oeffentliche Schnittstellen-Eigenschaft mehr.");
+            Assert.False(
+                IstRegistriert(eigenschaft!, services, registrations),
+                $"Ausnahme {name} ist inzwischen registriert und gehoert aus der Liste.");
+        }
+    }
+
+    private static IReadOnlyDictionary<Type, object> LeseRegistrierungen(ServiceProvider services)
+    {
+        var field = typeof(ServiceProvider).GetField(
+            "_services",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(field);
+        return Assert.IsAssignableFrom<IReadOnlyDictionary<Type, object>>(field!.GetValue(services));
+    }
+
+    // Alle Teildateien der partiellen Klasse liegen im selben Typ; Indexer und statische
+    // Eigenschaften sind keine Dienste.
+    private static List<PropertyInfo> OeffentlicheEigenschaften()
+        => typeof(ServiceProvider)
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(p => p.GetIndexParameters().Length == 0 && p.GetMethod is not null)
+            .ToList();
+
+    private static bool IstRegistriert(
+        PropertyInfo eigenschaft,
+        ServiceProvider services,
+        IReadOnlyDictionary<Type, object> registrations)
+    {
+        var wert = eigenschaft.GetValue(services);
+        return wert is not null && registrations.Values.Any(v => ReferenceEquals(v, wert));
     }
 
     private static ServiceProvider CreateServices(ILoggerFactory loggerFactory)

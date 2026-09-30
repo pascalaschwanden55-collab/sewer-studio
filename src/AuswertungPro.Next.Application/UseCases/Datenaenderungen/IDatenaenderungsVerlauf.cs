@@ -43,6 +43,19 @@ public sealed class DatenaenderungsVerlaufGeleertEventArgs(string grund) : Event
 /// eines Umbenennungsfelds (Haltungsname, Schacht oben/unten, Schachtnummer) zieht Dateien mit und
 /// ist nie rueckgaengig machbar: Sie leert den Verlauf. Ebenso leeren ihn Projektwechsel, neue,
 /// geloeschte oder verschobene Datensaetze sowie Importe und Uebernahmen (<see cref="Leere"/>).
+///
+/// REGEL fuer jeden neuen externen Schreibweg (schreibt Felder an der Eingabe vorbei, etwa eine
+/// Uebernahme aus GeoShop, QGIS, WebGIS oder einer Objektakte): danach <see cref="Leere"/> mit
+/// <see cref="DatenaenderungsVerlauf.GrundUebernahme"/> aufrufen. Sonst nimmt Strg+Z spaeter Werte
+/// zurueck, die der Schritt gar nicht mehr besitzt. Heutige Stellen:
+///  - Haltungen: <c>DataPageViewModel.MeldeFelderExternErgaenzt</c>, aufgerufen von
+///    <c>DataPageViewModel.KatasterKennungen</c>, <c>.QgisNachfuellen</c> und <c>.WebGisHolen</c>.
+///  - Schaechte: <c>SchaechtePageViewModel.MeldeUebernahme</c>, aufgerufen von <c>.KatasterKennungen</c>,
+///    <c>.WebGisHolen</c>; <c>.QgisNachfuellen</c> ruft <c>Leere</c> selbst auf.
+///  - <c>WebGisHolenAblauf</c> (Holen ueber die Shell) und <c>ObjektaktenDialog</c> (nach erfolgreichem
+///    Speichern der Objektakte).
+///  - <c>ShellViewModel.DatenVerlauf</c>: Import, Uebertragung oder Projektwechsel
+///    (<see cref="DatenaenderungsVerlauf.GrundVorgang"/>).
 /// </summary>
 public interface IDatenaenderungsVerlauf
 {
