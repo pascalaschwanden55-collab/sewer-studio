@@ -32,6 +32,8 @@ from typing import Any, Mapping, Sequence
 
 from PIL import Image
 
+from haltungsidentitaet import physischer_schluessel
+
 
 SCHEMA_VERSION = "1.1"
 
@@ -680,7 +682,7 @@ def _physical_holding_key(holding_key: str) -> str:
         raise ValueError(
             f"Negativsatz besitzt keine belastbare Haltungsidentitaet: {holding_key}"
         )
-    return "|".join(sorted((parts[0].casefold(), parts[1].casefold())))
+    return physischer_schluessel(normalized)
 
 
 def _negative_split_map(
