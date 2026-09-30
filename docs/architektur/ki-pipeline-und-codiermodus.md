@@ -208,7 +208,16 @@ Sieben Befunde mit derselben Wurzel: Ein Teillauf sah aus wie ein vollstaendiger
   Fehlerzaehlung in der belegten Reihenfolge und entscheidet ueber Fortsetzung oder Abbruch.
   Achtung: Beim DINO-Negativbefund steht der Checkpoint VOR dem Trace, sonst danach.
 - **Qwen-Schritt:** `MultiModelQwenSchritt` (eine Instanz je Lauf, haelt den Vorbefund-Kontext).
-  YOLO/DINO/SAM bleiben im Bildschritt; ihre Regeln sind bewusst nicht vereinheitlicht.
+  Seit AP05b liegen auch YOLO, DINO, SAM und der cls-Vorfilter in eigenen Klassen (siehe unten);
+  ihre Regeln sind bewusst nicht vereinheitlicht.
+- **Modellschritte (AP05b, 30.09.2026):** `MultiModelClsVorfilter`, `MultiModelYoloSchritt` (Umgehung,
+  Qualifikationsentzug: nur ausdrueckliches `qualified=true` filtert, Klassenschwellen, COCO-Warnung),
+  `MultiModelDinoSchritt` (degraded = Modellfehler, ohne Box, Grundgeruest-Befund) und `MultiModelSamSchritt`
+  (Vollstaendigkeit, `LowScoreBoxes` kein Fehler, Quantifizierung, Befundbau). `MultiModelBildKontext` traegt
+  die Werte eines Bildes. `MultiModelSidecarAufruf` ordnet nur die Fehlerart ein (Nutzerabbruch weiterwerfen,
+  VRAM = Kapazitaet, sonst Transport); Folgen, Log- und Fortschrittstexte bleiben beim Modell. Der Vorfilter
+  faellt bei jeder Fehlerart weich zurueck. Tests je Schritt: `MultiModel*SchrittTests`,
+  `MultiModelClsVorfilterTests`, `MultiModelSidecarAufrufTests`.
 - Schutz: `MultiModelAnalysisReferenceSnapshotTests` vergleicht fuenf kontrollierte Laeufe zeichengleich
   (Ereignisfolge aus Modellaufrufen, Trace, Checkpoint, Fortschritt, Log sowie Ergebnis und Befunde;
   Schnappschuesse unter `tests/AuswertungPro.Next.Pipeline.Tests/Snapshots/MultiModel/`). Neu schreiben

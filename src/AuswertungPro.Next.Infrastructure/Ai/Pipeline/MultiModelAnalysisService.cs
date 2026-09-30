@@ -10,7 +10,6 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.QualityGate;
-using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
@@ -331,18 +330,15 @@ public sealed partial class MultiModelAnalysisService
 
     /// <summary>
     /// Ein Bild = ein Schritt: cls-Vorfilter, YOLO, DINO, SAM, Quantifizierung, Klassifikator-
-    /// Entscheidung und Qwen. Liefert nur den Ausgang des Bildes; Trace-Schreiben, Dedup,
+    /// Entscheidung und Qwen. Die Modellschritte liegen in eigenen Klassen (AP05b); hier bleiben
+    /// ihre Reihenfolge, die Klassifikator-Entscheidung und der Beleg des Bildes.
+    /// Liefert nur den Ausgang des Bildes; Trace-Schreiben, Dedup,
     /// Checkpoint und Fehlerzaehlung bucht <see cref="BookFrameResultAsync"/>. Ein Nutzerabbruch
     /// wird als Ausnahme weitergereicht und zaehlt nie als Fehler.
     /// </summary>
     private async Task<MultiModelBildErgebnis> ProcessFrameAsync(
         MultiModelLaufZustand run, FrameData frame, PipelineFrameTrace trace, Stopwatch frameSw, CancellationToken ct)
     {
-        var progress = run.Progress;
-        var totalFrames = run.TotalFrames;
-        var telemetry = run.Telemetry;
-        var duration = run.Duration;
-        var pipeDiameterMm = run.PipeDiameterMm;
         var t = frame.TimestampSeconds;
 
         // Extraction timing is effectively 0 for streaming (already read)
@@ -351,7 +347,7 @@ public sealed partial class MultiModelAnalysisService
 
         if (frameBytes is null or { Length: 0 })
         {
-            telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, 0, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
+            run.Telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, 0, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
             trace.Path = "empty_frame";
             trace.DropReason = "empty_frame";
             return MultiModelBildErgebnis.Uebersprungen(run.LastMeter);
@@ -359,7 +355,6 @@ public sealed partial class MultiModelAnalysisService
 
         double estimatedMeter = EstimateMeter(run, t);
         var bild = new MultiModelBildKontext(t, frameBytes, trace, frameSw, extractionMs, estimatedMeter);
-        var frameBase64 = bild.FrameBase64;
         // Telemetrie-Bypass: Bestandsaufnahme-Sweep, BCD-/BCE-Zone und gesperrter Detektor laufen
         // ohne YOLO-Detect an DINO weiter (Regeln im YOLO-Schritt).
         var yoloUmgehung = MultiModelYoloSchritt.Umgehung.Bestimme(run, t, estimatedMeter, FrameStepSeconds);
@@ -470,9 +465,9 @@ public sealed partial class MultiModelAnalysisService
         {
             var qwenContext = new MultiModelQwenSchritt.QwenFrameContext(meter, run.LastMeter);
             qwenMs = await run.Qwen.EnrichAsync(
-                qwenContext, findings, classifierCode, run.FrameIndex, t, frameBytes, frameBase64,
-                dinoResult, samResult, yoloResult, pipeDiameterMm, totalFrames,
-                trace, QwenFrameTimeout, progress, ct).ConfigureAwait(false);
+                qwenContext, findings, classifierCode, run.FrameIndex, t, bild.FrameBytes, bild.FrameBase64,
+                dinoResult, samResult, yoloResult, run.PipeDiameterMm, run.TotalFrames,
+                trace, QwenFrameTimeout, run.Progress, ct).ConfigureAwait(false);
             meter = qwenContext.Meter;
             run.LastMeter = qwenContext.LastMeter;
             qwenMeterAccepted = qwenContext.MeterAccepted;
@@ -483,7 +478,7 @@ public sealed partial class MultiModelAnalysisService
             }
         }
 
-        telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, bild.YoloMs, bild.DinoMs, samMs, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
+        run.Telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, bild.YoloMs, bild.DinoMs, samMs, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
 
         var (meterSource, isMeterEstimated) = GetDedupMeterMetadata(qwenMeterAccepted);
         trace.Meter = meter;
@@ -499,7 +494,7 @@ public sealed partial class MultiModelAnalysisService
                 trace.DropReason = "all_findings_missing_code";
         }
         return new MultiModelBildErgebnis(MultiModelBildAusgang.Befunde, meter, findings, frameEvidence,
-            meterSource, isMeterEstimated, ErneutNoetig: frameNeedsRetry, FrameBytes: frameBytes);
+            meterSource, isMeterEstimated, ErneutNoetig: frameNeedsRetry, FrameBytes: bild.FrameBytes);
     }
 
     /// <summary>
