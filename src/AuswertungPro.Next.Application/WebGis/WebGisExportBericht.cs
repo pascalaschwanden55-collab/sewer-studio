@@ -57,13 +57,14 @@ public static class WebGisExportBericht
     public static string Ergebnis(WebGisExportPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        var objOk = plan.Positionen.Count(p => p.Geschrieben);
-        var objFehler = plan.Positionen.Count(p => p.SchreibFehler is not null);
+        var objOk = plan.Positionen.Count(p => p.Ausgang is WebGisSchreibAusgang.Geschrieben
+            or WebGisSchreibAusgang.VomServerBestaetigt or WebGisSchreibAusgang.Nachgeprueft);
+        var objFehler = plan.Positionen.Count(p => p.Ausgang == WebGisSchreibAusgang.Fehler);
         // WG05: «angelegt» zaehlt nur nachgepruefte Massnahmen; bestaetigt ohne Gegenprobe und ungeklaert getrennt.
-        var sanOk = plan.Sanierungen.Count(s => s.Geschrieben && s.Nachgeprueft);
-        var sanBestaetigt = plan.Sanierungen.Count(s => s.Geschrieben && !s.Nachgeprueft && s.Ungeklaert is null);
-        var sanUngeklaert = plan.Sanierungen.Count(s => s.Ungeklaert is not null);
-        var sanFehler = plan.Sanierungen.Count(s => s.SchreibFehler is not null);
+        var sanOk = plan.Sanierungen.Count(s => s.Ausgang == WebGisSchreibAusgang.Nachgeprueft);
+        var sanBestaetigt = plan.Sanierungen.Count(s => s.Ausgang == WebGisSchreibAusgang.VomServerBestaetigt);
+        var sanUngeklaert = plan.Sanierungen.Count(s => s.Ausgang == WebGisSchreibAusgang.Ungeklaert);
+        var sanFehler = plan.Sanierungen.Count(s => s.Ausgang == WebGisSchreibAusgang.Fehler);
         return $"WebGIS: {objOk} Objekte geschrieben, {sanOk} Sanierungsmassnahmen angelegt und nachgeprüft"
              + (sanBestaetigt > 0 ? $", {sanBestaetigt} vom Server bestätigt (nicht nachgeprüft)" : "")
              + (sanUngeklaert > 0 ? $", {sanUngeklaert} mit ungeklärtem Ausgang (im WebGIS nachsehen, nicht erneut anlegen)" : "")
@@ -83,7 +84,12 @@ public static class WebGisExportBericht
         foreach (var p in plan.Positionen)
         {
             var status = p.Sperren.Count > 0 ? "GESPERRT"
-                : mitErgebnis ? (p.Geschrieben ? "GESCHRIEBEN" : p.SchreibFehler is not null ? "FEHLER" : p.Aenderungen.Count == 0 ? "UNVERÄNDERT" : "OFFEN")
+                : mitErgebnis ? p.Ausgang switch
+                {
+                    WebGisSchreibAusgang.Fehler => "FEHLER",
+                    WebGisSchreibAusgang.Offen => p.Aenderungen.Count == 0 ? "UNVERÄNDERT" : "OFFEN",
+                    _ => "GESCHRIEBEN",
+                }
                 : p.Aenderungen.Count == 0 ? "UNVERÄNDERT" : "ÄNDERN";
             sb.AppendLine($"[{status}] {Objekt(p.Objektart, p.Bezeichnung)}" + (p.GlobalId is null ? "" : $"  (GlobalID {p.GlobalId})"));
             foreach (var a in p.Aenderungen) sb.AppendLine($"    {a.Feld}: {Leer(a.AltText ?? a.Alt)} → {a.NeuText ?? a.Neu}");
@@ -102,10 +108,14 @@ public static class WebGisExportBericht
             foreach (var s in plan.Sanierungen)
             {
                 var status = s.Sperren.Count > 0 ? "GESPERRT"
-                    : mitErgebnis ? (s.Ungeklaert is not null ? $"UNGEKLÄRT (vom Server bestätigt, ID {s.NeueId ?? "?"})"
-                        : s.Geschrieben && s.Nachgeprueft ? $"ANGELEGT UND NACHGEPRÜFT (ID {s.NeueId ?? "?"}, GlobalID {s.NeueGlobalId ?? "?"})"
-                        : s.Geschrieben ? $"ANGELEGT, VOM SERVER BESTÄTIGT (ID {s.NeueId ?? "?"}, nicht nachgeprüft)"
-                        : s.SchreibFehler is not null ? "FEHLER" : "OFFEN")
+                    : mitErgebnis ? s.Ausgang switch
+                    {
+                        WebGisSchreibAusgang.Ungeklaert => $"UNGEKLÄRT (vom Server bestätigt, ID {s.NeueId ?? "?"})",
+                        WebGisSchreibAusgang.Nachgeprueft => $"ANGELEGT UND NACHGEPRÜFT (ID {s.NeueId ?? "?"}, GlobalID {s.NeueGlobalId ?? "?"})",
+                        WebGisSchreibAusgang.VomServerBestaetigt => $"ANGELEGT, VOM SERVER BESTÄTIGT (ID {s.NeueId ?? "?"}, nicht nachgeprüft)",
+                        WebGisSchreibAusgang.Fehler => "FEHLER",
+                        _ => "OFFEN",
+                    }
                     : "ANLEGEN";
                 sb.AppendLine($"[{status}] {Objekt(s.Objektart, s.ElternBezeichnung)}  (Akte {s.AkteId.ToString("N")[..8]})");
                 foreach (var z in s.Anzeige) sb.AppendLine("    " + z);
@@ -158,14 +168,16 @@ public static class WebGisExportBericht
         ArgumentNullException.ThrowIfNull(p);
         var z = Z(zeit);
         var objekt = Objekt(p.Objektart, p.Bezeichnung);
-        if (p.Geschrieben)
-            return string.Join(Environment.NewLine,
-                p.Aenderungen.ConvertAll(a => $"{z} | {objekt} | {a.Feld} | {AltLog(a)} → {NeuLog(a)} | OK"));
-        if (p.SchreibFehler is not null)
-            return $"{z} | {objekt} | {string.Join(", ", p.Aenderungen.ConvertAll(a => a.Feld))} | nicht geschrieben | FEHLER: {p.SchreibFehler}";
-        if (p.Sperren.Count > 0)
-            return $"{z} | {objekt} | – | übersprungen | GESPERRT: {string.Join("; ", p.Sperren)}";
-        return string.Empty;
+        return p.Ausgang switch
+        {
+            WebGisSchreibAusgang.Fehler =>
+                $"{z} | {objekt} | {string.Join(", ", p.Aenderungen.ConvertAll(a => a.Feld))} | nicht geschrieben | FEHLER: {p.SchreibFehler}",
+            WebGisSchreibAusgang.Offen => p.Sperren.Count > 0
+                ? $"{z} | {objekt} | – | übersprungen | GESPERRT: {string.Join("; ", p.Sperren)}"
+                : string.Empty,
+            _ => string.Join(Environment.NewLine,
+                p.Aenderungen.ConvertAll(a => $"{z} | {objekt} | {a.Feld} | {AltLog(a)} → {NeuLog(a)} | OK")),
+        };
     }
 
     /// <summary>Logzeile einer Sanierungsmassnahme nach ihrem Anlegeversuch; leer, wenn nichts zu melden ist.</summary>
@@ -175,17 +187,20 @@ public static class WebGisExportBericht
         var z = Z(zeit);
         var objekt = Objekt(s.Objektart, s.ElternBezeichnung);
         var werte = string.Join(", ", s.Anzeige.ConvertAll(a => a.Split(" (")[0]));
-        if (s.Ungeklaert is not null)
-            return $"{z} | {objekt} | Sanierungsmassnahme vom Server bestätigt (ID {s.NeueId ?? "?"}) | – → {werte} | UNGEKLÄRT: {s.Ungeklaert}";
-        if (s.Geschrieben && s.Nachgeprueft)
-            return $"{z} | {objekt} | Sanierungsmassnahme angelegt (ID {s.NeueId ?? "?"}) | – → {werte} | OK, nachgeprüft (GlobalID {s.NeueGlobalId ?? "?"})";
-        if (s.Geschrieben)
-            return $"{z} | {objekt} | Sanierungsmassnahme angelegt (ID {s.NeueId ?? "?"}) | – → {werte} | BESTÄTIGT, nicht nachgeprüft";
-        if (s.SchreibFehler is not null)
-            return $"{z} | {objekt} | Sanierungsmassnahme | nicht angelegt ({werte}) | FEHLER: {s.SchreibFehler}";
-        if (s.Sperren.Count > 0)
-            return $"{z} | {objekt} | Sanierungsmassnahme | übersprungen | GESPERRT: {string.Join("; ", s.Sperren)}";
-        return string.Empty;
+        return s.Ausgang switch
+        {
+            WebGisSchreibAusgang.Ungeklaert =>
+                $"{z} | {objekt} | Sanierungsmassnahme vom Server bestätigt (ID {s.NeueId ?? "?"}) | – → {werte} | UNGEKLÄRT: {s.Ungeklaert}",
+            WebGisSchreibAusgang.Nachgeprueft =>
+                $"{z} | {objekt} | Sanierungsmassnahme angelegt (ID {s.NeueId ?? "?"}) | – → {werte} | OK, nachgeprüft (GlobalID {s.NeueGlobalId ?? "?"})",
+            WebGisSchreibAusgang.VomServerBestaetigt =>
+                $"{z} | {objekt} | Sanierungsmassnahme angelegt (ID {s.NeueId ?? "?"}) | – → {werte} | BESTÄTIGT, nicht nachgeprüft",
+            WebGisSchreibAusgang.Fehler =>
+                $"{z} | {objekt} | Sanierungsmassnahme | nicht angelegt ({werte}) | FEHLER: {s.SchreibFehler}",
+            _ => s.Sperren.Count > 0
+                ? $"{z} | {objekt} | Sanierungsmassnahme | übersprungen | GESPERRT: {string.Join("; ", s.Sperren)}"
+                : string.Empty,
+        };
     }
 
     /// <summary>Zeile VOR dem Schreibversuch eines Objekts: steht sie nicht im Log, wird nicht gesendet.</summary>

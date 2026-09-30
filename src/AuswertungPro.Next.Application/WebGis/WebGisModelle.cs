@@ -74,6 +74,31 @@ public sealed class WebGisFeldAenderung
     public string? NeuText { get; init; }
 }
 
+/// <summary>
+/// Ausgang eines Schreibversuchs, berechnet aus den Flags einer <see cref="WebGisExportPosition"/> bzw.
+/// <see cref="WebGisSanierungPosition"/> (Wartbarkeitsaudit 30.09.2026, WG-D). Bericht, Log, Uebersicht,
+/// Vergleichsliste und Ergebnismeldung lesen ihn, statt die Flags selbst zu kombinieren. Nur der Schreibausgang:
+/// Sperren, Aenderungen und «schreibbar» bleiben eigene Angaben der Position.
+/// </summary>
+public enum WebGisSchreibAusgang
+{
+    /// <summary>Kein Schreibergebnis: nicht versucht (auch gesperrt, unveraendert oder Probelauf).</summary>
+    Offen,
+    /// <summary>Nicht geschrieben bzw. nicht angelegt; der Grund steht in <c>SchreibFehler</c>.</summary>
+    Fehler,
+    /// <summary>
+    /// Nur Objekt: <c>Geschrieben</c> ohne <c>VomServerBestaetigt</c>. Der Ablauf setzt «geschrieben» nur nach einer
+    /// Serverbestaetigung; die Anzeige kennt den Fall trotzdem («Kontrolle durch Zurücklesen offen»).
+    /// </summary>
+    Geschrieben,
+    /// <summary>Vom Server bestaetigt, aber nicht nachgeprueft (Objekt: Nachkontrolle gescheitert; Massnahme: ohne Gegenprobe).</summary>
+    VomServerBestaetigt,
+    /// <summary>Vom Server bestaetigt und durch Zuruecklesen nachgeprueft.</summary>
+    Nachgeprueft,
+    /// <summary>Nur Massnahme: vom Server bestaetigt, die Gegenprobe ergab keinen sicheren Befund (WG05).</summary>
+    Ungeklaert,
+}
+
 /// <summary>Plan fuer genau ein Objekt.</summary>
 public sealed class WebGisExportPosition
 {
@@ -121,6 +146,18 @@ public sealed class WebGisExportPosition
     public bool Nachgeprueft { get; set; }
     /// <summary>Wird vom Ablauf gesetzt: Fehlertext bei fehlgeschlagenem Schreiben.</summary>
     public string? SchreibFehler { get; set; }
+
+    /// <summary>
+    /// Schreibausgang aus den Flags (WG-D). Reihenfolge wie bisher in Bericht, Log und Vergleichsliste: geschrieben
+    /// vor Fehler; geschrieben ohne Serverbestaetigung, bestaetigt, bestaetigt und nachgeprueft.
+    /// </summary>
+    public WebGisSchreibAusgang Ausgang =>
+        Geschrieben
+            ? (!VomServerBestaetigt ? WebGisSchreibAusgang.Geschrieben
+                : Nachgeprueft ? WebGisSchreibAusgang.Nachgeprueft
+                : WebGisSchreibAusgang.VomServerBestaetigt)
+            : SchreibFehler is not null ? WebGisSchreibAusgang.Fehler
+            : WebGisSchreibAusgang.Offen;
 }
 
 /// <summary>Gesamter Exportplan eines Projekts.</summary>

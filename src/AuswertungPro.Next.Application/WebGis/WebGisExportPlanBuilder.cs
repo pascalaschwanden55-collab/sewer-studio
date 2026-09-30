@@ -188,7 +188,7 @@ public static class WebGisExportPlanBuilder
             var wert = (text ?? string.Empty).Trim();
             if (wert.Length == 0) continue; // Leeren wird nicht uebertragen (nichts loeschen)
 
-            if (WebGisHandwertKarte.WebGisFuehrt(feldName))
+            if (WebGisFuehrungsfelder.NieSenden(feldName))
             {
                 pos.Hinweise.Add($"{feldName}: im WebGIS führend — «{wert}» wird nicht übertragen.");
                 continue;
@@ -256,7 +256,7 @@ public static class WebGisExportPlanBuilder
         {
             if (e.Handwerte.ContainsKey(feldName)) continue;
             if (WebGisHandwertKarte.IstEigeneRegel(feldName) || WebGisHandwertKarte.NichtFuerKataster(feldName)
-                || WebGisHandwertKarte.WebGisFuehrt(feldName)) continue;
+                || WebGisFuehrungsfelder.NieSenden(feldName)) continue;
             var wert = (text ?? string.Empty).Trim();
             if (wert.Length == 0) continue;
             var karte = WebGisHandwertKarte.Finde(e.Objektart, feldName);

@@ -198,7 +198,7 @@ public sealed class WebGisHandwertTests
         Assert.Empty(pos.Aenderungen);
         Assert.Contains(pos.Hinweise, h => h.Contains("Eigentümer") && h.Contains("im WebGIS führend"));
         Assert.Contains(pos.Hinweise, h => h.Contains("Betreiber") && h.Contains("im WebGIS führend"));
-        Assert.True(WebGisHandwertKarte.WebGisFuehrt("Eigentuemer"));
+        Assert.True(WebGisFuehrungsfelder.NieSenden("Eigentuemer"));
     }
 
     [Fact]

@@ -433,7 +433,9 @@ public sealed class WebGisImportUseCase
 
         var akte = projekt.Objektakten.FirstOrDefault(x => x.Id == pos.RecordId && x.Art == art);
         var bisher = akte?.Werte.GetValueOrDefault(a.Feld);
-        // Den Betreiber fuehrt das WebGIS, auch ueber eine Handeingabe (Entscheid Pascal 24.09.2026 abends).
+        // Den Betreiber fuehrt das WebGIS, auch ueber eine Handeingabe (Entscheid Pascal 24.09.2026 abends). Er ist beim
+        // Holen kein Tabellenfeld, deshalb steht diese Ausnahme hier an der Wurzelakte und nicht in
+        // WebGisFuehrungsfelder.HolenUeberschreibtHand (dort nur der Eigentuemer als Tabellenfeld).
         if (bisher is { VonHand: true } && a.Feld != WebGisImportPlanBuilder.BetreiberFeld(pos.Objektart)) return false;
         if (!string.Equals((bisher?.Text ?? string.Empty).Trim(), (a.Alt ?? string.Empty).Trim(), StringComparison.Ordinal)) return false;
         if (akte is null)
@@ -464,10 +466,11 @@ public sealed class WebGisImportUseCase
     /// <summary>
     /// Vor jedem Feld nochmals (Pruefung 23.09.2026): keine Handeingabe — auch nicht bewusst leer
     /// (Entscheid Pascal) — und derselbe Wert wie in der Vorschau. Sonst bleibt das Feld, wie es ist.
-    /// Ausnahme Eigentuemer: den fuehrt das WebGIS, dort zaehlt nur «seit der Vorschau gleich».
+    /// Ausnahme Eigentuemer: den fuehrt das WebGIS (<see cref="WebGisFuehrungsfelder.HolenUeberschreibtHand"/>), dort
+    /// zaehlt nur «seit der Vorschau gleich».
     /// </summary>
     private static bool SeitVorschauUnveraendert(string aktuell, FieldMetadata? meta, WebGisImportAenderung a)
-        => (meta?.UserEdited != true || WebGisFuehrt(a.Feld))
+        => (meta?.UserEdited != true || WebGisFuehrungsfelder.HolenUeberschreibtHand(a.Feld))
            && string.Equals(aktuell.Trim(), (a.Alt ?? string.Empty).Trim(), StringComparison.Ordinal);
 
     /// <summary>
@@ -477,17 +480,14 @@ public sealed class WebGisImportUseCase
     private static bool DarfErsetzen(string aktuell, FieldMetadata? meta, WebGisImportAenderung a)
         => a.Alt is not null
            && string.Equals(aktuell.Trim(), a.Alt.Trim(), StringComparison.Ordinal)
-           && (IstErsetzbar(meta) || WebGisFuehrt(a.Feld));
+           && (IstErsetzbar(meta) || WebGisFuehrungsfelder.HolenUeberschreibtHand(a.Feld));
 
     /// <summary>
-    /// Eigentuemer (und in der Akte der Betreiber) «duerfen vom WebGIS ueberschrieben werden» (Entscheid Pascal
-    /// 24.09.2026 abends) — auch eine Handeingabe. Die Handmarke weicht dabei: Der Wert ist danach ein Katasterwert.
+    /// Nimmt die Handmarke weg, damit der Datensatz den WebGIS-Wert annimmt (nur
+    /// <see cref="WebGisFuehrungsfelder.HolenUeberschreibtHand"/>). Der Wert ist danach ein Katasterwert.
     /// </summary>
-    private static bool WebGisFuehrt(string feld) => feld == FieldKeys.Owner;
-
-    /// <summary>Nimmt die Handmarke weg, damit der Datensatz den WebGIS-Wert annimmt (nur <see cref="WebGisFuehrt"/>).</summary>
     private static void GibHandmarkeFrei(FieldMetadata? meta, string feld)
     {
-        if (meta is { UserEdited: true } && WebGisFuehrt(feld)) meta.UserEdited = false;
+        if (meta is { UserEdited: true } && WebGisFuehrungsfelder.HolenUeberschreibtHand(feld)) meta.UserEdited = false;
     }
 }

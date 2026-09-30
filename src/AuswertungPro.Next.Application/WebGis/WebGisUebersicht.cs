@@ -141,7 +141,8 @@ public sealed class WebGisUebersicht
                 schonVorhanden++;
                 continue;
             }
-            if (!s.Schreibbar && s.Sperren.Count == 0 && s.Hinweise.Count == 0 && s.SchreibFehler is null && s.Ungeklaert is null) continue;
+            if (!s.Schreibbar && s.Sperren.Count == 0 && s.Hinweise.Count == 0
+                && s.Ausgang is not (WebGisSchreibAusgang.Fehler or WebGisSchreibAusgang.Ungeklaert)) continue;
 
             var o = Hole(s.Objektart, s.ElternBezeichnung, s.ElternRecordId);
             if (s.Schreibbar || s.Geschrieben)

@@ -336,54 +336,7 @@ public sealed class ExportWebGisBereich : ObservableObject
                 return new Views.Windows.WebGisFensterStand(zuZeigen, Status);
             }
 
-            var log = new WebGisLaufLog(ordner);
-            Status = "Schreibe ins WebGIS …";
-            WebGisSendenAblauf.Ausgang ausgang;
-            try
-            {
-                ausgang = await WebGisSendenAblauf.FuehreAusAsync(
-                    useCase, frisch, log, _d.Zugang()?.SynLogin ?? "", () => GiltNoch(bindung));
-            }
-            catch (Exception)
-            {
-                // Auch nach einem Abbruch: Was bis dahin geschrieben ist, muss belegt sein.
-                SchreibeBericht(ordner, WebGisExportBericht.Details(frisch, mitErgebnis: true), "Ergebnis-abgebrochen");
-                throw;
-            }
-
-            var logPfad = Path.Combine(ordner, WebGisBerichtAblage.LogDatei);
-            if (ausgang == WebGisSendenAblauf.Ausgang.KeinStartbeleg)
-            {
-                Status = "Das Änderungslog ist nicht schreibbar (" + logPfad + ") — nichts ins WebGIS geschrieben.";
-                _d.Toasts.Warning(Status);
-                return new Views.Windows.WebGisFensterStand(zuZeigen, Status);
-            }
-
-            var ergebnis = WebGisExportBericht.Ergebnis(frisch);
-            var zusatz = ausgang switch
-            {
-                WebGisSendenAblauf.Ausgang.LogAusgefallen =>
-                    "\nACHTUNG: Das Änderungslog fiel während des Laufs aus — Lauf gestoppt. Bereits bestätigte "
-                    + "Änderungen stehen im Bericht; vor einem neuen Versuch im WebGIS nachsehen.",
-                WebGisSendenAblauf.Ausgang.ProjektGewechselt =>
-                    "\nACHTUNG: Das Projekt war nicht mehr offen — Lauf vor dem nächsten Schreiben gestoppt.",
-                WebGisSendenAblauf.Ausgang.Ungeklaert =>
-                    "\nACHTUNG: Eine Sanierungsmassnahme wurde vom Server bestätigt, liess sich aber nicht sicher nachprüfen — "
-                    + "Lauf gestoppt. Vor einem neuen Versuch im WebGIS nachsehen, nicht erneut anlegen.",
-                _ => string.Empty,
-            };
-            var pfad = SchreibeBericht(ordner, WebGisExportBericht.Details(frisch, mitErgebnis: true),
-                ausgang == WebGisSendenAblauf.Ausgang.Abgeschlossen ? "Ergebnis" : "Ergebnis-abgebrochen");
-            _d.MeldeErgebnis(ergebnis + zusatz + $"\nLog: {logPfad} (Lauf {log.LaufId})"
-                + (pfad is null ? "" : $"\nBericht: {pfad}"));
-            Status = ergebnis + zusatz;
-            var fehlgeschlagen = ausgang != WebGisSendenAblauf.Ausgang.Abgeschlossen
-                || frisch.Positionen.Exists(p => p.SchreibFehler is not null)
-                || frisch.Sanierungen.Exists(s => s.SchreibFehler is not null || s.Ungeklaert is not null);
-            if (fehlgeschlagen) _d.Toasts.Warning(ergebnis + zusatz); else _d.Toasts.Success(ergebnis);
-
-            // Die Liste zeigt das Ergebnis (geschrieben/bestaetigt) — der geschriebene Stand ist schon uebernommen.
-            return new Views.Windows.WebGisFensterStand(zuZeigen, Status, frisch);
+            return await SendeAsync(useCase, frisch, zuZeigen, bindung, ordner);
         }
         catch (WebGisSitzungException ex)
         {
@@ -401,6 +354,49 @@ public sealed class ExportWebGisBereich : ObservableObject
             _d.BeendeProjektvorgang();
             _laeuft = false; Aktualisiere();
         }
+    }
+
+    /// <summary>
+    /// Schreibt den bestaetigten Plan (<see cref="WebGisSendenAblauf"/>) und meldet das Ergebnis. Welcher Ausgang welche
+    /// Meldung, welchen Toast und welchen Berichtsnamen ergibt, entscheidet <see cref="WebGisSendenAblauf.Melde"/>
+    /// (Application, ohne Oberflaeche getestet; Wartbarkeitsaudit 30.09.2026, WG-E). Ausnahmen gehen an
+    /// <see cref="SchreibeAsync"/> zurueck, nachdem der Bericht «Ergebnis-abgebrochen» geschrieben ist.
+    /// </summary>
+    private async Task<Views.Windows.WebGisFensterStand> SendeAsync(
+        WebGisExportUseCase useCase, WebGisExportPlan frisch, WebGisExportPlan zuZeigen, WebGisProjektBindung bindung, string ordner)
+    {
+        var d = _d!;
+        var log = new WebGisLaufLog(ordner);
+        Status = "Schreibe ins WebGIS …";
+        WebGisSendenAblauf.Ausgang ausgang;
+        try
+        {
+            ausgang = await WebGisSendenAblauf.FuehreAusAsync(
+                useCase, frisch, log, d.Zugang()?.SynLogin ?? "", () => GiltNoch(bindung));
+        }
+        catch (Exception)
+        {
+            // Auch nach einem Abbruch: Was bis dahin geschrieben ist, muss belegt sein.
+            SchreibeBericht(ordner, WebGisExportBericht.Details(frisch, mitErgebnis: true), "Ergebnis-abgebrochen");
+            throw;
+        }
+
+        var logPfad = Path.Combine(ordner, WebGisBerichtAblage.LogDatei);
+        if (ausgang == WebGisSendenAblauf.Ausgang.KeinStartbeleg)
+        {
+            Status = WebGisSendenAblauf.KeinStartbelegText(logPfad);
+            d.Toasts.Warning(Status);
+            return new Views.Windows.WebGisFensterStand(zuZeigen, Status);
+        }
+
+        var meldung = WebGisSendenAblauf.Melde(ausgang, frisch);
+        var pfad = SchreibeBericht(ordner, WebGisExportBericht.Details(frisch, mitErgebnis: true), meldung.Berichtsart);
+        d.MeldeErgebnis(meldung.Ergebnisfenster(logPfad, log.LaufId, pfad));
+        Status = meldung.Text;
+        if (meldung.Fehlgeschlagen) d.Toasts.Warning(meldung.Text); else d.Toasts.Success(meldung.Ergebnis);
+
+        // Die Liste zeigt das Ergebnis (geschrieben/bestaetigt) — der geschriebene Stand ist schon uebernommen.
+        return new Views.Windows.WebGisFensterStand(zuZeigen, Status, frisch);
     }
 
     /// <summary>Der zuletzt gezeigte Plan, falls er zu diesem Projekt gehoert.</summary>

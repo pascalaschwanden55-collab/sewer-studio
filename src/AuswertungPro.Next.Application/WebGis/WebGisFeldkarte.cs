@@ -13,22 +13,54 @@ namespace AuswertungPro.Next.Application.WebGis;
 /// sind Objekt-unabhaengig (sie stammen aus dem Layout, nicht aus den Daten).
 ///
 /// Reine Werte-Logik, kein Zustand, kein Dateizugriff.
+///
+/// Jede refId-Konstante traegt ein Etikett «Status: live geprueft (…)» oder «Status: offen (…)» (Wartbarkeitsaudit
+/// 30.09.2026, WG-A). Quelle sind ausschliesslich docs/architektur/webgis.md und die bisherigen Kommentare.
+/// Jede refId steht im Quelltext genau einmal (Waechter <c>WebGisKennungenTests</c>); die Schacht-Aktenkarte
+/// <see cref="WebGisImportAktenfelder"/> fuehrt ihre Inventur-refIds bewusst selbst.
 /// </summary>
 public static class WebGisFeldkarte
 {
     // --- Haltung (Tabelle awk_haltung) ---
+    /// <summary>Zustand Haltung. Status: live geprueft (Lauf 21.09.2026, Haltung 525145-505377: Z4).</summary>
     public const string HaltungZustandRef = "1b817d9e-26d9-cc56-df8d-d52c23509841";
+    /// <summary>Sanierungsbedarf Haltung (2. Combo des Paars). Status: live geprueft (Lauf 21.09.2026, Haltung 525145-505377: Saniert).</summary>
     public const string HaltungSanierungsbedarfRef = "2b200c69-4a70-bae0-64e7-8d2e3aae6871";
+    /// <summary>Bemerkung Haltung. Status: live geprueft (Lauf 21.09.2026, Haltung 525145-505377).</summary>
     public const string HaltungBemerkungRef = "5027c330-73e2-4674-9cbc-8efed43d655e";
+    /// <summary>Baujahr Haltung. Status: offen (Masken-Erhebung 21.09.2026; kein Live-Beleg in webgis.md).</summary>
     public const string HaltungBaujahrRef = "72b0bc78-b7b7-8dd3-bc64-e41cf40aa5ca";
+    /// <summary>
+    /// Baujahr/Ersatzjahr Haltung — wird im WebGIS nie geschrieben (<see cref="WebGisGeschuetzteFelder"/>).
+    /// Status: offen (Masken-Inventur v2, Buerglen 21.09.2026; kein Live-Beleg in webgis.md).
+    /// </summary>
+    public const string HaltungBaujahrErsatzjahrRef = "e2fddd0d-b1f0-bc99-bc54-95bc6d2d5b1a";
+    /// <summary>Laenge geometrisch Haltung. NUR LESEN. Status: offen (Masken-Erhebung 21.09.2026; kein Live-Beleg in webgis.md).</summary>
     public const string HaltungLaengeGeomRef = "e5b5b42c-8970-3ebf-8bea-5705ca4be842"; // NUR LESEN
+    /// <summary>Rohr-/Haltungslaenge. NIE SCHREIBEN. Status: offen (Masken-Erhebung 21.09.2026; kein Live-Beleg in webgis.md).</summary>
     public const string HaltungLaengeRohrRef = "7e439b47-81e0-b7d6-b05b-575178d48c3c"; // NIE SCHREIBEN
 
+    /// <summary>
+    /// Breite [mm] der Haltung (Handwerte «Lichte_Breite_mm» und «DN_mm»; beim Holen die DN, wenn Breite = Hoehe).
+    /// Status: live geprueft (21.09.2026, Haltung 80480-80478, sichtbar 300/300 — Breite und Hoehe dort gleich).
+    /// </summary>
+    public const string HaltungBreiteRef = "902695a4-5f44-e910-b2da-471c17085822";
+    /// <summary>
+    /// Hoehe [mm] der Haltung (Handwert «Lichte_Hoehe_mm»; beim Holen nur der Vergleich mit der Breite fuer die DN).
+    /// Status: offen (webgis.md 22.09.2026: Breite/Hoehe der Haltung OFFEN, die Inventur v2 nennt diese refId einmal
+    /// Breite, einmal Hoehe — an einem Eiprofil klaeren; am 21.09.2026 unter den drei erschlossenen, als FALSCH
+    /// erkannten refIds genannt). Wert unveraendert.
+    /// </summary>
+    public const string HaltungHoeheRef = "d06f8d1f-8a09-1b22-4380-088a7ee42507";
+
     // --- Schacht (Tabelle awk_abwasserknoten) ---
+    /// <summary>Zustand Schacht. Status: offen (Masken-Erhebung 21.09.2026; Live-Schreiben in webgis.md nur an der Haltung belegt).</summary>
     public const string SchachtZustandRef = "1e0208ec-0373-12d3-725d-55e374fbfd51";
+    /// <summary>Sanierungsbedarf Schacht (2. Combo des Paars). Status: offen (Masken-Erhebung 21.09.2026; Live-Schreiben in webgis.md nur an der Haltung belegt).</summary>
     public const string SchachtSanierungsbedarfRef = "ae898ff7-8b6d-a170-36cf-ce904e9b6639";
+    /// <summary>Bemerkung Schacht. Status: offen (Masken-Erhebung 21.09.2026; Live-Schreiben in webgis.md nur an der Haltung belegt).</summary>
     public const string SchachtBemerkungRef = "979ffb47-1ac0-da09-a398-02f1347727f5";
-    /// <summary>Baujahr Schacht: EditBox ohne Titel (2. Feld des Paars Material/Baujahr); live geprueft 21.09.2026 (505377=2018, 80475=1963).</summary>
+    /// <summary>Baujahr Schacht: EditBox ohne Titel (2. Feld des Paars Material/Baujahr). Status: live geprueft (21.09.2026, 505377=2018, 80475=1963).</summary>
     public const string SchachtBaujahrRef = "e35e99dc-3754-dd97-296d-8bb8b70c61c3";
 
     public static string BaujahrRef(WebGisObjektart art) =>
@@ -40,7 +72,9 @@ public static class WebGisFeldkarte
     // der Ablauf, ob das WebGIS-Objekt noch denselben Namen traegt. Live noch nicht gegen den
     // sichtbaren Wert geprueft — deshalb fail-closed: fehlt der Wert oder weicht er ab, wird das
     // Objekt gesperrt, nie geschrieben (Pascal 23.09.2026).
+    /// <summary>Bezeichnung Haltung. Status: offen (Inventur v2, live noch nicht gegen den sichtbaren Wert geprueft).</summary>
     public const string HaltungBezeichnungRef = "e2bf0b38-f8fe-0a23-3f19-3cd2395b8d92";
+    /// <summary>Bezeichnung Schacht. Status: offen (Inventur v2, live noch nicht gegen den sichtbaren Wert geprueft).</summary>
     public const string SchachtBezeichnungRef = "302da059-fda3-b684-3f61-3ce293bea795";
 
     public static string BezeichnungRef(WebGisObjektart art) =>
@@ -50,11 +84,17 @@ public static class WebGisFeldkarte
     // Nur lesen: Das Holen uebernimmt sie rein informativ in LEERE Felder (Entscheid Pascal 23.09.2026) und
     // prueft dabei, dass die Liste der Komponente wirklich Organisationen fuehrt. Geschrieben werden sie nie
     // (WebGisGeschuetzteFelder).
+    /// <summary>Eigentuemer Haltung. Status: offen (Inventur v2, live nicht geprueft; zaehlt nur mit Organisationsliste «Bund»).</summary>
     public const string HaltungEigentuemerRef = "fadff6f2-c674-9327-36d8-b2ac79b704cd";
+    /// <summary>Betreiber Haltung. Status: offen (Inventur v2, live nicht geprueft; zaehlt nur mit Organisationsliste «Bund»).</summary>
     public const string HaltungBetreiberRef = "bd6d1330-f106-9eb3-c079-22a2accd845c";
+    /// <summary>OBJECTID Haltung. Status: offen (Inventur v2, live nicht geprueft).</summary>
     public const string HaltungObjectIdRef = "8410243c-beab-5ecb-b4e7-bc7907b9ee31";
+    /// <summary>Eigentuemer Schacht. Status: offen (Inventur v2, live nicht geprueft; zaehlt nur mit Organisationsliste «Bund»).</summary>
     public const string SchachtEigentuemerRef = "e2987817-9bdd-2cef-4617-729126d465a1";
+    /// <summary>Betreiber Schacht. Status: offen (Inventur v2, live nicht geprueft; zaehlt nur mit Organisationsliste «Bund»).</summary>
     public const string SchachtBetreiberRef = "1187d930-1cdb-d29b-2065-499d273dbeba";
+    /// <summary>OBJECTID Schacht. Status: offen (Inventur v2, live nicht geprueft).</summary>
     public const string SchachtObjectIdRef = "9bc2e78d-3a34-e836-5db6-357202362d20";
 
     public static string EigentuemerRef(WebGisObjektart art) =>
@@ -68,8 +108,11 @@ public static class WebGisFeldkarte
     // PAA und SAA muessen darin stehen. Die hydraulische Funktion des Schachts nennt die Inventur nur mit den
     // ersten acht Zeichen; gesucht wird die EINE Komponente mit diesem Praefix, deren Liste die hydraulischen
     // Funktionen fuehrt (Freispiegelleitung). Sonst nichts, mit Hinweis.
+    /// <summary>Typ AA Haltung. Status: offen (Inventur v2, live nicht geprueft; zaehlt nur, wenn die Liste PAA und SAA fuehrt).</summary>
     public const string HaltungTypAaRef = "65e83cb4-0e0f-ee6c-47c6-6efad172c3b1";
+    /// <summary>Typ AA Schacht. Status: offen (Inventur v2, live nicht geprueft; zaehlt nur, wenn die Liste PAA und SAA fuehrt).</summary>
     public const string SchachtTypAaRef = "8d17a0bc-4472-d776-82f7-58ba57adf676";
+    /// <summary>Praefix der hydraulischen Funktion des Schachts. Status: offen (Inventur v2 nennt nur acht Zeichen, live nicht geprueft).</summary>
     public const string SchachtFunktionHydraulischPraefix = "0e5eab11-";
 
     public static string TypAaRef(WebGisObjektart art) =>

@@ -180,21 +180,18 @@ public static class WebGisImportPlanBuilder
         return pos;
     }
 
-    private const string BreiteRef = "902695a4-5f44-e910-b2da-471c17085822";
-    private const string HoeheRef = "d06f8d1f-8a09-1b22-4380-088a7ee42507";
-
     private const string GrundInformativ = "Rein informativ: in SewerStudio leer, im WebGIS vorhanden — geht nie ins WebGIS zurück.";
 
     /// <summary>
     /// Haltungslaenge (geometrisch, auf zwei Stellen; Entscheid Pascal 23.09.2026 abends): rein informativ, nur in
-    /// ein leeres Feld, nie ueber einen vorhandenen Wert. Eigentuemer und Betreiber: siehe <see cref="FuehrtWebGis"/>.
+    /// ein leeres Feld, nie ueber einen vorhandenen Wert. Eigentuemer und Betreiber: siehe <see cref="PlaneFuehrungswert"/>.
     /// </summary>
     private static void Informativ(WebGisImportEingabe e, WebGisLesestand stand, WebGisImportPosition pos)
     {
         if (e.Objektart == WebGisObjektart.Haltung)
             FuelleInformativ(e, pos, FeldLaenge, "Haltungslänge", LaengeNormiert(stand.Feld(WebGisFeldkarte.HaltungLaengeGeomRef)));
 
-        FuehrtWebGis(e, pos, FieldKeys.Owner,
+        PlaneFuehrungswert(e, pos, FieldKeys.Owner,
             Organisation(stand, WebGisFeldkarte.EigentuemerRef(e.Objektart), "Eigentümer", pos)?.Text);
 
         if (Organisation(stand, WebGisFeldkarte.BetreiberRef(e.Objektart), "Betreiber", pos) is { } betreiber)
@@ -204,7 +201,7 @@ public static class WebGisImportPlanBuilder
             if (eintrag is null)
                 pos.Hinweise.Add($"Betreiber «{betreiber.Text}» steht nicht in der Liste der Objektakte — nicht übernommen.");
             else
-                FuehrtWebGis(e, pos, feldId, eintrag.Label);
+                PlaneFuehrungswert(e, pos, feldId, eintrag.Label);
         }
     }
 
@@ -240,9 +237,12 @@ public static class WebGisImportPlanBuilder
     /// Eigentuemer und Betreiber (Entscheid Pascal 24.09.2026, ersetzt «nur in leere Felder» vom 23.09.): «muessen
     /// perfekt vom WebGIS uebernommen werden, diese Werte aendern sich sehr selten». Der WebGIS-Wert ersetzt jeden
     /// vorhandenen zeichengenau — GeoShop, Kanalfirma und seit 24.09.2026 abends auch eine Handeingabe (auch bewusst
-    /// leer; Entscheid Pascal «duerfen vom WebGIS ueberschrieben werden»).
+    /// leer; Entscheid Pascal «duerfen vom WebGIS ueberschrieben werden»). Hier wird nur geplant; bei der Uebernahme
+    /// gilt <see cref="WebGisFuehrungsfelder.HolenUeberschreibtHand"/> (Eigentuemer als Tabellenfeld), der Betreiber
+    /// geht in die Wurzelakte (<see cref="BetreiberFeld"/>). Ins WebGIS geht keiner zurueck
+    /// (<see cref="WebGisFuehrungsfelder.NieSenden"/>).
     /// </summary>
-    private static void FuehrtWebGis(WebGisImportEingabe e, WebGisImportPosition pos, string feld, string? neu)
+    private static void PlaneFuehrungswert(WebGisImportEingabe e, WebGisImportPosition pos, string feld, string? neu)
     {
         if (string.IsNullOrWhiteSpace(neu)) return;
         neu = neu.Trim();
@@ -408,8 +408,8 @@ public static class WebGisImportPlanBuilder
     {
         if (karte.SewerStudioFeld == "DN_mm")
         {
-            var breite = Klartext(stand, BreiteRef);
-            var hoehe = Klartext(stand, HoeheRef);
+            var breite = Klartext(stand, WebGisFeldkarte.HaltungBreiteRef);
+            var hoehe = Klartext(stand, WebGisFeldkarte.HaltungHoeheRef); // Status: offen (siehe Feldkarte)
             if (breite is null) return null;
             if (hoehe is not null && !WebGisExportPlanBuilder.GleicherWert(breite, hoehe))
             {

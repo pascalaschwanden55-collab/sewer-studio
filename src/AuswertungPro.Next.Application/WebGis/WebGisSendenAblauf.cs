@@ -111,7 +111,7 @@ public static class WebGisSendenAblauf
             throw;
         }
 
-        if (plan.Sanierungen.Exists(s => s.Ungeklaert is not null))
+        if (plan.Sanierungen.Exists(s => s.Ausgang == WebGisSchreibAusgang.Ungeklaert))
         {
             log.VersucheSchreibe(WebGisExportBericht.LogAbbruch(DateTime.Now,
                 "Ausgang einer Sanierungsmassnahme ungeklärt — Lauf gestoppt, vor einem neuen Versuch im WebGIS nachsehen", plan));
@@ -121,5 +121,53 @@ public static class WebGisSendenAblauf
         return log.VersucheSchreibe(WebGisExportBericht.LogAbschluss(DateTime.Now, plan))
             ? Ausgang.Abgeschlossen
             : Ausgang.LogAusgefallen;
+    }
+
+    /// <summary>
+    /// Was nach einem Schreiblauf gemeldet wird (Status, Toast, Ergebnisfenster, Berichtsname). Bis 30.09.2026 stand
+    /// diese Zuordnung in der Export-Seite (Wartbarkeitsaudit, WG-E); hier ist sie ohne Oberflaeche pruefbar.
+    /// </summary>
+    /// <param name="Ergebnis">Kurzer Ergebnistext (<see cref="WebGisExportBericht.Ergebnis"/>), Text des gruenen Toasts.</param>
+    /// <param name="Zusatz">«ACHTUNG»-Zeile bei einem gestoppten Lauf, sonst leer.</param>
+    /// <param name="Fehlgeschlagen">Warn-Toast statt Erfolg: Lauf nicht abgeschlossen, ein Fehler oder ein ungeklaerter Ausgang.</param>
+    /// <param name="Berichtsart">«Ergebnis» nach vollstaendigem Lauf, sonst «Ergebnis-abgebrochen».</param>
+    public sealed record Meldung(string Ergebnis, string Zusatz, bool Fehlgeschlagen, string Berichtsart)
+    {
+        /// <summary>Status und Text des Warn-Toasts.</summary>
+        public string Text => Ergebnis + Zusatz;
+
+        /// <summary>Text fuer das Ergebnisfenster: Ergebnis, Log-Datei samt Lauf und, falls geschrieben, der Bericht.</summary>
+        public string Ergebnisfenster(string logPfad, string laufId, string? berichtPfad)
+            => Text + $"\nLog: {logPfad} (Lauf {laufId})" + (berichtPfad is null ? "" : $"\nBericht: {berichtPfad}");
+    }
+
+    /// <summary>Status und Warn-Toast, wenn die Startzeile des Logs fehlt (<see cref="Ausgang.KeinStartbeleg"/>).</summary>
+    public static string KeinStartbelegText(string logPfad)
+        => "Das Änderungslog ist nicht schreibbar (" + logPfad + ") — nichts ins WebGIS geschrieben.";
+
+    /// <summary>
+    /// Ordnet einem Ausgang (nicht <see cref="Ausgang.KeinStartbeleg"/>, dort gilt <see cref="KeinStartbelegText"/>)
+    /// die Meldung zu. «Fehlgeschlagen» liest den Schreibausgang jeder Position (<see cref="WebGisSchreibAusgang"/>).
+    /// </summary>
+    public static Meldung Melde(Ausgang ausgang, WebGisExportPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var zusatz = ausgang switch
+        {
+            Ausgang.LogAusgefallen =>
+                "\nACHTUNG: Das Änderungslog fiel während des Laufs aus — Lauf gestoppt. Bereits bestätigte "
+                + "Änderungen stehen im Bericht; vor einem neuen Versuch im WebGIS nachsehen.",
+            Ausgang.ProjektGewechselt =>
+                "\nACHTUNG: Das Projekt war nicht mehr offen — Lauf vor dem nächsten Schreiben gestoppt.",
+            Ausgang.Ungeklaert =>
+                "\nACHTUNG: Eine Sanierungsmassnahme wurde vom Server bestätigt, liess sich aber nicht sicher nachprüfen — "
+                + "Lauf gestoppt. Vor einem neuen Versuch im WebGIS nachsehen, nicht erneut anlegen.",
+            _ => string.Empty,
+        };
+        var fehlgeschlagen = ausgang != Ausgang.Abgeschlossen
+            || plan.Positionen.Exists(p => p.Ausgang == WebGisSchreibAusgang.Fehler)
+            || plan.Sanierungen.Exists(s => s.Ausgang is WebGisSchreibAusgang.Fehler or WebGisSchreibAusgang.Ungeklaert);
+        return new Meldung(WebGisExportBericht.Ergebnis(plan), zusatz, fehlgeschlagen,
+            ausgang == Ausgang.Abgeschlossen ? "Ergebnis" : "Ergebnis-abgebrochen");
     }
 }

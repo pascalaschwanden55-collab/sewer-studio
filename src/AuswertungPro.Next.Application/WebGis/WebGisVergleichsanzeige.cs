@@ -59,23 +59,29 @@ public sealed class WebGisVergleichsZeile : INotifyPropertyChanged
         if (v.Massnahme is { } san)
         {
             // WG05: bestätigt / nachgeprüft / ungeklärt getrennt zeigen.
-            if (san.Ungeklaert is not null)
-                return (v.Nachher ?? v.WebGis, "Ausgang ungeklärt", san.Ungeklaert, WebGisAnzeigeTon.Warnung);
-            if (san.Geschrieben && san.Nachgeprueft)
-                return (v.Nachher ?? v.WebGis, "angelegt und nachgeprüft", "zurückgelesen (ID " + (san.NeueId ?? "?") + ")", WebGisAnzeigeTon.Bestaetigt);
-            if (san.Geschrieben)
-                return (v.Nachher ?? v.WebGis, "angelegt", "vom Server bestätigt (ID " + (san.NeueId ?? "?") + "), nicht nachgeprüft", WebGisAnzeigeTon.Warnung);
-            if (san.SchreibFehler is not null)
-                return (v.WebGis, "nicht angelegt", san.SchreibFehler, WebGisAnzeigeTon.Fehler);
+            switch (san.Ausgang)
+            {
+                case WebGisSchreibAusgang.Ungeklaert:
+                    return (v.Nachher ?? v.WebGis, "Ausgang ungeklärt", san.Ungeklaert!, WebGisAnzeigeTon.Warnung);
+                case WebGisSchreibAusgang.Nachgeprueft:
+                    return (v.Nachher ?? v.WebGis, "angelegt und nachgeprüft", "zurückgelesen (ID " + (san.NeueId ?? "?") + ")", WebGisAnzeigeTon.Bestaetigt);
+                case WebGisSchreibAusgang.VomServerBestaetigt:
+                    return (v.Nachher ?? v.WebGis, "angelegt", "vom Server bestätigt (ID " + (san.NeueId ?? "?") + "), nicht nachgeprüft", WebGisAnzeigeTon.Warnung);
+                case WebGisSchreibAusgang.Fehler:
+                    return (v.WebGis, "nicht angelegt", san.SchreibFehler!, WebGisAnzeigeTon.Fehler);
+            }
         }
         else if (v.WirdGeschrieben || (v.Art == WebGisVergleichsArt.Vorschlag && pos.Geschrieben && (v.Vorschlag?.Gewaehlt ?? false)))
         {
-            if (pos.Geschrieben && pos.VomServerBestaetigt)
-                return (v.Nachher ?? v.SewerStudio, "im WebGIS bestätigt", "nach dem Schreiben zurückgelesen", WebGisAnzeigeTon.Bestaetigt);
-            if (pos.Geschrieben)
-                return (v.Nachher ?? v.SewerStudio, "geschrieben", "Kontrolle durch Zurücklesen offen", WebGisAnzeigeTon.Warnung);
-            if (pos.SchreibFehler is not null)
-                return (v.WebGis, "nicht geschrieben", pos.SchreibFehler, WebGisAnzeigeTon.Fehler);
+            switch (pos.Ausgang)
+            {
+                case WebGisSchreibAusgang.VomServerBestaetigt or WebGisSchreibAusgang.Nachgeprueft:
+                    return (v.Nachher ?? v.SewerStudio, "im WebGIS bestätigt", "nach dem Schreiben zurückgelesen", WebGisAnzeigeTon.Bestaetigt);
+                case WebGisSchreibAusgang.Geschrieben:
+                    return (v.Nachher ?? v.SewerStudio, "geschrieben", "Kontrolle durch Zurücklesen offen", WebGisAnzeigeTon.Warnung);
+                case WebGisSchreibAusgang.Fehler:
+                    return (v.WebGis, "nicht geschrieben", pos.SchreibFehler!, WebGisAnzeigeTon.Fehler);
+            }
         }
 
         var grund = v.Grund;
@@ -145,10 +151,10 @@ public sealed class WebGisVergleichsObjekt : INotifyPropertyChanged
             Chip = "gesperrt"; ChipTon = WebGisAnzeigeTon.Gesperrt;
             Untertitel = string.Join(" ", _pos.Sperren);
         }
-        else if (Massnahmen.Any(m => m.Ungeklaert is not null))
+        else if (Massnahmen.Any(m => m.Ausgang == WebGisSchreibAusgang.Ungeklaert))
         {
             Chip = "ungeklärt"; ChipTon = WebGisAnzeigeTon.Warnung;
-            Untertitel = Massnahmen.First(m => m.Ungeklaert is not null).Ungeklaert!;
+            Untertitel = Massnahmen.First(m => m.Ausgang == WebGisSchreibAusgang.Ungeklaert).Ungeklaert!;
         }
         else if (_pos.SchreibFehler is not null || Massnahmen.Any(m => m.SchreibFehler is not null))
         {
@@ -158,7 +164,7 @@ public sealed class WebGisVergleichsObjekt : INotifyPropertyChanged
         else if (IstGeschrieben)
         {
             Chip = "geschrieben"; ChipTon = WebGisAnzeigeTon.Bestaetigt;
-            Untertitel = _pos.VomServerBestaetigt || !_pos.Geschrieben
+            Untertitel = _pos.Ausgang != WebGisSchreibAusgang.Geschrieben
                 ? "Geschrieben – vom WebGIS bestätigt."
                 : "Geschrieben – die Kontrolle durch Zurücklesen steht noch aus.";
         }
@@ -217,16 +223,20 @@ public static class WebGisVergleichsanzeige
     private static (string Text, WebGisAnzeigeTon Ton) Ergebnis(WebGisExportPosition pos, WebGisFeldVergleich v)
     {
         if (v.Massnahme is { } san)
+            return san.Ausgang switch
+            {
+                WebGisSchreibAusgang.Ungeklaert => ("Ausgang ungeklärt: " + san.Ungeklaert, WebGisAnzeigeTon.Warnung),
+                WebGisSchreibAusgang.Nachgeprueft => ("angelegt und nachgeprüft (ID " + (san.NeueId ?? "?") + ")", WebGisAnzeigeTon.Bestaetigt),
+                WebGisSchreibAusgang.VomServerBestaetigt => ("angelegt, vom Server bestätigt (ID " + (san.NeueId ?? "?") + "), nicht nachgeprüft", WebGisAnzeigeTon.Warnung),
+                WebGisSchreibAusgang.Fehler => ("nicht angelegt: " + san.SchreibFehler, WebGisAnzeigeTon.Fehler),
+                _ => ("nicht versucht", WebGisAnzeigeTon.Warnung),
+            };
+        return pos.Ausgang switch
         {
-            if (san.Ungeklaert is not null) return ("Ausgang ungeklärt: " + san.Ungeklaert, WebGisAnzeigeTon.Warnung);
-            if (san.Geschrieben && san.Nachgeprueft) return ("angelegt und nachgeprüft (ID " + (san.NeueId ?? "?") + ")", WebGisAnzeigeTon.Bestaetigt);
-            if (san.Geschrieben) return ("angelegt, vom Server bestätigt (ID " + (san.NeueId ?? "?") + "), nicht nachgeprüft", WebGisAnzeigeTon.Warnung);
-            if (san.SchreibFehler is not null) return ("nicht angelegt: " + san.SchreibFehler, WebGisAnzeigeTon.Fehler);
-            return ("nicht versucht", WebGisAnzeigeTon.Warnung);
-        }
-        if (pos.Geschrieben && pos.VomServerBestaetigt) return ("bestätigt", WebGisAnzeigeTon.Bestaetigt);
-        if (pos.Geschrieben) return ("geschrieben, Kontrolle offen", WebGisAnzeigeTon.Warnung);
-        if (pos.SchreibFehler is not null) return ("nicht geschrieben: " + pos.SchreibFehler, WebGisAnzeigeTon.Fehler);
-        return ("nicht versucht", WebGisAnzeigeTon.Warnung);
+            WebGisSchreibAusgang.VomServerBestaetigt or WebGisSchreibAusgang.Nachgeprueft => ("bestätigt", WebGisAnzeigeTon.Bestaetigt),
+            WebGisSchreibAusgang.Geschrieben => ("geschrieben, Kontrolle offen", WebGisAnzeigeTon.Warnung),
+            WebGisSchreibAusgang.Fehler => ("nicht geschrieben: " + pos.SchreibFehler, WebGisAnzeigeTon.Fehler),
+            _ => ("nicht versucht", WebGisAnzeigeTon.Warnung),
+        };
     }
 }
