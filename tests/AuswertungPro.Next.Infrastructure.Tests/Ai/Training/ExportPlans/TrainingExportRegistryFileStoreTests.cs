@@ -606,6 +606,20 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
     }
 
     [Fact]
+    public void ReadBundle_blockiert_proto_Satz_mit_Gold_Testhaltung_in_Validation()
+    {
+        // Entscheid 30.09.2026 (2): Gold-Testhaltungen stehen in keinem Split, auch
+        // nicht in validation. Bisher erzwang die Gold-Rolle test nur validation.
+        var protoSet = CreateProtoNegativeSet(forcedValidationGoldRole: "test");
+        var paths = CreateFiles(negativesJson: ProtoNegativesJson(protoSet));
+
+        var error = Assert.Throws<TrainingExportPlanException>(() =>
+            new TrainingExportRegistryFileStore(paths.RegistryPath, _root).ReadBundle());
+
+        Assert.Contains("Gold-Testhaltung", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ReadBundle_blockiert_proto_Satz_mit_fremdem_Ordner_Praefix()
     {
         var protoSet = CreateProtoNegativeSet();
@@ -1456,7 +1470,8 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
     /// </summary>
     private BoundProtoNegativeSet CreateProtoNegativeSet(
         bool includeQueueModelScope = false,
-        bool setImageAlsoEvalExcluded = false)
+        bool setImageAlsoEvalExcluded = false,
+        string forcedValidationGoldRole = "val")
     {
         var holdings = new[] { "100-200", "300-400", "500-600", "700-800", "900-1000" };
         var imageFills = new byte[] { 0x21, 0x22, 0x23, 0x24, 0x25 };
@@ -1718,7 +1733,7 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
               },
               {
                 "physical_holding_key": "{{goldVal}}",
-                "gold_role": "val",
+                "gold_role": "{{forcedValidationGoldRole}}",
                 "forced_split": "validation"
               }
             ]

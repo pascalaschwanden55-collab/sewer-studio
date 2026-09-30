@@ -1351,6 +1351,26 @@ def pruefe_proto_keine_ueberschneidung(
             )
 
 
+def pruefe_proto_ohne_gold_testhaltung(
+    eintraege: Sequence[Mapping[str, Any]],
+    gold_test_haltungen: set[str],
+) -> None:
+    """Kein Proto-Negativbild aus einer Gold-Testhaltung, in keinem Split (Entscheid 30.09.2026).
+
+    Auch ``validation`` ist gesperrt: sie steuert Early Stopping und
+    Kandidatenwahl. ``gold_test_haltungen`` sind physische Schluessel, die
+    Gegenrichtung ist damit eingeschlossen. Saetze sind hashgebunden; nur die
+    Ableitung kann ein Bild entfernen, der Pruefer lehnt den Satz ab.
+    """
+    for eintrag in sorted(eintraege, key=lambda wert: str(wert["review_item_id"])):
+        if eintrag["physical_holding_key"] in gold_test_haltungen:
+            raise ValueError(
+                f"Proto-Negativbild {eintrag['review_item_id']} stammt aus der eingefrorenen "
+                f"Gold-Testhaltung {eintrag['holding_key']} (Split {eintrag['split']}); "
+                "Gold-Testhaltungen duerfen in keinem Split stehen, auch nicht in validation."
+            )
+
+
 # ---------------------------------------------------------------------------
 # Split: stabile Rangregel je physischer Haltung
 # ---------------------------------------------------------------------------

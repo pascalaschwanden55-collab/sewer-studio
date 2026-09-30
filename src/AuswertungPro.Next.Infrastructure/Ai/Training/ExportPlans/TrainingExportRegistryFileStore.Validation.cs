@@ -350,6 +350,15 @@ public sealed partial class TrainingExportRegistryFileStore
                 throw new TrainingExportPlanException(
                     "Eine Gold-Ausrichtung im Negativ-Set-Manifest ist ungültig.");
             }
+            // Entscheid 30.09.2026: Gold-Testhaltungen stehen in keinem Split, auch nicht
+            // in validation (steuert Early Stopping). Der Store kennt den Gold-Split nicht;
+            // er sieht nur die Rolle, die das Manifest selbst in der Ausrichtung nennt.
+            if (alignment.GoldRole == "test")
+            {
+                throw new TrainingExportPlanException(
+                    $"Das Negativ-Set enthält ein Bild aus der eingefrorenen Gold-Testhaltung '{alignment.PhysicalHoldingKey}'. "
+                    + "Gold-Testhaltungen dürfen in keinem Split stehen, auch nicht in validation.");
+            }
             var expectedForcedSplit = alignment.GoldRole == "train" ? "train" : "validation";
             if (!string.Equals(alignment.ForcedSplit, expectedForcedSplit, StringComparison.Ordinal)
                 || !forcedSplits.TryAdd(

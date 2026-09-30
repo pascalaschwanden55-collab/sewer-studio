@@ -58,6 +58,7 @@ from repair_pdf_gold_holding_ids import comparison_key, load_protection_keys
 from gold_stock_audit import (
     NEGATIVE_SPLIT_SALT,
     _gold_split_roles_by_physical,
+    _gold_test_haltungen,
     _negative_split_map,
     _physical_holding_key,
     normalize_holding_key,
@@ -595,6 +596,24 @@ def build_set_plan(
     usable_items = final_items
     if not usable_items:
         raise ValueError("Kein verwertbares all_classes_clear nach Eval-Schutz.")
+
+    # Gold-Testhaltungen stehen in keinem Split, auch nicht in validation
+    # (Entscheid 30.09.2026). Die Testgruppen des juengsten Gold-Audits hat der
+    # Eval-Schutz oben schon begruendet ausgeschlossen. Eine Gold-Testhaltung
+    # ausserhalb dieses Schutzes laesst sich nicht begruendet ausschliessen; der
+    # Pruefer wuerde den Satz so oder so ablehnen. Darum hier vorab stoppen.
+    gold_test = _gold_test_haltungen(knowledge_root)
+    gesperrt = sorted(
+        {item["holding_key"] for item in usable_items if item["physical"] in gold_test},
+        key=str.casefold,
+    )
+    if gesperrt:
+        raise ValueError(
+            "Klassenfreie Bilder aus Gold-Testhaltungen ohne Eval-Schutzbeleg: "
+            + ", ".join(gesperrt)
+            + ". Gold-Testhaltungen duerfen in keinem Split stehen; zuerst den "
+            "Gold-Audit erneuern oder die Bilder im Review ausschliessen."
+        )
 
     split_map, validation_count = _negative_split_map([i["physical"] for i in usable_items])
     for item in usable_items:
