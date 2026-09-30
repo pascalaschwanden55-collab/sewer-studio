@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// ein Wert wird über die Quelle verändert und muss im Fenster ankommen), und dass
 /// <see cref="TastenkuerzelWindow.ZeigeAn"/> das Fenster als Einzelstück hält.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class TastenkuerzelWindowIsolatedSmokeTests
 {

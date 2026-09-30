@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// der x:Static-Verweis beim Aufbau wirklich aufgeloest wird - dieser Test baut das Fenster im
 /// eigenen WPF-Prozess auf (ohne Show, ohne Timer-Start) und sucht den Chip im logischen Baum.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class StartupSplashVersionIsolatedSmokeTests
 {

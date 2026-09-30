@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// einem echten Fenster, Theme hell -> dunkel -> hell wechseln, die Farbe muss jedes Mal mitwechseln
 /// (eine Aenderung der App-Ressourcen erreicht lose Elemente nicht).
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class ThemeStileLiveWechselIsolatedSmokeTests
 {

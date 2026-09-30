@@ -17,6 +17,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// anderen WPF-Smoke-Tests in einem eigenen Kindprozess; kein Projekt, kein ViewModel, kein
 /// Fensterstart.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests
 {

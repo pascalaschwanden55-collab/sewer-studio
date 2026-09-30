@@ -20,6 +20,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// prozessweit und einmalig, und im Elternprozess darf es keines geben.
 /// Deshalb hier KEIN eigener Wirt.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class OberflaechenBindungsRauchtestTests
 {

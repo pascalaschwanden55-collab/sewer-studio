@@ -20,6 +20,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// nirgends eingehaengtes Control fand die Anwendungsressourcen in einer ersten Fassung dieses
 /// Tests NICHT (Focusable blieb der CLR-Standard <c>true</c>).
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class NovaDialogHeaderIsolatedSmokeTests
 {

@@ -6,6 +6,7 @@ using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;
 
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class PipelineCompletionWindowTests
 {

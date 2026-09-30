@@ -11,10 +11,67 @@ public sealed class MaintainabilityFitnessTests
     {
     };
 
+    private const int FileRatchetThreshold = 900;
+    private const int TypeRatchetThreshold = 1_500;
+
+    /// <summary>
+    /// Sperrklinke fuer Dateien ab 900 Zeilen (Stand 30.09.2026). Ein Eintrag darf nie wachsen; schrumpft die
+    /// Datei, muss der Wert gesenkt werden, unter 900 Zeilen faellt der Eintrag weg. So ist jeder Fortschritt
+    /// festgehalten und Code laeuft nicht bis knapp unter die harte Grenze von 1'000 Zeilen auf.
+    /// </summary>
+    private static readonly Dictionary<string, int> FrozenFileSizes = new(StringComparer.Ordinal)
+    {
+        ["src/AuswertungPro.Next.UI/ViewModels/TrainingStudioViewModel.cs"] = 1_000,
+        ["src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml.cs"] = 1_000,
+        ["src/AuswertungPro.Next.UI/ViewModels/ShellViewModel.cs"] = 999,
+        ["src/AuswertungPro.Next.UI/ViewModels/Windows/TrainingCenterViewModel.cs"] = 997,
+        ["src/AuswertungPro.Next.UI/ViewModels/Pages/SanierungsMatrixPageViewModel.cs"] = 995,
+        ["src/AuswertungPro.Next.Infrastructure/Reports/ProtocolPdfExporter.cs"] = 994,
+        ["src/AuswertungPro.Next.UI/Services/AnnotationWorkbenchService.cs"] = 993,
+        ["src/AuswertungPro.Next.UI/Views/Windows/StartupSplashWindow.Animation.cs"] = 985,
+        ["src/AuswertungPro.Next.Application/Dossiers/Preview/DossierOutputPreviewTableCellMapper.cs"] = 984,
+        ["src/AuswertungPro.Next.Infrastructure/HoldingFolderDistributor.PdfParsing.cs"] = 976,
+        ["src/AuswertungPro.Next.Infrastructure/Import/MediaDistributionService.cs"] = 973,
+        ["src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs"] = 973,
+        ["src/AuswertungPro.Next.Infrastructure/Ai/Training/Services/PdfProtocolExtractor.cs"] = 969,
+        ["src/AuswertungPro.Next.Infrastructure/Ai/Pipeline/MultiModelAnalysisService.cs"] = 967,
+        ["src/AuswertungPro.Next.Infrastructure/Import/WinCan/WinCanDbImportService.cs"] = 958,
+        ["src/AuswertungPro.Next.Infrastructure/Ai/OverlayToolService.cs"] = 954,
+        ["src/AuswertungPro.Next.Infrastructure/Media/MediaConflictCenterService.cs"] = 954,
+        ["src/AuswertungPro.Next.Infrastructure/Dossiers/DossierWordTemplateExportService.cs"] = 948,
+        ["src/AuswertungPro.Next.UI/ViewModels/Pages/BuilderPageViewModel.cs"] = 948,
+        ["src/AuswertungPro.Next.UI/ServiceProvider.cs"] = 939,
+        ["src/AuswertungPro.Next.UI/Services/SystemMonitorService.cs"] = 937,
+        ["src/AuswertungPro.Next.Infrastructure/Ai/Training/ExportPlans/TrainingExportRegistryFileStore.cs"] = 935,
+        ["src/AuswertungPro.Next.UI/ViewModels/Pages/DossiersPageViewModel.Actions.cs"] = 910
+    };
+
+    /// <summary>
+    /// Sperrklinke fuer Typen ab 1'500 Zeilen (alle Teildateien einer partial-Klasse zusammengezaehlt,
+    /// Stand 30.09.2026). Gleiche Regeln wie bei <see cref="FrozenFileSizes"/>. Zusaetzlich gilt weiter die harte
+    /// Grenze von 2'000 Zeilen fuer alle Typen ausser den hier eingetragenen.
+    /// </summary>
     private static readonly Dictionary<string, int> ExistingLargePartialTypes = new(StringComparer.Ordinal)
     {
-        ["AuswertungPro.Next.UI.Views.Windows.PlayerWindow"] = 4_263,
-        ["AuswertungPro.Next.Infrastructure.HoldingFolderDistributor"] = 3_064
+        ["AuswertungPro.Next.UI.Views.Windows.PlayerWindow"] = 4_260,
+        ["AuswertungPro.Next.Infrastructure.HoldingFolderDistributor"] = 2_981,
+        ["AuswertungPro.Next.UI.Views.Windows.DossierPreviewFieldPanel"] = 1_999,
+        ["AuswertungPro.Next.UI.Views.Pages.DataPage"] = 1_978,
+        ["AuswertungPro.Next.UI.ViewModels.Pages.BuilderPageViewModel"] = 1_964,
+        ["AuswertungPro.Next.UI.ViewModels.TrainingStudioViewModel"] = 1_951,
+        ["AuswertungPro.Next.UI.ViewModels.Pages.SchaechtePageViewModel"] = 1_921,
+        ["AuswertungPro.Next.Infrastructure.Import.Xtf.LegacyXtfImportService"] = 1_910,
+        ["AuswertungPro.Next.UI.ViewModels.Pages.ExportPageViewModel"] = 1_889,
+        ["AuswertungPro.Next.Infrastructure.Import.WinCan.WinCanDbImportService"] = 1_821,
+        ["AuswertungPro.Next.UI.ViewModels.ShellViewModel"] = 1_783,
+        ["AuswertungPro.Next.Infrastructure.Ai.Training.ExportPlans.TrainingExportRegistryFileStore"] = 1_745,
+        ["AuswertungPro.Next.UI.Views.Pages.SchaechtePage"] = 1_722,
+        ["AuswertungPro.Next.UI.ViewModels.Pages.DossiersPageViewModel"] = 1_642,
+        ["AuswertungPro.Next.UI.Views.Windows.StartupSplashWindow"] = 1_618,
+        ["AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel"] = 1_564,
+        ["AuswertungPro.Next.Infrastructure.Ai.Pipeline.MultiModelAnalysisService"] = 1_560,
+        ["AuswertungPro.Next.UI.ServiceProvider"] = 1_557,
+        ["AuswertungPro.Next.UI.Views.Windows.PhotoMeasurementWindow"] = 1_556
     };
 
     private static readonly HashSet<string> ExistingMutableServiceFacades = new(StringComparer.Ordinal)
@@ -119,39 +176,85 @@ public sealed class MaintainabilityFitnessTests
     }
 
     [Fact]
-    public void Partial_types_cannot_hide_growth_across_many_small_files()
+    public void Frozen_files_cannot_grow()
     {
-        var offenders = FindPartialTypeSizes()
-            .Where(type => type.Lines > LargePartialTypeLimit)
-            .Where(type => !ExistingLargePartialTypes.TryGetValue(type.Name, out var baseline)
-                || type.Lines > baseline)
-            .OrderByDescending(type => type.Lines)
-            .Select(type => $"{type.Name} ({type.Lines} Zeilen in {type.FileCount} Dateien)")
+        var current = FindFileSizes();
+        var offenders = FrozenFileSizes
+            .Where(entry => current.TryGetValue(entry.Key, out var lines) && lines > entry.Value)
+            .Select(entry => $"{entry.Key}: alt {entry.Value}, neu {current[entry.Key]} Zeilen")
+            .OrderBy(text => text, StringComparer.Ordinal)
             .ToArray();
 
         Assert.True(
             offenders.Length == 0,
-            "Neue God-Classes oder Wachstum bestehender God-Classes sind nicht erlaubt. "
-            + "Verantwortung zuerst in Controller oder Services auslagern:\n"
+            "Diese Dateien sind eingefroren und dürfen nicht wachsen. Verantwortung in eine eigene Klasse "
+            + "auslagern, nicht in eine neue Teildatei verschieben:\n  "
+            + string.Join("\n  ", offenders));
+    }
+
+    [Fact]
+    public void Frozen_file_values_follow_shrinking_files()
+    {
+        var current = FindFileSizes();
+        var stale = new List<string>();
+        foreach (var (path, frozen) in FrozenFileSizes.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+        {
+            if (!current.TryGetValue(path, out var lines))
+                stale.Add($"{path}: Datei gibt es nicht mehr, Eintrag entfernen");
+            else if (lines <= FileRatchetThreshold)
+                stale.Add($"{path}: nur noch {lines} Zeilen (Schwelle {FileRatchetThreshold}), Eintrag entfernen");
+            else if (lines < frozen)
+                stale.Add($"{path}: Wert auf {lines} senken (bisher {frozen})");
+        }
+
+        Assert.True(
+            stale.Count == 0,
+            "Die Dateien sind kleiner geworden. Werte in FrozenFileSizes nachziehen, damit der Fortschritt "
+            + "festgehalten bleibt:\n  " + string.Join("\n  ", stale));
+    }
+
+    [Fact]
+    public void Partial_types_cannot_hide_growth_across_many_small_files()
+    {
+        var offenders = FindPartialTypeSizes()
+            .Where(type => type.Lines > LargePartialTypeLimit
+                || ExistingLargePartialTypes.ContainsKey(type.Name))
+            .Where(type => !ExistingLargePartialTypes.TryGetValue(type.Name, out var baseline)
+                || type.Lines > baseline)
+            .OrderByDescending(type => type.Lines)
+            .Select(type => ExistingLargePartialTypes.TryGetValue(type.Name, out var baseline)
+                ? $"{type.Name}: alt {baseline}, neu {type.Lines} Zeilen in {type.FileCount} Dateien"
+                : $"{type.Name} ({type.Lines} Zeilen in {type.FileCount} Dateien)")
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "Neue God-Classes oder Wachstum eingefrorener Klassen sind nicht erlaubt. "
+            + "Verantwortung zuerst in Controller oder Services auslagern, nicht in eine neue Teildatei "
+            + "verschieben:\n"
             + string.Join("\n", offenders));
     }
 
     [Fact]
-    public void Partial_type_baseline_contains_only_types_that_are_still_large()
+    public void Partial_type_baseline_follows_shrinking_types()
     {
         var current = FindPartialTypeSizes()
             .ToDictionary(type => type.Name, type => type.Lines, StringComparer.Ordinal);
-        var staleEntries = ExistingLargePartialTypes
-            .Where(entry => !current.TryGetValue(entry.Key, out var lines)
-                || lines <= LargePartialTypeLimit)
-            .Select(entry => entry.Key)
-            .OrderBy(name => name, StringComparer.Ordinal)
-            .ToArray();
+        var stale = new List<string>();
+        foreach (var (name, frozen) in ExistingLargePartialTypes.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+        {
+            if (!current.TryGetValue(name, out var lines))
+                stale.Add($"{name}: Typ gibt es nicht mehr, Eintrag entfernen");
+            else if (lines <= TypeRatchetThreshold)
+                stale.Add($"{name}: nur noch {lines} Zeilen (Schwelle {TypeRatchetThreshold}), Eintrag entfernen");
+            else if (lines < frozen)
+                stale.Add($"{name}: Wert auf {lines} senken (bisher {frozen})");
+        }
 
         Assert.True(
-            staleEntries.Length == 0,
-            "Diese Klassen sind nicht mehr zu gross und müssen aus der Ausnahme entfernt werden:\n"
-            + string.Join("\n", staleEntries));
+            stale.Count == 0,
+            "Die Klassen sind kleiner geworden. Werte in ExistingLargePartialTypes nachziehen, damit der "
+            + "Fortschritt festgehalten bleibt:\n  " + string.Join("\n  ", stale));
     }
 
     [Fact]
@@ -212,6 +315,20 @@ public sealed class MaintainabilityFitnessTests
             removedFacades.Length == 0,
             "Diese Current/Use-Altstellen wurden entfernt. Bitte aus der Altliste löschen, damit " +
             "die Obergrenze dauerhaft sinkt:\n  " + string.Join("\n  ", removedFacades));
+    }
+
+    private static IReadOnlyDictionary<string, int> FindFileSizes()
+    {
+        var root = TestRepoPaths.FindRepositoryRoot();
+        var sourceRoot = Path.Combine(root, "src");
+        var separator = Path.DirectorySeparatorChar;
+        return Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(
+                path => Path.GetRelativePath(root, path).Replace('\\', '/'),
+                path => File.ReadLines(path).Count(),
+                StringComparer.Ordinal);
     }
 
     private static IReadOnlyList<PartialTypeSize> FindPartialTypeSizes()

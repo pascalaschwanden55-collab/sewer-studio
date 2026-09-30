@@ -16,6 +16,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// eigenen Namescope). Laeuft wie die anderen WPF-Smoke-Tests in einem eigenen Kindprozess;
 /// kein Projekt, kein echtes ViewModel, kein Fensterstart.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class NovaPageHeaderIsolatedSmokeTests
 {

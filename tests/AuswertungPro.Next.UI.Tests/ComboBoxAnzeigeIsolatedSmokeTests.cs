@@ -15,6 +15,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// aus dem fertig getemplateten Control. Er beantwortet damit, ob es ein Produktfehler ist oder
 /// nur der Prüfhost. Läuft wie die anderen WPF-Smoke-Tests in einem eigenen Kindprozess.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class ComboBoxAnzeigeIsolatedSmokeTests
 {

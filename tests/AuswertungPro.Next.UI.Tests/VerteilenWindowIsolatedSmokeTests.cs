@@ -12,6 +12,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Das Fenster «Verteilen» wird wirklich gezeichnet: Vorschau mit Status-Chips, Filmspalte
 /// nur bei Haltungen, Hauptknopf mit der Zahl der Ablagen — im eigenen Prozess mit echtem WPF.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class VerteilenWindowIsolatedSmokeTests
 {

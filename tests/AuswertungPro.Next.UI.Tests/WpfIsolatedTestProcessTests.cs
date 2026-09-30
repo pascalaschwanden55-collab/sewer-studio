@@ -1,5 +1,6 @@
 namespace AuswertungPro.Next.UI.Tests;
 
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 public sealed class WpfIsolatedTestProcessTests
 {
     [Fact]

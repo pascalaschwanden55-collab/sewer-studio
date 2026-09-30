@@ -12,6 +12,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Art, Standard-/Abbrechen-Knopf, Rueckgabewerte per programmatischem Klick und die Darstellung im
 /// Dunkeltheme - im eigenen Prozess mit echtem WPF (Muster wie <see cref="ListenErgaenzungWindowIsolatedSmokeTests"/>).
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class NovaDialogWindowIsolatedSmokeTests
 {

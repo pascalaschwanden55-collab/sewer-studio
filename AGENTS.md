@@ -58,6 +58,16 @@ dotnet test tests\AuswertungPro.Next.UI.Tests\AuswertungPro.Next.UI.Tests.csproj
 dotnet test tests\ProjectModernizer.Tests\ProjectModernizer.Tests.csproj -c Release --no-build --no-restore
 ```
 
+Schnelllauf für den Alltag in der Oberfläche (überspringt die Tests, die je einen eigenen Testprozess starten):
+
+```powershell
+dotnet test tests\AuswertungPro.Next.UI.Tests\AuswertungPro.Next.UI.Tests.csproj -c Release --no-build --no-restore --filter "Kategorie!=Kindprozess"
+```
+
+Pre-Push-Hook und CI prüfen weiterhin alles, auch die Kindprozess-Tests. Neue Testklassen, die
+`WpfIsolatedTestProcess.RunAsync` aufrufen, tragen `[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]`;
+ein Wächtertest (`TestInfrastrukturWaechterTests`) prüft das.
+
 Bei Sidecar- oder QGIS-Arbeit zusätzlich:
 
 ```powershell

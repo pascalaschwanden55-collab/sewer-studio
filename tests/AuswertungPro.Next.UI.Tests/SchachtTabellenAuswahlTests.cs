@@ -13,6 +13,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// ueberschrieb ihn; und schon das blosse Verlassen der Zelle schrieb den Wert mit Handmarke neu — ein
 /// Kanalfirma-Wert waere so ohne Haekchen ins WebGIS gegangen.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class SchachtTabellenAuswahlTests
 {
