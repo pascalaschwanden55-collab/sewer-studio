@@ -45,6 +45,10 @@ public sealed class XtfReferenzfallTests : IDisposable
         => PruefeSchnappschuss("sia405-referenz-vorbelegt", VorbelegtesProjekt(), "sia405-referenz.xtf");
 
     [Fact]
+    public void Sia405_Eigentuemer_und_Verwaltungsrollen_je_Bezugsart()
+        => PruefeSchnappschuss("sia405-bezuege", new Project(), "sia405-bezuege.xtf");
+
+    [Fact]
     public void Sia405_gewinnt_gegen_VsaKek_in_derselben_Datei()
         => PruefeSchnappschuss("sia405-mit-vsakek", new Project(), "sia405-mit-vsakek.xtf");
 

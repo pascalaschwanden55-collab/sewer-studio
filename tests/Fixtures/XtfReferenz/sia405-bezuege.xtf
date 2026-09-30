@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Synthetische Referenzdatei fuer AP08 (keine Kundendaten). Jede Haltung zeigt genau
+     eine Art, den Eigentuemer und die Verwaltungsrollen zu finden, ohne dass eine andere
+     Haltung sie im Projekt wieder ueberschreibt. -->
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION VERSION="2.3" SENDER="Referenzfall AP08">
+    <MODELS><MODEL NAME="SIA405_ABWASSER_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="refB00000000ABW4">
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil TID="refPROFILMAUL">
+        <Profiltyp>Maulprofil</Profiltyp>
+        <HoehenBreitenverhaeltnis>0.75</HoehenBreitenverhaeltnis>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="refKANALNURVERWEIS">
+        <Bezeichnung>10-11</Bezeichnung>
+        <EigentuemerRef REF="refORGGEMEINDE" />
+        <DatenherrRef REF="refORGKANTON" />
+        <DatenlieferantRef REF="refORGBUERO" />
+        <Status>stillgelegt</Status>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="refKANALLEERESALTFELD">
+        <Bezeichnung>11-12</Bezeichnung>
+        <Eigentuemer />
+        <EigentuemerRef REF="refORGKANTON" />
+        <DatenherrRef REF="refORGGEMEINDE" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="refKANALTEXT">
+        <Bezeichnung>12-13</Bezeichnung>
+        <Eigentuemer>Privat</Eigentuemer>
+        <EigentuemerRef REF="refORGGEMEINDE" />
+        <DatenlieferantRef REF="refORGUNBEKANNT" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refHALTUNGA">
+        <Bezeichnung>10-11</Bezeichnung>
+        <Lichte_Hoehe>900</Lichte_Hoehe>
+        <Letzte_Aenderung>20250101</Letzte_Aenderung>
+        <AbwasserbauwerkRef REF="refKANALNURVERWEIS" />
+        <RohrprofilRef REF="refPROFILMAUL" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refHALTUNGB">
+        <Bezeichnung>11-12</Bezeichnung>
+        <AbwasserbauwerkRef REF="refKANALLEERESALTFELD" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refHALTUNGC">
+        <Bezeichnung>12-13</Bezeichnung>
+        <AbwasserbauwerkRef REF="refKANALTEXT" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    <SIA405_Base_Abwasser_LV95.Administration BID="refB00000000ADM4">
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="refORGGEMEINDE">
+        <Bezeichnung>Gemeinde Referenz</Bezeichnung>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="refORGKANTON">
+        <Bezeichnung>Kanton Referenz</Bezeichnung>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="refORGBUERO">
+        <Bezeichnung>Ingenieurbuero Beispiel</Bezeichnung>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="refORGUNBEKANNT">
+        <Bezeichnung>unbekannt</Bezeichnung>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+    </SIA405_Base_Abwasser_LV95.Administration>
+  </DATASECTION>
+</TRANSFER>
