@@ -1,11 +1,11 @@
 ﻿using AuswertungPro.Next.Application.Common;
 using System.IO;
-using System.Security.Cryptography;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Workbench;
+using AuswertungPro.Next.Application.UseCases.GoldSampleSpeichern;
 using AuswertungPro.Next.Infrastructure.Ai;         // VsaCodeResolver (Default-Code-Pruefung)
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Teacher;             // TrainingAnnotationExportServiceFactory (Default)
@@ -13,32 +13,25 @@ using AuswertungPro.Next.UI.Ai.Teacher;             // TrainingAnnotationExportS
 namespace AuswertungPro.Next.UI.Services;
 
 /// <summary>
-/// Pruefplatz-Orchestrator (Etappe 1): buendelt SAM-Segmentierung, KI-Codevorschlag und das
-/// geschuetzte Speichern (Eval-Schutz → Goldkopie → TrainingSample → KB-Index → Teacher-Kandidat).
-/// Ein Service fuer Center und Player. Implementierung liegt bewusst in der UI-Schicht
-/// (wie <see cref="TrainingReviewSamSegmentationService"/>), damit die Application-Schicht keine
-/// Infrastruktur bindet.
+/// Pruefplatz-Fassade (Etappe 1): buendelt SAM-Segmentierung und KI-Codevorschlag. Das
+/// geschuetzte Speichern (Eval-Schutz → Goldkopie → TrainingSample → KB-Index →
+/// Teacher-Kandidat) steuert <see cref="GoldSampleSpeichernUseCase"/> in der
+/// Application-Schicht; dieser Dienst baut ihn aus seinen Abhaengigkeiten und reicht die
+/// Infrastruktur-Schritte (Eval-Schutzdaten laden, strenge Maskenpruefung, Teacher-Export)
+/// als Delegates hinein. Ein Service fuer Center und Player.
 /// </summary>
-public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchService, IDisposable
+public sealed class AnnotationWorkbenchService : IAnnotationWorkbenchService, IDisposable
 {
     private readonly ITrainingReviewSamSegmentationService _samService;
     private readonly IVisionPipelineClient _pipelineClient;
     private readonly IRetrievalService? _retrieval;
-    private readonly ITrainingSampleStore _sampleStore;
-    private readonly ITrainingFrameStore _frameStore;
-    private readonly Func<string?> _resolveGoldFramesDir;
     private readonly IKnowledgeBaseIndexer _kbIndexer;
-    private readonly ITeacherAnnotationStore _teacherStore;
-    private readonly IVsaYoloClassMapStore _teacherClassMap;
     private readonly Func<string, byte[]> _readFileBytes;
-    private readonly Func<string?> _resolveEvalSetRoot;
-    private readonly Func<ITrainingAnnotationExportService>? _exportServiceFactory;
     private readonly Func<string, bool> _isCodeKnown;
     private readonly IBcaFineCodeClassifier? _bcaClassifier;
-    private readonly Func<string, string?> _codeLabelLookup;
     private readonly IProtocolAiService? _protocolAi;
     private readonly Func<IReadOnlyList<string>> _resolveAllowedCodes;
-    private readonly Func<string, (int Width, int Height)?> _readImageDimensions;
+    private readonly GoldSampleSpeichernUseCase _goldSampleSpeichern;
 
     public AnnotationWorkbenchService(
         ITrainingReviewSamSegmentationService samService,
@@ -64,16 +57,8 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         _samService = samService;
         _pipelineClient = pipelineClient;
         _retrieval = retrieval;
-        _sampleStore = sampleStore;
-        _frameStore = frameStore;
-        _resolveGoldFramesDir = resolveGoldFramesDir;
         _kbIndexer = kbIndexer;
-        _teacherStore = teacherStore;
-        _teacherClassMap = teacherClassMap;
         _readFileBytes = readFileBytes;
-        _resolveEvalSetRoot = resolveEvalSetRoot;
-        _exportServiceFactory = exportServiceFactory;
-        _codeLabelLookup = codeLabelLookup ?? VsaCodeResolver.LookupLabel;
         _protocolAi = protocolAi;
         _resolveAllowedCodes = resolveAllowedCodes
             ?? (() => VsaCodeResolver.CurrentCatalog?.AllowedCodes() ?? Array.Empty<string>());
@@ -81,7 +66,29 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         // akzeptieren. LookupLabel ist dafuer ungeeignet, weil es absichtlich auf
         // Hauptcodes zurueckfaellt und dadurch erfundene Untercodes beschriften kann.
         _isCodeKnown = isCodeKnown ?? VsaCodeResolver.IsExactSelectableCode;
-        _readImageDimensions = readImageDimensions ?? TrainingImageFileProbe.ReadDimensions;
+        var dimensionsReader = readImageDimensions ?? TrainingImageFileProbe.ReadDimensions;
+        _goldSampleSpeichern = new GoldSampleSpeichernUseCase(
+            sampleStore,
+            frameStore,
+            resolveGoldFramesDir,
+            kbIndexer,
+            teacherStore,
+            teacherClassMap,
+            () => exportServiceFactory?.Invoke()
+                  ?? TrainingAnnotationExportServiceFactory.Create(teacherStore),
+            readFileBytes,
+            resolveEvalSetRoot,
+            LoadEvalSchutz,
+            _isCodeKnown,
+            codeLabelLookup ?? VsaCodeResolver.LookupLabel,
+            (segmentation, box, storedFramePath) => WorkbenchGoldMask.Evaluate(
+                segmentation, box, storedFramePath, dimensionsReader));
+    }
+
+    private static GoldSampleEvalSchutz LoadEvalSchutz(string? evalSetRoot)
+    {
+        var sets = EvalContaminationSetProvider.Load(evalSetRoot);
+        return new GoldSampleEvalSchutz(sets.ImageHashes, sets.HaltungKeys);
     }
 
     public async Task<WorkbenchSegmentation> SegmentAsync(WorkbenchItem item, BoundingBox box, string codeHint, CancellationToken ct = default)
@@ -311,7 +318,9 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         WorkbenchSegmentation? segmentation,
         WorkbenchDecision decision,
         CancellationToken ct = default)
-        => SaveCoreAsync(item, box, segmentation, decision, imageSnapshot: null, ct);
+        => _goldSampleSpeichern.SaveAsync(
+            new GoldSampleSpeichernAnfrage(item, box, segmentation, decision),
+            ct);
 
     public Task<WorkbenchSaveResult> SaveAsync(
         WorkbenchItem item,
@@ -322,662 +331,9 @@ public sealed partial class AnnotationWorkbenchService : IAnnotationWorkbenchSer
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(imageSnapshot);
-        return SaveCoreAsync(item, box, segmentation, decision, imageSnapshot, ct);
-    }
-
-    private async Task<WorkbenchSaveResult> SaveCoreAsync(
-        WorkbenchItem item,
-        BoundingBox box,
-        WorkbenchSegmentation? segmentation,
-        WorkbenchDecision decision,
-        WorkbenchImageSnapshot? imageSnapshot,
-        CancellationToken ct)
-    {
-        // 1) Validierung (VOR jedem Schreiben und vor dem Eval-Guard).
-        var beschreibung = decision.Beschreibung?.Trim() ?? string.Empty;
-        var confirmedByUser = decision.ConfirmedByUser?.Trim() ?? string.Empty;
-        var finalCode = NormalizeCode(decision.VsaCode);
-        if (confirmedByUser.Length == 0)
-        {
-            return Rejected(
-                "Persönliche Bestätigung fehlt. Ohne Bearbeiter wird kein Goldsample gespeichert.");
-        }
-        if (beschreibung.Length < 10)
-            return Rejected("Beschreibung zu kurz (mindestens 10 Zeichen).");
-        if (GoldBeschreibungGuard.IsPlaceholder(beschreibung))
-            return Rejected(
-                "Bitte die Platzhalter-Beschreibung ersetzen (Lage und Ausmass konkret angeben).");
-        if (!_isCodeKnown(finalCode))
-            return Rejected($"Unbekannter VSA-Code '{decision.VsaCode}'.");
-
-        var repairsExistingSample = !string.IsNullOrWhiteSpace(item.ExistingSampleId);
-        TrainingSample? existingSample = null;
-        if (repairsExistingSample)
-        {
-            try
-            {
-                var matches = (await _sampleStore.LoadAsync().ConfigureAwait(false))
-                    .Where(sample => string.Equals(
-                        sample.SampleId,
-                        item.ExistingSampleId,
-                        StringComparison.Ordinal))
-                    .ToList();
-                if (matches.Count != 1)
-                {
-                    return Rejected(
-                        matches.Count == 0
-                            ? "Goldsample wurde nicht gespeichert: Der zu reparierende Bestandseintrag wurde nicht gefunden."
-                            : "Die Sample-ID ist im Bestand nicht eindeutig. Es wurde nichts gespeichert.");
-                }
-
-                existingSample = matches[0];
-                if (item.ExpectedConfirmedAtUtc.HasValue
-                    && (!existingSample.ConfirmedAtUtc.HasValue
-                        || ToUtc(existingSample.ConfirmedAtUtc.Value)
-                           != item.ExpectedConfirmedAtUtc.Value.ToUniversalTime()))
-                {
-                    return Rejected(
-                        "Goldsample wurde inzwischen in einem anderen Arbeitsablauf geändert. Bitte die Goldprüfung neu laden.");
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                return Rejected(
-                    $"Das zu reparierende Goldsample konnte nicht sicher gelesen werden: {UserError.DescribeAndReport(ex, "Goldsample zur Reparatur lesen")}");
-            }
-        }
-
-        var sourceType = existingSample is null
-            ? (item.SourceSuggestion is null
-                ? SourceTypeNames.ManualCoding
-                : SourceTypeNames.PdfPhoto)
-            : existingSample.SourceType;
-        var sourceNote = existingSample is null
-            ? BuildSourceNote(item.SourceSuggestion)
-            : existingSample.Notes ?? string.Empty;
-        var sourceReferenceCode = existingSample is null
-            ? item.SourceSuggestion?.VsaCode?.Trim()
-            : existingSample.SourceReferenceCode;
-        var sourceReferenceDescription = existingSample is null
-            ? item.SourceSuggestion?.Beschreibung?.Trim()
-            : existingSample.SourceReferenceDescription;
-        var isPdfPhoto = string.Equals(
-            sourceType,
-            SourceTypeNames.PdfPhoto,
-            StringComparison.OrdinalIgnoreCase);
-        var isManualCoding = string.Equals(
-            sourceType,
-            SourceTypeNames.ManualCoding,
-            StringComparison.OrdinalIgnoreCase);
-        if (!isPdfPhoto && !isManualCoding)
-        {
-            return Rejected(
-                "Die gespeicherte Herkunft ist nicht als persönliches Gold zugelassen. Es wurde nichts gespeichert.");
-        }
-        if (isPdfPhoto
-            && (!PdfGoldProvenancePolicy.IsValid(sourceNote)
-                || string.IsNullOrWhiteSpace(sourceReferenceCode)
-                || string.IsNullOrWhiteSpace(sourceReferenceDescription)))
-        {
-            return Rejected(
-                "PDF-Goldsample kann nicht gespeichert werden: Die Operateurreferenz oder PDF-Prüfspur ist unvollständig oder ungültig.");
-        }
-        if (existingSample is null
-            && item.SourceSuggestion is not null
-            && !isPdfPhoto)
-        {
-            return Rejected(
-                "Die PDF-Herkunft konnte nicht eindeutig gebunden werden. Es wurde nichts gespeichert.");
-        }
-
-        var codeChanged = repairsExistingSample
-            && !string.Equals(
-                NormalizeCode(existingSample?.Code ?? item.ExistingCode),
-                finalCode,
-                StringComparison.OrdinalIgnoreCase);
-        var keepsExistingReviewDecision = repairsExistingSample
-            && !codeChanged
-            && existingSample?.Corrected.HasValue == true
-            && (string.Equals(
-                    existingSample.MatchLevel,
-                    MatchLevelNames.ReviewApproved,
-                    StringComparison.Ordinal)
-                || string.Equals(
-                    existingSample.MatchLevel,
-                    MatchLevelNames.ReviewCorrected,
-                    StringComparison.Ordinal));
-        var wasCorrected = keepsExistingReviewDecision
-            ? existingSample!.Corrected!.Value
-            : isPdfPhoto
-                ? !string.Equals(
-                    NormalizeCode(sourceReferenceCode),
-                    finalCode,
-                    StringComparison.OrdinalIgnoreCase)
-                : decision.WasCorrected;
-        var matchLevel = keepsExistingReviewDecision
-            ? existingSample!.MatchLevel!
-            : wasCorrected
-                ? MatchLevelNames.ReviewCorrected
-                : MatchLevelNames.ReviewApproved;
-
-        // Fuer gebundene Qualitaetspruefungen werden genau die beim Laden geprueften
-        // Bildbytes als Snapshot verwendet. Damit koennen weder ein Dateiaustausch
-        // noch ein Schreib-/Lese-Rennen die alte Maske mit einem neuen Bild verbinden.
-        if (!string.IsNullOrWhiteSpace(item.ExpectedImageSha256))
-        {
-            try
-            {
-                imageSnapshot ??= WorkbenchImageSnapshot.Create(
-                    _readFileBytes(item.FramePath),
-                    Path.GetExtension(item.FramePath));
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                return Rejected(
-                    $"Gebundener Bildstand konnte nicht sicher gelesen werden: {UserError.DescribeAndReport(ex, "Gebundenen Bildstand lesen")}");
-            }
-
-            if (!string.Equals(
-                    imageSnapshot.Sha256,
-                    item.ExpectedImageSha256.Trim(),
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return Rejected(
-                    "Das Bild wurde seit dem Laden der Goldprüfung geändert. Bitte die Goldprüfung neu laden.");
-            }
-        }
-
-        // 2) Eval-Schutz (hart): kein eingefrorenes Mess-Bild darf ins Training/Retrieval.
-        var root = _resolveEvalSetRoot();
-        EvalContaminationSets evalSets;
-        try
-        {
-            evalSets = EvalContaminationSetProvider.Load(root);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            return Rejected($"Eval-Schutz nicht verfügbar: {UserError.DescribeAndReport(ex, "Eval-Schutz laden")}");
-        }
-        // Beim Foto-Assistenten ist dies genau eine Arbeitskopie des beim
-        // Segmentieren gebundenen Originals. Dieselben Bytes gehen unten an
-        // StoreBytesAsync; der veraenderbare Quellpfad wird nicht erneut gelesen.
-        var snapshotBytes = imageSnapshot?.CopyImageBytes();
-        var verdict = snapshotBytes is null
-            ? EvalContaminationGuard.ClassifyForExport(
-                evalSets.ImageHashes,
-                evalSets.HaltungKeys,
-                item.FramePath,
-                item.CaseId)
-            : EvalContaminationGuard.ClassifyForExport(
-                evalSets.ImageHashes,
-                evalSets.HaltungKeys,
-                snapshotBytes,
-                item.CaseId);
-        if (verdict != EvalContaminationGuard.ExportContaminationResult.Clean)
-        {
-            return Rejected(
-                $"Eval-Schutz: Bild gehört zum eingefrorenen Mess-Set ({verdict}). Nicht speicherbar.");
-        }
-
-        // 3) Das angenommene Bild zuerst unveraendert ins KI-Brain uebernehmen.
-        // Stabile Objekt-ID: ein geladener Bestandssatz (z. B. aus 'Unvollstaendige Goldframes')
-        // behaelt seine SampleId — bei gleichem Code als Ergaenzung (MergeOrUpdate), bei
-        // geaendertem Code als Ersatz (Loeschen + Neuanlage inkl. KB-/Teacher-Bereinigung,
-        // siehe Schritt 6). So entsteht bei einer Codekorrektur kein zweiter Datensatz.
-        var sampleId = repairsExistingSample
-            ? item.ExistingSampleId!
-            : $"wb_{Guid.NewGuid():N}"[..15];
-        var (storedImage, imageRejection) = await StoreGoldImageAsync(
-                item, finalCode, snapshotBytes, imageSnapshot, ct)
-            .ConfigureAwait(false);
-        if (imageRejection is not null)
-            return imageRejection;
-
-        var storedFramePath = storedImage!.FramePath;
-        var storedImageSha256 = storedImage.Sha256;
-
-        // 4) Entwurf oder Gold? Vollstaendig ist ein Fund nur mit gepruefter SAM-Maske.
-        // Ohne gueltige Maske bleibt das Sample ein Entwurf (Schritt 7).
-        var goldMask = WorkbenchGoldMask.Evaluate(segmentation, box, storedFramePath, _readImageDimensions);
-        var maskValid = goldMask.IsValid;
-
-        // 5) TrainingSample als geprueften Fund bauen (Feldfolge wie ReviewApprovalService).
-        var sample = new TrainingSample
-        {
-            SampleId = sampleId,
-            CaseId = item.CaseId,
-            Code = finalCode,
-            Beschreibung = beschreibung,
-            MeterStart = item.MeterStart,
-            MeterEnd = item.MeterEnd,
-            MeterIsUnknown = item.MeterIsUnknown,
-            Signature = TrainingSample.BuildCanonicalSignature(
-                item.CaseId,
-                finalCode,
-                item.MeterStart,
-                item.MeterEnd,
-                // Mehrfachobjekt: die Hand-Box gehoert zur Objekt-Identitaet — zwei Befunde
-                // mit gleichem Code/Meter, aber verschiedenen Boxen sind verschiedene Objekte.
-                box.XCenter,
-                box.YCenter,
-                box.Width,
-                box.Height,
-                item.MeterIsUnknown),
-            Status = maskValid ? TrainingSampleStatus.Approved : TrainingSampleStatus.Draft,
-            HumanConfirmed = true,
-            Corrected = wasCorrected,
-            ConfirmedByUser = confirmedByUser,
-            ConfirmedAtUtc = DateTime.UtcNow,
-            QualityGateLevel = maskValid ? "Green" : "Yellow",
-            SourceType = sourceType,
-            Notes = sourceNote,
-            SourceReferenceCode = sourceReferenceCode,
-            SourceReferenceDescription = sourceReferenceDescription,
-            MatchLevel = matchLevel,
-            IsStreckenschaden = existingSample?.IsStreckenschaden ?? item.IsStreckenschaden,
-            InspectionDate = existingSample?.InspectionDate
-                ?? item.InspectionDate
-                ?? item.SourceSuggestion?.InspectionDate,
-            FramePath = storedFramePath,
-            KbIndexState = KbIndexState.Pending,
-        };
-        PreserveRepairContext(existingSample, sample);
-        ApplyDecisionCodeMeta(sample, finalCode, decision);
-        box.ApplyTo(sample);
-        goldMask.ApplyTo(sample);
-
-        // Letzte zentrale Gold-Schranke: Caller-Flags allein duerfen keinen
-        // unvollstaendigen Fund zu KB oder Teacher durchreichen.
-        var goldEligibility = maskValid
-            ? ManualGoldTrainingPolicy.EvaluateForExport(sample, confirmedByUser)
-            : new TrainingEligibilityResult(
-                false,
-                ManualGoldTrainingPolicy.GoldGeometryRequiredReason);
-        var goldApproved = maskValid && goldEligibility.IsEligible;
-        if (!goldApproved)
-        {
-            sample.Status = TrainingSampleStatus.Draft;
-            sample.QualityGateLevel = "Yellow";
-        }
-
-        // 6) Neues Sample speichern, ein geladenes Bestandssample ergaenzen (gleicher Code)
-        // oder ersetzen (geaenderter Code: gleiche SampleId, neuer Code/Ordner — der
-        // Merge-Schluessel ist die Signatur, die den Code enthaelt; ein Code-Wechsel ist
-        // daher Loeschen + Neuanlage inkl. KB-/Teacher-Bereinigung).
-        var (replaceWarning, sampleRejection) = await PersistSampleAsync(
-                item, sample, repairsExistingSample, codeChanged, ct)
-            .ConfigureAwait(false);
-        if (sampleRejection is not null)
-            return sampleRejection;
-
-        // 7) Entwurf ohne gepruefte Maske: gespeichert, aber NICHT Gold (Status=Draft).
-        // KB-Index (KbIndexState bleibt Pending) und Teacher-Kandidat werden NICHT geschrieben.
-        // Das Sample landet in 'Unvollstaendige Goldframes'; beim Nachruesten mit Maske
-        // (Reparatur ueber denselben SaveAsync) laeuft der volle Gold-Pfad inkl. KB/Teacher.
-        if (!goldApproved)
-        {
-            return new WorkbenchSaveResult(
-                true,
-                CombineWarnings(
-                    "Entwurf gespeichert: ohne geprüfte SAM-Maske kein Goldsample. Das Sample landet in 'Unvollständige Goldframes' und kann dort mit Maske nachgerüstet werden.",
-                    replaceWarning),
-                sampleId,
-                "Entwurf",
-                null,
-                StoredImageSha256: storedImageSha256,
-                StoredConfirmedAtUtc: sample.ConfirmedAtUtc is { } draftConfirmedAtUtc
-                    ? ToUtc(draftConfirmedAtUtc) : null);
-        }
-
-        // 8) KB-Index; Zustand nachtragen (Skipped/Error werden nicht wiederholt).
-        // Das Sample ist ab Schritt 6 dauerhaft gespeichert. Ein KB-Index- oder
-        // Nachtrags-Fehler (SQLite-Lock, DB-Fehler) darf den Save deshalb NICHT als
-        // "Nicht gespeichert" darstellen — sonst legt der Nutzer dasselbe Sample erneut an.
-        // Wie beim Teacher-Schritt wird der Fehler als sichtbare Warnung zurueckgegeben.
-        var (kbState, kbWarning) = await RecordKbIndexAsync(sample, ct).ConfigureAwait(false);
-
-        // 9) Teacher-Kandidat. Ein Teacher-Fehler darf das gespeicherte Sample NICHT ruecknehmen.
-        var (teacherId, teacherWarning) = await RecordTeacherCandidateAsync(
-            item, box, decision, finalCode, beschreibung, sampleId, storedFramePath, ct)
-            .ConfigureAwait(false);
-
-        // KB-, Teacher- und Ersetz-Warnung gemeinsam sichtbar machen; das Sample selbst ist gespeichert.
-        var warning = CombineWarnings(replaceWarning, kbWarning, teacherWarning);
-        return new WorkbenchSaveResult(
-            true,
-            warning,
-            sampleId,
-            kbState,
-            teacherId,
-            GoldApproved: true,
-            StoredImageSha256: storedImageSha256,
-            StoredConfirmedAtUtc: sample.ConfirmedAtUtc is { } goldConfirmedAtUtc
-                ? ToUtc(goldConfirmedAtUtc) : null);
-    }
-
-    /// <summary>
-    /// Einheitliches Abweisungsergebnis fuer SaveCoreAsync: Saved=false, kein SampleId,
-    /// KbIndexState="-", kein TeacherAnnotationId. Fasst die vielfach wiederholte, exakt
-    /// gleiche 5-Argument-Form zusammen; Reihenfolge, Meldungstexte und alle anderen
-    /// Ergebnisformen (Draft/Gold) bleiben unveraendert.
-    /// </summary>
-    private static WorkbenchSaveResult Rejected(string message) =>
-        new(false, message, null, "-", null);
-
-    /// <summary>
-    /// Deutscher Grund fuer einen gescheiterten Teacher-Export (Aufgabe 10c2, Fix-Runde 2).
-    /// <see cref="TrainingAnnotationResult.Error"/> kann je nach Exporteur ein roher
-    /// Framework-Text sein ("The process cannot access the file …") und wird deshalb nie
-    /// angezeigt, sondern nur protokolliert. Angezeigt wird die Einordnung der Ausnahme
-    /// ueber <see cref="UserError"/> oder ein fester deutscher Satz.
-    /// </summary>
-    internal static string TeacherExportGrund(TrainingAnnotationResult export)
-    {
-        if (export.Failure is { } fehler)
-            return UserError.Describe(fehler);
-
-        BestEffort.ReportWarning(
-            "[AnnotationWorkbenchService.TeacherExport] Teacher-Export ohne Erfolg: "
-            + (string.IsNullOrWhiteSpace(export.Error) ? "(kein Grund gemeldet)" : export.Error));
-        return "Der Teacher-Export ist fehlgeschlagen. Technische Details stehen im Programmlog.";
-    }
-
-    private sealed record StoredGoldImage(string FramePath, string Sha256);
-
-    /// <summary>
-    /// Speichert die angenommene Bildkopie und bindet ihren Hash an den gespeicherten
-    /// Goldpfad. Die drei Ablehnungen bleiben vor dem Schreiben eines Samples.
-    /// </summary>
-    private async Task<(StoredGoldImage? Image, WorkbenchSaveResult? Rejection)> StoreGoldImageAsync(
-        WorkbenchItem item,
-        string finalCode,
-        byte[]? snapshotBytes,
-        WorkbenchImageSnapshot? imageSnapshot,
-        CancellationToken ct)
-    {
-        string? storedFramePath;
-        try
-        {
-            var goldFramesRoot = _resolveGoldFramesDir();
-            var codeFolder = PersonalGoldMainCodeCatalog.FormatFolderName(
-                finalCode,
-                _codeLabelLookup);
-            var codeFramesDir = string.IsNullOrWhiteSpace(goldFramesRoot)
-                ? goldFramesRoot
-                : Path.Combine(goldFramesRoot, codeFolder);
-            storedFramePath = snapshotBytes is null
-                ? await _frameStore
-                    .StoreExistingAsync(item.FramePath, codeFramesDir, ct)
-                    .ConfigureAwait(false)
-                : await _frameStore
-                    .StoreBytesAsync(snapshotBytes, imageSnapshot!.Extension, codeFramesDir, ct)
-                    .ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            return (null, Rejected($"Goldbild konnte nicht sicher gespeichert werden: {UserError.DescribeAndReport(ex, "Goldbild speichern")}"));
-        }
-        if (string.IsNullOrWhiteSpace(storedFramePath))
-        {
-            return (null, Rejected("Goldbild konnte nicht sicher gespeichert werden."));
-        }
-
-        string storedImageSha256;
-        try
-        {
-            storedImageSha256 = imageSnapshot?.Sha256
-                ?? Convert.ToHexStringLower(SHA256.HashData(_readFileBytes(storedFramePath)));
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            return (null, Rejected(
-                $"Goldbild konnte nach dem Speichern nicht bytegenau geprüft werden: {UserError.DescribeAndReport(ex, "Goldbild nachprüfen")}"));
-        }
-
-        return (new StoredGoldImage(storedFramePath, storedImageSha256), null);
-    }
-
-    /// <summary>
-    /// Speichert ein neues Sample oder ersetzt den geladenen Bestand unter Beibehaltung
-    /// der bisherigen Fehlergrenzen. Die Bereinigung alter KB-/Teacher-Ableitungen
-    /// gehoert nur zu den beiden Reparaturwegen.
-    /// </summary>
-    private async Task<(string? Warning, WorkbenchSaveResult? Rejection)> PersistSampleAsync(
-        WorkbenchItem item,
-        TrainingSample sample,
-        bool repairsExistingSample,
-        bool codeChanged,
-        CancellationToken ct)
-    {
-        string? replaceWarning = null;
-        if (repairsExistingSample && codeChanged)
-        {
-            try
-            {
-                replaceWarning = await ReplaceSampleWithChangedCodeAsync(item, sample).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {UserError.DescribeAndReport(ex, "Goldsample speichern")}"));
-            }
-        }
-        else if (repairsExistingSample)
-        {
-            // Gezielt geladenes, unvollstaendiges Goldsample um Box/Segmentierung ergaenzen.
-            // So entsteht beim Nachlabeln kein doppelter Datensatz.
-            try
-            {
-                var replaced = await _sampleStore.ReplaceBySampleIdAsync(sample).ConfigureAwait(false);
-                if (!replaced)
-                {
-                    var added = await _sampleStore.TryAddNewAsync(sample, ct).ConfigureAwait(false);
-                    if (!added)
-                    {
-                        return (null, Rejected(
-                            "Goldsample wurde nicht gespeichert: Die Signatur gehört bereits zu einem anderen Datensatz."));
-                    }
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                return (null, Rejected($"Goldsample konnte nicht gespeichert werden: {UserError.DescribeAndReport(ex, "Goldsample speichern")}"));
-            }
-
-            // Auch ein Nachlabeln mit gleichem Code ersetzt die fachliche Wahrheit
-            // (neue Box/Signatur). Alte KB-/Teacher-Ableitungen derselben SampleId
-            // muessen deshalb vor dem Neuaufbau entfernt werden.
-            replaceWarning = await ReplaceSampleWithChangedCodeAsync(
-                    item,
-                    sample,
-                    sampleAlreadyReplaced: true)
-                .ConfigureAwait(false);
-        }
-        else
-        {
-            // Neuanlage mit eindeutigem Ergebnis: bei Signatur-Dublett NICHT still
-            // weiterlaufen — sonst entstuenden KB-/Teacher-Eintraege ohne JSON-Sample
-            // (Waisen). Die inhaltsadressierte Goldkopie ist bei echten Duplikaten
-            // ohnehin dieselbe Datei (kein Muell).
-            var added = await _sampleStore.TryAddNewAsync(sample, ct).ConfigureAwait(false);
-            if (!added)
-            {
-                return (null, Rejected(
-                    "Bereits als Goldsample vorhanden (gleiche Haltung, Code, Meter und Box). Zum Ändern den Eintrag über 'Unvollständige Goldframes' oder das Goldalbum laden."));
-            }
-        }
-
-        return (replaceWarning, null);
-    }
-
-    /// <summary>
-    /// KB-Index fuer das bereits dauerhaft gespeicherte Sample nachtragen (Schritt 8 aus
-    /// SaveCoreAsync, hier von der persistierten Sample-Phase getrennt): indexieren, den
-    /// resultierenden KbIndexState an <paramref name="sample"/> setzen und ueber
-    /// MergeOrUpdateAsync nachtragen. Ein Fehler HIER (Index ODER Nachtrag) darf das
-    /// gespeicherte Sample NICHT ruecknehmen: der bare "catch (Exception ex)" (bewusst OHNE
-    /// Abbruch-Ausnahme auszuschliessen — Ist-Verhalten) ist unveraendert; die Ausnahme wird
-    /// als sichtbare Warnung zurueckgegeben statt weitergeworfen.
-    /// </summary>
-    private async Task<(string KbState, string? KbWarning)> RecordKbIndexAsync(
-        TrainingSample sample, CancellationToken ct)
-    {
-        try
-        {
-            var outcome = await _kbIndexer.IndexAsync(new[] { sample }, ct).ConfigureAwait(false);
-            sample.KbIndexState = outcome.IsIndexed(sample.SampleId) ? KbIndexState.Indexed
-                : outcome.IsSkipped(sample.SampleId) ? KbIndexState.Skipped
-                : KbIndexState.Error;
-            await _sampleStore.MergeOrUpdateAsync(new List<TrainingSample> { sample }).ConfigureAwait(false);
-            return (sample.KbIndexState.ToString(), null);
-        }
-        catch (Exception ex)
-        {
-            return (KbIndexState.Error.ToString(), $"KB-Index nicht aktualisiert: {UserError.DescribeAndReport(ex, "KB-Index aktualisieren")}");
-        }
-    }
-
-    /// <summary>
-    /// Teacher-Kandidat fuer das bereits dauerhaft gespeicherte Sample bauen und exportieren
-    /// (Schritt 9 aus SaveCoreAsync, hier von der persistierten Sample-Phase getrennt). Ein
-    /// Fehler hier darf das gespeicherte Sample nicht ruecknehmen. Auch eine
-    /// OperationCanceledException wird wie bisher als sichtbare Warnung behandelt.
-    /// </summary>
-    private async Task<(string? TeacherId, string? TeacherWarning)> RecordTeacherCandidateAsync(
-        WorkbenchItem item,
-        BoundingBox box,
-        WorkbenchDecision decision,
-        string finalCode,
-        string beschreibung,
-        string sampleId,
-        string storedFramePath,
-        CancellationToken ct)
-    {
-        try
-        {
-            var classId = _teacherClassMap.GetOrAddClassId(finalCode);
-            var bbox = new NormalizedBoundingBox
-            {
-                XCenter = box.XCenter,
-                YCenter = box.YCenter,
-                Width = box.Width,
-                Height = box.Height,
-            };
-            var annotation = new TeacherAnnotation
-            {
-                VsaCode = finalCode,
-                Beschreibung = beschreibung,
-                Severity = decision.Severity,
-                MeterPosition = item.MeterStart,
-                BoundingBox = bbox,
-                ClockPosition = decision.ClockPosition,
-                HaltungName = item.HaltungName,   // <-- schliesst die QuarantineOrigin-Luecke
-                VideoPath = item.VideoPath,
-                SourceSampleId = sampleId,        // <-- Fremdschluessel fuer die Codekorrektur-Bereinigung
-            };
-
-            var exportService = _exportServiceFactory?.Invoke()
-                ?? TrainingAnnotationExportServiceFactory.Create(_teacherStore);
-            var export = await exportService
-                .ExportAsync(storedFramePath, bbox, finalCode, classId, $"wb_{annotation.AnnotationId}", ct)
-                .ConfigureAwait(false);
-            if (!export.Success)
-                throw new UserFacingException(TeacherExportGrund(export));
-
-            annotation.FullFramePath = export.FullFramePath;
-            annotation.CroppedRegionPath = export.CroppedRegionPath;
-            annotation.YoloAnnotationPath = export.YoloAnnotationPath;
-            await _teacherStore.AppendAsync(annotation).ConfigureAwait(false);
-            return (annotation.AnnotationId, null);
-        }
-        catch (Exception ex)
-        {
-            // Sample bleibt gespeichert; die Warnung wird sichtbar zurueckgegeben (nie still).
-            return (null, $"Teacher-Kandidat nicht gespeichert: {UserError.DescribeAndReport(ex, "Teacher-Kandidat speichern")}");
-        }
-    }
-
-    /// <summary>
-    /// Ersetzt ein Bestandssample bei geaenderter Code-Entscheidung (gleiche SampleId, neuer
-    /// Code/Ordner): alten Eintrag loeschen, neuen anhaengen, danach den alten KB-Eintrag und
-    /// den alten Teacher-Kandidaten entfernen. Das KB-Deindex liegt bewusst VOR dem neuen
-    /// Index (Schritt 8), damit nicht der frisch geschriebene Eintrag geloescht wird.
-    /// Fehler bei den Bereinigungen machen den Save NICHT rueckgaengig — sie werden als
-    /// sichtbare Warnung zurueckgegeben (Muster wie KB-/Teacher-Warnung, nie still).
-    /// </summary>
-    private async Task<string?> ReplaceSampleWithChangedCodeAsync(
-        WorkbenchItem item,
-        TrainingSample sample,
-        bool sampleAlreadyReplaced = false)
-    {
-        // Atomares Ersetzen unter einer Sperre (Loeschen + Anhaengen + Speichern in einem
-        // Schritt). Existiert die Id nicht (z. B. zwischenzeitlich geloescht), wird der Fund
-        // als Neuanlage zusammengefuehrt, damit er nicht verloren geht.
-        if (!sampleAlreadyReplaced)
-        {
-            var replaced = await _sampleStore.ReplaceBySampleIdAsync(sample).ConfigureAwait(false);
-            if (!replaced)
-            {
-                var added = await _sampleStore.TryAddNewAsync(sample).ConfigureAwait(false);
-                if (!added)
-                {
-                    throw new UserFacingException(
-                        "Die Signatur gehört bereits zu einem anderen Gold-Datensatz.");
-                }
-            }
-        }
-
-        // KB: alten Code-Eintrag entfernen (gleiche SampleId, alter Code-Inhalt).
-        string? warning = null;
-        try
-        {
-            _kbIndexer.Deindex(sample.SampleId);
-        }
-        catch (Exception ex)
-        {
-            warning = $"Alter KB-Eintrag konnte nicht entfernt werden: {UserError.DescribeAndReport(ex, "Alten KB-Eintrag entfernen")}";
-        }
-
-        // Teacher: alten Kandidaten entfernen — sonst lernt der Export weiter den alten Code.
-        // Primaertreffer ueber den Fremdschluessel SourceSampleId (Neubestand). Altbestand
-        // ohne SourceSampleId: ueber Goldpfad (item.FramePath ist beim Reparatur-Laden der
-        // gespeicherte Goldpfad) oder fachliche Signatur (alter Code + Meter + Haltung) —
-        // aber NUR bei GENAU EINEM Kandidaten; bei Mehrdeutigkeit nichts loeschen, sondern
-        // sichtbar warnen (nie still das Falsche entfernen).
-        try
-        {
-            var oldHaltung = item.HaltungName ?? item.CaseId;
-            var candidates = await _teacherStore.LoadAsync().ConfigureAwait(false);
-            var stale = candidates
-                .Where(annotation =>
-                    string.Equals(annotation.SourceSampleId, sample.SampleId, StringComparison.Ordinal))
-                .ToList();
-
-            var legacy = candidates
-                .Where(annotation => annotation.SourceSampleId is null)
-                .Where(annotation =>
-                    PathsEqual(annotation.FullFramePath, item.FramePath)
-                    || (string.Equals(annotation.VsaCode, item.ExistingCode, StringComparison.OrdinalIgnoreCase)
-                        && annotation.MeterPosition == item.MeterStart
-                        && string.Equals(annotation.HaltungName, oldHaltung, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-            if (legacy.Count == 1)
-                stale.AddRange(legacy);
-            else if (legacy.Count > 1)
-                warning = CombineWarnings(
-                    warning,
-                    $"{legacy.Count} alte Teacher-Einträge unklar zugeordnet — bitte manuell prüfen.");
-
-            foreach (var annotation in stale)
-                await _teacherStore.DeleteAsync(annotation.AnnotationId).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            warning = CombineWarnings(
-                warning,
-                $"Alter Teacher-Eintrag konnte nicht entfernt werden: {UserError.DescribeAndReport(ex, "Alten Teacher-Eintrag entfernen")}");
-        }
-
-        return warning;
+        return _goldSampleSpeichern.SaveAsync(
+            new GoldSampleSpeichernAnfrage(item, box, segmentation, decision, imageSnapshot),
+            ct);
     }
 
     // Der Pruefplatz baut SAM-Service und Vision-Client pro Fenster frisch (eigener HttpClient).

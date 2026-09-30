@@ -1098,8 +1098,8 @@ dieselben Bildbytes nochmals geprueft. Korrigierte Uhrlage und Schadensstufe wer
 auch in `TrainingSample.CodeMeta` uebernommen. Ein Fall zaehlt erst nach erneutem
 persoenlichem Gold-Akzeptieren und erfolgreichem Abschlussbeleg; gespeichert wird
 mit derselben Sample-ID, sodass keine Dublette entsteht.
-Die Metadaten-Uebernahme bestehender Samples ist in
-`AnnotationWorkbenchService.SampleMapping.cs` getrennt; die reine blaue
+Die Metadaten-Uebernahme bestehender Samples liegt seit AP06 (30.09.2026) in
+`GoldSampleAufbau` (Application/UseCases/GoldSampleSpeichern); die reine blaue
 Modellvorschau liegt in `TrainingStudioViewModel.PreviewDetection.cs` und schreibt
 selbst keine Gold-Daten.
 
@@ -1206,6 +1206,21 @@ statt Loeschen). `MergeAndSaveAsync` dedupliziert per Signatur als Sperre
 gegen versehentliches Doppel-Akzeptieren; der Neuanlage-Pfad nutzt
 `TryAddNewAsync`, das eine uebersprungene Dublette sichtbar abweist statt
 still fortzufahren (fruehere KB-Waisen entstanden genau so).
+
+Seit 30.09.2026 (Wartbarkeit AP06) steuert `GoldSampleSpeichernUseCase` unter
+`Application/UseCases/GoldSampleSpeichern/` diesen Speicherweg; beide
+`AnnotationWorkbenchService.SaveAsync`-Ueberladungen delegieren nur noch dorthin.
+Phasen: Eingaben pruefen, Herkunft pruefen (`GoldSampleHerkunft`), Bild binden mit
+Eval-Schutz und Goldkopie, Sample dauerhaft speichern (`GoldSampleAblage`), KB-Nachtrag
+und Teacher-Nachlauf (`GoldSampleNachlauf`), gemeinsames Ergebnis. Die Metadaten-
+Uebernahme aus `AnnotationWorkbenchService.SampleMapping.cs` liegt jetzt in
+`GoldSampleAufbau`. Die Grenze "dauerhaft gespeichert" ist der Typ
+`DauerhaftGespeichertesGoldSample`: Vorher fuehrt jeder Fehler zu "nicht gespeichert" und
+ein Abbruch wird weitergeworfen; danach entsteht nur noch ein Ergebnis mit `Saved=true`,
+KB- und Teacher-Fehler (auch Abbruch) erscheinen als Warnung. Eval-Schutzdaten laden,
+strenge Maskenpruefung (`WorkbenchGoldMask`/`SamMaskValidator`) und den WPF-Teacher-Export
+reicht der UI-Dienst als Delegates hinein. Tests: `GoldSampleSpeichernUseCaseTests`
+(Pipeline.Tests) und `AnnotationWorkbenchServiceTests`.
 
 Mehrfachobjekte werden seit 2026-07-25 unterstuetzt: Neue Samples bauen ihre
 Signatur mit Box als `caseId|code|meter|meter|b:x,y,w,h` (normalisiert, 3

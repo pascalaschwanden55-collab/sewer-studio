@@ -1,13 +1,84 @@
-﻿using System.Globalization;
+using System.Globalization;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Workbench;
 using AuswertungPro.Next.Application.Protocol;
 
-namespace AuswertungPro.Next.UI.Services;
+namespace AuswertungPro.Next.Application.UseCases.GoldSampleSpeichern;
 
-public sealed partial class AnnotationWorkbenchService
+/// <summary>
+/// Baut das zu speichernde <see cref="TrainingSample"/> aus Entscheid, Herkunft und
+/// gebundenem Goldbild (Feldfolge wie ReviewApprovalService) und uebernimmt die
+/// Metadaten eines reparierten Bestandssamples. Frueher
+/// <c>AnnotationWorkbenchService.SampleMapping.cs</c>; reine Funktionen ohne Zustand.
+/// </summary>
+internal static class GoldSampleAufbau
 {
-    private static string BuildSourceNote(WorkbenchSourceSuggestion? source)
+    /// <summary>
+    /// Einheitliches Abweisungsergebnis: Saved=false, keine SampleId, KbIndexState="-",
+    /// kein TeacherAnnotationId. Nur VOR der dauerhaften Speicherung zulaessig.
+    /// </summary>
+    public static WorkbenchSaveResult Rejected(string message) =>
+        new(false, message, null, "-", null);
+
+    public static TrainingSample Erzeuge(
+        WorkbenchItem item,
+        BoundingBox box,
+        WorkbenchDecision decision,
+        GoldSampleHerkunft herkunft,
+        string sampleId,
+        string finalCode,
+        string beschreibung,
+        string confirmedByUser,
+        string storedFramePath,
+        bool maskValid)
+    {
+        var existingSample = herkunft.Bestand;
+        var sample = new TrainingSample
+        {
+            SampleId = sampleId,
+            CaseId = item.CaseId,
+            Code = finalCode,
+            Beschreibung = beschreibung,
+            MeterStart = item.MeterStart,
+            MeterEnd = item.MeterEnd,
+            MeterIsUnknown = item.MeterIsUnknown,
+            Signature = TrainingSample.BuildCanonicalSignature(
+                item.CaseId,
+                finalCode,
+                item.MeterStart,
+                item.MeterEnd,
+                // Mehrfachobjekt: die Hand-Box gehoert zur Objekt-Identitaet — zwei Befunde
+                // mit gleichem Code/Meter, aber verschiedenen Boxen sind verschiedene Objekte.
+                box.XCenter,
+                box.YCenter,
+                box.Width,
+                box.Height,
+                item.MeterIsUnknown),
+            Status = maskValid ? TrainingSampleStatus.Approved : TrainingSampleStatus.Draft,
+            HumanConfirmed = true,
+            Corrected = herkunft.WasCorrected,
+            ConfirmedByUser = confirmedByUser,
+            ConfirmedAtUtc = DateTime.UtcNow,
+            QualityGateLevel = maskValid ? "Green" : "Yellow",
+            SourceType = herkunft.SourceType,
+            Notes = herkunft.SourceNote,
+            SourceReferenceCode = herkunft.SourceReferenceCode,
+            SourceReferenceDescription = herkunft.SourceReferenceDescription,
+            MatchLevel = herkunft.MatchLevel,
+            IsStreckenschaden = existingSample?.IsStreckenschaden ?? item.IsStreckenschaden,
+            InspectionDate = existingSample?.InspectionDate
+                ?? item.InspectionDate
+                ?? item.SourceSuggestion?.InspectionDate,
+            FramePath = storedFramePath,
+            KbIndexState = KbIndexState.Pending,
+        };
+        PreserveRepairContext(existingSample, sample);
+        ApplyDecisionCodeMeta(sample, finalCode, decision);
+        box.ApplyTo(sample);
+        return sample;
+    }
+
+    public static string BuildSourceNote(WorkbenchSourceSuggestion? source)
     {
         if (source is null)
             return string.Empty;
@@ -81,26 +152,22 @@ public sealed partial class AnnotationWorkbenchService
     }
 
     // ── Kleine reine Helfer ──────────────────────────────────────────────
-    // Aus der Hauptdatei hierher verschoben: Sie stand exakt auf der
-    // 1000-Zeilen-Grenze des Wartbarkeits-Waechters, und schon zwei neue
-    // Zeilen haetten sie gerissen. Reine Helfer ohne Zustand sind der
-    // natuerliche Teil, der in die bestehende Partialdatei gehoert.
 
-    private static bool PathsEqual(string? first, string? second)
+    public static bool PathsEqual(string? first, string? second)
         => !string.IsNullOrWhiteSpace(first)
            && !string.IsNullOrWhiteSpace(second)
            && string.Equals(first.Trim(), second.Trim(), StringComparison.OrdinalIgnoreCase);
 
-    private static string? CombineWarnings(params string?[] warnings)
+    public static string? CombineWarnings(params string?[] warnings)
     {
         var present = warnings.Where(w => !string.IsNullOrWhiteSpace(w)).ToArray();
         return present.Length == 0 ? null : string.Join(" | ", present);
     }
 
-    private static string NormalizeCode(string? code)
+    public static string NormalizeCode(string? code)
         => (code ?? string.Empty).Trim().Replace(".", string.Empty).ToUpperInvariant();
 
-    private static DateTimeOffset ToUtc(DateTime value)
+    public static DateTimeOffset ToUtc(DateTime value)
         => value.Kind switch
         {
             DateTimeKind.Utc => new DateTimeOffset(value, TimeSpan.Zero),

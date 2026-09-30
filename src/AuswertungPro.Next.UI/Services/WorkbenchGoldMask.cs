@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Workbench;
+using AuswertungPro.Next.Application.UseCases.GoldSampleSpeichern;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Services;
@@ -11,7 +12,7 @@ namespace AuswertungPro.Next.UI.Services;
 /// passend und nicht degradiert sein, und die Flaeche wird aus dem RLE gezaehlt statt
 /// dem Sidecarwert zu vertrauen.
 /// </summary>
-internal sealed class WorkbenchGoldMask
+internal sealed class WorkbenchGoldMask : IGoldSampleMaske
 {
     private static readonly WorkbenchGoldMask Invalid = new(null, null);
 
