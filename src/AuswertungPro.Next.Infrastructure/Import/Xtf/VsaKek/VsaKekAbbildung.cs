@@ -1,68 +1,58 @@
-﻿using System.Xml.Linq;
+using System.Security.Cryptography;
+using System.Text.Json;
 using AuswertungPro.Next.Application.Protocol;
-using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.Infrastructure.Import.Xtf.VsaKek;
-using AuswertungPro.Next.Infrastructure.Media;
-using IVsaMediaPathResolver = AuswertungPro.Next.Application.Import.IVsaMediaPathResolver;
 
-namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
+namespace AuswertungPro.Next.Infrastructure.Import.Xtf.VsaKek;
+
+/// <summary>Eine Schachtbegehung samt ihren Schachtschaeden.</summary>
+internal sealed record XtfSchachtUntersuchung(
+    string Nummer,
+    string Zeitpunkt,
+    string Operateur,
+    string Erfassungsart,
+    IReadOnlyList<ProtocolEntry> Eintraege,
+    string? ImportFingerprint = null);
 
 /// <summary>
-/// VSA-KEK-Teil des XTF-Imports: Untersuchungen, Kanalschaeden und die daraus
-/// erzeugten Haltungen. Aus <c>LegacyXtfImportService.cs</c> herausgeloest, weil die
-/// Datei sonst die 1000-Zeilen-Grenze reisst. Reiner Umzug, kein Verhaltenswechsel.
+/// Was eine VSA-KEK-Datei fachlich hergibt — nach Bauwerksart getrennt.
+/// <paramref name="Weitere"/> sind die Untersuchungen einer Haltung neben ihrer
+/// Haupt-Untersuchung (siehe <see cref="VsaKekUntersuchungsWahl"/>).
 /// </summary>
-public sealed partial class LegacyXtfImportService
+internal sealed record XtfVsaKekErgebnis(
+    List<HaltungRecord> Haltungen,
+    List<XtfSchachtUntersuchung> Schaechte,
+    List<XtfOffeneUntersuchung> Offene,
+    int Untersuchungen,
+    List<XtfWeitereUntersuchung> Weitere);
+
+/// <summary>
+/// Schritt 3 des VSA-KEK-Imports: bildet die eingeordneten Untersuchungen ab. Hier stehen
+/// die fachlichen Regeln — welche Angabe der Haupt-Untersuchung in welches Haltungsfeld geht
+/// (Name, Laenge, Datum, Schaechte, Befunde, Primaerschaeden, Video, Richtung, Bemerkung),
+/// wie Schachtschaeden zu Protokollzeilen werden und der Importbeleg. Alle Werte tragen
+/// <see cref="FieldSource.Xtf"/>; Handwertschutz und Protokollablage uebernimmt danach die
+/// Uebernahme ins Projekt.
+/// </summary>
+internal static class VsaKekAbbildung
 {
-    // ===================== VSA_KEK =====================
-    /// <summary>Eine Schachtbegehung samt ihren Schachtschaeden.</summary>
-    internal sealed record XtfSchachtUntersuchung(
-        string Nummer,
-        string Zeitpunkt,
-        string Operateur,
-        string Erfassungsart,
-        IReadOnlyList<ProtocolEntry> Eintraege,
-        string? ImportFingerprint = null);
-
-    /// <summary>
-    /// Was eine VSA-KEK-Datei fachlich hergibt — nach Bauwerksart getrennt.
-    /// <paramref name="Weitere"/> sind die Untersuchungen einer Haltung neben ihrer
-    /// Haupt-Untersuchung (siehe <see cref="VsaKekUntersuchungsWahl"/>).
-    /// </summary>
-    internal sealed record XtfVsaKekErgebnis(
-        List<HaltungRecord> Haltungen,
-        List<XtfSchachtUntersuchung> Schaechte,
-        List<XtfOffeneUntersuchung> Offene,
-        int Untersuchungen,
-        List<XtfWeitereUntersuchung> Weitere);
-
-    private static XtfVsaKekErgebnis ParseVsaKek(XDocument doc, string sourcePath,
-        IVsaMediaPathResolver mediaPaths)
+    public static XtfVsaKekErgebnis Baue(
+        VsaKekBezuege bezuege,
+        IReadOnlyList<VsaKekUntersuchungsWahl.Gruppe<VsaKekUntersuchung>> gruppen,
+        string sourcePath,
+        string modellName)
     {
-        var bestand = VsaKekObjektLeser.Lies(doc);
-        var bezuege = VsaKekBeziehungen.Loese(bestand, sourcePath, mediaPaths);
-        var modellName = bestand.ModellName;
+        ArgumentNullException.ThrowIfNull(bezuege);
+        ArgumentNullException.ThrowIfNull(gruppen);
 
+        var schaechte = bezuege.Schachtbegehungen.Select(BaueSchachtbegehung).ToList();
+
+        // Nur die Haupt-Untersuchung liefert Felder, Befunde und Primaere_Schaeden; jede
+        // weitere wird nach der Uebernahme als Protokollfassung abgelegt.
         var records = new List<HaltungRecord>();
-        var schaechte = new List<XtfSchachtUntersuchung>();
-        foreach (var u in bezuege.Schachtbegehungen)
-        {
-            schaechte.Add(new XtfSchachtUntersuchung(
-                u.Bezeichnung,
-                NormalizeDate_yyyymmdd(u.Zeitpunkt),
-                u.Operateur,
-                u.Erfassungsart,
-                BaueSchachteintraege(u),
-                Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-                    System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(u)))));
-        }
-
-        // Je Haltung eine Haupt-Untersuchung (die vollstaendigste). Nur sie liefert Felder,
-        // Befunde und Primaere_Schaeden; jede weitere wird danach als Protokollfassung abgelegt.
         var weitere = new List<XtfWeitereUntersuchung>();
-        foreach (var gruppe in VsaKekUntersuchungsWahl.Waehle(bezuege.Haltungsuntersuchungen, u => u.Bezeichnung, Merkmale))
+        foreach (var gruppe in gruppen)
         {
             bezuege.BefundeJeUntersuchung.TryGetValue(gruppe.Haupt.Tid, out var findings);
             bezuege.VideoJeUntersuchung.TryGetValue(gruppe.Haupt.Tid, out var videoLink);
@@ -76,8 +66,7 @@ public sealed partial class LegacyXtfImportService
                     gruppe.Haltung, gruppe.Haupt.Tid, gruppe.Haupt.Zeitpunkt, findings?.Count ?? 0,
                     w.Tid, w.Zeitpunkt, befunde ?? new List<VsaFinding>(), video,
                     // Gleiche Rechnung wie der Schacht-Fingerabdruck: nur Dateiinhalt, keine Pfade.
-                    Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-                        System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(w)))));
+                    Importbeleg(w)));
             }
         }
 
@@ -85,27 +74,45 @@ public sealed partial class LegacyXtfImportService
     }
 
     /// <summary>
-    /// Vollstaendigkeit einer Haltungsuntersuchung. Abgebrochen heisst: ein Kanalschaden mit
-    /// Abbruchcode BDC* (die Datei kennt kein eigenes Abbruchfeld). Die Strecke ist
-    /// <c>Inspizierte_Laenge</c>, ohne sie die groesste Schadensdistanz.
+    /// Vollstaendigkeit einer Haltungsuntersuchung fuer <see cref="VsaKekUntersuchungsWahl"/>.
+    /// Abgebrochen heisst: ein Kanalschaden mit Abbruchcode BDC* (die Datei kennt kein eigenes
+    /// Abbruchfeld). Die Strecke ist <c>Inspizierte_Laenge</c>, ohne sie die groesste
+    /// Schadensdistanz.
     /// </summary>
-    private static VsaKekUntersuchungsWahl.Merkmale Merkmale(VsaKekUntersuchung u)
+    public static VsaKekUntersuchungsWahl.Merkmale Merkmale(VsaKekUntersuchung u)
     {
         var abgebrochen = u.Schaeden.Any(s => (s.Schadencode ?? "").Trim()
             .StartsWith(ProtocolBoundaryService.AbortPrefix, StringComparison.OrdinalIgnoreCase));
-        var laenge = TryParseDouble(u.InspizierteLaenge, out var inspiziert)
+        var laenge = XtfValueNormalizer.TryParseDouble(u.InspizierteLaenge, out var inspiziert)
             ? inspiziert
-            : u.Schaeden.Select(s => TryParseDouble(s.Distanz, out var d) ? d : 0.0).DefaultIfEmpty(0.0).Max();
+            : u.Schaeden.Select(s => XtfValueNormalizer.TryParseDouble(s.Distanz, out var d) ? d : 0.0).DefaultIfEmpty(0.0).Max();
         return new VsaKekUntersuchungsWahl.Merkmale(abgebrochen, laenge, u.Zeitpunkt);
     }
 
     /// <summary>
+    /// Der gespeicherte <c>ImportFingerprint</c> einer Untersuchung: SHA-256 ueber ihre
+    /// JSON-Form samt Schaeden, ohne Pfade, also unabhaengig vom Lauf. Siehe
+    /// <see cref="VsaKekUntersuchung"/> — die Form der Klasse ist Teil gespeicherter Projekte.
+    /// </summary>
+    private static string Importbeleg(VsaKekUntersuchung u)
+        => Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(u)));
+
+    private static XtfSchachtUntersuchung BaueSchachtbegehung(VsaKekUntersuchung u)
+        => new(
+            u.Bezeichnung,
+            XtfValueNormalizer.NormalizeDate_yyyymmdd(u.Zeitpunkt),
+            u.Operateur,
+            u.Erfassungsart,
+            BaueSchachteintraege(u),
+            Importbeleg(u));
+
+    /// <summary>
     /// Baut den Haltungsdatensatz aus genau einer Untersuchung, ihren Befunden und ihrem Video.
     /// </summary>
-    private static HaltungRecord BaueHaltung(VsaKekUntersuchung u,List<VsaFinding>? findings,
+    private static HaltungRecord BaueHaltung(VsaKekUntersuchung u, List<VsaFinding>? findings,
         string? videoLink, string sourcePath, string modellName)
     {
-        var zeitpunkt = NormalizeDate_yyyymmdd(u.Zeitpunkt);
+        var zeitpunkt = XtfValueNormalizer.NormalizeDate_yyyymmdd(u.Zeitpunkt);
         var primaere = new List<string>();
 
         if (findings is not null)
@@ -215,7 +222,7 @@ public sealed partial class LegacyXtfImportService
                 Source = ProtocolEntrySource.Imported
             };
 
-            if (TryParseDouble(schaden.Distanz, out var tiefe))
+            if (XtfValueNormalizer.TryParseDouble(schaden.Distanz, out var tiefe))
             {
                 eintrag.MeterStart = tiefe;
                 eintrag.MeterEnd = tiefe;

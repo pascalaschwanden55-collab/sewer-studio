@@ -4,6 +4,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 using AuswertungPro.Next.Infrastructure.Import.Xtf.Sia405;
+using AuswertungPro.Next.Infrastructure.Import.Xtf.VsaKek;
 using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
