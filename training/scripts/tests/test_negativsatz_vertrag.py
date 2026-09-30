@@ -671,6 +671,12 @@ def _entferne_erstes_bild(staging: Path) -> None:
     ersten.unlink()
 
 
+def _tausche_bildinhalt(staging: Path) -> None:
+    bild = sorted((staging / "images").iterdir())[0]
+    daten = bild.read_bytes()
+    bild.write_bytes(daten[:-1] + (b"y" if daten[-1:] != b"y" else b"z"))
+
+
 def _zusatzbeleg(staging: Path) -> None:
     (staging / "receipts" / "extra.json").write_text("{}", encoding="utf-8")
 
@@ -1447,6 +1453,13 @@ FAELLE: list[tuple[str, dict[str, Any], dict[str, str | None]]] = [
     (
         "bildgroesse_falsch",
         {"bilder": lambda liste: liste[0].__setitem__("size_bytes", liste[0]["size_bytes"] - 1)},
+        {"bcc": genau("Negativbild passt nicht zum semantischen Bildbeleg."),
+         "proto": genau("Proto-Negativbild passt nicht zum semantischen Bildbeleg.")},
+    ),
+    (
+        # Dateiname und Satz-Hashliste stimmen, aber der Inhalt ist nicht das gebundene Bild.
+        "bildinhalt_passt_nicht_zum_bildhash",
+        {"dateien": _tausche_bildinhalt},
         {"bcc": genau("Negativbild passt nicht zum semantischen Bildbeleg."),
          "proto": genau("Proto-Negativbild passt nicht zum semantischen Bildbeleg.")},
     ),
