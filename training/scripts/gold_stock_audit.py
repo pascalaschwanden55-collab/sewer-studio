@@ -34,7 +34,12 @@ from PIL import Image
 
 from haltungsidentitaet import physischer_schluessel
 import negativsatz_pruefung as negativsatz
-from negativsatz_pruefung import (
+
+# Vertragskonstanten, JSON-Bausteine und Splitregel der Negativsaetze liegen in
+# negativsatz_pruefung.py. Die bisherigen Namen bleiben hier fuer bestehende
+# Aufrufer erhalten (z. B. proto_hard_negative_review, prepare_detect_gold,
+# derive_negative_set_for_gold_audit).
+from negativsatz_pruefung import (  # noqa: F401
     MIN_TRAINING_NEGATIVE_BYTES,
     NEGATIVE_QUEUE_PURPOSE,
     NEGATIVE_QUEUE_ROLE,
@@ -52,6 +57,7 @@ from negativsatz_pruefung import (
     PROTO_SET_PURPOSE,
 )
 from negativsatz_pruefung import canonical_json_bytes as _canonical_json_bytes
+from negativsatz_pruefung import negative_split_map as _negative_split_map
 from negativsatz_pruefung import require_count as _require_count
 from negativsatz_pruefung import require_exact_fields as _require_exact_fields
 from negativsatz_pruefung import require_sha256 as _require_sha256
@@ -639,34 +645,6 @@ def _physical_holding_key(holding_key: str) -> str:
     return physischer_schluessel(normalized)
 
 
-def _negative_split_map(
-    physical_holding_keys: Sequence[str],
-) -> tuple[dict[str, str], int]:
-    unique = set(physical_holding_keys)
-    if len(unique) != len(physical_holding_keys):
-        raise ValueError(
-            "Negativsaetze duerfen nur ein Bild je physischer Haltung enthalten."
-        )
-    ranked = sorted(
-        unique,
-        key=lambda holding: (
-            hashlib.sha256(
-                f"{NEGATIVE_SPLIT_SALT}|{holding}".encode("utf-8")
-            ).hexdigest(),
-            holding,
-        ),
-    )
-    validation_count = 0 if len(ranked) < 2 else max(1, (len(ranked) + 2) // 5)
-    validation = set(ranked[:validation_count])
-    return (
-        {
-            holding: "validation" if holding in validation else "train"
-            for holding in ranked
-        },
-        validation_count,
-    )
-
-
 def _safe_negative_set_root(knowledge_root: Path, requested: Path) -> Path:
     sets_root = Path(
         os.path.abspath(
@@ -881,10 +859,115 @@ def _gold_split_roles_by_physical(knowledge_root: Path) -> dict[str, str]:
     return roles
 
 
+def _pruefe_negativbild_datei(
+    files: Mapping[str, Path],
+    beleg: negativsatz.Bildbeleg,
+    vertrag: negativsatz.Satzvertrag,
+) -> tuple[Path, int]:
+    """Dateigrenze je Bild: vorhanden, Mindestgroesse, Formatsignatur, Groesse, Hash, Endung."""
+    image_path = files.get(beleg.relative_path)
+    if image_path is None:
+        raise ValueError(vertrag.text("bild_fehlt", pfad=beleg.relative_path))
+    size_bytes = _require_count(beleg.image.get("size_bytes"), vertrag.text("bildgroesse"))
+    with image_path.open("rb") as stream:
+        signature = stream.read(8)
+    if (
+        size_bytes < MIN_TRAINING_NEGATIVE_BYTES
+        or not negativsatz.hat_bildsignatur(beleg.image_format, signature)
+        or image_path.stat().st_size != size_bytes
+        or _sha256_file(image_path) != beleg.image_sha
+        or image_path.suffix.casefold() != f".{beleg.image_format}"
+    ):
+        raise ValueError(vertrag.text("bild_datei"))
+    return image_path, size_bytes
+
+
+def _proto_eval_schluessel(knowledge_root: Path) -> set[str]:
+    """Geschuetzte Haltungen fuer Proto-Eval-Ausnahmen: Eval-Kandidatenlisten und
+    die Testgruppen des juengsten Gold-Audits (normalisiert und physisch)."""
+    eval_keys = set()
+    for candidates_path in sorted((knowledge_root / "eval_set").glob("**/_candidates.json")):
+        try:
+            document = json.loads(candidates_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        items = document.get("candidates") if isinstance(document, dict) else document
+        for entry in items or []:
+            if isinstance(entry, dict):
+                for raw in (entry.get("haltung_key"), entry.get("physical_holding_key")):
+                    normalized = normalize_holding_key(raw)
+                    if normalized:
+                        eval_keys.add(normalized)
+                        eval_keys.add(_physical_holding_key(normalized))
+    reports = sorted((knowledge_root / "training" / "reports").glob("gold_stock_audit_*.json"))
+    if reports:
+        try:
+            latest = json.loads(reports[-1].read_text(encoding="utf-8"))
+            for gruppe in latest.get("split", {}).get("gruppen", []):
+                if gruppe.get("rolle") == "test":
+                    normalized = normalize_holding_key(
+                        str(gruppe.get("gruppe") or "").removeprefix("haltung:"))
+                    if normalized:
+                        eval_keys.add(normalized)
+                        eval_keys.add(_physical_holding_key(normalized))
+        except (OSError, json.JSONDecodeError):
+            pass
+    return eval_keys
+
+
+def _gib_negativsatz_frei(
+    knowledge_root: Path,
+    set_root: Path,
+    manifest_path: Path,
+    manifest_bytes: bytes,
+    manifest: Mapping[str, Any],
+    files: Mapping[str, Path],
+    bindung: negativsatz.Satzbindung,
+    output_images: list[dict[str, Any]],
+    validation_count: int,
+    vertrag: negativsatz.Satzvertrag,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Freigabe erst nach allen Pruefungen: Satz, Belege, Klassenkarte und VSA-Manifest
+    muessen seit Pruefbeginn unveraendert sein."""
+    output_images.sort(key=lambda item: str(item["sha256"]))
+    provenance = negativsatz.satz_provenienz(
+        bindung,
+        _stored_path(knowledge_root, set_root),
+        len(output_images),
+        validation_count,
+    )
+    if manifest_path.read_bytes() != manifest_bytes:
+        raise ValueError(vertrag.text("manifest_geaendert"))
+    manifest_hashes = manifest["hashes"]
+    for relative, path in files.items():
+        hash_entry = manifest_hashes[relative]
+        if (
+            path.stat().st_size != hash_entry["size_bytes"]
+            or _sha256_file(path) != hash_entry["sha256"]
+        ):
+            raise ValueError(vertrag.text("datei_geaendert", pfad=relative))
+    if (
+        _sha256_file(ACTIVE_CLASS_MAP_PATH) != bindung.karte.sha256
+        or _sha256_file(ACTIVE_VSA_MANIFEST_PATH) != bindung.karte.vsa_hash
+    ):
+        raise ValueError(
+            "Klassenkarte oder VSA-Manifest wurde waehrend der Pruefung geaendert."
+        )
+    return output_images, provenance
+
+
 def _read_reviewed_negative_set(
     knowledge_root: Path,
     requested: Path,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Liest einen streng veroeffentlichten BCC-Negativsatz (bcc_hn_*).
+
+    Reihenfolge: Satzordner, Satzkopf, Dateien/Hashes, Belegbindung,
+    Klassenkarte, Queue, Kandidatenliste, Review, Bildbelege mit Datei- und
+    Queue-Abgleich, Vollstaendigkeit, Split und zuletzt die Freigabe nach der
+    Unveraendert-Pruefung. Proto-Saetze (proto_hn_*) prueft
+    _read_proto_reviewed_negative_set.
+    """
     set_root = _safe_negative_set_root(knowledge_root, requested)
     manifest_path = set_root / "_manifest.json"
     manifest_bytes = manifest_path.read_bytes()
@@ -895,348 +978,85 @@ def _read_reviewed_negative_set(
         )
     vertrag = negativsatz.BCC_VERTRAG
     kopf = negativsatz.pruefe_satzkopf(manifest_bytes, set_root.name, vertrag)
-    manifest, semantic, set_id = kopf.manifest, kopf.semantic, kopf.set_id
-
-    files, receipts = _verify_negative_set_files(set_root, manifest)
-    belege = negativsatz.pruefe_belegbindung(semantic, receipts, vertrag)
-    queue_binding = belege.queue_binding
-    review_binding = belege.review_binding
-    queue_manifest_bytes = belege.queue_manifest_bytes
-    candidates_bytes = belege.candidates_bytes
-    review_bytes = belege.review_bytes
-    queue_manifest_sha = belege.queue_manifest_sha
-    candidates_sha = belege.candidates_sha
-    review_sha = belege.review_sha
-    class_map_version, class_map_sha, vsa_hash, class_names = (
-        _validate_class_map_receipt(belege.class_map_bytes, semantic)
+    files, receipts = _verify_negative_set_files(set_root, kopf.manifest)
+    belege = negativsatz.pruefe_belegbindung(kopf.semantic, receipts, vertrag)
+    karte = negativsatz.Klassenkarte(
+        *_validate_class_map_receipt(belege.class_map_bytes, kopf.semantic)
     )
 
-    karte = negativsatz.Klassenkarte(class_map_version, class_map_sha, vsa_hash, class_names)
     queue = negativsatz.pruefe_queue_kopf(
-        queue_manifest_bytes, queue_binding, semantic, karte, vertrag
+        belege.queue_manifest_bytes, belege.queue_binding, kopf.semantic, karte, vertrag
     )
-    queue_manifest, queue_id = queue.manifest, queue.queue_id
     queue_hashes = negativsatz.pruefe_queue_hashliste(
-        queue_manifest, candidates_bytes, candidates_sha, vertrag
+        queue.manifest, belege.candidates_bytes, belege.candidates_sha, vertrag
     )
-    model_ids, queue_items = negativsatz.pruefe_bcc_auswahl(queue_manifest, queue.semantic)
+    model_ids, queue_items = negativsatz.pruefe_bcc_auswahl(queue.manifest, queue.semantic)
     queue_by_id = negativsatz.pruefe_bcc_queue_bilder(
         queue_items, model_ids, _physical_holding_key
     )
     candidates_by_id = negativsatz.pruefe_kandidaten(
-        candidates_bytes, queue_manifest, queue_by_id, queue_hashes, vertrag
+        belege.candidates_bytes, queue.manifest, queue_by_id, queue_hashes, vertrag
+    )
+    accepted_ids = negativsatz.pruefe_review(
+        belege.review_bytes,
+        belege.review_binding,
+        queue_id=queue.queue_id,
+        queue_manifest_sha=belege.queue_manifest_sha,
+        candidates_sha=belege.candidates_sha,
+        class_map_sha=karte.sha256,
+        candidates_by_id=candidates_by_id,
+        vertrag=vertrag,
     )
 
-    review = _require_exact_fields(
-        _strict_json_bytes(review_bytes, "Review-Beleg"),
-        {
-            "schema_version",
-            "purpose",
-            "queue_id",
-            "queue_manifest_sha256",
-            "candidates_sha256",
-            "class_map_sha256",
-            "reviewer",
-            "updated_at_utc",
-            "decisions",
-        },
-        "Review-Beleg",
+    semantic_images = negativsatz.pruefe_bildanzahl(kopf.semantic, kopf.manifest, vertrag)
+    bindung = negativsatz.Satzbindung(
+        set_id=kopf.set_id,
+        manifest_sha=hashlib.sha256(manifest_bytes).hexdigest(),
+        queue_id=queue.queue_id,
+        queue_manifest_sha=belege.queue_manifest_sha,
+        candidates_sha=belege.candidates_sha,
+        review_sha=belege.review_sha,
+        karte=karte,
     )
-    if (
-        review.get("schema_version") != NEGATIVE_SET_SCHEMA_VERSION
-        or review.get("purpose") != NEGATIVE_REVIEW_PURPOSE
-        or review_binding.get("purpose") != NEGATIVE_REVIEW_PURPOSE
-        or review.get("queue_id") != queue_id
-        or review.get("queue_manifest_sha256") != queue_manifest_sha
-        or review.get("candidates_sha256") != candidates_sha
-        or review.get("class_map_sha256") != class_map_sha
-        or not str(review.get("reviewer") or "").strip()
-    ):
-        raise ValueError("Review, Queue und Klassenkarte sind nicht fest verbunden.")
-    decisions = review.get("decisions")
-    if not isinstance(decisions, dict) or set(decisions) != set(candidates_by_id):
-        raise ValueError("Das Review ist nicht vollstaendig oder enthaelt fremde Bild-IDs.")
-    decision_counts = {decision: 0 for decision in NEGATIVE_REVIEW_DECISIONS}
-    accepted_ids: set[str] = set()
-    for item_id, raw_decision in decisions.items():
-        decision = _require_exact_fields(
-            raw_decision,
-            {"decision", "comment", "reviewed_at_utc"},
-            f"Review-Entscheidung {item_id}",
-        )
-        value = decision.get("decision")
-        if (
-            value not in decision_counts
-            or not isinstance(decision.get("comment"), str)
-            or not isinstance(decision.get("reviewed_at_utc"), str)
-            or not str(decision.get("reviewed_at_utc")).endswith("Z")
-        ):
-            raise ValueError(f"Review-Entscheidung {item_id} ist nicht erlaubt.")
-        decision_counts[str(value)] += 1
-        if value == "all_classes_clear":
-            accepted_ids.add(item_id)
-    bound_decision_counts = review_binding.get("decision_counts")
-    if not isinstance(bound_decision_counts, dict) or set(
-        bound_decision_counts
-    ) != set(NEGATIVE_REVIEW_DECISIONS):
-        raise ValueError("Der Negativsatz besitzt ungueltige Review-Anzahlen.")
-    normalized_bound_counts = {
-        decision: _require_count(
-            bound_decision_counts[decision],
-            f"Review-Anzahl {decision}",
-        )
-        for decision in NEGATIVE_REVIEW_DECISIONS
-    }
-    if (
-        _require_count(
-            review_binding.get("reviewed_images"),
-            "reviewed_images",
-        )
-        != len(decisions)
-        or normalized_bound_counts != decision_counts
-    ):
-        raise ValueError("Review-Anzahlen und Negativsatz widersprechen sich.")
-
-    semantic_images = semantic.get("images")
-    if not isinstance(semantic_images, list) or not semantic_images:
-        raise ValueError("Der Negativsatz enthaelt keine freigegebenen Bilder.")
-    if (
-        _require_count(manifest.get("images_count"), "images_count")
-        != len(semantic_images)
-        or _require_count(manifest.get("holdings_count"), "holdings_count")
-        != len(semantic_images)
-    ):
-        raise ValueError("Die Bild-/Haltungsanzahl im Negativsatz ist falsch.")
-
     output_images: list[dict[str, Any]] = []
-    seen_review_ids: set[str] = set()
-    seen_hashes: set[str] = set()
-    physical_keys: list[str] = []
-    split_by_physical: dict[str, str] = {}
+    bilder = negativsatz.Bildsammlung.leer()
     referenced_image_paths: set[str] = set()
     for raw_image in semantic_images:
-        image = _require_exact_fields(
-            raw_image,
-            {
-                "id",
-                "file_name",
-                "image_sha256",
-                "size_bytes",
-                "image_format",
-                "holding_key",
-                "physical_holding_key",
-                "split",
-                "review_item_id",
-                "review_decision",
-                "source_ref",
-                "inspection_date",
-            },
-            "Negativsatz-Bild",
+        beleg = negativsatz.pruefe_bildbeleg(
+            raw_image, accepted_ids, bilder, _physical_holding_key, vertrag
         )
-        image_sha = _require_sha256(
-            image.get("image_sha256"),
-            "Negativsatz-Bildhash",
+        referenced_image_paths.add(beleg.relative_path)
+        image_path, size_bytes = _pruefe_negativbild_datei(files, beleg, vertrag)
+        queue_item, candidate = negativsatz.queue_eintrag_zum_bild(
+            beleg, queue_by_id, candidates_by_id, vertrag
         )
-        file_name = str(image.get("file_name") or "")
-        image_format = str(image.get("image_format") or "").casefold()
-        review_item_id = str(image.get("review_item_id") or "")
-        holding_key = str(image.get("holding_key") or "")
-        physical = str(image.get("physical_holding_key") or "")
-        split = str(image.get("split") or "")
-        expected_physical = _physical_holding_key(holding_key)
-        if physical != expected_physical:
-            raise ValueError("Haltung und physische Haltung im Negativsatz widersprechen sich.")
-        if (
-            image.get("id") != f"bcc-neg-{image_sha}"
-            or file_name != f"img_{image_sha}.{image_format}"
-            or image_format not in {"jpg", "jpeg", "png"}
-            or split not in {"train", "validation"}
-            or image.get("review_decision") != "all_classes_clear"
-            or review_item_id not in accepted_ids
-        ):
-            raise ValueError("Negativsatz-Bild ist nicht als klassenfreies Trainingsbild gebunden.")
-        if (
-            review_item_id in seen_review_ids
-            or image_sha in seen_hashes
-            or physical in split_by_physical
-        ):
-            raise ValueError("Negativsatz enthaelt doppelte Bilder oder Haltungen.")
-        seen_review_ids.add(review_item_id)
-        seen_hashes.add(image_sha)
-        physical_keys.append(physical)
-        split_by_physical[physical] = split
-
-        relative_image = f"images/{file_name}"
-        referenced_image_paths.add(relative_image)
-        image_path = files.get(relative_image)
-        if image_path is None:
-            raise ValueError(f"Gebundenes Negativbild fehlt: {relative_image}")
-        size_bytes = _require_count(image.get("size_bytes"), "Negativbild-Groesse")
-        with image_path.open("rb") as stream:
-            signature = stream.read(8)
-        valid_signature = (
-            image_format in {"jpg", "jpeg"}
-            and signature.startswith(b"\xff\xd8\xff")
-        ) or (
-            image_format == "png"
-            and signature == b"\x89PNG\r\n\x1a\n"
+        negativsatz.pruefe_bcc_bild_gegen_queue(beleg, queue_item, vertrag)
+        negativsatz.pruefe_bild_gegen_kandidat_und_hashliste(
+            beleg, size_bytes, candidate, queue_hashes, vertrag
         )
-        if (
-            size_bytes < MIN_TRAINING_NEGATIVE_BYTES
-            or not valid_signature
-            or image_path.stat().st_size != size_bytes
-            or _sha256_file(image_path) != image_sha
-            or image_path.suffix.casefold() != f".{image_format}"
-        ):
-            raise ValueError("Negativbild passt nicht zum semantischen Bildbeleg.")
-
-        queue_item = queue_by_id.get(review_item_id)
-        candidate = candidates_by_id.get(review_item_id)
-        if queue_item is None or candidate is None:
-            raise ValueError("Negativbild ist nicht in Queue und Kandidatenliste enthalten.")
-        for image_field, queue_field in (
-            ("image_sha256", "image_sha256"),
-            ("holding_key", "holding_key"),
-            ("physical_holding_key", "physical_holding_key"),
-            ("source_ref", "source_ref"),
-            ("inspection_date", "inspection_date"),
-            ("size_bytes", "size_bytes"),
-            ("image_format", "image_format"),
-        ):
-            if image.get(image_field) != queue_item.get(queue_field):
-                raise ValueError(
-                    f"Negativbild und Queue widersprechen sich bei {image_field}."
-                )
-        if (
-            candidate.get("frame_path") != file_name
-            or candidate.get("source_sha256") != image_sha
-        ):
-            raise ValueError("Negativbild und Kandidaten-Beleg widersprechen sich.")
-        queue_image_hash = _require_exact_fields(
-            queue_hashes.get(relative_image),
-            {"sha256", "size_bytes"},
-            f"Queue-Bildhash {relative_image}",
-        )
-        if (
-            _require_sha256(
-                queue_image_hash.get("sha256"),
-                f"Queue-Bildhash {relative_image}",
-            )
-            != image_sha
-            or _require_count(
-                queue_image_hash.get("size_bytes"),
-                f"Queue-Bildgroesse {relative_image}",
-            )
-            != size_bytes
-        ):
-            raise ValueError("Der Queue-Beleg bindet das Negativbild nicht bytegenau.")
-
         output_images.append(
-            {
-                "path": _stored_path(knowledge_root, image_path),
-                "sha256": image_sha,
-                "split": split,
-                "source_type": "reviewed_negative_set",
-                "holding_key": holding_key,
-                "physical_holding_key": physical,
-                "set_id": set_id,
-                "set_manifest_sha256": hashlib.sha256(
-                    manifest_bytes
-                ).hexdigest(),
-                "queue_id": queue_id,
-                "queue_manifest_sha256": queue_manifest_sha,
-                "candidates_sha256": candidates_sha,
-                "review_sha256": review_sha,
-                "class_map_version": class_map_version,
-                "class_map_sha256": class_map_sha,
-                "vsa_manifest_hash": vsa_hash,
-                "review_item_id": review_item_id,
-                "review_decision": "all_classes_clear",
-            }
-        )
-
-    actual_image_paths = {
-        relative for relative in files if relative.startswith("images/")
-    }
-    if actual_image_paths != referenced_image_paths:
-        raise ValueError(
-            "Bilder, Hashliste und semantischer Negativsatz-Beleg sind nicht deckungsgleich."
-        )
-    if seen_review_ids != accepted_ids:
-        raise ValueError(
-            "Der Negativsatz muss exakt alle klassenfreien Review-Entscheidungen enthalten."
-        )
-    expected_splits, validation_count = _negative_split_map(physical_keys)
-    if any(
-        split_by_physical[physical] != expected_split
-        for physical, expected_split in expected_splits.items()
-    ):
-        raise ValueError("Der Negativsatz besitzt einen manipulierten Split.")
-    split_rule = _require_exact_fields(
-        semantic.get("split_rule"),
-        {
-            "name",
-            "salt",
-            "one_image_per_physical_holding",
-            "validation_count",
-            "train_count",
-        },
-        "Negativsatz-Splitregel",
-    )
-    if (
-        split_rule.get("name") != "stable_rank_v1"
-        or split_rule.get("salt") != NEGATIVE_SPLIT_SALT
-        or split_rule.get("one_image_per_physical_holding") is not True
-        or _require_count(
-            split_rule.get("validation_count"),
-            "validation_count der Negativsatz-Splitregel",
-        )
-        != validation_count
-        or _require_count(
-            split_rule.get("train_count"),
-            "train_count der Negativsatz-Splitregel",
-        )
-        != len(output_images) - validation_count
-    ):
-        raise ValueError("Die Negativsatz-Splitregel ist ungueltig.")
-
-    output_images.sort(key=lambda item: str(item["sha256"]))
-    manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()
-    provenance = {
-        "set_id": set_id,
-        "root_path": _stored_path(knowledge_root, set_root),
-        "manifest_sha256": manifest_sha,
-        "queue_id": queue_id,
-        "queue_manifest_sha256": queue_manifest_sha,
-        "candidates_sha256": candidates_sha,
-        "review_sha256": review_sha,
-        "class_map_version": class_map_version,
-        "class_map_sha256": class_map_sha,
-        "vsa_manifest_hash": vsa_hash,
-        "images": len(output_images),
-        "train_images": len(output_images) - validation_count,
-        "validation_images": validation_count,
-    }
-    if manifest_path.read_bytes() != manifest_bytes:
-        raise ValueError("Das Negativsatz-Manifest wurde waehrend der Pruefung geaendert.")
-    manifest_hashes = manifest["hashes"]
-    for relative, path in files.items():
-        hash_entry = manifest_hashes[relative]
-        if (
-            path.stat().st_size != hash_entry["size_bytes"]
-            or _sha256_file(path) != hash_entry["sha256"]
-        ):
-            raise ValueError(
-                f"Negativsatz-Datei wurde waehrend der Pruefung geaendert: {relative}"
+            negativsatz.negativbild_eintrag(
+                beleg, _stored_path(knowledge_root, image_path), bindung
             )
-    if (
-        _sha256_file(ACTIVE_CLASS_MAP_PATH) != class_map_sha
-        or _sha256_file(ACTIVE_VSA_MANIFEST_PATH) != vsa_hash
-    ):
-        raise ValueError(
-            "Klassenkarte oder VSA-Manifest wurde waehrend der Pruefung geaendert."
         )
-    return output_images, provenance
+
+    negativsatz.pruefe_bildabdeckung(set(files), referenced_image_paths, vertrag)
+    negativsatz.pruefe_bcc_vollzaehlig(bilder.review_ids, accepted_ids)
+    validation_count = negativsatz.pruefe_bcc_split(
+        kopf.semantic, bilder, len(output_images)
+    )
+    return _gib_negativsatz_frei(
+        knowledge_root,
+        set_root,
+        manifest_path,
+        manifest_bytes,
+        kopf.manifest,
+        files,
+        bindung,
+        output_images,
+        validation_count,
+        vertrag,
+    )
 
 
 def _read_proto_reviewed_negative_set(
@@ -1250,386 +1070,112 @@ def _read_proto_reviewed_negative_set(
     Gleiche Bindungstiefe wie der BCC-Pfad, aber mit dem ehrlichen
     Geschwister-Vertrag: keine gebundenen Auswahlmodelle, kein Modelltrigger,
     protokollbasierte Auswahl. Das BCC-Verfahren bleibt unveraendert.
+    Zusaetzlich: begruendete Ausnahmen fuer klassenfreie Bilder ohne
+    belastbare oder mit eval-geschuetzter Haltung und die Gold-Ausrichtung
+    des Splits.
     """
     vertrag = negativsatz.PROTO_VERTRAG
     kopf = negativsatz.pruefe_satzkopf(manifest_bytes, set_root.name, vertrag)
-    manifest, semantic, set_id = kopf.manifest, kopf.semantic, kopf.set_id
-
-    files, receipts = _verify_negative_set_files(set_root, manifest)
-    belege = negativsatz.pruefe_belegbindung(semantic, receipts, vertrag)
-    queue_binding = belege.queue_binding
-    review_binding = belege.review_binding
-    queue_manifest_bytes = belege.queue_manifest_bytes
-    candidates_bytes = belege.candidates_bytes
-    review_bytes = belege.review_bytes
-    queue_manifest_sha = belege.queue_manifest_sha
-    candidates_sha = belege.candidates_sha
-    review_sha = belege.review_sha
-    class_map_version, class_map_sha, vsa_hash, class_names = (
-        _validate_class_map_receipt(belege.class_map_bytes, semantic)
+    files, receipts = _verify_negative_set_files(set_root, kopf.manifest)
+    belege = negativsatz.pruefe_belegbindung(kopf.semantic, receipts, vertrag)
+    karte = negativsatz.Klassenkarte(
+        *_validate_class_map_receipt(belege.class_map_bytes, kopf.semantic)
     )
 
-    karte = negativsatz.Klassenkarte(class_map_version, class_map_sha, vsa_hash, class_names)
     queue = negativsatz.pruefe_queue_kopf(
-        queue_manifest_bytes, queue_binding, semantic, karte, vertrag
+        belege.queue_manifest_bytes, belege.queue_binding, kopf.semantic, karte, vertrag
     )
-    queue_manifest, queue_id = queue.manifest, queue.queue_id
     negativsatz.pruefe_proto_auswahlregel(queue.semantic)
     queue_hashes = negativsatz.pruefe_queue_hashliste(
-        queue_manifest, candidates_bytes, candidates_sha, vertrag
+        queue.manifest, belege.candidates_bytes, belege.candidates_sha, vertrag
     )
-    queue_items = negativsatz.pruefe_proto_auswahl(queue_manifest, queue.semantic)
+    queue_items = negativsatz.pruefe_proto_auswahl(queue.manifest, queue.semantic)
     queue_by_id = negativsatz.pruefe_proto_queue_bilder(
         queue_items, _proto_physical_holding_key
     )
     candidates_by_id = negativsatz.pruefe_kandidaten(
-        candidates_bytes, queue_manifest, queue_by_id, queue_hashes, vertrag
+        belege.candidates_bytes, queue.manifest, queue_by_id, queue_hashes, vertrag
+    )
+    accepted_ids = negativsatz.pruefe_review(
+        belege.review_bytes,
+        belege.review_binding,
+        queue_id=queue.queue_id,
+        queue_manifest_sha=belege.queue_manifest_sha,
+        candidates_sha=belege.candidates_sha,
+        class_map_sha=karte.sha256,
+        candidates_by_id=candidates_by_id,
+        vertrag=vertrag,
     )
 
-    review = _require_exact_fields(
-        _strict_json_bytes(review_bytes, "Review-Beleg"),
-        {
-            "schema_version",
-            "purpose",
-            "queue_id",
-            "queue_manifest_sha256",
-            "candidates_sha256",
-            "class_map_sha256",
-            "reviewer",
-            "updated_at_utc",
-            "decisions",
-        },
-        "Review-Beleg",
+    semantic_images = negativsatz.pruefe_bildanzahl(kopf.semantic, kopf.manifest, vertrag)
+    bindung = negativsatz.Satzbindung(
+        set_id=kopf.set_id,
+        manifest_sha=hashlib.sha256(manifest_bytes).hexdigest(),
+        queue_id=queue.queue_id,
+        queue_manifest_sha=belege.queue_manifest_sha,
+        candidates_sha=belege.candidates_sha,
+        review_sha=belege.review_sha,
+        karte=karte,
     )
-    if (
-        review.get("schema_version") != NEGATIVE_SET_SCHEMA_VERSION
-        or review.get("purpose") != NEGATIVE_REVIEW_PURPOSE
-        or review_binding.get("purpose") != NEGATIVE_REVIEW_PURPOSE
-        or review.get("queue_id") != queue_id
-        or review.get("queue_manifest_sha256") != queue_manifest_sha
-        or review.get("candidates_sha256") != candidates_sha
-        or review.get("class_map_sha256") != class_map_sha
-        or not str(review.get("reviewer") or "").strip()
-    ):
-        raise ValueError("Review, Proto-Queue und Klassenkarte sind nicht fest verbunden.")
-    decisions = review.get("decisions")
-    if not isinstance(decisions, dict) or set(decisions) != set(candidates_by_id):
-        raise ValueError("Das Review ist nicht vollstaendig oder enthaelt fremde Bild-IDs.")
-    decision_counts = {decision: 0 for decision in NEGATIVE_REVIEW_DECISIONS}
-    accepted_ids: set[str] = set()
-    for item_id, raw_decision in decisions.items():
-        decision = _require_exact_fields(
-            raw_decision,
-            {"decision", "comment", "reviewed_at_utc"},
-            f"Review-Entscheidung {item_id}",
-        )
-        value = decision.get("decision")
-        if (
-            value not in decision_counts
-            or not isinstance(decision.get("comment"), str)
-            or not isinstance(decision.get("reviewed_at_utc"), str)
-            or not str(decision.get("reviewed_at_utc")).endswith("Z")
-        ):
-            raise ValueError(f"Review-Entscheidung {item_id} ist nicht erlaubt.")
-        decision_counts[str(value)] += 1
-        if value == "all_classes_clear":
-            accepted_ids.add(item_id)
-    bound_decision_counts = review_binding.get("decision_counts")
-    if not isinstance(bound_decision_counts, dict) or set(bound_decision_counts) != set(
-        NEGATIVE_REVIEW_DECISIONS
-    ):
-        raise ValueError("Der Proto-Satz besitzt ungueltige Review-Anzahlen.")
-    normalized_bound_counts = {
-        decision: _require_count(bound_decision_counts[decision], f"Review-Anzahl {decision}")
-        for decision in NEGATIVE_REVIEW_DECISIONS
-    }
-    if (
-        _require_count(review_binding.get("reviewed_images"), "reviewed_images") != len(decisions)
-        or normalized_bound_counts != decision_counts
-    ):
-        raise ValueError("Review-Anzahlen und Proto-Negativsatz widersprechen sich.")
-
-    semantic_images = semantic.get("images")
-    if not isinstance(semantic_images, list) or not semantic_images:
-        raise ValueError("Der Proto-Negativsatz enthaelt keine freigegebenen Bilder.")
-    if (
-        _require_count(manifest.get("images_count"), "images_count") != len(semantic_images)
-        or _require_count(manifest.get("holdings_count"), "holdings_count") != len(semantic_images)
-    ):
-        raise ValueError("Die Bild-/Haltungsanzahl im Proto-Negativsatz ist falsch.")
-
     output_images: list[dict[str, Any]] = []
-    seen_review_ids: set[str] = set()
-    seen_hashes: set[str] = set()
-    physical_keys: list[str] = []
-    split_by_physical: dict[str, str] = {}
+    bilder = negativsatz.Bildsammlung.leer()
     referenced_image_paths: set[str] = set()
     for raw_image in semantic_images:
-        image = _require_exact_fields(
-            raw_image,
-            {
-                "id",
-                "file_name",
-                "image_sha256",
-                "size_bytes",
-                "image_format",
-                "holding_key",
-                "physical_holding_key",
-                "split",
-                "review_item_id",
-                "review_decision",
-                "quelle",
-            },
-            "Proto-Negativsatz-Bild",
+        beleg = negativsatz.pruefe_bildbeleg(
+            raw_image, accepted_ids, bilder, _physical_holding_key, vertrag
         )
-        image_sha = _require_sha256(image.get("image_sha256"), "Proto-Negativbildhash")
-        file_name = str(image.get("file_name") or "")
-        image_format = str(image.get("image_format") or "").casefold()
-        review_item_id = str(image.get("review_item_id") or "")
-        holding_key = str(image.get("holding_key") or "")
-        physical = str(image.get("physical_holding_key") or "")
-        split = str(image.get("split") or "")
-        if physical != _physical_holding_key(holding_key):
-            raise ValueError("Haltung und physische Haltung im Proto-Satz widersprechen sich.")
-        if (
-            image.get("id") != f"{PROTO_IMAGE_ID_PREFIX}{image_sha}"
-            or file_name != f"img_{image_sha}.{image_format}"
-            or image_format not in {"jpg", "jpeg", "png"}
-            or split not in {"train", "validation"}
-            or image.get("review_decision") != "all_classes_clear"
-            or review_item_id not in accepted_ids
-        ):
-            raise ValueError("Proto-Negativbild ist nicht als klassenfreies Trainingsbild gebunden.")
-        if review_item_id in seen_review_ids or image_sha in seen_hashes or physical in split_by_physical:
-            raise ValueError("Proto-Negativsatz enthaelt doppelte Bilder oder Haltungen.")
-        seen_review_ids.add(review_item_id)
-        seen_hashes.add(image_sha)
-        physical_keys.append(physical)
-        split_by_physical[physical] = split
-
-        relative_image = f"images/{file_name}"
-        referenced_image_paths.add(relative_image)
-        image_path = files.get(relative_image)
-        if image_path is None:
-            raise ValueError(f"Gebundenes Proto-Negativbild fehlt: {relative_image}")
-        size_bytes = _require_count(image.get("size_bytes"), "Proto-Negativbild-Groesse")
-        with image_path.open("rb") as stream:
-            signature = stream.read(8)
-        valid_signature = (
-            image_format in {"jpg", "jpeg"} and signature.startswith(b"\xff\xd8\xff")
-        ) or (
-            image_format == "png" and signature == b"\x89PNG\r\n\x1a\n"
+        referenced_image_paths.add(beleg.relative_path)
+        image_path, size_bytes = _pruefe_negativbild_datei(files, beleg, vertrag)
+        queue_item, candidate = negativsatz.queue_eintrag_zum_bild(
+            beleg, queue_by_id, candidates_by_id, vertrag
         )
-        if (
-            size_bytes < MIN_TRAINING_NEGATIVE_BYTES
-            or not valid_signature
-            or image_path.stat().st_size != size_bytes
-            or _sha256_file(image_path) != image_sha
-            or image_path.suffix.casefold() != f".{image_format}"
-        ):
-            raise ValueError("Proto-Negativbild passt nicht zum semantischen Bildbeleg.")
-
-        queue_item = queue_by_id.get(review_item_id)
-        candidate = candidates_by_id.get(review_item_id)
-        if queue_item is None or candidate is None:
-            raise ValueError("Proto-Negativbild ist nicht in Queue und Kandidatenliste enthalten.")
-        for field in ("image_sha256", "size_bytes", "image_format", "quelle"):
-            if image.get(field) != queue_item.get(field):
-                raise ValueError(f"Proto-Negativbild und Queue widersprechen sich bei {field}.")
-        if normalize_holding_key(queue_item.get("holding_key")) != image.get("holding_key"):
-            raise ValueError("Proto-Negativbild und Queue widersprechen sich bei holding_key.")
-        if (
-            candidate.get("frame_path") != file_name
-            or candidate.get("source_sha256") != image_sha
-        ):
-            raise ValueError("Proto-Negativbild und Kandidaten-Beleg widersprechen sich.")
-        queue_image_hash = _require_exact_fields(
-            queue_hashes.get(relative_image),
-            {"sha256", "size_bytes"},
-            f"Queue-Bildhash {relative_image}",
+        negativsatz.pruefe_proto_bild_gegen_queue(
+            beleg, queue_item, normalize_holding_key, vertrag
         )
-        if (
-            _require_sha256(queue_image_hash.get("sha256"), f"Queue-Bildhash {relative_image}")
-            != image_sha
-            or _require_count(queue_image_hash.get("size_bytes"), f"Queue-Bildgroesse {relative_image}")
-            != size_bytes
-        ):
-            raise ValueError("Der Queue-Beleg bindet das Proto-Negativbild nicht bytegenau.")
-
+        negativsatz.pruefe_bild_gegen_kandidat_und_hashliste(
+            beleg, size_bytes, candidate, queue_hashes, vertrag
+        )
         output_images.append(
-            {
-                "path": _stored_path(knowledge_root, image_path),
-                "sha256": image_sha,
-                "split": split,
-                "source_type": "reviewed_negative_set",
-                "holding_key": holding_key,
-                "physical_holding_key": physical,
-                "set_id": set_id,
-                "set_manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
-                "queue_id": queue_id,
-                "queue_manifest_sha256": queue_manifest_sha,
-                "candidates_sha256": candidates_sha,
-                "review_sha256": review_sha,
-                "class_map_version": class_map_version,
-                "class_map_sha256": class_map_sha,
-                "vsa_manifest_hash": vsa_hash,
-                "review_item_id": review_item_id,
-                "review_decision": "all_classes_clear",
-            }
+            negativsatz.negativbild_eintrag(
+                beleg, _stored_path(knowledge_root, image_path), bindung
+            )
         )
 
-    actual_image_paths = {relative for relative in files if relative.startswith("images/")}
-    if actual_image_paths != referenced_image_paths:
-        raise ValueError("Bilder, Hashliste und semantischer Proto-Beleg sind nicht deckungsgleich.")
-    if seen_review_ids != accepted_ids:
+    negativsatz.pruefe_bildabdeckung(set(files), referenced_image_paths, vertrag)
+    if bilder.review_ids != accepted_ids:
         # Dokumentierte Ausnahmen: klassenfreie Bilder ohne belastbare
         # Haltungsidentitaet oder mit kanonisch geschuetzter Eval-Haltung
         # werden ausgeschlossen, muessen aber vollzaehlig und begruendet sein.
-        excluded = semantic.get("excluded_not_normalizable")
-        excluded_eval = semantic.get("excluded_eval_protected")
-        if not isinstance(excluded, list) or not isinstance(excluded_eval, list):
-            raise ValueError("Der Proto-Satz muss exakt alle klassenfreien Review-Entscheidungen enthalten.")
-        excluded_ids = {str(value) for value in excluded}
-        excluded_eval_ids = {str(value) for value in excluded_eval}
-        if seen_review_ids | excluded_ids | excluded_eval_ids != accepted_ids:
-            raise ValueError("Der Proto-Satz muss exakt alle klassenfreien Review-Entscheidungen enthalten.")
-        eval_keys = set()
-        for candidates_path in sorted((knowledge_root / "eval_set").glob("**/_candidates.json")):
-            try:
-                document = json.loads(candidates_path.read_text(encoding="utf-8-sig"))
-            except (OSError, json.JSONDecodeError):
-                continue
-            items = document.get("candidates") if isinstance(document, dict) else document
-            for entry in items or []:
-                if isinstance(entry, dict):
-                    for raw in (entry.get("haltung_key"), entry.get("physical_holding_key")):
-                        normalized = normalize_holding_key(raw)
-                        if normalized:
-                            eval_keys.add(normalized)
-                            eval_keys.add(_physical_holding_key(normalized))
-        reports = sorted((knowledge_root / "training" / "reports").glob("gold_stock_audit_*.json"))
-        if reports:
-            try:
-                latest = json.loads(reports[-1].read_text(encoding="utf-8"))
-                for gruppe in latest.get("split", {}).get("gruppen", []):
-                    if gruppe.get("rolle") == "test":
-                        normalized = normalize_holding_key(
-                            str(gruppe.get("gruppe") or "").removeprefix("haltung:"))
-                        if normalized:
-                            eval_keys.add(normalized)
-                            eval_keys.add(_physical_holding_key(normalized))
-            except (OSError, json.JSONDecodeError):
-                pass
-        for excluded_id in excluded_ids:
-            queue_item = queue_by_id.get(excluded_id)
-            if (
-                excluded_id not in accepted_ids
-                or queue_item is None
-                or normalize_holding_key(queue_item.get("holding_key")) is not None
-            ):
-                raise ValueError("Ein ausgeschlossenes Proto-Bild besitzt eine belastbare Haltung oder fehlt im Review.")
-        for excluded_id in excluded_eval_ids:
-            queue_item = queue_by_id.get(excluded_id)
-            normalized = queue_item is not None and normalize_holding_key(queue_item.get("holding_key"))
-            if (
-                excluded_id not in accepted_ids
-                or not normalized
-                or (normalized not in eval_keys
-                    and _physical_holding_key(normalized) not in eval_keys)
-            ):
-                raise ValueError("Ein eval-ausgeschlossenes Proto-Bild ist nicht im geschuetzten Bestand.")
-    split_rule_raw = semantic.get("split_rule")
-    if not isinstance(split_rule_raw, dict):
-        raise ValueError("Die Proto-Splitregel fehlt.")
-    split_name = split_rule_raw.get("name")
-    if split_name == "stable_rank_v1":
-        split_rule = _require_exact_fields(
-            split_rule_raw,
-            {"name", "salt", "one_image_per_physical_holding", "validation_count", "train_count"},
-            "Proto-Splitregel",
+        excluded_ids, excluded_eval_ids = negativsatz.pruefe_proto_ausnahmelisten(
+            kopf.semantic, bilder.review_ids, accepted_ids
         )
-        expected_splits, validation_count = _negative_split_map(physical_keys)
-        aligned_splits = expected_splits
-    elif split_name == "stable_rank_v1_gold_aligned":
-        split_rule = _require_exact_fields(
-            split_rule_raw,
-            {"name", "salt", "one_image_per_physical_holding", "validation_count", "train_count", "gold_alignments"},
-            "Proto-Splitregel (gold-aligned)",
+        negativsatz.pruefe_proto_ausnahmen(
+            excluded_ids,
+            excluded_eval_ids,
+            accepted_ids,
+            queue_by_id,
+            _proto_eval_schluessel(knowledge_root),
+            normalize_holding_key,
+            _physical_holding_key,
         )
-        base_splits, _base_count = _negative_split_map(physical_keys)
-        gold_roles = _gold_split_roles_by_physical(knowledge_root)
-        aligned_splits = dict(base_splits)
-        alignments = split_rule.get("gold_alignments")
-        if not isinstance(alignments, list):
-            raise ValueError("Die Gold-Ausrichtung der Proto-Splitregel fehlt.")
-        for alignment in alignments:
-            alignment = _require_exact_fields(
-                alignment,
-                {"physical_holding_key", "gold_role", "forced_split"},
-                "Gold-Ausrichtung",
-            )
-            physical = str(alignment.get("physical_holding_key") or "")
-            gold_role = str(alignment.get("gold_role") or "")
-            forced = str(alignment.get("forced_split") or "")
-            if physical not in split_by_physical:
-                raise ValueError("Gold-Ausrichtung verweist auf eine fremde Haltung.")
-            if gold_roles.get(physical) != gold_role or gold_role not in {"train", "val", "test"}:
-                raise ValueError("Gold-Ausrichtung widerspricht dem aktuellen Gold-Split.")
-            expected_forced = "train" if gold_role == "train" else "validation"
-            if forced != expected_forced:
-                raise ValueError("Gold-Ausrichtung verwendet eine falsche Zielrolle.")
-            aligned_splits[physical] = forced
-        validation_count = sum(1 for role in aligned_splits.values() if role == "validation")
-        expected_splits = aligned_splits
-    else:
-        raise ValueError("Unbekannte Proto-Splitregel.")
-    if any(
-        split_by_physical[physical] != expected_split
-        for physical, expected_split in expected_splits.items()
-    ):
-        raise ValueError("Der Proto-Negativsatz besitzt einen manipulierten Split.")
-    if (
-        split_rule.get("salt") != NEGATIVE_SPLIT_SALT
-        or split_rule.get("one_image_per_physical_holding") is not True
-        or _require_count(split_rule.get("validation_count"), "validation_count") != validation_count
-        or _require_count(split_rule.get("train_count"), "train_count")
-        != len(output_images) - validation_count
-    ):
-        raise ValueError("Die Proto-Splitregel ist ungueltig.")
-
-    output_images.sort(key=lambda item: str(item["sha256"]))
-    manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()
-    provenance = {
-        "set_id": set_id,
-        "root_path": _stored_path(knowledge_root, set_root),
-        "manifest_sha256": manifest_sha,
-        "queue_id": queue_id,
-        "queue_manifest_sha256": queue_manifest_sha,
-        "candidates_sha256": candidates_sha,
-        "review_sha256": review_sha,
-        "class_map_version": class_map_version,
-        "class_map_sha256": class_map_sha,
-        "vsa_manifest_hash": vsa_hash,
-        "images": len(output_images),
-        "train_images": len(output_images) - validation_count,
-        "validation_images": validation_count,
-    }
-    if manifest_path.read_bytes() != manifest_bytes:
-        raise ValueError("Das Proto-Manifest wurde waehrend der Pruefung geaendert.")
-    manifest_hashes = manifest["hashes"]
-    for relative, path in files.items():
-        hash_entry = manifest_hashes[relative]
-        if (
-            path.stat().st_size != hash_entry["size_bytes"]
-            or _sha256_file(path) != hash_entry["sha256"]
-        ):
-            raise ValueError(f"Proto-Satz-Datei wurde waehrend der Pruefung geaendert: {relative}")
-    if (
-        _sha256_file(ACTIVE_CLASS_MAP_PATH) != class_map_sha
-        or _sha256_file(ACTIVE_VSA_MANIFEST_PATH) != vsa_hash
-    ):
-        raise ValueError("Klassenkarte oder VSA-Manifest wurde waehrend der Pruefung geaendert.")
-    return output_images, provenance
+    validation_count = negativsatz.pruefe_proto_split(
+        kopf.semantic,
+        bilder,
+        len(output_images),
+        lambda: _gold_split_roles_by_physical(knowledge_root),
+    )
+    return _gib_negativsatz_frei(
+        knowledge_root,
+        set_root,
+        manifest_path,
+        manifest_bytes,
+        kopf.manifest,
+        files,
+        bindung,
+        output_images,
+        validation_count,
+        vertrag,
+    )
 
 
 def read_training_negative_sources(
