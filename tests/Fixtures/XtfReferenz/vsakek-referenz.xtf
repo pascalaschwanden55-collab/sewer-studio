@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Synthetische Referenzdatei fuer AP08 (keine Kundendaten). Deckt mehrere Untersuchungen
+     derselben Haltung, eine Gegenbefahrung, Videozaehlerstaende, Fotos und Videos, eine
+     Schachtbegehung, widerspruechliche und fehlende Bezuege ab. Der SIA405-Kopf ohne
+     SIA405-Haltungen fuehrt ueber den Rueckfall auf VSA-KEK. -->
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION VERSION="2.3" SENDER="Referenzfall AP08">
+    <MODELS>
+      <MODEL NAME="VSA_KEK_2020_LV95" />
+      <MODEL NAME="SIA405_ABWASSER_2020_LV95" />
+    </MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="refB00000000ABW2">
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="refKANAL7">
+        <Bezeichnung>700-701</Bezeichnung>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="refSCHACHT800">
+        <Bezeichnung>800</Bezeichnung>
+        <Funktion>Kontrollschacht</Funktion>
+        <Dimension1>800</Dimension1>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    <VSA_KEK_2020_LV95.KEK BID="refB00000000KEK1">
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refUNTERS1">
+        <Bezeichnung>200-201</Bezeichnung>
+        <Ausfuehrender>Kanal-TV Muster AG</Ausfuehrender>
+        <Zeitpunkt>20250312</Zeitpunkt>
+        <Inspizierte_Laenge>38.40</Inspizierte_Laenge>
+        <Erfassungsart>Kanalfernsehen</Erfassungsart>
+        <Fahrzeug>TV-3</Fahrzeug>
+        <Geraet>Kamera 2</Geraet>
+        <Witterung>trocken</Witterung>
+        <Grund>Zustandserfassung</Grund>
+        <vonPunktBezeichnung>200</vonPunktBezeichnung>
+        <bisPunktBezeichnung>201</bisPunktBezeichnung>
+        <Fliessrichtung>in_Fliessrichtung</Fliessrichtung>
+        <Operateur>M. Muster</Operateur>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refUNTERS2">
+        <Bezeichnung>200-201</Bezeichnung>
+        <Zeitpunkt>20250315</Zeitpunkt>
+        <Inspizierte_Laenge>12.00</Inspizierte_Laenge>
+        <Erfassungsart>Kanalfernsehen</Erfassungsart>
+        <vonPunktBezeichnung>201</vonPunktBezeichnung>
+        <bisPunktBezeichnung>200</bisPunktBezeichnung>
+        <Fliessrichtung>gegen_Fliessrichtung</Fliessrichtung>
+        <Operateur>A. Beispiel</Operateur>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refUNTERS3">
+        <Bezeichnung>300</Bezeichnung>
+        <Zeitpunkt>20250313</Zeitpunkt>
+        <Erfassungsart>Begehung</Erfassungsart>
+        <Operateur>M. Muster</Operateur>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refUNTERS4">
+        <Bezeichnung>400-401</Bezeichnung>
+        <Zeitpunkt>20250314</Zeitpunkt>
+        <Erfassungsart>Kanalfernsehen</Erfassungsart>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refUNTERS5">
+        <Bezeichnung>500</Bezeichnung>
+        <Zeitpunkt>20250316</Zeitpunkt>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refUNTERS6">
+        <Bezeichnung>700-701</Bezeichnung>
+        <Zeitpunkt>20250317</Zeitpunkt>
+        <AbwasserbauwerkRef REF="refKANAL7" />
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refUNTERS7">
+        <Bezeichnung>800</Bezeichnung>
+        <Zeitpunkt>20250318</Zeitpunkt>
+        <Erfassungsart>Begehung</Erfassungsart>
+        <AbwasserbauwerkRef REF="refSCHACHT800" />
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refUNTERS8">
+        <Zeitpunkt>20250319</Zeitpunkt>
+        <vonPunktBezeichnung>900</vonPunktBezeichnung>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refSCHADEN1">
+        <UntersuchungRef REF="refUNTERS1" />
+        <KanalSchadencode>BCD</KanalSchadencode>
+        <Distanz>0.00</Distanz>
+        <Videozaehlerstand>00:00:04</Videozaehlerstand>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refSCHADEN2">
+        <UntersuchungRef REF="refUNTERS1" />
+        <OBJ_ID>OBJ-SCHADEN2</OBJ_ID>
+        <KanalSchadencode>BABBA</KanalSchadencode>
+        <Distanz>12.30</Distanz>
+        <Videozaehlerstand>00:02:11</Videozaehlerstand>
+        <Anmerkung>Querriss</Anmerkung>
+        <Einzelschadenklasse>3</Einzelschadenklasse>
+        <Quantifizierung1>2</Quantifizierung1>
+        <SchadenlageAnfang>3</SchadenlageAnfang>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refSCHADEN3">
+        <UntersuchungRef REF="refUNTERS1" />
+        <OBJ_ID>OBJ-SCHADEN3</OBJ_ID>
+        <KanalSchadencode>BBAA</KanalSchadencode>
+        <Distanz>20,00</Distanz>
+        <Videozaehlerstand>00:03:40</Videozaehlerstand>
+        <Streckenschaden>true</Streckenschaden>
+        <Quantifizierung1>5.5</Quantifizierung1>
+        <Quantifizierung2>10</Quantifizierung2>
+        <SchadenlageAnfang>9</SchadenlageAnfang>
+        <SchadenlageEnde>3</SchadenlageEnde>
+        <Einzelschadenklasse>7</Einzelschadenklasse>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refSCHADEN4">
+        <UntersuchungRef REF="refUNTERS1" />
+        <KanalSchadencode>BCE</KanalSchadencode>
+        <Distanz>38.40</Distanz>
+        <Videozaehlerstand>00:06:02</Videozaehlerstand>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refSCHADEN4DOPPELT">
+        <UntersuchungRef REF="refUNTERS1" />
+        <KanalSchadencode>bce</KanalSchadencode>
+        <Distanz>38.40</Distanz>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refSCHADEN5">
+        <UntersuchungRef REF="refUNTERS2" />
+        <KanalSchadencode>BCD</KanalSchadencode>
+        <Distanz>0.00</Distanz>
+        <Videozaehlerstand>00:00:03</Videozaehlerstand>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refSCHADEN6">
+        <UntersuchungRef REF="refUNTERS2" />
+        <KanalSchadencode>BDC</KanalSchadencode>
+        <Distanz>12.00</Distanz>
+        <Videozaehlerstand>00:01:50</Videozaehlerstand>
+        <Anmerkung>Abbruch Gegenbefahrung</Anmerkung>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refSCHADEN7">
+        <UntersuchungRef REF="refUNTERS4" />
+        <KanalSchadencode>BAJA</KanalSchadencode>
+        <Distanz>4.00</Distanz>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refSCHADENVERWAIST">
+        <UntersuchungRef REF="refUNTERSFEHLT" />
+        <KanalSchadencode>BAB</KanalSchadencode>
+        <Distanz>1.00</Distanz>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refSCHADENOHNEREF">
+        <KanalSchadencode>BAB</KanalSchadencode>
+        <Distanz>2.00</Distanz>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Normschachtschaden TID="refSCHSCHADEN1">
+        <UntersuchungRef REF="refUNTERS3" />
+        <SchachtSchadencode>DAGB</SchachtSchadencode>
+        <Distanz>1.20</Distanz>
+        <Anmerkung>Riss im Konus</Anmerkung>
+        <Einzelschadenklasse>2</Einzelschadenklasse>
+        <Schachtbereich>B</Schachtbereich>
+        <Videozaehlerstand>00:00:42</Videozaehlerstand>
+        <Quantifizierung1>3</Quantifizierung1>
+      </VSA_KEK_2020_LV95.KEK.Normschachtschaden>
+      <VSA_KEK_2020_LV95.KEK.Normschachtschaden TID="refSCHSCHADEN2">
+        <UntersuchungRef REF="refUNTERS3" />
+        <NormschachtSchadencode>DCA</NormschachtSchadencode>
+        <Distanz>2,50</Distanz>
+        <Quantifizierung2>50</Quantifizierung2>
+      </VSA_KEK_2020_LV95.KEK.Normschachtschaden>
+      <VSA_KEK_2020_LV95.KEK.Normschachtschaden TID="refSCHSCHADEN3">
+        <UntersuchungRef REF="refUNTERS4" />
+        <SchachtSchadencode>DAB</SchachtSchadencode>
+      </VSA_KEK_2020_LV95.KEK.Normschachtschaden>
+      <VSA_KEK_2020_LV95.KEK.Normschachtschaden TID="refSCHSCHADENVERWAIST">
+        <UntersuchungRef REF="refUNTERSFEHLT" />
+        <SchachtSchadencode>DAB</SchachtSchadencode>
+      </VSA_KEK_2020_LV95.KEK.Normschachtschaden>
+      <VSA_KEK_2020_LV95.KEK.Datei TID="refDATEI1">
+        <Art>Foto</Art>
+        <Klasse>Kanalschaden</Klasse>
+        <Objekt>refSCHADEN2</Objekt>
+        <Bezeichnung>foto_schaden2.jpg</Bezeichnung>
+        <Relativpfad>Fotos</Relativpfad>
+      </VSA_KEK_2020_LV95.KEK.Datei>
+      <VSA_KEK_2020_LV95.KEK.Datei TID="refDATEI2">
+        <Art>Foto</Art>
+        <Klasse>Kanalschaden</Klasse>
+        <Objekt>OBJ-SCHADEN3</Objekt>
+        <Bezeichnung>foto_schaden3.jpg</Bezeichnung>
+        <Relativpfad>Fotos</Relativpfad>
+      </VSA_KEK_2020_LV95.KEK.Datei>
+      <VSA_KEK_2020_LV95.KEK.Datei TID="refDATEI3">
+        <Art>Foto</Art>
+        <Klasse>Kanalschaden</Klasse>
+        <Objekt>refSCHADEN2</Objekt>
+        <Bezeichnung>foto_schaden2_zweites.jpg</Bezeichnung>
+        <Relativpfad>Fotos</Relativpfad>
+      </VSA_KEK_2020_LV95.KEK.Datei>
+      <VSA_KEK_2020_LV95.KEK.Datei TID="refDATEI4">
+        <Art>Foto</Art>
+        <Klasse>Kanalschaden</Klasse>
+        <Objekt>refSCHADENFEHLT</Objekt>
+        <Bezeichnung>foto_verwaist.jpg</Bezeichnung>
+        <Relativpfad>Fotos</Relativpfad>
+      </VSA_KEK_2020_LV95.KEK.Datei>
+      <VSA_KEK_2020_LV95.KEK.Datei TID="refDATEI5">
+        <Art>Video</Art>
+        <Klasse>Untersuchung</Klasse>
+        <Objekt>refUNTERS1</Objekt>
+        <Bezeichnung>200-201.mpg</Bezeichnung>
+        <Relativpfad>Film</Relativpfad>
+      </VSA_KEK_2020_LV95.KEK.Datei>
+      <VSA_KEK_2020_LV95.KEK.Datei TID="refDATEI6">
+        <Art>Video</Art>
+        <Klasse>Untersuchung</Klasse>
+        <Objekt>refUNTERS2</Objekt>
+        <Bezeichnung>200-201_gegen.mp4</Bezeichnung>
+        <Relativpfad>Film</Relativpfad>
+      </VSA_KEK_2020_LV95.KEK.Datei>
+      <VSA_KEK_2020_LV95.KEK.Datei TID="refDATEI7">
+        <Art>Video</Art>
+        <Klasse>Untersuchung</Klasse>
+        <Objekt>refUNTERS5</Objekt>
+        <Bezeichnung>500.mp4</Bezeichnung>
+        <Relativpfad>Film</Relativpfad>
+      </VSA_KEK_2020_LV95.KEK.Datei>
+    </VSA_KEK_2020_LV95.KEK>
+  </DATASECTION>
+</TRANSFER>

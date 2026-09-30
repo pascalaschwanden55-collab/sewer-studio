@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Synthetische Referenzdatei fuer AP08 (keine Kundendaten). SIA405-Haltungen und eine
+     VSA-KEK-Untersuchung in derselben Datei: Heute gewinnt SIA405, die Untersuchung wird
+     nicht gelesen. -->
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION VERSION="2.3" SENDER="Referenzfall AP08">
+    <MODELS>
+      <MODEL NAME="SIA405_ABWASSER_2020_LV95" />
+      <MODEL NAME="VSA_KEK_2020_LV95" />
+    </MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="refB00000000ABW3">
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="refKANAL9">
+        <Bezeichnung>900-901</Bezeichnung>
+        <Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>
+        <BaulicherZustand>Z4</BaulicherZustand>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refHALTUNG9">
+        <Bezeichnung>900-901</Bezeichnung>
+        <Lichte_Hoehe>250</Lichte_Hoehe>
+        <Material>Steinzeug</Material>
+        <AbwasserbauwerkRef REF="refKANAL9" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    <VSA_KEK_2020_LV95.KEK BID="refB00000000KEK2">
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refUNTERS9">
+        <Bezeichnung>900-901</Bezeichnung>
+        <Zeitpunkt>20250320</Zeitpunkt>
+        <Erfassungsart>Kanalfernsehen</Erfassungsart>
+        <vonPunktBezeichnung>900</vonPunktBezeichnung>
+        <bisPunktBezeichnung>901</bisPunktBezeichnung>
+        <Fliessrichtung>in_Fliessrichtung</Fliessrichtung>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refSCHADEN9">
+        <UntersuchungRef REF="refUNTERS9" />
+        <KanalSchadencode>BCD</KanalSchadencode>
+        <Distanz>0.00</Distanz>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+    </VSA_KEK_2020_LV95.KEK>
+  </DATASECTION>
+</TRANSFER>
