@@ -33,6 +33,29 @@ from typing import Any, Mapping, Sequence
 from PIL import Image
 
 from haltungsidentitaet import physischer_schluessel
+import negativsatz_pruefung as negativsatz
+from negativsatz_pruefung import (
+    MIN_TRAINING_NEGATIVE_BYTES,
+    NEGATIVE_QUEUE_PURPOSE,
+    NEGATIVE_QUEUE_ROLE,
+    NEGATIVE_REVIEW_DECISIONS,
+    NEGATIVE_REVIEW_PURPOSE,
+    NEGATIVE_SET_PILOT,
+    NEGATIVE_SET_PURPOSE,
+    NEGATIVE_SET_ROLE,
+    NEGATIVE_SET_SCHEMA_VERSION,
+    NEGATIVE_SPLIT_SALT,
+    PROTO_IMAGE_ID_PREFIX,
+    PROTO_ITEM_ID_PREFIX,
+    PROTO_PILOT,
+    PROTO_QUEUE_PURPOSE,
+    PROTO_SET_PURPOSE,
+)
+from negativsatz_pruefung import canonical_json_bytes as _canonical_json_bytes
+from negativsatz_pruefung import require_count as _require_count
+from negativsatz_pruefung import require_exact_fields as _require_exact_fields
+from negativsatz_pruefung import require_sha256 as _require_sha256
+from negativsatz_pruefung import strict_json_bytes as _strict_json_bytes
 
 
 SCHEMA_VERSION = "1.1"
@@ -51,7 +74,6 @@ SPLIT_SALT = "split-v1"
 TRAIN_SHARE = 0.70
 VAL_SHARE = 0.15  # test = Rest (~0.15)
 PILOT_MIN_SAMPLES = 30
-MIN_TRAINING_NEGATIVE_BYTES = 1024
 MINIMUM_MASK_CONTAINMENT_NUMERATOR = 4
 MINIMUM_MASK_CONTAINMENT_DENOMINATOR = 5
 MINIMUM_MASK_CONTAINMENT_PERCENT = 80
@@ -67,25 +89,7 @@ PDF_GOLD_PROVENANCE_PATTERN = re.compile(
     re.ASCII,
 )
 PDF_GOLD_MATCH_KINDS = ("same_block", "photo_id", "time_meter_text")
-NEGATIVE_SET_SCHEMA_VERSION = "1.0"
-NEGATIVE_SET_PURPOSE = "bcc_reviewed_negative_set"
-NEGATIVE_SET_ROLE = "training_negative_set"
-NEGATIVE_SET_PILOT = "BCC_bogen"
-NEGATIVE_QUEUE_PURPOSE = "bcc_hard_negative_review_queue"
-NEGATIVE_QUEUE_ROLE = "training_candidate_review"
-NEGATIVE_REVIEW_PURPOSE = "bcc_hard_negative_review"
-NEGATIVE_SPLIT_SALT = "bcc-hard-negative-split-v1"
-NEGATIVE_REVIEW_DECISIONS = (
-    "all_classes_clear",
-    "mapped_object_visible",
-    "exclude_uncertain",
-)
-# Protokollbasierte Negativsaetze (Geschwister-Vertrag ohne Modellbindung).
-PROTO_SET_PURPOSE = "proto_reviewed_negative_set"
-PROTO_QUEUE_PURPOSE = "proto_hard_negative_review_queue"
-PROTO_PILOT = "protokoll_negative"
-PROTO_ITEM_ID_PREFIX = "proto-hn-"
-PROTO_IMAGE_ID_PREFIX = "proto-neg-"
+# Die Vertragskonstanten der Negativsaetze stehen in negativsatz_pruefung.py.
 PROTO_ENDPOINT_PREFIX = re.compile(r"^\d{1,2}\.(.{4,})$")
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 ACTIVE_CLASS_MAP_PATH = (
@@ -128,56 +132,6 @@ def _load_json_array(path: Path) -> list[dict[str, Any]]:
         raise ValueError(f"{path} muss ein JSON-Array enthalten.")
     if any(not isinstance(item, dict) for item in value):
         raise ValueError(f"{path} enthaelt einen ungueltigen Eintrag.")
-    return value
-
-
-def _canonical_json_bytes(value: Any) -> bytes:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-
-
-def _strict_json_bytes(data: bytes, label: str) -> Any:
-    def reject_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-        result: dict[str, Any] = {}
-        for key, value in pairs:
-            if key in result:
-                raise ValueError(f"{label} enthaelt ein doppeltes Feld: {key}")
-            result[key] = value
-        return result
-
-    try:
-        return json.loads(
-            data.decode("utf-8-sig"),
-            object_pairs_hook=reject_duplicates,
-        )
-    except (UnicodeError, json.JSONDecodeError) as error:
-        raise ValueError(f"{label} ist kein sicher lesbares JSON.") from error
-
-
-def _require_exact_fields(
-    value: Any,
-    expected: set[str],
-    label: str,
-) -> Mapping[str, Any]:
-    if not isinstance(value, dict) or set(value) != expected:
-        raise ValueError(f"{label} hat fehlende oder fremde Felder.")
-    return value
-
-
-def _require_sha256(value: Any, label: str) -> str:
-    text = str(value or "").strip().casefold()
-    if len(text) != 64 or any(character not in "0123456789abcdef" for character in text):
-        raise ValueError(f"{label} ist kein gueltiger SHA-256.")
-    return text
-
-
-def _require_count(value: Any, label: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise ValueError(f"{label} ist keine gueltige Anzahl.")
     return value
 
 
@@ -939,130 +893,22 @@ def _read_reviewed_negative_set(
         return _read_proto_reviewed_negative_set(
             knowledge_root, set_root, manifest_path, manifest_bytes
         )
-    manifest = _require_exact_fields(
-        _strict_json_bytes(manifest_bytes, "Negativsatz-Manifest"),
-        {
-            "schema_version",
-            "purpose",
-            "set_id",
-            "pilot",
-            "role",
-            "created_utc",
-            "frozen",
-            "dataset_status",
-            "hash_algorithm",
-            "images_count",
-            "holdings_count",
-            "hashes_count",
-            "hashes",
-            "semantic",
-        },
-        "Negativsatz-Manifest",
-    )
-    if (
-        manifest.get("schema_version") != NEGATIVE_SET_SCHEMA_VERSION
-        or manifest.get("purpose") != NEGATIVE_SET_PURPOSE
-        or manifest.get("pilot") != NEGATIVE_SET_PILOT
-        or manifest.get("role") != NEGATIVE_SET_ROLE
-        or manifest.get("frozen") is not True
-        or manifest.get("dataset_status") != "ready_for_training"
-        or manifest.get("hash_algorithm") != "sha256"
-        or not isinstance(manifest.get("created_utc"), str)
-        or not str(manifest.get("created_utc")).endswith("Z")
-    ):
-        raise ValueError("Der Negativsatz ist nicht streng eingefroren und trainingsbereit.")
-
-    semantic = _require_exact_fields(
-        manifest.get("semantic"),
-        {
-            "schema_version",
-            "purpose",
-            "pilot",
-            "role",
-            "queue",
-            "review",
-            "class_map_version",
-            "class_map_sha256",
-            "class_map_receipt_path",
-            "vsa_manifest_hash",
-            "class_names",
-            "protected_sets",
-            "protection_snapshot",
-            "split_rule",
-            "images",
-        },
-        "Semantischer Negativsatz-Beleg",
-    )
-    if (
-        semantic.get("schema_version") != NEGATIVE_SET_SCHEMA_VERSION
-        or semantic.get("purpose") != NEGATIVE_SET_PURPOSE
-        or semantic.get("pilot") != NEGATIVE_SET_PILOT
-        or semantic.get("role") != NEGATIVE_SET_ROLE
-    ):
-        raise ValueError("Manifest und semantischer Negativsatz-Beleg widersprechen sich.")
-    set_id = _require_sha256(manifest.get("set_id"), "Negativsatz-ID")
-    if hashlib.sha256(_canonical_json_bytes(semantic)).hexdigest() != set_id:
-        raise ValueError("Die Negativsatz-ID passt nicht zum semantischen Beleg.")
-    if set_root.name != f"bcc_hn_{set_id[:12]}":
-        raise ValueError("Der Negativsatz-Ordner passt nicht zur Negativsatz-ID.")
+    vertrag = negativsatz.BCC_VERTRAG
+    kopf = negativsatz.pruefe_satzkopf(manifest_bytes, set_root.name, vertrag)
+    manifest, semantic, set_id = kopf.manifest, kopf.semantic, kopf.set_id
 
     files, receipts = _verify_negative_set_files(set_root, manifest)
-    queue_binding = _require_exact_fields(
-        semantic.get("queue"),
-        {
-            "queue_id",
-            "queue_manifest_sha256",
-            "queue_manifest_receipt_path",
-            "candidates_sha256",
-            "candidates_receipt_path",
-        },
-        "Queue-Bindung",
-    )
-    review_binding = _require_exact_fields(
-        semantic.get("review"),
-        {
-            "purpose",
-            "review_sha256",
-            "receipt_path",
-            "reviewed_images",
-            "decision_counts",
-        },
-        "Review-Bindung",
-    )
-    if (
-        queue_binding.get("queue_manifest_receipt_path")
-        != "receipts/queue_manifest.json"
-        or queue_binding.get("candidates_receipt_path")
-        != "receipts/queue_candidates.json"
-        or review_binding.get("receipt_path") != "receipts/review.json"
-        or semantic.get("class_map_receipt_path") != "receipts/class_map.json"
-    ):
-        raise ValueError("Der Negativsatz verweist nicht auf die festen Belegpfade.")
-
-    queue_manifest_bytes = receipts["receipts/queue_manifest.json"]
-    candidates_bytes = receipts["receipts/queue_candidates.json"]
-    review_bytes = receipts["receipts/review.json"]
-    class_map_bytes = receipts["receipts/class_map.json"]
-    queue_manifest_sha = _require_sha256(
-        queue_binding.get("queue_manifest_sha256"),
-        "Queue-Manifest-Hash",
-    )
-    candidates_sha = _require_sha256(
-        queue_binding.get("candidates_sha256"),
-        "Kandidaten-Hash",
-    )
-    review_sha = _require_sha256(
-        review_binding.get("review_sha256"),
-        "Review-Hash",
-    )
-    if hashlib.sha256(queue_manifest_bytes).hexdigest() != queue_manifest_sha:
-        raise ValueError("Der Queue-Manifest-Beleg passt nicht zum Negativsatz.")
-    if hashlib.sha256(candidates_bytes).hexdigest() != candidates_sha:
-        raise ValueError("Der Kandidaten-Beleg passt nicht zum Negativsatz.")
-    if hashlib.sha256(review_bytes).hexdigest() != review_sha:
-        raise ValueError("Der Review-Beleg passt nicht zum Negativsatz.")
+    belege = negativsatz.pruefe_belegbindung(semantic, receipts, vertrag)
+    queue_binding = belege.queue_binding
+    review_binding = belege.review_binding
+    queue_manifest_bytes = belege.queue_manifest_bytes
+    candidates_bytes = belege.candidates_bytes
+    review_bytes = belege.review_bytes
+    queue_manifest_sha = belege.queue_manifest_sha
+    candidates_sha = belege.candidates_sha
+    review_sha = belege.review_sha
     class_map_version, class_map_sha, vsa_hash, class_names = (
-        _validate_class_map_receipt(class_map_bytes, semantic)
+        _validate_class_map_receipt(belege.class_map_bytes, semantic)
     )
 
     queue_manifest = _require_exact_fields(
@@ -1709,121 +1555,22 @@ def _read_proto_reviewed_negative_set(
     Geschwister-Vertrag: keine gebundenen Auswahlmodelle, kein Modelltrigger,
     protokollbasierte Auswahl. Das BCC-Verfahren bleibt unveraendert.
     """
-    manifest = _require_exact_fields(
-        _strict_json_bytes(manifest_bytes, "Negativsatz-Manifest"),
-        {
-            "schema_version",
-            "purpose",
-            "set_id",
-            "pilot",
-            "role",
-            "created_utc",
-            "frozen",
-            "dataset_status",
-            "hash_algorithm",
-            "images_count",
-            "holdings_count",
-            "hashes_count",
-            "hashes",
-            "semantic",
-        },
-        "Negativsatz-Manifest",
-    )
-    if (
-        manifest.get("schema_version") != NEGATIVE_SET_SCHEMA_VERSION
-        or manifest.get("purpose") != PROTO_SET_PURPOSE
-        or manifest.get("pilot") != PROTO_PILOT
-        or manifest.get("role") != NEGATIVE_SET_ROLE
-        or manifest.get("frozen") is not True
-        or manifest.get("dataset_status") != "ready_for_training"
-        or manifest.get("hash_algorithm") != "sha256"
-        or not isinstance(manifest.get("created_utc"), str)
-        or not str(manifest.get("created_utc")).endswith("Z")
-    ):
-        raise ValueError("Der Proto-Negativsatz ist nicht streng eingefroren und trainingsbereit.")
-
-    semantic = _require_exact_fields(
-        manifest.get("semantic"),
-        {
-            "schema_version",
-            "purpose",
-            "pilot",
-            "role",
-            "queue",
-            "review",
-            "class_map_version",
-            "class_map_sha256",
-            "class_map_receipt_path",
-            "vsa_manifest_hash",
-            "class_names",
-            "protected_sets",
-            "protection_snapshot",
-            "split_rule",
-            "images",
-            "excluded_not_normalizable",
-            "excluded_eval_protected",
-        },
-        "Semantischer Proto-Negativsatz-Beleg",
-    )
-    if (
-        semantic.get("schema_version") != NEGATIVE_SET_SCHEMA_VERSION
-        or semantic.get("purpose") != PROTO_SET_PURPOSE
-        or semantic.get("pilot") != PROTO_PILOT
-        or semantic.get("role") != NEGATIVE_SET_ROLE
-    ):
-        raise ValueError("Manifest und semantischer Proto-Beleg widersprechen sich.")
-    set_id = _require_sha256(manifest.get("set_id"), "Proto-Negativsatz-ID")
-    if hashlib.sha256(_canonical_json_bytes(semantic)).hexdigest() != set_id:
-        raise ValueError("Die Proto-Negativsatz-ID passt nicht zum semantischen Beleg.")
-    if set_root.name != f"proto_hn_{set_id[:12]}":
-        raise ValueError("Der Proto-Negativsatz-Ordner passt nicht zur Satz-ID.")
+    vertrag = negativsatz.PROTO_VERTRAG
+    kopf = negativsatz.pruefe_satzkopf(manifest_bytes, set_root.name, vertrag)
+    manifest, semantic, set_id = kopf.manifest, kopf.semantic, kopf.set_id
 
     files, receipts = _verify_negative_set_files(set_root, manifest)
-    queue_binding = _require_exact_fields(
-        semantic.get("queue"),
-        {
-            "queue_id",
-            "queue_manifest_sha256",
-            "queue_manifest_receipt_path",
-            "candidates_sha256",
-            "candidates_receipt_path",
-        },
-        "Proto-Queue-Bindung",
-    )
-    review_binding = _require_exact_fields(
-        semantic.get("review"),
-        {
-            "purpose",
-            "review_sha256",
-            "receipt_path",
-            "reviewed_images",
-            "decision_counts",
-        },
-        "Proto-Review-Bindung",
-    )
-    if (
-        queue_binding.get("queue_manifest_receipt_path") != "receipts/queue_manifest.json"
-        or queue_binding.get("candidates_receipt_path") != "receipts/queue_candidates.json"
-        or review_binding.get("receipt_path") != "receipts/review.json"
-        or semantic.get("class_map_receipt_path") != "receipts/class_map.json"
-    ):
-        raise ValueError("Der Proto-Negativsatz verweist nicht auf die festen Belegpfade.")
-
-    queue_manifest_bytes = receipts["receipts/queue_manifest.json"]
-    candidates_bytes = receipts["receipts/queue_candidates.json"]
-    review_bytes = receipts["receipts/review.json"]
-    class_map_bytes = receipts["receipts/class_map.json"]
-    queue_manifest_sha = _require_sha256(queue_binding.get("queue_manifest_sha256"), "Queue-Manifest-Hash")
-    candidates_sha = _require_sha256(queue_binding.get("candidates_sha256"), "Kandidaten-Hash")
-    review_sha = _require_sha256(review_binding.get("review_sha256"), "Review-Hash")
-    if hashlib.sha256(queue_manifest_bytes).hexdigest() != queue_manifest_sha:
-        raise ValueError("Der Queue-Manifest-Beleg passt nicht zum Proto-Satz.")
-    if hashlib.sha256(candidates_bytes).hexdigest() != candidates_sha:
-        raise ValueError("Der Kandidaten-Beleg passt nicht zum Proto-Satz.")
-    if hashlib.sha256(review_bytes).hexdigest() != review_sha:
-        raise ValueError("Der Review-Beleg passt nicht zum Proto-Satz.")
+    belege = negativsatz.pruefe_belegbindung(semantic, receipts, vertrag)
+    queue_binding = belege.queue_binding
+    review_binding = belege.review_binding
+    queue_manifest_bytes = belege.queue_manifest_bytes
+    candidates_bytes = belege.candidates_bytes
+    review_bytes = belege.review_bytes
+    queue_manifest_sha = belege.queue_manifest_sha
+    candidates_sha = belege.candidates_sha
+    review_sha = belege.review_sha
     class_map_version, class_map_sha, vsa_hash, class_names = (
-        _validate_class_map_receipt(class_map_bytes, semantic)
+        _validate_class_map_receipt(belege.class_map_bytes, semantic)
     )
 
     queue_manifest = _require_exact_fields(
