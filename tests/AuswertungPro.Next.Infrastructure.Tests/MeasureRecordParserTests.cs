@@ -196,6 +196,8 @@ public sealed class MeasureRecordParserTests
     [InlineData("3,2", 3)]   // Komma als Dezimaltrennzeichen
     [InlineData("2,5", 3)]   // Mittelwert rundet aufwaerts (AwayFromZero)
     [InlineData("-3,5", -4)] // Mittelwert bei negativem Wert rundet von Null weg
+    [InlineData("2147483647", int.MaxValue)]
+    [InlineData("-2147483648", int.MinValue)]
     public void TryParseInt_ReturnsExpected(string? input, int? expected)
         => Assert.Equal(expected, MeasureRecordParser.TryParseInt(input));
 
