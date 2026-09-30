@@ -38,6 +38,7 @@ public sealed partial class MultiModelAnalysisService
     // Checkpoint-Journal (Resume): null = ohne Journal (Tests/aeltere Aufrufer).
     private readonly IAnalysisCheckpointJournal? _checkpointJournal;
     // Ausgelagerte Modellschritte (AP05b); ohne eigenen Laufzustand, daher je Dienst einmal.
+    private readonly MultiModelYoloSchritt _yoloSchritt;
     private readonly MultiModelDinoSchritt _dinoSchritt;
     private readonly MultiModelSamSchritt _samSchritt;
 
@@ -126,6 +127,7 @@ public sealed partial class MultiModelAnalysisService
         _expectedYoloModel = options.ExpectedYoloModel();
         _checkpointJournal = checkpointJournal;
         _sidecarRestart = sidecarRestart;
+        _yoloSchritt = new MultiModelYoloSchritt(client, config, _minClassConfidence, _expectedYoloModel, _logger);
         _dinoSchritt = new MultiModelDinoSchritt(client, config, _logger);
         _samSchritt = new MultiModelSamSchritt(client, _logger);
     }
@@ -353,31 +355,21 @@ public sealed partial class MultiModelAnalysisService
             return MultiModelBildErgebnis.Uebersprungen(run.LastMeter);
         }
 
-        // ── Telemetrie-Bypass: Frames ohne YOLO-Detection an Qwen schicken ──
-        // YOLO erkennt nur Schaeden — Bestandsaufnahme (Anschluesse, Boegen,
-        // Ablagerungen, Rohranfang/Ende) wird verpasst.
-        // Loesung: Jeden N-ten Frame + BCD/BCE-Zonen immer analysieren.
         double estimatedMeter = EstimateMeter(run, t);
         var bild = new MultiModelBildKontext(t, frameBytes, trace, frameSw, extractionMs, estimatedMeter);
         var frameBase64 = bild.FrameBase64;
-        bool isAfterOsd = t > 20.0; // OSD-Einblendung 10-20 Sekunden je nach Operateur
-        bool isBcdZone = isAfterOsd && estimatedMeter < 1.5 && run.FrameIndex <= 10;
-        bool isBceZone = duration > 10 && t > (duration - FrameStepSeconds * 2);
-        // Jeden 3. Frame immer analysieren (Bestandsaufnahme-Sweep)
-        bool isPeriodicSweep = isAfterOsd && (run.FrameIndex % 3 == 0);
-        bool detectorQualificationBypass = !run.DetectorQualified;
-        bool telemetryBypass =
-            detectorQualificationBypass || isBcdZone || isBceZone || isPeriodicSweep;
+        // Telemetrie-Bypass: Bestandsaufnahme-Sweep, BCD-/BCE-Zone und gesperrter Detektor laufen
+        // ohne YOLO-Detect an DINO weiter (Regeln im YOLO-Schritt).
+        var yoloUmgehung = MultiModelYoloSchritt.Umgehung.Bestimme(run, t, estimatedMeter, FrameStepSeconds);
 
         trace.Meter = estimatedMeter;
-        trace.YoloBypass = telemetryBypass;
-        if (detectorQualificationBypass)
+        trace.YoloBypass = yoloUmgehung.Aktiv;
+        if (yoloUmgehung.QualifikationGesperrt)
             MarkTraceDegraded(trace, "detector_unqualified");
 
         // ── YOLO-cls Vorfilter + Frame-Quality-Gate (CPU-billig) ──
         // Gilt bewusst AUCH fuer Sweep-/BCD-/BCE-Frames: vorher konnten schwarze
         // oder strukturlose Bypass-Frames ungefiltert bis zu Qwen (120s-Cap) laufen.
-        var phaseSw = Stopwatch.StartNew();
         YoloClassifyResponse? clsResult = null;
         if (UseClsPrefilter) try
         {
@@ -438,156 +430,14 @@ public sealed partial class MultiModelAnalysisService
                 _logger.LogDebug(ex, "Frame {Frame}: YOLO-cls nicht verfuegbar, ueberspringe Vorfilter", run.FrameIndex);
         }
 
-        // ── Step 1: YOLO Pre-Screening ──
-        phaseSw.Restart();
-        YoloResponse yoloResult;
-        long yoloMs;
-
-        if (telemetryBypass)
-        {
-            // YOLO-Detect ueberspringen — Frame direkt an DINO/Qwen weiterleiten.
-            // frame_class ehrlich als "sweep" markieren: BCD/BCE sind hier nur
-            // Zonen-Heuristiken, keine Detektionen.
-            yoloResult = new YoloResponse(
-                IsRelevant: true,
-                Detections: Array.Empty<YoloDetectionDto>(),
-                FrameClass: detectorQualificationBypass ? "detector_unqualified" : "sweep",
-                InferenceTimeMs: 0);
-            yoloMs = 0;
-            var zone = detectorQualificationBypass ? "YOLO gesperrt – DINO/SAM-Prüfung"
-                : isBcdZone ? "BCD-Zone (Rohranfang)"
-                : isBceZone ? "BCE-Zone (Rohrende)"
-                : "Bestandsaufnahme-Sweep";
-            _logger.LogDebug("Frame {Frame}: Telemetrie-Bypass ({Zone}) @ {Meter:F2}m",
-                run.FrameIndex, zone, estimatedMeter);
-            progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
-                $"Frame {run.FrameIndex}/{totalFrames} – {zone} @ {estimatedMeter:F1}m",
-                FramePreviewPng: frameBytes));
-        }
-        else
-        {
-            progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
-                $"Frame {run.FrameIndex}/{totalFrames} – YOLO Pre-Screening...",
-                FramePreviewPng: frameBytes));
-
-            try
-            {
-                // Niedrigsten klassenspezifischen Threshold senden (mehr Kandidaten),
-                // dann in C# pro Klasse nachfiltern
-                double minConf = _minClassConfidence;
-                yoloResult = await _client.DetectYoloAsync(
-                    new YoloRequest(frameBase64, minConf), ct).ConfigureAwait(false);
-
-                // Die Qualifikation kann sich zwischen /health und Inferenz aendern.
-                // Auch die konkrete Antwort muss deshalb ein ausdrueckliches true tragen.
-                if (yoloResult.DetectorQualified != true)
-                {
-                    run.EffectiveDetectorQualified = yoloResult.DetectorQualified;
-                    run.DetectorQualified = false;
-                    run.DetectorQualificationReason =
-                        yoloResult.DetectorQualificationReason
-                        ?? "YOLO-Antwort ohne positive Detektorqualifikation";
-                    detectorQualificationBypass = true;
-                    trace.YoloBypass = true;
-                    MarkTraceDegraded(trace, "detector_unqualified_response");
-                    yoloResult = yoloResult with
-                    {
-                        IsRelevant = true,
-                        Detections = Array.Empty<YoloDetectionDto>(),
-                        FrameClass = "detector_unqualified",
-                    };
-                    progress?.Report(new VideoAnalysisProgress(
-                        run.FrameIndex,
-                        totalFrames,
-                        "WARNUNG: YOLO-Freigabe während des Laufs fehlt – DINO/SAM laufen weiter."));
-                }
-
-                // COCO-Fallback sichtbar machen: laeuft der Sidecar nicht mit den
-                // eigenen Gewichten (yolo26m), ist die Schadenserkennung faktisch
-                // blind — das darf nie wieder still passieren (realer Vorfall 2026-06-09).
-                if (!detectorQualificationBypass
-                    && !run.YoloFallbackWarned
-                    && yoloResult.ModelName is { Length: > 0 } yoloModelName
-                    && !yoloModelName.Contains(_expectedYoloModel, StringComparison.OrdinalIgnoreCase))
-                {
-                    run.YoloFallbackWarned = true;
-                    _logger.LogWarning(
-                        "YOLO laeuft mit '{Model}' statt der eigenen Gewichte ({Expected}) – COCO-Fallback, Schadenserkennung stark eingeschraenkt!",
-                        yoloModelName, _expectedYoloModel);
-                    progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
-                        $"WARNUNG: YOLO-Fallback aktiv ('{yoloModelName}' statt {_expectedYoloModel}) – Schadenserkennung eingeschränkt!"));
-                }
-
-                // Klassenspezifische Filterung: Jede Klasse hat ihren eigenen Schwellenwert
-                if (!detectorQualificationBypass
-                    && yoloResult.Detections.Count > 0
-                    && _config.YoloClassConfidence.Count > 0)
-                {
-                    var filtered = yoloResult.Detections
-                        .Where(d =>
-                        {
-                            // VSA-Hauptcode aus YOLO-Klassenname ableiten ("crack" → BAB,
-                            // legacy "BAB_crack" → BAB); ohne Zuordnung gilt die Default-Schwelle
-                            var baseCode = YoloClassVsaMapper.ToVsaMainCode(d.ClassName);
-                            var threshold = baseCode is not null
-                                ? _config.YoloClassConfidence.GetValueOrDefault(baseCode, _config.YoloConfidence)
-                                : _config.YoloConfidence;
-                            return d.Confidence >= threshold;
-                        })
-                        .ToList();
-                    yoloResult = yoloResult with
-                    {
-                        Detections = filtered,
-                        IsRelevant = filtered.Count > 0
-                    };
-                }
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                // Nutzerabbruch: sofort weiterwerfen, nie als Sidecar-Ausfall zaehlen.
-                throw;
-            }
-            catch (SidecarInsufficientVramException ex)
-            {
-                // Paket 2/A4: VRAM-Mangel ist ein Kapazitaetsfehler, KEIN Transport-Ausfall:
-                // kein Outage-Zaehler, kein Neustart — wie ein Modellfehler ueberspringen
-                // (Skip-Quote + Incomplete); das Checkpoint-Journal schreibt weiter retry_required.
-                _logger.LogWarning(ex, "Frame {Frame}: YOLO wegen VRAM-Mangels uebersprungen", run.FrameIndex);
-                progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
-                    $"Frame {run.FrameIndex} – YOLO übersprungen: {ex.Message}"));
-                telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, phaseSw.ElapsedMilliseconds, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-                trace.Path = "yolo_error";
-                trace.DropReason = "vram_insufficient";
-                MarkTraceDegraded(trace, "vram_insufficient");
-                return MultiModelBildErgebnis.VramMangel(ex.Message, estimatedMeter);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Frame {Frame}: YOLO detection failed", run.FrameIndex);
-                progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
-                    $"Frame {run.FrameIndex} – YOLO Fehler: {ex.Message}"));
-                telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, phaseSw.ElapsedMilliseconds, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-                return MultiModelBildErgebnis.Transportfehler("yolo_error", estimatedMeter);
-            }
-            yoloMs = phaseSw.ElapsedMilliseconds;
-        }
-
-        trace.YoloRelevant = yoloResult.IsRelevant;
-        trace.YoloDetectionCount = yoloResult.Detections.Count;
-
-        if (!yoloResult.IsRelevant)
-        {
-            run.SkippedFrames++;
-            progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
-                $"Frame {run.FrameIndex}/{totalFrames} – übersprungen (YOLO: irrelevant, {run.SkippedFrames} gesamt)"));
-            telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, yoloMs, 0, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-            trace.Path = "yolo_irrelevant";
-            trace.DropReason = "yolo_irrelevant";
-            return MultiModelBildErgebnis.Uebersprungen(estimatedMeter);
-        }
+        // ── Step 1: YOLO Pre-Screening (Umgehung, Qualifikation, Klassenschwellen, COCO-Warnung im YOLO-Schritt) ──
+        var yolo = await _yoloSchritt.PruefeAsync(run, bild, yoloUmgehung, ct).ConfigureAwait(false);
+        if (yolo.Abschluss is { } yoloAbschluss)
+            return yoloAbschluss;
+        var yoloResult = yolo.Antwort!;
+        var detectorQualificationBypass = yolo.QualifikationGesperrt;
 
         // ── Step 2: Grounding DINO Detection (degraded, ohne Box und Grundgeruest im DINO-Schritt) ──
-        bild.YoloMs = yoloMs;
         var dino = await _dinoSchritt.ErkenneAsync(run, bild, ct).ConfigureAwait(false);
         if (dino.Abschluss is { } dinoAbschluss)
             return dinoAbschluss;
@@ -684,7 +534,7 @@ public sealed partial class MultiModelAnalysisService
             }
         }
 
-        telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, yoloMs, bild.DinoMs, samMs, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
+        telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, bild.YoloMs, bild.DinoMs, samMs, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
 
         var (meterSource, isMeterEstimated) = GetDedupMeterMetadata(qwenMeterAccepted);
         trace.Meter = meter;
