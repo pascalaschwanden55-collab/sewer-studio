@@ -218,10 +218,10 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
 
                     found++;
 
-                    var kandidaten = inspections
-                        .Where(i => i.SectionFk == section.Pk)
-                        .OrderByDescending(i => i.SortKey)
-                        .ToList();
+                    // Neueste glaubwuerdige zuerst; dieselbe Regel gilt fuer den VSA-KEK-XTF-Import.
+                    var kandidaten = AuswertungPro.Next.Application.UseCases.Import.Quellen.UntersuchungsAuswahl.Ordne(
+                        inspections.Where(i => i.SectionFk == section.Pk),
+                        i => i.SortKey);
                     var inspection = kandidaten.FirstOrDefault();
 
                     // Mehr als eine Untersuchung je Haltung: Nur die neueste kommt ins

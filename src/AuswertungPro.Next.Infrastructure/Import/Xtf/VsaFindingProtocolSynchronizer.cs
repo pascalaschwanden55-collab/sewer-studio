@@ -46,10 +46,23 @@ internal static class VsaFindingProtocolSynchronizer
         SyncRevision(record.Protocol.Original, findings);
         SyncRevision(record.Protocol.Current, findings);
         foreach (var revision in record.Protocol.History)
+        {
+            // Eine Fassung mit eigenem Importbeleg ist eine andere Befahrung (weitere
+            // WinCan- oder VSA-KEK-Untersuchung, z.B. die Gegenbefahrung). Die Befunde der
+            // Haupt-Untersuchung duerfen dort weder Fotos noch Texte nachtragen.
+            if (IstAndereBefahrung(record.Protocol, revision))
+                continue;
             SyncRevision(revision, findings);
+        }
     }
 
-    private static List<ProtocolEntry> BuildImportedEntries(IReadOnlyList<VsaFinding> findings)
+    private static bool IstAndereBefahrung(ProtocolDocument protokoll, ProtocolRevision revision)
+        => !string.IsNullOrEmpty(revision.ImportFingerprint)
+           && revision.ImportFingerprint != protokoll.Current?.ImportFingerprint
+           && revision.ImportFingerprint != protokoll.Original?.ImportFingerprint;
+
+    /// <summary>Protokollzeilen aus Befunden, mit ihren eigenen Metern (nicht umgerechnet).</summary>
+    internal static List<ProtocolEntry> BuildImportedEntries(IReadOnlyList<VsaFinding> findings)
     {
         var entries = new List<ProtocolEntry>(findings.Count);
         foreach (var finding in findings)

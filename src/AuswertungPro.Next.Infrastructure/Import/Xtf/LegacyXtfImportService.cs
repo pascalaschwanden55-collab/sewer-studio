@@ -180,7 +180,10 @@ public sealed partial class LegacyXtfImportService
                 }
             }
 
-            var records = ParseSia405(doc);
+            var records = ParseSia405(doc, out var doppelte);
+            foreach (var meldung in doppelte)
+                stats.Messages.Add(new ImportMessage { Level = "Warn", Context = "XTF405", Message = meldung });
+
             if (records.Count > 0)
             {
                 sia405Imported = true;
@@ -212,7 +215,7 @@ public sealed partial class LegacyXtfImportService
         // VSA_KEK verarbeiten, wenn NICHT bereits erfolgreich als SIA405 importiert
         if (!sia405Imported && isVsa)
         {
-            var ergebnis = ParseVsaKek(doc, path, mediaPaths, out _);
+            var ergebnis = ParseVsaKek(doc, path, mediaPaths);
             stats.Found += ergebnis.Haltungen.Count;
 
             foreach (var rec in ergebnis.Haltungen)
@@ -251,6 +254,10 @@ public sealed partial class LegacyXtfImportService
                     Message = $"Untersuchung \"{offen.Bezeichnung}\" nicht zugeordnet: {offen.Grund}"
                 });
             }
+
+            // Weitere Untersuchungen derselben Haltung (z.B. Gegenbefahrung): als eigene
+            // Protokollfassung ablegen, erst nach der Uebernahme der Haupt-Untersuchungen.
+            VsaKekWeitereUntersuchungen.LegeAb(project, ergebnis.Weitere, stats);
         }
 
         if (!isSia405 && !isVsa)
@@ -403,16 +410,17 @@ public sealed partial class LegacyXtfImportService
         => Common.HoldingKeyNormalizer.Normalize(value);
 
     // ===================== SIA405 =====================
-    private static List<HaltungRecord> ParseSia405(XDocument doc)
+    private static List<HaltungRecord> ParseSia405(XDocument doc, out List<string> doppelte)
     {
         // Drei getrennte Schritte, damit eine neue Feldregel nur die Abbildung beruehrt:
         // 1. Objekte lesen — die Verweise bleiben Kennungen,
         // 2. Bezuege aufloesen — Kanal, Rohrprofil, Organisationen, Schachtnamen,
+        //    danach je Bezeichnung nur die erste Haltung (keine Vermischung),
         // 3. fachlich abbilden — welche Angabe in welches Programmfeld geht.
         // Die Uebernahme ins Projekt (Handwertschutz, Konflikte) macht danach
         // MergeRecordIntoProject.
         var bestand = Sia405ObjektLeser.Lies(doc);
-        return Sia405Beziehungen.Loese(bestand)
+        return Sia405DoppelteBezeichnungen.NurErste(Sia405Beziehungen.Loese(bestand), out doppelte)
             .Select(Sia405HaltungAbbildung.BaueRecord)
             .ToList();
     }
