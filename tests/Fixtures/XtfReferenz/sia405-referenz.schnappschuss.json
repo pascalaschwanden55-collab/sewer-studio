@@ -394,14 +394,14 @@
           "Bemerkungen": "Kanal mit allen Feldern\nZugaenglichkeit: zugaenglich",
           "Bettung_Umhuellung": "Sand",
           "Bruttokosten": "12500",
-          "DN_mm": "700",
-          "Datenherr": "unbekannt",
+          "DN_mm": "600",
+          "Datenherr": "Kanton Referenz",
           "Datenlieferant": "Inspektion Muster AG",
           "Datum_Jahr": "",
-          "Eigentuemer": "Privat",
+          "Eigentuemer": "Gemeinde Referenz",
           "Empfohlene_Sanierungsmassnahmen": "",
           "Erneuerung_Neubau_m": "",
-          "FunktionHierarchisch": "PAA.Liegenschaftsentwaesserung",
+          "FunktionHierarchisch": "PAA.Sammelkanal",
           "FunktionHydraulisch": "Freispiegelleitung",
           "GEONIS_Kennung": "",
           "Gewaesserschutz": "",
@@ -416,9 +416,9 @@
           "Linerendmanschette_LEM": "",
           "Link": "",
           "NR": "",
-          "Nutzungsart": "Regenabwasser",
-          "Objekt_ID": "refHALTUNG7",
-          "Offen_abgeschlossen": "offen",
+          "Nutzungsart": "Schmutzabwasser",
+          "Objekt_ID": "refHALTUNG1",
+          "Offen_abgeschlossen": "abgeschlossen",
           "Organisation": "",
           "Primaere_Schaeden": "",
           "Profiltyp": "Rechteckprofil (R)",
@@ -428,12 +428,12 @@
           "Renovierung_Inliner_m": "",
           "Reparatur_Kurzliner": "",
           "Reparatur_Manschette": "",
-          "Rohrmaterial": "Steinzeug",
+          "Rohrmaterial": "Normalbeton",
           "Sanieren_JaNein": "",
           "Sanierungsbedarf": "Mittelfristig",
           "Schacht_oben": "100",
           "Schacht_unten": "101",
-          "Status": "Ausser Betrieb",
+          "Status": "In Betrieb",
           "Strasse": "Referenzstrasse 1",
           "VSA_Geschaetzt": "",
           "VSA_Zustandsnote_B": "",
@@ -2199,7 +2199,7 @@
     "Id": "<laufabhaengig>",
     "ImportHistory": [
       {
-        "count": 6,
+        "count": 5,
         "file": "sia405-referenz.xtf",
         "timestampUtc": "<laufabhaengig>",
         "type": "xtf405"
@@ -2616,7 +2616,7 @@
     "Conflicts": 0,
     "CreatedRecords": 10,
     "Errors": 0,
-    "Found": 6,
+    "Found": 5,
     "Messages": [
       {
         "Context": "XTF405",
@@ -2625,8 +2625,13 @@
       },
       {
         "Context": "XTF405",
+        "Level": "Warn",
+        "Message": "Haltung '100-101' kommt zweimal vor (TID refHALTUNG1, TID refHALTUNG7) – nur die erste übernommen."
+      },
+      {
+        "Context": "XTF405",
         "Level": "Info",
-        "Message": "Importiert 6 Haltungen aus sia405-referenz.xtf"
+        "Message": "Importiert 5 Haltungen aus sia405-referenz.xtf"
       },
       {
         "Context": "XTF-ZUSATZ",
@@ -2640,7 +2645,7 @@
       }
     ],
     "Uncertain": 0,
-    "UpdatedFields": 64,
-    "UpdatedRecords": 1
+    "UpdatedFields": 55,
+    "UpdatedRecords": 0
   }
 }
