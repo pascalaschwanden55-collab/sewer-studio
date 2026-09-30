@@ -172,9 +172,12 @@ internal static class MeasureRecordParser
             return intValue;
 
         // Gemeinsame Dezimalregel mit TryParseDecimal: Komma als Trennzeichen, invariant-kulturell.
-        return TryParseDecimal(text) is decimal decimalValue
-            ? (int)Math.Round(decimalValue, 0, MidpointRounding.AwayFromZero)
-            : null;
+        // Ausserhalb des int-Bereichs gilt der Wert als nicht lesbar (null) statt eine
+        // OverflowException aus dem Cast zu werfen - wie jede andere ungueltige Eingabe.
+        if (TryParseDecimal(text) is not decimal decimalValue)
+            return null;
+        var gerundet = Math.Round(decimalValue, 0, MidpointRounding.AwayFromZero);
+        return gerundet is >= int.MinValue and <= int.MaxValue ? (int)gerundet : null;
     }
 
     // ── Signaturen ───────────────────────────────────────────────────
