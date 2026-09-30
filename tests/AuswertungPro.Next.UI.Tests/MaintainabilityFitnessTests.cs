@@ -61,7 +61,7 @@ public sealed class MaintainabilityFitnessTests
         ["AuswertungPro.Next.UI.ViewModels.Pages.ExportPageViewModel"] = 1_889,
         ["AuswertungPro.Next.Infrastructure.Import.WinCan.WinCanDbImportService"] = 1_821,
         ["AuswertungPro.Next.UI.ViewModels.ShellViewModel"] = 1_783,
-        ["AuswertungPro.Next.Infrastructure.Ai.Training.ExportPlans.TrainingExportRegistryFileStore"] = 1_745,
+        ["AuswertungPro.Next.Infrastructure.Ai.Training.ExportPlans.TrainingExportRegistryFileStore"] = 1_721,
         ["AuswertungPro.Next.UI.Views.Pages.SchaechtePage"] = 1_687,
         ["AuswertungPro.Next.UI.ViewModels.Pages.DossiersPageViewModel"] = 1_642,
         ["AuswertungPro.Next.UI.Views.Windows.StartupSplashWindow"] = 1_618,
