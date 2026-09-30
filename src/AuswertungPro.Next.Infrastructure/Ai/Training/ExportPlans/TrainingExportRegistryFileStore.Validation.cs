@@ -336,32 +336,8 @@ public sealed partial class TrainingExportRegistryFileStore
             throw new TrainingExportPlanException(
                 "Die Splitregel im Negativ-Set-Manifest passt nicht zu den Bildern.");
         }
-        var knownHoldings = semantic.Images
-            .Select(image => image.PhysicalHoldingKey)
-            .ToHashSet(StringComparer.Ordinal);
-        var forcedSplits = new Dictionary<string, TrainingExportTarget>(StringComparer.Ordinal);
-        foreach (var alignment in semantic.SplitRule.GoldAlignments)
-        {
-            if (alignment is null
-                || string.IsNullOrWhiteSpace(alignment.PhysicalHoldingKey)
-                || !knownHoldings.Contains(alignment.PhysicalHoldingKey)
-                || alignment.GoldRole is not ("train" or "val" or "test"))
-            {
-                throw new TrainingExportPlanException(
-                    "Eine Gold-Ausrichtung im Negativ-Set-Manifest ist ungültig.");
-            }
-            var expectedForcedSplit = alignment.GoldRole == "train" ? "train" : "validation";
-            if (!string.Equals(alignment.ForcedSplit, expectedForcedSplit, StringComparison.Ordinal)
-                || !forcedSplits.TryAdd(
-                    alignment.PhysicalHoldingKey,
-                    alignment.GoldRole == "train"
-                        ? TrainingExportTarget.Train
-                        : TrainingExportTarget.Validation))
-            {
-                throw new TrainingExportPlanException(
-                    "Eine Gold-Ausrichtung im Negativ-Set-Manifest ist ungültig.");
-            }
-        }
+        var forcedSplits = NegativeSetGoldAusrichtung.ErzwungeneSplits(
+            semantic.Images.Select(image => image.PhysicalHoldingKey), semantic.SplitRule.GoldAlignments);
         var appliedValidationCount = 0;
         foreach (var image in semantic.Images)
         {

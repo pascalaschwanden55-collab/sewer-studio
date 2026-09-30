@@ -280,6 +280,55 @@ class ProtoHardNegativeTests(unittest.TestCase):
             self.assertEqual(len(regel["gold_alignments"]), 1)
             self.assertEqual(regel["gold_alignments"][0]["physical_holding_key"], item["physical"])
 
+    def _gold_test_queue(self):
+        """Zwei klassenfreie Bilder; 100-200 ist ueber das Gold-Sample 200-100 eine Gold-Testhaltung."""
+        import gold_stock_audit
+        self.assertEqual(gold_stock_audit.split_role("haltung:200-100"), "test")
+        self._add_photo("t1.jpg", 80)
+        self._add_photo("t2.jpg", 81)
+        selected, _ = self._select([
+            _befund("BCDYA", "t1.jpg", "100-200"),
+            _befund("AEDXA", "t2.jpg", "700-800"),
+        ])
+        plan = MODULE.build_queue_plan(self.knowledge, selected, self.class_map)
+        queue_root = MODULE.publish_queue(plan)
+        candidates = json.loads((queue_root / "_candidates.json").read_text(encoding="utf-8"))
+        review_path = self._write_bound_review(
+            queue_root, {c["id"]: {"decision": "all_classes_clear"} for c in candidates})
+        return queue_root, review_path
+
+    def test_gold_testhaltung_im_eval_schutz_wird_vorab_ausgeschlossen(self):
+        # Entscheid 30.09.2026 (2): Die Testgruppe des juengsten Gold-Audits ist
+        # Teil des Eval-Schutzes; die Ableitung schliesst das Bild begruendet aus,
+        # der Pruefer nimmt den Satz an.
+        import gold_stock_audit
+        self._write_samples([])
+        reports = self.knowledge / "training" / "reports"
+        reports.mkdir(parents=True)
+        (reports / "gold_stock_audit_20260101_000000_000.json").write_text(json.dumps({
+            "split": {"gruppen": [{"gruppe": "haltung:200-100", "rolle": "test"}]},
+            "samples": [{"haltung_key": "200-100", "rolle": "test"}],
+        }), encoding="utf-8")
+        queue_root, review_path = self._gold_test_queue()
+        set_plan = MODULE.build_set_plan(self.knowledge, queue_root, review_path, CLASS_MAP)
+        self.assertEqual([i["holding_key"] for i in set_plan["items"]], ["700-800"])
+        self.assertEqual(len(set_plan["semantic"]["excluded_eval_protected"]), 1)
+        set_root = MODULE.publish_set(set_plan)
+        images, _provenance = gold_stock_audit._read_reviewed_negative_set(self.knowledge, set_root)
+        self.assertEqual([img["holding_key"] for img in images], ["700-800"])
+
+    def test_gold_testhaltung_ohne_eval_schutz_stoppt_die_ableitung(self):
+        # Heute erzwang die Gold-Rolle test nur validation. Ohne Eval-Schutzbeleg
+        # laesst sich das Bild nicht begruendet ausschliessen; der Pruefer wuerde
+        # den Satz ablehnen. Die Ableitung stoppt deshalb vorab mit klarer Meldung.
+        self._write_samples([{
+            "SampleId": "wb_gold_test", "CaseId": "200-100", "Code": "BAHCA",
+            "Signature": "200-100|BAHCA|0.0|0.0",
+        }])
+        queue_root, review_path = self._gold_test_queue()
+        with self.assertRaisesRegex(ValueError, r"Gold-Testhaltung.*100-200"):
+            MODULE.build_set_plan(self.knowledge, queue_root, review_path, CLASS_MAP)
+
     def test_publizierter_satz_besteht_audit_validierung(self):
         import gold_stock_audit
         queue_root = self._publish_test_queue()

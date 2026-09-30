@@ -859,6 +859,56 @@ def _gold_split_roles_by_physical(knowledge_root: Path) -> dict[str, str]:
     return roles
 
 
+def _gold_test_haltungen(knowledge_root: Path) -> set[str]:
+    """Physische Schluessel aller Gold-Testhaltungen (Entscheid 30.09.2026).
+
+    Zwei Quellen, beide je Richtung ausgewertet, damit eine Gegenrichtung mit
+    der Rolle test die ganze physische Haltung sperrt:
+    - der aktuelle Gold-Split aus ``training_samples.json`` (dieselbe Grundlage
+      wie die Gold-Ausrichtung der Proto-Splitregel),
+    - die Rolle ``test`` im juengsten Gold-Audit (Samples, auch aus
+      Haltungsverbuenden, und Haltungsgruppen).
+    Unlesbare Dateien liefern wie bei Gold-Ausrichtung und Eval-Schutz nichts;
+    die strenge Bindung an einen bestimmten Gold-Audit leistet
+    ``prepare_detect_gold`` (Audit-Testhaltungen sind dort gesperrt).
+    """
+    keys: set[str] = set()
+
+    def add(raw: Any) -> None:
+        normalized = normalize_holding_key(str(raw or ""))
+        if normalized:
+            keys.add(_physical_holding_key(normalized))
+
+    try:
+        samples = json.loads(
+            (knowledge_root / "training_samples.json").read_text(encoding="utf-8-sig")
+        )
+    except (OSError, json.JSONDecodeError):
+        samples = []
+    for sample in samples if isinstance(samples, list) else []:
+        if not isinstance(sample, dict):
+            continue
+        normalized = normalize_holding_key(str(sample.get("CaseId") or ""))
+        if normalized and split_role(f"haltung:{normalized}") == "test":
+            keys.add(_physical_holding_key(normalized))
+
+    reports = sorted((knowledge_root / "training" / "reports").glob("gold_stock_audit_*.json"))
+    if reports:
+        try:
+            latest = json.loads(reports[-1].read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            latest = {}
+        if isinstance(latest, dict):
+            for sample in latest.get("samples") or []:
+                if isinstance(sample, dict) and sample.get("rolle") == "test":
+                    add(sample.get("haltung_key"))
+            split = latest.get("split")
+            for gruppe in (split.get("gruppen") or []) if isinstance(split, dict) else []:
+                if isinstance(gruppe, dict) and gruppe.get("rolle") == "test":
+                    add(str(gruppe.get("gruppe") or "").removeprefix("haltung:"))
+    return keys
+
+
 def _pruefe_negativbild_datei(
     files: Mapping[str, Path],
     beleg: negativsatz.Bildbeleg,
@@ -1163,6 +1213,12 @@ def _read_proto_reviewed_negative_set(
         bilder,
         len(output_images),
         lambda: _gold_split_roles_by_physical(knowledge_root),
+    )
+    # Entscheid 30.09.2026: Nach allen bisherigen Pruefungen, damit deren
+    # Meldungen unveraendert bleiben.
+    negativsatz.pruefe_proto_keine_ueberschneidung(kopf.semantic, output_images)
+    negativsatz.pruefe_proto_ohne_gold_testhaltung(
+        output_images, _gold_test_haltungen(knowledge_root)
     )
     return _gib_negativsatz_frei(
         knowledge_root,

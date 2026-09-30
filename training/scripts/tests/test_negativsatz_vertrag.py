@@ -1738,6 +1738,76 @@ def test_proto_eval_ausnahme_nur_mit_passendem_schutzbestand(wurzel: Path) -> No
 
 
 # ---------------------------------------------------------------------------
+# Entscheid 30.09.2026 (1): Satzbild und Ausnahmeliste ueberschneiden sich nie
+# ---------------------------------------------------------------------------
+
+
+def _ueberschneidung(auch_luecke: bool, feld: str = "excluded_eval_protected") -> Callable[[Path], Path]:
+    """Baut den Satz aus scratchpad/ueberlappung.py (AP10-Befund 1) synthetisch nach.
+
+    Das Bild der eval-geschuetzten Haltung ``500-600`` steht im Satz und zugleich
+    auf der Ausnahmeliste. Mit ``auch_luecke`` fehlt zusaetzlich das nicht
+    normierbare Bild, sodass die Ausnahmepruefung ueberhaupt anlaeuft.
+    """
+
+    def baue(wurzel: Path) -> Path:
+        _eval_kandidaten(wurzel, "500-600")
+        items: list[dict] = []
+
+        def ausnahmen(semantik: dict, _w: Path) -> None:
+            if auch_luecke:
+                semantik["excluded_not_normalizable"] = [items[0]["item_id"]]
+            semantik[feld] = [items[2]["item_id"]]
+
+        return baue_satz(
+            wurzel,
+            "proto",
+            ("unbekannt", "300-400", "500-600") if auch_luecke else HALTUNGEN,
+            ohne_bild=(0,) if auch_luecke else (),
+            queue_items=lambda liste: items.extend(liste),
+            semantic=ausnahmen,
+        )
+
+    return baue
+
+
+def _ueberschneidung_meldung(grund: str) -> str:
+    return (
+        r"^Proto-Bild proto-hn-[0-9a-f]+ \(Haltung 500-600\) steht im Satz und ist zugleich als "
+        + re.escape(grund)
+        + r" ausgeschlossen\.$"
+    )
+
+
+@pytest.mark.parametrize(
+    ("baue", "meldung"),
+    [
+        pytest.param(
+            _ueberschneidung(auch_luecke=True),
+            _ueberschneidung_meldung("eval-geschuetzt"),
+            id="befund_ueberlappung_py",
+        ),
+        pytest.param(
+            _ueberschneidung(auch_luecke=False),
+            _ueberschneidung_meldung("eval-geschuetzt"),
+            id="ohne_luecke_eval",
+        ),
+        pytest.param(
+            _ueberschneidung(auch_luecke=False, feld="excluded_not_normalizable"),
+            _ueberschneidung_meldung("ohne belastbare Haltung"),
+            id="ohne_luecke_nicht_normierbar",
+        ),
+    ],
+)
+def test_proto_bild_im_satz_und_auf_ausnahmeliste_wird_abgelehnt(
+    wurzel: Path, baue: Callable[[Path], Path], meldung: str
+) -> None:
+    satz = baue(wurzel)
+    with pytest.raises(ValueError, match=meldung):
+        pruefe(wurzel, satz)
+
+
+# ---------------------------------------------------------------------------
 # Proto-Gold-Ausrichtung
 # ---------------------------------------------------------------------------
 
@@ -1827,6 +1897,95 @@ def test_bcc_kennt_keine_gold_ausrichtung(wurzel: Path) -> None:
     satz = baue_satz(wurzel, "bcc", semantic=_gold_ausrichtung(wurzel, "500|600"))
     with pytest.raises(ValueError, match=genau("Negativsatz-Splitregel hat fehlende oder fremde Felder.")):
         pruefe(wurzel, satz)
+
+
+# ---------------------------------------------------------------------------
+# Entscheid 30.09.2026 (2): Gold-Testhaltungen stehen in keinem Split
+# ---------------------------------------------------------------------------
+
+
+def _gold_bericht(wurzel: Path, *, samples: list[dict] | None = None, gruppen: list[dict] | None = None) -> None:
+    ordner = wurzel / "training" / "reports"
+    ordner.mkdir(parents=True, exist_ok=True)
+    bericht: dict[str, Any] = {"split": {"gruppen": gruppen or []}}
+    if samples is not None:
+        bericht["samples"] = samples
+    _schreibe_json(ordner / "gold_stock_audit_20260101_000000_000.json", bericht)
+
+
+def _gold_test_meldung(haltung: str) -> str:
+    return (
+        r"^Proto-Negativbild proto-hn-[0-9a-f]+ stammt aus der eingefrorenen Gold-Testhaltung "
+        + re.escape(haltung)
+        + r" \(Split (train|validation)\); Gold-Testhaltungen duerfen in keinem Split stehen, "
+        r"auch nicht in validation\.$"
+    )
+
+
+def _gold_test_gegenrichtung(wurzel: Path) -> Path:
+    """Gold-Sample ``200-100`` hat die Rolle test; das Negativbild steht als ``100-200``."""
+    assert AUDIT.split_role("haltung:200-100") == "test"
+    _gold_samples(wurzel, "200-100")
+    return baue_satz(wurzel, "proto")
+
+
+def _gold_test_ausgerichtet(wurzel: Path) -> Path:
+    """Heutiger Weg: Gold-Rolle test erzwingt validation ueber die Gold-Ausrichtung."""
+    _gold_samples(wurzel, "200-100")
+    return baue_satz(wurzel, "proto", semantic=_gold_ausrichtung(wurzel, "100|200", rolle="test"))
+
+
+def _gold_test_audit_sample(wurzel: Path) -> Path:
+    """Rolle test nur im Gold-Audit-Bericht (z. B. Haltungsverbund), nicht im Gold-Split."""
+    assert AUDIT.split_role("haltung:300-400") != "test"
+    _gold_bericht(wurzel, samples=[{"haltung_key": "300-400", "rolle": "test"}])
+    return baue_satz(wurzel, "proto")
+
+
+def _gold_test_audit_gruppe(wurzel: Path) -> Path:
+    """Testgruppe des Gold-Audits in Gegenrichtung, das Bild steht trotzdem im Satz."""
+    _gold_bericht(wurzel, gruppen=[{"gruppe": "haltung:600-500", "rolle": "test"}])
+    return baue_satz(wurzel, "proto")
+
+
+@pytest.mark.parametrize(
+    ("baue", "haltung"),
+    [
+        pytest.param(_gold_test_gegenrichtung, "100-200", id="gold_split_gegenrichtung"),
+        pytest.param(_gold_test_ausgerichtet, "100-200", id="gold_ausrichtung_test_nach_validation"),
+        pytest.param(_gold_test_audit_sample, "300-400", id="gold_audit_sample"),
+        pytest.param(_gold_test_audit_gruppe, "500-600", id="gold_audit_gruppe_gegenrichtung"),
+    ],
+)
+def test_proto_negativbild_aus_gold_testhaltung_wird_abgelehnt(
+    wurzel: Path, baue: Callable[[Path], Path], haltung: str
+) -> None:
+    satz = baue(wurzel)
+    with pytest.raises(ValueError, match=_gold_test_meldung(haltung)):
+        pruefe(wurzel, satz)
+
+
+def test_proto_gold_train_und_val_haltungen_bleiben_erlaubt(wurzel: Path) -> None:
+    """Nur die Rolle test sperrt; train- und val-Haltungen im Gold bleiben erlaubt."""
+    assert AUDIT.split_role("haltung:300-400") == "val"
+    assert AUDIT.split_role("haltung:500-600") == "train"
+    _gold_samples(wurzel, "300-400", "500-600")
+    _gold_bericht(
+        wurzel,
+        samples=[
+            {"haltung_key": "300-400", "rolle": "val"},
+            {"haltung_key": "500-600", "rolle": "train"},
+        ],
+    )
+    bilder, _ = pruefe(wurzel, baue_satz(wurzel, "proto"))
+    assert len(bilder) == 3
+
+
+def test_bcc_bleibt_ohne_gold_testsperre_im_leser(wurzel: Path) -> None:
+    """BCC entfernt Audit-Testhaltungen in der Ableitung; der Leser bleibt unveraendert."""
+    _gold_samples(wurzel, "200-100")
+    bilder, _ = pruefe(wurzel, baue_satz(wurzel, "bcc"))
+    assert len(bilder) == 3
 
 
 # ---------------------------------------------------------------------------

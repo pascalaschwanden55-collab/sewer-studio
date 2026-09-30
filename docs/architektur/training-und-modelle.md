@@ -287,6 +287,25 @@
   stehen in `BCC_VERTRAG`/`PROTO_VERTRAG`; eine gemeinsame Funktion nur bei
   gleicher Regel. `tests/test_negativsatz_vertrag.py` haelt jede Ablehnung mit
   ihrer Meldung fest; eine neue Regel bekommt dort zuerst einen Fall.
+- Proto-Satz ohne Ueberschneidung (Entscheid 2026-09-30): Neben
+  `gesehen ∪ ausgeschlossen == akzeptiert` muss die Schnittmenge leer sein. Ein
+  Satzbild, das zugleich in `excluded_eval_protected` oder
+  `excluded_not_normalizable` steht, lehnt `pruefe_proto_keine_ueberschneidung`
+  mit Bild-ID und Haltung ab; die Pruefung laeuft immer, auch ohne Luecke im Satz.
+  Der C#-Store verlangt Bilder == akzeptiert ohne Ausnahmelisten und lehnt den
+  Fall schon ab (Test `ReadBundle_blockiert_proto_Satzbild_das_zugleich_eval_ausgeschlossen_ist`).
+- Proto-Satz ohne Gold-Testhaltung (Entscheid 2026-09-30): Ein Negativbild, dessen
+  physische Haltung (samt Gegenrichtung) die Gold-Rolle `test` hat, steht in keinem
+  Split, auch nicht in `validation` (steuert Early Stopping). Quellen:
+  `_gold_test_haltungen` = aktueller Gold-Split aus `training_samples.json` (wie die
+  Gold-Ausrichtung) und Rolle `test` im juengsten Gold-Audit (Samples und Gruppen).
+  Der Pruefer lehnt den Satz mit Bild-ID, Haltung und Split ab
+  (`pruefe_proto_ohne_gold_testhaltung`); die fruehere Ausrichtung test -> validation
+  ist damit gesperrt. Die Ableitung `proto_hard_negative_review.py` schliesst
+  Audit-Testgruppen schon ueber den Eval-Schutz begruendet aus; eine Gold-Testhaltung
+  ausserhalb dieses Schutzes stoppt sie vorab, weil ein begruendeter Ausschluss nicht
+  moeglich ist. C# kennt den Gold-Split nicht und sperrt nur Ausrichtungen mit
+  `gold_role: test`; die volle Pruefung leisten Python-Leser und `prepare_detect_gold`.
 
 ## (Fortsetzung aus «XTF-Aenderungslieferung und Bauwerksarten (2026-09-07)»)
 
