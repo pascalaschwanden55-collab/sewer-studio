@@ -33,10 +33,10 @@ public sealed class MaintainabilityFitnessTests
         ["src/AuswertungPro.Next.Infrastructure/Import/MediaDistributionService.cs"] = 973,
         ["src/AuswertungPro.Next.UI/ViewModels/Pages/DataPageViewModel.cs"] = 973,
         ["src/AuswertungPro.Next.Infrastructure/Ai/Training/Services/PdfProtocolExtractor.cs"] = 969,
-        ["src/AuswertungPro.Next.Infrastructure/Ai/Pipeline/MultiModelAnalysisService.cs"] = 967,
         ["src/AuswertungPro.Next.Infrastructure/Import/WinCan/WinCanDbImportService.cs"] = 958,
         ["src/AuswertungPro.Next.Infrastructure/Ai/OverlayToolService.cs"] = 954,
         ["src/AuswertungPro.Next.Infrastructure/Media/MediaConflictCenterService.cs"] = 954,
+        ["src/AuswertungPro.Next.Infrastructure/Ai/Pipeline/MultiModelAnalysisService.cs"] = 952,
         ["src/AuswertungPro.Next.Infrastructure/Dossiers/DossierWordTemplateExportService.cs"] = 948,
         ["src/AuswertungPro.Next.UI/ViewModels/Pages/BuilderPageViewModel.cs"] = 948,
         ["src/AuswertungPro.Next.UI/ServiceProvider.cs"] = 939,
@@ -68,7 +68,6 @@ public sealed class MaintainabilityFitnessTests
         ["AuswertungPro.Next.UI.ViewModels.Pages.DossiersPageViewModel"] = 1_642,
         ["AuswertungPro.Next.UI.Views.Windows.StartupSplashWindow"] = 1_618,
         ["AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel"] = 1_564,
-        ["AuswertungPro.Next.Infrastructure.Ai.Pipeline.MultiModelAnalysisService"] = 1_560,
         ["AuswertungPro.Next.UI.ServiceProvider"] = 1_557,
         ["AuswertungPro.Next.UI.Views.Windows.PhotoMeasurementWindow"] = 1_556
     };

@@ -16,9 +16,6 @@ public sealed partial class MultiModelAnalysisService
     // (Tests/aeltere Aufrufer) — am Ausfall-Limit wird sofort degraded abgebrochen.
     private readonly ISidecarRestartService? _sidecarRestart;
 
-    // Neustart-Budget: genau EIN Versuch pro AnalyzeAsync-Lauf (wird dort zurueckgesetzt).
-    private bool _sidecarRestartAttemptedThisRun;
-
     /// <summary>
     /// Zaehlt den Transportfehler des aktuellen Frames; versucht am Limit EINMAL pro Lauf
     /// einen kontrollierten Neustart (nur mit injiziertem Restart-Dienst). Bei Erfolg wird
@@ -27,21 +24,20 @@ public sealed partial class MultiModelAnalysisService
     /// einem zweiten Ausloeser wird wie bisher degraded abgebrochen.
     /// true = Lauf abbrechen (degraded).
     /// </summary>
-    private async Task<bool> HandleSidecarTransportErrorAsync(
-        SidecarOutageGuard outageGuard,
-        Action markOutage,
-        IProgress<VideoAnalysisProgress>? progress,
-        int frameIndex,
-        int totalFrames,
-        CancellationToken ct)
+    private async Task<bool> HandleSidecarTransportErrorAsync(MultiModelLaufZustand run, CancellationToken ct)
     {
+        var outageGuard = run.OutageGuard;
+        var progress = run.Progress;
+        var frameIndex = run.FrameIndex;
+        var totalFrames = run.TotalFrames;
         outageGuard.RegisterTransportError(frameIndex);
         if (!outageGuard.LimitReached)
             return false;
 
-        if (!_sidecarRestartAttemptedThisRun && _sidecarRestart is not null)
+        // Neustart-Budget: genau EIN Versuch pro Lauf.
+        if (!run.SidecarRestartAttempted && _sidecarRestart is not null)
         {
-            _sidecarRestartAttemptedThisRun = true;
+            run.SidecarRestartAttempted = true;
             if (await TryRestartSidecarAsync(progress, frameIndex, totalFrames, ct).ConfigureAwait(false))
             {
                 outageGuard.ResetSeries();
@@ -49,7 +45,7 @@ public sealed partial class MultiModelAnalysisService
             }
         }
 
-        markOutage();
+        run.SidecarOutage = true;
         _logger.LogError(
             "Sidecar antwortet seit {Count} Frames nicht — Analyse abgebrochen (degraded).",
             outageGuard.ConsecutiveErrorFrames);
