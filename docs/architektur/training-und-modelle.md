@@ -287,6 +287,13 @@
   stehen in `BCC_VERTRAG`/`PROTO_VERTRAG`; eine gemeinsame Funktion nur bei
   gleicher Regel. `tests/test_negativsatz_vertrag.py` haelt jede Ablehnung mit
   ihrer Meldung fest; eine neue Regel bekommt dort zuerst einen Fall.
+- Proto-Satz ohne Ueberschneidung (Entscheid 2026-09-30): Neben
+  `gesehen ∪ ausgeschlossen == akzeptiert` muss die Schnittmenge leer sein. Ein
+  Satzbild, das zugleich in `excluded_eval_protected` oder
+  `excluded_not_normalizable` steht, lehnt `pruefe_proto_keine_ueberschneidung`
+  mit Bild-ID und Haltung ab; die Pruefung laeuft immer, auch ohne Luecke im Satz.
+  Der C#-Store verlangt Bilder == akzeptiert ohne Ausnahmelisten und lehnt den
+  Fall schon ab (Test `ReadBundle_blockiert_proto_Satzbild_das_zugleich_eval_ausgeschlossen_ist`).
 
 ## (Fortsetzung aus «XTF-Aenderungslieferung und Bauwerksarten (2026-09-07)»)
 

@@ -1164,6 +1164,9 @@ def _read_proto_reviewed_negative_set(
         len(output_images),
         lambda: _gold_split_roles_by_physical(knowledge_root),
     )
+    # Entscheid 30.09.2026: Nach allen bisherigen Pruefungen, damit deren
+    # Meldungen unveraendert bleiben.
+    negativsatz.pruefe_proto_keine_ueberschneidung(kopf.semantic, output_images)
     return _gib_negativsatz_frei(
         knowledge_root,
         set_root,

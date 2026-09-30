@@ -591,6 +591,21 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
     }
 
     [Fact]
+    public void ReadBundle_blockiert_proto_Satzbild_das_zugleich_eval_ausgeschlossen_ist()
+    {
+        // Entscheid 30.09.2026 (1): Satzbild und Ausnahmeliste duerfen sich nicht
+        // ueberschneiden. Der Store verlangt Bilder == akzeptiert ohne Ausnahmelisten
+        // und lehnt die Ueberschneidung deshalb schon ab; der Test haelt das fest.
+        var protoSet = CreateProtoNegativeSet(setImageAlsoEvalExcluded: true);
+        var paths = CreateFiles(negativesJson: ProtoNegativesJson(protoSet));
+
+        var error = Assert.Throws<TrainingExportPlanException>(() =>
+            new TrainingExportRegistryFileStore(paths.RegistryPath, _root).ReadBundle());
+
+        Assert.Contains("ohne Auschlusslisten", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ReadBundle_blockiert_proto_Satz_mit_fremdem_Ordner_Praefix()
     {
         var protoSet = CreateProtoNegativeSet();
@@ -1439,7 +1454,9 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
     /// proto-neg-/proto-hn-IDs, quelle statt source_ref, Auschlusslisten, Gold-Ausrichtung).
     /// Fuenf Set-Bilder; zwei weitere akzeptierte Queue-Items stehen auf den Auschlusslisten.
     /// </summary>
-    private BoundProtoNegativeSet CreateProtoNegativeSet(bool includeQueueModelScope = false)
+    private BoundProtoNegativeSet CreateProtoNegativeSet(
+        bool includeQueueModelScope = false,
+        bool setImageAlsoEvalExcluded = false)
     {
         var holdings = new[] { "100-200", "300-400", "500-600", "700-800", "900-1000" };
         var imageFills = new byte[] { 0x21, 0x22, 0x23, 0x24, 0x25 };
@@ -1706,6 +1723,10 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
               }
             ]
             """;
+        // Ueberschneidung: ein Satzbild steht zugleich auf der Eval-Ausnahmeliste.
+        var excludedEvalJson = JsonSerializer.Serialize(setImageAlsoEvalExcluded
+            ? new[] { excludedImages[1].ReviewItemId, setImages[0].ReviewItemId }
+            : new[] { excludedImages[1].ReviewItemId });
         var semanticJson = $$"""
             {
               "schema_version": "1.0",
@@ -1746,7 +1767,7 @@ public sealed class TrainingExportRegistryFileStoreTests : IDisposable
                 "gold_alignments": {{goldAlignmentsJson}}
               },
               "excluded_not_normalizable": ["{{excludedImages[0].ReviewItemId}}"],
-              "excluded_eval_protected": ["{{excludedImages[1].ReviewItemId}}"],
+              "excluded_eval_protected": {{excludedEvalJson}},
               "images": [{{semanticImagesJson}}]
             }
             """;

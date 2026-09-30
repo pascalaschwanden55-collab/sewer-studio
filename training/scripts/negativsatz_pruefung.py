@@ -1321,6 +1321,36 @@ def pruefe_proto_ausnahmen(
             raise ValueError("Ein eval-ausgeschlossenes Proto-Bild ist nicht im geschuetzten Bestand.")
 
 
+def pruefe_proto_keine_ueberschneidung(
+    semantic: Mapping[str, Any],
+    eintraege: Sequence[Mapping[str, Any]],
+) -> None:
+    """Kein Satzbild steht zugleich auf einer Ausnahmeliste (Entscheid 30.09.2026).
+
+    ``gesehen | ausgeschlossen == akzeptiert`` allein laesst eine
+    Ueberschneidung zu; so koennte ein eval-geschuetztes Bild trotz Ausnahme
+    ins Training gelangen. Die Pruefung laeuft immer, auch wenn der Satz alle
+    klassenfreien Entscheidungen enthaelt und die Ausnahmen sonst nicht
+    geprueft werden. ``eintraege`` sind die fertigen Negativbild-Eintraege.
+    """
+    gruende: dict[str, str] = {}
+    for feld, grund in (
+        ("excluded_eval_protected", "eval-geschuetzt"),
+        ("excluded_not_normalizable", "ohne belastbare Haltung"),
+    ):
+        liste = semantic.get(feld)
+        if isinstance(liste, list):
+            for wert in liste:
+                gruende.setdefault(str(wert), grund)
+    for eintrag in sorted(eintraege, key=lambda wert: str(wert["review_item_id"])):
+        grund = gruende.get(str(eintrag["review_item_id"]))
+        if grund is not None:
+            raise ValueError(
+                f"Proto-Bild {eintrag['review_item_id']} (Haltung {eintrag['holding_key']}) "
+                f"steht im Satz und ist zugleich als {grund} ausgeschlossen."
+            )
+
+
 # ---------------------------------------------------------------------------
 # Split: stabile Rangregel je physischer Haltung
 # ---------------------------------------------------------------------------

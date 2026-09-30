@@ -1738,6 +1738,76 @@ def test_proto_eval_ausnahme_nur_mit_passendem_schutzbestand(wurzel: Path) -> No
 
 
 # ---------------------------------------------------------------------------
+# Entscheid 30.09.2026 (1): Satzbild und Ausnahmeliste ueberschneiden sich nie
+# ---------------------------------------------------------------------------
+
+
+def _ueberschneidung(auch_luecke: bool, feld: str = "excluded_eval_protected") -> Callable[[Path], Path]:
+    """Baut den Satz aus scratchpad/ueberlappung.py (AP10-Befund 1) synthetisch nach.
+
+    Das Bild der eval-geschuetzten Haltung ``500-600`` steht im Satz und zugleich
+    auf der Ausnahmeliste. Mit ``auch_luecke`` fehlt zusaetzlich das nicht
+    normierbare Bild, sodass die Ausnahmepruefung ueberhaupt anlaeuft.
+    """
+
+    def baue(wurzel: Path) -> Path:
+        _eval_kandidaten(wurzel, "500-600")
+        items: list[dict] = []
+
+        def ausnahmen(semantik: dict, _w: Path) -> None:
+            if auch_luecke:
+                semantik["excluded_not_normalizable"] = [items[0]["item_id"]]
+            semantik[feld] = [items[2]["item_id"]]
+
+        return baue_satz(
+            wurzel,
+            "proto",
+            ("unbekannt", "300-400", "500-600") if auch_luecke else HALTUNGEN,
+            ohne_bild=(0,) if auch_luecke else (),
+            queue_items=lambda liste: items.extend(liste),
+            semantic=ausnahmen,
+        )
+
+    return baue
+
+
+def _ueberschneidung_meldung(grund: str) -> str:
+    return (
+        r"^Proto-Bild proto-hn-[0-9a-f]+ \(Haltung 500-600\) steht im Satz und ist zugleich als "
+        + re.escape(grund)
+        + r" ausgeschlossen\.$"
+    )
+
+
+@pytest.mark.parametrize(
+    ("baue", "meldung"),
+    [
+        pytest.param(
+            _ueberschneidung(auch_luecke=True),
+            _ueberschneidung_meldung("eval-geschuetzt"),
+            id="befund_ueberlappung_py",
+        ),
+        pytest.param(
+            _ueberschneidung(auch_luecke=False),
+            _ueberschneidung_meldung("eval-geschuetzt"),
+            id="ohne_luecke_eval",
+        ),
+        pytest.param(
+            _ueberschneidung(auch_luecke=False, feld="excluded_not_normalizable"),
+            _ueberschneidung_meldung("ohne belastbare Haltung"),
+            id="ohne_luecke_nicht_normierbar",
+        ),
+    ],
+)
+def test_proto_bild_im_satz_und_auf_ausnahmeliste_wird_abgelehnt(
+    wurzel: Path, baue: Callable[[Path], Path], meldung: str
+) -> None:
+    satz = baue(wurzel)
+    with pytest.raises(ValueError, match=meldung):
+        pruefe(wurzel, satz)
+
+
+# ---------------------------------------------------------------------------
 # Proto-Gold-Ausrichtung
 # ---------------------------------------------------------------------------
 
