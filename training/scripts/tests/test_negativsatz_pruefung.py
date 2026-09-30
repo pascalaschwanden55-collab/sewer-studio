@@ -175,3 +175,123 @@ def test_belegbindung_bleibt_ohne_nebenwirkung() -> None:
     vorher = (copy.deepcopy(semantik), dict(belege))
     NP.pruefe_belegbindung(semantik, belege, NP.BCC_VERTRAG)
     assert (semantik, belege) == vorher
+
+
+# ---------------------------------------------------------------------------
+# Queue
+# ---------------------------------------------------------------------------
+
+
+def _physisch(haltung: str) -> str:
+    links, rechts = haltung.split("-", maxsplit=1)
+    return "|".join(sorted((links, rechts)))
+
+
+def _bcc_item(index: int, haltung: str) -> dict[str, Any]:
+    sha = _sha(f"bild-{index}".encode("utf-8"))
+    return {
+        "id": f"bcc-hn-{sha[:16]}",
+        "image_sha256": sha,
+        "holding_key": haltung,
+        "physical_holding_key": _physisch(haltung),
+        "source_ref": _sha(f"quelle-{index}".encode("utf-8")),
+        "inspection_date": "2026-07-28",
+        "size_bytes": 2048,
+        "image_format": "png",
+        "predictions": [
+            {"model_id": "m", "predicted_bcc": True, "bcc_detection_count": 1, "max_bcc_confidence": None}
+        ],
+    }
+
+
+def test_bcc_queue_bilder_nutzen_die_uebergebene_haltungsidentitaet() -> None:
+    items = [_bcc_item(0, "100-200"), _bcc_item(1, "300-400")]
+    ergebnis = NP.pruefe_bcc_queue_bilder(items, {"m"}, _physisch)
+    assert set(ergebnis) == {items[0]["id"], items[1]["id"]}
+
+    gegenrichtung = [_bcc_item(0, "100-200"), _bcc_item(1, "200-100")]
+    with pytest.raises(ValueError, match=r"^Queue-Bildbeleg bcc-hn-[0-9a-f]{16} ist ungueltig\.$"):
+        NP.pruefe_bcc_queue_bilder(gegenrichtung, {"m"}, _physisch)
+
+
+def test_bcc_queue_bild_braucht_einen_modelltrigger() -> None:
+    item = _bcc_item(0, "100-200")
+    item["predictions"][0]["predicted_bcc"] = False
+    with pytest.raises(ValueError, match="nicht an einen BCC-Modelltrigger gebunden"):
+        NP.pruefe_bcc_queue_bilder([item], {"m"}, _physisch)
+
+
+def _proto_item(index: int, haltung: str) -> dict[str, Any]:
+    sha = _sha(f"proto-{index}".encode("utf-8"))
+    return {
+        "item_id": f"proto-hn-{sha[:20]}",
+        "image_sha256": sha,
+        "holding_key": haltung,
+        "code": "BCDYA",
+        "gruppe": "rohranfang_ende",
+        "quelle": "xtf",
+        "quell_datei": "q.xtf",
+        "leitungsinspektion": False,
+        "size_bytes": 2048,
+        "image_format": "png",
+        "target_file_name": f"img_{sha}.png",
+    }
+
+
+def test_proto_queue_bilder_sperren_gegenrichtung_ueber_proto_schluessel() -> None:
+    ok = NP.pruefe_proto_queue_bilder([_proto_item(0, "100-200"), _proto_item(1, "300-400")], _physisch)
+    assert len(ok) == 2
+    with pytest.raises(ValueError, match=r"^Proto-Queue-Bildbeleg proto-hn-[0-9a-f]{20} ist ungueltig\.$"):
+        NP.pruefe_proto_queue_bilder([_proto_item(0, "100-200"), _proto_item(1, "200-100")], _physisch)
+
+
+@pytest.mark.parametrize(
+    "regel",
+    [
+        {"one_image_per_physical_holding": True, "model_involved": True},
+        {"one_image_per_physical_holding": True},
+        {"one_image_per_physical_holding": False, "model_involved": False},
+        {"one_image_per_physical_holding": True, "model_involved": False, "requires_current_model_bcc_trigger": True},
+    ],
+)
+def test_proto_auswahlregel_bleibt_modellfrei(regel: dict[str, Any]) -> None:
+    NP.pruefe_proto_auswahlregel({"selection_rule": {"one_image_per_physical_holding": True, "model_involved": False}})
+    with pytest.raises(ValueError, match="modellfrei"):
+        NP.pruefe_proto_auswahlregel({"selection_rule": regel})
+
+
+@pytest.mark.parametrize("vertrag", VERTRAEGE)
+def test_queue_hashliste_bindet_kandidaten_bytegenau(vertrag: NP.Satzvertrag) -> None:
+    kandidaten = b"[]"
+    manifest = {
+        "hashes": {"_candidates.json": {"sha256": _sha(kandidaten), "size_bytes": len(kandidaten)}},
+        "hashes_count": 1,
+    }
+    assert NP.pruefe_queue_hashliste(manifest, kandidaten, _sha(kandidaten), vertrag) is manifest["hashes"]
+    with pytest.raises(ValueError) as fehler:
+        NP.pruefe_queue_hashliste(manifest, b"[ ]", _sha(kandidaten), vertrag)
+    assert str(fehler.value) == vertrag.text("queue_kandidaten_bytegenau")
+
+
+@pytest.mark.parametrize("vertrag", VERTRAEGE)
+def test_kandidatenliste_muss_queue_decken(vertrag: NP.Satzvertrag) -> None:
+    item = _bcc_item(0, "100-200")
+    kandidat = {
+        "id": item["id"],
+        "frame_path": f"img_{item['image_sha256']}.png",
+        "category": "all_class_background_review",
+        "status": "pending_review",
+        "source_sha256": item["image_sha256"],
+    }
+    queue_manifest = {"candidates_count": 1, "images_count": 1, "holdings_count": 1}
+    hashes = {
+        "_candidates.json": {},
+        f"images/{kandidat['frame_path']}": {"sha256": item["image_sha256"], "size_bytes": 2048},
+    }
+    ergebnis = NP.pruefe_kandidaten(
+        json.dumps([kandidat]).encode("utf-8"), queue_manifest, {item["id"]: item}, hashes, vertrag
+    )
+    assert ergebnis == {item["id"]: kandidat}
+    with pytest.raises(ValueError) as fehler:
+        NP.pruefe_kandidaten(b"[]", queue_manifest, {item["id"]: item}, hashes, vertrag)
+    assert str(fehler.value) == vertrag.text("kandidatenliste_unvollstaendig")
