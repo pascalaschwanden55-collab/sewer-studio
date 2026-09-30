@@ -10,10 +10,12 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 /// Herkunft und Bemerkung der ersten, und der Datensatz trug die Befunde beider, weil sie
 /// ueber den Namen zugeordnet wurden (Befund 4 aus AP08).
 ///
-/// Regel seither, dieselbe wie beim WinCan-Import: Je Haltung genau eine Untersuchung,
-/// die mit dem neuesten glaubwuerdigen Datum. Der WinCan-Vorgabetag 2007-12-31 und alles
-/// vor 1990 zaehlen als Platzhalter; bei Gleichstand gilt die Dateireihenfolge. Nur die
-/// gewaehlte Untersuchung liefert Felder und Befunde; jede andere steht im Importbericht.
+/// Regel seither (Entscheid Pascal, «Variante C»): Haupt-Untersuchung ist die
+/// vollstaendigste — nicht abgebrochen (kein BDC) vor abgebrochen, dann die laengere
+/// Strecke, dann das glaubwuerdige Datum wie bei WinCan, dann die erste in der Datei. Sie
+/// liefert Felder, Befunde und Protokoll. Jede weitere Untersuchung wird wie beim
+/// WinCan-Import als zusaetzliche Protokollfassung (ProtocolRevision mit
+/// ImportFingerprint und ImportVideoPaths) abgelegt.
 /// </summary>
 public sealed class XtfVsaKekMehrereUntersuchungenTests : IDisposable
 {
@@ -26,159 +28,220 @@ public sealed class XtfVsaKekMehrereUntersuchungenTests : IDisposable
     }
 
     [Fact]
-    public void Nur_die_neueste_Untersuchung_liefert_Felder_und_Befunde()
+    public void Die_vollstaendige_Befahrung_ist_Haupt_Untersuchung_auch_wenn_die_Gegenbefahrung_neuer_ist()
     {
         // Gleiche Bezeichnung wie in einer Hin- und Gegenbefahrung: Frueher trug der
-        // Datensatz dann die Befunde beider Untersuchungen.
-        var (projekt, _) = Importiere(ersteZeitpunkt: "20250312", zweiteZeitpunkt: "20250315",
-            zweiteBezeichnung: "200-201");
+        // Datensatz dann die Befunde beider Untersuchungen und die Felder der letzten.
+        var (projekt, _) = Importiere(new Datei { ZweiteBezeichnung = "200-201" });
 
         var haltung = Assert.Single(projekt.Data);
-        Assert.Equal("15.03.2025", haltung.GetFieldValue(FieldKeys.InspectionYear));
-        Assert.Equal("12.00", haltung.GetFieldValue(FieldKeys.HoldingLengthMeters));
-        Assert.Equal("Gegen Fliessrichtung", haltung.GetFieldValue("Inspektionsrichtung"));
-        Assert.Equal("refZWEITE", haltung.XtfHerkunft?.UntersuchungTid);
-        Assert.EndsWith("zweite.mp4", haltung.GetFieldValue(FieldKeys.Link), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("12.03.2025", haltung.GetFieldValue(FieldKeys.InspectionYear));
+        Assert.Equal("38.40", haltung.GetFieldValue(FieldKeys.HoldingLengthMeters));
+        Assert.Equal("In Fliessrichtung", haltung.GetFieldValue("Inspektionsrichtung"));
+        Assert.Equal("refERSTE", haltung.XtfHerkunft?.UntersuchungTid);
+        Assert.EndsWith("erste.mpg", haltung.GetFieldValue(FieldKeys.Link), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Kanal-TV Muster AG", haltung.GetFieldValue("Bemerkungen"), StringComparison.Ordinal);
 
         // Befunde ueber ihre Untersuchung, nicht ueber den gemeinsamen Namen.
         Assert.NotNull(haltung.VsaFindings);
-        Assert.Equal(2, haltung.VsaFindings!.Count);
-        Assert.All(haltung.VsaFindings, f => Assert.Equal("refZWEITE", f.UntersuchungTid));
+        Assert.Equal(3, haltung.VsaFindings!.Count);
+        Assert.All(haltung.VsaFindings, f => Assert.Equal("refERSTE", f.UntersuchungTid));
 
         var primaere = haltung.GetFieldValue("Primaere_Schaeden");
-        Assert.Contains("BDC", primaere, StringComparison.Ordinal);
-        Assert.DoesNotContain("BABBA", primaere, StringComparison.Ordinal);
-
-        // Die Bemerkung stammt ebenfalls nur von der gewaehlten Untersuchung.
-        Assert.DoesNotContain("Kanal-TV Muster AG", haltung.GetFieldValue("Bemerkungen"), StringComparison.Ordinal);
+        Assert.Contains("BABBA", primaere, StringComparison.Ordinal);
+        Assert.DoesNotContain("BDC", primaere, StringComparison.Ordinal);
+        Assert.Equal(new[] { "BCD", "BABBA", "BCE" }, haltung.Protocol!.Current.Entries.Select(e => e.Code));
     }
 
     [Fact]
-    public void Die_uebersprungene_Untersuchung_steht_mit_Datum_im_Importbericht()
+    public void Nicht_abgebrochen_geht_vor_der_laengeren_Strecke()
     {
-        var (_, stats) = Importiere(ersteZeitpunkt: "20250312", zweiteZeitpunkt: "20250315");
+        // Die abgebrochene ist laenger und neuer, verliert aber trotzdem.
+        var (projekt, _) = Importiere(new Datei
+        {
+            ErsteZeitpunkt = "20250320", ErsteAbgebrochen = true,
+            ZweiteZeitpunkt = "20250101", ZweiteAbgebrochen = false
+        });
 
-        var meldung = Assert.Single(stats.Messages, m => m.Message.Contains("übersprungen", StringComparison.Ordinal));
-        Assert.Equal("Warn", meldung.Level);
-        Assert.Contains("200-201", meldung.Message, StringComparison.Ordinal);
-        Assert.Contains("Übernommen: 15.03.2025 (TID refZWEITE)", meldung.Message, StringComparison.Ordinal);
-        Assert.Contains("übersprungen: 12.03.2025 (TID refERSTE) mit 3 Befunden", meldung.Message, StringComparison.Ordinal);
+        Assert.Equal("refZWEITE", Assert.Single(projekt.Data).XtfHerkunft?.UntersuchungTid);
     }
 
     [Fact]
-    public void Das_Platzhalterdatum_gewinnt_nie_gegen_ein_glaubwuerdiges_Datum()
+    public void Die_laengere_Strecke_geht_vor_dem_neueren_Datum()
     {
-        // Roh verglichen waere 2007-12-31 neuer als 2005-06-01.
-        var (projekt, stats) = Importiere(ersteZeitpunkt: "20071231", zweiteZeitpunkt: "20050601");
+        var (projekt, _) = Importiere(new Datei
+        {
+            ErsteZeitpunkt = "20250320", ErsteLaenge = "12.00",
+            ZweiteZeitpunkt = "20250101", ZweiteLaenge = "38.40", ZweiteAbgebrochen = false
+        });
 
-        var haltung = Assert.Single(projekt.Data);
-        Assert.Equal("refZWEITE", haltung.XtfHerkunft?.UntersuchungTid);
-        var meldung = Assert.Single(stats.Messages, m => m.Message.Contains("übersprungen", StringComparison.Ordinal));
-        Assert.Contains("Platzhalterdatum", meldung.Message, StringComparison.Ordinal);
+        Assert.Equal("refZWEITE", Assert.Single(projekt.Data).XtfHerkunft?.UntersuchungTid);
     }
 
     [Theory]
-    [InlineData("19850101", "19870101")]
-    [InlineData("20250312", "20250312")]
-    [InlineData("", "")]
-    public void Ohne_glaubwuerdigen_Unterschied_gilt_die_Dateireihenfolge(string erste, string zweite)
+    [InlineData("20250312", "20250315", "refZWEITE")]
+    // Roh verglichen waere 2007-12-31 neuer als 2005-06-01; es ist aber ein Platzhalter.
+    [InlineData("20071231", "20050601", "refZWEITE")]
+    [InlineData("19850101", "19870101", "refERSTE")]
+    [InlineData("20250312", "20250312", "refERSTE")]
+    [InlineData("", "", "refERSTE")]
+    public void Bei_gleicher_Vollstaendigkeit_entscheidet_das_glaubwuerdige_Datum_dann_die_Datei(
+        string erste, string zweite, string erwartet)
     {
-        var (projekt, _) = Importiere(erste, zweite);
+        var (projekt, _) = Importiere(new Datei
+        {
+            ErsteZeitpunkt = erste, ZweiteZeitpunkt = zweite,
+            ZweiteLaenge = "38.40", ZweiteAbgebrochen = false
+        });
 
-        var haltung = Assert.Single(projekt.Data);
-        Assert.Equal("refERSTE", haltung.XtfHerkunft?.UntersuchungTid);
-        Assert.Equal(3, haltung.VsaFindings?.Count);
+        Assert.Equal(erwartet, Assert.Single(projekt.Data).XtfHerkunft?.UntersuchungTid);
     }
 
-    /// <summary>Die zweite Bezeichnung ist standardmaessig anders geschrieben, aber gleich normalisiert.</summary>
-    private (Project Projekt, ImportStats Stats) Importiere(string ersteZeitpunkt, string zweiteZeitpunkt,
-        string zweiteBezeichnung = "200 - 201")
+    [Fact]
+    public void Die_weitere_Untersuchung_wird_als_Protokollfassung_mit_eigenen_Befunden_abgelegt()
+    {
+        var (projekt, _) = Importiere(new Datei());
+
+        var protokoll = Assert.Single(projekt.Data).Protocol;
+        Assert.NotNull(protokoll);
+        var fassung = Assert.Single(protokoll!.History);
+        Assert.False(string.IsNullOrWhiteSpace(fassung.ImportFingerprint));
+        Assert.Contains("refZWEITE", fassung.Comment, StringComparison.Ordinal);
+        Assert.Equal(new[] { "BCD", "BDC" }, fassung.Entries.Select(e => e.Code));
+        // Eigene Meter der Gegenbefahrung, nicht umgerechnet.
+        Assert.Equal(12.0, fassung.Entries[1].MeterStart);
+        var video = Assert.Single(fassung.ImportVideoPaths!);
+        Assert.EndsWith("zweite.mp4", video, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(fassung.Entries[0].FotoPaths);
+    }
+
+    [Fact]
+    public void Ein_Wiederholungsimport_legt_keine_zweite_Fassung_an_und_vermischt_nichts()
+    {
+        var projekt = new Project { Name = "Test" };
+        Importiere(new Datei(), projekt);
+        var (_, stats) = Importiere(new Datei(), projekt);
+
+        var haltung = Assert.Single(projekt.Data);
+        var fassung = Assert.Single(haltung.Protocol!.History);
+        // Das Foto gehoert zum BCD der Haupt-Untersuchung; der Abgleich beim zweiten Import
+        // darf es nicht in die Gegenbefahrung tragen.
+        Assert.Empty(fassung.Entries[0].FotoPaths);
+        Assert.Single(haltung.Protocol.Current.Entries[0].FotoPaths);
+        Assert.Contains(stats.Messages, m => m.Message.Contains("bereits als Protokollfassung vorhanden", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Der_Importbericht_nennt_Haupt_Untersuchung_und_zusaetzliche_Protokollfassung()
+    {
+        var (_, stats) = Importiere(new Datei());
+
+        var meldung = Assert.Single(stats.Messages, m => m.Message.Contains("Haupt-Untersuchung", StringComparison.Ordinal));
+        Assert.Contains("200-201", meldung.Message, StringComparison.Ordinal);
+        Assert.Contains("Haupt-Untersuchung: 12.03.2025 (TID refERSTE) mit 3 Befunden", meldung.Message, StringComparison.Ordinal);
+        Assert.Contains("zusätzliche Protokollfassung: 15.03.2025 (TID refZWEITE) mit 2 Befunden", meldung.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(stats.Messages, m => m.Message.Contains("übersprungen", StringComparison.Ordinal));
+    }
+
+    private (Project Projekt, ImportStats Stats) Importiere(Datei datei, Project? projekt = null)
     {
         Directory.CreateDirectory(Path.Combine(_dir, "Film"));
+        Directory.CreateDirectory(Path.Combine(_dir, "Fotos"));
         File.WriteAllBytes(Path.Combine(_dir, "Film", "erste.mpg"), [0x00]);
         File.WriteAllBytes(Path.Combine(_dir, "Film", "zweite.mp4"), [0x00]);
+        File.WriteAllBytes(Path.Combine(_dir, "Fotos", "anfang.jpg"), [0x00]);
         var pfad = Path.Combine(_dir, "mehrere.xtf");
-        File.WriteAllText(pfad, ZweiUntersuchungen(ersteZeitpunkt, zweiteZeitpunkt, zweiteBezeichnung));
+        File.WriteAllText(pfad, datei.Xtf());
 
-        var projekt = new Project { Name = "Test" };
+        projekt ??= new Project { Name = "Test" };
         var stats = new LegacyXtfImportService().ImportXtfFiles(new[] { pfad }, projekt);
         Assert.True(stats.Errors == 0, string.Join(" | ", stats.Messages.Select(m => m.Message)));
         return (projekt, stats);
     }
 
-    private static string Zeitpunkt(string wert) => wert.Length == 0 ? "" : $"<Zeitpunkt>{wert}</Zeitpunkt>";
+    /// <summary>
+    /// Zwei Untersuchungen derselben Haltung. Voreinstellung: die erste ist die vollstaendige
+    /// Hinfahrt (38,40 m, 3 Befunde), die zweite eine neuere, abgebrochene Gegenbefahrung
+    /// (12,00 m, BCD + BDC) mit anders geschriebener, gleich normalisierter Bezeichnung.
+    /// </summary>
+    private sealed class Datei
+    {
+        public string ErsteZeitpunkt { get; init; } = "20250312";
+        public string ErsteLaenge { get; init; } = "38.40";
+        public bool ErsteAbgebrochen { get; init; }
+        public string ZweiteBezeichnung { get; init; } = "200 - 201";
+        public string ZweiteZeitpunkt { get; init; } = "20250315";
+        public string ZweiteLaenge { get; init; } = "12.00";
+        public bool ZweiteAbgebrochen { get; init; } = true;
 
-    private static string ZweiUntersuchungen(string ersteZeitpunkt, string zweiteZeitpunkt, string zweiteBezeichnung) => $"""
-        <?xml version="1.0" encoding="utf-8"?>
-        <TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
-          <HEADERSECTION VERSION="2.3" SENDER="Test">
-            <MODELS>
-              <MODEL NAME="VSA_KEK_2020_LV95" />
-            </MODELS>
-          </HEADERSECTION>
-          <DATASECTION>
-            <VSA_KEK_2020_LV95.KEK BID="refB1">
-              <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refERSTE">
-                <Bezeichnung>200-201</Bezeichnung>
-                <Ausfuehrender>Kanal-TV Muster AG</Ausfuehrender>
-                {Zeitpunkt(ersteZeitpunkt)}
-                <Inspizierte_Laenge>38.40</Inspizierte_Laenge>
-                <Erfassungsart>Kanalfernsehen</Erfassungsart>
-                <vonPunktBezeichnung>200</vonPunktBezeichnung>
-                <bisPunktBezeichnung>201</bisPunktBezeichnung>
-                <Fliessrichtung>in_Fliessrichtung</Fliessrichtung>
-              </VSA_KEK_2020_LV95.KEK.Untersuchung>
-              <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refZWEITE">
-                <Bezeichnung>{zweiteBezeichnung}</Bezeichnung>
-                {Zeitpunkt(zweiteZeitpunkt)}
-                <Inspizierte_Laenge>12.00</Inspizierte_Laenge>
-                <Erfassungsart>Kanalfernsehen</Erfassungsart>
-                <vonPunktBezeichnung>201</vonPunktBezeichnung>
-                <bisPunktBezeichnung>200</bisPunktBezeichnung>
-                <Fliessrichtung>gegen_Fliessrichtung</Fliessrichtung>
-              </VSA_KEK_2020_LV95.KEK.Untersuchung>
-              <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refS1">
-                <UntersuchungRef REF="refERSTE" />
-                <KanalSchadencode>BCD</KanalSchadencode>
-                <Distanz>0.00</Distanz>
-              </VSA_KEK_2020_LV95.KEK.Kanalschaden>
-              <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refS2">
-                <UntersuchungRef REF="refERSTE" />
-                <KanalSchadencode>BABBA</KanalSchadencode>
-                <Distanz>12.30</Distanz>
-              </VSA_KEK_2020_LV95.KEK.Kanalschaden>
-              <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refS3">
-                <UntersuchungRef REF="refERSTE" />
-                <KanalSchadencode>BCE</KanalSchadencode>
-                <Distanz>38.40</Distanz>
-              </VSA_KEK_2020_LV95.KEK.Kanalschaden>
-              <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refS4">
-                <UntersuchungRef REF="refZWEITE" />
-                <KanalSchadencode>BCD</KanalSchadencode>
-                <Distanz>0.00</Distanz>
-              </VSA_KEK_2020_LV95.KEK.Kanalschaden>
-              <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="refS5">
-                <UntersuchungRef REF="refZWEITE" />
-                <KanalSchadencode>BDC</KanalSchadencode>
-                <Distanz>12.00</Distanz>
-                <Anmerkung>Abbruch Gegenbefahrung</Anmerkung>
-              </VSA_KEK_2020_LV95.KEK.Kanalschaden>
-              <VSA_KEK_2020_LV95.KEK.Datei TID="refD1">
-                <Art>Video</Art>
-                <Klasse>Untersuchung</Klasse>
-                <Objekt>refERSTE</Objekt>
-                <Bezeichnung>erste.mpg</Bezeichnung>
-                <Relativpfad>Film</Relativpfad>
-              </VSA_KEK_2020_LV95.KEK.Datei>
-              <VSA_KEK_2020_LV95.KEK.Datei TID="refD2">
-                <Art>Video</Art>
-                <Klasse>Untersuchung</Klasse>
-                <Objekt>refZWEITE</Objekt>
-                <Bezeichnung>zweite.mp4</Bezeichnung>
-                <Relativpfad>Film</Relativpfad>
-              </VSA_KEK_2020_LV95.KEK.Datei>
-            </VSA_KEK_2020_LV95.KEK>
-          </DATASECTION>
-        </TRANSFER>
-        """;
+        private static string Zeitpunkt(string wert) => wert.Length == 0 ? "" : $"<Zeitpunkt>{wert}</Zeitpunkt>";
+
+        private static string Schaden(string tid, string untersuchung, string code, string distanz) => $"""
+                  <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="{tid}">
+                    <UntersuchungRef REF="{untersuchung}" />
+                    <KanalSchadencode>{code}</KanalSchadencode>
+                    <Distanz>{distanz}</Distanz>
+                  </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+            """;
+
+        public string Xtf() => $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+              <HEADERSECTION VERSION="2.3" SENDER="Test">
+                <MODELS>
+                  <MODEL NAME="VSA_KEK_2020_LV95" />
+                </MODELS>
+              </HEADERSECTION>
+              <DATASECTION>
+                <VSA_KEK_2020_LV95.KEK BID="refB1">
+                  <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refERSTE">
+                    <Bezeichnung>200-201</Bezeichnung>
+                    <Ausfuehrender>Kanal-TV Muster AG</Ausfuehrender>
+                    {Zeitpunkt(ErsteZeitpunkt)}
+                    <Inspizierte_Laenge>{ErsteLaenge}</Inspizierte_Laenge>
+                    <Erfassungsart>Kanalfernsehen</Erfassungsart>
+                    <vonPunktBezeichnung>200</vonPunktBezeichnung>
+                    <bisPunktBezeichnung>201</bisPunktBezeichnung>
+                    <Fliessrichtung>in_Fliessrichtung</Fliessrichtung>
+                  </VSA_KEK_2020_LV95.KEK.Untersuchung>
+                  <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refZWEITE">
+                    <Bezeichnung>{ZweiteBezeichnung}</Bezeichnung>
+                    {Zeitpunkt(ZweiteZeitpunkt)}
+                    <Inspizierte_Laenge>{ZweiteLaenge}</Inspizierte_Laenge>
+                    <Erfassungsart>Kanalfernsehen</Erfassungsart>
+                    <vonPunktBezeichnung>201</vonPunktBezeichnung>
+                    <bisPunktBezeichnung>200</bisPunktBezeichnung>
+                    <Fliessrichtung>gegen_Fliessrichtung</Fliessrichtung>
+                  </VSA_KEK_2020_LV95.KEK.Untersuchung>
+            {Schaden("refS1", "refERSTE", "BCD", "0.00")}
+            {Schaden("refS2", "refERSTE", "BABBA", "12.30")}
+            {Schaden("refS3", "refERSTE", ErsteAbgebrochen ? "BDC" : "BCE", "38.40")}
+            {Schaden("refS4", "refZWEITE", "BCD", "0.00")}
+            {Schaden("refS5", "refZWEITE", ZweiteAbgebrochen ? "BDC" : "BCE", "12.00")}
+                  <VSA_KEK_2020_LV95.KEK.Datei TID="refD0">
+                    <Art>Foto</Art>
+                    <Klasse>Kanalschaden</Klasse>
+                    <Objekt>refS1</Objekt>
+                    <Bezeichnung>anfang.jpg</Bezeichnung>
+                    <Relativpfad>Fotos</Relativpfad>
+                  </VSA_KEK_2020_LV95.KEK.Datei>
+                  <VSA_KEK_2020_LV95.KEK.Datei TID="refD1">
+                    <Art>Video</Art>
+                    <Klasse>Untersuchung</Klasse>
+                    <Objekt>refERSTE</Objekt>
+                    <Bezeichnung>erste.mpg</Bezeichnung>
+                    <Relativpfad>Film</Relativpfad>
+                  </VSA_KEK_2020_LV95.KEK.Datei>
+                  <VSA_KEK_2020_LV95.KEK.Datei TID="refD2">
+                    <Art>Video</Art>
+                    <Klasse>Untersuchung</Klasse>
+                    <Objekt>refZWEITE</Objekt>
+                    <Bezeichnung>zweite.mp4</Bezeichnung>
+                    <Relativpfad>Film</Relativpfad>
+                  </VSA_KEK_2020_LV95.KEK.Datei>
+                </VSA_KEK_2020_LV95.KEK>
+              </DATASECTION>
+            </TRANSFER>
+            """;
+    }
 }

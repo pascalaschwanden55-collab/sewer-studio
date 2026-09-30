@@ -5,17 +5,28 @@ using AuswertungPro.Next.Infrastructure.Import.Common;
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 /// <summary>
-/// Waehlt je Haltung genau eine VSA-KEK-Untersuchung. Bis 30.09.2026 ueberschrieb die
-/// zweite Untersuchung derselben Haltung (z.B. die Gegenbefahrung) Datum, Laenge,
-/// Richtung, Video, Herkunft und Bemerkung der ersten, und der Datensatz trug die Befunde
-/// beider. Jetzt gilt dieselbe Regel wie beim WinCan-Import
-/// (<see cref="UntersuchungsAuswahl"/>): neuestes glaubwuerdiges Datum, bei Gleichstand
-/// die Dateireihenfolge. Die XTF kennt keinen technischen Zeitstempel als Rueckfall.
+/// Waehlt je Haltung die Haupt-Untersuchung einer VSA-KEK-Datei. Bis 30.09.2026
+/// ueberschrieb die zweite Untersuchung derselben Haltung (z.B. die Gegenbefahrung) Datum,
+/// Laenge, Richtung, Video, Herkunft und Bemerkung der ersten, und der Datensatz trug die
+/// Befunde beider.
+///
+/// Regel (Entscheid Pascal 30.09.2026, «Variante C»): Haupt-Untersuchung ist die
+/// vollstaendigste, nicht die neueste —
+/// 1. nicht abgebrochen vor abgebrochen (ein Kanalschaden mit Abbruchcode BDC*; die Datei
+///    kennt kein eigenes Abbruchfeld),
+/// 2. laengere untersuchte Strecke,
+/// 3. erst dann das glaubwuerdige Datum wie bei WinCan (<see cref="UntersuchungsAuswahl"/>),
+/// 4. bei Gleichstand die erste in der Datei.
+/// Diese Reihenfolge gilt nur fuer VSA-KEK; der WinCan-Import waehlt weiter nach Datum.
+/// Die weiteren Untersuchungen gehen nicht verloren, sie werden als Protokollfassung abgelegt.
 /// </summary>
 internal static class VsaKekUntersuchungsWahl
 {
-    /// <summary>Die Untersuchungen einer Haltung: die uebernommene und die uebrigen.</summary>
-    internal sealed record Gruppe<T>(string Haltung, T Gewaehlt, IReadOnlyList<T> Uebersprungen);
+    /// <summary>Was die Wahl von einer Untersuchung wissen muss.</summary>
+    internal sealed record Merkmale(bool Abgebrochen, double Laenge, string? Zeitpunkt);
+
+    /// <summary>Die Untersuchungen einer Haltung: die Haupt-Untersuchung und die weiteren.</summary>
+    internal sealed record Gruppe<T>(string Haltung, T Haupt, IReadOnlyList<T> Weitere);
 
     private static readonly string[] Zeitformate =
     {
@@ -26,12 +37,13 @@ internal static class VsaKekUntersuchungsWahl
     /// <summary>
     /// Gruppiert die Haltungsuntersuchungen nach Bezeichnung, verglichen wie die Uebernahme
     /// den Projektdatensatz findet (<see cref="HoldingKeyNormalizer.Normalize"/>, Gross-/
-    /// Kleinschreibung egal). Die Gruppen stehen in der Reihenfolge ihres ersten Auftretens.
+    /// Kleinschreibung egal), und ordnet jede Gruppe nach der Regel oben. Die Gruppen stehen
+    /// in der Reihenfolge ihres ersten Auftretens.
     /// </summary>
     public static List<Gruppe<T>> Waehle<T>(
         IEnumerable<T> haltungsuntersuchungen,
         Func<T, string> bezeichnung,
-        Func<T, string> zeitpunkt)
+        Func<T, Merkmale> merkmale)
     {
         ArgumentNullException.ThrowIfNull(haltungsuntersuchungen);
 
@@ -53,8 +65,14 @@ internal static class VsaKekUntersuchungsWahl
         return reihenfolge
             .Select(schluessel =>
             {
-                var geordnet = UntersuchungsAuswahl.Ordne(jeHaltung[schluessel],
-                    u => UntersuchungsAuswahl.Sortierschluessel(new[] { LiesZeitpunkt(zeitpunkt(u)) }));
+                // OrderBy/ThenBy sind stabil: Gleichstand behaelt die Dateireihenfolge.
+                var geordnet = jeHaltung[schluessel]
+                    .Select(u => (Untersuchung: u, Merkmale: merkmale(u)))
+                    .OrderBy(k => k.Merkmale.Abgebrochen)
+                    .ThenByDescending(k => k.Merkmale.Laenge)
+                    .ThenByDescending(k => UntersuchungsAuswahl.Sortierschluessel(new[] { LiesZeitpunkt(k.Merkmale.Zeitpunkt) }))
+                    .Select(k => k.Untersuchung)
+                    .ToList();
                 return new Gruppe<T>(schluessel, geordnet[0], geordnet.Skip(1).ToList());
             })
             .ToList();
@@ -82,12 +100,4 @@ internal static class VsaKekUntersuchungsWahl
             return gueltig.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
         return string.IsNullOrWhiteSpace(roh) ? "ohne Datum" : $"«{roh.Trim()}» (Datum nicht lesbar)";
     }
-
-    /// <summary>Die Meldung fuer eine nicht gewaehlte Untersuchung.</summary>
-    public static string Meldung(string haltung, int anzahl,
-        string gewaehltTid, string gewaehltZeitpunkt,
-        string uebersprungenTid, string uebersprungenZeitpunkt, int befunde)
-        => $"Haltung \"{haltung}\": Datei führt {anzahl} Untersuchungen. "
-           + $"Übernommen: {Datumstext(gewaehltZeitpunkt)} (TID {gewaehltTid}); "
-           + $"übersprungen: {Datumstext(uebersprungenZeitpunkt)} (TID {uebersprungenTid}) mit {befunde} Befunden.";
 }

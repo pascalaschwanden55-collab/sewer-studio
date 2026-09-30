@@ -391,13 +391,13 @@
           "Anschluesse_verpressen": "",
           "Ausgefuehrt_durch": "",
           "Baujahr": "",
-          "Bemerkungen": "Erfassung: Kanalfernsehen",
+          "Bemerkungen": "Erfassung: Kanalfernsehen, Grund: Zustandserfassung, Witterung: trocken, Ausfuehrender: Kanal-TV Muster AG, Fahrzeug: TV-3, Geraet: Kamera 2",
           "Bettung_Umhuellung": "",
           "Bruttokosten": "",
           "DN_mm": "",
           "Datenherr": "",
           "Datenlieferant": "",
-          "Datum_Jahr": "15.03.2025",
+          "Datum_Jahr": "12.03.2025",
           "Eigentuemer": "",
           "Empfohlene_Sanierungsmassnahmen": "",
           "Erneuerung_Neubau_m": "",
@@ -406,21 +406,21 @@
           "GEONIS_Kennung": "",
           "Gewaesserschutz": "",
           "Grundwasserspiegel": "",
-          "Haltungslaenge_m": "12.00",
+          "Haltungslaenge_m": "38.40",
           "Haltungsname": "200-201",
-          "Inspektionsrichtung": "Gegen Fliessrichtung",
+          "Inspektionsrichtung": "In Fliessrichtung",
           "Kosten": "",
           "Lagebestimmung": "",
           "Letzte_Aenderung": "",
           "Lichte_Breite_mm": "",
           "Linerendmanschette_LEM": "",
-          "Link": "<lauf>/Film/200-201_gegen.mp4",
+          "Link": "<lauf>/Film/200-201.mpg",
           "NR": "",
           "Nutzungsart": "",
           "Objekt_ID": "",
           "Offen_abgeschlossen": "",
           "Organisation": "",
-          "Primaere_Schaeden": "0.00m BCD Anfangsknoten\n12.00m BDC Abbruch der Inspektion (Abbruch Gegenbefahrung)",
+          "Primaere_Schaeden": "0.00m BCD Anfangsknoten\n12.30m BABBA Längs (Querriss) Q1=2\n20.00m BBAA Pfahlwurzeln Q1=5.5 Q2=10\n38.40m BCE Endknoten",
           "Profiltyp": "",
           "Pruefungsresultat": "",
           "Referenzpruefung": "",
@@ -431,8 +431,8 @@
           "Rohrmaterial": "",
           "Sanieren_JaNein": "",
           "Sanierungsbedarf": "",
-          "Schacht_oben": "201",
-          "Schacht_unten": "200",
+          "Schacht_oben": "200",
+          "Schacht_unten": "201",
           "Status": "",
           "Strasse": "",
           "VSA_Geschaetzt": "",
@@ -464,34 +464,161 @@
                 "IsStreckenschaden": false,
                 "MeterEnd": null,
                 "MeterStart": 0,
-                "Mpeg": "00:00:03",
+                "Mpeg": "00:00:04",
                 "OriginalFotoPaths": [],
                 "Source": 0,
                 "Training": null,
-                "Zeit": "00:00:03"
+                "Zeit": "00:00:04"
               },
               {
                 "Ai": null,
-                "Beschreibung": "Abbruch Gegenbefahrung",
-                "Code": "BDC",
+                "Beschreibung": "Querriss",
+                "Code": "BABBA",
+                "CodeMeta": {
+                  "Code": "BABBA",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung1": "2",
+                    "Quantifizierung2": "",
+                    "vsa.uhr.von": "3"
+                  },
+                  "Severity": null,
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [
+                  "<lauf>/Fotos/foto_schaden2.jpg"
+                ],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 12.3,
+                "Mpeg": "00:02:11",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:02:11"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "BBAA",
+                "CodeMeta": {
+                  "Code": "BBAA",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung1": "5.5",
+                    "Quantifizierung2": "10",
+                    "vsa.uhr.bis": "3",
+                    "vsa.uhr.von": "9"
+                  },
+                  "Severity": null,
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [
+                  "<lauf>/Fotos/foto_schaden3.jpg"
+                ],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 20,
+                "Mpeg": "00:03:40",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:03:40"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "BCE",
                 "CodeMeta": null,
                 "EntryId": "<guid>",
                 "FotoPaths": [],
                 "IsDeleted": false,
                 "IsStreckenschaden": false,
                 "MeterEnd": null,
-                "MeterStart": 12,
-                "Mpeg": "00:01:50",
+                "MeterStart": 38.4,
+                "Mpeg": "00:06:02",
                 "OriginalFotoPaths": [],
                 "Source": 0,
                 "Training": null,
-                "Zeit": "00:01:50"
+                "Zeit": "00:06:02"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "bce",
+                "CodeMeta": null,
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 38.4,
+                "Mpeg": null,
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": null
               }
             ],
             "RevisionId": "<guid>"
           },
           "HaltungId": "200-201",
-          "History": [],
+          "History": [
+            {
+              "BasedOnRevisionId": null,
+              "Changes": [],
+              "Comment": "Weitere VSA-KEK-Untersuchung vom 15.03.2025 (TID refUNTERS2)",
+              "CreatedAt": "<zeitpunkt>",
+              "CreatedBy": null,
+              "Entries": [
+                {
+                  "Ai": null,
+                  "Beschreibung": "",
+                  "Code": "BCD",
+                  "CodeMeta": null,
+                  "EntryId": "<guid>",
+                  "FotoPaths": [],
+                  "IsDeleted": false,
+                  "IsStreckenschaden": false,
+                  "MeterEnd": null,
+                  "MeterStart": 0,
+                  "Mpeg": "00:00:03",
+                  "OriginalFotoPaths": [],
+                  "Source": 0,
+                  "Training": null,
+                  "Zeit": "00:00:03"
+                },
+                {
+                  "Ai": null,
+                  "Beschreibung": "Abbruch Gegenbefahrung",
+                  "Code": "BDC",
+                  "CodeMeta": null,
+                  "EntryId": "<guid>",
+                  "FotoPaths": [],
+                  "IsDeleted": false,
+                  "IsStreckenschaden": false,
+                  "MeterEnd": null,
+                  "MeterStart": 12,
+                  "Mpeg": "00:01:50",
+                  "OriginalFotoPaths": [],
+                  "Source": 0,
+                  "Training": null,
+                  "Zeit": "00:01:50"
+                }
+              ],
+              "ImportFingerprint": "2B4BE85B0897D6BB264B0D538D270455BBA22E221561137E980F3C94C8CBA513",
+              "ImportVideoPaths": [
+                "<lauf>/Film/200-201_gegen.mp4"
+              ],
+              "RevisionId": "<guid>"
+            }
+          ],
           "Original": {
             "BasedOnRevisionId": null,
             "Changes": [],
@@ -510,28 +637,106 @@
                 "IsStreckenschaden": false,
                 "MeterEnd": null,
                 "MeterStart": 0,
-                "Mpeg": "00:00:03",
+                "Mpeg": "00:00:04",
                 "OriginalFotoPaths": [],
                 "Source": 0,
                 "Training": null,
-                "Zeit": "00:00:03"
+                "Zeit": "00:00:04"
               },
               {
                 "Ai": null,
-                "Beschreibung": "Abbruch Gegenbefahrung",
-                "Code": "BDC",
+                "Beschreibung": "Querriss",
+                "Code": "BABBA",
+                "CodeMeta": {
+                  "Code": "BABBA",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung1": "2",
+                    "Quantifizierung2": "",
+                    "vsa.uhr.von": "3"
+                  },
+                  "Severity": null,
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [
+                  "<lauf>/Fotos/foto_schaden2.jpg"
+                ],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 12.3,
+                "Mpeg": "00:02:11",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:02:11"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "BBAA",
+                "CodeMeta": {
+                  "Code": "BBAA",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung1": "5.5",
+                    "Quantifizierung2": "10",
+                    "vsa.uhr.bis": "3",
+                    "vsa.uhr.von": "9"
+                  },
+                  "Severity": null,
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [
+                  "<lauf>/Fotos/foto_schaden3.jpg"
+                ],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 20,
+                "Mpeg": "00:03:40",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:03:40"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "BCE",
                 "CodeMeta": null,
                 "EntryId": "<guid>",
                 "FotoPaths": [],
                 "IsDeleted": false,
                 "IsStreckenschaden": false,
                 "MeterEnd": null,
-                "MeterStart": 12,
-                "Mpeg": "00:01:50",
+                "MeterStart": 38.4,
+                "Mpeg": "00:06:02",
                 "OriginalFotoPaths": [],
                 "Source": 0,
                 "Training": null,
-                "Zeit": "00:01:50"
+                "Zeit": "00:06:02"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "bce",
+                "CodeMeta": null,
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 38.4,
+                "Mpeg": null,
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": null
               }
             ],
             "RevisionId": "<guid>"
@@ -545,9 +750,9 @@
             "EZS": null,
             "FotoPath": null,
             "KanalSchadencode": "BCD",
-            "KanalschadenTid": "refSCHADEN5",
+            "KanalschadenTid": "refSCHADEN1",
             "LL": 0,
-            "MPEG": "00:00:03",
+            "MPEG": "00:00:04",
             "MeterEnd": null,
             "MeterStart": 0,
             "Quantifizierung1": null,
@@ -556,32 +761,89 @@
             "SchadenlageAnfang": null,
             "SchadenlageEnde": null,
             "Timestamp": null,
-            "UntersuchungTid": "refUNTERS2"
+            "UntersuchungTid": "refUNTERS1"
+          },
+          {
+            "EZB": 3,
+            "EZD": 3,
+            "EZS": 3,
+            "FotoPath": "<lauf>/Fotos/foto_schaden2.jpg",
+            "KanalSchadencode": "BABBA",
+            "KanalschadenTid": "refSCHADEN2",
+            "LL": 0,
+            "MPEG": "00:02:11",
+            "MeterEnd": null,
+            "MeterStart": 12.3,
+            "Quantifizierung1": "2",
+            "Quantifizierung2": null,
+            "Raw": "Querriss",
+            "SchadenlageAnfang": 3,
+            "SchadenlageEnde": null,
+            "Timestamp": null,
+            "UntersuchungTid": "refUNTERS1"
+          },
+          {
+            "EZB": 4,
+            "EZD": 4,
+            "EZS": 4,
+            "FotoPath": "<lauf>/Fotos/foto_schaden3.jpg",
+            "KanalSchadencode": "BBAA",
+            "KanalschadenTid": "refSCHADEN3",
+            "LL": 5.5,
+            "MPEG": "00:03:40",
+            "MeterEnd": null,
+            "MeterStart": 20,
+            "Quantifizierung1": "5.5",
+            "Quantifizierung2": "10",
+            "Raw": null,
+            "SchadenlageAnfang": 9,
+            "SchadenlageEnde": 3,
+            "Timestamp": null,
+            "UntersuchungTid": "refUNTERS1"
           },
           {
             "EZB": null,
             "EZD": null,
             "EZS": null,
             "FotoPath": null,
-            "KanalSchadencode": "BDC",
-            "KanalschadenTid": "refSCHADEN6",
+            "KanalSchadencode": "BCE",
+            "KanalschadenTid": "refSCHADEN4",
             "LL": 0,
-            "MPEG": "00:01:50",
+            "MPEG": "00:06:02",
             "MeterEnd": null,
-            "MeterStart": 12,
+            "MeterStart": 38.4,
             "Quantifizierung1": null,
             "Quantifizierung2": null,
-            "Raw": "Abbruch Gegenbefahrung",
+            "Raw": null,
             "SchadenlageAnfang": null,
             "SchadenlageEnde": null,
             "Timestamp": null,
-            "UntersuchungTid": "refUNTERS2"
+            "UntersuchungTid": "refUNTERS1"
+          },
+          {
+            "EZB": null,
+            "EZD": null,
+            "EZS": null,
+            "FotoPath": null,
+            "KanalSchadencode": "bce",
+            "KanalschadenTid": "refSCHADEN4DOPPELT",
+            "LL": 0,
+            "MPEG": null,
+            "MeterEnd": null,
+            "MeterStart": 38.4,
+            "Quantifizierung1": null,
+            "Quantifizierung2": null,
+            "Raw": null,
+            "SchadenlageAnfang": null,
+            "SchadenlageEnde": null,
+            "Timestamp": null,
+            "UntersuchungTid": "refUNTERS1"
           }
         ],
         "XtfHerkunft": {
           "Datei": "vsakek-referenz.xtf",
           "Modell": "VSA_KEK_2020_LV95",
-          "UntersuchungTid": "refUNTERS2"
+          "UntersuchungTid": "refUNTERS1"
         }
       },
       {
@@ -1329,10 +1591,10 @@
       {
         "Context": "XTF",
         "Level": "Warn",
-        "Message": "Haltung \"200-201\": Datei führt 2 Untersuchungen. Übernommen: 15.03.2025 (TID refUNTERS2); übersprungen: 12.03.2025 (TID refUNTERS1) mit 5 Befunden."
+        "Message": "Haltung \"200-201\": Datei führt weitere Untersuchungen. Haupt-Untersuchung: 12.03.2025 (TID refUNTERS1) mit 5 Befunden; zusätzliche Protokollfassung: 15.03.2025 (TID refUNTERS2) mit 2 Befunden abgelegt."
       }
     ],
-    "Uncertain": 2,
+    "Uncertain": 3,
     "UpdatedFields": 9,
     "UpdatedRecords": 0
   }

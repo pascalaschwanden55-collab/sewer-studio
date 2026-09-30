@@ -732,18 +732,24 @@ Datei fehlt, und muss dann bewusst geprueft werden.
   – nur die erste übernommen»). Gleiche TID zweimal bleibt wie bisher.
   Ort: `Sia405DoppelteBezeichnungen` zwischen Bezuegen und Abbildung. Test:
   `XtfDoppelteHaltungsbezeichnungTests`.
-- **VSA-KEK: je Haltung genau eine Untersuchung, gewaehlt wie bei WinCan.** Bisher
-  ueberschrieb die zweite Untersuchung derselben Haltung (z.B. die Gegenbefahrung) Datum,
-  Laenge, Richtung, Video, `XtfHerkunft` und Bemerkung der ersten, und der Datensatz trug
-  die Befunde beider (Zuordnung ueber den Namen), `Primaere_Schaeden` mischte beide
-  Richtungen. Jetzt gilt die gemeinsame Regel `UntersuchungsAuswahl`
-  (Application, rein; auch der WinCan-Import nutzt sie): neuestes glaubwuerdiges
-  `Zeitpunkt`, der Vorgabetag `2007-12-31` und alles vor 1990 zaehlen als Platzhalter;
-  einen technischen Zeitstempel als Rueckfall hat die XTF nicht, also entscheidet danach
-  die Dateireihenfolge. Nur die gewaehlte Untersuchung liefert Felder, Befunde (ueber
-  `UntersuchungRef`, nicht den Namen) und `Primaere_Schaeden`; jede andere steht als
-  Warnung mit Datum, TID und Befundzahl im Importbericht. Anders als bei WinCan wird sie
-  (noch) nicht als `ProtocolRevision` abgelegt. Schachtbegehungen und ihr
-  `ImportFingerprint` sind unveraendert. Ort: `VsaKekUntersuchungsWahl`. Tests:
-  `XtfVsaKekMehrereUntersuchungenTests`, `UntersuchungsAuswahlTests`.
+- **VSA-KEK: Haupt-Untersuchung ist die vollstaendigste, jede weitere wird Protokollfassung**
+  (Entscheid Pascal 30.09.2026, «Variante C»). Bisher ueberschrieb die zweite Untersuchung
+  derselben Haltung (z.B. die Gegenbefahrung) Datum, Laenge, Richtung, Video,
+  `XtfHerkunft` und Bemerkung der ersten, und der Datensatz trug die Befunde beider
+  (Zuordnung ueber den Namen). Jetzt waehlt `VsaKekUntersuchungsWahl` je Haltung
+  (Bezeichnung normalisiert wie die Uebernahme) die Haupt-Untersuchung: nicht abgebrochen
+  (kein Kanalschaden BDC*; ein Abbruchfeld gibt es in der Datei nicht) vor abgebrochen,
+  dann laengere `Inspizierte_Laenge` (ohne sie die groesste Schadensdistanz), dann das
+  glaubwuerdige Datum wie bei WinCan (`UntersuchungsAuswahl.Sortierschluessel`:
+  `2007-12-31` und vor 1990 sind Platzhalter), dann die Dateireihenfolge. Nur fuer
+  VSA-KEK; WinCan waehlt unveraendert nach Datum (`UntersuchungsAuswahl.Ordne`). Die
+  Haupt-Untersuchung liefert Felder, Befunde (ueber `UntersuchungRef`), `Primaere_Schaeden`
+  und das Protokoll. Jede weitere wird wie bei WinCan als zusaetzliche `ProtocolRevision`
+  in `History` abgelegt: eigene Befunde und Meter, `ImportFingerprint` (SHA-256 wie beim
+  Schacht) gegen Duplikate, Video in `ImportVideoPaths`; ohne Befunde keine Fassung.
+  `VsaFindingProtocolSynchronizer` gleicht Fassungen mit fremdem Importbeleg nicht mehr mit
+  den Befunden der Haupt-Untersuchung ab. Der Importbericht nennt Haupt-Untersuchung und
+  Fassung mit Datum, TID und Befundzahl. `Link_G` setzt der XTF-Weg nicht (WinCan nur per
+  `Befahrungsrollen`-Namenskonvention). Schachtbegehungen und ihr `ImportFingerprint` sind
+  unveraendert. Tests: `XtfVsaKekMehrereUntersuchungenTests`, `UntersuchungsAuswahlTests`.
 

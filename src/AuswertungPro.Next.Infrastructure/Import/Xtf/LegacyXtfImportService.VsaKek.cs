@@ -1,4 +1,5 @@
 ﻿using System.Xml.Linq;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -70,15 +71,15 @@ public sealed partial class LegacyXtfImportService
 
     /// <summary>
     /// Was eine VSA-KEK-Datei fachlich hergibt — nach Bauwerksart getrennt.
-    /// <paramref name="Uebersprungen"/> nennt jede weitere Untersuchung einer Haltung, die
-    /// nicht gewaehlt wurde (siehe <see cref="VsaKekUntersuchungsWahl"/>).
+    /// <paramref name="Weitere"/> sind die Untersuchungen einer Haltung neben ihrer
+    /// Haupt-Untersuchung (siehe <see cref="VsaKekUntersuchungsWahl"/>).
     /// </summary>
     internal sealed record XtfVsaKekErgebnis(
         List<HaltungRecord> Haltungen,
         List<XtfSchachtUntersuchung> Schaechte,
         List<XtfOffeneUntersuchung> Offene,
         int Untersuchungen,
-        List<string> Uebersprungen);
+        List<XtfWeitereUntersuchung> Weitere);
 
     private sealed class Schaden
     {
@@ -413,25 +414,44 @@ public sealed partial class LegacyXtfImportService
             haltungsuntersuchungen.Add(u);
         }
 
-        // Je Haltung genau eine Untersuchung, gleiche Regel wie der WinCan-Import. Nur sie
-        // liefert Felder, Befunde und Primaere_Schaeden; jede andere steht im Importbericht.
-        var uebersprungen = new List<string>();
-        foreach (var gruppe in VsaKekUntersuchungsWahl.Waehle(haltungsuntersuchungen, u => u.Bezeichnung, u => u.Zeitpunkt))
+        // Je Haltung eine Haupt-Untersuchung (die vollstaendigste). Nur sie liefert Felder,
+        // Befunde und Primaere_Schaeden; jede weitere wird danach als Protokollfassung abgelegt.
+        var weitere = new List<XtfWeitereUntersuchung>();
+        foreach (var gruppe in VsaKekUntersuchungsWahl.Waehle(haltungsuntersuchungen, u => u.Bezeichnung, Merkmale))
         {
-            findingsJeUntersuchung.TryGetValue(gruppe.Gewaehlt.Tid, out var findings);
-            videoByUntersuchungTid.TryGetValue(gruppe.Gewaehlt.Tid, out var videoLink);
-            records.Add(BaueHaltung(gruppe.Gewaehlt, findings, videoLink, sourcePath, modellName));
+            findingsJeUntersuchung.TryGetValue(gruppe.Haupt.Tid, out var findings);
+            videoByUntersuchungTid.TryGetValue(gruppe.Haupt.Tid, out var videoLink);
+            records.Add(BaueHaltung(gruppe.Haupt, findings, videoLink, sourcePath, modellName));
 
-            foreach (var weitere in gruppe.Uebersprungen)
+            foreach (var w in gruppe.Weitere)
             {
-                uebersprungen.Add(VsaKekUntersuchungsWahl.Meldung(
-                    gruppe.Haltung, gruppe.Uebersprungen.Count + 1,
-                    gruppe.Gewaehlt.Tid, gruppe.Gewaehlt.Zeitpunkt, weitere.Tid, weitere.Zeitpunkt,
-                    findingsJeUntersuchung.TryGetValue(weitere.Tid, out var befunde) ? befunde.Count : 0));
+                findingsJeUntersuchung.TryGetValue(w.Tid, out var befunde);
+                videoByUntersuchungTid.TryGetValue(w.Tid, out var video);
+                weitere.Add(new XtfWeitereUntersuchung(
+                    gruppe.Haltung, gruppe.Haupt.Tid, gruppe.Haupt.Zeitpunkt, findings?.Count ?? 0,
+                    w.Tid, w.Zeitpunkt, befunde ?? new List<VsaFinding>(), video,
+                    // Gleiche Rechnung wie der Schacht-Fingerabdruck: nur Dateiinhalt, keine Pfade.
+                    Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                        System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(w)))));
             }
         }
 
-        return new XtfVsaKekErgebnis(records, schaechte, offene, untersuchungen.Count, uebersprungen);
+        return new XtfVsaKekErgebnis(records, schaechte, offene, untersuchungen.Count, weitere);
+    }
+
+    /// <summary>
+    /// Vollstaendigkeit einer Haltungsuntersuchung. Abgebrochen heisst: ein Kanalschaden mit
+    /// Abbruchcode BDC* (die Datei kennt kein eigenes Abbruchfeld). Die Strecke ist
+    /// <c>Inspizierte_Laenge</c>, ohne sie die groesste Schadensdistanz.
+    /// </summary>
+    private static VsaKekUntersuchungsWahl.Merkmale Merkmale(Untersuchung u)
+    {
+        var abgebrochen = u.Schaeden.Any(s => (s.Schadencode ?? "").Trim()
+            .StartsWith(ProtocolBoundaryService.AbortPrefix, StringComparison.OrdinalIgnoreCase));
+        var laenge = TryParseDouble(u.InspizierteLaenge, out var inspiziert)
+            ? inspiziert
+            : u.Schaeden.Select(s => TryParseDouble(s.Distanz, out var d) ? d : 0.0).DefaultIfEmpty(0.0).Max();
+        return new VsaKekUntersuchungsWahl.Merkmale(abgebrochen, laenge, u.Zeitpunkt);
     }
 
     /// <summary>

@@ -255,9 +255,9 @@ public sealed partial class LegacyXtfImportService
                 });
             }
 
-            // Weitere Untersuchungen derselben Haltung: nicht uebernommen, aber namentlich gemeldet.
-            foreach (var meldung in ergebnis.Uebersprungen)
-                stats.Messages.Add(new ImportMessage { Level = "Warn", Context = "XTF", Message = meldung });
+            // Weitere Untersuchungen derselben Haltung (z.B. Gegenbefahrung): als eigene
+            // Protokollfassung ablegen, erst nach der Uebernahme der Haupt-Untersuchungen.
+            VsaKekWeitereUntersuchungen.LegeAb(project, ergebnis.Weitere, stats);
         }
 
         if (!isSia405 && !isVsa)
