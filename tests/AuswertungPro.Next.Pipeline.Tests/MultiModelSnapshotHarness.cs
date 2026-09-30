@@ -114,6 +114,9 @@ internal sealed class MultiModelSnapshotRecorder :
                    + (exception is null ? string.Empty : $" [{exception.GetType().Name}: {exception.Message}]");
         line = System.Text.RegularExpressions.Regex.Replace(line, @"runId=\d{8}_\d{6}_[0-9a-f]{6}", "runId=<lauf>");
         line = System.Text.RegularExpressions.Regex.Replace(line, @"=\d+ms", "=<zeit>ms");
+        // Der Journalname ist ein Hash des vollen Videopfads und haengt damit am Arbeitsverzeichnis
+        // (Debug- und Release-Ausgabe liegen in verschiedenen Ordnern).
+        line = System.Text.RegularExpressions.Regex.Replace(line, @"analysis_checkpoint_[0-9a-f]{16}", "analysis_checkpoint_<hash>");
         Events.Add(line);
     }
 
