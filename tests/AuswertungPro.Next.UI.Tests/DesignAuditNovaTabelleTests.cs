@@ -75,11 +75,18 @@ public sealed class DesignAuditNovaTabelleTests
     {
         var header = Kopfstil(datei);
 
-        Assert.Contains("x:Key=\"KopfGriffOhneLinie\"", header);
-        Assert.Contains("x:Key=\"KopfGriffTrennlinie\"", header);
-        Assert.Contains("PART_LeftHeaderGripper\" Style=\"{StaticResource KopfGriffOhneLinie}\"", header);
-        Assert.Contains("PART_RightHeaderGripper\" Style=\"{StaticResource KopfGriffTrennlinie}\"", header);
-        Assert.Contains("Fill=\"{DynamicResource BorderBrush}\"", header);
+        // Wartbarkeit Q3: Die Griff-Stile stehen genau einmal in Controls.xaml (nicht mehr in
+        // beiden Themes). Die Vorlage im Theme liest sie per DynamicResource, weil ein
+        // StaticResource in dieser Vorlage nur Ressourcen desselben Woerterbuchs findet.
+        var controls = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", "Controls.xaml"));
+        Assert.DoesNotContain("x:Key=\"KopfGriffOhneLinie\"", header);
+        Assert.DoesNotContain("x:Key=\"KopfGriffTrennlinie\"", header);
+        Assert.Contains("x:Key=\"KopfGriffOhneLinie\"", controls);
+        Assert.Contains("x:Key=\"KopfGriffTrennlinie\"", controls);
+        Assert.Contains("PART_LeftHeaderGripper\" Style=\"{DynamicResource KopfGriffOhneLinie}\"", header);
+        Assert.Contains("PART_RightHeaderGripper\" Style=\"{DynamicResource KopfGriffTrennlinie}\"", header);
+        var trennlinie = Regex.Match(controls, "<Style x:Key=\"KopfGriffTrennlinie\"[\\s\\S]*?\n    </Style>").Value;
+        Assert.Contains("Fill=\"{DynamicResource BorderBrush}\"", trennlinie);
 
         // Der Ziehbereich bleibt: 6 px breit, Cursor SizeWE.
         Assert.Equal(2, Regex.Matches(header, "Width=\"6\" Cursor=\"SizeWE\"").Count);

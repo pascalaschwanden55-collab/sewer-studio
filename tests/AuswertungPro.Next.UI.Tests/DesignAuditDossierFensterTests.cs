@@ -136,15 +136,21 @@ public sealed class DesignAuditDossierFensterTests
     }
 
     [Fact]
-    public void CompactButton_ist_in_beiden_Themes_gleich_und_folgt_SecondaryButton()
+    public void CompactButton_steht_einmal_in_Controls_und_folgt_SecondaryButton()
     {
+        // Wartbarkeit Q3: Vorher stand er zeichengleich in beiden Themes ("in beiden Themes
+        // gleich"); jetzt genau einmal in Controls.xaml, in den Themes gar nicht mehr.
+        var controls = File.ReadAllText(Path.Combine(UiRoot, "Theme", "Controls.xaml"));
+        var m = Regex.Match(controls, @"<Style x:Key=""CompactButton"" TargetType=""Button"" BasedOn=""\{StaticResource SecondaryButton\}"">.*?</Style>", RegexOptions.Singleline);
+        Assert.True(m.Success, "Controls.xaml: CompactButton fehlt oder ist nicht auf SecondaryButton umgestellt.");
+        Assert.Contains("MinHeight\" Value=\"28\"", m.Value);
+        Assert.Contains("Padding\" Value=\"10,4\"", m.Value);
+        Assert.Single(Regex.Matches(controls, @"x:Key=""CompactButton"""));
+
         foreach (var datei in new[] { "Theme.xaml", "ThemeLight.xaml" })
         {
             var xaml = File.ReadAllText(Path.Combine(UiRoot, "Theme", datei));
-            var m = Regex.Match(xaml, @"<Style x:Key=""CompactButton"" TargetType=""Button"" BasedOn=""\{StaticResource SecondaryButton\}"">.*?</Style>", RegexOptions.Singleline);
-            Assert.True(m.Success, $"{datei}: CompactButton fehlt oder ist nicht auf SecondaryButton umgestellt.");
-            Assert.Contains("MinHeight\" Value=\"28\"", m.Value);
-            Assert.Contains("Padding\" Value=\"10,4\"", m.Value);
+            Assert.DoesNotContain("x:Key=\"CompactButton\"", xaml);
         }
     }
 

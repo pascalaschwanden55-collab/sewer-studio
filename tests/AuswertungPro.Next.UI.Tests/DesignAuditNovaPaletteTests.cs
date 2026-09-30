@@ -59,12 +59,16 @@ public sealed class DesignAuditNovaPaletteTests
     public void Werkzeugknoepfe_und_Chips_sind_Pillen_und_der_Tabellenkopf_schreibt_gross(string datei)
     {
         var xaml = Xaml(datei);
-        string Stil(string key) => Regex.Match(xaml, $"<Style x:Key=\"{key}\"[\\s\\S]*?\n    </Style>").Value;
+        var controls = Xaml("Controls.xaml");
+        // Wartbarkeit Q3: ToolbarButton bleibt je Theme (feste Hover-/Druckfarben), Accent und
+        // Toggle stehen einmal in Controls.xaml.
+        string Stil(string key) => StilAusThemeOderControls(xaml, controls, key);
         // B1: 15 = halbe Hoehe der drei Vorlagen (MinHeight 30). 999 ergab in WPF eine Ellipse.
         Assert.Contains("CornerRadius=\"15\"", Stil("ToolbarButton"));
         Assert.Contains("CornerRadius=\"15\"", Stil("ToolbarButtonAccent"));
         Assert.Contains("CornerRadius=\"15\"", Stil("CompactToggleButton"));
         Assert.DoesNotContain("CornerRadius=\"999\"", xaml);
+        Assert.DoesNotContain("CornerRadius=\"999\"", controls);
         var header = Regex.Match(xaml, "<Style TargetType=\"\\{x:Type DataGridColumnHeader\\}\">[\\s\\S]*?\n    </Style>").Value;
         // Nova-Etappe 2b: Kapitaelchen greifen mit der Programmschrift nicht (siehe
         // DesignAuditNovaTabelleTests). Die Grossschreibung passiert beim Erzeugen der Spalte
@@ -86,7 +90,8 @@ public sealed class DesignAuditNovaPaletteTests
     public void Knopfvorlagen_reichen_ihre_Tinte_an_den_Inhalt_durch(string datei)
     {
         var xaml = Xaml(datei);
-        string Stil(string key) => Regex.Match(xaml, $"<Style x:Key=\"{key}\"[\\s\\S]*?\n    </Style>").Value;
+        var controls = Xaml("Controls.xaml");
+        string Stil(string key) => StilAusThemeOderControls(xaml, controls, key);
         var basis = Regex.Match(xaml, "<Style TargetType=\"\\{x:Type Button\\}\">[\\s\\S]*?\n    </Style>").Value;
 
         foreach (var (name, block, anker) in new[]
@@ -112,6 +117,17 @@ public sealed class DesignAuditNovaPaletteTests
         Assert.Contains("IsChecked=\"{Binding HintergrundEngine}\"", xaml);
         var main = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "MainWindow.xaml"));
         Assert.Contains("<ctrl:NetzHintergrund", main);
+    }
+
+    /// <summary>
+    /// Wartbarkeit Q3: Sucht einen benannten Stil zuerst im Theme (ToolbarButton, je Theme
+    /// verschieden), sonst in Controls.xaml (dort stehen die gemeinsamen Stile genau einmal).
+    /// </summary>
+    internal static string StilAusThemeOderControls(string themeXaml, string controlsXaml, string key)
+    {
+        var muster = $"<Style x:Key=\"{key}\"[\\s\\S]*?\n    </Style>";
+        var treffer = Regex.Match(themeXaml, muster);
+        return (treffer.Success ? treffer : Regex.Match(controlsXaml, muster)).Value;
     }
 
     internal static string Xaml(string datei)

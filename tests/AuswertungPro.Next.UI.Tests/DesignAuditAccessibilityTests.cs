@@ -12,10 +12,14 @@ public sealed class DesignAuditAccessibilityTests
     public void Themes_define_a_visible_keyboard_focus_style(string themeFile)
     {
         var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+        var controls = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", "Controls.xaml"));
 
-        Assert.Contains("x:Key=\"KeyboardFocusVisual\"", xaml, StringComparison.Ordinal);
+        // Wartbarkeit Q3: Der Fokusstil steht einmal in Controls.xaml; jedes Theme muss ihn
+        // weiter ueber den impliziten Button-Stil anwenden.
+        Assert.Contains("x:Key=\"KeyboardFocusVisual\"", controls, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"KeyboardFocusVisual\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Property=\"FocusVisualStyle\" Value=\"{DynamicResource KeyboardFocusVisual}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("BorderThickness=\"2\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("BorderThickness=\"2\"", controls, StringComparison.Ordinal);
     }
 
     [Fact]
