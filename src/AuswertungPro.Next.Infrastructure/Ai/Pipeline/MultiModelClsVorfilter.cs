@@ -38,12 +38,14 @@ internal sealed class MultiModelClsVorfilter
     {
         var trace = bild.Trace;
         YoloClassifyResponse? clsResult = null;
-        try
+        // Aufruf, Entscheidung und Skip-Buchung liegen in derselben Fehlereinordnung wie vorher im try.
+        var aufruf = await MultiModelSidecarAufruf.AusfuehrenAsync(async () =>
         {
-            clsResult = await _client.ClassifyYoloAsync(
+            var antwort = await _client.ClassifyYoloAsync(
                 new YoloClassifyRequest(bild.FrameBase64, 3), ct).ConfigureAwait(false);
+            clsResult = antwort;
 
-            if (ClsPrefilterRule.Decide(clsResult, classifierDecisionEnabled) is { } skip)
+            if (ClsPrefilterRule.Decide(antwort, classifierDecisionEnabled) is { } skip)
             {
                 run.SkippedFrames++;
                 if (skip.EmptyPrediction is { } empty)
@@ -51,7 +53,7 @@ internal sealed class MultiModelClsVorfilter
                     run.CodeVoting.RegisterAndVote(null, bild.EstimatedMeter);   // Fenster altern lassen
                     trace.ClassifierCode = "LEER";
                     trace.ClassifierConfidence = empty.Confidence;
-                    trace.ClassifierModel = MultiModelAnalysisService.ClassifierModelTag(clsResult);
+                    trace.ClassifierModel = MultiModelAnalysisService.ClassifierModelTag(antwort);
                 }
                 _logger.LogDebug("Frame {Frame}: cls-Vorfilter {Reason} → skip", run.FrameIndex, skip.ProgressText);
                 run.Progress?.Report(new VideoAnalysisProgress(run.FrameIndex, run.TotalFrames,
@@ -60,42 +62,42 @@ internal sealed class MultiModelClsVorfilter
                 trace.Path = skip.TracePath;
                 trace.YoloRelevant = false;
                 trace.DropReason = skip.DropReason;
-                return new Ergebnis(MultiModelBildErgebnis.Uebersprungen(bild.EstimatedMeter), clsResult);
+                return new Ergebnis(MultiModelBildErgebnis.Uebersprungen(bild.EstimatedMeter), antwort);
             }
 
-            var topPred = clsResult.Predictions.Count > 0 ? clsResult.Predictions[0] : null;
+            var topPred = antwort.Predictions.Count > 0 ? antwort.Predictions[0] : null;
 
             if (topPred != null)
                 _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → weiter zur Detektion",
                     run.FrameIndex, topPred.ClassName, topPred.Confidence * 100);
-            if (classifierDecisionEnabled && !clsResult.ClassifierLoaded)
+            if (classifierDecisionEnabled && !antwort.ClassifierLoaded)
             {
                 MultiModelAnalysisService.MarkTraceDegraded(trace, "classifier_not_loaded");
                 _logger.LogWarning("Frame {Frame}: YOLO-cls Modell nicht geladen - Klassifikator-Code wird nicht angewendet.",
                     run.FrameIndex);
             }
 
-            if (classifierDecisionEnabled && clsResult.BendVetoFailed)
+            if (classifierDecisionEnabled && antwort.BendVetoFailed)
             {
                 MultiModelAnalysisService.MarkTraceDegraded(trace, "bend_veto_failed");
                 _logger.LogWarning("Frame {Frame}: Bogen-Veto fehlgeschlagen - is_bend=false wird nicht fuer Klassifikator-Code vertraut.",
                     run.FrameIndex);
             }
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            return new Ergebnis(null, antwort);
+        }, ct).ConfigureAwait(false);
+
+        if (aufruf.Fehlerart != MultiModelFehlerart.Keine)
         {
-            // Nutzerabbruch: sofort weiterwerfen, nie als Fehler zaehlen.
-            throw;
-        }
-        catch (Exception ex)
-        {
-            // cls-Modell nicht verfuegbar → normal weiter (kein harter Fehler)
+            // cls-Modell nicht verfuegbar → normal weiter (kein harter Fehler), gleich ob
+            // Kapazitaet oder Transport; ein zuvor erhaltenes Signal bleibt erhalten.
+            var ex = aufruf.Fehler!;
             if (classifierDecisionEnabled)
                 _logger.LogWarning(ex, "Frame {Frame}: YOLO-cls im Klassifikator-Entscheidungsmodus nicht verfuegbar; falle auf Detektionspfad zurueck", run.FrameIndex);
             else
                 _logger.LogDebug(ex, "Frame {Frame}: YOLO-cls nicht verfuegbar, ueberspringe Vorfilter", run.FrameIndex);
+            return new Ergebnis(null, clsResult);
         }
 
-        return new Ergebnis(null, clsResult);
+        return aufruf.Antwort!;
     }
 }

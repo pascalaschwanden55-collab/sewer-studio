@@ -61,23 +61,15 @@ internal sealed class MultiModelSamSchritt
             .ToList();
 
         var phaseSw = Stopwatch.StartNew();
-        SamResponse samResult;
-        try
-        {
-            samResult = await _client.SegmentSamAsync(
-                new SamRequest(bild.FrameBase64, samBoxes, run.PipeDiameterMm > 0 ? run.PipeDiameterMm : null), ct)
-                .ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            // Nutzerabbruch: sofort weiterwerfen, nie als Sidecar-Ausfall zaehlen.
-            throw;
-        }
-        catch (SidecarInsufficientVramException ex)
+        var aufruf = await MultiModelSidecarAufruf.AusfuehrenAsync(() => _client.SegmentSamAsync(
+            new SamRequest(bild.FrameBase64, samBoxes, run.PipeDiameterMm > 0 ? run.PipeDiameterMm : null), ct), ct)
+            .ConfigureAwait(false);
+        if (aufruf.Fehlerart == MultiModelFehlerart.Kapazitaet)
         {
             // Paket 2/A4: VRAM-Mangel = Kapazitaetsfehler, KEIN Transport-Ausfall:
             // kein Outage-Zaehler, kein Neustart — wie ein Modellfehler ueberspringen
             // (Skip-Quote + Incomplete); das Checkpoint-Journal schreibt weiter retry_required.
+            var ex = aufruf.Fehler!;
             _logger.LogWarning(ex, "Frame {Frame}: SAM wegen VRAM-Mangels uebersprungen", run.FrameIndex);
             run.Progress?.Report(new VideoAnalysisProgress(run.FrameIndex, run.TotalFrames,
                 $"Frame {run.FrameIndex} – SAM übersprungen: {ex.Message}"));
@@ -87,14 +79,16 @@ internal sealed class MultiModelSamSchritt
             MultiModelAnalysisService.MarkTraceDegraded(trace, "vram_insufficient");
             return Ergebnis.Beendet(MultiModelBildErgebnis.VramMangel(ex.Message, bild.EstimatedMeter));
         }
-        catch (Exception ex)
+        if (aufruf.Fehlerart == MultiModelFehlerart.Transport)
         {
+            var ex = aufruf.Fehler!;
             _logger.LogWarning(ex, "Frame {Frame}: SAM segmentation failed", run.FrameIndex);
             run.Progress?.Report(new VideoAnalysisProgress(run.FrameIndex, run.TotalFrames,
                 $"Frame {run.FrameIndex} – SAM Fehler: {ex.Message}"));
             bild.RecordFrame(run, bild.YoloMs, bild.DinoMs, phaseSw.ElapsedMilliseconds);
             return Ergebnis.Beendet(MultiModelBildErgebnis.Transportfehler("sam_error", bild.EstimatedMeter));
         }
+        var samResult = aufruf.Antwort!;
         var samMs = phaseSw.ElapsedMilliseconds;
         trace.SamMaskCount = samResult.Masks.Count;
 

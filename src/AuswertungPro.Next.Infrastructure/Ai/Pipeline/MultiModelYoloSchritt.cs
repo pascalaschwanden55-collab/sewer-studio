@@ -103,27 +103,28 @@ internal sealed class MultiModelYoloSchritt
                 $"Frame {run.FrameIndex}/{totalFrames} – YOLO Pre-Screening...",
                 FramePreviewPng: bild.FrameBytes));
 
-            try
+            // Aufruf samt Nachfilterung liegt in derselben Fehlereinordnung wie vorher im try.
+            var aufruf = await MultiModelSidecarAufruf.AusfuehrenAsync(async () =>
             {
                 // Niedrigsten klassenspezifischen Threshold senden (mehr Kandidaten),
                 // dann in C# pro Klasse nachfiltern
                 double minConf = _minClassConfidence;
-                yoloResult = await _client.DetectYoloAsync(
+                var antwort = await _client.DetectYoloAsync(
                     new YoloRequest(bild.FrameBase64, minConf), ct).ConfigureAwait(false);
 
                 // Die Qualifikation kann sich zwischen /health und Inferenz aendern.
                 // Auch die konkrete Antwort muss deshalb ein ausdrueckliches true tragen.
-                if (yoloResult.DetectorQualified != true)
+                if (antwort.DetectorQualified != true)
                 {
-                    run.EffectiveDetectorQualified = yoloResult.DetectorQualified;
+                    run.EffectiveDetectorQualified = antwort.DetectorQualified;
                     run.DetectorQualified = false;
                     run.DetectorQualificationReason =
-                        yoloResult.DetectorQualificationReason
+                        antwort.DetectorQualificationReason
                         ?? "YOLO-Antwort ohne positive Detektorqualifikation";
                     detectorQualificationBypass = true;
                     trace.YoloBypass = true;
                     MultiModelAnalysisService.MarkTraceDegraded(trace, "detector_unqualified_response");
-                    yoloResult = yoloResult with
+                    antwort = antwort with
                     {
                         IsRelevant = true,
                         Detections = Array.Empty<YoloDetectionDto>(),
@@ -135,19 +136,15 @@ internal sealed class MultiModelYoloSchritt
                         "WARNUNG: YOLO-Freigabe während des Laufs fehlt – DINO/SAM laufen weiter."));
                 }
 
-                WarnOnCocoFallback(run, yoloResult, detectorQualificationBypass);
-                yoloResult = ApplyClassThresholds(yoloResult, detectorQualificationBypass);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                // Nutzerabbruch: sofort weiterwerfen, nie als Sidecar-Ausfall zaehlen.
-                throw;
-            }
-            catch (SidecarInsufficientVramException ex)
+                WarnOnCocoFallback(run, antwort, detectorQualificationBypass);
+                return ApplyClassThresholds(antwort, detectorQualificationBypass);
+            }, ct).ConfigureAwait(false);
+            if (aufruf.Fehlerart == MultiModelFehlerart.Kapazitaet)
             {
                 // Paket 2/A4: VRAM-Mangel ist ein Kapazitaetsfehler, KEIN Transport-Ausfall:
                 // kein Outage-Zaehler, kein Neustart — wie ein Modellfehler ueberspringen
                 // (Skip-Quote + Incomplete); das Checkpoint-Journal schreibt weiter retry_required.
+                var ex = aufruf.Fehler!;
                 _logger.LogWarning(ex, "Frame {Frame}: YOLO wegen VRAM-Mangels uebersprungen", run.FrameIndex);
                 progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
                     $"Frame {run.FrameIndex} – YOLO übersprungen: {ex.Message}"));
@@ -158,8 +155,9 @@ internal sealed class MultiModelYoloSchritt
                 return new Ergebnis(MultiModelBildErgebnis.VramMangel(ex.Message, bild.EstimatedMeter), null,
                     detectorQualificationBypass);
             }
-            catch (Exception ex)
+            if (aufruf.Fehlerart == MultiModelFehlerart.Transport)
             {
+                var ex = aufruf.Fehler!;
                 _logger.LogWarning(ex, "Frame {Frame}: YOLO detection failed", run.FrameIndex);
                 progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
                     $"Frame {run.FrameIndex} – YOLO Fehler: {ex.Message}"));
@@ -167,6 +165,7 @@ internal sealed class MultiModelYoloSchritt
                 return new Ergebnis(MultiModelBildErgebnis.Transportfehler("yolo_error", bild.EstimatedMeter), null,
                     detectorQualificationBypass);
             }
+            yoloResult = aufruf.Antwort!;
             yoloMs = phaseSw.ElapsedMilliseconds;
         }
         bild.YoloMs = yoloMs;

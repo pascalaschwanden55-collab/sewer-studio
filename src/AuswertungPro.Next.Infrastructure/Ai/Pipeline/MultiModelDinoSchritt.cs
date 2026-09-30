@@ -53,26 +53,18 @@ internal sealed class MultiModelDinoSchritt
             FramePreviewPng: bild.FrameBytes));
 
         var phaseSw = Stopwatch.StartNew();
-        DinoResponse dinoResult;
-        try
-        {
-            dinoResult = await _client.DetectDinoAsync(
-                new DinoRequest(
-                    bild.FrameBase64,
-                    null, // use default labels from sidecar config
-                    _config.DinoBoxThreshold,
-                    _config.DinoTextThreshold), ct).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            // Nutzerabbruch: sofort weiterwerfen, nie als Sidecar-Ausfall zaehlen.
-            throw;
-        }
-        catch (SidecarInsufficientVramException ex)
+        var aufruf = await MultiModelSidecarAufruf.AusfuehrenAsync(() => _client.DetectDinoAsync(
+            new DinoRequest(
+                bild.FrameBase64,
+                null, // use default labels from sidecar config
+                _config.DinoBoxThreshold,
+                _config.DinoTextThreshold), ct), ct).ConfigureAwait(false);
+        if (aufruf.Fehlerart == MultiModelFehlerart.Kapazitaet)
         {
             // Paket 2/A4: VRAM-Mangel = Kapazitaetsfehler, KEIN Transport-Ausfall:
             // kein Outage-Zaehler, kein Neustart — wie ein Modellfehler ueberspringen
             // (Skip-Quote + Incomplete); das Checkpoint-Journal schreibt weiter retry_required.
+            var ex = aufruf.Fehler!;
             _logger.LogWarning(ex, "Frame {Frame}: DINO wegen VRAM-Mangels uebersprungen", run.FrameIndex);
             run.Progress?.Report(new VideoAnalysisProgress(run.FrameIndex, run.TotalFrames,
                 $"Frame {run.FrameIndex} – DINO übersprungen: {ex.Message}"));
@@ -82,14 +74,16 @@ internal sealed class MultiModelDinoSchritt
             MultiModelAnalysisService.MarkTraceDegraded(trace, "vram_insufficient");
             return new Ergebnis(MultiModelBildErgebnis.VramMangel(ex.Message, bild.EstimatedMeter), null);
         }
-        catch (Exception ex)
+        if (aufruf.Fehlerart == MultiModelFehlerart.Transport)
         {
+            var ex = aufruf.Fehler!;
             _logger.LogWarning(ex, "Frame {Frame}: DINO detection failed", run.FrameIndex);
             run.Progress?.Report(new VideoAnalysisProgress(run.FrameIndex, run.TotalFrames,
                 $"Frame {run.FrameIndex} – DINO Fehler: {ex.Message}"));
             bild.RecordFrame(run, bild.YoloMs, phaseSw.ElapsedMilliseconds, 0);
             return new Ergebnis(MultiModelBildErgebnis.Transportfehler("dino_error", bild.EstimatedMeter), null);
         }
+        var dinoResult = aufruf.Antwort!;
         bild.DinoMs = phaseSw.ElapsedMilliseconds;
         trace.DinoBoxCount = dinoResult.Detections.Count;
 
