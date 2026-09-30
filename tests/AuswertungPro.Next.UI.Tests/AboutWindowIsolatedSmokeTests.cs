@@ -20,6 +20,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// <c>SafeShellOpenService</c>) einen ECHTEN Explorer-Prozess - das ist Sache von
 /// <c>SettingsPathWorkflowTests</c>, nicht dieses Fenstertests.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class AboutWindowIsolatedSmokeTests
 {

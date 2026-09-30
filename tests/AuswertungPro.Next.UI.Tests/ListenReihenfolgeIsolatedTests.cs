@@ -20,6 +20,7 @@ using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 
 namespace AuswertungPro.Next.UI.Tests;
 
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class ListenReihenfolgeIsolatedTests
 {

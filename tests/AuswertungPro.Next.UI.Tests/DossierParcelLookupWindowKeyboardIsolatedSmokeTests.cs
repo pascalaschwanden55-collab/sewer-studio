@@ -32,6 +32,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Gemeindeliste bleibt in diesem Test bewusst leer (Fake liefert nichts), damit «Bitte
 /// zuerst eine Gemeinde wählen.» früh genug greift, ohne echte Netzabfragen zu benötigen.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class DossierParcelLookupWindowKeyboardIsolatedSmokeTests
 {

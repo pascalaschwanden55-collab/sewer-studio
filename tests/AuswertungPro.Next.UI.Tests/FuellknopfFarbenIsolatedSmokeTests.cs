@@ -17,6 +17,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// PrimaryButton war TextBrush (#FF14213A, dunkles Marineblau auf Akzentblau) - der B7-Block im
 /// ContentPresenter erreicht ihn nicht, erst der Stil in Style.Resources.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class FuellknopfFarbenIsolatedSmokeTests
 {

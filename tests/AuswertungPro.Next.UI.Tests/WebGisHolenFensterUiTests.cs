@@ -13,6 +13,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Wunsch Pascal 23.09.2026: Gesperrtes und nicht Zugeordnetes steht im Holen-Fenster sichtbar
 /// in einer roten Liste unter einem orangen Band — nicht in einer zugeklappten Hinweisliste.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class WebGisHolenFensterUiTests
 {

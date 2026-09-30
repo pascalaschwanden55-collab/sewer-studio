@@ -10,6 +10,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// braucht deshalb den echten WPF-Kindprozess (pack-URIs loesen ohne laufende
 /// <see cref="System.Windows.Application"/> nicht auf).
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class ThemeHighContrastIsolatedSmokeTests
 {

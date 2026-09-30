@@ -17,6 +17,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// <c>HaltungsgrafikControlIsolatedSmokeTests.DieRohrsaeuleBleibtLesbar</c>: Skalenfaktor der
 /// Viewbox mal Schriftgrösse bzw. Strichstärke.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class SchachtgrafikControlIsolatedSmokeTests
 {

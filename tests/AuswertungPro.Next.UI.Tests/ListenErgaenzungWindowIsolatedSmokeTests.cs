@@ -11,6 +11,7 @@ namespace AuswertungPro.Next.UI.Tests;
 
 /// <summary>Das Fenster «Liste bearbeiten» wird wirklich gezeichnet, nimmt einen eigenen Eintrag an
 /// und schreibt ihn programmweit - im eigenen Prozess mit echtem WPF.</summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class ListenErgaenzungWindowIsolatedSmokeTests
 {

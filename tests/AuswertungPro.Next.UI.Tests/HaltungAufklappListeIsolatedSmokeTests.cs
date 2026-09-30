@@ -23,6 +23,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Tastatur wird deshalb ueber <c>VerarbeiteTaste</c> gefahren, also ueber genau denselben Weg,
 /// den der KeyDown-Handler nimmt.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class HaltungAufklappListeIsolatedSmokeTests
 {

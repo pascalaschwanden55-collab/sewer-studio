@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// standardmässig eingeklappt, Suche filtert, und <see cref="HandbuchWindow.ZeigeAn"/> hält das
 /// Fenster als Einzelstück (kein zweites Fenster beim zweiten Aufruf).
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class HandbuchWindowIsolatedSmokeTests
 {

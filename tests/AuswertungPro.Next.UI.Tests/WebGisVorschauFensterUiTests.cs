@@ -15,6 +15,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Feld mit beiden Werten und was passiert; ein Objekt einzeln schreiben, vorher genau die Änderungen bestätigen.
 /// Der Haken beim Vorschlag der Kanalfirma muss im Plan ankommen (Entscheid 23.09.2026 abends).
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class WebGisVorschauFensterUiTests
 {

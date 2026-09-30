@@ -11,6 +11,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// App-Ressourcen auf und misst, wie weit die erste Gruppe unter dem Reiterbereich beginnt.
 /// Läuft wie die anderen WPF-Smoke-Tests in einem eigenen Kindprozess.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class SettingsPageLayoutIsolatedSmokeTests
 {

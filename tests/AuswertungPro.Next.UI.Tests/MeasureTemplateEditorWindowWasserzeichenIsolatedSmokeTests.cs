@@ -13,6 +13,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Theme-Wechsel folgt. Fix-Runde 2 (Aufgabe 13) liess die Stelle bewusst bei
 /// <c>StaticResource</c>, weil dieser Nachweis fehlte - er ist hier nachgeholt.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class MeasureTemplateEditorWindowWasserzeichenIsolatedSmokeTests
 {

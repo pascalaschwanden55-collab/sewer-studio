@@ -13,6 +13,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// FullBackupService.RunAsync ruft den Fortschritts-Callback aus Task.Run) und beweist, dass die
 /// echte Klasse jetzt weder wirft noch den Zustand verliert.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class TaskbarFortschrittThreadSafetyIsolatedSmokeTests
 {

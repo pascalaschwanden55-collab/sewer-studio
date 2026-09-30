@@ -8,6 +8,7 @@ using AuswertungPro.Next.UI.Views.Pages;
 
 namespace AuswertungPro.Next.UI.Tests;
 
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class ImportFortschrittIsolatedSmokeTests
 {

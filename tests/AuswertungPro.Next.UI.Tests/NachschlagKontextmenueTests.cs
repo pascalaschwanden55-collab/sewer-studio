@@ -30,6 +30,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Vorlagen greifen auf das Theme zu, und ein Application-Objekt ist
 /// prozessweit und einmalig.
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 [Collection("IsolatedWpf")]
 public sealed class NachschlagKontextmenueTests
 {
