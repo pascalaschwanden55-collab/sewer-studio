@@ -409,76 +409,16 @@ public sealed partial class LegacyXtfImportService
     private static List<HaltungRecord> ParseSia405(XDocument doc)
     {
         // Schritt 1: Objekte lesen (Sia405ObjektLeser). Die Verweise bleiben Kennungen.
+        // Schritt 2: Bezuege aufloesen (Sia405Beziehungen): Kanal, Rohrprofil,
+        // Organisationen, Schachtnamen.
         var bestand = Sia405ObjektLeser.Lies(doc);
-        var kanaele = bestand.Kanaele;
-        var kanaeleByBez = bestand.KanaeleNachBezeichnung;
-        var haltungen = bestand.Haltungen;
-        var haltungspunkte = bestand.Haltungspunkte;
-        var abwasserknoten = bestand.Abwasserknoten;
-        var rohrprofile = bestand.Rohrprofile;
-        var organisationen = bestand.Organisationen;
-
-        // Hilfsfunktion für Schacht-Label
-        string? ResolveSchachtLabel(string? refTid, string haltungsname, bool oben)
-        {
-            if (string.IsNullOrWhiteSpace(refTid)) return null;
-            if (haltungspunkte.TryGetValue(refTid, out var hp))
-            {
-                // Der Abwasserknoten IST der Schacht; die Bezeichnung des Haltungspunkts
-                // ist nur ein technischer Name. Im Kantonsexport heisst er "u-80401_von",
-                // im SewerStudio-Export "<Haltung>_von" — beides sind keine Schachtnummern.
-                // Die umgekehrte Reihenfolge schrieb genau diese Namen in "Schacht_oben".
-                if (!string.IsNullOrWhiteSpace(hp.AbwassernetzelementRef) && abwasserknoten.TryGetValue(hp.AbwassernetzelementRef, out var knBez))
-                    return knBez;
-
-                // Ohne Knoten: Heisst der Punkt "<Haltung>_von" / "<Haltung>_nach" und der
-                // Haltungsname ist "oben-unten", dann steckt der Schacht im Haltungsnamen.
-                // So kam beim Rueckimport eines SewerStudio-Exports "78998-79002_nach" in
-                // "Schacht_unten" an, obwohl "79002" gemeint war.
-                var ausHaltung = SchachtAusHaltungsname(hp.Bezeichnung, haltungsname, oben);
-                if (ausHaltung is not null) return ausHaltung;
-
-                if (!string.IsNullOrWhiteSpace(hp.Bezeichnung)) return hp.Bezeichnung;
-            }
-            return null;
-        }
-
-        static string? SchachtAusHaltungsname(string? punktname, string haltungsname, bool oben)
-        {
-            var punkt = (punktname ?? "").Trim();
-            var name = (haltungsname ?? "").Trim();
-            var erwartet = name + (oben ? "_von" : "_nach");
-            if (name.Length == 0 || !string.Equals(punkt, erwartet, StringComparison.OrdinalIgnoreCase))
-                return null;
-
-            var trenner = name.IndexOf('-');
-            if (trenner <= 0 || trenner >= name.Length - 1 || name.IndexOf('-', trenner + 1) >= 0)
-                return null;
-
-            return oben ? name[..trenner] : name[(trenner + 1)..];
-        }
-
-        string? ResolveKnotenName(string? refTid)
-        {
-            if (string.IsNullOrWhiteSpace(refTid)) return null;
-            if (!haltungspunkte.TryGetValue(refTid, out var hp)) return null;
-            if (!string.IsNullOrWhiteSpace(hp.AbwassernetzelementRef) && abwasserknoten.TryGetValue(hp.AbwassernetzelementRef, out var knBez))
-                return knBez;
-            return string.IsNullOrWhiteSpace(hp.Bezeichnung) ? null : hp.Bezeichnung;
-        }
 
         var records = new List<HaltungRecord>();
-        foreach (var hd in haltungen.Values)
+        foreach (var h in Sia405Beziehungen.Loese(bestand))
         {
-            Sia405KanalObjekt? kanal = null;
-            if (!string.IsNullOrWhiteSpace(hd.KanalRef) && kanaele.TryGetValue(hd.KanalRef, out var kdByRef))
-                kanal = kdByRef;
-            else if (!string.IsNullOrWhiteSpace(hd.Bezeichnung) && kanaeleByBez.TryGetValue(hd.Bezeichnung, out var kdByBez))
-                kanal = kdByBez;
-
-            var haltungsname = !string.IsNullOrWhiteSpace(hd.Bezeichnung) ? hd.Bezeichnung : (kanal?.Bezeichnung ?? "");
-            if (string.IsNullOrWhiteSpace(haltungsname))
-                continue;
+            var hd = h.Haltung;
+            var kanal = h.Kanal;
+            var haltungsname = h.Haltungsname;
 
             var material = NormalizeSiaMaterial(hd.Material);
             var nutzungsart = kanal is null ? "" : NormalizeNutzungsart(kanal.Nutzungsart);
@@ -507,7 +447,7 @@ public sealed partial class LegacyXtfImportService
             // Die zweite Dimension: Profiltyp und Hoehen-Breiten-Verhaeltnis stehen am
             // verwiesenen Rohrprofil. Aus Hoehe und Verhaeltnis entsteht die Breite;
             // beim Kreisprofil ist sie gleich der Hoehe (rund = beide gleich).
-            if (!string.IsNullOrWhiteSpace(hd.RohrprofilRef) && rohrprofile.TryGetValue(hd.RohrprofilRef, out var profil))
+            if (h.Rohrprofil is { } profil)
             {
                 var profiltyp = (profil.Profiltyp ?? "").Trim();
                 if (profiltyp.Length > 0)
@@ -532,8 +472,6 @@ public sealed partial class LegacyXtfImportService
                 rec.SetFieldValue(FieldKeys.ClearWidthMm, hd.LichteBreite.Trim(), FieldSource.Xtf405, userEdited: false);
             }
 
-            var vonKnoten = ResolveKnotenName(hd.VonRef);
-            var nachKnoten = ResolveKnotenName(hd.NachRef);
             // Keine Inspektionsrichtung: SIA405 ist der Kataster-Bestand und kennt keine Untersuchung.
             // Sie kommt aus der VSA-KEK-Untersuchung (<Fliessrichtung>), siehe ParseVsaKek.
 
@@ -555,17 +493,12 @@ public sealed partial class LegacyXtfImportService
                 if (!string.IsNullOrWhiteSpace(kanal.Bemerkung)) rec.SetFieldValue("Bemerkungen", kanal.Bemerkung, FieldSource.Xtf405, userEdited: false);
                 // Der Rohwert der XTF ("Abwasser Uri") faerbt die Eigentuemerspalte der
                 // Excel-Vorlage nicht - sie vergleicht exakt gegen "AWU".
-                var ausVerweis = organisationen.TryGetValue(kanal.EigentuemerRef ?? "", out var orgName)
-                    ? orgName
-                    : null;
                 var eigentuemer = EigentumVokabular.Normalisieren(
-                    string.IsNullOrWhiteSpace(kanal.Eigentuemer) ? ausVerweis : kanal.Eigentuemer);
+                    string.IsNullOrWhiteSpace(kanal.Eigentuemer) ? h.EigentuemerAusVerweis : kanal.Eigentuemer);
                 if (!string.IsNullOrWhiteSpace(eigentuemer)) rec.SetFieldValue("Eigentuemer", eigentuemer, FieldSource.Xtf405, userEdited: false);
 
-                if (organisationen.TryGetValue(kanal.DatenherrRef, out var datenHerr))
-                    Uebernimm(FieldKeys.DataOwner, datenHerr, unbekanntIstLeer: false);
-                if (organisationen.TryGetValue(kanal.DatenlieferantRef, out var datenLieferant))
-                    Uebernimm(FieldKeys.DataSupplier, datenLieferant, unbekanntIstLeer: false);
+                Uebernimm(FieldKeys.DataOwner, h.Datenherr, unbekanntIstLeer: false);
+                Uebernimm(FieldKeys.DataSupplier, h.Datenlieferant, unbekanntIstLeer: false);
 
                 // FunktionHierarchisch -> Katalog-Combo "PAA.<Suffix>" / "SAA.<Suffix>" (speist u.a. VSA-Zustandsnote B4)
                 var funktion = NormalizeFunktionHierarchisch(kanal.Funktion);
@@ -611,10 +544,8 @@ public sealed partial class LegacyXtfImportService
             }
 
             // Schacht-Labels (optional, für Debug/Logging)
-            var schachtOben = ResolveSchachtLabel(hd.VonRef, haltungsname, oben: true);
-            var schachtUnten = ResolveSchachtLabel(hd.NachRef, haltungsname, oben: false);
-            if (!string.IsNullOrWhiteSpace(schachtOben)) rec.SetFieldValue("Schacht_oben", schachtOben, FieldSource.Xtf405, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(schachtUnten)) rec.SetFieldValue("Schacht_unten", schachtUnten, FieldSource.Xtf405, userEdited: false);
+            if (!string.IsNullOrWhiteSpace(h.SchachtOben)) rec.SetFieldValue("Schacht_oben", h.SchachtOben, FieldSource.Xtf405, userEdited: false);
+            if (!string.IsNullOrWhiteSpace(h.SchachtUnten)) rec.SetFieldValue("Schacht_unten", h.SchachtUnten, FieldSource.Xtf405, userEdited: false);
 
             records.Add(rec);
         }
