@@ -276,6 +276,17 @@
   7/14 nicht mittrainierten Altnegativen. Deshalb nicht aktivieren: zuerst mehr
   unterschiedliche BCC-Boxen und streng reviewte Hard-Negatives sammeln, danach
   einen frischen, zuvor unberuehrten Release-Holdout pruefen.
+- Aufbau der Negativsatz-Pruefung (seit 2026-09-30, AP10): Die reinen
+  Pruefschritte fuer `bcc_hn_*` und `proto_hn_*` liegen in
+  `training/scripts/negativsatz_pruefung.py` (Satzkopf, Belegbindung, Queue,
+  Kandidatenliste, Review, Bildbelege, Proto-Ausnahmen, Split, Ergebnisformat)
+  und lesen keine Dateien. `gold_stock_audit.py` behaelt die Dateigrenzen
+  (Satzordner, Datei-Hashes, aktive Klassenkarte, Bilddateien, Eval-Schutz,
+  Gold-Split) und gibt einen Satz erst nach der Unveraendert-Pruefung frei.
+  Alle Unterschiede zwischen BCC und Proto (Zweck, Felder, Meldungstexte)
+  stehen in `BCC_VERTRAG`/`PROTO_VERTRAG`; eine gemeinsame Funktion nur bei
+  gleicher Regel. `tests/test_negativsatz_vertrag.py` haelt jede Ablehnung mit
+  ihrer Meldung fest; eine neue Regel bekommt dort zuerst einen Fall.
 
 ## (Fortsetzung aus «XTF-Aenderungslieferung und Bauwerksarten (2026-09-07)»)
 
