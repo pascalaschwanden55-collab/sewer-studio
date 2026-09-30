@@ -16,7 +16,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// SegmentAsync/SuggestAsync (Aufgabe 2) und SaveAsync mit Schutznetz (Aufgabe 3).
 /// Alle Abhaengigkeiten sind handgeschriebene Fakes (kein Mocking-Paket).
 /// </summary>
-public sealed class AnnotationWorkbenchServiceTests
+public sealed partial class AnnotationWorkbenchServiceTests
 {
     private static WorkbenchItem Foto(string frame = @"C:\frames\f.jpg", int? dn = 300)
         => new(frame, "case1", MeterStart: 1.0, MeterEnd: 1.0, HaltungName: null, VideoPath: null, PipeDiameterMm: dn);
@@ -1280,20 +1280,6 @@ public sealed class AnnotationWorkbenchServiceTests
         Assert.StartsWith("Teacher-Kandidat nicht gespeichert:", result.RefusalReason);
         Assert.DoesNotContain("process cannot access", result.RefusalReason);
         Assert.Contains("Teacher-Export ist fehlgeschlagen", result.RefusalReason);
-    }
-
-    [Fact]
-    public void TeacherExportGrund_ordnet_eine_mitgelieferte_Framework_Ausnahme_deutsch_ein()
-    {
-        var grund = AnnotationWorkbenchService.TeacherExportGrund(new TrainingAnnotationResult
-        {
-            Success = false,
-            Error = "Access to the path is denied.",
-            Failure = new UnauthorizedAccessException("Access to the path is denied."),
-        });
-
-        Assert.DoesNotContain("Access to the path", grund);
-        Assert.False(string.IsNullOrWhiteSpace(grund));
     }
 
     [Fact]

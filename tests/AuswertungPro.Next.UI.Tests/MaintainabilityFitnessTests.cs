@@ -27,7 +27,6 @@ public sealed class MaintainabilityFitnessTests
         ["src/AuswertungPro.Next.UI/ViewModels/Windows/TrainingCenterViewModel.cs"] = 997,
         ["src/AuswertungPro.Next.UI/ViewModels/Pages/SanierungsMatrixPageViewModel.cs"] = 995,
         ["src/AuswertungPro.Next.Infrastructure/Reports/ProtocolPdfExporter.cs"] = 994,
-        ["src/AuswertungPro.Next.UI/Services/AnnotationWorkbenchService.cs"] = 993,
         ["src/AuswertungPro.Next.UI/Views/Windows/StartupSplashWindow.Animation.cs"] = 985,
         ["src/AuswertungPro.Next.Application/Dossiers/Preview/DossierOutputPreviewTableCellMapper.cs"] = 984,
         ["src/AuswertungPro.Next.Infrastructure/HoldingFolderDistributor.PdfParsing.cs"] = 976,
