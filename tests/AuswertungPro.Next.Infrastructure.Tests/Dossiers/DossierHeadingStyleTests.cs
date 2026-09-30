@@ -37,7 +37,7 @@ public sealed class DossierHeadingStyleTests
     public void Die_Regel_steht_nur_noch_an_einer_Stelle()
     {
         // Zwei Kopien liefen in diesem Programm schon einmal auseinander.
-        var wurzel = RepoWurzel();
+        var wurzel = TestRepoPaths.RepoRoot();
 
         foreach (var datei in new[]
                  {
@@ -54,13 +54,4 @@ public sealed class DossierHeadingStyleTests
         }
     }
 
-    private static string RepoWurzel()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "AuswertungPro.sln")))
-            dir = dir.Parent;
-
-        Assert.NotNull(dir);
-        return dir!.FullName;
-    }
 }

@@ -7,7 +7,7 @@ public sealed class VsaClassificationRuleSelectorV2Tests
 {
     private static VsaClassificationRuleSelector CreateSelector()
     {
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var channelsPath = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "vsa_zustandsklassifizierung_2023_channels.json");
         var manholesPath = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "vsa_zustandsklassifizierung_2023_manholes.json");
         return VsaClassificationRuleSelector.Load(channelsPath, manholesPath);

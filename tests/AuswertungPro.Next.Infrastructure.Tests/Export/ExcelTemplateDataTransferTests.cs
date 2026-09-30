@@ -157,7 +157,7 @@ public sealed class ExcelTemplateDataTransferTests
         => record.SetFieldValue(field, value, FieldSource.Manual, userEdited: false);
 
     private static string Template(string fileName)
-        => Path.Combine(TestPaths.FindSolutionRoot(), "Export_Vorlage", fileName);
+        => Path.Combine(TestRepoPaths.RepoRoot(), "Export_Vorlage", fileName);
 
     private static Dictionary<string, int> ReadColumns(IXLWorksheet worksheet)
     {

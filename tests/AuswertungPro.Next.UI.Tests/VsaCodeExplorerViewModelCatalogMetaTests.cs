@@ -1,6 +1,7 @@
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.ViewModels.Windows;
+using AuswertungPro.Next.UI.Tests;
 using System.IO;
 
 public sealed class VsaCodeExplorerViewModelCatalogMetaTests
@@ -240,7 +241,7 @@ public sealed class VsaCodeExplorerViewModelCatalogMetaTests
             }
         };
         var rules = new CodeCatalogSelectionCatalog(
-            new ManifestCodeCatalogProvider(FindManifestPath()));
+            new ManifestCodeCatalogProvider(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json")));
         var vm = new VsaCodeExplorerViewModel(
             existing,
             catalog: new VsaCodeTreeSelectionCatalog(rules));
@@ -271,7 +272,7 @@ public sealed class VsaCodeExplorerViewModelCatalogMetaTests
             MeterStart = 1.0
         };
         var rules = new CodeCatalogSelectionCatalog(
-            new ManifestCodeCatalogProvider(FindManifestPath()));
+            new ManifestCodeCatalogProvider(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json")));
         var vm = new VsaCodeExplorerViewModel(
             existing,
             catalog: new VsaCodeTreeSelectionCatalog(rules));
@@ -375,7 +376,7 @@ public sealed class VsaCodeExplorerViewModelCatalogMetaTests
     private static VsaCodeExplorerViewModel CreateRealCatalogViewModel()
     {
         var rules = new CodeCatalogSelectionCatalog(
-            new ManifestCodeCatalogProvider(FindManifestPath()));
+            new ManifestCodeCatalogProvider(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json")));
         return new VsaCodeExplorerViewModel(
             catalog: new VsaCodeTreeSelectionCatalog(rules));
     }
@@ -392,25 +393,6 @@ public sealed class VsaCodeExplorerViewModelCatalogMetaTests
                     CategoryPath = ["Kanal"]
                 }).ToList()));
 
-    private static string FindManifestPath()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(
-                current.FullName,
-                "src",
-                "AuswertungPro.Next.UI",
-                "Data",
-                "vsa_kek_2020_catalog_manifest.json");
-            if (File.Exists(candidate))
-                return candidate;
-
-            current = current.Parent;
-        }
-
-        throw new FileNotFoundException("VSA-KEK-Katalogmanifest wurde nicht gefunden.");
-    }
 
     private sealed class InMemoryCodeCatalogProvider : ICodeCatalogProvider
     {

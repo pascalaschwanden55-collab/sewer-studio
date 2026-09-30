@@ -6,7 +6,7 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DesignAuditNovaTrainingStudioTests
 {
-    private static string Xaml() => File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "TrainingStudioWindow.xaml"));
+    private static string Xaml() => File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "TrainingStudioWindow.xaml"));
 
     [Fact]
     public void Drei_Spalten_mit_Prototyp_Breiten_und_Titelchip()
@@ -48,7 +48,7 @@ public sealed class DesignAuditNovaTrainingStudioTests
     [Fact]
     public void Overlay_beschriftet_Hand_Box_und_Maske()
     {
-        var cs = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "TrainingStudioWindow.xaml.cs"));
+        var cs = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "TrainingStudioWindow.xaml.cs"));
         Assert.Contains("\"Hand-Box\"", cs);
         Assert.Contains("StatusBadgeTextBrush", cs);
     }

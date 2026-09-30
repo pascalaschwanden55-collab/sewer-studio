@@ -41,13 +41,13 @@ public sealed class DossierRevisionRowFocusTests
                 "Aenderungen", 0, "Visum")));
             Assert.True(panel.Kennt(DossierPreviewTarget.RowCell(
                 "Aenderungen", 0, "Aenderung")));
-            Assert.Equal(4, Nachfahren(host).OfType<RichTextBox>().Count());
-            var entfernen = Assert.Single(Nachfahren(host)
+            Assert.Equal(4, WpfTestHilfe.LogischeNachfahren(host).OfType<RichTextBox>().Count());
+            var entfernen = Assert.Single(WpfTestHilfe.LogischeNachfahren(host)
                 .OfType<Button>()
                 .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE711" }));
             Assert.False(entfernen.IsEnabled);
 
-            Nachfahren(host).OfType<RichTextBox>().First().AppendText("1");
+            WpfTestHilfe.LogischeNachfahren(host).OfType<RichTextBox>().First().AppendText("1");
             Assert.True(entfernen.IsEnabled);
 
             entfernen.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -115,7 +115,7 @@ public sealed class DossierRevisionRowFocusTests
             var panel = CreatePanel(host, dossier);
 
             panel.Baue(ChangePage(), [ChangeField()]);
-            var editors = Nachfahren(host).OfType<RichTextBox>().ToList();
+            var editors = WpfTestHilfe.LogischeNachfahren(host).OfType<RichTextBox>().ToList();
             Assert.Equal(8, editors.Count);
 
             var window = new Window
@@ -141,13 +141,13 @@ public sealed class DossierRevisionRowFocusTests
                     Assert.Equal(Visibility.Collapsed, editor.Visibility));
                 Assert.True(editors[1].IsKeyboardFocused);
 
-                var alleFelder = Assert.Single(Nachfahren(host)
+                var alleFelder = Assert.Single(WpfTestHilfe.LogischeNachfahren(host)
                     .OfType<Button>()
                     .Where(button => string.Equals(
                         button.Content as string,
                         "Alle Felder anzeigen",
                         StringComparison.Ordinal)));
-                var rueckgaengig = Assert.Single(Nachfahren(host)
+                var rueckgaengig = Assert.Single(WpfTestHilfe.LogischeNachfahren(host)
                     .OfType<Button>()
                     .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A7" }));
                 Assert.Equal(Visibility.Visible, alleFelder.Visibility);
@@ -190,7 +190,7 @@ public sealed class DossierRevisionRowFocusTests
             try
             {
                 window.Show();
-                var editor = Nachfahren(host).OfType<RichTextBox>().First();
+                var editor = WpfTestHilfe.LogischeNachfahren(host).OfType<RichTextBox>().First();
                 editor.Focus();
                 PumpDispatcherFor(TimeSpan.FromMilliseconds(50));
 
@@ -199,7 +199,7 @@ public sealed class DossierRevisionRowFocusTests
                 PumpDispatcherFor(TimeSpan.FromMilliseconds(50));
                 Assert.Equal(string.Empty, dossier.Changes[0].Version);
 
-                var undo = Assert.Single(Nachfahren(host)
+                var undo = Assert.Single(WpfTestHilfe.LogischeNachfahren(host)
                     .OfType<Button>()
                     .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A7" }));
                 var undoCommand = Assert.IsType<RoutedUICommand>(undo.Command);
@@ -210,7 +210,7 @@ public sealed class DossierRevisionRowFocusTests
                 PumpDispatcherFor(TimeSpan.FromMilliseconds(50));
                 Assert.Equal("1", dossier.Changes[0].Version);
 
-                var redo = Assert.Single(Nachfahren(host)
+                var redo = Assert.Single(WpfTestHilfe.LogischeNachfahren(host)
                     .OfType<Button>()
                     .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A6" }));
                 var redoCommand = Assert.IsType<RoutedUICommand>(redo.Command);
@@ -253,18 +253,18 @@ public sealed class DossierRevisionRowFocusTests
             try
             {
                 window.Show();
-                var altesFeld = Nachfahren(host).OfType<RichTextBox>().First();
+                var altesFeld = WpfTestHilfe.LogischeNachfahren(host).OfType<RichTextBox>().First();
                 altesFeld.Focus();
                 PumpDispatcherFor(TimeSpan.FromMilliseconds(50));
 
-                var alterKnopf = Assert.Single(Nachfahren(host)
+                var alterKnopf = Assert.Single(WpfTestHilfe.LogischeNachfahren(host)
                     .OfType<Button>()
                     .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A7" }));
                 Assert.Same(altesFeld, alterKnopf.CommandTarget);
 
                 panel.Baue(ChangePage(), [ChangeField()]);
 
-                var neuerKnopf = Assert.Single(Nachfahren(host)
+                var neuerKnopf = Assert.Single(WpfTestHilfe.LogischeNachfahren(host)
                     .OfType<Button>()
                     .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A7" }));
                 Assert.Same(alterKnopf, neuerKnopf);
@@ -297,7 +297,7 @@ public sealed class DossierRevisionRowFocusTests
             var panel = CreatePanel(host, new DossierDefinition(), area);
 
             panel.Baue(TopicPage(), [TopicField()]);
-            var editors = Nachfahren(host).OfType<RichTextBox>().ToList();
+            var editors = WpfTestHilfe.LogischeNachfahren(host).OfType<RichTextBox>().ToList();
             Assert.Equal(2, editors.Count);
 
             var window = new Window
@@ -380,16 +380,6 @@ public sealed class DossierRevisionRowFocusTests
             [],
             ["Themen"]);
 
-    private static IEnumerable<DependencyObject> Nachfahren(DependencyObject wurzel)
-    {
-        foreach (var kind in LogicalTreeHelper.GetChildren(wurzel)
-                     .OfType<DependencyObject>())
-        {
-            yield return kind;
-            foreach (var nachfahr in Nachfahren(kind))
-                yield return nachfahr;
-        }
-    }
 
     private static void PumpDispatcherFor(TimeSpan duration)
     {

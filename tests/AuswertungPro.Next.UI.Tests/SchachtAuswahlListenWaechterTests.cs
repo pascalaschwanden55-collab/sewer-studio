@@ -22,7 +22,7 @@ public sealed class SchachtAuswahlListenWaechterTests
     [Fact]
     public void Jede_liste_eines_schacht_auswahlfelds_wird_aufgeloest()
     {
-        var quelle = File.ReadAllText(Path.Combine(TestRepoPaths.FindRepoRoot(),
+        var quelle = File.ReadAllText(Path.Combine(TestRepoPaths.FindRepositoryRoot(),
             "src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
         var start = quelle.IndexOf("private IEnumerable<string> ResolveOptions(", StringComparison.Ordinal);
         Assert.True(start >= 0, "ResolveOptions nicht gefunden");

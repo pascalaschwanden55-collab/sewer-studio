@@ -132,7 +132,7 @@ public sealed class ExcelArbeitsansichtTests
                 }
             }
         var ziel = new Ausgabe();
-        var vorlage = System.IO.Path.Combine(TestPaths.FindSolutionRoot(), "Export_Vorlage",
+        var vorlage = System.IO.Path.Combine(TestRepoPaths.RepoRoot(), "Export_Vorlage",
             schaechte ? "Schächte.xlsx" : "Haltungen.xlsx");
         var service = new ExcelTemplateExportService();
         var result = schaechte

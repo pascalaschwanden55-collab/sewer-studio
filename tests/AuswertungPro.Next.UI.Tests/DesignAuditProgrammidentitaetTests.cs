@@ -29,16 +29,10 @@ public sealed class DesignAuditProgrammidentitaetTests
     {
         var verstoesse = new List<string>();
 
-        foreach (var pfad in Directory.EnumerateFiles(UiRoot, "*.xaml", SearchOption.AllDirectories))
+        // TestXaml.Alle() laesst Build-Ausgaben (bin/obj) weg: Sie enthalten Kopien alter Staende und
+        // gehoeren nicht zum gepflegten Quellbestand.
+        foreach (var pfad in TestXaml.Alle())
         {
-            // Build-Ausgaben (bin/obj) enthalten Kopien alter Staende und gehoeren nicht zum
-            // gepflegten Quellbestand.
-            if (pfad.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-                || pfad.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
             var xaml = File.ReadAllText(pfad);
             foreach (Match treffer in SichtbaresAttribut.Matches(xaml))
             {

@@ -83,8 +83,7 @@ public sealed class BeobachtungenWindowIsolatedSmokeTests
             // Show erzeugt und laedt das echte Fenster synchron. Ein danach
             // eingeplanter Dispatcher-Aufruf kann durch die fortlaufende
             // Startanimation verhungern und beweist nichts Zusaetzliches.
-            window.UpdateLayout();
-            Assert.True(window.IsLoaded);
+            WpfTestHilfe.WarteAufLayout(window);
             Assert.True(window.IsVisible);
         }
         finally

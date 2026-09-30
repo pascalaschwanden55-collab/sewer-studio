@@ -64,8 +64,7 @@ public sealed class DesignAuditKeinStaticResourceThemeTokenTests
 
     private static IEnumerable<string> AlleGepruefteXamlDateien()
     {
-        foreach (var pfad in Directory.GetFiles(UiRoot, "*.xaml", SearchOption.AllDirectories)
-                     .OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+        foreach (var pfad in TestXaml.Alle().OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
         {
             if (ThemeDefinitionsdateien.Any(t => string.Equals(t, pfad, StringComparison.OrdinalIgnoreCase)))
                 continue;
@@ -78,7 +77,7 @@ public sealed class DesignAuditKeinStaticResourceThemeTokenTests
     [Fact]
     public void Ausnahmeliste_verweist_nur_auf_tatsaechlich_vorhandene_Dateien()
     {
-        var alle = Directory.GetFiles(UiRoot, "*.xaml", SearchOption.AllDirectories)
+        var alle = TestXaml.Alle()
             .Select(Path.GetFileName)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 

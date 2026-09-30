@@ -24,10 +24,10 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Export;
 public sealed class ExcelExportVorlagentreueTests
 {
     private static string VorlageHaltungen()
-        => Path.Combine(TestPaths.FindSolutionRoot(), "Export_Vorlage", "Haltungen.xlsx");
+        => Path.Combine(TestRepoPaths.RepoRoot(), "Export_Vorlage", "Haltungen.xlsx");
 
     private static string VorlageSchaechte()
-        => Path.Combine(TestPaths.FindSolutionRoot(), "Export_Vorlage", "Schächte.xlsx");
+        => Path.Combine(TestRepoPaths.RepoRoot(), "Export_Vorlage", "Schächte.xlsx");
 
     private static Project BaueProjekt(params (string Name, string Massnahmen)[] zeilen)
     {
@@ -318,7 +318,7 @@ public sealed class ExcelExportVorlagentreueTests
         string fachlicheId,
         string ausfuehrung)
     {
-        var pfad = Path.Combine(TestPaths.FindSolutionRoot(), "Export_Vorlage", datei);
+        var pfad = Path.Combine(TestRepoPaths.RepoRoot(), "Export_Vorlage", datei);
 
         using (var wb = new XLWorkbook(pfad))
         {
@@ -407,7 +407,7 @@ public sealed class ExcelExportVorlagentreueTests
     [InlineData("Schächte.xlsx", "Schaechte", "J")]
     public void Eigentuemerblock_zaehlt_und_faerbt_jeden_aufgefuehrten_Eigentuemer(string datei, string blattname, string spalte)
     {
-        using var zip = ZipFile.OpenRead(Path.Combine(TestPaths.FindSolutionRoot(), "Export_Vorlage", datei));
+        using var zip = ZipFile.OpenRead(Path.Combine(TestRepoPaths.RepoRoot(), "Export_Vorlage", datei));
         var blatt = Bestand.LiesXml(zip, "xl/worksheets/sheet1.xml");
         var formeln = blatt.Descendants().Where(e => e.Name.LocalName == "f").Select(e => e.Value).ToArray();
         var farbformeln = blatt.Descendants().Where(e => e.Name.LocalName == "formula").Select(e => e.Value).ToArray();
@@ -497,7 +497,7 @@ public sealed class ExcelExportVorlagentreueTests
     [InlineData("Schächte.xlsx")]
     public void Vorlage_verlangt_beim_Oeffnen_eine_vollstaendige_Neuberechnung(string datei)
     {
-        var pfad = Path.Combine(TestPaths.FindSolutionRoot(), "Export_Vorlage", datei);
+        var pfad = Path.Combine(TestRepoPaths.RepoRoot(), "Export_Vorlage", datei);
         using var zip = ZipFile.OpenRead(pfad);
         var arbeitsmappe = Bestand.LiesXml(zip, "xl/workbook.xml");
         var berechnung = arbeitsmappe.Descendants().Single(e => e.Name.LocalName == "calcPr");

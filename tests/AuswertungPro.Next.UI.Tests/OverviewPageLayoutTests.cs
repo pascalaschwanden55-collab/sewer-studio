@@ -69,7 +69,7 @@ public sealed class OverviewPageLayoutTests
 
     private static string ReadOverviewXaml()
     {
-        var root = FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         return File.ReadAllText(Path.Combine(
             root,
             "src",
@@ -79,17 +79,4 @@ public sealed class OverviewPageLayoutTests
             "OverviewPage.xaml"));
     }
 
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (!string.IsNullOrWhiteSpace(dir))
-        {
-            if (File.Exists(Path.Combine(dir, "AuswertungPro.sln")))
-                return dir;
-
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
-    }
 }

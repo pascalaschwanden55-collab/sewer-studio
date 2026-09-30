@@ -201,7 +201,7 @@ public sealed class DatenVerlaufShellTests : IDisposable
     [Fact]
     public void Eingabewege_beider_Seiten_laufen_durch_den_Verlauf()
     {
-        var seiten = Path.Combine(TestRepoPaths.FindRepoRoot(), "src", "AuswertungPro.Next.UI", "Views", "Pages");
+        var seiten = Path.Combine(TestRepoPaths.FindRepositoryRoot(), "src", "AuswertungPro.Next.UI", "Views", "Pages");
         var dataXaml = File.ReadAllText(Path.Combine(seiten, "DataPage.xaml"));
         Assert.Contains("CellEditEnding=\"Grid_CellEditEndingMitVerlauf\"", dataXaml);
         Assert.Contains("PreparingCellForEdit=\"Grid_PreparingCellForEditMitVerlauf\"", dataXaml);
@@ -221,7 +221,7 @@ public sealed class DatenVerlaufShellTests : IDisposable
         Assert.Contains("ClearColumnMitVerlauf(feld,", schachtCode);
 
         // Die Objektakte bekommt den Verlauf auf beiden Seiten mit.
-        var vms = Path.Combine(TestRepoPaths.FindRepoRoot(), "src", "AuswertungPro.Next.UI", "ViewModels", "Pages");
+        var vms = Path.Combine(TestRepoPaths.FindRepositoryRoot(), "src", "AuswertungPro.Next.UI", "ViewModels", "Pages");
         foreach (var datei in new[] { "DataPageViewModel.cs", "SchaechtePageViewModel.cs" })
             Assert.Equal(2, File.ReadAllText(Path.Combine(vms, datei)).Split("services.DatenaenderungsVerlauf);").Length - 1);
     }
@@ -229,7 +229,7 @@ public sealed class DatenVerlaufShellTests : IDisposable
     [Fact]
     public void Menue_Bearbeiten_und_Tasten_stehen_im_Hauptfenster()
     {
-        var pfad = Path.Combine(TestRepoPaths.FindRepoRoot(), "src", "AuswertungPro.Next.UI", "MainWindow.xaml");
+        var pfad = Path.Combine(TestRepoPaths.FindRepositoryRoot(), "src", "AuswertungPro.Next.UI", "MainWindow.xaml");
         var doc = XDocument.Load(pfad);
         XNamespace wpf = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
         var menues = doc.Descendants(wpf + "Menu").First().Elements(wpf + "MenuItem")

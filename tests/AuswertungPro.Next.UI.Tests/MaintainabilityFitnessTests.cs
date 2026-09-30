@@ -78,7 +78,7 @@ public sealed class MaintainabilityFitnessTests
     [Fact]
     public void No_new_production_file_exceeds_1000_lines()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var sourceRoot = Path.Combine(root, "src");
         var offenders = Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
@@ -102,7 +102,7 @@ public sealed class MaintainabilityFitnessTests
     [Fact]
     public void Large_file_whitelist_contains_only_files_that_are_still_large()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var staleEntries = ExistingLargeFiles
             .Where(relativePath =>
             {
@@ -157,7 +157,7 @@ public sealed class MaintainabilityFitnessTests
     [Fact]
     public void Static_di_bypass_facades_are_frozen_to_documented_whitelist()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var expected = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["public static IDialogService Current"] = "src/AuswertungPro.Next.UI/Services/DialogHost.cs",
@@ -179,7 +179,7 @@ public sealed class MaintainabilityFitnessTests
     [Fact]
     public void Mutable_service_facades_can_only_shrink()
     {
-        var sourceRoot = Path.Combine(TestRepoPaths.FindRepoRoot(), "src");
+        var sourceRoot = Path.Combine(TestRepoPaths.FindRepositoryRoot(), "src");
         var useMethod = new Regex(
             @"\b(?:public|internal)\s+static\s+void\s+Use(?:Provider|Service)?\s*\(",
             RegexOptions.CultureInvariant);
@@ -216,7 +216,7 @@ public sealed class MaintainabilityFitnessTests
 
     private static IReadOnlyList<PartialTypeSize> FindPartialTypeSizes()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var sourceRoot = Path.Combine(root, "src");
         var separator = Path.DirectorySeparatorChar;
         var namespaceRegex = new Regex(

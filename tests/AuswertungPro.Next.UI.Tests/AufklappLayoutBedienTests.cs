@@ -71,14 +71,14 @@ public sealed class AufklappLayoutBedienTests
             {
                 var details = (RecordDetailsView)fenster.FindName("Details");
                 var a = details.Groups![0].Items[0];
-                var knopf = Nachfahren<Button>(details).Single(b =>
+                var knopf = WpfTestHilfe.Nachfahren<Button>(details).Single(b =>
                     ReferenceEquals(b.DataContext, a) && (string?)b.ToolTip == "Dieses Feld ausblenden (Wert und Exporte bleiben unverändert)");
                 Klicke(knopf);
                 Assert.True(a.IsHiddenByUser);
                 Assert.False(original[0].Items[0].IsHiddenByUser);
                 Assert.Contains(a, details.HiddenFields!);
                 fenster.UpdateLayout();
-                Klicke(Nachfahren<Button>(details).Single(b => ReferenceEquals(b.DataContext, a)
+                Klicke(WpfTestHilfe.Nachfahren<Button>(details).Single(b => ReferenceEquals(b.DataContext, a)
                     && (string?)b.ToolTip == "Wieder einblenden"));
                 Assert.False(a.IsHiddenByUser);
                 details.Groups = RecordDetailDragOperations.MoveField(details.Groups!, "Stamm", 0, "Weitere", 0);
@@ -88,7 +88,7 @@ public sealed class AufklappLayoutBedienTests
                 fenster.UpdateLayout();
                 Assert.Equal(new[] { "A", "B" }, details.Groups![0].Items.Select(i => i.FieldName));
                 var b = details.Groups[0].Items[1];
-                Klicke(Nachfahren<Button>(details).Single(k => ReferenceEquals(k.DataContext, b)
+                Klicke(WpfTestHilfe.Nachfahren<Button>(details).Single(k => ReferenceEquals(k.DataContext, b)
                     && (string?)k.ToolTip == "Dieses Feld ausblenden (Wert und Exporte bleiben unverändert)"));
                 Klicke(Knopf(fenster, "Speichern"));
             }
@@ -153,15 +153,6 @@ public sealed class AufklappLayoutBedienTests
         [new("Stamm", "", [Item("A"), Item("B")]), new("Weitere", "", [Item("C")])];
     private static RecordDetailItem Item(string name) => new(name, "Probe", _ => { }) { FieldName = name };
     private static Button Knopf(DependencyObject root, string text)
-        => Nachfahren<Button>(root).Single(b => b.IsVisible && b.Content as string == text);
+        => WpfTestHilfe.Nachfahren<Button>(root).Single(b => b.IsVisible && b.Content as string == text);
     private static void Klicke(Button button) => button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-    private static IEnumerable<T> Nachfahren<T>(DependencyObject root) where T : DependencyObject
-    {
-        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is T match) yield return match;
-            foreach (var deeper in Nachfahren<T>(child)) yield return deeper;
-        }
-    }
 }

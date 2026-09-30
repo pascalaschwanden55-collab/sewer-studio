@@ -7,7 +7,7 @@ public sealed class DialogServiceFolderSelectionTests
     [Fact]
     public void SelectFolder_VerwendetEchtenOrdnerdialog()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             root,
             "src",

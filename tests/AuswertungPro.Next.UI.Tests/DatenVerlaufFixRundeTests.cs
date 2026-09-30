@@ -190,7 +190,7 @@ public sealed class DatenVerlaufFixRundeTests : IDisposable
         Assert.Same(_shell.RueckgaengigTasteCommand, seite.RueckgaengigTasteCommand);
         Assert.Same(_shell.WiederholenTasteCommand, seite.WiederholenTasteCommand);
 
-        var pfad = Path.Combine(TestRepoPaths.FindRepoRoot(), "src", "AuswertungPro.Next.UI", "Views", "Windows", "FloatingGridWindow.xaml");
+        var pfad = Path.Combine(TestRepoPaths.FindRepositoryRoot(), "src", "AuswertungPro.Next.UI", "Views", "Windows", "FloatingGridWindow.xaml");
         XNamespace wpf = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
         var tasten = XDocument.Load(pfad).Descendants(wpf + "KeyBinding")
             .Select(k => ((string?)k.Attribute("Key"), (string?)k.Attribute("Modifiers"), (string?)k.Attribute("Command"))).ToList();
@@ -204,7 +204,7 @@ public sealed class DatenVerlaufFixRundeTests : IDisposable
     [Fact]
     public void WebGis_Holen_leert_den_Verlauf_in_jedem_Einstieg()
     {
-        var code = File.ReadAllText(Path.Combine(TestRepoPaths.FindRepoRoot(), "src", "AuswertungPro.Next.UI", "Services", "WebGisHolenAblauf.cs"));
+        var code = File.ReadAllText(Path.Combine(TestRepoPaths.FindRepositoryRoot(), "src", "AuswertungPro.Next.UI", "Services", "WebGisHolenAblauf.cs"));
         var block = code[code.IndexOf("if (uebernommen > 0)", StringComparison.Ordinal)..];
         block = block[..block.IndexOf("_geaendert?.Invoke();", StringComparison.Ordinal)];
         Assert.Contains("shell.DatenVerlauf.Leere(", block);

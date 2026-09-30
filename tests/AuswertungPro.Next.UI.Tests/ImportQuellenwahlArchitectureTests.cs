@@ -25,7 +25,7 @@ public sealed class ImportQuellenwahlArchitectureTests
 
     private static string Lies(params string[] teile)
     {
-        var pfad = Path.Combine(FindRepositoryRoot(), Path.Combine(teile));
+        var pfad = Path.Combine(TestRepoPaths.FindRepositoryRoot(), Path.Combine(teile));
         Assert.True(File.Exists(pfad), $"Datei nicht gefunden: {pfad}");
         return File.ReadAllText(pfad);
     }
@@ -121,22 +121,6 @@ public sealed class ImportQuellenwahlArchitectureTests
             StringComparison.Ordinal);
     }
 
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (Directory.Exists(Path.Combine(directory.FullName, "src")) &&
-                Directory.Exists(Path.Combine(directory.FullName, "tests")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
-    }
 
     private static bool IstNurImKommentar(string quelltext, string begriff)
         => quelltext

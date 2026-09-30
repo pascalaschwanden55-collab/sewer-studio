@@ -20,7 +20,7 @@ public sealed class UserErrorArchitectureTests
     [Fact]
     public void Ui_Dialoge_zeigen_keine_rohen_Exception_Meldungen()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var separator = Path.DirectorySeparatorChar;
 
@@ -42,7 +42,7 @@ public sealed class UserErrorArchitectureTests
     [Fact]
     public void ViewModel_Status_zeigt_keine_rohen_Exception_Meldungen()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var viewModelRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "ViewModels");
 
         var offenders = Directory.EnumerateFiles(viewModelRoot, "*.cs", SearchOption.AllDirectories)
@@ -61,7 +61,7 @@ public sealed class UserErrorArchitectureTests
     [Fact]
     public void Sichtbare_Textfelder_zeigen_keine_rohen_Exception_Meldungen()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
 
         var offenders = Directory.EnumerateFiles(uiRoot, "*.cs", SearchOption.AllDirectories)

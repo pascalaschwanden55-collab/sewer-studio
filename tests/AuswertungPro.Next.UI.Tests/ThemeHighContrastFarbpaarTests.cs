@@ -81,7 +81,7 @@ public sealed class ThemeHighContrastFarbpaarTests
 
         foreach (var (theme, modell) in Modelle())
         {
-            foreach (var datei in XamlDateien())
+            foreach (var datei in TestXaml.Alle())
             {
                 var name = Path.GetFileName(datei);
                 if (name == "ThemeHighContrast.xaml")
@@ -361,8 +361,4 @@ public sealed class ThemeHighContrastFarbpaarTests
         return zuordnung;
     }
 
-    private static IEnumerable<string> XamlDateien()
-        => Directory.EnumerateFiles(RepoFile("src", "AuswertungPro.Next.UI"), "*.xaml", SearchOption.AllDirectories)
-            .Where(p => !p.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", System.StringComparison.OrdinalIgnoreCase)
-                     && !p.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", System.StringComparison.OrdinalIgnoreCase));
 }

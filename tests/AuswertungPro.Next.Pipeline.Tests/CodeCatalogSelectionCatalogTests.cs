@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Pipeline.Tests;
 using AuswertungPro.Next.Application.Protocol;
 
 public sealed class CodeCatalogSelectionCatalogTests
@@ -128,7 +129,7 @@ public sealed class CodeCatalogSelectionCatalogTests
     public void Curated_quant_rules_supply_visible_units_and_ranges()
     {
         var rules = new CodeCatalogSelectionCatalog(
-            new ManifestCodeCatalogProvider(FindManifestPath()));
+            new ManifestCodeCatalogProvider(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json")));
         var catalog = new VsaCodeTreeSelectionCatalog(rules);
 
         var (bcaQ1, bcaQ2) = catalog.GetQuantRule("BCA", "A");
@@ -154,7 +155,7 @@ public sealed class CodeCatalogSelectionCatalogTests
     public void Real_manifest_and_curated_tree_render_pe_as_polyethylene()
     {
         var rules = new CodeCatalogSelectionCatalog(
-            new ManifestCodeCatalogProvider(FindManifestPath()));
+            new ManifestCodeCatalogProvider(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json")));
         var catalog = new VsaCodeTreeSelectionCatalog(rules);
         var codeDef = catalog.Groups["AE"].Codes["AED"];
         var charDef = codeDef.Char1!["O"];
@@ -222,25 +223,6 @@ public sealed class CodeCatalogSelectionCatalogTests
             }
         }));
 
-    private static string FindManifestPath()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(
-                current.FullName,
-                "src",
-                "AuswertungPro.Next.UI",
-                "Data",
-                "vsa_kek_2020_catalog_manifest.json");
-            if (File.Exists(candidate))
-                return candidate;
-
-            current = current.Parent;
-        }
-
-        throw new FileNotFoundException("VSA-KEK-Katalogmanifest wurde nicht gefunden.");
-    }
 
     private sealed class InMemoryCodeCatalogProvider : ICodeCatalogProvider
     {

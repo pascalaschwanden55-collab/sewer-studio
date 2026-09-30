@@ -129,7 +129,7 @@ public sealed class ThemeHighContrastCoverageTests
         var overlayKeys = LiesUeberlagerungsSchluessel();
         var gefunden = new SortedSet<string>(System.StringComparer.Ordinal);
 
-        foreach (var datei in XamlDateien())
+        foreach (var datei in TestXaml.Alle())
         {
             var root = LadeRoot(datei);
             if (root is null)
@@ -371,10 +371,6 @@ public sealed class ThemeHighContrastCoverageTests
         }
     }
 
-    private static IEnumerable<string> XamlDateien()
-        => Directory.EnumerateFiles(RepoFile("src", "AuswertungPro.Next.UI"), "*.xaml", SearchOption.AllDirectories)
-            .Where(p => !p.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", System.StringComparison.OrdinalIgnoreCase)
-                     && !p.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", System.StringComparison.OrdinalIgnoreCase));
 
     private static HashSet<string> LiesUeberlagerungsSchluessel()
     {

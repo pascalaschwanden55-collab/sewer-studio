@@ -134,7 +134,7 @@ public sealed class VsaKekManifestIntegrityTests
 
     private static List<ManifestCode> LoadCodes()
     {
-        var path = FindManifestPath();
+        var path = TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json");
         using var stream = File.OpenRead(path);
         using var doc = JsonDocument.Parse(stream);
 
@@ -150,24 +150,4 @@ public sealed class VsaKekManifestIntegrityTests
             .ToList();
     }
 
-    private static string FindManifestPath()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(
-                current.FullName,
-                "src",
-                "AuswertungPro.Next.UI",
-                "Data",
-                "vsa_kek_2020_catalog_manifest.json");
-
-            if (File.Exists(candidate))
-                return candidate;
-
-            current = current.Parent;
-        }
-
-        throw new FileNotFoundException("VSA-KEK-Katalogmanifest wurde nicht gefunden.");
-    }
 }

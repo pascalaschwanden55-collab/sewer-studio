@@ -100,7 +100,7 @@ public sealed class TrainingSamplesStoreDependencyTests
     [Fact]
     public void Codiermodus_und_Training_reichen_den_registrierten_Speicher_weiter()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var serviceProvider = Read(root, "src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
         var player = Read(root, "src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var training = Read(root, "src", "AuswertungPro.Next.UI", "ViewModels", "Windows", "TrainingCenterViewModel.cs");

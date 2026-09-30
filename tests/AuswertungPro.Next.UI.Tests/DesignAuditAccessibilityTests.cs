@@ -55,14 +55,8 @@ public sealed class DesignAuditAccessibilityTests
             RegexOptions.Compiled);
         var treffer = new List<string>();
 
-        foreach (var datei in Directory.EnumerateFiles(uiRoot, "*.xaml", SearchOption.AllDirectories))
+        foreach (var datei in TestXaml.Alle())
         {
-            if (datei.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-                || datei.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
             var xaml = File.ReadAllText(datei);
             foreach (Match match in muster.Matches(xaml))
             {

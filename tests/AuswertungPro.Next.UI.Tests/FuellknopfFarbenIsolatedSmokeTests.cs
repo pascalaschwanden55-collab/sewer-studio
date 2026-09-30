@@ -147,7 +147,7 @@ public sealed class FuellknopfFarbenIsolatedSmokeTests
                 """);
             liste.ItemsSource = new[] { "a", "b" };
             Lege(liste);
-            var zeilen = Nachfahren<Border>(liste).Where(b => b.Name == "Zeile").ToList();
+            var zeilen = WpfTestHilfe.Nachfahren<Border>(liste).Where(b => b.Name == "Zeile").ToList();
             Assert.Equal(2, zeilen.Count);
             Assert.Equal(Farbe("CardBrush"), Assert.IsType<SolidColorBrush>(zeilen[0].Background).Color);
             Assert.Equal(Farbe("SurfaceSubtleBrush"), Assert.IsType<SolidColorBrush>(zeilen[1].Background).Color);
@@ -211,16 +211,4 @@ public sealed class FuellknopfFarbenIsolatedSmokeTests
         => Assert.IsType<SolidColorBrush>(Teil<Border>(control, teil).Background).Color;
 
     private static Color TextFarbe(TextBlock text) => Assert.IsType<SolidColorBrush>(text.Foreground).Color;
-
-    private static IEnumerable<T> Nachfahren<T>(DependencyObject wurzel) where T : DependencyObject
-    {
-        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(wurzel); i++)
-        {
-            var kind = VisualTreeHelper.GetChild(wurzel, i);
-            if (kind is T t)
-                yield return t;
-            foreach (var n in Nachfahren<T>(kind))
-                yield return n;
-        }
-    }
 }

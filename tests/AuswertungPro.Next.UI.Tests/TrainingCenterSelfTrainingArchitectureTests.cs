@@ -9,7 +9,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_run_command_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -91,7 +91,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterRuntimeHelpers_ist_aus_viewmodel_ordner_entfernt()
     {
         var path = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -104,7 +104,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void Training_meter_timeline_erzeugung_liegt_in_einer_training_factory()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var factoryPath = Path.Combine(
             repoRoot,
             "src",
@@ -152,7 +152,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_self_training_cancellation_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -172,7 +172,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void SelfTrainingRunPreparationWorkflow_delegiert_self_training_auto_scan_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -194,7 +194,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void SelfTrainingRunPreparationWorkflow_setzt_self_training_case_selection_orchestrierung()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -214,7 +214,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_run_request_erzeugung_an_command_factory()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -273,7 +273,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void SelfTrainingRunWorkflow_setzt_triviale_self_training_review_queue_orchestrierung()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var workflowControllerPath = Path.Combine(
             repoRoot,
             "src",
@@ -307,14 +307,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_self_training_kb_update_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
         var workflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -336,14 +336,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void SelfTrainingRunWorkflow_setzt_trivialen_self_training_startzustand()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "SelfTrainingRunWorkflow.cs"));
         var startControllerPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -366,21 +366,21 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_self_training_ollama_log_an_presenter()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
         var setupSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "SelfTrainingRuntimeSetupController.cs"));
         var workflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -396,14 +396,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void SelfTrainingRunWorkflow_setzt_triviale_self_training_completion()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "SelfTrainingRunWorkflow.cs"));
         var completionControllerPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -422,21 +422,21 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_self_training_runtime_setup_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
         var setupSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "SelfTrainingRuntimeSetupController.cs"));
         var workflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -452,7 +452,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void SelfTrainingRunWorkflow_setzt_triviale_self_training_run_execution()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var controllerPath = Path.Combine(
             repoRoot,
             "src",
@@ -479,7 +479,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void SelfTrainingRunWorkflow_setzt_trivialen_self_training_post_run_refresh()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -495,7 +495,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_last_match_rate_refresh_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -552,7 +552,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_load_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -603,14 +603,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void SelfTrainingRunWorkflow_setzt_triviale_self_training_exceptions()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "SelfTrainingRunWorkflow.cs"));
         var controllerPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -629,7 +629,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void SelfTrainingRunWorkflow_setzt_trivialen_self_training_final_state()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -646,7 +646,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_stop_und_pause_control_an_controller()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -688,7 +688,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_kb_index_loop_an_runner()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -697,7 +697,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         var viewModelSource = source;
         var methodSource = ExtractMethodBody(source, "private async Task<KbIndexOutcome> IncrementalKbUpdateWithReasonAsync(");
         var workflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -719,7 +719,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_review_sample_id_aufloesung_an_workflow()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -727,7 +727,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterViewModel.cs"));
         var methodSource = ExtractMethodBody(source, "private async Task<string?> ResolveSelfTrainingSampleIdAsync(");
         var workflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -748,7 +748,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_gold_kb_reconcile_run_an_command_factory()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -817,14 +817,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_review_queue_abschluss_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
         var workflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -843,21 +843,21 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_review_item_entscheidung_an_workflow()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
         var commandWorkflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingReviewItemDecisionCommandWorkflow.cs"));
         var commandFactorySource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -894,7 +894,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_review_approval_service_erzeugung_an_factory()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -934,7 +934,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_selected_review_commands_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -995,7 +995,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_pending_review_geometry_reset_an_controller()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1026,21 +1026,21 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_review_feedback_service_erzeugung_an_factory()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
         var runtimeSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingSelectedReviewRuntime.cs"));
         var factorySource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -1062,7 +1062,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_review_queue_load_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1111,7 +1111,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_kb_check_an_workflow()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -1120,14 +1120,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         var viewModelSource = source;
         var checkSource = ExtractMethodBody(source, "private async Task CheckKnowledgeBaseAsync()");
         var workflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingKnowledgeBaseCheckWorkflow.cs"));
         var factorySource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -1158,7 +1158,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_kb_status_und_quality_presentation_an_builder()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1269,7 +1269,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_sample_persistenz_request_an_factory()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1309,7 +1309,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_approved_protocol_export_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1365,7 +1365,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_sample_commands_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1423,7 +1423,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_kb_sample_deindex_an_deindexer()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1457,7 +1457,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_sample_generierung_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1502,7 +1502,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_selection_command_refresh_an_controller()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1542,7 +1542,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_generation_cancellation_lifecycle_an_helper()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1597,7 +1597,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterWorkflow_ueberlaesst_Sidecar_und_lokalen_Weg_dem_ExecutionService()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var executionServicePath = Path.Combine(
             repoRoot,
             "src",
@@ -1638,7 +1638,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterWorkflow_baut_keinen_Sidecar_Payload_mehr_in_der_UI()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var executionServicePath = Path.Combine(
             repoRoot,
             "src",
@@ -1678,7 +1678,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterWorkflow_erzeugt_keinen_Sidecar_Client_oder_Infrastruktur_Dienst()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var yoloExportWorkflowSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1700,7 +1700,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterWorkflow_ueberlaesst_Kandidatenauswahl_dem_Koordinator()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var coordinatorPath = Path.Combine(
             repoRoot,
             "src",
@@ -1735,7 +1735,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterWorkflow_nutzt_festen_DatasetRoot_ohne_Zielordnerdialog()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var serviceProviderSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1773,7 +1773,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterWorkflow_delegiert_Abschluss_an_plan_gebundenen_Service()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var coordinatorPath = Path.Combine(
             repoRoot,
             "src",
@@ -1806,7 +1806,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_export_yolo_startet_nur_noch_export_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var yoloExportSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1849,7 +1849,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_case_decisions_an_controller()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1903,7 +1903,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_step_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1938,7 +1938,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_match_rate_zaehler_an_tracker()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -1999,14 +1999,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_self_training_visual_reset_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
         var controllerPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -2028,7 +2028,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_code_distribution_an_controller()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var controllerPath = Path.Combine(
             repoRoot,
             "src",
@@ -2061,7 +2061,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_samples_load_und_collection_mutation_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2140,7 +2140,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_batch_command_und_run_request_erzeugung_an_factory()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2196,7 +2196,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_cases_restore_collection_mutation_an_controller()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2226,7 +2226,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_rootfolder_mutation_an_state_controller()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2293,7 +2293,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_haltungs_verteilung_an_workflow()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -2302,14 +2302,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         var viewModelSource = source;
         var distributionSource = ExtractMethodBody(source, "private async Task DistributeHaltungAsync()");
         var factorySource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingCenterDistributionRequestFactory.cs"));
         var dialogSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -2342,7 +2342,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_scan_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2397,7 +2397,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_manuelles_speichern_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2464,7 +2464,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_log_format_und_trim_an_controller()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var controllerPath = Path.Combine(
             repoRoot,
             "src",
@@ -2502,7 +2502,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_live_frame_throttling_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -2528,7 +2528,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_live_preview_clear_an_controller()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2587,7 +2587,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_protocol_startdata_queue_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2684,7 +2684,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_protocol_startdata_approval_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2744,7 +2744,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     public void TrainingCenterViewModel_delegiert_protocol_startdata_review_item_filter_an_selector()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -2767,7 +2767,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_kb_update_workflow_an_controller()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2797,7 +2797,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void TrainingKbIndexRunner_haengt_nicht_am_viewmodel_runtime_helper()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var runnerSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -2824,7 +2824,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     [Fact]
     public void SelfTrainingSessionController_nutzt_ffmpeg_resolver_aus_training_paket()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var sessionControllerSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",

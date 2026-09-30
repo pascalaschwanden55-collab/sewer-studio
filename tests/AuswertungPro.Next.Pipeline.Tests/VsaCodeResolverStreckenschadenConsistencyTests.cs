@@ -31,7 +31,7 @@ public sealed class VsaCodeResolverStreckenschadenConsistencyTests
 
     private static IReadOnlyList<CodeDefinition> LoadManifestCodes()
     {
-        var path = FindManifestPath();
+        var path = TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json");
         var json = File.ReadAllText(path);
         var document = JsonSerializer.Deserialize<CodeCatalogDocument>(
             json,
@@ -39,26 +39,6 @@ public sealed class VsaCodeResolverStreckenschadenConsistencyTests
         return document?.Codes.ToArray() ?? Array.Empty<CodeDefinition>();
     }
 
-    private static string FindManifestPath()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(
-                current.FullName,
-                "src",
-                "AuswertungPro.Next.UI",
-                "Data",
-                "vsa_kek_2020_catalog_manifest.json");
-
-            if (File.Exists(candidate))
-                return candidate;
-
-            current = current.Parent;
-        }
-
-        throw new FileNotFoundException("VSA-KEK-Katalogmanifest wurde nicht gefunden.");
-    }
 
     private sealed class InMemoryCodeCatalogProvider : ICodeCatalogProvider
     {
