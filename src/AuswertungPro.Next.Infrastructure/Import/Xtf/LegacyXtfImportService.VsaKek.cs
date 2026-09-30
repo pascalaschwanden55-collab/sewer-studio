@@ -68,12 +68,17 @@ public sealed partial class LegacyXtfImportService
     /// <summary>Eine Untersuchung, deren Bauwerksart sich nicht belegen liess.</summary>
     internal sealed record XtfOffeneUntersuchung(string Bezeichnung, string Grund);
 
-    /// <summary>Was eine VSA-KEK-Datei fachlich hergibt — nach Bauwerksart getrennt.</summary>
+    /// <summary>
+    /// Was eine VSA-KEK-Datei fachlich hergibt — nach Bauwerksart getrennt.
+    /// <paramref name="Uebersprungen"/> nennt jede weitere Untersuchung einer Haltung, die
+    /// nicht gewaehlt wurde (siehe <see cref="VsaKekUntersuchungsWahl"/>).
+    /// </summary>
     internal sealed record XtfVsaKekErgebnis(
         List<HaltungRecord> Haltungen,
         List<XtfSchachtUntersuchung> Schaechte,
         List<XtfOffeneUntersuchung> Offene,
-        int Untersuchungen);
+        int Untersuchungen,
+        List<string> Uebersprungen);
 
     private sealed class Schaden
     {
@@ -102,12 +107,13 @@ public sealed partial class LegacyXtfImportService
     }
 
     private static XtfVsaKekErgebnis ParseVsaKek(XDocument doc, string sourcePath,
-        IVsaMediaPathResolver mediaPaths,
-        out Dictionary<string, List<VsaFinding>> findingsPerHaltung)
+        IVsaMediaPathResolver mediaPaths)
     {
         var modellName = ReadModelName(doc);
         var untersuchungen = new Dictionary<string, Untersuchung>(StringComparer.Ordinal);
-        findingsPerHaltung = new Dictionary<string, List<VsaFinding>>(StringComparer.OrdinalIgnoreCase);
+        // Befunde je Untersuchungs-TID. Bis 30.09.2026 je Bezeichnung: Dann trug eine
+        // Haltung mit Hin- und Gegenbefahrung die Befunde beider Untersuchungen.
+        var findingsJeUntersuchung = new Dictionary<string, List<VsaFinding>>(StringComparer.Ordinal);
         var findingsByObjId = new Dictionary<string, VsaFinding>(StringComparer.OrdinalIgnoreCase);
         var findingsByTid = new Dictionary<string, VsaFinding>(StringComparer.OrdinalIgnoreCase);
         // Video-Pfad je Untersuchungs-TID (KEK.Datei mit Klasse=Untersuchung)
@@ -246,20 +252,13 @@ public sealed partial class LegacyXtfImportService
             // XTF-Variante nutzt Datei.Objekt = Kanalschaden-TID (kein OBJ_ID-Element vorhanden) — auch nach TID indizieren.
             if (!string.IsNullOrWhiteSpace(schadenTid))
                 findingsByTid[schadenTid!] = finding;
-            // Add finding to findingsPerHaltung (by Bezeichnung)
-            if (!string.IsNullOrWhiteSpace(refTid) && untersuchungen.TryGetValue(refTid, out var untersuchung))
+            // Zuordnung ueber den Bezug (UntersuchungRef), nicht ueber den Namen.
+            if (!findingsJeUntersuchung.TryGetValue(refTid!, out var list))
             {
-                var haltungName = untersuchung.Bezeichnung;
-                if (!string.IsNullOrWhiteSpace(haltungName))
-                {
-                    if (!findingsPerHaltung.TryGetValue(haltungName, out var list))
-                    {
-                        list = new List<VsaFinding>();
-                        findingsPerHaltung[haltungName] = list;
-                    }
-                    list.Add(finding);
-                }
+                list = new List<VsaFinding>();
+                findingsJeUntersuchung[refTid!] = list;
             }
+            list.Add(finding);
         }
 
         // Normschachtschaeden. Bis 2026-09-05 wurden sie ueberhaupt nicht gelesen: Die
@@ -369,14 +368,13 @@ public sealed partial class LegacyXtfImportService
         var records = new List<HaltungRecord>();
         var schaechte = new List<XtfSchachtUntersuchung>();
         var offene = new List<XtfOffeneUntersuchung>();
+        var haltungsuntersuchungen = new List<Untersuchung>();
         var bauwerksarten = LiesBauwerksarten(doc);
 
         foreach (var u in untersuchungen.Values)
         {
             if (string.IsNullOrWhiteSpace(u.Bezeichnung))
                 continue;
-
-            var zeitpunkt = NormalizeDate_yyyymmdd(u.Zeitpunkt);
 
             // Haltung oder Schacht? Die Datei sagt es an mehreren Stellen; widersprechen
             // sie sich, bleibt der Fall offen statt geraten.
@@ -403,7 +401,7 @@ public sealed partial class LegacyXtfImportService
             {
                 schaechte.Add(new XtfSchachtUntersuchung(
                     u.Bezeichnung,
-                    zeitpunkt,
+                    NormalizeDate_yyyymmdd(u.Zeitpunkt),
                     u.Operateur,
                     u.Erfassungsart,
                     BaueSchachteintraege(u),
@@ -412,94 +410,122 @@ public sealed partial class LegacyXtfImportService
                 continue;
             }
 
-            var primaere = new List<string>();
-
-            if (findingsPerHaltung.TryGetValue(u.Bezeichnung, out var findings))
-            {
-                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var f in findings)
-                {
-                    var code = (f.KanalSchadencode ?? "").Trim().ToUpperInvariant();
-                    if (code.Length == 0) continue;
-                    var meter = f.MeterStart;
-                    var key = $"{code}|{(meter.HasValue ? meter.Value.ToString("F2") : "")}";
-                    if (!seen.Add(key)) continue;
-
-                    var detail = XtfPrimaryDamageFormatter.FormatLine(f);
-                    if (!string.IsNullOrWhiteSpace(detail))
-                        primaere.Add(detail);
-                }
-            }
-
-            var rec = new HaltungRecord
-            {
-                // Ankerangabe fuer eine spaetere Revision: aus welcher Datei und welcher
-                // Untersuchung diese Haltung stammt.
-                XtfHerkunft = new XtfHerkunft
-                {
-                    Datei = Path.GetFileName(sourcePath) ?? "",
-                    Modell = modellName,
-                    UntersuchungTid = u.Tid
-                }
-            };
-            rec.SetFieldValue("Haltungsname", u.Bezeichnung, FieldSource.Xtf, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(u.InspizierteLaenge)) rec.SetFieldValue("Haltungslaenge_m", u.InspizierteLaenge, FieldSource.Xtf, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(zeitpunkt)) rec.SetFieldValue("Datum_Jahr", zeitpunkt, FieldSource.Xtf, userEdited: false);
-            // Schacht oben/unten aus der Untersuchung (von-/bisPunktBezeichnung) — VSA_KEK ist Hauptquelle,
-            // eine spaetere SIA405-Anreicherung fuellt nur, falls hier leer.
-            if (!string.IsNullOrWhiteSpace(u.VonPunkt)) rec.SetFieldValue("Schacht_oben", u.VonPunkt, FieldSource.Xtf, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(u.BisPunkt)) rec.SetFieldValue("Schacht_unten", u.BisPunkt, FieldSource.Xtf, userEdited: false);
-            if (findings is not null && findings.Count > 0)
-                rec.VsaFindings = new List<VsaFinding>(findings);
-
-            // Video-Link aus KEK.Datei (Klasse=Untersuchung) setzen, falls noch kein Link vorhanden
-            if (videoByUntersuchungTid.TryGetValue(u.Tid, out var videoLink)
-                && string.IsNullOrWhiteSpace(rec.GetFieldValue("Link")))
-            {
-                rec.SetFieldValue("Link", videoLink, FieldSource.Xtf, userEdited: false);
-            }
-
-            if (primaere.Count > 0)
-            {
-                var val = XtfPrimaryDamageFormatter.DeduplicateText(string.Join("\n", primaere));
-                rec.SetFieldValue("Primaere_Schaeden", val, FieldSource.Xtf, userEdited: false);
-            }
-
-            // NOTE: VSA-Zustandsnote wird NICHT hier berechnet, sondern später durch VsaEvaluationService
-            // Die korrekte Berechnung basiert auf VSA-Regeln und allen Schadenscodes pro Haltung
-
-            // maxKlasse wird hier nicht korrekt berechnet - entfernt um falsche Werte zu vermeiden
-            // if (maxKlasse > 0)
-            // {
-            //     rec.SetFieldValue("Zustandsklasse", maxKlasse.ToString(), FieldSource.Xtf, userEdited: false);
-            //     rec.SetFieldValue("VSA_Zustandsnote_D", maxKlasse.ToString(), FieldSource.Xtf, userEdited: false);
-            // }
-
-            // Inspektionsrichtung aus der Untersuchung (IKAS liefert sie als <Fliessrichtung>).
-            var richtung = XtfValueNormalizer.NormalizeInspectionDirection(u.Fliessrichtung);
-            if (!string.IsNullOrWhiteSpace(richtung))
-                rec.SetFieldValue("Inspektionsrichtung", richtung, FieldSource.Xtf, userEdited: false);
-
-            // Bemerkungen mit Inspektionskontext anreichern. VSA_KEK ist Hauptquelle und darf Bemerkungen
-            // setzen. Alle verfuegbaren Kontextangaben einbeziehen (nicht nur wenn Erfassungsart da ist),
-            // damit Grund/Witterung/Ausfuehrender/Fahrzeug/Geraet nicht verloren gehen.
-            var bemParts = new List<string>();
-            if (!string.IsNullOrWhiteSpace(u.Erfassungsart)) bemParts.Add($"Erfassung: {u.Erfassungsart}");
-            if (!string.IsNullOrWhiteSpace(u.Grund)) bemParts.Add($"Grund: {u.Grund}");
-            if (!string.IsNullOrWhiteSpace(u.Witterung)) bemParts.Add($"Witterung: {u.Witterung}");
-            if (!string.IsNullOrWhiteSpace(u.Ausfuehrender)) bemParts.Add($"Ausfuehrender: {u.Ausfuehrender}");
-            if (!string.IsNullOrWhiteSpace(u.Fahrzeug)) bemParts.Add($"Fahrzeug: {u.Fahrzeug}");
-            if (!string.IsNullOrWhiteSpace(u.Geraet)) bemParts.Add($"Geraet: {u.Geraet}");
-            if (bemParts.Count > 0)
-            {
-                rec.SetFieldValue("Bemerkungen", string.Join(", ", bemParts), FieldSource.Xtf, userEdited: false);
-                rec.SetFieldValue("Pruefungsresultat", "", FieldSource.Xtf, userEdited: false);
-            }
-
-            records.Add(rec);
+            haltungsuntersuchungen.Add(u);
         }
 
-        return new XtfVsaKekErgebnis(records, schaechte, offene, untersuchungen.Count);
+        // Je Haltung genau eine Untersuchung, gleiche Regel wie der WinCan-Import. Nur sie
+        // liefert Felder, Befunde und Primaere_Schaeden; jede andere steht im Importbericht.
+        var uebersprungen = new List<string>();
+        foreach (var gruppe in VsaKekUntersuchungsWahl.Waehle(haltungsuntersuchungen, u => u.Bezeichnung, u => u.Zeitpunkt))
+        {
+            findingsJeUntersuchung.TryGetValue(gruppe.Gewaehlt.Tid, out var findings);
+            videoByUntersuchungTid.TryGetValue(gruppe.Gewaehlt.Tid, out var videoLink);
+            records.Add(BaueHaltung(gruppe.Gewaehlt, findings, videoLink, sourcePath, modellName));
+
+            foreach (var weitere in gruppe.Uebersprungen)
+            {
+                uebersprungen.Add(VsaKekUntersuchungsWahl.Meldung(
+                    gruppe.Haltung, gruppe.Uebersprungen.Count + 1,
+                    gruppe.Gewaehlt.Tid, gruppe.Gewaehlt.Zeitpunkt, weitere.Tid, weitere.Zeitpunkt,
+                    findingsJeUntersuchung.TryGetValue(weitere.Tid, out var befunde) ? befunde.Count : 0));
+            }
+        }
+
+        return new XtfVsaKekErgebnis(records, schaechte, offene, untersuchungen.Count, uebersprungen);
+    }
+
+    /// <summary>
+    /// Baut den Haltungsdatensatz aus genau einer Untersuchung, ihren Befunden und ihrem Video.
+    /// </summary>
+    private static HaltungRecord BaueHaltung(Untersuchung u, List<VsaFinding>? findings,
+        string? videoLink, string sourcePath, string modellName)
+    {
+        var zeitpunkt = NormalizeDate_yyyymmdd(u.Zeitpunkt);
+        var primaere = new List<string>();
+
+        if (findings is not null)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var f in findings)
+            {
+                var code = (f.KanalSchadencode ?? "").Trim().ToUpperInvariant();
+                if (code.Length == 0) continue;
+                var meter = f.MeterStart;
+                var key = $"{code}|{(meter.HasValue ? meter.Value.ToString("F2") : "")}";
+                if (!seen.Add(key)) continue;
+
+                var detail = XtfPrimaryDamageFormatter.FormatLine(f);
+                if (!string.IsNullOrWhiteSpace(detail))
+                    primaere.Add(detail);
+            }
+        }
+
+        var rec = new HaltungRecord
+        {
+            // Ankerangabe fuer eine spaetere Revision: aus welcher Datei und welcher
+            // Untersuchung diese Haltung stammt.
+            XtfHerkunft = new XtfHerkunft
+            {
+                Datei = Path.GetFileName(sourcePath) ?? "",
+                Modell = modellName,
+                UntersuchungTid = u.Tid
+            }
+        };
+        rec.SetFieldValue("Haltungsname", u.Bezeichnung, FieldSource.Xtf, userEdited: false);
+        if (!string.IsNullOrWhiteSpace(u.InspizierteLaenge)) rec.SetFieldValue("Haltungslaenge_m", u.InspizierteLaenge, FieldSource.Xtf, userEdited: false);
+        if (!string.IsNullOrWhiteSpace(zeitpunkt)) rec.SetFieldValue("Datum_Jahr", zeitpunkt, FieldSource.Xtf, userEdited: false);
+        // Schacht oben/unten aus der Untersuchung (von-/bisPunktBezeichnung) — VSA_KEK ist Hauptquelle,
+        // eine spaetere SIA405-Anreicherung fuellt nur, falls hier leer.
+        if (!string.IsNullOrWhiteSpace(u.VonPunkt)) rec.SetFieldValue("Schacht_oben", u.VonPunkt, FieldSource.Xtf, userEdited: false);
+        if (!string.IsNullOrWhiteSpace(u.BisPunkt)) rec.SetFieldValue("Schacht_unten", u.BisPunkt, FieldSource.Xtf, userEdited: false);
+        if (findings is not null && findings.Count > 0)
+            rec.VsaFindings = new List<VsaFinding>(findings);
+
+        // Video-Link aus KEK.Datei (Klasse=Untersuchung) setzen, falls noch kein Link vorhanden
+        if (!string.IsNullOrWhiteSpace(videoLink)
+            && string.IsNullOrWhiteSpace(rec.GetFieldValue("Link")))
+        {
+            rec.SetFieldValue("Link", videoLink, FieldSource.Xtf, userEdited: false);
+        }
+
+        if (primaere.Count > 0)
+        {
+            var val = XtfPrimaryDamageFormatter.DeduplicateText(string.Join("\n", primaere));
+            rec.SetFieldValue("Primaere_Schaeden", val, FieldSource.Xtf, userEdited: false);
+        }
+
+        // NOTE: VSA-Zustandsnote wird NICHT hier berechnet, sondern später durch VsaEvaluationService
+        // Die korrekte Berechnung basiert auf VSA-Regeln und allen Schadenscodes pro Haltung
+
+        // maxKlasse wird hier nicht korrekt berechnet - entfernt um falsche Werte zu vermeiden
+        // if (maxKlasse > 0)
+        // {
+        //     rec.SetFieldValue("Zustandsklasse", maxKlasse.ToString(), FieldSource.Xtf, userEdited: false);
+        //     rec.SetFieldValue("VSA_Zustandsnote_D", maxKlasse.ToString(), FieldSource.Xtf, userEdited: false);
+        // }
+
+        // Inspektionsrichtung aus der Untersuchung (IKAS liefert sie als <Fliessrichtung>).
+        var richtung = XtfValueNormalizer.NormalizeInspectionDirection(u.Fliessrichtung);
+        if (!string.IsNullOrWhiteSpace(richtung))
+            rec.SetFieldValue("Inspektionsrichtung", richtung, FieldSource.Xtf, userEdited: false);
+
+        // Bemerkungen mit Inspektionskontext anreichern. VSA_KEK ist Hauptquelle und darf Bemerkungen
+        // setzen. Alle verfuegbaren Kontextangaben einbeziehen (nicht nur wenn Erfassungsart da ist),
+        // damit Grund/Witterung/Ausfuehrender/Fahrzeug/Geraet nicht verloren gehen.
+        var bemParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(u.Erfassungsart)) bemParts.Add($"Erfassung: {u.Erfassungsart}");
+        if (!string.IsNullOrWhiteSpace(u.Grund)) bemParts.Add($"Grund: {u.Grund}");
+        if (!string.IsNullOrWhiteSpace(u.Witterung)) bemParts.Add($"Witterung: {u.Witterung}");
+        if (!string.IsNullOrWhiteSpace(u.Ausfuehrender)) bemParts.Add($"Ausfuehrender: {u.Ausfuehrender}");
+        if (!string.IsNullOrWhiteSpace(u.Fahrzeug)) bemParts.Add($"Fahrzeug: {u.Fahrzeug}");
+        if (!string.IsNullOrWhiteSpace(u.Geraet)) bemParts.Add($"Geraet: {u.Geraet}");
+        if (bemParts.Count > 0)
+        {
+            rec.SetFieldValue("Bemerkungen", string.Join(", ", bemParts), FieldSource.Xtf, userEdited: false);
+            rec.SetFieldValue("Pruefungsresultat", "", FieldSource.Xtf, userEdited: false);
+        }
+
+        return rec;
     }
 
     /// <summary>

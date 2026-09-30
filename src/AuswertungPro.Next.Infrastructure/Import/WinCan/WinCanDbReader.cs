@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using Microsoft.Data.Sqlite;
 
 namespace AuswertungPro.Next.Infrastructure.Import.WinCan;
@@ -66,14 +67,14 @@ internal static class WinCanDbReader
             // aufgefallen in Seilergasse (07.638905-78998): Die Untersuchung mit 12 Befunden
             // trug das Platzhalterdatum und verlor gegen eine mit 4 Befunden. Der technische
             // Zeitstempel darf die Auswahl ordnen, wird aber nie zum Inspektionsdatum.
+            // Die Regel selbst liegt in UntersuchungsAuswahl; der VSA-KEK-XTF-Import nutzt sie auch.
             var startDate = ReadText(reader, 2);
             var gelesenesStartdatum = WinCanValueNormalizer.ParseSqliteDate(startDate);
-            var hatWinCanVorgabedatum = IstWinCanVorgabetag(gelesenesStartdatum);
-            var glaubwuerdigesStartdatum = Glaubwuerdig(gelesenesStartdatum);
-            var sortKey = glaubwuerdigesStartdatum
-                          ?? Glaubwuerdig(WinCanValueNormalizer.ParseSqliteDate(reader[3]))
-                          ?? WinCanValueNormalizer.ParseSqliteDate(reader[4])
-                          ?? DateTime.MinValue;
+            var hatWinCanVorgabedatum = UntersuchungsAuswahl.IstVorgabetag(gelesenesStartdatum);
+            var glaubwuerdigesStartdatum = UntersuchungsAuswahl.Glaubwuerdig(gelesenesStartdatum);
+            var sortKey = UntersuchungsAuswahl.Sortierschluessel(
+                new[] { gelesenesStartdatum, WinCanValueNormalizer.ParseSqliteDate(reader[3]) },
+                technischerZeitstempel: WinCanValueNormalizer.ParseSqliteDate(reader[4]));
 
             list.Add(new WinCanDbInspection(
                 reader.GetString(0),
@@ -86,22 +87,6 @@ internal static class WinCanDbReader
 
         return list;
     }
-
-    /// <summary>
-    /// Der Tag, den WinCan VX als Vorgabe in INS_StartDate eintraegt, solange niemand ein
-    /// Datum erfasst hat ("2007-12-31 23:27:20", ohne Bruchteilsekunden). Gemessen in der
-    /// Seilergasse-Datenbank; eine echte Aufnahme traegt dort Bruchteilsekunden.
-    /// </summary>
-    private static readonly DateOnly WinCanVorgabetag = new(2007, 12, 31);
-
-    /// <summary>
-    /// Ein Datum vor 1990 oder der WinCan-Vorgabetag ist ein Platzhalter, kein Aufnahmetag.
-    /// </summary>
-    private static DateTime? Glaubwuerdig(DateTime? datum)
-        => datum is { Year: >= 1990 } d && DateOnly.FromDateTime(d) != WinCanVorgabetag ? datum : null;
-
-    private static bool IstWinCanVorgabetag(DateTime? datum)
-        => datum is { } d && DateOnly.FromDateTime(d) == WinCanVorgabetag;
 
     private static Dictionary<string, List<WinCanDbObservation>> LoadObservations(SqliteConnection connection)
     {

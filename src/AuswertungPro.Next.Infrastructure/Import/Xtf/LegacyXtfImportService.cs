@@ -215,7 +215,7 @@ public sealed partial class LegacyXtfImportService
         // VSA_KEK verarbeiten, wenn NICHT bereits erfolgreich als SIA405 importiert
         if (!sia405Imported && isVsa)
         {
-            var ergebnis = ParseVsaKek(doc, path, mediaPaths, out _);
+            var ergebnis = ParseVsaKek(doc, path, mediaPaths);
             stats.Found += ergebnis.Haltungen.Count;
 
             foreach (var rec in ergebnis.Haltungen)
@@ -254,6 +254,10 @@ public sealed partial class LegacyXtfImportService
                     Message = $"Untersuchung \"{offen.Bezeichnung}\" nicht zugeordnet: {offen.Grund}"
                 });
             }
+
+            // Weitere Untersuchungen derselben Haltung: nicht uebernommen, aber namentlich gemeldet.
+            foreach (var meldung in ergebnis.Uebersprungen)
+                stats.Messages.Add(new ImportMessage { Level = "Warn", Context = "XTF", Message = meldung });
         }
 
         if (!isSia405 && !isVsa)

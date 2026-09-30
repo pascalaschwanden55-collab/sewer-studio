@@ -732,4 +732,18 @@ Datei fehlt, und muss dann bewusst geprueft werden.
   – nur die erste übernommen»). Gleiche TID zweimal bleibt wie bisher.
   Ort: `Sia405DoppelteBezeichnungen` zwischen Bezuegen und Abbildung. Test:
   `XtfDoppelteHaltungsbezeichnungTests`.
+- **VSA-KEK: je Haltung genau eine Untersuchung, gewaehlt wie bei WinCan.** Bisher
+  ueberschrieb die zweite Untersuchung derselben Haltung (z.B. die Gegenbefahrung) Datum,
+  Laenge, Richtung, Video, `XtfHerkunft` und Bemerkung der ersten, und der Datensatz trug
+  die Befunde beider (Zuordnung ueber den Namen), `Primaere_Schaeden` mischte beide
+  Richtungen. Jetzt gilt die gemeinsame Regel `UntersuchungsAuswahl`
+  (Application, rein; auch der WinCan-Import nutzt sie): neuestes glaubwuerdiges
+  `Zeitpunkt`, der Vorgabetag `2007-12-31` und alles vor 1990 zaehlen als Platzhalter;
+  einen technischen Zeitstempel als Rueckfall hat die XTF nicht, also entscheidet danach
+  die Dateireihenfolge. Nur die gewaehlte Untersuchung liefert Felder, Befunde (ueber
+  `UntersuchungRef`, nicht den Namen) und `Primaere_Schaeden`; jede andere steht als
+  Warnung mit Datum, TID und Befundzahl im Importbericht. Anders als bei WinCan wird sie
+  (noch) nicht als `ProtocolRevision` abgelegt. Schachtbegehungen und ihr
+  `ImportFingerprint` sind unveraendert. Ort: `VsaKekUntersuchungsWahl`. Tests:
+  `XtfVsaKekMehrereUntersuchungenTests`, `UntersuchungsAuswahlTests`.
 
