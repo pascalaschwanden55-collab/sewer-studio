@@ -79,7 +79,6 @@ CodingEingabemarkerGeometryPolicy.cs
 CodingEingabemarkerInputWorkflow.cs
 CodingEingabemarkerSubmissionWorkflow.cs
 CodingEingabemarkerToggleWorkflow.cs
-CodingEndMeterResolveWorkflow.cs
 CodingEventActionDialogService.cs
 CodingEventActionDialogServiceFactory.cs
 CodingEventActionDialogWorkflow.cs
@@ -171,10 +170,7 @@ CodingModeExitTeardownWorkflow.cs
 CodingModePreparePlaybackWorkflow.cs
 CodingModeShowUiWorkflow.cs
 CodingMoveByCommandWorkflow.cs
-CodingMultiModelAnalysisCommandWorkflow.cs
 CodingMultiModelAnalysisResultWorkflow.cs
-CodingMultiModelAnalysisStartWorkflow.cs
-CodingMultiModelClassifierInputPolicy.cs
 CodingMultiModelEventAppender.cs
 CodingMultiModelEventFactory.cs
 CodingMultiModelFindingEventCommandWorkflow.cs
@@ -183,7 +179,6 @@ CodingMultiModelFindingSummary.cs
 CodingMultiModelInferenceWorkflow.cs
 CodingMultiModelQualityGatePolicy.cs
 CodingMultiModelResultsRenderWorkflow.cs
-CodingMultiModelRuntimeGateWorkflow.cs
 CodingMultiPointOverlayDrawWorkflow.cs
 CodingNewFindingOverlaySelector.cs
 CodingOpenStretchDamageCloseApplier.cs

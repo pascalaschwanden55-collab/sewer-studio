@@ -7,25 +7,29 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowCodingMultiModelArchitectureTests
 {
     [Fact]
-    public void PlayerWindow_multi_model_analysis_sequence_lives_in_command_workflow()
+    public void PlayerWindow_multi_model_analysis_sequence_lives_in_application_use_case()
     {
         var multiModelPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelAnalysisCommandWorkflow.cs");
+        var useCasePath = RepoFile(
+            "src", "AuswertungPro.Next.Application", "UseCases", "CodingEinzelbild", "CodingEinzelbildAnalyseUseCase.cs");
 
-        Assert.True(File.Exists(commandWorkflowPath), "Multi-Model-Analyse-Sequenz muss ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(useCasePath), "Multi-Model-Analyse-Sequenz muss ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var multiModel = File.ReadAllText(multiModelPath);
-        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
+        var useCase = File.Exists(useCasePath) ? File.ReadAllText(useCasePath) : "";
 
-        Assert.Contains("CodingMultiModelAnalysisCommandWorkflow.ExecuteAsync", multiModel);
-        Assert.Contains("CodingMultiModelRuntimeGateWorkflow.Execute", commandWorkflow);
-        Assert.Contains("start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready", commandWorkflow);
-        Assert.Contains("actions.RunInferenceAsync", commandWorkflow);
+        // Verhalten: CodingEinzelbildAnalyseUseCaseTests und CodingEinzelbildAblaufTests.
+        Assert.Contains("CodingEinzelbildAnalyseUseCase.ExecuteAsync", multiModel);
+        Assert.Contains("CodingEinzelbildStatusAnzeige.Zeigen", multiModel);
+        Assert.DoesNotContain("System.Windows", useCase);
+        Assert.DoesNotContain("Color", useCase);
 
         var offenders = FindFileTokenOffenders(
                 multiModelPath,
                 "if (!runtimeGate.Ready)",
-                "if (start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready)")
+                "if (start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready)",
+                "CodingAnalyzedFrameEvidence.FromResolution",
+                "CodingMultiModelClassifierInputPolicy.Build")
             .Concat(FindFileTokenOffenders(
                 RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs"),
                 "private void AddMultiModelFindingsAsEvents"))
@@ -37,7 +41,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-MultiModel-Partials sollen Command-Sequenz, Session-Guards und Meter-Aufloesung an Workflows delegieren:\n"
+            "PlayerWindow-MultiModel-Partials sollen Ablauf, Session-Guards, Beleg und Meter-Aufloesung an den Anwendungsfall delegieren:\n"
             + string.Join("\n", offenders));
     }
 
