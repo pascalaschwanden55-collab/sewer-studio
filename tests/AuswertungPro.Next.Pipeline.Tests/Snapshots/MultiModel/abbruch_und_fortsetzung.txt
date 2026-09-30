@@ -1,0 +1,252 @@
+### lauf1_abbruch
+PROG 0/0 preview=-1 Multi-Model: Videodauer wird ermittelt... live=null
+PROG 0/16 preview=-1 Multi-Model Pipeline: 16 Frames, DN300 live=null
+LOG Information Multi-Model Pipeline runId=<lauf>, Stufen-Trace: (null)
+CALL health
+PROG 1/16 preview=70 Frame 1/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=0
+PROG 1/16 preview=70 Frame 1/16 – Grounding DINO Detection... live=null
+CALL dino m=0
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":1,"TimeSec":0,"Meter":0,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+PROG 2/16 preview=70 Frame 2/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=1
+PROG 2/16 preview=70 Frame 2/16 – Grounding DINO Detection... live=null
+CALL dino m=1
+PROG 2/16 preview=70 Frame 2/16 – SAM Segmentation (2 Boxes)... live=null
+CALL sam-boxes=2 dn=300
+CALL sam m=1
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":2,"TimeSec":1,"Meter":3.12,"Path":"processed","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":2,"SamMaskCount":2,"FindingsBuilt":2,"CodesFromLabel":1,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":1,"FindingsEndOfFrame":2,"ActiveCount":2,"DetectionsTotal":0,"DropReason":null,"Degraded":false,"DegradedReason":null}
+PROG 2/16 preview=70 Frame 2/16 @ 3.1m – 2 Befunde (Multi-Model) live=[{"Label":"crack","Severity":2,"PositionClock":"10:00","ExtentPercent":5,"VsaCodeHint":"BAB","HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null},{"Label":"roots","Severity":3,"PositionClock":"4:00","ExtentPercent":5,"VsaCodeHint":null,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null}]
+PROG 3/16 preview=70 Frame 3/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=2
+PROG 3/16 preview=70 Frame 3/16 – Grounding DINO Detection... live=null
+CALL dino m=2
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":3,"TimeSec":2,"Meter":6.25,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+PROG 4/16 preview=70 Frame 4/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=3
+PROG 4/16 preview=70 Frame 4/16 – Grounding DINO Detection... live=null
+CALL dino m=3
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":4,"TimeSec":3,"Meter":9.38,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+PROG 5/16 preview=70 Frame 5/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=4
+PROG 5/16 preview=70 Frame 5/16 – Grounding DINO Detection... live=null
+CALL dino m=4
+PROG 5/16 preview=70 Frame 5/16 – SAM Segmentation (2 Boxes)... live=null
+CALL sam-boxes=2 dn=300
+CALL sam m=4
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":5,"TimeSec":4,"Meter":12.5,"Path":"processed","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":2,"SamMaskCount":2,"FindingsBuilt":2,"CodesFromLabel":1,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":1,"FindingsEndOfFrame":2,"ActiveCount":2,"DetectionsTotal":2,"DropReason":null,"Degraded":false,"DegradedReason":null}
+PROG 5/16 preview=70 Frame 5/16 @ 12.5m – 2 Befunde (Multi-Model) live=[{"Label":"crack","Severity":2,"PositionClock":"10:00","ExtentPercent":5,"VsaCodeHint":"BAB","HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null},{"Label":"roots","Severity":3,"PositionClock":"4:00","ExtentPercent":5,"VsaCodeHint":null,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null}]
+PROG 6/16 preview=70 Frame 6/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=5
+PROG 6/16 preview=70 Frame 6/16 – Grounding DINO Detection... live=null
+CALL dino m=5
+PROG 6/16 preview=70 Frame 6/16 – SAM Segmentation (2 Boxes)... live=null
+CALL sam-boxes=2 dn=300
+CALL sam m=5
+LOG Warning Frame 6: SAM – 1/2 Boxen nicht segmentiert (Review).
+PROG 6/16 preview=-1 Frame 6 – SAM: 1 Box(en) nicht segmentiert – Review nötig live=null
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":6,"TimeSec":5,"Meter":15.62,"Path":"processed","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":2,"SamMaskCount":1,"FindingsBuilt":1,"CodesFromLabel":1,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":1,"FindingsEndOfFrame":1,"ActiveCount":2,"DetectionsTotal":3,"DropReason":null,"Degraded":true,"DegradedReason":"sam_skipped_1_of_2"}
+PROG 6/16 preview=70 Frame 6/16 @ 15.6m – 1 Befunde (Multi-Model) live=[{"Label":"crack","Severity":2,"PositionClock":"10:00","ExtentPercent":5,"VsaCodeHint":"BAB","HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null}]
+PROG 7/16 preview=70 Frame 7/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=6
+PROG 7/16 preview=70 Frame 7/16 – Grounding DINO Detection... live=null
+CALL dino m=6
+LOG Warning Frame 7: DINO detection failed [HttpRequestException: Sidecar nicht erreichbar (Test).]
+PROG 7/16 preview=-1 Frame 7 – DINO Fehler: Sidecar nicht erreichbar (Test). live=null
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":7,"TimeSec":6,"Meter":18.75,"Path":"dino_error","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_error","Degraded":false,"DegradedReason":null}
+PROG 8/16 preview=70 Frame 8/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=7
+PROG 8/16 preview=70 Frame 8/16 – Grounding DINO Detection... live=null
+CALL dino m=7
+LOG Warning Frame 8: DINO detection failed [HttpRequestException: Sidecar nicht erreichbar (Test).]
+PROG 8/16 preview=-1 Frame 8 – DINO Fehler: Sidecar nicht erreichbar (Test). live=null
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":8,"TimeSec":7,"Meter":21.88,"Path":"dino_error","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_error","Degraded":false,"DegradedReason":null}
+PROG 9/16 preview=70 Frame 9/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=8
+PROG 9/16 preview=70 Frame 9/16 – Grounding DINO Detection... live=null
+CALL dino m=8
+LOG Warning Frame 9: DINO detection failed [HttpRequestException: Sidecar nicht erreichbar (Test).]
+PROG 9/16 preview=-1 Frame 9 – DINO Fehler: Sidecar nicht erreichbar (Test). live=null
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":9,"TimeSec":8,"Meter":25,"Path":"dino_error","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_error","Degraded":false,"DegradedReason":null}
+PROG 10/16 preview=70 Frame 10/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=9
+PROG 10/16 preview=70 Frame 10/16 – Grounding DINO Detection... live=null
+CALL dino m=9
+LOG Warning Frame 10: DINO detection failed [HttpRequestException: Sidecar nicht erreichbar (Test).]
+PROG 10/16 preview=-1 Frame 10 – DINO Fehler: Sidecar nicht erreichbar (Test). live=null
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":10,"TimeSec":9,"Meter":28.12,"Path":"dino_error","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_error","Degraded":false,"DegradedReason":null}
+PROG 11/16 preview=70 Frame 11/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=10
+PROG 11/16 preview=70 Frame 11/16 – Grounding DINO Detection... live=null
+CALL dino m=10
+LOG Warning Frame 11: DINO detection failed [HttpRequestException: Sidecar nicht erreichbar (Test).]
+PROG 11/16 preview=-1 Frame 11 – DINO Fehler: Sidecar nicht erreichbar (Test). live=null
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":11,"TimeSec":10,"Meter":31.25,"Path":"dino_error","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_error","Degraded":false,"DegradedReason":null}
+PROG 12/16 preview=70 Frame 12/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=11
+PROG 12/16 preview=70 Frame 12/16 – Grounding DINO Detection... live=null
+CALL dino m=11
+LOG Warning Frame 12: DINO detection failed [HttpRequestException: Sidecar nicht erreichbar (Test).]
+PROG 12/16 preview=-1 Frame 12 – DINO Fehler: Sidecar nicht erreichbar (Test). live=null
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":12,"TimeSec":11,"Meter":34.38,"Path":"dino_error","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_error","Degraded":false,"DegradedReason":null}
+PROG 13/16 preview=70 Frame 13/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=12
+PROG 13/16 preview=70 Frame 13/16 – Grounding DINO Detection... live=null
+CALL dino m=12
+LOG Warning Frame 13: DINO detection failed [HttpRequestException: Sidecar nicht erreichbar (Test).]
+PROG 13/16 preview=-1 Frame 13 – DINO Fehler: Sidecar nicht erreichbar (Test). live=null
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":13,"TimeSec":12,"Meter":37.5,"Path":"dino_error","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_error","Degraded":false,"DegradedReason":null}
+PROG 14/16 preview=70 Frame 14/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=13
+PROG 14/16 preview=70 Frame 14/16 – Grounding DINO Detection... live=null
+CALL dino m=13
+LOG Warning Frame 14: DINO detection failed [HttpRequestException: Sidecar nicht erreichbar (Test).]
+PROG 14/16 preview=-1 Frame 14 – DINO Fehler: Sidecar nicht erreichbar (Test). live=null
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":14,"TimeSec":13,"Meter":40.62,"Path":"dino_error","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_error","Degraded":false,"DegradedReason":null}
+LOG Error Sidecar antwortet seit 8 Frames nicht — Analyse abgebrochen (degraded).
+LOG Information Multi-Model Pipeline complete: 5 detections, 0/14 frames skipped, 16.0s video
+LOG Information Telemetry: Wall=<zeit>ms, Extraction Mean=<zeit>ms P95=<zeit>ms, YOLO Mean=<zeit>ms P95=<zeit>ms, DINO Mean=<zeit>ms, SAM Mean=<zeit>ms, Qwen Mean=<zeit>ms
+SUMMARY frames=14 skipped=11 failed=0
+PROG 14/16 preview=-1 Multi-Model Analyse unvollständig – 5 Schäden, 0 Frames übersprungen. SAM: 1 Frames technisch nicht vollständig segmentiert – manuelle Prüfung erforderlich. Sidecar antwortete ab Frame 14 nicht mehr – Analyse unvollständig. live=null
+RESULT {"VideoPath":"<pfad>","DurationSeconds":16,"FramesAnalyzed":14,"Detections":[],"Error":null,"Telemetry":null,"Degraded":true,"DegradedReason":"SAM: 1 Frames technisch nicht vollständig segmentiert – manuelle Prüfung erforderlich. Sidecar antwortete ab Frame 14 nicht mehr – Analyse unvollständig.","DetectorQualified":true,"DetectorQualificationReason":null,"Incomplete":true,"IsSuccess":true}
+TELEMETRY frames=14 skipped=11 failed=0
+DETECTION {"FindingLabel":"crack","MeterStart":3.12,"MeterEnd":3.12,"Severity":"low","VsaCodeHint":"BAB","PositionClock":"10:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"MeterSource":"LinearEstimate","IsMeterEstimated":true,"SeverityLevel":2,"Code":"BAB","Label":"crack","Confidence":0.5}
+DETECTION {"FindingLabel":"roots","MeterStart":3.12,"MeterEnd":3.12,"Severity":"mid","VsaCodeHint":null,"PositionClock":"4:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"MeterSource":"LinearEstimate","IsMeterEstimated":true,"SeverityLevel":3,"Code":"","Label":"roots","Confidence":0.7}
+DETECTION {"FindingLabel":"crack","MeterStart":12.5,"MeterEnd":12.5,"Severity":"low","VsaCodeHint":"BAB","PositionClock":"10:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"MeterSource":"LinearEstimate","IsMeterEstimated":true,"SeverityLevel":2,"Code":"BAB","Label":"crack","Confidence":0.5}
+DETECTION {"FindingLabel":"roots","MeterStart":12.5,"MeterEnd":12.5,"Severity":"mid","VsaCodeHint":null,"PositionClock":"4:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"MeterSource":"LinearEstimate","IsMeterEstimated":true,"SeverityLevel":3,"Code":"","Label":"roots","Confidence":0.7}
+DETECTION {"FindingLabel":"crack","MeterStart":15.62,"MeterEnd":15.62,"Severity":"low","VsaCodeHint":"BAB","PositionClock":"10:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"MeterSource":"LinearEstimate","IsMeterEstimated":true,"SeverityLevel":2,"Code":"BAB","Label":"crack","Confidence":0.5}
+JOURNAL
+{"type":"frame","kind":"advance","frame_index":1,"time_sec":0,"meter":0,"is_meter_estimated":true}
+{"type":"frame","kind":"update","frame_index":2,"time_sec":1,"meter":3.12,"meter_source":"LinearEstimate","is_meter_estimated":true,"evidence":{"yolo_conf":1,"dino_conf":0.8,"frame_count":1,"signal_count":2},"findings":[{"label":"crack","vsa_code_hint":"BAB","severity":2,"position_clock":"10:00","extent_percent":5,"height_mm":47,"width_mm":47,"cross_section_reduction_percent":3,"bbox_x1":0.015625,"bbox_y1":0.020833333333333332,"bbox_x2":0.125,"bbox_y2":0.16666666666666666,"notes":"DINO conf=0.80"},{"label":"roots","severity":3,"position_clock":"4:00","extent_percent":5,"height_mm":47,"width_mm":47,"intrusion_percent":16,"cross_section_reduction_percent":3,"bbox_x1":0.84375,"bbox_y1":0.7291666666666666,"bbox_x2":0.953125,"bbox_y2":0.875,"notes":"DINO conf=0.70"}]}
+{"type":"frame","kind":"advance","frame_index":3,"time_sec":2,"meter":6.25,"is_meter_estimated":true}
+{"type":"frame","kind":"advance","frame_index":4,"time_sec":3,"meter":9.38,"is_meter_estimated":true}
+{"type":"frame","kind":"update","frame_index":5,"time_sec":4,"meter":12.5,"meter_source":"LinearEstimate","is_meter_estimated":true,"evidence":{"yolo_conf":1,"dino_conf":0.8,"frame_count":1,"signal_count":2},"findings":[{"label":"crack","vsa_code_hint":"BAB","severity":2,"position_clock":"10:00","extent_percent":5,"height_mm":47,"width_mm":47,"cross_section_reduction_percent":3,"bbox_x1":0.015625,"bbox_y1":0.020833333333333332,"bbox_x2":0.125,"bbox_y2":0.16666666666666666,"notes":"DINO conf=0.80"},{"label":"roots","severity":3,"position_clock":"4:00","extent_percent":5,"height_mm":47,"width_mm":47,"intrusion_percent":16,"cross_section_reduction_percent":3,"bbox_x1":0.84375,"bbox_y1":0.7291666666666666,"bbox_x2":0.953125,"bbox_y2":0.875,"notes":"DINO conf=0.70"}]}
+{"type":"frame","kind":"retry_required","frame_index":6,"time_sec":5,"meter":15.62,"meter_source":"LinearEstimate","is_meter_estimated":true,"evidence":{"yolo_conf":1,"dino_conf":0.8,"frame_count":1,"signal_count":2}}
+{"type":"frame","kind":"retry_required","frame_index":7,"time_sec":6,"meter":18.75,"is_meter_estimated":true}
+{"type":"frame","kind":"retry_required","frame_index":8,"time_sec":7,"meter":21.88,"is_meter_estimated":true}
+{"type":"frame","kind":"retry_required","frame_index":9,"time_sec":8,"meter":25,"is_meter_estimated":true}
+{"type":"frame","kind":"retry_required","frame_index":10,"time_sec":9,"meter":28.12,"is_meter_estimated":true}
+{"type":"frame","kind":"retry_required","frame_index":11,"time_sec":10,"meter":31.25,"is_meter_estimated":true}
+{"type":"frame","kind":"retry_required","frame_index":12,"time_sec":11,"meter":34.38,"is_meter_estimated":true}
+{"type":"frame","kind":"retry_required","frame_index":13,"time_sec":12,"meter":37.5,"is_meter_estimated":true}
+{"type":"frame","kind":"retry_required","frame_index":14,"time_sec":13,"meter":40.62,"is_meter_estimated":true}
+### lauf2_fortsetzung
+PROG 0/0 preview=-1 Multi-Model: Videodauer wird ermittelt... live=null
+PROG 0/16 preview=-1 Multi-Model Pipeline: 16 Frames, DN300 live=null
+LOG Information Multi-Model Pipeline runId=<lauf>, Stufen-Trace: (null)
+CALL health
+LOG Information Checkpoint-Journal: Fortsetzung ab Frame 6 (5 Frames aus Journal uebernommen).
+PROG 5/16 preview=-1 Checkpoint: Fortsetzung ab Frame 6 (5 Frames übernommen). live=null
+PROG 6/16 preview=70 Frame 6/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=5
+PROG 6/16 preview=70 Frame 6/16 – Grounding DINO Detection... live=null
+CALL dino m=5
+PROG 6/16 preview=70 Frame 6/16 – SAM Segmentation (2 Boxes)... live=null
+CALL sam-boxes=2 dn=300
+CALL sam m=5
+LOG Warning Frame 6: SAM – 1/2 Boxen nicht segmentiert (Review).
+PROG 6/16 preview=-1 Frame 6 – SAM: 1 Box(en) nicht segmentiert – Review nötig live=null
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":6,"TimeSec":5,"Meter":15.62,"Path":"processed","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":2,"SamMaskCount":1,"FindingsBuilt":1,"CodesFromLabel":1,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":1,"FindingsEndOfFrame":1,"ActiveCount":2,"DetectionsTotal":3,"DropReason":null,"Degraded":true,"DegradedReason":"sam_skipped_1_of_2"}
+PROG 6/16 preview=70 Frame 6/16 @ 15.6m – 1 Befunde (Multi-Model) live=[{"Label":"crack","Severity":2,"PositionClock":"10:00","ExtentPercent":5,"VsaCodeHint":"BAB","HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null}]
+PROG 7/16 preview=70 Frame 7/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=6
+PROG 7/16 preview=70 Frame 7/16 – Grounding DINO Detection... live=null
+CALL dino m=6
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":7,"TimeSec":6,"Meter":18.75,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+PROG 8/16 preview=70 Frame 8/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=7
+PROG 8/16 preview=70 Frame 8/16 – Grounding DINO Detection... live=null
+CALL dino m=7
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":8,"TimeSec":7,"Meter":21.88,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+PROG 9/16 preview=70 Frame 9/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=8
+PROG 9/16 preview=70 Frame 9/16 – Grounding DINO Detection... live=null
+CALL dino m=8
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":9,"TimeSec":8,"Meter":25,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+PROG 10/16 preview=70 Frame 10/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=9
+PROG 10/16 preview=70 Frame 10/16 – Grounding DINO Detection... live=null
+CALL dino m=9
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":10,"TimeSec":9,"Meter":28.12,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+PROG 11/16 preview=70 Frame 11/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=10
+PROG 11/16 preview=70 Frame 11/16 – Grounding DINO Detection... live=null
+CALL dino m=10
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":11,"TimeSec":10,"Meter":31.25,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+PROG 12/16 preview=70 Frame 12/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=11
+PROG 12/16 preview=70 Frame 12/16 – Grounding DINO Detection... live=null
+CALL dino m=11
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":12,"TimeSec":11,"Meter":34.38,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+PROG 13/16 preview=70 Frame 13/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=12
+PROG 13/16 preview=70 Frame 13/16 – Grounding DINO Detection... live=null
+CALL dino m=12
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":13,"TimeSec":12,"Meter":37.5,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+PROG 14/16 preview=70 Frame 14/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=13
+PROG 14/16 preview=70 Frame 14/16 – Grounding DINO Detection... live=null
+CALL dino m=13
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":14,"TimeSec":13,"Meter":40.62,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+PROG 15/16 preview=70 Frame 15/16 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=14
+PROG 15/16 preview=70 Frame 15/16 – Grounding DINO Detection... live=null
+CALL dino m=14
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":15,"TimeSec":14,"Meter":43.75,"Path":"dino_no_boxes","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+LOG Debug Frame 16: Telemetrie-Bypass (BCE-Zone (Rohrende)) @ 46.88m
+PROG 16/16 preview=70 Frame 16/16 – BCE-Zone (Rohrende) @ 46.9m live=null
+PROG 16/16 preview=70 Frame 16/16 – Grounding DINO Detection... live=null
+CALL dino m=15
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":16,"TimeSec":15,"Meter":46.88,"Path":"dino_no_boxes","YoloBypass":true,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":0,"SamMaskCount":0,"FindingsBuilt":0,"CodesFromLabel":0,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":0,"FindingsEndOfFrame":0,"ActiveCount":0,"DetectionsTotal":0,"DropReason":"dino_no_boxes","Degraded":false,"DegradedReason":null}
+LOG Information Multi-Model Pipeline complete: 5 detections, 0/16 frames skipped, 16.0s video
+LOG Information Telemetry: Wall=<zeit>ms, Extraction Mean=<zeit>ms P95=<zeit>ms, YOLO Mean=<zeit>ms P95=<zeit>ms, DINO Mean=<zeit>ms, SAM Mean=<zeit>ms, Qwen Mean=<zeit>ms
+SUMMARY frames=11 skipped=10 failed=0
+PROG 16/16 preview=-1 Multi-Model abgeschlossen mit Einschränkungen – 5 Schäden, 0 Frames übersprungen. SAM: 1 Frames technisch nicht vollständig segmentiert – manuelle Prüfung erforderlich. live=null
+RESULT {"VideoPath":"<pfad>","DurationSeconds":16,"FramesAnalyzed":16,"Detections":[],"Error":null,"Telemetry":null,"Degraded":true,"DegradedReason":"SAM: 1 Frames technisch nicht vollständig segmentiert – manuelle Prüfung erforderlich.","DetectorQualified":true,"DetectorQualificationReason":null,"Incomplete":false,"IsSuccess":true}
+TELEMETRY frames=11 skipped=10 failed=0
+DETECTION {"FindingLabel":"crack","MeterStart":3.12,"MeterEnd":3.12,"Severity":"low","VsaCodeHint":"BAB","PositionClock":"10:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"MeterSource":"LinearEstimate","IsMeterEstimated":true,"SeverityLevel":2,"Code":"BAB","Label":"crack","Confidence":0.5}
+DETECTION {"FindingLabel":"roots","MeterStart":3.12,"MeterEnd":3.12,"Severity":"mid","VsaCodeHint":null,"PositionClock":"4:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"MeterSource":"LinearEstimate","IsMeterEstimated":true,"SeverityLevel":3,"Code":"","Label":"roots","Confidence":0.7}
+DETECTION {"FindingLabel":"crack","MeterStart":12.5,"MeterEnd":12.5,"Severity":"low","VsaCodeHint":"BAB","PositionClock":"10:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"MeterSource":"LinearEstimate","IsMeterEstimated":true,"SeverityLevel":2,"Code":"BAB","Label":"crack","Confidence":0.5}
+DETECTION {"FindingLabel":"roots","MeterStart":12.5,"MeterEnd":12.5,"Severity":"mid","VsaCodeHint":null,"PositionClock":"4:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"MeterSource":"LinearEstimate","IsMeterEstimated":true,"SeverityLevel":3,"Code":"","Label":"roots","Confidence":0.7}
+DETECTION {"FindingLabel":"crack","MeterStart":15.62,"MeterEnd":15.62,"Severity":"low","VsaCodeHint":"BAB","PositionClock":"10:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"MeterSource":"LinearEstimate","IsMeterEstimated":true,"SeverityLevel":2,"Code":"BAB","Label":"crack","Confidence":0.5}
+JOURNAL
+{"type":"frame","kind":"advance","frame_index":1,"time_sec":0,"meter":0,"is_meter_estimated":true}
+{"type":"frame","kind":"update","frame_index":2,"time_sec":1,"meter":3.12,"meter_source":"LinearEstimate","is_meter_estimated":true,"evidence":{"yolo_conf":1,"dino_conf":0.8,"frame_count":1,"signal_count":2},"findings":[{"label":"crack","vsa_code_hint":"BAB","severity":2,"position_clock":"10:00","extent_percent":5,"height_mm":47,"width_mm":47,"cross_section_reduction_percent":3,"bbox_x1":0.015625,"bbox_y1":0.020833333333333332,"bbox_x2":0.125,"bbox_y2":0.16666666666666666,"notes":"DINO conf=0.80"},{"label":"roots","severity":3,"position_clock":"4:00","extent_percent":5,"height_mm":47,"width_mm":47,"intrusion_percent":16,"cross_section_reduction_percent":3,"bbox_x1":0.84375,"bbox_y1":0.7291666666666666,"bbox_x2":0.953125,"bbox_y2":0.875,"notes":"DINO conf=0.70"}]}
+{"type":"frame","kind":"advance","frame_index":3,"time_sec":2,"meter":6.25,"is_meter_estimated":true}
+{"type":"frame","kind":"advance","frame_index":4,"time_sec":3,"meter":9.38,"is_meter_estimated":true}
+{"type":"frame","kind":"update","frame_index":5,"time_sec":4,"meter":12.5,"meter_source":"LinearEstimate","is_meter_estimated":true,"evidence":{"yolo_conf":1,"dino_conf":0.8,"frame_count":1,"signal_count":2},"findings":[{"label":"crack","vsa_code_hint":"BAB","severity":2,"position_clock":"10:00","extent_percent":5,"height_mm":47,"width_mm":47,"cross_section_reduction_percent":3,"bbox_x1":0.015625,"bbox_y1":0.020833333333333332,"bbox_x2":0.125,"bbox_y2":0.16666666666666666,"notes":"DINO conf=0.80"},{"label":"roots","severity":3,"position_clock":"4:00","extent_percent":5,"height_mm":47,"width_mm":47,"intrusion_percent":16,"cross_section_reduction_percent":3,"bbox_x1":0.84375,"bbox_y1":0.7291666666666666,"bbox_x2":0.953125,"bbox_y2":0.875,"notes":"DINO conf=0.70"}]}
+{"type":"frame","kind":"retry_required","frame_index":6,"time_sec":5,"meter":15.62,"meter_source":"LinearEstimate","is_meter_estimated":true,"evidence":{"yolo_conf":1,"dino_conf":0.8,"frame_count":1,"signal_count":2}}
+{"type":"frame","kind":"advance","frame_index":7,"time_sec":6,"meter":18.75,"is_meter_estimated":true}
+{"type":"frame","kind":"advance","frame_index":8,"time_sec":7,"meter":21.88,"is_meter_estimated":true}
+{"type":"frame","kind":"advance","frame_index":9,"time_sec":8,"meter":25,"is_meter_estimated":true}
+{"type":"frame","kind":"advance","frame_index":10,"time_sec":9,"meter":28.12,"is_meter_estimated":true}
+{"type":"frame","kind":"advance","frame_index":11,"time_sec":10,"meter":31.25,"is_meter_estimated":true}
+{"type":"frame","kind":"advance","frame_index":12,"time_sec":11,"meter":34.38,"is_meter_estimated":true}
+{"type":"frame","kind":"advance","frame_index":13,"time_sec":12,"meter":37.5,"is_meter_estimated":true}
+{"type":"frame","kind":"advance","frame_index":14,"time_sec":13,"meter":40.62,"is_meter_estimated":true}
+{"type":"frame","kind":"advance","frame_index":15,"time_sec":14,"meter":43.75,"is_meter_estimated":true}
+{"type":"frame","kind":"advance","frame_index":16,"time_sec":15,"meter":46.88,"is_meter_estimated":true}

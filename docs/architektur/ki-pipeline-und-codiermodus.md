@@ -15,6 +15,7 @@
 - Qualifizierte Detektorboxen im Codiermodus (20.09.2026)
 - Bildklassifikator-Hinweis im Codiermodus (20.09.2026)
 - Auditkorrekturen: Videoauswertung meldet ihre Luecken (18.09.2026)
+- Aufbau der Mehrmodell-Videoanalyse (AP05, 30.09.2026)
 - Aktueller Pipeline-Ablauf
 - Codiermodus-Bildvergleich (20.09.2026, erste Messstufe)
 
@@ -193,6 +194,26 @@ Sieben Befunde mit derselben Wurzel: Ein Teillauf sah aus wie ein vollstaendiger
 - Grenzen: Die Erkennungsqualitaet der Modelle ist unveraendert und weiterhin nicht
   freigegeben. Der Rohrdurchmesser macht die Maskenmasse nachvollziehbar, nicht kalibriert.
   Abnahme: `docs/audits/2026-09-18-videoauswertung/BEHEBUNG.md`.
+
+## Aufbau der Mehrmodell-Videoanalyse (AP05, 30.09.2026)
+
+`MultiModelAnalysisService.AnalyzeAsync` ist in drei Teile geordnet (reine Umordnung, gleiches Verhalten):
+
+- **Laufzustand:** `MultiModelLaufZustand` haelt alles, was genau einen Lauf lebt (Befunde, Dedup,
+  Code-Voting, Zaehler, Ausfallschutz, Vollstaendigkeit, Resume-Stand, Qualifikation, Neustart-Budget).
+  Der Dienst hat zwischen zwei Laeufen keinen Laufzustand mehr.
+- **Ein Bild = ein Schritt:** `ProcessFrameAsync` liefert nur einen `MultiModelBildErgebnis`
+  (uebersprungen, ohne Box, Grundgeruestbefund, Befunde, erneut noetig mit `MultiModelFehlerart`
+  Transport/Kapazitaet/Modell). `BookFrameResultAsync` bucht daraus Trace, Dedup, Checkpoint und
+  Fehlerzaehlung in der belegten Reihenfolge und entscheidet ueber Fortsetzung oder Abbruch.
+  Achtung: Beim DINO-Negativbefund steht der Checkpoint VOR dem Trace, sonst danach.
+- **Qwen-Schritt:** `MultiModelQwenSchritt` (eine Instanz je Lauf, haelt den Vorbefund-Kontext).
+  YOLO/DINO/SAM bleiben im Bildschritt; ihre Regeln sind bewusst nicht vereinheitlicht.
+- Schutz: `MultiModelAnalysisReferenceSnapshotTests` vergleicht fuenf kontrollierte Laeufe zeichengleich
+  (Ereignisfolge aus Modellaufrufen, Trace, Checkpoint, Fortschritt, Log sowie Ergebnis und Befunde;
+  Schnappschuesse unter `tests/AuswertungPro.Next.Pipeline.Tests/Snapshots/MultiModel/`). Neu schreiben
+  nur bewusst mit `SEWERSTUDIO_SNAPSHOT_UPDATE=1`. Dazu `MultiModelFrameOutcomeTests` und
+  `MultiModelQwenSchrittTests`.
 
 ## Aktueller Pipeline-Ablauf
 1. UI/Service startet Analyse ueber `VideoAnalysisPipelineService`, `SingleFrameMultiModelService` oder `VideoFullAnalysisService`.

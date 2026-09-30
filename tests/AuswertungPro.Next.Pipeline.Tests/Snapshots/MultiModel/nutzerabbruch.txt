@@ -1,0 +1,47 @@
+PROG 0/0 preview=-1 Multi-Model: Videodauer wird ermittelt... live=null
+PROG 0/8 preview=-1 Multi-Model Pipeline: 8 Frames, DN300 live=null
+LOG Information Multi-Model Pipeline runId=<lauf>, Stufen-Trace: (null)
+CALL health
+CKPT-OPEN step=1
+PROG 1/8 preview=70 Frame 1/8 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=0
+PROG 1/8 preview=70 Frame 1/8 – Grounding DINO Detection... live=null
+CALL dino m=0
+PROG 1/8 preview=70 Frame 1/8 – SAM Segmentation (2 Boxes)... live=null
+CALL sam-boxes=2 dn=300
+CALL sam m=0
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":1,"TimeSec":0,"Meter":0,"Path":"processed","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":2,"SamMaskCount":2,"FindingsBuilt":2,"CodesFromLabel":1,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":1,"FindingsEndOfFrame":2,"ActiveCount":2,"DetectionsTotal":0,"DropReason":null,"Degraded":false,"DegradedReason":null}
+CKPT {"Kind":0,"FrameIndex":1,"TimeSec":0,"Meter":0,"MeterSource":"LinearEstimate","IsMeterEstimated":true,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"Findings":[{"Label":"crack","VsaCodeHint":"BAB","Severity":2,"PositionClock":"10:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":0.015625,"BboxY1":0.020833333333333332,"BboxX2":0.125,"BboxY2":0.16666666666666666,"Notes":"DINO conf=0.80"},{"Label":"roots","VsaCodeHint":null,"Severity":3,"PositionClock":"4:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":0.84375,"BboxY1":0.7291666666666666,"BboxX2":0.953125,"BboxY2":0.875,"Notes":"DINO conf=0.70"}]}
+PROG 1/8 preview=70 Frame 1/8 @ 0.0m – 2 Befunde (Multi-Model) live=[{"Label":"crack","Severity":2,"PositionClock":"10:00","ExtentPercent":5,"VsaCodeHint":"BAB","HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null},{"Label":"roots","Severity":3,"PositionClock":"4:00","ExtentPercent":5,"VsaCodeHint":null,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null}]
+PROG 2/8 preview=70 Frame 2/8 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=1
+PROG 2/8 preview=70 Frame 2/8 – Grounding DINO Detection... live=null
+CALL dino m=1
+PROG 2/8 preview=70 Frame 2/8 – SAM Segmentation (2 Boxes)... live=null
+CALL sam-boxes=2 dn=300
+CALL sam m=1
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":2,"TimeSec":1,"Meter":6.25,"Path":"processed","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":2,"SamMaskCount":2,"FindingsBuilt":2,"CodesFromLabel":1,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":1,"FindingsEndOfFrame":2,"ActiveCount":2,"DetectionsTotal":2,"DropReason":null,"Degraded":false,"DegradedReason":null}
+CKPT {"Kind":0,"FrameIndex":2,"TimeSec":1,"Meter":6.25,"MeterSource":"LinearEstimate","IsMeterEstimated":true,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"Findings":[{"Label":"crack","VsaCodeHint":"BAB","Severity":2,"PositionClock":"10:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":0.015625,"BboxY1":0.020833333333333332,"BboxX2":0.125,"BboxY2":0.16666666666666666,"Notes":"DINO conf=0.80"},{"Label":"roots","VsaCodeHint":null,"Severity":3,"PositionClock":"4:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":0.84375,"BboxY1":0.7291666666666666,"BboxX2":0.953125,"BboxY2":0.875,"Notes":"DINO conf=0.70"}]}
+PROG 2/8 preview=70 Frame 2/8 @ 6.3m – 2 Befunde (Multi-Model) live=[{"Label":"crack","Severity":2,"PositionClock":"10:00","ExtentPercent":5,"VsaCodeHint":"BAB","HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null},{"Label":"roots","Severity":3,"PositionClock":"4:00","ExtentPercent":5,"VsaCodeHint":null,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null}]
+PROG 3/8 preview=70 Frame 3/8 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=2
+PROG 3/8 preview=70 Frame 3/8 – Grounding DINO Detection... live=null
+CALL dino m=2
+PROG 3/8 preview=70 Frame 3/8 – SAM Segmentation (2 Boxes)... live=null
+CALL sam-boxes=2 dn=300
+CALL sam m=2
+TRACE {"RunId":"","TimestampUtc":"0001-01-01T00:00:00+00:00","FrameIndex":3,"TimeSec":2,"Meter":12.5,"Path":"processed","YoloBypass":false,"YoloRelevant":true,"YoloDetectionCount":0,"DinoBoxCount":2,"SamMaskCount":2,"FindingsBuilt":2,"CodesFromLabel":1,"ClassifierCode":null,"ClassifierConfidence":null,"ClassifierSource":null,"ClassifierModel":null,"ClassifierVoteConfirmed":null,"QwenCalled":false,"QwenImageQuality":null,"QwenRawFindingCount":0,"CodesAfterQwen":1,"FindingsEndOfFrame":2,"ActiveCount":2,"DetectionsTotal":4,"DropReason":null,"Degraded":false,"DegradedReason":null}
+CKPT {"Kind":0,"FrameIndex":3,"TimeSec":2,"Meter":12.5,"MeterSource":"LinearEstimate","IsMeterEstimated":true,"Evidence":{"YoloConf":1,"DinoConf":0.8,"SamMaskStability":null,"QwenVisionConf":null,"LlmCodeConf":null,"KbSimilarity":null,"KbCodeAgreement":null,"PlausibilityScore":null,"DamageCategory":null,"FrameCount":1,"SignalCount":2},"Findings":[{"Label":"crack","VsaCodeHint":"BAB","Severity":2,"PositionClock":"10:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":0.015625,"BboxY1":0.020833333333333332,"BboxX2":0.125,"BboxY2":0.16666666666666666,"Notes":"DINO conf=0.80"},{"Label":"roots","VsaCodeHint":null,"Severity":3,"PositionClock":"4:00","ExtentPercent":5,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":0.84375,"BboxY1":0.7291666666666666,"BboxX2":0.953125,"BboxY2":0.875,"Notes":"DINO conf=0.70"}]}
+PROG 3/8 preview=70 Frame 3/8 @ 12.5m – 2 Befunde (Multi-Model) live=[{"Label":"crack","Severity":2,"PositionClock":"10:00","ExtentPercent":5,"VsaCodeHint":"BAB","HeightMm":47,"WidthMm":47,"IntrusionPercent":null,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null},{"Label":"roots","Severity":3,"PositionClock":"4:00","ExtentPercent":5,"VsaCodeHint":null,"HeightMm":47,"WidthMm":47,"IntrusionPercent":16,"CrossSectionReductionPercent":3,"DiameterReductionMm":null,"BboxX1":null,"BboxY1":null,"BboxX2":null,"BboxY2":null,"ModelConfidence":null,"ConfidenceSource":null}]
+PROG 4/8 preview=70 Frame 4/8 – YOLO Pre-Screening... live=null
+CALL yolo-conf=0.5
+CALL yolo m=3
+PROG 4/8 preview=70 Frame 4/8 – Grounding DINO Detection... live=null
+CALL dino m=3
+PROG 4/8 preview=70 Frame 4/8 – SAM Segmentation (2 Boxes)... live=null
+CALL sam-boxes=2 dn=300
+CALL sam m=3
+THROWN OperationCanceledException: The operation was canceled.
