@@ -38,6 +38,7 @@ public sealed partial class MultiModelAnalysisService
     // Checkpoint-Journal (Resume): null = ohne Journal (Tests/aeltere Aufrufer).
     private readonly IAnalysisCheckpointJournal? _checkpointJournal;
     // Ausgelagerte Modellschritte (AP05b); ohne eigenen Laufzustand, daher je Dienst einmal.
+    private readonly MultiModelDinoSchritt _dinoSchritt;
     private readonly MultiModelSamSchritt _samSchritt;
 
     /// <summary>
@@ -125,6 +126,7 @@ public sealed partial class MultiModelAnalysisService
         _expectedYoloModel = options.ExpectedYoloModel();
         _checkpointJournal = checkpointJournal;
         _sidecarRestart = sidecarRestart;
+        _dinoSchritt = new MultiModelDinoSchritt(client, config, _logger);
         _samSchritt = new MultiModelSamSchritt(client, _logger);
     }
     public static (string MeterSource, bool IsMeterEstimated) GetDedupMeterMetadata(bool qwenMeterAccepted)
@@ -584,127 +586,18 @@ public sealed partial class MultiModelAnalysisService
             return MultiModelBildErgebnis.Uebersprungen(estimatedMeter);
         }
 
-        // ── Step 2: Grounding DINO Detection ──
-        progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
-            $"Frame {run.FrameIndex}/{totalFrames} – Grounding DINO Detection...",
-            FramePreviewPng: frameBytes));
-
-        phaseSw.Restart();
-        DinoResponse dinoResult;
-        try
-        {
-            dinoResult = await _client.DetectDinoAsync(
-                new DinoRequest(
-                    frameBase64,
-                    null, // use default labels from sidecar config
-                    _config.DinoBoxThreshold,
-                    _config.DinoTextThreshold), ct).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            // Nutzerabbruch: sofort weiterwerfen, nie als Sidecar-Ausfall zaehlen.
-            throw;
-        }
-        catch (SidecarInsufficientVramException ex)
-        {
-            // Paket 2/A4: VRAM-Mangel = Kapazitaetsfehler, KEIN Transport-Ausfall:
-            // kein Outage-Zaehler, kein Neustart — wie ein Modellfehler ueberspringen
-            // (Skip-Quote + Incomplete); das Checkpoint-Journal schreibt weiter retry_required.
-            _logger.LogWarning(ex, "Frame {Frame}: DINO wegen VRAM-Mangels uebersprungen", run.FrameIndex);
-            progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
-                $"Frame {run.FrameIndex} – DINO übersprungen: {ex.Message}"));
-            telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, yoloMs, phaseSw.ElapsedMilliseconds, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-            trace.Path = "dino_error";
-            trace.DropReason = "vram_insufficient";
-            MarkTraceDegraded(trace, "vram_insufficient");
-            return MultiModelBildErgebnis.VramMangel(ex.Message, estimatedMeter);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Frame {Frame}: DINO detection failed", run.FrameIndex);
-            progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
-                $"Frame {run.FrameIndex} – DINO Fehler: {ex.Message}"));
-            telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, yoloMs, phaseSw.ElapsedMilliseconds, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-            return MultiModelBildErgebnis.Transportfehler("dino_error", estimatedMeter);
-        }
-        var dinoMs = phaseSw.ElapsedMilliseconds;
-        trace.DinoBoxCount = dinoResult.Detections.Count;
-
-        // degraded != sauber: ein Modell-/Inferenzfehler im Sidecar (degraded=true)
-        // darf NICHT als "dino_no_boxes" (kein Befund) verbucht werden, sonst sieht
-        // ein verstummtes Modell wie ein sauberes Rohr aus. Frame als Review markieren.
-        if (dinoResult.Degraded)
-        {
-            _logger.LogWarning("Frame {Frame}: DINO degraded ({Code}: {Error}) – als Review markiert, NICHT als sauberer Negativbefund.",
-                run.FrameIndex, dinoResult.ErrorCode, dinoResult.Error);
-            progress?.Report(new VideoAnalysisProgress(run.FrameIndex, totalFrames,
-                $"Frame {run.FrameIndex} – DINO degraded (Modellfehler) – Review nötig"));
-            telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: true));
-            trace.Path = "dino_degraded";
-            trace.DropReason = "dino_degraded";
-            trace.Degraded = true;
-            trace.DegradedReason = dinoResult.ErrorCode ?? "dino_degraded";
-            return MultiModelBildErgebnis.Modellfehler(estimatedMeter);   // Modellfehler: nur Skip-Quote, kein Transport-Ausfall
-        }
-
+        // ── Step 2: Grounding DINO Detection (degraded, ohne Box und Grundgeruest im DINO-Schritt) ──
+        bild.YoloMs = yoloMs;
+        var dino = await _dinoSchritt.ErkenneAsync(run, bild, ct).ConfigureAwait(false);
+        if (dino.Abschluss is { } dinoAbschluss)
+            return dinoAbschluss;
+        var dinoResult = dino.Antwort!;
         if (dinoResult.Detections.Count == 0)
-        {
-            // Fix #1: Bevor der Frame verworfen wird — wenn der Klassifikator einen
-            // Grundgeruest-Code (BCA/BCC/BCD/BCE) ueber das Voting bestaetigt, einen
-            // box-losen Befund erzeugen. Rettet Bestandsaufnahme, die DINO nicht boxt.
-            var meterNoBox = EstimateMeter(run, t);
-            EnhancedFinding? structuralOnly = null;
-            if (ClassifierOnlyStructuralEnabled
-                && clsResult is { Predictions.Count: > 0 }
-                && CanUseClassifierDecision(clsResult))
-            {
-                var resolved = ClassifierOnlyStructuralPolicy.TryResolve(
-                    clsResult.Predictions, meterNoBox, EstimatedReachLengthM,
-                    isBend: clsResult.IsBend, minConfidence: ClassifierOnlyMinConfidence);
-                if (resolved is not null)
-                {
-                    var confirmed = run.CodeVoting.RegisterAndVote(resolved.Code, meterNoBox);
-                    if (confirmed is not null)
-                    {
-                        structuralOnly = new EnhancedFinding(
-                            Label: VsaCodeTree.LookupLabel(confirmed) ?? confirmed,
-                            VsaCodeHint: confirmed,
-                            Severity: 1,
-                            PositionClock: null,
-                            ExtentPercent: null, HeightMm: null, WidthMm: null,
-                            IntrusionPercent: null, CrossSectionReductionPercent: null,
-                            DiameterReductionMm: null,
-                            BboxX1: null, BboxY1: null, BboxX2: null, BboxY2: null,
-                            Notes: $"classifier-only (DINO 0 Boxen), conf={resolved.Confidence:F2}, {resolved.Source}");
-                        trace.ClassifierCode = confirmed;
-                        trace.ClassifierConfidence = resolved.Confidence;
-                        trace.ClassifierModel = ClassifierModelTag(clsResult);
-                        trace.ClassifierVoteConfirmed = true;
-                    }
-                }
-            }
-
-            telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: structuralOnly is null));
-
-            if (structuralOnly is not null)
-            {
-                trace.Path = "classifier_only_structural";
-                trace.FindingsBuilt = 1;
-                var evidence = new EvidenceVector(
-                    YoloConf: clsResult?.Predictions[0].Confidence ?? 0.0, DinoConf: 0.0, FrameCount: 1);
-                var (mSrc, mEst) = GetDedupMeterMetadata(qwenMeterAccepted: false);
-                return new MultiModelBildErgebnis(MultiModelBildAusgang.Grundgeruestbefund, meterNoBox,
-                    new List<EnhancedFinding> { structuralOnly }, evidence, mSrc, mEst);
-            }
-
-            trace.Path = "dino_no_boxes";
-            trace.DropReason = "dino_no_boxes";
-            return MultiModelBildErgebnis.OhneBox(meterNoBox);
-        }
+            return _dinoSchritt.OhneBox(run, bild, clsResult, EstimateMeter(run, t),
+                new MultiModelDinoSchritt.GrundgeruestRegel(
+                    ClassifierOnlyStructuralEnabled, ClassifierOnlyMinConfidence, EstimatedReachLengthM));
 
         // ── Step 3+4: SAM-Segmentierung und Quantifizierung (eigene Regeln im SAM-Schritt) ──
-        bild.YoloMs = yoloMs;
-        bild.DinoMs = dinoMs;
         var sam = await _samSchritt.SegmentiereAsync(run, bild, dinoResult, ct).ConfigureAwait(false);
         if (sam.Abschluss is { } samAbschluss)
             return samAbschluss;
@@ -791,7 +684,7 @@ public sealed partial class MultiModelAnalysisService
             }
         }
 
-        telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, yoloMs, dinoMs, samMs, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
+        telemetry.RecordFrame(new FrameTiming(run.FrameIndex, t, extractionMs, yoloMs, bild.DinoMs, samMs, qwenMs, frameSw.ElapsedMilliseconds, Skipped: false));
 
         var (meterSource, isMeterEstimated) = GetDedupMeterMetadata(qwenMeterAccepted);
         trace.Meter = meter;

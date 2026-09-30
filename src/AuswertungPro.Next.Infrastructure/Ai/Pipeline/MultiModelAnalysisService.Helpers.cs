@@ -66,7 +66,7 @@ public sealed partial class MultiModelAnalysisService
     private static string DeriveFfprobePath(string ffmpegPath) =>
         FfmpegLocator.DeriveFfprobeFrom(ffmpegPath);
 
-    private static bool CanUseClassifierDecision(YoloClassifyResponse cls)
+    internal static bool CanUseClassifierDecision(YoloClassifyResponse cls)
         => cls.ClassifierLoaded && !cls.BendVetoFailed;
 
     internal static void MarkTraceDegraded(PipelineFrameTrace trace, string reason)
@@ -104,7 +104,7 @@ public sealed partial class MultiModelAnalysisService
     }
 
     /// <summary>Modell-Tag fuer den Trace: Name + Kurz-Hash aus der Sidecar-Response.</summary>
-    private static string? ClassifierModelTag(YoloClassifyResponse? cls)
+    internal static string? ClassifierModelTag(YoloClassifyResponse? cls)
     {
         if (cls is null || string.IsNullOrEmpty(cls.ModelName))
             return null;
