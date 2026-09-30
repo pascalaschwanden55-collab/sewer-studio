@@ -598,8 +598,12 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     private static string NormalizeHoldingKey(string? value)
         => Common.HoldingKeyNormalizer.Normalize(value);
 
-    // Haltungs-Matching einheitlich zu IBAK/KINS: exakt ODER Grenz-Praefix
-    // (100-200 == 100-200-1, aber NICHT 100-2000). Frueher matchte WinCan nur exakt
+    // Die MATCHING-Regel entspricht IBAK/KINS: exakt ODER Grenz-Praefix
+    // (100-200 == 100-200-1, aber NICHT 100-2000). Die NORMALISIERUNG des Schluessels
+    // ist dagegen nicht einheitlich: WinCan nutzt HoldingKeyNormalizer.Normalize, IBAK
+    // NormalizeIbak (mit Dateinamen-Praefixen), KINS nur Trim + Leerzeichen entfernen +
+    // Grossschreibung (Schraegstrich und Gedankenstrich bleiben dort unveraendert).
+    // Frueher matchte WinCan nur exakt
     // und legte bei Segment-Suffix-Unterschieden ein Duplikat statt Zusammenfuehrung an.
     private static HaltungRecord? FindRecord(Project project, string? holdingName)
     {

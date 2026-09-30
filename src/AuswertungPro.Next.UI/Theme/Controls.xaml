@@ -1856,7 +1856,7 @@
          Abstand zwischen Trennlinie und Knoepfen. Anwendung: ein Border mit diesem Stil um eine
          rechtsbuendige, horizontale StackPanel mit den Knoepfen; jeder Knopf ausser dem letzten
          (dem ganz rechten Hauptknopf) traegt Margin="0,0,8,0" fuer den einheitlichen 8-px-Abstand.
-         Das genaue XAML-Muster steht im CLAUDE.md-Absatz zu dieser Aufgabe. -->
+         Das genaue XAML-Muster steht in docs/architektur/oberflaeche.md, Aufgabe 3. -->
     <Style x:Key="DialogButtonBar" TargetType="Border">
         <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
         <Setter Property="BorderThickness" Value="0,1,0,0"/>

@@ -7,6 +7,7 @@ import mimetypes
 import os
 import re
 import stat
+import sys
 import tempfile
 import threading
 import unicodedata
@@ -18,6 +19,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable, Sequence
 from urllib.parse import parse_qs, quote, urlparse
+
+
+# Gemeinsame Regel "physische Haltung" (Gegenrichtung) aus training/scripts.
+_TRAINING_SCRIPTS = Path(__file__).resolve().parents[2] / "training" / "scripts"
+if str(_TRAINING_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_TRAINING_SCRIPTS))
+
+from haltungsidentitaet import physischer_schluessel  # noqa: E402
 
 
 REVIEW_SCHEMA = "1.0"
@@ -1295,8 +1304,7 @@ def _physical_holding_key(value: object) -> str:
     normalized = _normalized_holding_key(value)
     if normalized is None:
         raise ValueError("Keine belastbare physische Haltung.")
-    left, right = normalized.split("-", maxsplit=1)
-    return "|".join(sorted((left.casefold(), right.casefold())))
+    return physischer_schluessel(normalized)
 
 
 _PROTO_ENDPOINT_PREFIX = re.compile(r"^\d{1,2}\.(.{4,})$")

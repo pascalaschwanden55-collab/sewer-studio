@@ -12,7 +12,7 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// Bewertung (9), Sanierung (11), Kosten und Bemerkungen (3). Drei fachlich zugehoerige
 /// Felder, die im Prototyp fehlen, sind bewusst ergaenzt: Schacht_oben/Schacht_unten direkt
 /// nach der Strasse (der Haltungsname haengt an den Schaechten), das Gefaelle nach der
-/// Haltungslaenge (CLAUDE.md: immer als Stammdaten-Eingabe) und Renovierung_Inliner_Stk
+/// Haltungslaenge (docs/architektur/oberflaeche.md: immer als Stammdaten-Eingabe) und Renovierung_Inliner_Stk
 /// direkt nach Renovierung_Inliner_m in der Sanierung. Alle uebrigen Projektfelder (auch die
 /// SIA405-Katasterfelder, NR und Primaere_Schaeden) bleiben im fuenften Thema
 /// "Weitere Angaben", damit kein Feld verschwindet.

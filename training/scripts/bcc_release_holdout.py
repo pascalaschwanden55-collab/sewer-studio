@@ -34,6 +34,7 @@ if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
 import gold_stock_audit as negative_source_tools
+from haltungsidentitaet import physischer_schluessel
 
 
 PILOT_NAME = "BCC_bogen"
@@ -334,8 +335,7 @@ def _physical_holding_key(value: Any) -> str:
     normalized = _numeric_holding_key(value)
     if normalized is None:
         raise ValueError(f"Keine belastbare Haltungsidentitaet: {value}")
-    left, right = normalized.split("-", maxsplit=1)
-    return "|".join(sorted((left.casefold(), right.casefold())))
+    return physischer_schluessel(normalized)
 
 
 def _holding_aliases(value: Any) -> set[str]:

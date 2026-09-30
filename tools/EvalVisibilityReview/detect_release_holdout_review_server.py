@@ -15,6 +15,7 @@ import os
 import re
 import stat
 import struct
+import sys
 import tempfile
 import threading
 import unicodedata
@@ -26,6 +27,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from typing import Callable, Iterator
 from urllib.parse import parse_qs, quote, urlparse
+
+
+# Gemeinsame Regel "physische Haltung" (Gegenrichtung) aus training/scripts.
+_TRAINING_SCRIPTS = Path(__file__).resolve().parents[2] / "training" / "scripts"
+if str(_TRAINING_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_TRAINING_SCRIPTS))
+
+from haltungsidentitaet import physischer_schluessel  # noqa: E402
 
 
 SCHEMA_VERSION = "1.0"
@@ -1027,8 +1036,9 @@ def _required_canonical_holding(value: object) -> str:
 
 
 def _physical_holding_key(holding_key: str) -> str:
-    left, right = holding_key.split("-", maxsplit=1)
-    return "|".join(sorted((left, right)))
+    # Der Schluessel ist hier nur Ziffern (siehe _required_canonical_holding);
+    # casefold aendert dabei nichts, das Ergebnis bleibt bytegleich.
+    return physischer_schluessel(holding_key)
 
 
 def _required_identifier(value: object, label: str) -> str:

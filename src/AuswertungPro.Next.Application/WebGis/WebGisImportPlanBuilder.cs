@@ -304,7 +304,7 @@ public static class WebGisImportPlanBuilder
         foreach (var karte in WebGisHandwertKarte.Felder)
         {
             if (karte.Objektart != e.Objektart) continue;
-            // Breite/Hoehe der Haltung sind noch nicht geklaert (CLAUDE.md OFFEN): nur DN bei runder Haltung.
+            // Breite/Hoehe der Haltung sind noch nicht geklaert (docs/architektur/webgis.md: OFFEN): nur DN bei runder Haltung.
             if (karte.SewerStudioFeld is "Lichte_Breite_mm" or "Lichte_Hoehe_mm") continue;
             // Am Schacht stehen diese Felder nur in der Akte (24.09.2026): dorthin, nicht in ein Tabellenfeld.
             if (e.Objektart == WebGisObjektart.Schacht && WebGisImportAktenfelder.SchachtNurUeberAkte(karte.SewerStudioFeld)) continue;

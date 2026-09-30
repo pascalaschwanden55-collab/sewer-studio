@@ -38,7 +38,9 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class WindowsThemeFollowServiceDispatchTests
 {
     private static string Quelle()
-        => File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Services", "WindowsThemeFollowService.cs"));
+        // Zeilenenden vereinheitlichen: Die CI checkt mit CRLF aus, die Suchmuster verwenden LF.
+        => File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Services", "WindowsThemeFollowService.cs"))
+            .Replace("\r\n", "\n");
 
     [Fact]
     public void Der_nicht_ui_thread_zweig_verwendet_BeginInvoke_statt_Invoke()

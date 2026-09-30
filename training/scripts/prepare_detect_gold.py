@@ -27,6 +27,7 @@ if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
 import gold_stock_audit as gold_audit_tools
+from haltungsidentitaet import physischer_schluessel
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -329,7 +330,7 @@ def _physical_holding_key(holding_key: str) -> str:
     parts = normalized.split("-", maxsplit=1)
     if len(parts) != 2 or not all(parts):
         raise ValueError(f"Keine belastbare Haltungsidentitaet: {holding_key}")
-    return "|".join(sorted((parts[0].casefold(), parts[1].casefold())))
+    return physischer_schluessel(normalized)
 
 
 def _read_active_class_map() -> tuple[
