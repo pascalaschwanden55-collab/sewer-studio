@@ -15,7 +15,7 @@ public sealed class SilentCatchGuardTests
     [Fact]
     public void Produktivcode_enthaelt_keine_vollstaendig_leeren_Catch_Bloecke()
     {
-        var sourceRoot = Path.Combine(TestRepoPaths.FindRepoRoot(), "src");
+        var sourceRoot = Path.Combine(TestRepoPaths.FindRepositoryRoot(), "src");
         var findings = Directory
             .EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
             .Where(ContainsCodeMatch)

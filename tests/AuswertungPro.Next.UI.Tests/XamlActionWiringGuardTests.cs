@@ -30,7 +30,7 @@ public sealed class XamlActionWiringGuardTests
     public void Alle_Xaml_Ereignisse_besitzen_einen_Handler_in_ihrer_partial_Klasse()
     {
         var findings = new List<string>();
-        foreach (var xamlPath in XamlFiles())
+        foreach (var xamlPath in TestXaml.Alle())
         {
             var document = XDocument.Load(xamlPath, LoadOptions.PreserveWhitespace);
             var className = document.Root?.Attribute(
@@ -63,7 +63,7 @@ public sealed class XamlActionWiringGuardTests
     public void Sichtbare_Blatt_Knoepfe_haben_eine_Aktion_oder_nachweisbare_Codeverdrahtung()
     {
         var findings = new List<string>();
-        foreach (var xamlPath in XamlFiles())
+        foreach (var xamlPath in TestXaml.Alle())
         {
             var document = XDocument.Load(xamlPath, LoadOptions.PreserveWhitespace);
             var className = document.Root?.Attribute(
@@ -113,7 +113,7 @@ public sealed class XamlActionWiringGuardTests
     {
         var uiRoot = RepoFile("src", "AuswertungPro.Next.UI");
         var viewModelRoot = Path.Combine(uiRoot, "ViewModels");
-        var xamlFiles = XamlFiles().ToList();
+        var xamlFiles = TestXaml.Alle().ToList();
         var productionCode = Directory.EnumerateFiles(uiRoot, "*.cs", SearchOption.AllDirectories)
             .Select(path => (Path: path, Text: File.ReadAllText(path)))
             .ToList();
@@ -168,11 +168,6 @@ public sealed class XamlActionWiringGuardTests
         Assert.True(findings.Count == 0, string.Join(Environment.NewLine, findings));
     }
 
-    private static IEnumerable<string> XamlFiles()
-        => Directory.EnumerateFiles(
-            RepoFile("src", "AuswertungPro.Next.UI"),
-            "*.xaml",
-            SearchOption.AllDirectories);
 
     private static (string MainPath, string Name, HashSet<string> Paths, string Text)
         BuildViewModelCommandSource(string mainPath)

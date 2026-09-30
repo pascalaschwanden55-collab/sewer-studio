@@ -20,7 +20,7 @@ public sealed class OverviewPageRunBindingArchitectureTests
     public void Run_Bindungen_im_Cockpit_sind_immer_OneWay()
     {
         var xaml = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(), "src", "AuswertungPro.Next.UI", "Views", "Pages", "OverviewPage.xaml"));
+            TestRepoPaths.FindRepositoryRoot(), "src", "AuswertungPro.Next.UI", "Views", "Pages", "OverviewPage.xaml"));
 
         var runBindings = Regex.Matches(xaml, @"<Run\s+Text=""\{Binding[^}]*\}""", RegexOptions.Singleline);
 
@@ -33,20 +33,4 @@ public sealed class OverviewPageRunBindingArchitectureTests
         }
     }
 
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (Directory.Exists(Path.Combine(directory.FullName, "src")) &&
-                Directory.Exists(Path.Combine(directory.FullName, "tests")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
-    }
 }

@@ -40,7 +40,7 @@ public sealed class DarkModeFieldStyleArchitectureTests
         var uiRoot = RepoFile("src", "AuswertungPro.Next.UI");
         var offenders = new List<string>();
 
-        foreach (var file in EnumerateApplicationXaml(uiRoot))
+        foreach (var file in TestXaml.Alle("Theme/"))
         {
             var document = XDocument.Load(file, LoadOptions.SetLineInfo);
             foreach (var style in document.Descendants().Where(element => element.Name.LocalName == "Style"))
@@ -68,7 +68,7 @@ public sealed class DarkModeFieldStyleArchitectureTests
         var uiRoot = RepoFile("src", "AuswertungPro.Next.UI");
         var offenders = new List<string>();
 
-        foreach (var file in EnumerateApplicationXaml(uiRoot))
+        foreach (var file in TestXaml.Alle("Theme/"))
         {
             var document = XDocument.Load(file, LoadOptions.SetLineInfo);
             foreach (var field in document.Descendants()
@@ -154,10 +154,6 @@ public sealed class DarkModeFieldStyleArchitectureTests
         Assert.Contains("SetResourceReference(TextBlock.ForegroundProperty, \"TextBrush\")", code);
     }
 
-    private static IEnumerable<string> EnumerateApplicationXaml(string uiRoot)
-        => Directory.EnumerateFiles(uiRoot, "*.xaml", SearchOption.AllDirectories)
-            .Where(file => !Path.GetRelativePath(uiRoot, file)
-                .StartsWith($"Theme{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
 
     private static bool DefinesOwnTemplate(XElement style)
         => style.Elements().Any(element =>

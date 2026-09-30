@@ -32,12 +32,12 @@ public sealed class DesignAuditSchriftskalaTests
     public void Keine_Schrift_unter_11_Pixel_in_XAML()
     {
         var zuKlein = new Regex("FontSize=\"(?:[0-9]|10)(?:\\.[0-9]+)?\"", RegexOptions.Compiled);
-        var treffer = SucheInXaml(zuKlein, _ => true);
+        var treffer = TestXaml.SucheZeilenweise(zuKlein, _ => true);
         Assert.True(treffer.Count == 0, "Schrift unter 11 px (Entscheid 2026-09-03: TextXS = 11 ist die Untergrenze):\n" + string.Join("\n", treffer));
 
         // Nova-Etappe 1: Auch Stil-Setter zaehlen. Vorher rutschten 9 px im Systemmonitor durch.
         var zuKleinSetter = new Regex("Property=\"FontSize\"\\s+Value=\"(?:[0-9]|10)(?:\\.[0-9]+)?\"", RegexOptions.Compiled);
-        var trefferSetter = SucheInXaml(zuKleinSetter, _ => true);
+        var trefferSetter = TestXaml.SucheZeilenweise(zuKleinSetter, _ => true);
         Assert.True(trefferSetter.Count == 0, "Stil-Setter unter 11 px:\n" + string.Join("\n", trefferSetter));
     }
 
@@ -47,7 +47,7 @@ public sealed class DesignAuditSchriftskalaTests
         // Theme-Dateien definieren die Stile (Zahlen erlaubt). Der Startbildschirm hat eine eigene
         // Choreografie mit 76-px-Wortmarke und bleibt wie bei Farben und Eintritt aussen vor.
         var literal = new Regex("FontSize=\"[0-9]|Property=\"FontSize\"\\s+Value=\"[0-9]", RegexOptions.Compiled);
-        var treffer = SucheInXaml(literal, datei =>
+        var treffer = TestXaml.SucheZeilenweise(literal, datei =>
             !datei.Contains($"{Path.DirectorySeparatorChar}Theme{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
             && Path.GetFileName(datei) != "StartupSplashWindow.xaml");
         Assert.True(
@@ -72,7 +72,7 @@ public sealed class DesignAuditSchriftskalaTests
 
         foreach (var datei in Directory.EnumerateFiles(UiRoot, "*.cs", SearchOption.AllDirectories))
         {
-            if (IstBuildAusgabe(datei) || grafik.Contains(Path.GetFileName(datei)))
+            if (TestXaml.IstBuildAusgabe(datei) || grafik.Contains(Path.GetFileName(datei)))
                 continue;
 
             var zeilen = File.ReadAllLines(datei);
@@ -86,26 +86,5 @@ public sealed class DesignAuditSchriftskalaTests
         Assert.True(treffer.Count == 0, "Oberflaechentext unter 11 px im Code:\n" + string.Join("\n", treffer));
     }
 
-    private static List<string> SucheInXaml(Regex muster, Func<string, bool> dateiFilter)
-    {
-        var treffer = new List<string>();
-        foreach (var datei in Directory.EnumerateFiles(UiRoot, "*.xaml", SearchOption.AllDirectories))
-        {
-            if (IstBuildAusgabe(datei) || !dateiFilter(datei))
-                continue;
 
-            var zeilen = File.ReadAllLines(datei);
-            for (var i = 0; i < zeilen.Length; i++)
-            {
-                foreach (Match m in muster.Matches(zeilen[i]))
-                    treffer.Add($"{Path.GetRelativePath(UiRoot, datei)}:{i + 1}: {m.Value}");
-            }
-        }
-
-        return treffer;
-    }
-
-    private static bool IstBuildAusgabe(string pfad)
-        => pfad.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-        || pfad.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
 }

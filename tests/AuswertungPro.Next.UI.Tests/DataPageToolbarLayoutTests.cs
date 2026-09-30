@@ -135,14 +135,14 @@ public sealed class DataPageToolbarLayoutTests
 
     private static string ReadDataPageXaml()
     {
-        var root = FindRepoRoot();
+        var root = FindRepositoryRoot();
         var path = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml");
         return File.ReadAllText(path);
     }
 
     private static string ReadHaltungsansichtXaml()
     {
-        var root = FindRepoRoot();
+        var root = FindRepositoryRoot();
         var path = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "Haltungsansicht", "HaltungsansichtView.xaml");
         return File.ReadAllText(path);
     }
@@ -152,7 +152,7 @@ public sealed class DataPageToolbarLayoutTests
 
     private static string ReadUiXaml(params string[] segments)
     {
-        var root = FindRepoRoot();
+        var root = FindRepositoryRoot();
         var path = Path.Combine(new[] { root, "src", "AuswertungPro.Next.UI" }.Concat(segments).ToArray());
         return File.ReadAllText(path);
     }

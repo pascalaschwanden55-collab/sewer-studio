@@ -199,13 +199,10 @@ public sealed class DesignAuditOptikTokenTests
     }
 
     private static IEnumerable<string> AlleQuellDateien()
-        => Directory.EnumerateFiles(UiRoot, "*.xaml", SearchOption.AllDirectories)
-            .Concat(Directory.EnumerateFiles(UiRoot, "*.cs", SearchOption.AllDirectories))
-            .Where(d => !IstBuildAusgabe(d));
+        => TestXaml.Alle()
+            .Concat(Directory.EnumerateFiles(UiRoot, "*.cs", SearchOption.AllDirectories)
+                .Where(d => !TestXaml.IstBuildAusgabe(d)));
 
-    private static bool IstBuildAusgabe(string pfad)
-        => pfad.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-        || pfad.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
 
     private static string Relativ(string pfad) => Path.GetRelativePath(UiRoot, pfad);
 }

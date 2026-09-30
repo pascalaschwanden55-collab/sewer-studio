@@ -175,11 +175,11 @@ public sealed class DossierFieldSectionTests
                 panel,
                 new object[] { new[] { "Kapitel" }, new[] { "Kapitel" } }));
 
-            var titel = Assert.Single(Nachfahren(wurzel).OfType<RichTextBox>());
-            var seitenzahl = Assert.Single(Nachfahren(wurzel).OfType<TextBox>());
+            var titel = Assert.Single(WpfTestHilfe.LogischeNachfahren(wurzel).OfType<RichTextBox>());
+            var seitenzahl = Assert.Single(WpfTestHilfe.LogischeNachfahren(wurzel).OfType<TextBox>());
             var seitenZiel = DossierTocChapterPageClickMapper.PageTarget("Kapitel");
             Assert.True(panel.Kennt(seitenZiel));
-            var fett = Assert.Single(Nachfahren(wurzel).OfType<Button>()
+            var fett = Assert.Single(WpfTestHilfe.LogischeNachfahren(wurzel).OfType<Button>()
                 .Where(knopf => string.Equals(
                     knopf.Content as string, "Fett", StringComparison.Ordinal)));
             var zeile = Assert.IsType<WrapPanel>(LogicalTreeHelper.GetParent(fett));
@@ -332,7 +332,7 @@ public sealed class DossierFieldSectionTests
                 null);
 
             panel.Baue(page, [field]);
-            var ergaenzen = Assert.Single(Nachfahren(host)
+            var ergaenzen = Assert.Single(WpfTestHilfe.LogischeNachfahren(host)
                 .OfType<Button>()
                 .Where(button => string.Equals(
                     button.Content as string,
@@ -411,7 +411,7 @@ public sealed class DossierFieldSectionTests
             panel.Baue(page, [field]);
 
             Assert.True(panel.SpringeZu(target));
-            var buttons = Nachfahren(host)
+            var buttons = WpfTestHilfe.LogischeNachfahren(host)
                 .OfType<Button>()
                 .Select(button => button.Content as string ?? button.ToolTip as string)
                 .ToList();
@@ -422,16 +422,6 @@ public sealed class DossierFieldSectionTests
         });
     }
 
-    private static IEnumerable<DependencyObject> Nachfahren(DependencyObject wurzel)
-    {
-        foreach (var kind in LogicalTreeHelper.GetChildren(wurzel)
-                     .OfType<DependencyObject>())
-        {
-            yield return kind;
-            foreach (var nachfahr in Nachfahren(kind))
-                yield return nachfahr;
-        }
-    }
 
     private sealed class PlanImageConverterStub : IPlanImageConverter
     {

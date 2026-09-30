@@ -14,7 +14,7 @@ public sealed class ExcelExportTests
     [Fact]
     public void Export_WritesDataIntoTemplateCopy()
     {
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var templatePath = Path.Combine(root, "Export_Vorlage", "Haltungen.xlsx");
         Assert.True(File.Exists(templatePath), $"Template not found: {templatePath}");
 
@@ -117,7 +117,7 @@ public sealed class ExcelExportTests
     {
         // Regressionsschutz: Ohne den Header "Renovierung Inliner m" (Vorlage hatte nur "m")
         // matcht der Export das Feld Renovierung_Inliner_m nie -> der Wert wird nie exportiert.
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var templatePath = Path.Combine(root, "Export_Vorlage", "Haltungen.xlsx");
         Assert.True(File.Exists(templatePath), $"Template not found: {templatePath}");
 

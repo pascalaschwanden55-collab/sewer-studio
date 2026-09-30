@@ -22,7 +22,7 @@ public sealed class DossierTextUndoControllerTests
         {
             var host = new StackPanel();
             var controller = new DossierTextUndoController(host);
-            var buttons = Nachfahren(controller.View).OfType<Button>().ToList();
+            var buttons = WpfTestHilfe.LogischeNachfahren(controller.View).OfType<Button>().ToList();
 
             var undo = Assert.Single(buttons.Where(button =>
                 button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE7A7" }));
@@ -66,7 +66,7 @@ public sealed class DossierTextUndoControllerTests
                 editor.Focus();
                 PumpDispatcherFor(TimeSpan.FromMilliseconds(50));
 
-                var buttons = Nachfahren(controller.View).OfType<Button>().ToList();
+                var buttons = WpfTestHilfe.LogischeNachfahren(controller.View).OfType<Button>().ToList();
                 Assert.All(buttons, button => Assert.Same(editor, button.CommandTarget));
 
                 controller.Reset();
@@ -79,16 +79,6 @@ public sealed class DossierTextUndoControllerTests
         });
     }
 
-    private static IEnumerable<DependencyObject> Nachfahren(DependencyObject wurzel)
-    {
-        foreach (var kind in LogicalTreeHelper.GetChildren(wurzel)
-                     .OfType<DependencyObject>())
-        {
-            yield return kind;
-            foreach (var nachfahr in Nachfahren(kind))
-                yield return nachfahr;
-        }
-    }
 
     private static void PumpDispatcherFor(TimeSpan duration)
     {

@@ -19,17 +19,10 @@ public sealed class DesignAuditFeinschliffTests
         "\\b(Content|Header|Text|ToolTip|Title)=\"([^\"]*)\"",
         RegexOptions.Compiled);
 
-    // Ersatzschreibweisen, die im Deutschen praktisch nur als Umlaut-Ersatz vorkommen.
-    // Bewusst NICHT enthalten: "ss" (Schweizer Schreibweise ist korrekt) und Woerter wie
-    // "neue", "Steuer", "Bauer", "Quelle", in denen ae/oe/ue echte Buchstabenfolgen sind.
+    // Ersatzschreibweisen, die im Deutschen praktisch nur als Umlaut-Ersatz vorkommen —
+    // Liste und Begruendung in Sprachregeln.XamlUmlautErsatzMuster.
     private static readonly Regex UmlautErsatz = new(
-        "oeffn|pruef|\\bfuer\\b|\\bueber|waehl|uebernehm|zurueck|aender|menue|naechst|drueck|" +
-        "temporaer|bestaetig|rueckmeld|zugehoerig|\\bgruen|verknuepf|loesch|laenge|groesse|hoehe|" +
-        "gefaell|schaecht|spaet|vorschlaeg|zusaetzl|verfuegbar|gueltig|moeglich|noetig|erfuellt|" +
-        "waehrend|schluessel|ausfuehr|ergaenz|erklaer|uebersicht|ueberspring|ausgewaehlt|zaehl|" +
-        "fuellen|buendel|rueckgaengig|ueberschreib|kuerzel|laeuft|staerke|wuensch|hoeher|groesser|" +
-        "\\bkuerz|praefix|gebaeud|haeus|kanaele|strassenzuege|uebertrag|ueberpruef|ausloes|" +
-        "loeschen|zuruecksetz|waehle|geoeffnet|ueblich|uebrig|aehnlich|erhoeh|gefuehrt|flaech|dafuer|wofuer",
+        string.Join("|", Sprachregeln.XamlUmlautErsatzMuster),
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     [Fact]
@@ -37,7 +30,7 @@ public sealed class DesignAuditFeinschliffTests
     {
         var treffer = new List<string>();
 
-        foreach (var datei in AlleXamlDateien())
+        foreach (var datei in TestXaml.Alle())
         {
             var zeilen = File.ReadAllLines(datei);
             for (var i = 0; i < zeilen.Length; i++)
@@ -71,7 +64,7 @@ public sealed class DesignAuditFeinschliffTests
     {
         var treffer = new List<string>();
 
-        foreach (var datei in AlleXamlDateien())
+        foreach (var datei in TestXaml.Alle())
         {
             var zeilen = File.ReadAllLines(datei);
             for (var i = 0; i < zeilen.Length; i++)
@@ -101,7 +94,7 @@ public sealed class DesignAuditFeinschliffTests
         var menuePunkt = new Regex("<MenuItem(?=[\\s/>])(.*?)(/?)>", RegexOptions.Compiled | RegexOptions.Singleline);
         var naechstesElement = new Regex("<MenuItem\\.Icon>|</MenuItem>|<MenuItem(?=[\\s/>])|<Separator", RegexOptions.Compiled);
 
-        foreach (var datei in AlleXamlDateien())
+        foreach (var datei in TestXaml.Alle())
         {
             var text = File.ReadAllText(datei);
             foreach (Match m in menuePunkt.Matches(text))
@@ -145,7 +138,7 @@ public sealed class DesignAuditFeinschliffTests
         var bedienAttribut = new Regex("\\b(Content|Header|Text)=\"([^\"]*)\"", RegexOptions.Compiled);
         var treffer = new List<string>();
 
-        foreach (var datei in AlleXamlDateien())
+        foreach (var datei in TestXaml.Alle())
         {
             var zeilen = File.ReadAllLines(datei);
             for (var i = 0; i < zeilen.Length; i++)
@@ -166,7 +159,7 @@ public sealed class DesignAuditFeinschliffTests
         var literal = new Regex("\"[^\"\\n]*\"", RegexOptions.Compiled);
         foreach (var datei in Directory.EnumerateFiles(UiRoot, "*.cs", SearchOption.AllDirectories))
         {
-            if (IstBuildAusgabe(datei) || ausnahmen.Contains(Path.GetFileName(datei)))
+            if (TestXaml.IstBuildAusgabe(datei) || ausnahmen.Contains(Path.GetFileName(datei)))
                 continue;
 
             var zeilen = File.ReadAllLines(datei);
@@ -199,7 +192,7 @@ public sealed class DesignAuditFeinschliffTests
         var ausnahmen = new[] { "MainWindow.xaml", "PlayerWindow.xaml", "LiveFrameWindow.xaml", "StartupSplashWindow.xaml" };
         var treffer = new List<string>();
 
-        foreach (var datei in AlleXamlDateien())
+        foreach (var datei in TestXaml.Alle())
         {
             if (ausnahmen.Contains(Path.GetFileName(datei)))
                 continue;
@@ -264,7 +257,7 @@ public sealed class DesignAuditFeinschliffTests
             RegexOptions.Compiled);
         var treffer = new List<string>();
 
-        foreach (var datei in AlleXamlDateien())
+        foreach (var datei in TestXaml.Alle())
         {
             if (videoDateien.Contains(Path.GetFileName(datei)))
                 continue;
@@ -314,12 +307,6 @@ public sealed class DesignAuditFeinschliffTests
         return sichtbar.Count == 0 ? null : string.Join(" ", sichtbar);
     }
 
-    private static IEnumerable<string> AlleXamlDateien()
-        => Directory.EnumerateFiles(UiRoot, "*.xaml", SearchOption.AllDirectories).Where(d => !IstBuildAusgabe(d));
-
-    private static bool IstBuildAusgabe(string pfad)
-        => pfad.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-        || pfad.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
 
     private static string Relativ(string pfad) => Path.GetRelativePath(UiRoot, pfad);
 }

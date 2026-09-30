@@ -41,19 +41,6 @@ public sealed class DesignAuditLeerUndLadezustandTests
             "Knopfregel/Aufgabe 4 ohnehin als Video-/Startfenster ausgenommen."),
     ];
 
-    private static IEnumerable<string> AlleXamlDateien()
-    {
-        foreach (var datei in Directory.EnumerateFiles(UiRoot, "*.xaml", SearchOption.AllDirectories))
-        {
-            if (datei.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-                || datei.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            yield return datei;
-        }
-    }
 
     private static bool TraegtBenanntenStil(string tag)
         => tag.Contains("StaticResource ProgressBarThin}", StringComparison.Ordinal)
@@ -82,7 +69,7 @@ public sealed class DesignAuditLeerUndLadezustandTests
     public void Mindestens_zwanzig_ProgressBar_Elemente_werden_tatsaechlich_geprueft()
     {
         // Schuetzt davor, dass ein Tippfehler im Suchmuster den Waechter leerlaufen laesst.
-        var anzahl = AlleXamlDateien()
+        var anzahl = TestXaml.Alle()
             .Where(p => !IstAusgenommen(p))
             .Sum(p => ProgressBarElement.Matches(File.ReadAllText(p)).Count);
 
@@ -94,7 +81,7 @@ public sealed class DesignAuditLeerUndLadezustandTests
     {
         var verstoesse = new List<string>();
 
-        foreach (var pfad in AlleXamlDateien())
+        foreach (var pfad in TestXaml.Alle())
         {
             if (IstAusgenommen(pfad))
                 continue;
@@ -145,7 +132,7 @@ public sealed class DesignAuditLeerUndLadezustandTests
     {
         var fehlend = ProgressBarAusnahmen
             .Select(a => a.Datei)
-            .Where(datei => !AlleXamlDateien().Any(p => string.Equals(Path.GetFileName(p), datei, StringComparison.OrdinalIgnoreCase)))
+            .Where(datei => !TestXaml.Alle().Any(p => string.Equals(Path.GetFileName(p), datei, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
         Assert.True(fehlend.Count == 0,

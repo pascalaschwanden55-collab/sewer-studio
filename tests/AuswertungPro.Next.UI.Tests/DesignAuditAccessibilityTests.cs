@@ -12,10 +12,14 @@ public sealed class DesignAuditAccessibilityTests
     public void Themes_define_a_visible_keyboard_focus_style(string themeFile)
     {
         var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
+        var controls = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", "Controls.xaml"));
 
-        Assert.Contains("x:Key=\"KeyboardFocusVisual\"", xaml, StringComparison.Ordinal);
+        // Wartbarkeit Q3: Der Fokusstil steht einmal in Controls.xaml; jedes Theme muss ihn
+        // weiter ueber den impliziten Button-Stil anwenden.
+        Assert.Contains("x:Key=\"KeyboardFocusVisual\"", controls, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"KeyboardFocusVisual\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Property=\"FocusVisualStyle\" Value=\"{DynamicResource KeyboardFocusVisual}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("BorderThickness=\"2\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("BorderThickness=\"2\"", controls, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -51,14 +55,8 @@ public sealed class DesignAuditAccessibilityTests
             RegexOptions.Compiled);
         var treffer = new List<string>();
 
-        foreach (var datei in Directory.EnumerateFiles(uiRoot, "*.xaml", SearchOption.AllDirectories))
+        foreach (var datei in TestXaml.Alle())
         {
-            if (datei.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-                || datei.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
             var xaml = File.ReadAllText(datei);
             foreach (Match match in muster.Matches(xaml))
             {

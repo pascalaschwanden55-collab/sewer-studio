@@ -101,7 +101,7 @@ public sealed class DossierSnapshotSingleSourceTests
 
         var treffer = quellen
             .Select(name => Path.Combine(
-                RepoRoot(), "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", name))
+                TestRepoPaths.RepoRoot(), "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", name))
             .Select(File.ReadAllText)
             .Sum(text => Vorkommen(text, "DossierSnapshotBuilder.Build("));
 
@@ -121,13 +121,4 @@ public sealed class DossierSnapshotSingleSourceTests
         return anzahl;
     }
 
-    private static string RepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "AuswertungPro.sln")))
-            dir = dir.Parent;
-
-        Assert.NotNull(dir);
-        return dir!.FullName;
-    }
 }

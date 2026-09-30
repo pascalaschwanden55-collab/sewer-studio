@@ -37,7 +37,7 @@ public sealed class DialogHostDependencyTests
 
     private static string ReadUiFile(params string[] segments)
         => File.ReadAllText(Path.Combine(
-            new[] { TestRepoPaths.FindRepoRoot(), "src", "AuswertungPro.Next.UI" }
+            new[] { TestRepoPaths.FindRepositoryRoot(), "src", "AuswertungPro.Next.UI" }
                 .Concat(segments)
                 .ToArray()));
 }

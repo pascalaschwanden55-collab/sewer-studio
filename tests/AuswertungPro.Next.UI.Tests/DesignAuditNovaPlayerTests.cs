@@ -6,7 +6,7 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DesignAuditNovaPlayerTests
 {
-    private static string Xaml() => File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml"));
+    private static string Xaml() => File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml"));
 
     [Fact]
     public void Kopf_ist_eine_Zeile_mit_Video_Haltung_Datei_und_Codiermodus_Chip()
@@ -39,7 +39,7 @@ public sealed class DesignAuditNovaPlayerTests
     [Fact]
     public void Seitenpanel_verwendet_Kapitaelchen_Abschnittskoepfe()
     {
-        var panel = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Resources.xaml"));
+        var panel = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Resources.xaml"));
         var stil = Regex.Match(panel, "<Style x:Key=\"SectionLabel\"[\\s\\S]*?</Style>").Value;
         Assert.Contains("Typography.Capitals\" Value=\"AllSmallCaps\"", stil);
     }

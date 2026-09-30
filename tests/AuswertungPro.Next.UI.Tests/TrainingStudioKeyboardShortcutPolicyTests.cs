@@ -92,7 +92,7 @@ public sealed class TrainingStudioKeyboardShortcutPolicyTests
     [Fact]
     public void Fensterverdrahtung_verwendet_die_sichere_Policy_statt_Window_InputBindings()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
         var xaml = File.ReadAllText(Path.Combine(windowsRoot, "TrainingStudioWindow.xaml"));
         var code = File.ReadAllText(Path.Combine(windowsRoot, "TrainingStudioWindow.xaml.cs"));

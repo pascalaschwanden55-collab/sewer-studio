@@ -59,7 +59,7 @@ public sealed class AiStartupUiTests
 
     private static string ReadUiFile(params string[] relativeParts)
     {
-        var root = FindRepoRoot();
+        var root = FindRepositoryRoot();
         var path = Path.Combine(new[] { root, "src", "AuswertungPro.Next.UI" }.Concat(relativeParts).ToArray());
         return File.ReadAllText(path);
     }

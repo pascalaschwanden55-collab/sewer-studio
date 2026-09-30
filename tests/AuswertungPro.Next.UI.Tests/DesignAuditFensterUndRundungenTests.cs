@@ -28,7 +28,7 @@ public sealed class DesignAuditFensterUndRundungenTests
         // Eine einzelne Zahl ist eine Stufe der Skala; vierteilige Werte (z. B. 8,8,0,0) sind bewusst
         // halbe Rundungen an zusammengesetzten Kanten und bleiben erlaubt. "0" ist keine Rundung.
         var festeRundung = new Regex("CornerRadius=\"(?!0\")[0-9.]+\"", RegexOptions.Compiled);
-        var treffer = SucheInXaml(festeRundung, datei => !IstTheme(datei) && Path.GetFileName(datei) != "StartupSplashWindow.xaml");
+        var treffer = TestXaml.SucheZeilenweise(festeRundung, datei => !IstTheme(datei) && Path.GetFileName(datei) != "StartupSplashWindow.xaml");
         Assert.True(treffer.Count == 0, "Feste Rundungen ausserhalb des Themes — bitte {DynamicResource RadiusS|M|L|XL|XXL|Pill}:\n" + string.Join("\n", treffer));
     }
 
@@ -84,11 +84,8 @@ public sealed class DesignAuditFensterUndRundungenTests
 
     private static IEnumerable<(string Datei, string Wurzel)> AlleFensterWurzeln()
     {
-        foreach (var datei in Directory.EnumerateFiles(UiRoot, "*.xaml", SearchOption.AllDirectories))
+        foreach (var datei in TestXaml.Alle())
         {
-            if (IstBuildAusgabe(datei))
-                continue;
-
             var xaml = File.ReadAllText(datei);
             var m = Regex.Match(xaml, "<Window\\b(.*?)>", RegexOptions.Singleline);
             if (m.Success)
@@ -96,31 +93,10 @@ public sealed class DesignAuditFensterUndRundungenTests
         }
     }
 
-    private static List<string> SucheInXaml(Regex muster, Func<string, bool> dateiFilter)
-    {
-        var treffer = new List<string>();
-        foreach (var datei in Directory.EnumerateFiles(UiRoot, "*.xaml", SearchOption.AllDirectories))
-        {
-            if (IstBuildAusgabe(datei) || !dateiFilter(datei))
-                continue;
-
-            var zeilen = File.ReadAllLines(datei);
-            for (var i = 0; i < zeilen.Length; i++)
-            {
-                foreach (Match m in muster.Matches(zeilen[i]))
-                    treffer.Add($"{Relativ(datei)}:{i + 1}: {m.Value}");
-            }
-        }
-
-        return treffer;
-    }
 
     private static bool IstTheme(string datei)
         => datei.Contains($"{Path.DirectorySeparatorChar}Theme{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
 
-    private static bool IstBuildAusgabe(string pfad)
-        => pfad.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-        || pfad.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
 
     private static string Relativ(string pfad) => Path.GetRelativePath(UiRoot, pfad);
 }

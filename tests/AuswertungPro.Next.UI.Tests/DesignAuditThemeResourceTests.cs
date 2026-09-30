@@ -37,10 +37,16 @@ public sealed class DesignAuditThemeResourceTests
     [Fact]
     public void Themes_define_explicit_textblock_styles_for_page_typography()
     {
+        // Wartbarkeit Q3: Die Typografie-Stile stehen einmal in Controls.xaml.
         var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
         var themeDark = ReadUiFile("Theme", "Theme.xaml");
+        var controls = ReadUiFile("Theme", "Controls.xaml");
 
         foreach (var theme in new[] { themeLight, themeDark })
+            foreach (var key in new[] { "PageTitle", "SectionTitle", "Body", "Caption" })
+                Assert.DoesNotContain($"x:Key=\"{key}\"", theme);
+
+        foreach (var theme in new[] { controls })
         {
             AssertStyleContains(theme, "PageTitle",
                 "TargetType=\"TextBlock\"",
@@ -340,18 +346,21 @@ public sealed class DesignAuditThemeResourceTests
     {
         var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
         var themeDark = ReadUiFile("Theme", "Theme.xaml");
+        var controls = ReadUiFile("Theme", "Controls.xaml");
 
+        // Zentral im PageTitle-Style (einmal in Controls.xaml), damit jede Seite die Linie
+        // bekommt — auch kuenftige. Der Pinsel wird per DynamicResource gelesen: der Stil wird
+        // beim Designwechsel nicht mehr mit dem Theme ausgetauscht.
+        AssertStyleContains(controls, "PageTitle",
+            "Property=\"TextDecorations\"",
+            "<Pen Thickness=\"2\" Brush=\"{DynamicResource NeuralUnderlineBrush}\"/>");
         foreach (var theme in new[] { themeLight, themeDark })
         {
-            // Zentral im PageTitle-Style, damit jede Seite die Linie bekommt — auch kuenftige.
-            AssertStyleContains(theme, "PageTitle",
-                "Property=\"TextDecorations\"",
-                "<Pen Thickness=\"2\" Brush=\"{StaticResource NeuralUnderlineBrush}\"/>");
+            Assert.DoesNotContain("x:Key=\"PageTitle\"", theme);
             Assert.Contains("x:Key=\"NeuralUnderlineBrush\"", theme);
         }
 
-        // Der Verlauf liegt je Theme, weil GradientStops keine DynamicResource aufnehmen und der
-        // Style ihn nur im eigenen Woerterbuch per StaticResource erreicht.
+        // Der Verlauf liegt je Theme, weil GradientStops keine DynamicResource aufnehmen.
         Assert.Contains("<GradientStop Color=\"#FF2563EB\" Offset=\"0\"/>", themeLight);
         Assert.Contains("<GradientStop Color=\"#FF539BF5\" Offset=\"0\"/>", themeDark);
     }

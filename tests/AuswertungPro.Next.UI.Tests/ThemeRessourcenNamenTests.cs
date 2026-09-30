@@ -50,7 +50,7 @@ public sealed class ThemeRessourcenNamenTests
 
         var treffer = new List<string>();
 
-        foreach (var datei in AlleXamlDateien())
+        foreach (var datei in TestXaml.Alle())
         {
             var name = Path.GetFileName(datei);
             if (BekannterBestand.Contains(name))
@@ -76,7 +76,7 @@ public sealed class ThemeRessourcenNamenTests
     {
         var ergebnis = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var datei in AlleXamlDateien())
+        foreach (var datei in TestXaml.Alle())
         {
             // Ressourcen-Woerterbuecher gelten programmweit; einzelne Fenster
             // bringen ihre eigenen mit, die nur dort zaehlen.
@@ -93,14 +93,6 @@ public sealed class ThemeRessourcenNamenTests
         return ergebnis;
     }
 
-    private static IEnumerable<string> AlleXamlDateien()
-    {
-        var wurzel = RepoFile("src", "AuswertungPro.Next.UI");
-
-        return Directory.EnumerateFiles(wurzel, "*.xaml", SearchOption.AllDirectories)
-            .Where(d => !d.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-                        && !d.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
-    }
 
     private static HashSet<string> SchluesselIn(string xaml)
         => Regex.Matches(xaml, @"x:Key=""([A-Za-z0-9_]+)""")

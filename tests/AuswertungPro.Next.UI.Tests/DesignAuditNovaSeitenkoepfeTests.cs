@@ -18,7 +18,7 @@ public sealed class DesignAuditNovaSeitenkoepfeTests
     [InlineData("DiagnosticsPage.xaml", "Protokoll des laufenden Programms")]
     public void Seite_traegt_den_Nova_Seitenkopf_mit_Prototyp_Untertitel(string datei, string untertitel)
     {
-        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", datei));
+        var xaml = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", datei));
         // Fix-Runde 1: Praefix-unabhaengig pruefen (MediaConflictsPage verwendet den vorhandenen
         // Alias "controls:", nicht "ctrl:" - ein zweiter Alias auf denselben Namespace ist unnoetig).
         Assert.Contains(":NovaPageHeader", xaml);
@@ -28,7 +28,7 @@ public sealed class DesignAuditNovaSeitenkoepfeTests
     [Fact]
     public void Seitenkopf_verwendet_den_PageTitle_Stil()
     {
-        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Controls", "NovaPageHeader.xaml"));
+        var xaml = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Controls", "NovaPageHeader.xaml"));
         // Ruling (Fix-Runde 1): Nur DynamicResource ist fuer das Control zulaessig - der Style
         // liegt in App.Resources; StaticResource wuerde die Theme-Farbe der Titel-Unterstreichung
         // beim Hell/Dunkel-Wechsel einfrieren.
@@ -46,7 +46,7 @@ public sealed class DesignAuditNovaSeitenkoepfeTests
     [InlineData("SchachtSanierungsMatrixPage.xaml")]
     public void Sanierungs_Matrix_Seiten_binden_den_Untertitel_statt_NovaPageHeader(string datei)
     {
-        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", datei));
+        var xaml = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", datei));
         Assert.Contains("Text=\"{Binding PageTitle}\"", xaml);
         Assert.Contains("Text=\"{Binding PageSubtitle}\"", xaml);
         Assert.DoesNotContain(":NovaPageHeader", xaml);
@@ -55,7 +55,7 @@ public sealed class DesignAuditNovaSeitenkoepfeTests
     [Fact]
     public void Einstellungen_traegt_den_Nova_Seitenkopf_ohne_Untertitel()
     {
-        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SettingsPage.xaml"));
+        var xaml = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SettingsPage.xaml"));
         Assert.Contains(":NovaPageHeader", xaml);
         // Fix-Runde 1: nur der Start-Tag des Controls darf kein Subtitle= tragen - ein "Subtitle="
         // irgendwo sonst in der Datei (z. B. in einem Kommentar oder einer anderen Seite) soll den

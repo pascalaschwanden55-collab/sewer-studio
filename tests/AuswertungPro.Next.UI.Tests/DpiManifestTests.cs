@@ -8,7 +8,7 @@ public sealed class DpiManifestTests
     [Fact]
     public void UI_Manifest_setzt_PerMonitorV2_mit_Rueckfall_und_behaelt_den_Benutzerkontext()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var manifestPath = Path.Combine(root, "src", "AuswertungPro.Next.UI", "app.manifest");
         var manifest = XDocument.Load(manifestPath);
         XNamespace v3 = "urn:schemas-microsoft-com:asm.v3";

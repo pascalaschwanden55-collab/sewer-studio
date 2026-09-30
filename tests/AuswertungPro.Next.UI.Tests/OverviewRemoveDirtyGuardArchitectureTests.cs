@@ -7,7 +7,7 @@ public sealed class OverviewRemoveDirtyGuardArchitectureTests
     [Fact]
     public void ActiveProjectRemoval_UsesSharedUnsavedChangesGuardBeforeHiding()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var path = Path.Combine(root, "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "OverviewPageViewModel.cs");
         var source = File.ReadAllText(path);
 

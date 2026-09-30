@@ -8,7 +8,7 @@ public sealed class ExplorerRevealArchitectureTests
     [Fact]
     public void ExplorerRevealUsesCentralInstanceAndKeepsStaticFacadeThin()
     {
-        var root = FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var provider = Read(root, "src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
         var dataPage = Read(
             root,
@@ -54,20 +54,4 @@ public sealed class ExplorerRevealArchitectureTests
     private static string Read(string root, params string[] segments)
         => File.ReadAllText(Path.Combine([root, .. segments]));
 
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (Directory.Exists(Path.Combine(directory.FullName, "src")) &&
-                Directory.Exists(Path.Combine(directory.FullName, "tests")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
-    }
 }

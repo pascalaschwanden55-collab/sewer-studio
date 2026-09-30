@@ -9,7 +9,7 @@ public sealed class VsaClassificationRuleSetV2Tests
 {
     private static string DataPath(string fileName)
     {
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         return Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", fileName);
     }
 

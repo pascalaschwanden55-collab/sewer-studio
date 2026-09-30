@@ -67,7 +67,7 @@ public sealed class DossierEmptyListFieldTests
             var panel = CreatePanel(area, dossier);
 
             var editor = BuildPrivate(panel, "BaueThemenEditor", RowsField("Themen"));
-            var boxes = Descendants(editor).OfType<RichTextBox>().ToList();
+            var boxes = WpfTestHilfe.LogischeNachfahren(editor).OfType<RichTextBox>().ToList();
             Assert.Equal(2, boxes.Count);
 
             DossierTopicRichTextEditor.SetValue(boxes[0], new DossierTopicRow
@@ -113,7 +113,7 @@ public sealed class DossierEmptyListFieldTests
             var panel = CreatePanel(new DossierAreaSettings(), dossier);
 
             var editor = BuildPrivate(panel, "BaueThemenEditor", RowsField("Themen"));
-            var boxes = Descendants(editor).OfType<RichTextBox>().ToList();
+            var boxes = WpfTestHilfe.LogischeNachfahren(editor).OfType<RichTextBox>().ToList();
             Assert.Equal(4, boxes.Count);
 
             DossierTopicRichTextEditor.SetValue(
@@ -126,7 +126,7 @@ public sealed class DossierEmptyListFieldTests
             Assert.Equal("Zweite Zeile", dossier.Topics[1].Title);
             Assert.Equal("Zweiter Text", dossier.Topics[1].Text);
 
-            var remove = Descendants(editor).OfType<Button>()
+            var remove = WpfTestHilfe.LogischeNachfahren(editor).OfType<Button>()
                 .Where(button => button.Content is AuswertungPro.Next.UI.FluentIcon { Glyph: "\uE711" })
                 .ToList();
             Assert.Equal(2, remove.Count);
@@ -146,17 +146,17 @@ public sealed class DossierEmptyListFieldTests
             var dossier = new DossierDefinition();
             var panel = CreatePanel(new DossierAreaSettings(), dossier);
             var editor = BuildPrivate(panel, "BaueThemenEditor", RowsField("Themen"));
-            var title = Descendants(editor).OfType<RichTextBox>().First();
+            var title = WpfTestHilfe.LogischeNachfahren(editor).OfType<RichTextBox>().First();
 
             Assert.DoesNotContain(
-                Descendants(editor).OfType<Button>(),
+                WpfTestHilfe.LogischeNachfahren(editor).OfType<Button>(),
                 button => Equals(button.Content, "Import aus Liste"));
 
             DossierTopicRichTextEditor.SetValue(
                 title, new DossierTopicRow { Text = "Schäden" });
 
             Assert.Contains(
-                Descendants(editor).OfType<Button>(),
+                WpfTestHilfe.LogischeNachfahren(editor).OfType<Button>(),
                 button => Equals(button.Content, "Import aus Liste"));
         });
     }
@@ -196,13 +196,13 @@ public sealed class DossierEmptyListFieldTests
             var dossier = new DossierDefinition();
             var panel = CreatePanel(area, dossier, values);
             var editor = BuildPrivate(panel, "BaueThemenEditor", RowsField("Themen"));
-            var import = Descendants(editor).OfType<Button>().Single(
+            var import = WpfTestHilfe.LogischeNachfahren(editor).OfType<Button>().Single(
                 button => Equals(button.Content, "Import aus Liste"));
 
             Assert.True(import.IsEnabled);
             import.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
-            var textBox = Descendants(editor).OfType<RichTextBox>().Last();
+            var textBox = WpfTestHilfe.LogischeNachfahren(editor).OfType<RichTextBox>().Last();
             var shown = DossierTopicRichTextEditor.Read(textBox);
             Assert.Equal(importedText, shown.Text);
             var conditionSegment = DossierTopicTextFormatting
@@ -252,15 +252,6 @@ public sealed class DossierEmptyListFieldTests
         return Assert.IsAssignableFrom<UIElement>(method.Invoke(panel, [field]));
     }
 
-    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
-    {
-        foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
-        {
-            yield return child;
-            foreach (var descendant in Descendants(child))
-                yield return descendant;
-        }
-    }
 
     private static DossierPreviewFieldPanel CreatePanel(
         DossierAreaSettings area,

@@ -18,7 +18,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Export;
 public sealed class ExcelSpaltenBestandTests
 {
     private static string VorlageHaltungen()
-        => Path.Combine(TestPaths.FindSolutionRoot(), "Export_Vorlage", "Haltungen.xlsx");
+        => Path.Combine(TestRepoPaths.RepoRoot(), "Export_Vorlage", "Haltungen.xlsx");
 
     /// <summary>
     /// Die Kopfzeile der ausgelieferten Vorlage, wortwoertlich. Ein zusaetzlicher oder

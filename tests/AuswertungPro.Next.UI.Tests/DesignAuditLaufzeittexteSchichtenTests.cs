@@ -29,7 +29,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Katalog/Vokabular, Markerinhalt, gespeicherte Datenwerte) stehen einzeln mit Grund in
 /// <see cref="AusgenommeneDateien"/> und <see cref="GeschuetzteGanzeZeichenketten"/>.</item>
 /// </list>
-/// WICHTIG: <see cref="BereinigteWoerter"/> enthaelt die ALTE ASCII-Form; ein automatisches
+/// WICHTIG: <see cref="Sprachregeln"/> enthaelt die ALTE ASCII-Form; ein automatisches
 /// Bereinigungsskript darf diese Datei nie anfassen (Lehre aus 10c1).
 /// </summary>
 public sealed class DesignAuditLaufzeittexteSchichtenTests
@@ -42,101 +42,15 @@ public sealed class DesignAuditLaufzeittexteSchichtenTests
     ];
 
     /// <summary>In Aufgabe 10c2 bereinigte Wortformen (alte Schreibweise).</summary>
-    private static readonly string[] BereinigteWoerter =
-    [
-        "Aehnlichkeitssuche", "Aelterer", "Anschluesse", "Aufloesung", "Aufloesungsdaten", "Aufraeumen", "Ausfuehrung",
-        "Ausfuehrungsmodus", "Begruendung", "Beitraege", "Benoetigt", "Bestaetiger", "Bestaetigt", "Bestaetigung",
-        "Bildqualitaeten", "Bogenfaelle", "Dateigroesse", "Dateiuebertragungs", "Dateiveroeffentlichung", "Datensaetze", "Einschraenkungen",
-        "Eintraege", "Eintraegen", "Einzellaeufe", "Einzelpruefung", "Ergaenzende", "Ergaenzung", "Faelle",
-        "Faellen", "Feldauftraege", "Feldauftraegen", "Frueherer", "Fuer", "Geprueft", "Gepruefte",
-        "Geschuetzter", "Goldpruefung", "Goldpruefungen", "Goldpruefungs", "Groesse", "Groessenlimit", "Gueltigkeit",
-        "Handaenderung", "Handaenderungen", "Haupteintraege", "Inhaltspruefung", "Klassenschluessel", "Klassenzaehlung", "Kompatibilitaets",
-        "Kostenuebersicht", "Kuenstliche", "Kuerzel", "Kuerzlich", "Laenge", "Laengen", "Laengenangabe",
-        "Laeufe", "Loeschen", "Loeschversuch", "Luecke", "Luecken", "Maskenflaeche", "Maskenqualitaet",
-        "Moegliche", "Moeglicher", "Nachpruefung", "Naechstes", "Negativsaetze", "Oberflaeche", "Oeffnen",
-        "Persoenlich", "Plausibilitaet", "Positionspruefung", "Praefix", "Projektpfadpruefung", "Protokolleintraegen", "Pruefablage",
-        "Pruefbeleg", "Pruefdatei", "Pruefe", "Pruefen", "Pruefergebnis", "Prueffall", "Prueffoto",
-        "Prueflauf", "Pruefliste", "Pruefpfad", "Pruefplatz", "Pruefsumme", "Pruefsummenalgorithmus", "Pruefsummendatei",
-        "Pruefsummennachweis", "Pruefung", "Qualitaetsbericht", "Quarantaene", "Quellengroesse", "Rueckfall", "Rueckgabewert",
-        "Ruecknahme", "Ruecksetzung", "Schluessel", "Sicherheitsgruenden", "Sicherheitspruefung", "Sicherungspruefung", "Temporaeres",
-        "Temporaerpfad", "Trainingsfaelle", "Uebergeordneter", "Ueberlagerung", "Uebernahme", "Uebernommen", "Uebersicht",
-        "Unabhaengiger", "Ungueltige", "Ungueltiger", "Ungueltiges", "Urspruengliche", "Verknuepfte", "Verknuepfter",
-        "Verknuepfung", "Verknuepfungshilfen", "Verlaeufe", "Veroeffentlichung", "Versionsstaende", "Vollstaendige", "Vollstaendiger",
-        "Vollstaendigkeit", "Vorpruefung", "Vorschlaege", "Zeitueberschreitung", "Zellgroesse", "Zusammenfuegedienst", "aehnliche",
-        "aehnlichen", "aelter", "aelteren", "aendert", "aufgefuehrten", "aufgeloest", "aufgeraeumt",
-        "aufloesbar", "aufraeumen", "ausdruecklich", "ausdrueckliche", "ausfuehrbar", "ausfuehren", "ausgefuehrt",
-        "ausgewaehlt", "ausgewaehlte", "ausgewaehlten", "ausgewaehlter", "behaelt", "benoetigen", "benoetigt",
-        "benoetigte", "beschaedigt", "beschaedigte", "beschaedigten", "bestaetigt", "bestaetigte", "bestaetigten",
-        "bestaetigter", "bestaetigtes", "darueber", "duerfen", "eingeschraenkt", "enthaelt", "erfuellt",
-        "ergaenzen", "ergaenzend", "ergaenzt", "erhaelt", "frueher", "frueheren", "fruehes",
-        "fuehren", "fuehrt", "fuellt", "fuenf", "fuer", "geaendert", "gefuehrt",
-        "gefuellt", "gefuellte", "gefuellten", "gehoeren", "gehoert", "geklaerten", "gekuerzt",
-        "geloescht", "geoeffnet", "geprueft", "gepruefte", "geschuetzt", "geschuetzten", "geschuetzter",
-        "gewaehlte", "gewaehlten", "gewuenscht", "glaubwuerdiges", "groesser", "groesseren", "gueltig",
-        "gueltige", "gueltigen", "gueltiger", "gueltiges", "haengend", "haengt", "hinzugefuegt",
-        "hoechstens", "klaeren", "koennen", "laenger", "laengster", "laesst", "laeuft",
-        "loeschen", "lueckenlos", "mitgezaehlt", "moeglich", "muessen", "nachgeprueft", "noetig",
-        "oeffne", "oeffnen", "persoenlich", "persoenliche", "persoenlichen", "pruefbar", "pruefbarer",
-        "pruefbares", "pruefe", "pruefen", "pruefenden", "prueft", "raeumliche", "regulaeres",
-        "ruecklaufende", "schreibgeschuetzt", "schreibgeschuetzten", "schwaecheren", "staerkerer", "temporaere", "traegt",
-        "ueber", "ueberein", "uebergeben", "ueberlappen", "ueberlappt", "uebernommen", "uebernommene",
-        "ueberschreiben", "ueberschreiten", "ueberschreitet", "ueberschrieben", "ueberschritten", "uebersprungen", "unabhaengige",
-        "ungeklaert", "ungepruefter", "ungeschuetzter", "ungueltig", "ungueltige", "ungueltigen", "ungueltiger",
-        "ungueltiges", "unnoetiger", "unterstuetzt", "unterstuetzte", "unterstuetzter", "unterstuetztes", "unveraenderlich",
-        "unveraendert", "unvollstaendig", "unvollstaendige", "unvollstaendigem", "unvollstaendigen", "unvollstaendiger", "unzulaessiges",
-        "urspruengliche", "veraendert", "verfuegbar", "verknuepft", "verlaessliches", "verlaesst", "veroeffentlicht",
-        "vollstaendig", "vollstaendige", "vollstaendiger", "vollstaendiges", "waehle", "waehlen", "waehrend",
-        "waere", "widerspruechlich", "widerspruechliche", "widerspruechlichen", "wuerde", "wuerden", "zaehlen",
-        "zurueck", "zurueckgenommen", "zurueckgenommene", "zurueckgerollt", "zurueckgesetzt", "zuruecklegen", "zuruecknehmen",
-        "zurueckverschoben", "zusaetzlich", "zusaetzlichen", "zusammengefuehrt", "zusammengefuehrte", "zusammenzufuehren",
-        // Fix-Runde 1: Mischschreibweisen im selben Satz.
-        "Exportbestaetigung", "Gefuellte", "Hausanschluesse", "Dateipfadaenderungen", "Eigentuemermanifest",
-        "Kanalschaeden", "uebrigen", "Zaehler", "Aenderungsauftrag", "Aenderungsdatum", "Ruecksetz", "gruene",
-        "Quellengroesse", "Qüllengrösse",
-    ];
+    private static readonly string[] BereinigteWoerter = Sprachregeln.WortformenFuerSchichten;
 
     /// <summary>Dateien, deren Zeichenketten bewusst unveraendert bleiben (Grund je Eintrag).</summary>
     private static readonly string[] AusgenommeneDateien =
-    [
-        // KI-Prompt an Qwen: Der Wortlaut steuert das Modell, kein Anzeigetext.
-        "EnhancedVisionPromptBuilder.cs",
-        // KI-Prompt samt JSON-Schluesseln ("bestaetigung", "erklaerung"), die zurueckgelesen werden.
-        "GuidedVerificationService.cs",
-        // KI-Prompt des PDF-Schiedsrichters.
-        "PdfKiSchiedsrichter.cs",
-        // PDF-Parsermuster ("Zustaendige Person" neben der Umlautform).
-        "PdfProjectMetadataParser.cs",
-        // VSA-Codebaum: Katalog-/Vokabulartabelle (Merkmalsbezeichnungen), nicht Teil von 10c2.
-        "VsaCodeTree.cs",
-        // Feldschluessel "Ausfuehrung Datum/Jahr" (Alias der Excel-Vorlage).
-        "SchachtProFieldNames.cs",
-        "ExcelSchachtFeldzuordnung.cs",
-    ];
+        Sprachregeln.AusgenommeneSchichtDateien.Select(a => a.Datei).ToArray();
 
     /// <summary>Ganze Literale, die exakt so verglichen, zurueckgelesen oder gespeichert werden.</summary>
     private static readonly string[] GeschuetzteGanzeZeichenketten =
-    [
-        // Feldschluessel (Schacht-Vorlage, SchachtPro, Namensverteilung).
-        "Ausfuehrung Datum/Jahr",
-        // Inhalt der Sicherungs-Markerdatei; bestehende Sicherungen werden daran erkannt.
-        "SewerStudio-Datensicherung. Diese Datei markiert den Spiegel-Ordner \\u2014 nicht loeschen.",
-        // Ordnername im Kataster-Paket (Dateinamen bleiben ASCII).
-        "2 Vollstaendig",
-        // Platzhaltererkennung der Goldbeschreibung (Python-Gegenstueck gold_stock_audit.py).
-        "ausmass ergaenzen",
-        "ausmaß ergaenzen",
-        // Standardbeschreibung eines Goldsamples: Datenwert in training_samples.json und KB.
-        "{normalizedCode} - persoenlich bestaetigt",
-        // SkipReason im gespeicherten Protokolleintrag (Projektdatei).
-        "Automatisch ergaenzte Rohrgrenze",
-        // Excel-Farbregel-Werte: ExcelReportStyle.Farbregeln vergleicht exakt (seit 10b).
-        "Pruefung bestanden",
-        "Pruefung knapp nicht bestanden",
-        "Pruefung nicht bestanden (grob undicht)",
-        // Kommentar im Kopf der XTF-Datei (XTF-Ausgabe bleibt unveraendert).
-        "Aenderungslieferung aus SewerStudio; nur Aenderung-Eintraege erlauben Updates: ",
-        "Vollstaendiger Neu-Export aus SewerStudio: ",
-    ];
+        Sprachregeln.GeschuetzteFuer(Sprachregeln.Bereich.Schichten);
 
     private static readonly Regex Literal = new("\"((?:[^\"\\\\]|\\\\.)*)\"", RegexOptions.Compiled);
 

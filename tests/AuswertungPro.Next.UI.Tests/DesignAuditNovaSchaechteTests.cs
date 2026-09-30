@@ -6,7 +6,7 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DesignAuditNovaSchaechteTests
 {
-    private static string Xaml() => File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml"));
+    private static string Xaml() => File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml"));
 
     [Fact]
     public void Werkzeugleiste_zeigt_nur_Hauptaktionen_und_ein_Menue_Weitere_Aktionen()
@@ -85,7 +85,7 @@ public sealed class DesignAuditNovaSchaechteTests
     [Fact]
     public void Spaltenaufbau_pro_Projekt_loest_die_Ansicht_nach_ohne_weitere_Zeile_in_der_Codebehind()
     {
-        var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.ColumnViews.cs"));
+        var code = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.ColumnViews.cs"));
         Assert.Contains("Grid.Columns.CollectionChanged", code);
         Assert.Contains("_reapplyGeplant", code);
     }
@@ -99,14 +99,14 @@ public sealed class DesignAuditNovaSchaechteTests
         Assert.Contains("SplitterKey=\"SchaechteSchachtansicht\"", xaml);
         Assert.Contains("SplitterKey=\"SchaechteEingabefelder\"", xaml);
         Assert.Contains("ViewPersonalization.ViewKey=\"SchaechtePage\"", xaml);
-        var settings = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "AppSettings.cs"));
+        var settings = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "AppSettings.cs"));
         Assert.Contains("public bool ShowSchaechteNovaLayout { get; set; } = true;", settings);
     }
 
     [Fact]
     public void Schachtansicht_erklaert_die_Handbewertung_und_zeigt_die_Schachtgrafik()
     {
-        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
+        var xaml = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
         Assert.Contains("Am Schacht wird die Zustandsklasse nie berechnet", xaml);
         Assert.Contains("<local:SchachtgrafikControl", xaml);
         Assert.Contains("ZustandsklasseInkConverter", xaml);
@@ -120,7 +120,7 @@ public sealed class DesignAuditNovaSchaechteTests
     [Fact]
     public void Schachtgrafik_ersetzt_den_Grundriss_und_bekommt_Haltungen_und_Katalog_von_der_Seite()
     {
-        var panelXaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
+        var panelXaml = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
         Assert.DoesNotContain("AutomationProperties.Name=\"Schachtgrundriss\"", panelXaml);
         Assert.DoesNotContain("x:Name=\"Kreis\"", panelXaml);
         Assert.DoesNotContain("x:Name=\"Oval\"", panelXaml);
@@ -128,7 +128,7 @@ public sealed class DesignAuditNovaSchaechteTests
         Assert.Contains("Haltungen=\"{Binding Haltungen, ElementName=Root}\"", panelXaml);
         Assert.Contains("Catalog=\"{Binding Catalog, ElementName=Root}\"", panelXaml);
 
-        var controlCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtgrafikControl.xaml.cs"));
+        var controlCode = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtgrafikControl.xaml.cs"));
         Assert.DoesNotContain("App.Services", controlCode);
         Assert.DoesNotContain("ServiceProvider.Current", controlCode);
     }
@@ -159,7 +159,7 @@ public sealed class DesignAuditNovaSchaechteTests
     [Fact]
     public void Schachtansicht_zeigt_ohne_Auswahl_nur_den_Leerzustand()
     {
-        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
+        var xaml = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
         Assert.Contains("x:Name=\"Leerzustand\"", xaml);
         // Optikanalyse 28.09.2026, Aufgabe 11 Fix-Runde 1: der Leerzustand ist auf das gemeinsame
         // EmptyStateControl umgestellt (Title/Message statt eines einzelnen TextBlock-Textes).
@@ -179,14 +179,14 @@ public sealed class DesignAuditNovaSchaechteTests
     [Fact]
     public void Zustandsklasse_und_Protokoll_kommen_aus_den_gemeinsamen_Fabriken()
     {
-        var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
-        var protokoll = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.Protokollspalte.cs"));
+        var code = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
+        var protokoll = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.Protokollspalte.cs"));
 
         Assert.Contains("ZustandsklasseChipColumnFactory.Create(", code);
         Assert.DoesNotContain("SchaechteZustandsklasseColumnFactory", code);
         Assert.Contains("SchaechteProtokollColumnFactory.Create(", protokoll);
         Assert.False(
-            File.Exists(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechteZustandsklasseColumnFactory.cs")),
+            File.Exists(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechteZustandsklasseColumnFactory.cs")),
             "Die eigene Schachtfabrik ist durch die gemeinsame Marke ersetzt.");
     }
 
@@ -198,7 +198,7 @@ public sealed class DesignAuditNovaSchaechteTests
     [Fact]
     public void Tabellenkopf_wird_einmal_geholt_und_gross_geschrieben()
     {
-        var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
+        var code = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
         var aufbau = Regex.Match(code, @"private void RebuildColumns\(\)[\s\S]*?\n    \}");
         Assert.True(aufbau.Success, "RebuildColumns nicht gefunden");
 
@@ -215,7 +215,7 @@ public sealed class DesignAuditNovaSchaechteTests
     [Fact]
     public void Eine_Auswahl_der_Zustandsklasse_wird_gestempelt_und_meldet_die_Aenderung()
     {
-        var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
+        var code = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
 
         Assert.Contains("_zustandsklasseBeimOeffnen", code);
         var commit = Regex.Match(code, @"private void Grid_CellEditEnding[\s\S]*?\n    \}");
@@ -233,7 +233,7 @@ public sealed class DesignAuditNovaSchaechteTests
     {
         foreach (var datei in new[] { "HaltungStatusColumnFactory.cs", "SchaechteProtokollColumnFactory.cs" })
         {
-            var code = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", datei));
+            var code = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", datei));
             Assert.Contains("StatusZellenBausteine.Aktionsknopf(", code);
             Assert.Contains("StatusZellenBausteine.Fehlt(", code);
         }
@@ -246,7 +246,7 @@ public sealed class DesignAuditNovaSchaechteTests
     [Fact]
     public void Schachtansicht_zeigt_leere_Eckdaten_als_Gedankenstrich()
     {
-        var xaml = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
+        var xaml = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtUebersichtPanel.xaml"));
         Assert.Contains("haltung:FaktWertConverter", xaml);
         foreach (var feld in new[] { "Funktion", "Material", "Schachttiefe", "Baujahr", "Belastungsklasse", "Inspektionsdatum" })
             Assert.Contains($"Fields[{feld}], Converter={{StaticResource FaktWertConv}}", xaml);
@@ -279,7 +279,7 @@ public sealed class DesignAuditNovaSchaechteTests
         Assert.Contains("Visibility=\"Collapsed\"", toggle.Value);
         Assert.DoesNotContain("Header=", toggle.Value);
 
-        var settings = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile("src", "AuswertungPro.Next.UI", "AppSettings.cs"));
+        var settings = File.ReadAllText(TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "AppSettings.cs"));
         Assert.Contains("public string SchaechteAnsicht { get; set; } = \"liste\";", settings);
     }
 
@@ -308,22 +308,22 @@ public sealed class DesignAuditNovaSchaechteTests
     [Fact]
     public void Schacht_Aufklapp_Liste_verwendet_die_geteilten_Bausteine_der_Haltungen()
     {
-        var controllerCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(
+        var controllerCode = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "DataPage", "SchaechteAufklappListeController.cs"));
         Assert.Contains("AufklappDetailLayout.Themen(", controllerCode);
-        var haltungController = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(
+        var haltungController = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "DataPage", "DataPageAufklappListeController.cs"));
         Assert.Contains("AufklappDetailLayout.Themen(", haltungController);
-        var layoutCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(
+        var layoutCode = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "DataPage", "AufklappDetailLayout.cs"));
         Assert.Contains("HaltungThemenGruppierung.Bilde(", layoutCode);
         Assert.Contains("new DataPageDetailLiveSync(", controllerCode);
 
-        var controlCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(
+        var controlCode = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtAufklappListe.xaml.cs"));
         Assert.Contains("HaltungAufklappTastenregel.Bestimme(", controlCode);
 
-        var umschalterCode = File.ReadAllText(DesignAuditNovaPaletteTests.RepoFile(
+        var umschalterCode = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "DataPage", "SchaechteAnsichtUmschalter.cs"));
         Assert.Contains("HaltungenAnsichtRegel.Bestimme(", umschalterCode);
         Assert.Contains("HaltungenAnsichtRegel.Normalisiere(", umschalterCode);
