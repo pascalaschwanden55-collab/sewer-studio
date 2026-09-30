@@ -38,14 +38,9 @@ public sealed class DesignAuditLaufzeittexteTests
     ];
 
     /// <summary>
-    /// Deutsche Woerter in Ersatzschreibweise. Die Liste ist bewusst konkret: Ein blosses
-    /// „ae/oe/ue irgendwo" traefe auch „Neu", „Quelle" oder „Muster".
+    /// Stammformen fuer die vier festen Quelldateien; Liste und Begruendung: <see cref="Sprachregeln.LaufzeittextStaemme"/>.
     /// </summary>
-    private static readonly string[] Ersatzschreibweisen =
-    [
-        "Faell", "Schaetz", "aehnlich", "Gruen", "Schaed", "Pruef", "Verknuepf",
-        "Loesch", "Oeffn", "Groess", "Naechst", "Ueber", "Zustaend", "Maengel", "Bemuehung"
-    ];
+    private static readonly string[] Ersatzschreibweisen = Sprachregeln.LaufzeittextStaemme;
 
     [Fact]
     public void Sichtbare_Laufzeittexte_tragen_echte_Umlaute()
@@ -195,7 +190,7 @@ public sealed class DesignAuditLaufzeittexteTests
     /// genau solche Stellen (siehe Fix-Runde 1: <c>ObservationCatalogWindowInputNormalizerArchitectureTests</c>,
     /// <c>SchaechtePageArchitectureGuardTests</c>) fuer den Waechter unsichtbar.
     ///
-    /// WICHTIG fuer diesen Waechter selbst: <see cref="Aufgabe10c1BereinigteWoerter"/> MUSS die
+    /// WICHTIG fuer diesen Waechter selbst: <see cref="Sprachregeln"/> MUSS die
     /// ALTE Ersatzschreibweise (ASCII) enthalten, nicht die neue Umlautschreibweise — der Test
     /// prueft ja, dass die ASCII-Form NICHT mehr vorkommt. Ein automatisches Bereinigungsskript
     /// darf diese Liste (und <see cref="BehobeneEinzeltexte"/> weiter oben) deshalb nie anfassen.
@@ -227,50 +222,12 @@ public sealed class DesignAuditLaufzeittexteTests
     /// <c>vsa.hoehe.mm</c>, <c>deckel.hoehe</c>, <c>haltungspunkt.hoehe</c> — ein Punkt ist kein
     /// Wortzeichen und haette die Wortgrenzenpruefung nicht automatisch geschuetzt).
     /// </summary>
-    private static readonly string[] Aufgabe10c1BereinigteWoerter =
-    [
-        "waehlen", "Waehlen", "waehle", "Waehle", "fuer", "Fuer",
-        "verfuegbar", "pruefen", "Pruefen", "pruefe", "Pruefe",
-        "ungueltig", "Ungueltig", "ungueltige", "Ungueltige", "ungueltigen", "ungueltiges",
-        "aendern", "Aendern", "geaendert", "Geaendert",
-        "geaenderte", "veraendert", "unveraendert", "unveraenderlich", "uebernommen", "uebernommene",
-        "Uebernommen", "uebernehmen", "Uebernehmen", "uebergeben", "Uebernahme", "Goldpruefung",
-        "Goldpruefungs", "Goldfaelle", "Pruefung", "laeuft", "Loeschen",
-        "geloescht", "Haltungslaenge", "geoeffnet", "geoeffneten", "Oeffner", "oeffnen",
-        "Oeffnen", "geprueft", "gepruefte", "ueber", "uebersprungen", "Uebersprungen",
-        "Uebersprungene", "Eintraege", "Protokolleintraege", "Laenge", "bestaetigt", "bestaetigen",
-        "Bestaetigen", "Bestaetigung", "bestaetigte", "auswaehlen", "auswaehlbar", "Ausgewaehlte",
-        "ausgewaehlt", "ausgewaehlte", "groesser", "waehrend", "Waehrend", "Faelle",
-        "Faellen", "beschaedigt", "Beschaedigte", "gehoert", "ueberschrieben", "ueberschreibt",
-        "Unvollstaendige", "unvollstaendig", "gewaehlt", "gewaehlten", "ergaenzen", "ergaenzt",
-        "Ergaenzt", "verknuepfte", "verknuepfen", "gezaehlt",
-        "gueltig", "gueltige", "gueltigen", "gueltiges", "hinzufuegen", "moeglich",
-        "moegliche", "naeherung", "Naeherung", "noetig", "persoenliches", "Persoenliche",
-        "spaetere", "spaeter", "uebrigen", "uebrige", "vollstaendig", "zusaetzlichen",
-        "Zusaetzliche", "Abhaengigkeitspaket", "Bildflaeche", "Bildgroesse", "Dichtheitspruefung", "Flaeche",
-        "Geraetesicherheit", "hashgeprueften", "klaeren", "Kostenuebersicht", "Maskenflaeche",
-        "Nettobetraege", "Preisaenderungen", "Pruefplatz", "Pruefspur", "Pruefungsfortschritt", "Qualitaetspruefung",
-        "Vorschlaege", "Zugehoerige", "zugehoerige", "zugehoerigen", "Zuruecksetzen", "ausdruecklich",
-        "ausgefuellt", "gehaengt", "geschuetzt", "geschuetzte", "geschuetzten", "rueckgaengig",
-        "temporaere", "temporaeren", "unterstuetzt", "verstaendlich", "wuerde", "zurueckgegeben",
-        "zurueckgehaltene", "zuruecknehmen", "naechsten", "Naechstes", "naeher", "benoetigt",
-        "enthaelt", "muessen", "laesst", "koennen", "Schaerfe", "trainingsfaehig",
-        "Anschluesse", "Fuellung", "laedt", "Laeufe", "Aufraeumen",
-        "nachgeruestet", "aufloesbar", "Eigentuemerdossiers", "Saetze", "Saetzen", "Verfuegung",
-        "aufgeloest", "schlaegt", "Zeitueberschreitung", "duerfen", "Schaetzung",
-    ];
+    private static readonly string[] Aufgabe10c1BereinigteWoerter = Sprachregeln.WortformenFuerUi;
 
     /// <summary>
-    /// Excel-Farbregel-Werte (<c>ExcelReportStyle.Farbregeln</c>,
-    /// <c>DataPageDropdownOptionGroupFactory.cs</c>/<c>SchaechteDropdownCommandFactory.cs</c>):
-    /// bleiben absichtlich in Ersatzschreibweise, weil der exakte Text verglichen wird.
+    /// Excel-Farbregel-Werte u. a. (Grund je Eintrag in <see cref="Sprachregeln.GeschuetzteGanzeZeichenketten"/>).
     /// </summary>
-    private static readonly string[] GeschuetzteGanzeZeichenketten =
-    [
-        "Pruefung bestanden",
-        "Pruefung knapp nicht bestanden",
-        "Pruefung nicht bestanden (grob undicht)",
-    ];
+    private static readonly string[] GeschuetzteGanzeZeichenketten = Sprachregeln.GeschuetzteFuer(Sprachregeln.Bereich.Ui);
 
     private static readonly Regex Aufgabe10c1ZeichenkettenLiteral =
         new("\"((?:[^\"\\\\]|\\\\.)*)\"", RegexOptions.Compiled);

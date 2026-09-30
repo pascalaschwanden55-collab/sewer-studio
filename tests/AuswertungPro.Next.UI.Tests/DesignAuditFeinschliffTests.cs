@@ -19,17 +19,10 @@ public sealed class DesignAuditFeinschliffTests
         "\\b(Content|Header|Text|ToolTip|Title)=\"([^\"]*)\"",
         RegexOptions.Compiled);
 
-    // Ersatzschreibweisen, die im Deutschen praktisch nur als Umlaut-Ersatz vorkommen.
-    // Bewusst NICHT enthalten: "ss" (Schweizer Schreibweise ist korrekt) und Woerter wie
-    // "neue", "Steuer", "Bauer", "Quelle", in denen ae/oe/ue echte Buchstabenfolgen sind.
+    // Ersatzschreibweisen, die im Deutschen praktisch nur als Umlaut-Ersatz vorkommen —
+    // Liste und Begruendung in Sprachregeln.XamlUmlautErsatzMuster.
     private static readonly Regex UmlautErsatz = new(
-        "oeffn|pruef|\\bfuer\\b|\\bueber|waehl|uebernehm|zurueck|aender|menue|naechst|drueck|" +
-        "temporaer|bestaetig|rueckmeld|zugehoerig|\\bgruen|verknuepf|loesch|laenge|groesse|hoehe|" +
-        "gefaell|schaecht|spaet|vorschlaeg|zusaetzl|verfuegbar|gueltig|moeglich|noetig|erfuellt|" +
-        "waehrend|schluessel|ausfuehr|ergaenz|erklaer|uebersicht|ueberspring|ausgewaehlt|zaehl|" +
-        "fuellen|buendel|rueckgaengig|ueberschreib|kuerzel|laeuft|staerke|wuensch|hoeher|groesser|" +
-        "\\bkuerz|praefix|gebaeud|haeus|kanaele|strassenzuege|uebertrag|ueberpruef|ausloes|" +
-        "loeschen|zuruecksetz|waehle|geoeffnet|ueblich|uebrig|aehnlich|erhoeh|gefuehrt|flaech|dafuer|wofuer",
+        string.Join("|", Sprachregeln.XamlUmlautErsatzMuster),
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     [Fact]
