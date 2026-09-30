@@ -1,0 +1,22 @@
+{
+ "dateien": 3306,
+ "zeilen": 385705,
+ "methoden": 15333,
+ "methoden_ueber_100": 197,
+ "methoden_ueber_200": 28,
+ "entscheidungen_ueber_20": 170,
+ "parameter_ueber_8": 156,
+ "async_void": 32,
+ "leere_catch": 237,
+ "exakte_klongruppen": 11,
+ "dateien_900_1000": 21,
+ "dateien_975_1000": 9,
+ "dateien_ueber_1000": 0,
+ "teilklassen_1800_2000": 7,
+ "teilklassen_ueber_2000": 2,
+ "teilklassen_dateien": 225,
+ "test_dateien": 2713,
+ "test_zeilen": 383386,
+ "ui_ai_dateien": 594,
+ "ui_ai_zeilen": 33970
+}
