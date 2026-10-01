@@ -64,7 +64,8 @@ public sealed class MultiModelOsdMeterPlausibilitaetTests
     [Fact]
     public async Task Unplausibler_OSD_Sprung_setzt_den_Meterstand_nicht_zurueck()
     {
-        // Bilder bei 0, 1, 2, 3 s; Schaetzung 0 / 12,5 / 25 / 37,5 m. OSD: 2 m (erster Wert),
+        // Bilder bei 0, 1, 2, 3 s; Rate 12,5 m/s, ab dem belegten Anker 2 m (t = 0) gezaehlt
+        // (Entscheid 01.10.2026, MultiModelMeterAnkerTests). OSD: 2 m (erster Wert),
         // 40 m (38 m in 1 s), 4 m (2 m in 2 s seit dem belegten Anker 2 m), danach weiter 4 m.
         var rec = await RunAsync(4, OsdMeters(2.0, 40.0, 4.0));
 
@@ -74,7 +75,7 @@ public sealed class MultiModelOsdMeterPlausibilitaetTests
         Assert.Null(Trace(rec, 1).OsdMeterRejected);
 
         var verworfen = Checkpoint(rec, 2);
-        Assert.Equal(12.5, verworfen.Meter);                  // bisherige Schaetzung bleibt
+        Assert.Equal(14.5, verworfen.Meter);                  // Schaetzung bleibt: 2 m + 12,5 m/s * 1 s
         Assert.Equal("LinearEstimate", verworfen.MeterSource);
         Assert.True(verworfen.IsMeterEstimated);
         Assert.Equal("OSD-Meter unplausibel: 40 m nach 2 m in 1 s", Trace(rec, 2).OsdMeterRejected);

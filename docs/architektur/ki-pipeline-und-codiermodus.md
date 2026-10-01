@@ -32,6 +32,16 @@
   laufenden Meterstand unverändert und steht im Trace (`OsdMeterRejected`: «OSD-Meter
   unplausibel: x m nach y m in t s»). Nach einer Fortsetzung kommt der Anker aus dem Journal.
   Tests: `MultiModelOsdMeterPlausibilitaetTests`, `MultiModelQwenSchrittTests`.
+- **Die Meterschätzung zählt vom letzten belegten OSD-Meter aus weiter** (01.10.2026). Nach jedem
+  übernommenen OSD-Meter gilt geschätzt = Anker-Meter + Rate × (t − Ankerzeit), nie unter dem
+  Anker; Rate wie bisher = angenommene Haltungslänge (`EstimatedReachLengthM`) je Videodauer.
+  Anker ist derselbe Wert wie bei der 5-m/s-Prüfung (`LetzterOsdMeter`); ein verworfener Wert ist
+  keiner. Ohne Anker unverändert die Gerade ab Videoanfang. Mit Anker entfällt
+  `Math.Max(LastMeter, …)`: `LastMeter` wird bei der Übernahme auf den OSD-Wert gesetzt und wächst
+  danach nur über die Schätzung. Beim Fortsetzen setzt ein OSD-Bild aus dem Journal `LastMeter`
+  ebenso zurück (vorher Höchstwert aller Journalbilder). Eine Stelle:
+  `MultiModelMeterSchaetzung.Schaetze`. Der Codiermodus (`CodingMeterResolver`) ist nicht
+  betroffen. Tests: `MultiModelMeterAnkerTests`, Schnappschuss `gemischt`.
 - **Kein fremder Code bei Widerspruch.** `TemporalCodeVotingService` gibt einem Bild mit
   eigenem, vom bestätigten abweichenden Klassifikator-Vorschlag den bestätigten Code des
   Nachbarbilds nicht mehr über die Hysterese. Die Befunde des Bildes bleiben unbestätigt

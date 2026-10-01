@@ -131,9 +131,8 @@ public sealed partial class MultiModelAnalysisService
 
     private double EstimateMeter(MultiModelLaufZustand run, double t)
     {
-        // Lineare Schaetzung basierend auf geschaetzter Haltungslaenge (wird durch Qwen OSD korrigiert)
-        var estimated = t / Math.Max(run.Duration, 1.0) * EstimatedReachLengthM;
-        run.LastMeter = Math.Max(run.LastMeter, estimated);
+        run.LastMeter = MultiModelMeterSchaetzung.Schaetze(
+            t, run.Duration, EstimatedReachLengthM, run.LastMeter, run.LetzterOsdMeter);
         return Math.Round(run.LastMeter, 2);
     }
 
@@ -178,9 +177,12 @@ public sealed partial class MultiModelAnalysisService
             {
                 detections.AddRange(deduplicator.AdvanceAll());
             }
-            lastMeter = Math.Max(lastMeter, frame.Meter);
-            // Belegter OSD-Anker der 5-m/s-Pruefung (Entscheid 01.10.2026) steht im Journal.
-            if (!frame.IsMeterEstimated && frame.MeterSource == GetDedupMeterMetadata(qwenMeterAccepted: true).MeterSource)
+            // Belegter OSD-Anker der 5-m/s-Pruefung und der Meterschaetzung (Entscheid 01.10.2026)
+            // steht im Journal. Wie im ununterbrochenen Lauf setzt er den laufenden Meterstand auf sich.
+            var osdAnker = !frame.IsMeterEstimated
+                && frame.MeterSource == GetDedupMeterMetadata(qwenMeterAccepted: true).MeterSource;
+            lastMeter = osdAnker ? frame.Meter : Math.Max(lastMeter, frame.Meter);
+            if (osdAnker)
                 run.LetzterOsdMeter = (frame.Meter, frame.TimeSec);
         }
 
