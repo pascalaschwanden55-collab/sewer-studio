@@ -175,7 +175,7 @@ internal static class VsaKekAbbildung
     private static XtfSchachtUntersuchung BaueSchachtbegehung(VsaKekUntersuchung u)
         => new(
             u.Bezeichnung,
-            XtfValueNormalizer.NormalizeDate_yyyymmdd(u.Zeitpunkt),
+            XtfValueNormalizer.NormalizeDate(u.Zeitpunkt),
             u.Operateur,
             u.Erfassungsart,
             BaueSchachteintraege(u),
@@ -187,7 +187,9 @@ internal static class VsaKekAbbildung
     private static HaltungRecord BaueHaltung(VsaKekUntersuchung u, List<VsaFinding>? findings,
         string? videoLink, string sourcePath, string modellName)
     {
-        var zeitpunkt = XtfValueNormalizer.NormalizeDate_yyyymmdd(u.Zeitpunkt);
+        // yyyymmdd und ISO-Datum wie Letzte_Aenderung (ISO seit 01.10.2026). Nur die Anzeige:
+        // Der Importbeleg rechnet weiter mit dem Rohwert u.Zeitpunkt.
+        var zeitpunkt = XtfValueNormalizer.NormalizeDate(u.Zeitpunkt);
         var primaere = new List<string>();
 
         if (findings is not null)
