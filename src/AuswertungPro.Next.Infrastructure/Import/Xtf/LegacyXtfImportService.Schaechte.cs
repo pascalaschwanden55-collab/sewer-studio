@@ -25,14 +25,20 @@ public sealed partial class LegacyXtfImportService
     /// <summary>
     /// Liest die Normschaechte einer SIA405-XTF. Nur lesend; ohne Bezeichnung wird
     /// uebersprungen, weil sich ein Schacht ohne Nummer spaeter keinem Protokoll
-    /// zuordnen laesst.
+    /// zuordnen laesst. Organisationsverweise, die sich nicht aufloesen lassen, prueft
+    /// <paramref name="verweise"/> nach derselben Regel wie bei den Haltungen (seit 01.10.2026);
+    /// die Warnungen stehen in <paramref name="meldungen"/>, die externen Verweise zaehlt
+    /// <paramref name="verweise"/> fuer den gemeinsamen Hinweis je Datei.
     /// </summary>
-    internal static List<XtfNormschachtElement> ParseSia405Schaechte(XDocument doc)
+    internal static List<XtfNormschachtElement> ParseSia405Schaechte(XDocument doc,
+        out Sia405Organisationsverweise verweise, out List<ImportMessage> meldungen)
     {
         ArgumentNullException.ThrowIfNull(doc);
 
         var elemente = new List<XtfNormschachtElement>();
-        var organisationen = Sia405ObjektLeser.LiesOrganisationen(doc);
+        var organisationen = Sia405ObjektLeser.LiesOrganisationen(doc, out var organisationenInDatei);
+        var pruefung = new Sia405Organisationsverweise(organisationenInDatei);
+        var warnungen = new List<ImportMessage>();
 
         foreach (var node in doc.Descendants())
         {
@@ -47,17 +53,25 @@ public sealed partial class LegacyXtfImportService
                 .FirstOrDefault(e => string.Equals(e.Name.LocalName, name, StringComparison.OrdinalIgnoreCase))
                 ?.Value;
 
-            string? WertOderVerweis(string name, string refName)
-            {
-                var direkt = Kind(name);
-                return string.IsNullOrWhiteSpace(direkt)
-                    ? Verweis(node, refName, organisationen)
-                    : direkt;
-            }
-
             var bezeichnung = (Kind("Bezeichnung") ?? "").Trim();
             if (bezeichnung.Length == 0)
                 continue;
+
+            string? WertOderVerweis(string name, string refName, string rolle)
+            {
+                var direkt = Kind(name);
+                if (!string.IsNullOrWhiteSpace(direkt))
+                    return direkt;
+
+                // Ein nicht leerer Text hat Vorrang vor dem Verweis; nur sonst wird geprueft.
+                var wert = Verweis(node, refName, organisationen);
+                var kennung = node.Elements()
+                    .FirstOrDefault(e => e.Name.LocalName.Equals(refName, StringComparison.OrdinalIgnoreCase))
+                    ?.Attribute("REF")?.Value;
+                var kopf = $"{klasse} \"{bezeichnung}\" (TID {(string?)node.Attribute("TID")}): ";
+                Sia405Bezugsmeldungen.WarnungFalls(warnungen, pruefung.Pruefe(kopf, rolle, kennung, wert is not null, schacht: true));
+                return wert;
+            }
 
             elemente.Add(new XtfNormschachtElement(
                 bezeichnung,
@@ -65,18 +79,20 @@ public sealed partial class LegacyXtfImportService
                 Kind("Material"),
                 Kind("Dimension1"),
                 Kind("Dimension2"),
-                WertOderVerweis("Eigentuemer", "EigentuemerRef"),
+                WertOderVerweis("Eigentuemer", "EigentuemerRef", "Eigentümer"),
                 Kind("BaulicherZustand"),
                 Kind("Bemerkung"),
                 Kind("Status"),
                 Kind("Sanierungsbedarf"),
                 Kind("Baujahr"),
-                WertOderVerweis("Datenherr", "DatenherrRef"),
-                WertOderVerweis("Datenlieferant", "DatenlieferantRef"),
+                WertOderVerweis("Datenherr", "DatenherrRef", "Datenherr"),
+                WertOderVerweis("Datenlieferant", "DatenlieferantRef", "Datenlieferant"),
                 (string?)node.Attribute("TID"), klasse, Kind("Standortname"), Kind("Bruttokosten"),
                 Kind("Art"), Kind("Zustandserhebung_Jahr")));
         }
 
+        verweise = pruefung;
+        meldungen = warnungen;
         return elemente;
     }
 
