@@ -2655,6 +2655,11 @@
       },
       {
         "Context": "XTF405",
+        "Level": "Warn",
+        "Message": "Haltung \"ohne-tid\" ohne TID nicht übernommen: Ohne Objektkennung lässt sie sich nicht eindeutig zuordnen."
+      },
+      {
+        "Context": "XTF405",
         "Level": "Info",
         "Message": "Organisationsverweise ausserhalb der Datei (nach Norm zulässig, Name nicht übernommen): Datenlieferant refORGFEHLT (1 Haltung)."
       },

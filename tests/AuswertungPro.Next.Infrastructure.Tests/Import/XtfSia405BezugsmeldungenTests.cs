@@ -62,6 +62,20 @@ public sealed class XtfSia405BezugsmeldungenTests : IDisposable
     }
 
     [Fact]
+    public void Eine_Haltung_ohne_TID_steht_als_Warnung_im_Importbericht_und_bleibt_uebersprungen()
+    {
+        // Seit 01.10.2026 (zweite Runde): Der Leser ueberspringt sie wie bisher, aber nicht mehr still.
+        var (projekt, stats) = Importiere("sia405-referenz.xtf");
+
+        var meldung = Assert.Single(stats.Messages, m => m.Message.Contains("ohne-tid", StringComparison.Ordinal));
+        Assert.Equal("Warn", meldung.Level);
+        Assert.Equal("XTF405", meldung.Context);
+        Assert.Equal("Haltung \"ohne-tid\" ohne TID nicht übernommen: Ohne Objektkennung lässt sie sich nicht eindeutig zuordnen.",
+            meldung.Message);
+        Assert.DoesNotContain(projekt.Data, r => r.GetFieldValue(FieldKeys.HoldingName) == "ohne-tid");
+    }
+
+    [Fact]
     public void Vollstaendige_Bezuege_erzeugen_keine_Meldung()
     {
         var (_, stats) = Importiere("sia405-bezuege.xtf");

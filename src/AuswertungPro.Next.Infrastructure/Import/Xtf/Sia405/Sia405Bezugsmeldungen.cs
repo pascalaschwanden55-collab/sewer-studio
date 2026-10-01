@@ -69,6 +69,13 @@ internal static class Sia405Bezugsmeldungen
                                + $"Weder die Haltung noch ihr Kanal{kanal} tragen einen Namen.");
         }
 
+        // Ohne TID liest der Leser die Haltung nicht ein (seit 01.10.2026 gemeldet).
+        foreach (var hd in bestand.HaltungenOhneTid)
+        {
+            var name = Gesetzt(hd.Bezeichnung) ? $"Haltung \"{hd.Bezeichnung.Trim()}\"" : "Haltung ohne Bezeichnung und";
+            Warnung(meldungen, $"{name} ohne TID nicht übernommen: Ohne Objektkennung lässt sie sich nicht eindeutig zuordnen.");
+        }
+
         if (externe.Count > 0)
         {
             meldungen.Add(new ImportMessage
