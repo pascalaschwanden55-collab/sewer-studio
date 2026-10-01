@@ -45,6 +45,14 @@
       "aufloesbar_durch": "DINO-Weg ohne groundingdino-py 0.4.0, danach transformers >= 5.10.0"
     },
     {
+      "paket": "transformers",
+      "version": "4.57.6",
+      "id": "GHSA-x9r9-c232-4q39",
+      "grund": "CVE-2026-80047: load_custom_generate() legt eine fremde custom_generate/generate.py vor der trust_remote_code-Pruefung im Cache ab. Keine Fix-Version vorhanden (betroffen 4.49.0 bis 5.8.1). Der Weg wird in dieser Anwendung nicht betreten.",
+      "beleg": "GitHub-Advisory am 2026-10-01 gelesen: 'Patched versions: None'. Suche am 2026-10-01: kein Treffer fuer custom_generate, load_custom_generate, trust_remote_code oder .generate( in sidecar/, training/ und tools/ sowie im installierten groundingdino 0.4.0 (dem einzigen transformers-Nutzer, nur BERT-Encoder und Tokenizer).",
+      "aufloesbar_durch": "Upstream-Fix abwarten"
+    },
+    {
       "paket": "setuptools",
       "version": "81.0.0",
       "id": "PYSEC-2026-3447",

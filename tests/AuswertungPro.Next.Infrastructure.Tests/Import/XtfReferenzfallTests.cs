@@ -110,6 +110,9 @@ public sealed class XtfReferenzfallTests : IDisposable
             return ziel;
         }).ToArray();
 
+        // Klartexte nur aus den eingebauten Titeln: sonst haengt der Schnappschuss davon ab, ob
+        // auf dem Rechner ein WinCan-Katalog installiert ist (lokal ja, in der CI nein).
+        using var _ = XtfPrimaryDamageFormatter.NurEingebauteTitelVerwenden();
         var stats = new LegacyXtfImportService().ImportXtfFiles(pfade, projekt);
         var ist = Schnappschuss(projekt, stats);
 

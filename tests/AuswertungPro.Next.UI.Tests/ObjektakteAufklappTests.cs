@@ -119,7 +119,13 @@ public sealed class ObjektakteAufklappTests
             tabs.Single(t => Equals(t.Header, "Alle Angaben")).IsSelected = true; Pump(window);
             Assert.Equal("450.94", sm.Gruppen.SelectMany(g => g.Felder).Single(f => f.Feld.Id == "deckel.hoehe").Text);
             // Kompakt (11.09.2026): 1280 px Fenster -> 3 Spalten, 800 -> 2, erst unter 700 eine.
-            Assert.Equal(3, Assert.Single(Alle<ObjektakteView>(schaechte)).Spalten);
+            // Auf einem schmalen Bildschirm (CI) wird die Akte trotz 1280-px-Fenster schmaler
+            // gezeichnet (window.ActualWidth meldet dort trotzdem 1280); dann folgen die Spalten
+            // der tatsaechlichen Breite der Akte. Die feste Zahl nur auf einem breiten Bildschirm.
+            var akte = Assert.Single(Alle<ObjektakteView>(schaechte));
+            Assert.Equal(ObjektakteView.SpaltenFuerBreite(akte.ActualWidth), akte.Spalten);
+            if (SystemParameters.VirtualScreenWidth >= window.Width)
+                Assert.Equal(3, akte.Spalten);
             Assert.True(Assert.Single(Alle<ObjektakteView>(schaechte)).ActualHeight >= 360,
                 "Die Objektakte in der Zeile braucht mindestens 360 px");
             window.Width = 800; Pump(window);

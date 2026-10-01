@@ -96,8 +96,15 @@ jobs:
       # Eigene frische Umgebung, weil SAM 2 in der Sidecar-Umgebung ein Top-Level-Paket
       # "training" installiert, das den Projektordner training/ verdeckt. Keine Skip-Regeln:
       # ein fehlendes Paket ist ein sichtbarer Sammelfehler, kein stilles Ueberspringen.
+      # Der Standard-Temp-Ordner des Runners heisst in Kurzform C:\Users\RUNNER~1\...; die
+      # Verknuepfungspruefung der Skripte vergleicht mit dem aufgeloesten Pfad und sperrt
+      # (richtig) fail-closed. runner.temp ist ein Langpfad ohne 8.3-Namen.
       - name: Trainingsskript-Tests (CPU)
         shell: bash
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+          TMPDIR: ${{ runner.temp }}
         run: |
           python -m venv .venv-training
           .venv-training/Scripts/python -m pip install -r training/scripts/tests/requirements-test.txt

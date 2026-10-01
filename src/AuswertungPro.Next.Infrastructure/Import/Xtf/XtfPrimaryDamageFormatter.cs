@@ -97,9 +97,26 @@ public static class XtfPrimaryDamageFormatter
     /// </summary>
     private static string NormalizeCode(string? raw) => XtfValueNormalizer.NormalizeCode(raw);
 
+    // Nur fuer Tests (01.10.2026): Die Klartexte kommen sonst aus dem lokal installierten
+    // WinCan-Katalog; auf einem Rechner ohne WinCan (CI) greifen die Ersatztitel. Referenz-
+    // schnappschuesse muessen ueberall gleich ausfallen. AsyncLocal: gilt nur im laufenden Test.
+    private static readonly AsyncLocal<bool> NurEingebauteTitel = new();
+
+    internal static IDisposable NurEingebauteTitelVerwenden()
+    {
+        NurEingebauteTitel.Value = true;
+        return new TitelRuecksetzer();
+    }
+
+    private sealed class TitelRuecksetzer : IDisposable
+    {
+        public void Dispose() => NurEingebauteTitel.Value = false;
+    }
+
     private static string? ResolveCodeTitle(string code)
     {
-        if (CodeTitles.Value.TryGetValue(code, out var title) && !string.IsNullOrWhiteSpace(title))
+        var titel = NurEingebauteTitel.Value ? FallbackTitles : CodeTitles.Value;
+        if (titel.TryGetValue(code, out var title) && !string.IsNullOrWhiteSpace(title))
             return title;
         return null;
     }
