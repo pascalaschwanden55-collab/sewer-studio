@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -96,6 +97,7 @@ internal static class VsaKekAbbildung
 
         var kandidaten = gruppe.Weitere
             .Where(w => Richtung(w.Fliessrichtung) == -hauptrichtung)
+            .Where(w => GleicheKampagne(gruppe.Haupt.Zeitpunkt, w.Zeitpunkt))
             .Select(w => videos.TryGetValue(w.Tid, out var video) ? video : null)
             .Where(video => !string.IsNullOrWhiteSpace(video)
                             && !string.Equals(video, hauptvideo, StringComparison.OrdinalIgnoreCase))
@@ -103,6 +105,21 @@ internal static class VsaKekAbbildung
             .ToList();
         return kandidaten.Count == 1 ? kandidaten[0] : null;
     }
+
+    /// <summary>
+    /// Entscheid Pascal 01.10.2026: Eine Gegenbefahrung gehoert zur selben Kampagne, beide
+    /// Untersuchungen liegen hoechstens 30 Tage auseinander. Eine Befahrung aus der Gegenrichtung
+    /// aus einem anderen Jahr ist keine Gegenbefahrung. Ohne glaubwuerdiges Datum (fehlt,
+    /// unlesbar, WinCan-Platzhalter) wird nicht geraten.
+    /// </summary>
+    private static bool GleicheKampagne(string? hauptZeitpunkt, string? weitererZeitpunkt)
+    {
+        var haupt = UntersuchungsAuswahl.Glaubwuerdig(VsaKekUntersuchungsWahl.LiesZeitpunkt(hauptZeitpunkt));
+        var weitere = UntersuchungsAuswahl.Glaubwuerdig(VsaKekUntersuchungsWahl.LiesZeitpunkt(weitererZeitpunkt));
+        return haupt is { } h && weitere is { } w && Math.Abs((h - w).TotalDays) <= GegenbefahrungHoechstabstandTage;
+    }
+
+    private const int GegenbefahrungHoechstabstandTage = 30;
 
     /// <summary>+1 in, -1 gegen Fliessrichtung, 0 unbekannt.</summary>
     private static int Richtung(string? fliessrichtung)

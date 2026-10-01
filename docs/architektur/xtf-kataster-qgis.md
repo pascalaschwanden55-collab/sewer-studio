@@ -779,6 +779,11 @@ ein Wiederholungsimport bestehende Begehungen nicht mehr; Waechter:
   Untersuchung gebunden. Uebernahme ueber `MergeEngine` wie `Link` (Handwert bleibt). Das
   Video bleibt zusaetzlich in `ImportVideoPaths` der Fassung; der Kanalverteiler kopiert es
   einmal (`-g`). Test: `XtfVsaKekMehrereUntersuchungenTests`.
+  Zusatz (Entscheid Pascal 01.10.2026): Beide Untersuchungen muessen zur selben Kampagne
+  gehoeren, hoechstens 30 Tage auseinander (`VsaKekAbbildung.GleicheKampagne`). Eine
+  Befahrung aus der Gegenrichtung aus einem anderen Jahr bleibt nur Protokollfassung. Fehlt
+  ein glaubwuerdiges Datum (leer, unlesbar, WinCan-Platzhalter 31.12.2007, vor 1990), bleibt
+  `Link_G` leer. Test: `Link_G_nur_bei_hoechstens_30_Tagen_Abstand`.
 - **Importbericht nennt stille Luecken (01.10.2026).** Nur Meldungen, kein Wert und kein
   Zaehler aendert sich. SIA405 (`Sia405Bezugsmeldungen`, Warn, Kontext XTF405): Kanal-,
   Rohrprofil- und Haltungspunktverweis ins Leere, Organisation in der Datei ohne

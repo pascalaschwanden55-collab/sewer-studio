@@ -173,6 +173,32 @@ public sealed class XtfVsaKekMehrereUntersuchungenTests : IDisposable
         Assert.DoesNotContain(stats.Messages, m => m.Message.Contains("Link_G", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// Entscheid Pascal 01.10.2026: Eine Untersuchung aus der Gegenrichtung ist nur dann eine
+    /// Gegenbefahrung, wenn beide nah beieinander liegen (hoechstens 30 Tage). Eine Befahrung aus
+    /// einem anderen Jahr bleibt nur Protokollfassung. Fehlt ein glaubwuerdiges Datum: nicht raten.
+    /// </summary>
+    [Theory]
+    [InlineData("20250312", "20250501", false)] // 50 Tage: andere Kampagne
+    [InlineData("20250301", "20250331", true)]  // genau 30 Tage: noch Gegenbefahrung
+    [InlineData("20250331", "20250301", true)]  // Reihenfolge egal
+    [InlineData("20250312", "", false)]         // Datum der weiteren fehlt
+    [InlineData("20071231", "20071231", false)] // WinCan-Platzhalterdatum
+    public void Link_G_nur_bei_hoechstens_30_Tagen_Abstand(string ersteDatum, string zweiteDatum, bool gegenbefahrung)
+    {
+        var (projekt, _) = Importiere(new Datei
+        {
+            ErsteRichtung = "in_Fliessrichtung", ZweiteRichtung = "gegen_Fliessrichtung",
+            ErsteZeitpunkt = ersteDatum, ZweiteZeitpunkt = zweiteDatum
+        });
+
+        var linkG = Assert.Single(projekt.Data).GetFieldValue("Link_G");
+        if (gegenbefahrung)
+            Assert.EndsWith("zweite.mp4", linkG, StringComparison.OrdinalIgnoreCase);
+        else
+            Assert.Equal("", linkG);
+    }
+
     [Fact]
     public void Ein_von_Hand_gesetztes_Link_G_bleibt_stehen()
     {
