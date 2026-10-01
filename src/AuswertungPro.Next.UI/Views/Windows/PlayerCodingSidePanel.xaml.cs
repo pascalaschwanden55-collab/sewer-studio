@@ -75,6 +75,8 @@ public partial class PlayerCodingSidePanel : UserControl
     private void ImportEdit_Click(object sender, RoutedEventArgs e) => ImportEditRequested?.Invoke(sender, e);
     private void ImportConfirmToBrain_Click(object sender, RoutedEventArgs e) => ImportConfirmToBrainRequested?.Invoke(sender, e);
     private void Suggestions_DoubleClick(object sender, MouseButtonEventArgs e) => SuggestionsDoubleClickRequested?.Invoke(sender, e);
+    // Codex-Review PR #24 (P2): Das Kontextmenue wirkt auf SelectedItem; der Rechtsklick waehlt die Zeile vorher aus.
+    private void Suggestions_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e) => AuswertungPro.Next.UI.Ai.Coding.CodingEventListItemSelectionHelper.SelectContainingListBoxItem(e.OriginalSource as DependencyObject);
     private void SuggestionSeek_Click(object sender, RoutedEventArgs e) => SuggestionSeekRequested?.Invoke(sender, e);
     private void SuggestionConfirm_Click(object sender, RoutedEventArgs e) => SuggestionConfirmRequested?.Invoke(sender, e);
     private void SuggestionReject_Click(object sender, RoutedEventArgs e) => SuggestionRejectRequested?.Invoke(sender, e);

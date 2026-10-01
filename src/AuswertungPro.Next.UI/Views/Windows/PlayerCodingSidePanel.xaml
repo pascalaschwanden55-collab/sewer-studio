@@ -567,7 +567,8 @@
                                                  FontSize="{DynamicResource TextXS}"
                                                  Foreground="{DynamicResource TextBrush}"
                                                  MaxHeight="180"
-                                                 MouseDoubleClick="Suggestions_DoubleClick">
+                                                 MouseDoubleClick="Suggestions_DoubleClick"
+                                                 PreviewMouseRightButtonDown="Suggestions_PreviewMouseRightButtonDown">
                                             <ListBox.ContextMenu>
                                                 <ContextMenu>
                                                     <MenuItem Header="Zum Zeitpunkt springen" Click="SuggestionSeek_Click">
