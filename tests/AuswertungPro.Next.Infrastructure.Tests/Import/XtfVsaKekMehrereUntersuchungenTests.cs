@@ -143,6 +143,50 @@ public sealed class XtfVsaKekMehrereUntersuchungenTests : IDisposable
         Assert.DoesNotContain(stats.Messages, m => m.Message.Contains("übersprungen", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("in_Fliessrichtung", "gegen_Fliessrichtung")]
+    [InlineData("gegen_Fliessrichtung", "in_Fliessrichtung")]
+    public void Das_Video_einer_Gegenbefahrung_steht_wie_bei_WinCan_in_Link_G(string ersteRichtung, string zweiteRichtung)
+    {
+        var (projekt, stats) = Importiere(new Datei { ErsteRichtung = ersteRichtung, ZweiteRichtung = zweiteRichtung });
+
+        var haltung = Assert.Single(projekt.Data);
+        Assert.EndsWith("erste.mpg", haltung.GetFieldValue(FieldKeys.Link), StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("zweite.mp4", haltung.GetFieldValue("Link_G"), StringComparison.OrdinalIgnoreCase);
+        // Das Video bleibt zusaetzlich an seiner Protokollfassung.
+        Assert.EndsWith("zweite.mp4", Assert.Single(Assert.Single(haltung.Protocol!.History).ImportVideoPaths!), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(stats.Messages, m => m.Message.Contains("Haupt-Untersuchung", StringComparison.Ordinal)
+                                             && m.Message.Contains("Link_G", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("in_Fliessrichtung", "in_Fliessrichtung")]   // gleiche Richtung: Wiederholung, keine Gegenbefahrung
+    [InlineData("", "gegen_Fliessrichtung")]                 // Richtung der Haupt-Untersuchung unbekannt
+    [InlineData("in_Fliessrichtung", "")]                    // Richtung der weiteren unbekannt
+    public void Ohne_belegte_Gegenrichtung_bleibt_Link_G_leer(string ersteRichtung, string zweiteRichtung)
+    {
+        var (projekt, stats) = Importiere(new Datei { ErsteRichtung = ersteRichtung, ZweiteRichtung = zweiteRichtung });
+
+        var haltung = Assert.Single(projekt.Data);
+        Assert.Equal("", haltung.GetFieldValue("Link_G"));
+        Assert.EndsWith("zweite.mp4", Assert.Single(Assert.Single(haltung.Protocol!.History).ImportVideoPaths!), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(stats.Messages, m => m.Message.Contains("Link_G", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Ein_von_Hand_gesetztes_Link_G_bleibt_stehen()
+    {
+        var projekt = new Project { Name = "Test" };
+        var vorhanden = new HaltungRecord();
+        vorhanden.SetFieldValue(FieldKeys.HoldingName, "200-201", FieldSource.Manual, userEdited: false);
+        vorhanden.SetFieldValue("Link_G", @"Videos\handgewaehlt.mp4", FieldSource.Manual, userEdited: true);
+        projekt.Data.Add(vorhanden);
+
+        Importiere(new Datei(), projekt);
+
+        Assert.Equal(@"Videos\handgewaehlt.mp4", Assert.Single(projekt.Data).GetFieldValue("Link_G"));
+    }
+
     private (Project Projekt, ImportStats Stats) Importiere(Datei datei, Project? projekt = null)
     {
         Directory.CreateDirectory(Path.Combine(_dir, "Film"));
@@ -173,6 +217,8 @@ public sealed class XtfVsaKekMehrereUntersuchungenTests : IDisposable
         public string ZweiteZeitpunkt { get; init; } = "20250315";
         public string ZweiteLaenge { get; init; } = "12.00";
         public bool ZweiteAbgebrochen { get; init; } = true;
+        public string ErsteRichtung { get; init; } = "in_Fliessrichtung";
+        public string ZweiteRichtung { get; init; } = "gegen_Fliessrichtung";
 
         private static string Zeitpunkt(string wert) => wert.Length == 0 ? "" : $"<Zeitpunkt>{wert}</Zeitpunkt>";
 
@@ -202,7 +248,7 @@ public sealed class XtfVsaKekMehrereUntersuchungenTests : IDisposable
                     <Erfassungsart>Kanalfernsehen</Erfassungsart>
                     <vonPunktBezeichnung>200</vonPunktBezeichnung>
                     <bisPunktBezeichnung>201</bisPunktBezeichnung>
-                    <Fliessrichtung>in_Fliessrichtung</Fliessrichtung>
+                    <Fliessrichtung>{ErsteRichtung}</Fliessrichtung>
                   </VSA_KEK_2020_LV95.KEK.Untersuchung>
                   <VSA_KEK_2020_LV95.KEK.Untersuchung TID="refZWEITE">
                     <Bezeichnung>{ZweiteBezeichnung}</Bezeichnung>
@@ -211,7 +257,7 @@ public sealed class XtfVsaKekMehrereUntersuchungenTests : IDisposable
                     <Erfassungsart>Kanalfernsehen</Erfassungsart>
                     <vonPunktBezeichnung>201</vonPunktBezeichnung>
                     <bisPunktBezeichnung>200</bisPunktBezeichnung>
-                    <Fliessrichtung>gegen_Fliessrichtung</Fliessrichtung>
+                    <Fliessrichtung>{ZweiteRichtung}</Fliessrichtung>
                   </VSA_KEK_2020_LV95.KEK.Untersuchung>
             {Schaden("refS1", "refERSTE", "BCD", "0.00")}
             {Schaden("refS2", "refERSTE", "BABBA", "12.30")}

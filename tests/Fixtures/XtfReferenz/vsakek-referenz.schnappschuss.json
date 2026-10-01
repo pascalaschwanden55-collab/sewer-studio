@@ -203,6 +203,13 @@
             "Source": "Xtf",
             "UserEdited": false
           },
+          "Link_G": {
+            "Conflict": null,
+            "FieldName": "Link_G",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
           "NR": {
             "Conflict": null,
             "FieldName": "NR",
@@ -415,6 +422,7 @@
           "Lichte_Breite_mm": "",
           "Linerendmanschette_LEM": "",
           "Link": "<lauf>/Film/200-201.mpg",
+          "Link_G": "<lauf>/Film/200-201_gegen.mp4",
           "NR": "",
           "Nutzungsart": "",
           "Objekt_ID": "",
@@ -1616,11 +1624,11 @@
       {
         "Context": "XTF",
         "Level": "Warn",
-        "Message": "Haltung \"200-201\": Datei führt weitere Untersuchungen. Haupt-Untersuchung: 12.03.2025 (TID refUNTERS1) mit 5 Befunden; zusätzliche Protokollfassung: 15.03.2025 (TID refUNTERS2) mit 2 Befunden abgelegt."
+        "Message": "Haltung \"200-201\": Datei führt weitere Untersuchungen. Haupt-Untersuchung: 12.03.2025 (TID refUNTERS1) mit 5 Befunden; zusätzliche Protokollfassung: 15.03.2025 (TID refUNTERS2) mit 2 Befunden abgelegt. Ihr Video steht als Gegenbefahrung in Link_G."
       }
     ],
     "Uncertain": 3,
-    "UpdatedFields": 9,
+    "UpdatedFields": 10,
     "UpdatedRecords": 0
   }
 }

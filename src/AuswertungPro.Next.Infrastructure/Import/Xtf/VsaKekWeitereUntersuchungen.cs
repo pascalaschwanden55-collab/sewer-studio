@@ -49,10 +49,16 @@ internal static class VsaKekWeitereUntersuchungen
                 continue;
             }
 
+            // Steht ihr Video als Gegenbefahrung in Link_G (VsaKekAbbildung), sagt es der Bericht.
+            var gegen = w.Video is not null
+                        && string.Equals(ziel.GetFieldValue("Link_G"), w.Video, StringComparison.OrdinalIgnoreCase)
+                ? " Ihr Video steht als Gegenbefahrung in Link_G."
+                : "";
+
             if (eintraege.Count == 0)
             {
                 // Wie bei WinCan: ohne Befunde keine eigene Fassung.
-                stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF", Message = kopf + " – ohne Befunde, keine Fassung angelegt." });
+                stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF", Message = kopf + " – ohne Befunde, keine Fassung angelegt." + gegen });
                 continue;
             }
 
@@ -61,7 +67,7 @@ internal static class VsaKekWeitereUntersuchungen
             if (new[] { ziel.Protocol.Original, ziel.Protocol.Current }.Concat(ziel.Protocol.History)
                 .Any(r => r?.ImportFingerprint == w.Fingerabdruck))
             {
-                stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF", Message = kopf + " – bereits als Protokollfassung vorhanden." });
+                stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF", Message = kopf + " – bereits als Protokollfassung vorhanden." + gegen });
                 continue;
             }
 
@@ -75,7 +81,7 @@ internal static class VsaKekWeitereUntersuchungen
 
             // Wie bei WinCan zaehlt eine abgelegte weitere Befahrung als Fall fuer den Menschen.
             stats.Uncertain++;
-            stats.Messages.Add(new ImportMessage { Level = "Warn", Context = "XTF", Message = kopf + " abgelegt." });
+            stats.Messages.Add(new ImportMessage { Level = "Warn", Context = "XTF", Message = kopf + " abgelegt." + gegen });
         }
     }
 }
