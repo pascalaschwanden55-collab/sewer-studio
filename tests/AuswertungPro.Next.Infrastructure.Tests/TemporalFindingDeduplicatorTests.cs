@@ -162,6 +162,45 @@ public class TemporalFindingDeduplicatorTests
         Assert.Equal(7.8, second.MeterEnd);
     }
 
+    // ── Review PR #60 (01.10.2026): Die Meter-Herkunft gehoert zum Wert, aus dem MeterStart
+    // (bzw. MeterEnd) stammt; ein Folgebild, das keinen dieser Werte liefert, ueberschreibt sie nicht.
+
+    private const string Osd = "QwenOsd";
+    private const string Schaetzung = "LinearEstimate";
+
+    [Theory]
+    // Punktschaden (Riss): Meter = erstes Bild; dessen Herkunft gilt, auch wenn Folgebilder geschaetzt sind.
+    [InlineData("Riss", "BAB", new[] { 12.0, 12.56, 13.12 }, new[] { true, false, false }, 12.0, 12.0, Osd, false)]
+    [InlineData("Riss", "BAB", new[] { 5.0, 5.5 }, new[] { false, true }, 5.0, 5.0, Schaetzung, true)]
+    // Streckenschaden: beide Grenzen belegt -> belegt, auch mit geschaetztem Bild dazwischen.
+    [InlineData("Wurzeln", "BBA", new[] { 5.0, 5.5, 6.1 }, new[] { true, false, true }, 5.0, 6.1, Osd, false)]
+    // Eine Grenze geschaetzt -> Herkunft dieser Grenze (der Bereich ist nur so belegt wie seine schwaechere Grenze).
+    [InlineData("Wurzeln", "BBA", new[] { 5.0, 5.5, 6.1 }, new[] { true, true, false }, 5.0, 6.1, Schaetzung, true)]
+    [InlineData("Wurzeln", "BBA", new[] { 5.0, 5.5, 6.1 }, new[] { false, true, true }, 5.0, 6.1, Schaetzung, true)]
+    // Rueckwaerts: MeterStart stammt aus dem letzten (geschaetzten) Bild.
+    [InlineData("Wurzeln", "BBA", new[] { 10.0, 9.5, 9.0 }, new[] { true, true, false }, 9.0, 10.0, Schaetzung, true)]
+    public void Zusammenfuehren_uebernimmt_die_Meter_Herkunft_der_Grenzwerte(string label, string code,
+        double[] meter, bool[] osd, double start, double ende, string quelle, bool geschaetzt)
+    {
+        var deduplicator = new TemporalFindingDeduplicator(new TemporalDedupOptions
+        {
+            DedupWindowFrames = 3,
+            MeterMergeGapMaxMeters = 1.0
+        });
+
+        for (var i = 0; i < meter.Length; i++)
+        {
+            Assert.Empty(deduplicator.Update(new[] { Finding(label, code, 2, "3") }, meter[i],
+                meterSource: osd[i] ? Osd : Schaetzung, isMeterEstimated: !osd[i]));
+        }
+
+        var detection = Assert.Single(deduplicator.Flush());
+        Assert.Equal(start, detection.MeterStart);
+        Assert.Equal(ende, detection.MeterEnd);
+        Assert.Equal(quelle, detection.MeterSource);
+        Assert.Equal(geschaetzt, detection.IsMeterEstimated);
+    }
+
     private static EnhancedFinding Finding(string label, string? code, int severity, string? clock) =>
         new(
             Label: label,

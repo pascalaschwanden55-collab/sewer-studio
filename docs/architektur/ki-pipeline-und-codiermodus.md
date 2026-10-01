@@ -53,6 +53,13 @@
   `gemischt` läuft die Schätzung dort weiter bis 38,86 m). Danach werden Folgebilder desselben
   Befunds näher beieinander geschätzt und von der Zusammenführung (1 m) wieder zu einem Befund
   verbunden. Codiermodus unverändert. Tests: `MultiModelMeterAnkerTests`, Schnappschuss `gemischt`.
+- **Die Meter-Herkunft gehört zum Grenzwert** (Review PR #60, 01.10.2026). Beim Zusammenführen in
+  `TemporalFindingDeduplicator` übernimmt ein Befund `MeterSource`/`IsMeterEstimated` vom Bild, aus dem
+  `MeterStart` stammt (Punktschaden: erstes Bild). Bei einem Streckenschaden gilt er nur als belegt, wenn
+  beide Grenzen belegt sind; sonst gilt die Herkunft der geschätzten Grenze. Ein Folgebild ohne neuen
+  Grenzwert ändert die Herkunft nicht. Vorher überschrieb das letzte Bild die Quelle und jedes geschätzte
+  Bild machte den Befund «geschätzt» (Altfehler, sichtbar seit den dichteren Metern). Gilt auch für die
+  Vollanalyse (`VideoFullAnalysisService`). Tests: `TemporalFindingDeduplicatorTests`, Schnappschuss `gemischt`.
 - **Kein fremder Code bei Widerspruch.** `TemporalCodeVotingService` gibt einem Bild mit
   eigenem, vom bestätigten abweichenden Klassifikator-Vorschlag den bestätigten Code des
   Nachbarbilds nicht mehr über die Hysterese. Die Befunde des Bildes bleiben unbestätigt

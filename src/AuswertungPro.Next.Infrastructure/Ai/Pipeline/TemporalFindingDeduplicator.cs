@@ -382,8 +382,11 @@ internal sealed class TemporalFindingDeduplicator
         public int? IntrusionPercent { get; private set; }
         public int? CrossSectionReductionPercent { get; private set; }
         public int? DiameterReductionMm { get; private set; }
-        public string? MeterSource { get; private set; }
-        public bool IsMeterEstimated { get; private set; }
+        // Meter-Herkunft je Grenzwert (Review PR #60, 01.10.2026): Sie gehoert zum Bild, aus dem
+        // MeterStart bzw. MeterEnd stammt. Ein Folgebild, das keinen Grenzwert liefert, aendert sie nicht.
+        private readonly MeterHerkunft _herkunftErstesBild;
+        private MeterHerkunft _herkunftAmMinimum;
+        private MeterHerkunft _herkunftAmMaximum;
         public EvidenceVector? Evidence { get; private set; }
         public int FrameCount { get; private set; } = 1;
         public int MissedFrames { get; set; }
@@ -422,8 +425,9 @@ internal sealed class TemporalFindingDeduplicator
             IntrusionPercent = intrusion;
             CrossSectionReductionPercent = crossSection;
             DiameterReductionMm = diameterReduction;
-            MeterSource = meterSource;
-            IsMeterEstimated = isMeterEstimated;
+            _herkunftErstesBild = new MeterHerkunft(meterSource, isMeterEstimated);
+            _herkunftAmMinimum = _herkunftErstesBild;
+            _herkunftAmMaximum = _herkunftErstesBild;
             Evidence = evidence;
         }
 
@@ -443,8 +447,18 @@ internal sealed class TemporalFindingDeduplicator
             EvidenceVector? evidence = null)
         {
             MeterEnd = meter;
-            ObservedMeterMin = Math.Min(ObservedMeterMin, meter);
-            ObservedMeterMax = Math.Max(ObservedMeterMax, meter);
+            // Nur ein Bild, das einen neuen Grenzwert setzt, bringt seine Herkunft mit (bei Gleichstand
+            // bleibt das fruehere Bild).
+            if (meter < ObservedMeterMin)
+            {
+                ObservedMeterMin = meter;
+                _herkunftAmMinimum = new MeterHerkunft(meterSource, isMeterEstimated);
+            }
+            if (meter > ObservedMeterMax)
+            {
+                ObservedMeterMax = meter;
+                _herkunftAmMaximum = new MeterHerkunft(meterSource, isMeterEstimated);
+            }
             MissedFrames = 0;
             FrameCount++;
             if (severity > MaxSeverity) MaxSeverity = severity;
@@ -456,8 +470,6 @@ internal sealed class TemporalFindingDeduplicator
             if (intrusion is { } ip) IntrusionPercent = Math.Max(IntrusionPercent ?? 0, ip);
             if (crossSection is { } csr) CrossSectionReductionPercent = Math.Max(CrossSectionReductionPercent ?? 0, csr);
             if (diameterReduction is { } dr) DiameterReductionMm = Math.Max(DiameterReductionMm ?? 0, dr);
-            if (!string.IsNullOrWhiteSpace(meterSource)) MeterSource = meterSource;
-            IsMeterEstimated |= isMeterEstimated;
             if (evidence is not null)
             {
                 Evidence = Evidence is null ? evidence : MergeEvidence(Evidence, evidence);
@@ -482,14 +494,31 @@ internal sealed class TemporalFindingDeduplicator
                 ObservedMeterMin,
                 ObservedMeterMax,
                 _minStretchLengthMeters);
+            var herkunft = HerkunftDesBereichs(meterStart, meterEnd);
 
             return new(Name, meterStart, meterEnd, SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
                 ExtentPercent, HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
                 Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null,
-                MeterSource: MeterSource,
-                IsMeterEstimated: IsMeterEstimated,
+                MeterSource: herkunft.Quelle,
+                IsMeterEstimated: herkunft.Geschaetzt,
                 SeverityLevel: MaxSeverity);
         }
+
+        /// <summary>
+        /// Punktschaden (Meter = erstes Bild): Herkunft des ersten Bildes. Streckenschaden (kleinster bis
+        /// groesster Meter): belegt nur, wenn beide Grenzen belegt sind; sonst die Herkunft der
+        /// geschaetzten Grenze (zuerst MeterStart).
+        /// </summary>
+        private MeterHerkunft HerkunftDesBereichs(double meterStart, double meterEnd)
+        {
+            if (meterStart == MeterStart && meterEnd == MeterStart)
+                return _herkunftErstesBild;
+            return !_herkunftAmMinimum.Geschaetzt && _herkunftAmMaximum.Geschaetzt
+                ? _herkunftAmMaximum
+                : _herkunftAmMinimum;
+        }
+
+        private readonly record struct MeterHerkunft(string? Quelle, bool Geschaetzt);
 
         private string? NormalizeStoredClock(string? clock) =>
             _normalizeOutputClock ? VsaCodeResolver.NormalizeClock(clock) : clock;
