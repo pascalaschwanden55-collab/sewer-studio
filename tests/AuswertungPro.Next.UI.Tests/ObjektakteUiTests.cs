@@ -257,7 +257,12 @@ public sealed class ObjektakteUiTests
                 window.Width = width;
                 window.UpdateLayout();
                 window.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-                Assert.Equal(spalten, window.Spalten);
+                // Windows macht ein Fenster nie breiter als den Bildschirm (CI-Rechner: schmal).
+                // Die Spalten folgen immer der tatsaechlichen Breite; die feste Zahl nur, wenn
+                // die Breite erreicht wurde (die Zuordnung selbst prueft SpaltenFuerBreite oben).
+                Assert.Equal(Views.Controls.ObjektakteView.SpaltenFuerBreite(window.ActualWidth), window.Spalten);
+                if (Math.Abs(window.ActualWidth - width) < 1)
+                    Assert.Equal(spalten, window.Spalten);
                 var grids = AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.FindDescendants<System.Windows.Controls.Primitives.UniformGrid>(host).ToArray();
                 Assert.NotEmpty(grids); Assert.All(grids, g => Assert.Equal(window.Spalten, g.Columns));
                 Assert.All(AuswertungPro.Next.UI.Behaviors.VisualTreeSafe.FindDescendants<CheckBox>(host)
