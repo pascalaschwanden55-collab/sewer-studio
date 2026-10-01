@@ -62,6 +62,7 @@ internal sealed class MultiModelSnapshotRecorder :
             FindingsEndOfFrame = entry.FindingsEndOfFrame, ActiveCount = entry.ActiveCount,
             DetectionsTotal = entry.DetectionsTotal, DropReason = entry.DropReason,
             Degraded = entry.Degraded, DegradedReason = entry.DegradedReason,
+            OsdMeterRejected = entry.OsdMeterRejected,
         };
         Events.Add("TRACE " + ToJson(copy));
         return Task.CompletedTask;

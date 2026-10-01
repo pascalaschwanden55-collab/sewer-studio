@@ -26,13 +26,14 @@ public sealed class MultiModelQwenSchrittTests
 
     private static async Task<(MultiModelQwenSchritt.QwenFrameContext Context, PipelineFrameTrace Trace, QwenOutageTracker Outage)>
         RunAsync(ScriptedQwenHandler handler, List<EnhancedFinding> findings, string? classifierCode = null,
-            CancellationToken ct = default, QwenOutageTracker? outage = null)
+            CancellationToken ct = default, QwenOutageTracker? outage = null,
+            (double Meter, double ZeitSek)? letzterOsdMeter = null)
     {
         using var http = new HttpClient(handler);
         using var ollama = new OllamaClient(new Uri("http://localhost:11434"), http);
         outage ??= new QwenOutageTracker(8);
         var step = new MultiModelQwenSchritt(new EnhancedVisionAnalysisService(ollama, "test"), outage, NullLogger.Instance);
-        var context = new MultiModelQwenSchritt.QwenFrameContext(meter: 4.0, lastMeter: 4.0);
+        var context = new MultiModelQwenSchritt.QwenFrameContext(meter: 4.0, lastMeter: 4.0, letzterOsdMeter);
         var trace = new PipelineFrameTrace { FrameIndex = 3 };
         await step.EnrichAsync(context, findings, classifierCode, 3, 2.0, [1, 2, 3], "AQID",
             ScriptedVisionClient.TwoBoxes(), ScriptedVisionClient.TwoMasks(), ScriptedVisionClient.HealthyYolo(),
@@ -88,6 +89,58 @@ public sealed class MultiModelQwenSchrittTests
         Assert.Equal(6.5, context.LastMeter);
         Assert.Equal("BCD", findings[0].VsaCodeHint);        // bestaetigter Code: Qwen ueberschreibt nicht
         Assert.NotNull(findings[1].VsaCodeHint);              // leerer Hinweis wird gefuellt
+    }
+
+    private static ScriptedQwenHandler OsdMeter(double meter) => new((_, _) => ScriptedQwenHandler.Content(
+        "{\"meter\":" + meter.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        + ",\"findings\":[{\"label\":\"crack\",\"vsa_code_hint\":\"BABBA\",\"severity\":3}],"
+        + "\"image_quality\":\"gut\",\"is_empty_frame\":false}"));
+
+    // Entscheid 01.10.2026: Ein gelesener OSD-Meter gilt nur, wenn er mit hoechstens 5 m/s zum
+    // letzten belegten (uebernommenen) OSD-Meter passt. Das Bild liegt bei t = 2,0 s.
+    [Fact]
+    public async Task OSD_Meter_mit_Sprung_ueber_5_m_pro_Sekunde_wird_verworfen_und_im_Trace_genannt()
+    {
+        using var handler = OsdMeter(40.0);
+
+        var (context, trace, _) = await RunAsync(handler, new List<EnhancedFinding> { Finding("crack", null) },
+            letzterOsdMeter: (10.0, 1.0));
+
+        Assert.False(context.MeterAccepted);
+        Assert.Equal(4.0, context.Meter);                     // bisherige Schaetzung bleibt
+        Assert.Equal(4.0, context.LastMeter);                 // laufender Meterstand springt nicht
+        Assert.Equal((10.0, 1.0), context.LetzterOsdMeter);   // Anker bleibt der belegte Wert
+        Assert.Equal("OSD-Meter unplausibel: 40 m nach 10 m in 1 s", trace.OsdMeterRejected);
+        Assert.False(context.RequiresRetry);
+        Assert.False(trace.Degraded);
+    }
+
+    [Fact]
+    public async Task Langsames_Rueckwaertsfahren_innerhalb_5_m_pro_Sekunde_bleibt_erlaubt()
+    {
+        using var handler = OsdMeter(4.5);
+
+        var (context, trace, _) = await RunAsync(handler, new List<EnhancedFinding> { Finding("crack", null) },
+            letzterOsdMeter: (6.0, 1.0));
+
+        Assert.True(context.MeterAccepted);
+        Assert.Equal(4.5, context.Meter);
+        Assert.Equal((4.5, 2.0), context.LetzterOsdMeter);    // neuer belegter Anker mit Bildzeit
+        Assert.Null(trace.OsdMeterRejected);
+    }
+
+    [Fact]
+    public async Task Erster_OSD_Meter_ohne_belegten_Vorgaenger_gilt_wie_bisher()
+    {
+        using var handler = OsdMeter(40.0);
+
+        var (context, trace, _) = await RunAsync(handler, new List<EnhancedFinding> { Finding("crack", null) });
+
+        Assert.True(context.MeterAccepted);
+        Assert.Equal(40.0, context.Meter);
+        Assert.Equal(40.0, context.LastMeter);
+        Assert.Equal((40.0, 2.0), context.LetzterOsdMeter);
+        Assert.Null(trace.OsdMeterRejected);
     }
 
     [Fact]

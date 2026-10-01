@@ -93,7 +93,24 @@ public static class MeterSequencePlausibility
         if (neighbours.Count == 0)
             return false;
 
-        return neighbours.All(pair =>
-            Math.Abs(meter - pair.meter) > options.MaxMetersPerSecond * pair.gap);
+        return neighbours.All(pair => !IsReachable(meter, pair.meter, pair.gap, options));
+    }
+
+    /// <summary>
+    /// Kann die Kamera in <paramref name="gapSeconds"/> von <paramref name="previousMeter"/> nach
+    /// <paramref name="meter"/> gekommen sein? Hoechstens <see cref="MeterPlausibilityOptions.MaxMetersPerSecond"/>
+    /// in beide Richtungen (langsames Rueckwaertsfahren ist erlaubt), plus eine feste Toleranz
+    /// fuer die Rundung der Anzeige. Die eine Stelle fuer diese Grenze: die Folgepruefung oben und
+    /// die laufende OSD-Uebernahme der Mehrmodell-Analyse (Entscheid 01.10.2026) nutzen sie beide.
+    /// </summary>
+    public static bool IsReachable(
+        double meter,
+        double previousMeter,
+        double gapSeconds,
+        MeterPlausibilityOptions options,
+        double toleranceMeters = 0.0)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return Math.Abs(meter - previousMeter) <= options.MaxMetersPerSecond * Math.Abs(gapSeconds) + toleranceMeters;
     }
 }

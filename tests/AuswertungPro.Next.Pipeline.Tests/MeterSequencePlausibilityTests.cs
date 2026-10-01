@@ -101,6 +101,19 @@ public sealed class MeterSequencePlausibilityTests
         Assert.Empty(MeterSequencePlausibility.Check([], new MeterPlausibilityOptions()));
     }
 
+    [Fact]
+    public void Erreichbar_heisst_hoechstens_5_m_pro_Sekunde_in_beide_Richtungen()
+    {
+        var options = new MeterPlausibilityOptions();
+
+        Assert.True(MeterSequencePlausibility.IsReachable(20.0, 10.0, 2.0, options));    // genau 5 m/s
+        Assert.False(MeterSequencePlausibility.IsReachable(20.5, 10.0, 2.0, options));
+        Assert.True(MeterSequencePlausibility.IsReachable(7.0, 10.0, 1.0, options));     // rueckwaerts erlaubt
+        Assert.False(MeterSequencePlausibility.IsReachable(4.0, 10.0, 1.0, options));
+        Assert.True(MeterSequencePlausibility.IsReachable(10.01, 10.0, 0.0, options, toleranceMeters: 0.01));
+        Assert.False(MeterSequencePlausibility.IsReachable(10.05, 10.0, 0.0, options, toleranceMeters: 0.01));
+    }
+
     private static IReadOnlyList<double?> Pruefe(params (double Zeit, double? Meter)[] werte)
         => MeterSequencePlausibility
             .Check(werte.Select(w => new MeterReading(w.Zeit, w.Meter)), new MeterPlausibilityOptions())
