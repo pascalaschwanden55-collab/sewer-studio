@@ -428,7 +428,7 @@
           "Objekt_ID": "",
           "Offen_abgeschlossen": "",
           "Organisation": "",
-          "Primaere_Schaeden": "0.00m BCD Anfangsknoten\n12.30m BABBA Längs (Querriss) Q1=2\n20.00m BBAA Pfahlwurzeln Q1=5.5 Q2=10\n38.40m BCE Endknoten",
+          "Primaere_Schaeden": "0.00m BCD Rohranfang\n12.30m BABBA (Querriss) Q1=2\n20.00m BBAA Q1=5.5 Q2=10\n38.40m BCE Rohrende",
           "Profiltyp": "",
           "Pruefungsresultat": "",
           "Referenzpruefung": "",
