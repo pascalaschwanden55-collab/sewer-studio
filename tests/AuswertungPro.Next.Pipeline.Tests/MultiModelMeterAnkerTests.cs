@@ -18,6 +18,9 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 /// Schaetzung (angenommene Haltungslaenge je Videodauer). Ohne belegten OSD-Meter gilt die bisherige
 /// Schaetzung. Ein verworfener OSD-Wert ist kein Anker; nach einer Fortsetzung aus dem Journal
 /// ergibt sich derselbe Meter wie ohne Unterbrechung.
+/// Zweiter Entscheid 01.10.2026: Ab zwei belegten OSD-Metern gilt als Rate die gemessene
+/// Geschwindigkeit zwischen den beiden letzten (belastbar: mindestens 1 s Abstand, 0 bis 5 m/s);
+/// rueckwaerts oder Stillstand: Schaetzung bleibt am Anker.
 /// </summary>
 [Collection(VsaCodeResolverTestCollection.Name)]
 public sealed class MultiModelMeterAnkerTests
@@ -135,6 +138,76 @@ public sealed class MultiModelMeterAnkerTests
         (double Meter, double ZeitSek)? anker = ankerMeter is { } m && ankerZeit is { } z ? (m, z) : null;
 
         var geschaetzt = MultiModelMeterSchaetzung.Schaetze(t, dauerSek: 10.0, haltungslaengeM: 50.0, laufend, anker);
+
+        Assert.Equal(erwartet, geschaetzt, 9);
+    }
+
+    // ── Entscheid 01.10.2026: Rate aus den zwei letzten belegten OSD-Metern ──
+
+    [Fact]
+    public async Task Mit_zwei_belegten_OSD_Metern_gilt_die_gemessene_Geschwindigkeit()
+    {
+        // Bild 3 (t = 2 s) liest 1 m, Bild 6 (t = 5 s) liest 2,5 m: gemessen 0,5 m/s statt angenommen 5 m/s.
+        var rec = await RunAsync(OsdJeAufruf(new Dictionary<int, double> { [3] = 1.0, [6] = 2.5 }));
+
+        // Zwischen den beiden Ankern gibt es nur einen: angenommene Rate wie bisher.
+        Assert.Equal(new[] { 6.0, 11.0 }, new[] { 4, 5 }.Select(i => Checkpoint(rec, i).Meter));
+        Assert.Equal(2.5, Checkpoint(rec, 6).Meter);
+        // Danach 2,5 m + 0,5 m/s seit t = 5 s, nicht 7,5 / 12,5 / 17,5 / 22,5 m.
+        Assert.Equal(new[] { 3.0, 3.5, 4.0, 4.5 }, new[] { 7, 8, 9, 10 }.Select(i => Checkpoint(rec, i).Meter));
+        Assert.All(new[] { 7, 8, 9, 10 }, i => Assert.Equal("LinearEstimate", Checkpoint(rec, i).MeterSource));
+    }
+
+    [Theory]
+    [InlineData(5.0, 4.0)]   // rueckwaerts: 1 m in 2 s zurueck (plausibel), Schaetzung bleibt bei 4 m
+    [InlineData(5.0, 5.0)]   // Stillstand
+    public async Task Rueckwaerts_oder_Stillstand_bleibt_am_Anker(double ersterOsd, double zweiterOsd)
+    {
+        // Bild 4 (t = 3 s) und Bild 6 (t = 5 s) lesen den OSD-Meter.
+        var rec = await RunAsync(OsdJeAufruf(new Dictionary<int, double> { [4] = ersterOsd, [6] = zweiterOsd }));
+
+        Assert.All(new[] { 7, 8, 9, 10 }, i => Assert.Equal(zweiterOsd, Checkpoint(rec, i).Meter));
+    }
+
+    [Fact]
+    public async Task Fortsetzung_aus_dem_Journal_behaelt_die_gemessene_Geschwindigkeit()
+    {
+        // Bild 8 (Kennbyte 7) ist leer: es uebernimmt den laufenden Meterstand.
+        var leer = new HashSet<int> { 7 };
+        var durchgehend = await RunAsync(OsdJeAufruf(new Dictionary<int, double> { [3] = 1.0, [6] = 2.5 }), leer);
+
+        // Journal aus demselben Lauf bis Bild 7; der fortgesetzte Lauf liest keinen OSD-Meter mehr.
+        var journal = Checkpoints(durchgehend).Where(c => c.FrameIndex <= 7).ToList();
+        var fortgesetzt = await RunAsync(OsdJeAufruf(new Dictionary<int, double>()), leer,
+            new AnalysisCheckpointState(7, journal));
+
+        Assert.Equal(new[] { 3.0, 4.0, 4.5 }, new[] { 8, 9, 10 }.Select(i => Checkpoint(durchgehend, i).Meter));
+        foreach (var i in new[] { 8, 9, 10 })
+        {
+            Assert.Equal(Checkpoint(durchgehend, i).Meter, Checkpoint(fortgesetzt, i).Meter);
+            Assert.Equal(Checkpoint(durchgehend, i).MeterSource, Checkpoint(fortgesetzt, i).MeterSource);
+        }
+    }
+
+    [Theory]
+    // Gemessen: (2,5 - 1) m / (5 - 2) s = 0,5 m/s; angenommen waeren 5 m/s.
+    [InlineData(8.0, 10.0, 2.5, 5.0, 1.0, 2.0, 4.0)]
+    // Genau die Mindestzeit 1 s: gemessen 0,5 m/s gilt.
+    [InlineData(7.0, 10.0, 2.0, 5.0, 1.5, 4.0, 3.0)]
+    // Unter der Mindestzeit (0,5 s): angenommene Rate 5 m/s wie mit einem Anker.
+    [InlineData(8.0, 10.0, 2.5, 5.0, 2.0, 4.5, 17.5)]
+    // Genau 5 m/s gilt noch (angenommen waeren 0,5 m/s).
+    [InlineData(6.0, 100.0, 6.0, 5.0, 1.0, 4.0, 11.0)]
+    // Ueber 5 m/s (Rundungstoleranz der Folgepruefung): nicht belastbar, angenommene 0,5 m/s.
+    [InlineData(6.0, 100.0, 6.01, 5.0, 1.0, 4.0, 6.51)]
+    // Rueckwaerts und Stillstand: Rate 0, nie unter den Anker.
+    [InlineData(8.0, 10.0, 4.0, 5.0, 5.0, 3.0, 4.0)]
+    [InlineData(8.0, 10.0, 5.0, 5.0, 5.0, 3.0, 5.0)]
+    public void Rate_aus_den_zwei_letzten_Ankern(double t, double dauerSek, double ankerMeter, double ankerZeit,
+        double vorletzterMeter, double vorletzterZeit, double erwartet)
+    {
+        var geschaetzt = MultiModelMeterSchaetzung.Schaetze(t, dauerSek, haltungslaengeM: 50.0, laufenderMeter: 0.0,
+            (ankerMeter, ankerZeit), (vorletzterMeter, vorletzterZeit));
 
         Assert.Equal(erwartet, geschaetzt, 9);
     }

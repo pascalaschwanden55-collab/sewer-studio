@@ -236,7 +236,8 @@ internal sealed class MultiModelQwenSchritt
     /// </summary>
     internal const double OsdMeterRundungM = 0.01;
 
-    private static readonly MeterPlausibilityOptions OsdFolgeGrenze = new();
+    /// <summary>Hoechstgeschwindigkeit fuer OSD-Folge und gemessene Schaetzrate (eine Stelle).</summary>
+    internal static readonly MeterPlausibilityOptions OsdFolgeGrenze = new();
 
     /// <summary>
     /// Grund, wenn der gelesene Meter nicht mit hoechstens 5 m/s zum letzten belegten OSD-Meter passt
