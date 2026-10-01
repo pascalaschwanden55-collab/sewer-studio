@@ -395,8 +395,11 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     `ExportPageViewModelDependencyTests`, `ArchitectureDriftRatchet` und der Groessenwaechter wieder gruen. Die
     Schachtseite blieb unter 2000 Zeilen, weil ihr Importschutz (`SharedProtocolImportOperationState`,
     `ProtocolImportShellOperationGuard`) unveraendert in `SchaechteProtokollImportSperre.cs` liegt.
-    Vorbestehend rot und NICHT daher: `SchaechteNovaLayoutIsolatedSmokeTests.Schachtansicht_laedt_Lage_in_der_Liste…`
+    Damals rot und NICHT daher: `SchaechteNovaLayoutIsolatedSmokeTests.Schachtansicht_laedt_Lage_in_der_Liste…`
     haengt ueber 60 s, auch auf dem Stand vor dem Umbau (916fd626c, 24.09. gemessen, SewerStudio lief).
+    Ursache ist das offene Programm, kein Codefehler: Am 01.10.2026 hingen dieser Test, sein Kindprozess
+    und `TaskbarFortschrittThreadSafetyIsolatedSmokeTests` bei offenem SewerStudio auch einzeln; nach dem
+    Schliessen liefen alle drei in 13 s gruen. Vor einem Push SewerStudio schliessen.
   - HOLEN: TYP AA UND DIE GANZE SCHACHTMASKE (Wunsch Pascal 24.09.2026 «importiere das was im WebGIS ist», «auch
     bei den Schächten alle fehlenden Felder ergänzen»). `WebGisImportAktenfelder`: (1) Typ AA (PAA/SAA) kommt aus dem
     WebGIS selbst (`WebGisFeldkarte.TypAaRef`, Haltung `65e83cb4…`, Schacht `8d17a0bc…`, Inventur v2) und entscheidet

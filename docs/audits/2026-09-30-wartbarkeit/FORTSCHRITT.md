@@ -55,10 +55,13 @@ bleiben eine Kandidatenliste (Regel: bei jeder Berührung entscheiden).
 
 ## Offen
 
-- **Fachliche Befunde aus den Paketen (nicht behoben, Entscheid nötig):** Qwen-OSD-Meter darf rückwärts springen;
-  Klassifikator-Voting überträgt bestätigte Codes auf Folgebilder; DINO «degraded» überschreibt den
-  Trace-Grund; XTF-Import meldet fehlende Bezüge, ISO-Daten, Untersuchungen ohne Bezeichnung und verwaiste
-  Schäden nicht; `Link_G` wird beim XTF-Weg nicht gesetzt.
+- **Fachliche Befunde aus den Paketen:** am 01.10.2026 behoben (PR #42 Videoanalyse: OSD-Meter nur bei
+  höchstens 5 m/s zum letzten belegten OSD-Meter, kein fremder bestätigter Code bei eigenem abweichendem
+  Vorschlag; PR #43 XTF-Import: fehlende Bezüge, ISO-Datum, Untersuchungen ohne Bezeichnung, verwaiste
+  Schäden, VSA-KEK neben SIA405 gemeldet, `Link_G` = Gegenbefahrung, DINO-Trace hängt an). Noch offen:
+  Die Meterschätzung (`EstimateMeter`) richtet sich nicht am letzten OSD-Meter aus – ein Sprung «geschätzt
+  40,9 m → OSD 12,0 m» bleibt deshalb möglich (Entscheid Pascal); `Link_G` folgt der Fliessrichtung statt der
+  WinCan-Namensmarke `_G` (Bestätigung Pascal).
 - **Trainingsbestand:** Die drei echten Negativsätze passen nicht mehr zur aktiven Detect-Klassenkarte (neu
   ableiten); die Python-Prüfung vergleicht Satzbilder nicht mit den Eval-Schlüsseln (der C#-Export stoppt es).
 - **WebGIS:** Breite/Höhe der Haltung am Eiprofil klären; drei früher als «falsch» bezeichnete refIds;
