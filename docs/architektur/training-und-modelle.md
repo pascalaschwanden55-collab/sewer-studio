@@ -287,6 +287,17 @@
   stehen in `BCC_VERTRAG`/`PROTO_VERTRAG`; eine gemeinsame Funktion nur bei
   gleicher Regel. `tests/test_negativsatz_vertrag.py` haelt jede Ablehnung mit
   ihrer Meldung fest; eine neue Regel bekommt dort zuerst einen Fall.
+- Klassenkarte v3 mit festen Bytes (2026-10-01): Negativsaetze, Register und
+  Berichte unter `C:\KI_BRAIN\training` binden `detect_class_map_v3.json` ueber
+  die SHA-256 der LF-Fassung `58f1160f…` (116 Dateien, keine mit CRLF). Ein
+  Windows-Checkout mit CRLF ergab `89bf03e3…`; Python (`gold_stock_audit`) und
+  C# (`TrainingNegativeClassMapBinding`) lehnten darauf ALLE Negativsaetze mit
+  «passt nicht zur aktiven Detect-Klassenkarte» ab. `.gitattributes` haelt die
+  Datei ohne Zeilenende-Umwandlung; die drei echten Saetze werden wieder
+  angenommen (10 + 9 + 286 Bilder), ohne neue Review. Nicht umstellen: Die
+  Migrationsdatei v3 und das VSA-Manifest sind mit ihrer CRLF-Fassung gebunden
+  (`registry_setup_v1.json`). Waechter: `TrainingYoloClassMapHashBindungTests`.
+  Alte Arbeitskopien: Datei loeschen und `git checkout -- <datei>`.
 - Proto-Satz ohne Ueberschneidung (Entscheid 2026-09-30): Neben
   `gesehen ∪ ausgeschlossen == akzeptiert` muss die Schnittmenge leer sein. Ein
   Satzbild, das zugleich in `excluded_eval_protected` oder
