@@ -116,6 +116,26 @@ internal static class XtfValueNormalizer
     }
 
     /// <summary>
+    /// Wandelt ein Datum im Format yyyymmdd ODER im ISO-Format von INTERLIS
+    /// (<c>2025-10-06</c>, auch mit Uhrzeit wie <c>2025-10-06T14:30:00</c>) in dd.MM.yyyy um.
+    /// Die Uhrzeit faellt weg. Unlesbares und ungueltige Daten kommen unveraendert
+    /// (getrimmt) zurueck, wie bei <see cref="NormalizeDate_yyyymmdd"/>.
+    /// </summary>
+    public static string NormalizeDate(string? datum)
+    {
+        var text = (datum ?? "").Trim();
+        var iso = Regex.Match(text,
+            @"^(\d{4})-(\d{2})-(\d{2})(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$");
+        if (!iso.Success)
+            return NormalizeDate_yyyymmdd(text);
+
+        return DateTime.TryParseExact($"{iso.Groups[1].Value}{iso.Groups[2].Value}{iso.Groups[3].Value}", "yyyyMMdd",
+                   CultureInfo.InvariantCulture, DateTimeStyles.None, out var tag)
+            ? tag.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)
+            : text;
+    }
+
+    /// <summary>
     /// Parst einen Double-Wert aus einem String; unterstuetzt Komma und Punkt als Dezimaltrennzeichen.
     /// Faellt bei einfachem Parse-Fehler auf einen Regex-Extrakt-Versuch zurueck.
     /// </summary>

@@ -86,6 +86,26 @@ public sealed class XtfValueNormalizerTests
         Assert.Equal(expected, result);
     }
 
+    // ===================== NormalizeDate (yyyymmdd oder ISO) =====================
+
+    [Theory]
+    [InlineData("20251006", "06.10.2025")]
+    [InlineData("2025-10-06", "06.10.2025")]                 // INTERLIS XMLDate
+    [InlineData("2025-10-06T14:30:00", "06.10.2025")]        // INTERLIS XMLDateTime
+    [InlineData("2025-10-06T14:30:00.123", "06.10.2025")]
+    [InlineData("2025-10-06T14:30:00Z", "06.10.2025")]
+    [InlineData("2025-10-06T14:30:00+02:00", "06.10.2025")]
+    [InlineData("2025-10-06 14:30", "06.10.2025")]
+    [InlineData(" 2025-10-06 ", "06.10.2025")]
+    [InlineData("2025-13-06", "2025-13-06")]                 // kein gueltiges Datum -> unveraendert
+    [InlineData("2025-10-06Tabends", "2025-10-06Tabends")]   // unlesbar -> unveraendert
+    [InlineData("06.10.2025", "06.10.2025")]
+    [InlineData("unbekannt", "unbekannt")]
+    [InlineData("", "")]
+    [InlineData(null, "")]
+    public void NormalizeDate_versteht_yyyymmdd_und_ISO_und_laesst_Unlesbares_stehen(string? input, string expected)
+        => Assert.Equal(expected, XtfValueNormalizer.NormalizeDate(input));
+
     // ===================== TryParseDouble =====================
 
     [Theory]
