@@ -78,6 +78,12 @@ internal sealed class Sia405Bestand
 
     /// <summary>Kennung der Organisation -> Bezeichnung.</summary>
     public Dictionary<string, string> Organisationen { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Die Kennungen ALLER Organisationen der Datei, auch ohne Bezeichnung. Ein Verweis auf
+    /// eine Kennung, die hier fehlt, zeigt nach Norm erlaubt ausserhalb der Datei (EXTERNAL).
+    /// </summary>
+    public HashSet<string> OrganisationenInDatei { get; init; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>
@@ -92,7 +98,11 @@ internal static class Sia405ObjektLeser
         // Die Organisationen der Datei, damit EigentuemerRef aufgeloest werden kann.
         // Sie stehen im Topic "Administration", also ausserhalb der Fachdaten-Baskets —
         // deshalb ueber das ganze Dokument gelesen.
-        var bestand = new Sia405Bestand { Organisationen = LiesOrganisationen(doc) };
+        var bestand = new Sia405Bestand
+        {
+            Organisationen = LiesOrganisationen(doc, out var alleOrganisationen),
+            OrganisationenInDatei = alleOrganisationen
+        };
 
         var baskets = doc.Descendants()
             .Where(e => e.Name.LocalName.EndsWith("SIA405_Abwasser.SIA405_Abwasser", StringComparison.OrdinalIgnoreCase))
@@ -177,8 +187,13 @@ internal static class Sia405ObjektLeser
     /// Pflicht.
     /// </summary>
     public static Dictionary<string, string> LiesOrganisationen(XDocument doc)
+        => LiesOrganisationen(doc, out _);
+
+    /// <summary>Wie oben; <paramref name="alle"/> enthaelt auch die Kennungen ohne Bezeichnung.</summary>
+    internal static Dictionary<string, string> LiesOrganisationen(XDocument doc, out HashSet<string> alle)
     {
         var jeTid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        alle = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var node in doc.Descendants())
         {
@@ -190,6 +205,8 @@ internal static class Sia405ObjektLeser
                 .FirstOrDefault(e => e.Name.LocalName.Equals("Bezeichnung", StringComparison.OrdinalIgnoreCase))
                 ?.Value?.Trim();
 
+            if (!string.IsNullOrWhiteSpace(tid))
+                alle.Add(tid!);
             if (!string.IsNullOrWhiteSpace(tid) && !string.IsNullOrWhiteSpace(bezeichnung))
                 jeTid[tid!] = bezeichnung!;
         }

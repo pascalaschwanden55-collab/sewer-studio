@@ -181,9 +181,8 @@ public sealed partial class LegacyXtfImportService
                 }
             }
 
-            var records = ParseSia405(doc, out var doppelte);
-            foreach (var meldung in doppelte)
-                stats.Messages.Add(new ImportMessage { Level = "Warn", Context = "XTF405", Message = meldung });
+            var records = ParseSia405(doc, out var meldungen);
+            stats.Messages.AddRange(meldungen);
 
             if (records.Count > 0)
             {
@@ -411,19 +410,21 @@ public sealed partial class LegacyXtfImportService
         => Common.HoldingKeyNormalizer.Normalize(value);
 
     // ===================== SIA405 =====================
-    private static List<HaltungRecord> ParseSia405(XDocument doc, out List<string> doppelte)
+    private static List<HaltungRecord> ParseSia405(XDocument doc, out List<ImportMessage> meldungen)
     {
         // Drei getrennte Schritte, damit eine neue Feldregel nur die Abbildung beruehrt:
         // 1. Objekte lesen — die Verweise bleiben Kennungen,
         // 2. Bezuege aufloesen — Kanal, Rohrprofil, Organisationen, Schachtnamen,
-        //    danach je Bezeichnung nur die erste Haltung (keine Vermischung),
+        //    danach je Bezeichnung nur die erste Haltung (keine Vermischung); was sich
+        //    nicht aufloesen liess, meldet Sia405Bezugsmeldungen (seit 01.10.2026),
         // 3. fachlich abbilden — welche Angabe in welches Programmfeld geht.
         // Die Uebernahme ins Projekt (Handwertschutz, Konflikte) macht danach
         // MergeRecordIntoProject.
         var bestand = Sia405ObjektLeser.Lies(doc);
-        return Sia405DoppelteBezeichnungen.NurErste(Sia405Beziehungen.Loese(bestand), out doppelte)
-            .Select(Sia405HaltungAbbildung.BaueRecord)
-            .ToList();
+        var haltungen = Sia405DoppelteBezeichnungen.NurErste(Sia405Beziehungen.Loese(bestand, out var ohneNamen), out var doppelte);
+        meldungen = doppelte.Select(m => new ImportMessage { Level = "Warn", Context = "XTF405", Message = m }).ToList();
+        meldungen.AddRange(Sia405Bezugsmeldungen.Erzeuge(bestand, haltungen, ohneNamen));
+        return haltungen.Select(Sia405HaltungAbbildung.BaueRecord).ToList();
     }
 
     // ===================== VSA_KEK =====================
