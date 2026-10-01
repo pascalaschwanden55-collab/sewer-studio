@@ -1,0 +1,5 @@
+# Dateien, deren SHA-256 in Trainingsdaten gebunden ist (Negativsaetze, Register, Berichte),
+# brauchen auf jeder Arbeitskopie dieselben Bytes. Die Klassenkarte v3 ist mit LF gebunden
+# (58f1160f...); ein Windows-Checkout mit CRLF ergab 89bf03e3... und alle Negativsaetze galten
+# als "passt nicht zur aktiven Detect-Klassenkarte" (01.10.2026). Keine Zeilenende-Umwandlung.
+training/class_maps/detect_class_map_v3.json -text
