@@ -2265,3 +2265,32 @@ def test_leser_stoppt_wenn_eval_schluesselquelle_unvollstaendig(wurzel: Path, ar
 def test_leser_braucht_ohne_negativsaetze_keine_eval_schluessel(wurzel: Path) -> None:
     bilder, provenienz = _lese_saetze(wurzel)
     assert bilder == () and provenienz == ()
+
+
+def test_leser_stoppt_wenn_nur_eine_von_mehreren_kandidatenlisten_leer_ist(wurzel: Path) -> None:
+    # Wie C# (ReadHoldingKeysAsync): Jede leere Liste macht die Quelle unvollstaendig.
+    satz = baue_satz(wurzel, "bcc")
+    _eval_kandidaten(wurzel, "900-901")
+    leer = wurzel / "eval_set" / "subsets" / "leer"
+    leer.mkdir(parents=True)
+    _schreibe_json(leer / "_candidates.json", {"candidates": []})
+    with pytest.raises(ValueError, match=r"^Der Eval-Schutz ist nicht vollstaendig lesbar"):
+        _lese_saetze(wurzel, satz)
+
+
+def test_leser_nimmt_eval_wurzel_aus_der_konfigurierten_quelle(wurzel: Path) -> None:
+    satz = baue_satz(wurzel, "bcc")
+    anders = wurzel / "anderes_eval"
+    ordner = anders / "subsets" / "fixture"
+    ordner.mkdir(parents=True)
+    _schreibe_json(ordner / "_candidates.json", [{"haltung_key": "200-100"}])
+    # Standardwurzel <wurzel>/eval_set fehlt: mit eigener Wurzel wird sie nicht gebraucht.
+    with pytest.raises(ValueError, match="Eval-/Abnahme-Set"):
+        AUDIT.read_training_negative_sources(
+            wurzel, wurzel / "kein_pool", (satz,), eval_root=anders
+        )
+    _schreibe_json(ordner / "_candidates.json", [{"haltung_key": "900-901"}])
+    bilder, _ = AUDIT.read_training_negative_sources(
+        wurzel, wurzel / "kein_pool", (satz,), eval_root=anders
+    )
+    assert len(bilder) == 3

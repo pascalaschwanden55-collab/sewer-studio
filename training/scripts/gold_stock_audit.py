@@ -965,17 +965,23 @@ def _proto_eval_schluessel(knowledge_root: Path) -> set[str]:
     return eval_keys
 
 
-def _lade_eval_schutz_haltungen(knowledge_root: Path) -> set[str]:
+def _eval_wurzel_von_bildordner(eval_images_dir: Path) -> Path:
+    """Eval-Wurzel zum konfigurierten Eval-Bildordner (``--eval-images``)."""
+    if eval_images_dir.name.casefold() == "images":
+        return eval_images_dir.parent
+    return eval_images_dir
+
+
+def _lade_eval_schutz_haltungen(eval_root: Path) -> set[str]:
     """Eval-Haltungsschluessel wie C# (``TrainingInventoryEvalProtectionReader``), ohne Fallback.
 
-    Quelle sind die ``haltung_key`` aller ``_candidates.json`` unter ``eval_set``,
+    Quelle sind die ``haltung_key`` aller ``_candidates.json`` unter ``eval_root``,
     normalisiert wie ``EvalContaminationGuard.NormalizeHaltungKey``. Ist die
     Quelle nicht vollstaendig lesbar, bricht der Leser ab: C# stoppt dann den
     ganzen Export, statt mit einer unvollstaendigen Schutzliste weiterzulesen.
     Nicht nachgebildet ist die Pruefung des Manifest-Hashs der Eval-Sets.
     """
     praefix = "Der Eval-Schutz ist nicht vollstaendig lesbar"
-    eval_root = knowledge_root / "eval_set"
     if not eval_root.is_dir():
         raise ValueError(f"{praefix}: Der Eval-Ordner fehlt: {eval_root}")
     listen = sorted(eval_root.rglob("_candidates.json"))
@@ -990,6 +996,9 @@ def _lade_eval_schutz_haltungen(knowledge_root: Path) -> set[str]:
         eintraege = dokument.get("candidates") if isinstance(dokument, dict) else dokument
         if not isinstance(eintraege, list):
             raise ValueError(f"{praefix}: {liste} muss ein Array oder ein candidates-Array enthalten")
+        if not eintraege:
+            # Wie C#: Jede leere Kandidatenliste macht die Quelle unvollstaendig.
+            raise ValueError(f"{praefix}: {liste} enthaelt keine Kandidaten")
         for index, eintrag in enumerate(eintraege):
             roh = eintrag.get("haltung_key") if isinstance(eintrag, dict) else None
             normalisiert = negativsatz.eval_haltungsschluessel(roh) if isinstance(roh, str) else None
@@ -1278,6 +1287,7 @@ def read_training_negative_sources(
     negative_sets: Sequence[Path] = (),
     *,
     minimum_legacy_bytes: int = 0,
+    eval_root: Path | None = None,
 ) -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:
     """Liest Legacy-Negative und streng veroeffentlichte Negativsaetze.
 
@@ -1319,7 +1329,9 @@ def read_training_negative_sources(
         set_images, provenance = _read_reviewed_negative_set(root, Path(requested))
         # Wie der C#-Export: Bild aus einer Eval-Haltung stoppt den Satz (01.10.2026).
         if eval_haltungen is None:
-            eval_haltungen = _lade_eval_schutz_haltungen(root)
+            eval_haltungen = _lade_eval_schutz_haltungen(
+                Path(os.path.abspath(eval_root)) if eval_root is not None else root / "eval_set"
+            )
         negativsatz.pruefe_negativbilder_gegen_eval(set_images, eval_haltungen)
         set_id = str(provenance["set_id"])
         if set_id in seen_set_ids:
@@ -1367,6 +1379,7 @@ def build_audit(
         negatives_dir,
         negative_set_paths,
         minimum_legacy_bytes=MIN_TRAINING_NEGATIVE_BYTES,
+        eval_root=_eval_wurzel_von_bildordner(eval_images_dir),
     )
     eval_physical_holdings = {
         _physical_holding_key(holding) for holding in eval_holding_keys
