@@ -2653,6 +2653,11 @@
       {
         "Context": "XTF405",
         "Level": "Warn",
+        "Message": "Haltung \"101-102\" (TID refHALTUNG2): Abwasserknotenverweis refKNOTENFEHLT am Haltungspunkt refPUNKT2NACH (unten) zeigt ins Leere – Schacht unten nicht übernommen."
+      },
+      {
+        "Context": "XTF405",
+        "Level": "Warn",
         "Message": "Haltung \"102-103\" (TID refHALTUNG3): Kanalverweis refKANALFEHLT zeigt ins Leere – Kanalangaben (Eigentümer, Status, Nutzungsart u. a.) nicht übernommen."
       },
       {

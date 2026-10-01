@@ -48,8 +48,8 @@ internal static class Sia405Bezugsmeldungen
                                             ? "Profiltyp fehlt, Breite aus Lichte_Breite der Haltung übernommen."
                                             : "Profiltyp und Breite fehlen."));
 
-            PruefePunkt(meldungen, bestand, kopf, hd.VonRef, "oben");
-            PruefePunkt(meldungen, bestand, kopf, hd.NachRef, "unten");
+            PruefePunkt(meldungen, bestand, kopf, hd.VonRef, "oben", h.SchachtOben);
+            PruefePunkt(meldungen, bestand, kopf, hd.NachRef, "unten", h.SchachtUnten);
 
             // Die Organisationen haengen am Kanal. Ein nicht leerer Eigentuemertext hat
             // Vorrang vor dem Verweis; dann fehlt nichts.
@@ -92,12 +92,32 @@ internal static class Sia405Bezugsmeldungen
         return meldungen;
     }
 
-    private static void PruefePunkt(List<ImportMessage> meldungen, Sia405Bestand bestand, string kopf, string kennung, string ende)
+    private static void PruefePunkt(List<ImportMessage> meldungen, Sia405Bestand bestand, string kopf, string kennung, string ende,
+        string? schacht)
     {
-        if (!Gesetzt(kennung) || bestand.Haltungspunkte.ContainsKey(kennung))
+        if (!Gesetzt(kennung))
             return;
 
-        Warnung(meldungen, kopf + $"Haltungspunktverweis {kennung} ({ende}) zeigt ins Leere – Schacht {ende} nicht übernommen.");
+        if (!bestand.Haltungspunkte.TryGetValue(kennung, out var punkt))
+        {
+            Warnung(meldungen, kopf + $"Haltungspunktverweis {kennung} ({ende}) zeigt ins Leere – Schacht {ende} nicht übernommen.");
+            return;
+        }
+
+        // Seit 01.10.2026 (zweite Runde): Der Punkt ist da, sein Knotenverweis aber zeigt ins
+        // Leere. Der Schachtname faellt wie bisher auf Punkt- oder Haltungsnamen zurueck; neu
+        // ist nur die Meldung. Ein Verweis auf eine Haltung der Datei (Anschluss an eine
+        // Leitung) ist kein Leerverweis.
+        var knoten = punkt.AbwassernetzelementRef;
+        if (!Gesetzt(knoten) || bestand.Abwasserknoten.ContainsKey(knoten!) || bestand.Haltungen.ContainsKey(knoten!))
+            return;
+
+        var rueckfall = schacht is null
+            ? $"Schacht {ende} nicht übernommen."
+            : string.Equals(schacht.Trim(), (punkt.Bezeichnung ?? "").Trim(), StringComparison.Ordinal)
+                ? $"Schacht {ende} ersatzweise aus dem Punktnamen übernommen (\"{schacht.Trim()}\")."
+                : $"Schacht {ende} ersatzweise aus dem Haltungsnamen übernommen (\"{schacht.Trim()}\").";
+        Warnung(meldungen, kopf + $"Abwasserknotenverweis {knoten} am Haltungspunkt {kennung} ({ende}) zeigt ins Leere – {rueckfall}");
     }
 
     private static void PruefeOrganisation(

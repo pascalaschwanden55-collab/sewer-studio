@@ -76,6 +76,61 @@ public sealed class XtfSia405BezugsmeldungenTests : IDisposable
     }
 
     [Fact]
+    public void Ein_Knotenverweis_ins_Leere_steht_als_Warnung_und_der_Schacht_bleibt_leer()
+    {
+        var (projekt, stats) = Importiere("sia405-referenz.xtf");
+
+        var meldung = Assert.Single(stats.Messages, m => m.Message.Contains("refKNOTENFEHLT", StringComparison.Ordinal));
+        Assert.Equal("Warn", meldung.Level);
+        Assert.Equal("XTF405", meldung.Context);
+        Assert.Equal("Haltung \"101-102\" (TID refHALTUNG2): Abwasserknotenverweis refKNOTENFEHLT am Haltungspunkt "
+                     + "refPUNKT2NACH (unten) zeigt ins Leere – Schacht unten nicht übernommen.", meldung.Message);
+        var haltung = Assert.Single(projekt.Data, r => r.GetFieldValue(FieldKeys.HoldingName) == "101-102");
+        Assert.Equal("", haltung.GetFieldValue("Schacht_unten"));
+    }
+
+    [Fact]
+    public void Ein_Knotenverweis_ins_Leere_nennt_den_unveraenderten_Rueckfall_auf_Punkt_oder_Haltungsnamen()
+    {
+        var (projekt, stats) = Importiere(Schreibe("knoten.xtf", Sia405Xtf("""
+                  <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="refPV">
+                    <Bezeichnung>P-77</Bezeichnung>
+                    <AbwassernetzelementRef REF="refKNOTENWEG" />
+                  </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+                  <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="refPN">
+                    <Bezeichnung>77-78_nach</Bezeichnung>
+                    <AbwassernetzelementRef REF="refKNOTENWEG2" />
+                  </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+                  <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="refPH">
+                    <Bezeichnung>Anschluss-80</Bezeichnung>
+                    <AbwassernetzelementRef REF="refH1" />
+                  </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+                  <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refH1">
+                    <Bezeichnung>77-78</Bezeichnung>
+                    <vonHaltungspunktRef REF="refPV" />
+                    <nachHaltungspunktRef REF="refPN" />
+                  </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+                  <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refH2">
+                    <Bezeichnung>80-81</Bezeichnung>
+                    <nachHaltungspunktRef REF="refPH" />
+                  </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+            """)));
+
+        Assert.Contains(stats.Messages, m => m.Level == "Warn" && m.Message ==
+            "Haltung \"77-78\" (TID refH1): Abwasserknotenverweis refKNOTENWEG am Haltungspunkt refPV (oben) zeigt ins Leere – "
+            + "Schacht oben ersatzweise aus dem Punktnamen übernommen (\"P-77\").");
+        Assert.Contains(stats.Messages, m => m.Level == "Warn" && m.Message ==
+            "Haltung \"77-78\" (TID refH1): Abwasserknotenverweis refKNOTENWEG2 am Haltungspunkt refPN (unten) zeigt ins Leere – "
+            + "Schacht unten ersatzweise aus dem Haltungsnamen übernommen (\"78\").");
+        // Ein Verweis auf eine Haltung der Datei (Anschluss an eine Leitung) zeigt nicht ins Leere.
+        Assert.DoesNotContain(stats.Messages, m => m.Message.Contains("refPH", StringComparison.Ordinal));
+
+        var haltung = Assert.Single(projekt.Data, r => r.GetFieldValue(FieldKeys.HoldingName) == "77-78");
+        Assert.Equal("P-77", haltung.GetFieldValue("Schacht_oben"));
+        Assert.Equal("78", haltung.GetFieldValue("Schacht_unten"));
+    }
+
+    [Fact]
     public void Vollstaendige_Bezuege_erzeugen_keine_Meldung()
     {
         var (_, stats) = Importiere("sia405-bezuege.xtf");
@@ -84,11 +139,34 @@ public sealed class XtfSia405BezugsmeldungenTests : IDisposable
         Assert.DoesNotContain(stats.Messages, m => m.Message.Contains("ausserhalb der Datei", StringComparison.Ordinal));
     }
 
+    private string Schreibe(string name, string inhalt)
+    {
+        Directory.CreateDirectory(_dir);
+        var pfad = Path.Combine(_dir, name);
+        File.WriteAllText(pfad, inhalt);
+        return pfad;
+    }
+
+    private static string Sia405Xtf(string objekte) => $"""
+        <?xml version="1.0" encoding="utf-8"?>
+        <TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+          <HEADERSECTION VERSION="2.3" SENDER="Test">
+            <MODELS><MODEL NAME="SIA405_ABWASSER_2020_LV95" /></MODELS>
+          </HEADERSECTION>
+          <DATASECTION>
+            <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="refB1">
+        {objekte}
+            </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+          </DATASECTION>
+        </TRANSFER>
+        """;
+
     private (Project Projekt, ImportStats Stats) Importiere(string datei)
     {
         Directory.CreateDirectory(_dir);
-        var pfad = Path.Combine(_dir, datei);
-        File.Copy(TestRepoPaths.RepoFile("tests", "Fixtures", "XtfReferenz", datei), pfad);
+        var pfad = Path.IsPathRooted(datei) ? datei : Path.Combine(_dir, datei);
+        if (!Path.IsPathRooted(datei))
+            File.Copy(TestRepoPaths.RepoFile("tests", "Fixtures", "XtfReferenz", datei), pfad);
 
         var projekt = new Project { Name = "Test" };
         var stats = new LegacyXtfImportService().ImportXtfFiles(new[] { pfad }, projekt);
