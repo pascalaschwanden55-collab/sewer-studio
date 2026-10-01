@@ -173,6 +173,65 @@ public sealed class XtfVsaKekMehrereUntersuchungenTests : IDisposable
         Assert.DoesNotContain(stats.Messages, m => m.Message.Contains("Link_G", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// Entscheid Pascal 01.10.2026: Eine Untersuchung aus der Gegenrichtung ist nur dann eine
+    /// Gegenbefahrung, wenn beide nah beieinander liegen (hoechstens 30 Tage). Eine Befahrung aus
+    /// einem anderen Jahr bleibt nur Protokollfassung. Fehlt ein glaubwuerdiges Datum: nicht raten.
+    /// </summary>
+    [Theory]
+    [InlineData("20250312", "20250501", false)] // 50 Tage: andere Kampagne
+    [InlineData("20250301", "20250331", true)]  // genau 30 Tage: noch Gegenbefahrung
+    [InlineData("20250331", "20250301", true)]  // Reihenfolge egal
+    [InlineData("20250312", "", false)]         // Datum der weiteren fehlt
+    [InlineData("20071231", "20071231", false)] // WinCan-Platzhalterdatum
+    public void Link_G_nur_bei_hoechstens_30_Tagen_Abstand(string ersteDatum, string zweiteDatum, bool gegenbefahrung)
+    {
+        var (projekt, _) = Importiere(new Datei
+        {
+            ErsteRichtung = "in_Fliessrichtung", ZweiteRichtung = "gegen_Fliessrichtung",
+            ErsteZeitpunkt = ersteDatum, ZweiteZeitpunkt = zweiteDatum
+        });
+
+        var linkG = Assert.Single(projekt.Data).GetFieldValue("Link_G");
+        if (gegenbefahrung)
+            Assert.EndsWith("zweite.mp4", linkG, StringComparison.OrdinalIgnoreCase);
+        else
+            Assert.Equal("", linkG);
+    }
+
+    /// <summary>
+    /// Codex-Review PR #54: Belegt ein neuer Import die Gegenbefahrung nicht mehr (z. B. neue
+    /// Haupt-Untersuchung einer spaeteren Kampagne), darf ein frueher automatisch aus XTF gesetztes
+    /// Link_G nicht stehen bleiben. Der Merge ueberspringt leere Werte, daher ausdruecklich leeren.
+    /// </summary>
+    [Fact]
+    public void Ein_veraltetes_automatisches_XTF_Link_G_wird_beim_Reimport_geleert()
+    {
+        var (projekt, _) = Importiere(new Datei { ErsteRichtung = "in_Fliessrichtung", ZweiteRichtung = "gegen_Fliessrichtung" });
+        Assert.EndsWith("zweite.mp4", Assert.Single(projekt.Data).GetFieldValue("Link_G"), StringComparison.OrdinalIgnoreCase);
+
+        Importiere(new Datei
+        {
+            ErsteRichtung = "in_Fliessrichtung", ZweiteRichtung = "gegen_Fliessrichtung", ZweiteZeitpunkt = "20250501"
+        }, projekt);
+
+        Assert.Equal("", Assert.Single(projekt.Data).GetFieldValue("Link_G"));
+    }
+
+    [Fact]
+    public void Ein_Link_G_aus_einer_anderen_Quelle_bleibt_beim_XTF_Reimport_stehen()
+    {
+        var projekt = new Project { Name = "Test" };
+        var vorhanden = new HaltungRecord();
+        vorhanden.SetFieldValue(FieldKeys.HoldingName, "200-201", FieldSource.Manual, userEdited: false);
+        vorhanden.SetFieldValue("Link_G", @"Videos\wincan_g.mp4", FieldSource.Legacy, userEdited: false);
+        projekt.Data.Add(vorhanden);
+
+        Importiere(new Datei { ZweiteZeitpunkt = "20250501" }, projekt);
+
+        Assert.Equal(@"Videos\wincan_g.mp4", Assert.Single(projekt.Data).GetFieldValue("Link_G"));
+    }
+
     [Fact]
     public void Ein_von_Hand_gesetztes_Link_G_bleibt_stehen()
     {
