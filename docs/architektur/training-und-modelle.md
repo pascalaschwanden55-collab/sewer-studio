@@ -287,6 +287,17 @@
   stehen in `BCC_VERTRAG`/`PROTO_VERTRAG`; eine gemeinsame Funktion nur bei
   gleicher Regel. `tests/test_negativsatz_vertrag.py` haelt jede Ablehnung mit
   ihrer Meldung fest; eine neue Regel bekommt dort zuerst einen Fall.
+- Klassenkarte v3 mit festen Bytes (2026-10-01): Negativsaetze, Register und
+  Berichte unter `C:\KI_BRAIN\training` binden `detect_class_map_v3.json` ueber
+  die SHA-256 der LF-Fassung `58f1160f…` (116 Dateien, keine mit CRLF). Ein
+  Windows-Checkout mit CRLF ergab `89bf03e3…`; Python (`gold_stock_audit`) und
+  C# (`TrainingNegativeClassMapBinding`) lehnten darauf ALLE Negativsaetze mit
+  «passt nicht zur aktiven Detect-Klassenkarte» ab. `.gitattributes` haelt die
+  Datei ohne Zeilenende-Umwandlung; die drei echten Saetze werden wieder
+  angenommen (10 + 9 + 286 Bilder), ohne neue Review. Nicht umstellen: Die
+  Migrationsdatei v3 und das VSA-Manifest sind mit ihrer CRLF-Fassung gebunden
+  (`registry_setup_v1.json`). Waechter: `TrainingYoloClassMapHashBindungTests`.
+  Alte Arbeitskopien: Datei loeschen und `git checkout -- <datei>`.
 - Proto-Satz ohne Ueberschneidung (Entscheid 2026-09-30): Neben
   `gesehen ∪ ausgeschlossen == akzeptiert` muss die Schnittmenge leer sein. Ein
   Satzbild, das zugleich in `excluded_eval_protected` oder
@@ -1251,6 +1262,17 @@ KB- und Teacher-Fehler (auch Abbruch) erscheinen als Warnung. Eval-Schutzdaten l
 strenge Maskenpruefung (`WorkbenchGoldMask`/`SamMaskValidator`) und den WPF-Teacher-Export
 reicht der UI-Dienst als Delegates hinein. Tests: `GoldSampleSpeichernUseCaseTests`
 (Pipeline.Tests) und `AnnotationWorkbenchServiceTests`.
+
+Seit 01.10.2026 meldet `GoldSampleAblage` einen Schreibfehler in allen drei Wegen
+(Neuanlage, Nachlabeln, Ersatz bei geaendertem Code) als dieselbe Ablehnung
+«Goldsample konnte nicht gespeichert werden: …»; vorher kam er bei der Neuanlage als
+Ausnahme beim Aufrufer an. Gefangen wird wie in den Reparaturwegen jede Ausnahme ausser
+`OperationCanceledException` (Abbruch wird weitergeworfen). Ein halbes Sample bleibt nicht
+liegen, weil der Store ueber Temp-Datei und atomares Ersetzen schreibt; die
+inhaltsadressierte Goldkopie bleibt wie in den Reparaturwegen stehen (kann einem anderen
+Sample gehoeren). Die Ablehnung «Die PDF-Herkunft konnte nicht eindeutig gebunden werden»
+in `GoldSampleHerkunft` greift heute nie (ohne Bestand und mit PDF-Vorschlag ist die
+Herkunft immer `PdfPhoto`), bleibt aber als kommentierte Doppelsicherung stehen.
 
 Mehrfachobjekte werden seit 2026-07-25 unterstuetzt: Neue Samples bauen ihre
 Signatur mit Box als `caseId|code|meter|meter|b:x,y,w,h` (normalisiert, 3

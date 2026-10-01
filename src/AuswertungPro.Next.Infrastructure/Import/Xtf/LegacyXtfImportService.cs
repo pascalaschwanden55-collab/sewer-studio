@@ -233,7 +233,10 @@ public sealed partial class LegacyXtfImportService
             stats.Found += ergebnis.Haltungen.Count;
 
             foreach (var rec in ergebnis.Haltungen)
-                MergeRecordIntoProject(project, rec, FieldSource.Xtf, stats, ctx);
+            {
+                if (MergeRecordIntoProject(project, rec, FieldSource.Xtf, stats, ctx) is { } ziel)
+                    VsaKekAbbildung.EntferneVeraltetesGegenvideo(ziel, rec);
+            }
 
             var beruehrteSchaechte = MergeVsaKekSchaechteIntoProject(project, ergebnis.Schaechte, stats, ctx);
 
@@ -370,14 +373,14 @@ public sealed partial class LegacyXtfImportService
         });
     }
 
-    private static void MergeRecordIntoProject(Project project, HaltungRecord source, FieldSource importSource, ImportStats stats, ImportRunContext? ctx = null)
+    private static HaltungRecord? MergeRecordIntoProject(Project project, HaltungRecord source, FieldSource importSource, ImportStats stats, ImportRunContext? ctx = null)
     {
         var key = NormalizeHoldingKey(source.GetFieldValue("Haltungsname"));
         if (string.IsNullOrWhiteSpace(key))
         {
             stats.Errors++;
             stats.Messages.Add(new ImportMessage { Level = "Error", Context = "XTF", Message = "Record ohne Haltungsname übersprungen." });
-            return;
+            return null;
         }
 
         var target = project.Data.FirstOrDefault(r =>
@@ -419,6 +422,7 @@ public sealed partial class LegacyXtfImportService
             stats.ConflictDetails.Add(c);
             project.Conflicts.Add(c);
         }
+        return target;
     }
 
     // Delegation: Logik liegt jetzt in Common.HoldingKeyNormalizer
