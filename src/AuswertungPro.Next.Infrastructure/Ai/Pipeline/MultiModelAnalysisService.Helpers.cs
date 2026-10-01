@@ -146,7 +146,8 @@ public sealed partial class MultiModelAnalysisService
     /// ununterbrochenen Laufs. Liefert den zuletzt journalierten Frame-Index und den
     /// fortzusetzenden Meterstand.
     /// Bekannte v1-Kanten: Code-Voting und der Qwen-Vorbefund-Kontext starten am
-    /// Resume-Punkt neu (nicht journaliert); ffmpeg dekodiert weiter ab Anfang, die
+    /// Resume-Punkt neu (nicht journaliert; der belegte OSD-Meter ist journaliert und wird
+    /// mitgenommen); ffmpeg dekodiert weiter ab Anfang, die
     /// journalierten Frames werden nur dekodiert, nicht erneut inferiert (spart die
     /// teure GPU-Inferenz; bewusster v1-Kompromiss).
     /// </summary>
@@ -178,6 +179,9 @@ public sealed partial class MultiModelAnalysisService
                 detections.AddRange(deduplicator.AdvanceAll());
             }
             lastMeter = Math.Max(lastMeter, frame.Meter);
+            // Belegter OSD-Anker der 5-m/s-Pruefung (Entscheid 01.10.2026) steht im Journal.
+            if (!frame.IsMeterEstimated && frame.MeterSource == GetDedupMeterMetadata(qwenMeterAccepted: true).MeterSource)
+                run.LetzterOsdMeter = (frame.Meter, frame.TimeSec);
         }
 
         _logger.LogInformation(

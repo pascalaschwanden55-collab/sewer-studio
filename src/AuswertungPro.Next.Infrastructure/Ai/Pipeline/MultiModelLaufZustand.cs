@@ -61,6 +61,12 @@ internal sealed class MultiModelLaufZustand
     public int SkippedFrames { get; set; }
     public double LastMeter { get; set; }
 
+    /// <summary>
+    /// Letzter uebernommener OSD-Meter mit Bildzeit: der belegte Anker, an dem ein neu gelesener
+    /// OSD-Meter gemessen wird (hoechstens 5 m/s). null = noch kein belegter Wert in diesem Lauf.
+    /// </summary>
+    public (double Meter, double ZeitSek)? LetzterOsdMeter { get; set; }
+
     /// <summary>Zuletzt aus dem Checkpoint-Journal uebernommener Frame (0 = frischer Lauf).</summary>
     public int ResumedFrames { get; set; }
 

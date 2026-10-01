@@ -463,13 +463,14 @@ public sealed partial class MultiModelAnalysisService
         var qwenMeterAccepted = false;
         if (run.Qwen is not null && findings.Count > 0)
         {
-            var qwenContext = new MultiModelQwenSchritt.QwenFrameContext(meter, run.LastMeter);
+            var qwenContext = new MultiModelQwenSchritt.QwenFrameContext(meter, run.LastMeter, run.LetzterOsdMeter);
             qwenMs = await run.Qwen.EnrichAsync(
                 qwenContext, findings, classifierCode, run.FrameIndex, t, bild.FrameBytes, bild.FrameBase64,
                 dinoResult, samResult, yoloResult, run.PipeDiameterMm, run.TotalFrames,
                 trace, QwenFrameTimeout, run.Progress, ct).ConfigureAwait(false);
             meter = qwenContext.Meter;
             run.LastMeter = qwenContext.LastMeter;
+            run.LetzterOsdMeter = qwenContext.LetzterOsdMeter;
             qwenMeterAccepted = qwenContext.MeterAccepted;
             if (qwenContext.RequiresRetry)
             {

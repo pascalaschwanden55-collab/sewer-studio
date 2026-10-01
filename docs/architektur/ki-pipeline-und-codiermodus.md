@@ -9,6 +9,7 @@
 
 ## Inhalt
 
+- Fachregeln der Mehrmodell-Videoanalyse (Entscheid 01.10.2026)
 - Grafik-Audit 23.09.2026: B01, B02, B04 behoben (24.09.2026)
 - Gebundene Bild-/Zeit-/Meterbelege im Player (20.09.2026)
 - Konservativer Folgebeleg-Abgleich (20.09.2026)
@@ -18,6 +19,19 @@
 - Aufbau der Mehrmodell-Videoanalyse (AP05, 30.09.2026)
 - Aktueller Pipeline-Ablauf
 - Codiermodus-Bildvergleich (20.09.2026, erste Messstufe)
+
+## Fachregeln der Mehrmodell-Videoanalyse (Entscheid 01.10.2026)
+
+- **Ein gelesener OSD-Meter gilt nur, wenn er plausibel ist.** Zusätzlich zu 0–500 m und
+  gutem Bild muss er mit höchstens 5 m/s zum letzten **belegten** Meter passen, also zum
+  letzten übernommenen OSD-Wert samt Bildzeit (`MultiModelLaufZustand.LetzterOsdMeter`),
+  nie zur linearen Schätzung. Grenze und Vergleich stehen an einer Stelle:
+  `MeterSequencePlausibility.IsReachable` (`MaxMetersPerSecond`, dieselbe Regel wie im
+  Bogen-Copiloten), Toleranz 0,01 m für die Anzeigerundung. Langsames Rückwärtsfahren bleibt
+  erlaubt; der erste Wert eines Laufs gilt wie bisher. Ein verworfener Wert lässt Meter und
+  laufenden Meterstand unverändert und steht im Trace (`OsdMeterRejected`: «OSD-Meter
+  unplausibel: x m nach y m in t s»). Nach einer Fortsetzung kommt der Anker aus dem Journal.
+  Tests: `MultiModelOsdMeterPlausibilitaetTests`, `MultiModelQwenSchrittTests`.
 
 ## Grafik-Audit 23.09.2026: B01, B02, B04 behoben (24.09.2026)
 

@@ -104,4 +104,10 @@ public sealed class PipelineFrameTrace
 
     /// <summary>Technischer Grund des eingeschraenkten Zustands.</summary>
     public string? DegradedReason { get; set; }
+
+    /// <summary>
+    /// Verworfener OSD-Meter mit Grund, wenn er nicht zum letzten belegten Meter passt
+    /// (hoechstens 5 m/s, Entscheid 01.10.2026); null = nichts verworfen.
+    /// </summary>
+    public string? OsdMeterRejected { get; set; }
 }

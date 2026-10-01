@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.UseCases.BendSuggestions;
 using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -39,14 +40,18 @@ internal sealed class MultiModelQwenSchritt
     /// <summary>Mutebarer Uebergabestand des Qwen-Blocks (Meter darf durch OSD korrigiert werden).</summary>
     internal sealed class QwenFrameContext
     {
-        public QwenFrameContext(double meter, double lastMeter)
+        public QwenFrameContext(double meter, double lastMeter, (double Meter, double ZeitSek)? letzterOsdMeter = null)
         {
             Meter = meter;
             LastMeter = lastMeter;
+            LetzterOsdMeter = letzterOsdMeter;
         }
 
         public double Meter { get; set; }
         public double LastMeter { get; set; }
+
+        /// <summary>Letzter uebernommener OSD-Meter mit Bildzeit (Anker der 5-m/s-Pruefung); null = keiner.</summary>
+        public (double Meter, double ZeitSek)? LetzterOsdMeter { get; set; }
         public bool MeterAccepted { get; set; }
         public bool RequiresRetry { get; set; }
     }
@@ -129,12 +134,23 @@ internal sealed class MultiModelQwenSchritt
             // OSD-Meter nur uebernehmen, wenn plausibel (0..500 m) UND nicht aus einem schlechten
             // Bild — sonst vergiftet ein halluzinierter/fehlgelesener Meter die fortlaufende
             // Timeline (lastMeter). Bei schlechtem Bild ist auch das OSD-Lesen unzuverlaessig. (Audit R7)
-            if (qwenResult.Meter.HasValue && !badQuality
-                && AuswertungPro.Next.Infrastructure.Ai.MeterPlausibility.IsPlausible(qwenResult.Meter.Value))
+            // Entscheid 01.10.2026: zusaetzlich hoechstens 5 m/s zum letzten belegten OSD-Meter.
+            // Ein verworfener Wert laesst Meter und laufenden Meterstand unveraendert.
+            var lesbar = qwenResult.Meter.HasValue && !badQuality
+                && AuswertungPro.Next.Infrastructure.Ai.MeterPlausibility.IsPlausible(qwenResult.Meter.Value);
+            var osdSprung = lesbar ? BeschreibeUnplausiblenSprung(qwenResult.Meter!.Value, t, context.LetzterOsdMeter) : null;
+            if (lesbar && osdSprung is null)
             {
-                meter = qwenResult.Meter.Value;
+                meter = qwenResult.Meter!.Value;
                 lastMeter = meter;
                 qwenMeterAccepted = true;
+                context.LetzterOsdMeter = (meter, t);
+            }
+            else if (osdSprung is not null)
+            {
+                trace.OsdMeterRejected = osdSprung;
+                _logger.LogDebug("Frame {Frame}: OSD-Meter {Meter} verworfen ({Reason})",
+                    frameIndex, qwenResult.Meter!.Value, osdSprung);
             }
             else if (qwenResult.Meter.HasValue)
             {
@@ -211,6 +227,30 @@ internal sealed class MultiModelQwenSchritt
         context.LastMeter = lastMeter;
         context.MeterAccepted = qwenMeterAccepted;
         return qwenMs;
+    }
+
+    /// <summary>
+    /// Mindesttoleranz fuer den Meterabgleich: die Anzeigerundung des OSD und des Meterstands
+    /// (zwei Nachkommastellen, 1 cm). Bei Bildabstaenden ab 1 s (5 m Spielraum) spielt sie keine
+    /// Rolle; sie verhindert nur, dass gleich gerundete Werte bei sehr kurzem Abstand kippen.
+    /// </summary>
+    internal const double OsdMeterRundungM = 0.01;
+
+    private static readonly MeterPlausibilityOptions OsdFolgeGrenze = new();
+
+    /// <summary>
+    /// Grund, wenn der gelesene Meter nicht mit hoechstens 5 m/s zum letzten belegten OSD-Meter passt
+    /// (gleiche Grenze wie die Folgepruefung im Bogen-Copiloten); null = passt oder noch kein Anker.
+    /// </summary>
+    internal static string? BeschreibeUnplausiblenSprung(double gelesen, double t, (double Meter, double ZeitSek)? anker)
+    {
+        if (anker is not { } a)
+            return null;
+        var abstand = Math.Abs(t - a.ZeitSek);
+        if (MeterSequencePlausibility.IsReachable(gelesen, a.Meter, abstand, OsdFolgeGrenze, OsdMeterRundungM))
+            return null;
+        return string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "OSD-Meter unplausibel: {0:0.##} m nach {1:0.##} m in {2:0.##} s", gelesen, a.Meter, abstand);
     }
 
     private static void RecordQwenFailure(QwenFrameContext context, PipelineFrameTrace trace,

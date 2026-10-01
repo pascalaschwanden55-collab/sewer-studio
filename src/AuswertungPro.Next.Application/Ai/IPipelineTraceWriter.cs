@@ -42,4 +42,11 @@ public sealed class PipelineTraceEntry
     public string? DropReason { get; set; }
     public bool Degraded { get; set; }
     public string? DegradedReason { get; set; }
+
+    /// <summary>
+    /// Verworfener OSD-Meter mit Grund (Sprung ueber 5 m/s zum letzten belegten Meter).
+    /// Nur geschrieben, wenn gesetzt: Aeltere Trace-Zeilen bleiben unveraendert.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? OsdMeterRejected { get; set; }
 }
