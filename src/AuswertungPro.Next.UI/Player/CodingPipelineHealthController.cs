@@ -46,7 +46,25 @@ public sealed class CodingPipelineHealthController : ICodingPipelineHealthContro
         _actions = actions;
     }
 
+    // Codex-Review PR #24 (P1, 01.10.2026): Codiermodus-Start und Vorschlagslauf rufen beide
+    // InitializeAsync auf. Ein zweiter Lauf erzeugte eine neue Runtime, entsorgte die erste
+    // mitten in der Initialisierung und liess ihren Zustandsmonitor ungestoppt zurueck. Je
+    // Codiermodus gibt es deshalb genau eine Initialisierung; Stop() gibt sie frei, ein
+    // Fehlschlag darf wiederholt werden.
+    private readonly object _initialisierungSperre = new();
+    private Task? _initialisierung;
+
     public Task InitializeAsync()
+    {
+        lock (_initialisierungSperre)
+        {
+            if (_initialisierung is { IsFaulted: false, IsCanceled: false } laufend)
+                return laufend;
+            return _initialisierung = InitialisiereAsync();
+        }
+    }
+
+    private Task InitialisiereAsync()
         => CodingAiInitializationWorkflow.ExecuteAsync(
             new CodingAiInitializationWorkflowActions(
                 CreateRuntime: _actions.CreateRuntime,
@@ -83,6 +101,8 @@ public sealed class CodingPipelineHealthController : ICodingPipelineHealthContro
 
     public void Stop()
     {
+        lock (_initialisierungSperre)
+            _initialisierung = null;
         _runtimeController
             .StopHealthMonitor()
             ?.SafeFireAndForget("PipelineHealthMonitorStop");
