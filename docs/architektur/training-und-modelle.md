@@ -1263,6 +1263,17 @@ strenge Maskenpruefung (`WorkbenchGoldMask`/`SamMaskValidator`) und den WPF-Teac
 reicht der UI-Dienst als Delegates hinein. Tests: `GoldSampleSpeichernUseCaseTests`
 (Pipeline.Tests) und `AnnotationWorkbenchServiceTests`.
 
+Seit 01.10.2026 meldet `GoldSampleAblage` einen Schreibfehler in allen drei Wegen
+(Neuanlage, Nachlabeln, Ersatz bei geaendertem Code) als dieselbe Ablehnung
+«Goldsample konnte nicht gespeichert werden: …»; vorher kam er bei der Neuanlage als
+Ausnahme beim Aufrufer an. Gefangen wird wie in den Reparaturwegen jede Ausnahme ausser
+`OperationCanceledException` (Abbruch wird weitergeworfen). Ein halbes Sample bleibt nicht
+liegen, weil der Store ueber Temp-Datei und atomares Ersetzen schreibt; die
+inhaltsadressierte Goldkopie bleibt wie in den Reparaturwegen stehen (kann einem anderen
+Sample gehoeren). Die Ablehnung «Die PDF-Herkunft konnte nicht eindeutig gebunden werden»
+in `GoldSampleHerkunft` greift heute nie (ohne Bestand und mit PDF-Vorschlag ist die
+Herkunft immer `PdfPhoto`), bleibt aber als kommentierte Doppelsicherung stehen.
+
 Mehrfachobjekte werden seit 2026-07-25 unterstuetzt: Neue Samples bauen ihre
 Signatur mit Box als `caseId|code|meter|meter|b:x,y,w,h` (normalisiert, 3
 Dezimalstellen). Zwei Schaeden mit gleichem Code am selben Meter, aber

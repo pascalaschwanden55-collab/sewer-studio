@@ -65,20 +65,25 @@ public sealed partial class AnnotationWorkbenchServiceTests
     }
 
     [Fact]
-    public async Task SaveAsync_Schreibfehler_bei_Neuanlage_wird_heute_weitergeworfen()
+    public async Task SaveAsync_Schreibfehler_bei_Neuanlage_meldet_Ablehnung_wie_die_Reparaturwege()
     {
-        // Ist-Verhalten: Im Neuanlage-Pfad steht TryAddNewAsync ohne eigenes try/catch.
-        // Ein Speicherfehler kommt deshalb als Ausnahme beim Aufrufer an (die Reparaturwege
-        // melden denselben Fehler dagegen als Ablehnung). Nach dem Fehler folgt kein Nachlauf.
+        // Seit 01.10.2026: Ein Speicherfehler bei der Neuanlage kommt nicht mehr als Ausnahme
+        // beim Aufrufer an, sondern als dieselbe Ablehnung wie in den Reparaturwegen.
+        // Nach dem Fehler folgt kein Nachlauf.
         var log = new List<string>();
         var sampleStore = new LogSampleStore(log) { ThrowOnTryAdd = new IOException("Datei gesperrt (Test).") };
         var service = CreateLoggingService(
             sampleStore, new LogFrameStore(log), new LogIndexer(log), new LogTeacherStore(log), new LogExportService(log));
 
-        await Assert.ThrowsAsync<IOException>(
-            () => service.SaveAsync(Foto(), TestBox, GueltigeMaske, RissEntscheid));
+        var result = await service.SaveAsync(Foto(), TestBox, GueltigeMaske, RissEntscheid);
 
+        Assert.False(result.Saved);
+        Assert.Equal(
+            "Goldsample konnte nicht gespeichert werden: Eine Datei oder ein Ordner ist momentan nicht verfügbar. Bitte schliessen Sie andere Zugriffe und versuchen Sie es erneut.",
+            result.RefusalReason);
+        Assert.Equal("-", result.KbIndexState);
         Assert.Equal(new[] { "frame.store", "sample.tryadd" }, log);
+        Assert.Empty(sampleStore.Store);
     }
 
     [Fact]

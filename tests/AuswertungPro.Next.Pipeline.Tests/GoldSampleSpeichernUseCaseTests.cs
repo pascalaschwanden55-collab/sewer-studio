@@ -250,6 +250,93 @@ public sealed class GoldSampleSpeichernUseCaseTests
     }
 
     [Fact]
+    public async Task Schreibfehler_bei_Neuanlage_meldet_dieselbe_Ablehnung_wie_die_Reparaturwege()
+    {
+        // Neuanlage
+        var neu = new Umgebung();
+        neu.Samples.Schreibfehler = new IOException("Datei gesperrt (Test).");
+        var neuErgebnis = await neu.UseCase().SaveAsync(
+            new GoldSampleSpeichernAnfrage(Foto(), TestBox, Segmentierung, Entscheid()));
+
+        // Reparatur mit gleichem Code (Nachlabeln) und mit geaendertem Code (Ersatz)
+        var nachlabeln = UmgebungMitBestand();
+        var nachlabelnErgebnis = await nachlabeln.UseCase().SaveAsync(new GoldSampleSpeichernAnfrage(
+            Foto() with { ExistingSampleId = "wb_alt", ExistingCode = "BAB" }, TestBox, Segmentierung, Entscheid()));
+        var ersatz = UmgebungMitBestand();
+        var ersatzErgebnis = await ersatz.UseCase().SaveAsync(new GoldSampleSpeichernAnfrage(
+            Foto() with { ExistingSampleId = "wb_alt", ExistingCode = "BAB" }, TestBox, Segmentierung,
+            Entscheid("BBA", text: "Wurzeleinwuchs im Anschlussbereich")));
+
+        Assert.False(neuErgebnis.Saved);
+        Assert.Null(neuErgebnis.SampleId);
+        Assert.Equal("-", neuErgebnis.KbIndexState);
+        Assert.StartsWith("Goldsample konnte nicht gespeichert werden: ", neuErgebnis.RefusalReason);
+        Assert.Equal(nachlabelnErgebnis, neuErgebnis);
+        Assert.Equal(ersatzErgebnis, neuErgebnis);
+
+        // Kein Sample, kein KB- oder Teacher-Nachlauf nach dem Fehler.
+        Assert.Equal(new[] { "frame.store", "file.read", "mask.check", "sample.tryadd" }, neu.Log);
+        Assert.Empty(neu.Samples.Store);
+        Assert.Empty(neu.Teacher.Appended);
+
+        static Umgebung UmgebungMitBestand()
+        {
+            var umgebung = new Umgebung();
+            umgebung.Samples.Store.Add(new TrainingSample
+            {
+                SampleId = "wb_alt",
+                CaseId = "case1",
+                Code = "BAB",
+                SourceType = SourceTypeNames.ManualCoding,
+            });
+            umgebung.Samples.Schreibfehler = new IOException("Datei gesperrt (Test).");
+            return umgebung;
+        }
+    }
+
+    [Fact]
+    public async Task Abbruch_beim_Speichern_der_Neuanlage_wird_weitergeworfen()
+    {
+        var umgebung = new Umgebung();
+        umgebung.Samples.Schreibfehler = new OperationCanceledException("Abbruch beim Speichern (Test).");
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => umgebung.UseCase().SaveAsync(
+            new GoldSampleSpeichernAnfrage(Foto(), TestBox, Segmentierung, Entscheid())));
+
+        Assert.Equal(new[] { "frame.store", "file.read", "mask.check", "sample.tryadd" }, umgebung.Log);
+        Assert.Empty(umgebung.Samples.Store);
+    }
+
+    [Fact]
+    public async Task PDF_Vorschlag_ohne_Bestand_ergibt_immer_PDF_Herkunft()
+    {
+        // Haelt fest, warum die Doppelsicherung "PDF-Herkunft konnte nicht eindeutig gebunden
+        // werden" heute nie greift: Ohne Bestand und mit PDF-Vorschlag ist die Herkunft immer
+        // PdfPhoto. Eine unvollstaendige Pruefspur scheitert deshalb an der PDF-Pruefung davor.
+        static WorkbenchItem MitPdfVorschlag(string pdfBeschreibung) => Foto() with
+        {
+            SourceSuggestion = new WorkbenchSourceSuggestion(
+                "BAB",
+                pdfBeschreibung,
+                "Haltung_123.pdf",
+                new string('a', 64),
+                PageNumber: 7,
+                PhotoId: "IMG-0042",
+                MatchKind: "time_meter_text"),
+        };
+        var samples = new SampleStore(new List<string>());
+
+        var (gueltig, keineAblehnung) = await GoldSampleHerkunft.BestimmeAsync(
+            samples, MitPdfVorschlag("Riss quer im Scheitel"), Entscheid(), "BAB");
+        var (_, unvollstaendig) = await GoldSampleHerkunft.BestimmeAsync(
+            samples, MitPdfVorschlag(""), Entscheid(), "BAB");
+
+        Assert.Null(keineAblehnung);
+        Assert.Equal(SourceTypeNames.PdfPhoto, gueltig!.SourceType);
+        Assert.StartsWith("PDF-Goldsample kann nicht gespeichert werden", unvollstaendig!.RefusalReason);
+    }
+
+    [Fact]
     public async Task KB_Fehler_nach_der_Speicherung_meldet_gespeichert_mit_Warnung_ohne_zweite_Speicherung()
     {
         var umgebung = new Umgebung();
@@ -407,6 +494,9 @@ public sealed class GoldSampleSpeichernUseCaseTests
         public List<TrainingSample> Store { get; } = new();
         public bool TryAddErgebnis { get; set; } = true;
 
+        // Schreibfehler fuer Neuanlage (TryAddNewAsync) und Ersatz (ReplaceBySampleIdAsync).
+        public Exception? Schreibfehler { get; set; }
+
         public Task<List<TrainingSample>> LoadAsync()
         {
             log.Add("sample.load");
@@ -426,6 +516,7 @@ public sealed class GoldSampleSpeichernUseCaseTests
         public Task<bool> TryAddNewAsync(TrainingSample sample, CancellationToken ct = default)
         {
             log.Add("sample.tryadd");
+            if (Schreibfehler is not null) throw Schreibfehler;
             if (TryAddErgebnis)
                 Store.Add(sample);
             return Task.FromResult(TryAddErgebnis);
@@ -434,6 +525,7 @@ public sealed class GoldSampleSpeichernUseCaseTests
         public Task<bool> ReplaceBySampleIdAsync(TrainingSample sample)
         {
             log.Add("sample.replace");
+            if (Schreibfehler is not null) throw Schreibfehler;
             var removed = Store.RemoveAll(existing => existing.SampleId == sample.SampleId) > 0;
             if (removed)
                 Store.Add(sample);
