@@ -22,7 +22,7 @@ public sealed class DocxLiteralTextReplacerTests
         var document = WordprocessingDocument.Create(strom, WordprocessingDocumentType.Document);
         var mainPart = document.AddMainDocumentPart();
         mainPart.Document = new Document();
-        var body = mainPart.Document.AppendChild(new Body());
+        var body = mainPart.Document!.AppendChild(new Body());
 
         foreach (var zeile in zeilen)
         {
@@ -38,7 +38,7 @@ public sealed class DocxLiteralTextReplacerTests
         strom.Position = 0;
         using var document = WordprocessingDocument.Open(strom, false);
 
-        return document.MainDocumentPart!.Document.Body!
+        return document.MainDocumentPart!.Document!.Body!
             .Elements<Paragraph>()
             .Select(p => string.Concat(p.Descendants<Text>().Select(t => t.Text)))
             .Where(t => t.Length > 0)
@@ -56,7 +56,7 @@ public sealed class DocxLiteralTextReplacerTests
                 ["Eigentumsverhältnisse"] = "Eigentümer der Liegenschaft"
             });
 
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         Assert.Equal(new[] { "Eigentümer der Liegenschaft", "Haus Nr." }, Lies(strom));
@@ -73,7 +73,7 @@ public sealed class DocxLiteralTextReplacerTests
                 ["Beilagen"] = "   "
             });
 
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         Assert.Equal(new[] { "Haus Nr." }, Lies(strom));
@@ -93,7 +93,7 @@ public sealed class DocxLiteralTextReplacerTests
             });
 
             Assert.Equal(0, geaendert);
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         Assert.Equal(new[] { "Datum: {{Datum}}" }, Lies(strom));
@@ -127,7 +127,7 @@ public sealed class DocxLiteralTextReplacerTests
                 ]
             });
 
-        var run = document.MainDocumentPart!.Document.Body!
+        var run = document.MainDocumentPart!.Document!.Body!
             .Descendants<Run>()
             .First(r => r.InnerText == "Informationen");
 
@@ -156,7 +156,7 @@ public sealed class DocxLiteralTextReplacerTests
             new Dictionary<string, string> { ["Datum"] = "24.08.2026" },
             formatting);
 
-        var paragraphs = document.MainDocumentPart!.Document.Body!
+        var paragraphs = document.MainDocumentPart!.Document!.Body!
             .Elements<Paragraph>()
             .Select(paragraph => paragraph.InnerText)
             .ToList();
@@ -176,7 +176,7 @@ public sealed class DocxLiteralTextReplacerTests
                 ["Gibt es nicht"] = "Neu"
             }));
 
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         Assert.Equal(new[] { "Beilagen" }, Lies(strom));

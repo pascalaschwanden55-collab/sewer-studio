@@ -63,7 +63,7 @@ public sealed class DossierPlanseiteTests : IDisposable
 
         using var doc = WordprocessingDocument.Open(pfad, false);
 
-        var inlineBilder = doc.MainDocumentPart!.Document.Body!
+        var inlineBilder = doc.MainDocumentPart!.Document!.Body!
             .Descendants<DocumentFormat.OpenXml.Wordprocessing.Drawing>()
             .Where(zeichnung => zeichnung.Descendants<DW.Inline>().Any())
             .ToList();
@@ -84,13 +84,13 @@ public sealed class DossierPlanseiteTests : IDisposable
 
         Assert.DoesNotContain(
             "{{@",
-            doc.MainDocumentPart!.Document.Body!.InnerText,
+            doc.MainDocumentPart!.Document!.Body!.InnerText,
             StringComparison.Ordinal);
     }
 
     /// <summary>Absaetze mit fest reservierter Hoehe in der Groessenordnung der Planflaeche.</summary>
     private static IReadOnlyList<Paragraph> ReservierteAbsaetze(WordprocessingDocument doc)
-        => doc.MainDocumentPart!.Document.Body!
+        => doc.MainDocumentPart!.Document!.Body!
             .Descendants<Paragraph>()
             .Where(absatz =>
             {

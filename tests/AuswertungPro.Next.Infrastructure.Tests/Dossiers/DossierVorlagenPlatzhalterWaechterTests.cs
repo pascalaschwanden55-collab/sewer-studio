@@ -118,9 +118,9 @@ public sealed class DossierVorlagenPlatzhalterWaechterTests
     {
         using var doc = WordprocessingDocument.Open(VorlagenPfad(), false);
         var text = string.Concat(
-            new[] { doc.MainDocumentPart!.Document.InnerText }
-                .Concat(doc.MainDocumentPart.HeaderParts.Select(p => p.Header.InnerText))
-                .Concat(doc.MainDocumentPart.FooterParts.Select(p => p.Footer.InnerText)));
+            new[] { doc.MainDocumentPart!.Document!.InnerText }
+                .Concat(doc.MainDocumentPart.HeaderParts.Select(p => p.Header!.InnerText))
+                .Concat(doc.MainDocumentPart.FooterParts.Select(p => p.Footer!.InnerText)));
 
         return Regex.Matches(text, @"\{\{([^}]{1,60})\}\}")
             .Select(m => m.Groups[1].Value.Trim())

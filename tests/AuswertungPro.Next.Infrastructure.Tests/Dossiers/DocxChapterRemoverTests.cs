@@ -39,7 +39,7 @@ public sealed class DocxChapterRemoverTests
         strom.Position = 0;
         using var document = WordprocessingDocument.Open(strom, false);
 
-        return string.Concat(document.MainDocumentPart!.Document.Body!
+        return string.Concat(document.MainDocumentPart!.Document!.Body!
             .Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>()
             .Select(t => t.Text));
     }
@@ -65,7 +65,7 @@ public sealed class DocxChapterRemoverTests
         using (var document = WordprocessingDocument.Open(strom, true))
         {
             Assert.True(DocxChapterRemover.Remove(document, "Übersichtsplan Werkleitungen"));
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         var text = Text(strom);
@@ -88,7 +88,7 @@ public sealed class DocxChapterRemoverTests
         using (var document = WordprocessingDocument.Open(strom, true))
         {
             Assert.False(DocxChapterRemover.Remove(document, "Gibt es nicht"));
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         Assert.Equal(vorher, Text(strom));
@@ -116,13 +116,13 @@ public sealed class DocxChapterRemoverTests
         using (var document = WordprocessingDocument.Open(strom, true))
         {
             Assert.True(DocxChapterRemover.Remove(document, "Informationen Sanierung"));
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         strom.Position = 0;
         using var wieder = WordprocessingDocument.Open(strom, false);
 
-        Assert.NotEmpty(wieder.MainDocumentPart!.Document.Body!
+        Assert.NotEmpty(wieder.MainDocumentPart!.Document!.Body!
             .Elements<SectionProperties>());
     }
 }
