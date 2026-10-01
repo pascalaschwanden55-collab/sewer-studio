@@ -470,8 +470,9 @@ public sealed partial class MultiModelAnalysisService
                 trace, QwenFrameTimeout, run.Progress, ct).ConfigureAwait(false);
             meter = qwenContext.Meter;
             run.LastMeter = qwenContext.LastMeter;
-            run.LetzterOsdMeter = qwenContext.LetzterOsdMeter;
             qwenMeterAccepted = qwenContext.MeterAccepted;
+            if (qwenMeterAccepted && qwenContext.LetzterOsdMeter is { } osdMeter)
+                run.UebernimmOsdMeter(osdMeter);
             if (qwenContext.RequiresRetry)
             {
                 run.Completeness.RecordQwenFailure();

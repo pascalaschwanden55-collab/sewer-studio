@@ -65,7 +65,24 @@ internal sealed class MultiModelLaufZustand
     /// Letzter uebernommener OSD-Meter mit Bildzeit: der belegte Anker, an dem ein neu gelesener
     /// OSD-Meter gemessen wird (hoechstens 5 m/s). null = noch kein belegter Wert in diesem Lauf.
     /// </summary>
-    public (double Meter, double ZeitSek)? LetzterOsdMeter { get; set; }
+    public (double Meter, double ZeitSek)? LetzterOsdMeter { get; private set; }
+
+    /// <summary>
+    /// Vorletzter uebernommener OSD-Meter mit Bildzeit. Mit <see cref="LetzterOsdMeter"/> ergibt er
+    /// die gemessene Fahrgeschwindigkeit der Meterschaetzung (Entscheid 01.10.2026). null = weniger
+    /// als zwei belegte Werte in diesem Lauf.
+    /// </summary>
+    public (double Meter, double ZeitSek)? VorletzterOsdMeter { get; private set; }
+
+    /// <summary>
+    /// Einziger Weg, einen belegten OSD-Meter zu uebernehmen (Lauf und Fortsetzen aus dem Journal):
+    /// Der bisherige letzte wird zum vorletzten.
+    /// </summary>
+    public void UebernimmOsdMeter((double Meter, double ZeitSek) osdMeter)
+    {
+        VorletzterOsdMeter = LetzterOsdMeter;
+        LetzterOsdMeter = osdMeter;
+    }
 
     /// <summary>Zuletzt aus dem Checkpoint-Journal uebernommener Frame (0 = frischer Lauf).</summary>
     public int ResumedFrames { get; set; }

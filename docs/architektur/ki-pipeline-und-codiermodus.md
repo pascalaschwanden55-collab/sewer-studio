@@ -42,6 +42,17 @@
   ebenso zurück (vorher Höchstwert aller Journalbilder). Eine Stelle:
   `MultiModelMeterSchaetzung.Schaetze`. Der Codiermodus (`CodingMeterResolver`) ist nicht
   betroffen. Tests: `MultiModelMeterAnkerTests`, Schnappschuss `gemischt`.
+- **Ab zwei belegten OSD-Metern gilt die gemessene Geschwindigkeit** (01.10.2026). Rate =
+  (m2 − m1) / (t2 − t1) der beiden letzten übernommenen OSD-Meter
+  (`MultiModelLaufZustand.LetzterOsdMeter`/`VorletzterOsdMeter`, gesetzt nur über
+  `UebernimmOsdMeter`, im Lauf und beim Fortsetzen aus dem Journal). Belastbar nur ab 1 s
+  Abstand (`MultiModelMeterSchaetzung.MindestAbstandSek`: die 1-cm-Rundung verfälscht die Rate
+  dann um höchstens 1 cm/s) und bis `MaxMetersPerSecond` (dieselbe Grenze wie die OSD-Folge);
+  sonst die angenommene Rate. Rückwärts oder Stillstand: Rate 0, die Schätzung bleibt am Anker.
+  Zwischen dem ersten und dem zweiten Anker gilt weiter die angenommene Rate (im Schnappschuss
+  `gemischt` läuft die Schätzung dort weiter bis 38,86 m). Danach werden Folgebilder desselben
+  Befunds näher beieinander geschätzt und von der Zusammenführung (1 m) wieder zu einem Befund
+  verbunden. Codiermodus unverändert. Tests: `MultiModelMeterAnkerTests`, Schnappschuss `gemischt`.
 - **Kein fremder Code bei Widerspruch.** `TemporalCodeVotingService` gibt einem Bild mit
   eigenem, vom bestätigten abweichenden Klassifikator-Vorschlag den bestätigten Code des
   Nachbarbilds nicht mehr über die Hysterese. Die Befunde des Bildes bleiben unbestätigt

@@ -132,7 +132,7 @@ public sealed partial class MultiModelAnalysisService
     private double EstimateMeter(MultiModelLaufZustand run, double t)
     {
         run.LastMeter = MultiModelMeterSchaetzung.Schaetze(
-            t, run.Duration, EstimatedReachLengthM, run.LastMeter, run.LetzterOsdMeter);
+            t, run.Duration, EstimatedReachLengthM, run.LastMeter, run.LetzterOsdMeter, run.VorletzterOsdMeter);
         return Math.Round(run.LastMeter, 2);
     }
 
@@ -183,7 +183,7 @@ public sealed partial class MultiModelAnalysisService
                 && frame.MeterSource == GetDedupMeterMetadata(qwenMeterAccepted: true).MeterSource;
             lastMeter = osdAnker ? frame.Meter : Math.Max(lastMeter, frame.Meter);
             if (osdAnker)
-                run.LetzterOsdMeter = (frame.Meter, frame.TimeSec);
+                run.UebernimmOsdMeter((frame.Meter, frame.TimeSec));
         }
 
         _logger.LogInformation(
