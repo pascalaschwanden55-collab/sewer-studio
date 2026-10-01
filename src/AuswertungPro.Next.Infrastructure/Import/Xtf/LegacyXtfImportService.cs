@@ -166,7 +166,7 @@ public sealed partial class LegacyXtfImportService
             // Schaechte sind unabhaengig von den Haltungen: Eine Datei kann Normschaechte
             // ohne Kanaele enthalten, und umgekehrt (Goeschenen hat 17 Haltungen und
             // null Schaechte).
-            var schaechte = ParseSia405Schaechte(doc);
+            var schaechte = ParseSia405Schaechte(doc, out var organisationsverweise, out var schachtMeldungen);
             if (schaechte.Count > 0)
             {
                 var beruehrt = MergeSchaechteIntoProject(project, schaechte, stats, ctx);
@@ -180,8 +180,9 @@ public sealed partial class LegacyXtfImportService
                     });
                 }
             }
+            stats.Messages.AddRange(schachtMeldungen);
 
-            var records = ParseSia405(doc, out var meldungen);
+            var records = ParseSia405(doc, organisationsverweise, out var meldungen);
             stats.Messages.AddRange(meldungen);
 
             if (records.Count > 0)
@@ -430,7 +431,8 @@ public sealed partial class LegacyXtfImportService
         => Common.HoldingKeyNormalizer.Normalize(value);
 
     // ===================== SIA405 =====================
-    private static List<HaltungRecord> ParseSia405(XDocument doc, out List<ImportMessage> meldungen)
+    private static List<HaltungRecord> ParseSia405(XDocument doc, Sia405Organisationsverweise organisationsverweise,
+        out List<ImportMessage> meldungen)
     {
         // Drei getrennte Schritte, damit eine neue Feldregel nur die Abbildung beruehrt:
         // 1. Objekte lesen — die Verweise bleiben Kennungen,
@@ -443,7 +445,7 @@ public sealed partial class LegacyXtfImportService
         var bestand = Sia405ObjektLeser.Lies(doc);
         var haltungen = Sia405DoppelteBezeichnungen.NurErste(Sia405Beziehungen.Loese(bestand, out var ohneNamen), out var doppelte);
         meldungen = doppelte.Select(m => new ImportMessage { Level = "Warn", Context = "XTF405", Message = m }).ToList();
-        meldungen.AddRange(Sia405Bezugsmeldungen.Erzeuge(bestand, haltungen, ohneNamen));
+        meldungen.AddRange(Sia405Bezugsmeldungen.Erzeuge(bestand, haltungen, ohneNamen, organisationsverweise));
         return haltungen.Select(Sia405HaltungAbbildung.BaueRecord).ToList();
     }
 

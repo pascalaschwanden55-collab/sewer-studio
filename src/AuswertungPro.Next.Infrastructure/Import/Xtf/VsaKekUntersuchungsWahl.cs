@@ -78,12 +78,24 @@ internal static class VsaKekUntersuchungsWahl
             .ToList();
     }
 
-    /// <summary>Liest den Rohwert von <c>Zeitpunkt</c>; ein unlesbarer Wert ergibt <c>null</c>.</summary>
+    /// <summary>
+    /// Liest den Rohwert von <c>Zeitpunkt</c>; ein unlesbarer Wert ergibt <c>null</c>. Was die
+    /// festen Formate schon kannten, liest sich wie bisher (mit Uhrzeit). Seit 01.10.2026 (zweite
+    /// Runde) zusaetzlich jedes ISO-Datum, das auch <c>Letzte_Aenderung</c> liest
+    /// (<see cref="XtfValueNormalizer.NormalizeDate"/>: Uhrzeit ohne Sekunden, Leerzeichen statt
+    /// <c>T</c>, Zone <c>Z</c> oder Versatz) — dann nur der Kalendertag, wie er in der Datei steht.
+    /// </summary>
     public static DateTime? LiesZeitpunkt(string? roh)
-        => DateTime.TryParseExact((roh ?? "").Trim(), Zeitformate, CultureInfo.InvariantCulture,
-            DateTimeStyles.None, out var datum)
-            ? datum
+    {
+        var text = (roh ?? "").Trim();
+        if (DateTime.TryParseExact(text, Zeitformate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var datum))
+            return datum;
+
+        return DateTime.TryParseExact(XtfValueNormalizer.NormalizeDate(text), "dd.MM.yyyy", CultureInfo.InvariantCulture,
+            DateTimeStyles.None, out var tag)
+            ? tag
             : null;
+    }
 
     /// <summary>
     /// Das Datum im Importbericht. Ein Platzhalter heisst ausdruecklich so und wird nicht

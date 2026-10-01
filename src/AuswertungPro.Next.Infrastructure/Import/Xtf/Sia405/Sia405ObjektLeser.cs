@@ -70,6 +70,12 @@ internal sealed class Sia405Bestand
 
     /// <summary>In Dateireihenfolge; die Reihenfolge der Haltungen im Projekt folgt ihr.</summary>
     public Dictionary<string, Sia405HaltungObjekt> Haltungen { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Haltungen ohne TID. Sie werden nicht uebernommen (ohne Kennung kein Verweis, kein
+    /// Abgleich), seit 01.10.2026 aber gemeldet; bis dahin fielen sie still weg.
+    /// </summary>
+    public List<Sia405HaltungObjekt> HaltungenOhneTid { get; } = new();
     public Dictionary<string, Sia405Haltungspunkt> Haltungspunkte { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Kennung des Abwasserknotens -> Bezeichnung.</summary>
@@ -123,8 +129,10 @@ internal static class Sia405ObjektLeser
 
             if (IstKlasse(node, "Haltung"))
             {
-                if (string.IsNullOrWhiteSpace(tid)) continue;
-                bestand.Haltungen[tid] = LiesHaltung(node, tid);
+                if (string.IsNullOrWhiteSpace(tid))
+                    bestand.HaltungenOhneTid.Add(LiesHaltung(node, ""));
+                else
+                    bestand.Haltungen[tid] = LiesHaltung(node, tid);
             }
 
             // Rohrprofil: Profiltyp und Hoehen-Breiten-Verhaeltnis haengen nicht an der
