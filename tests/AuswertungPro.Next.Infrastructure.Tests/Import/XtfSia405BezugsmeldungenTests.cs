@@ -131,6 +131,52 @@ public sealed class XtfSia405BezugsmeldungenTests : IDisposable
     }
 
     [Fact]
+    public void Ein_externer_Organisationsverweis_eines_Schachts_steht_im_selben_Hinweis_wie_die_der_Haltungen()
+    {
+        var (projekt, stats) = Importiere("sia405-referenz.xtf");
+
+        var hinweis = Assert.Single(stats.Messages, m => m.Message.Contains("ausserhalb der Datei", StringComparison.Ordinal));
+        Assert.Equal("Info", hinweis.Level);
+        Assert.Equal("Organisationsverweise ausserhalb der Datei (nach Norm zulässig, Name nicht übernommen): "
+                     + "Eigentümer refORGFEHLT (1 Schacht), Datenlieferant refORGFEHLT (1 Haltung).", hinweis.Message);
+        var schacht = Assert.Single(projekt.SchaechteData, s => s.GetFieldValue("Schachtnummer") == "101");
+        Assert.Equal("", schacht.GetFieldValue(FieldKeys.Owner));
+    }
+
+    [Fact]
+    public void Ein_Schacht_mit_Verweis_auf_eine_Organisation_ohne_Bezeichnung_steht_als_Warnung()
+    {
+        var (_, stats) = Importiere(Schreibe("schacht-org.xtf", Sia405Xtf("""
+                  <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="refS500">
+                    <Bezeichnung>500</Bezeichnung>
+                    <Funktion>Kontrollschacht</Funktion>
+                    <EigentuemerRef REF="refORGEXT" />
+                    <DatenherrRef REF="refORGLEER" />
+                  </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+                  <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="refS501">
+                    <Bezeichnung>501</Bezeichnung>
+                    <Eigentuemer>Privat</Eigentuemer>
+                    <EigentuemerRef REF="refORGLEER" />
+                    <DatenlieferantRef REF="refORGEXT" />
+                  </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+            """, """
+                <SIA405_Base_Abwasser_LV95.Administration BID="refB2">
+                  <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="refORGLEER">
+                    <Organisationstyp>Privat</Organisationstyp>
+                  </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+                </SIA405_Base_Abwasser_LV95.Administration>
+            """)));
+
+        // Ein Eigentuemertext hat Vorrang vor dem Verweis; dann fehlt nichts (Schacht 501).
+        var warnung = Assert.Single(stats.Messages, m => m.Level == "Warn");
+        Assert.Equal("XTF405", warnung.Context);
+        Assert.Equal("Normschacht \"500\" (TID refS500): Datenherr-Verweis refORGLEER zeigt auf eine Organisation ohne "
+                     + "Bezeichnung – Datenherr nicht übernommen.", warnung.Message);
+        var hinweis = Assert.Single(stats.Messages, m => m.Message.Contains("ausserhalb der Datei", StringComparison.Ordinal));
+        Assert.EndsWith(": Eigentümer refORGEXT (1 Schacht), Datenlieferant refORGEXT (1 Schacht).", hinweis.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Vollstaendige_Bezuege_erzeugen_keine_Meldung()
     {
         var (_, stats) = Importiere("sia405-bezuege.xtf");
@@ -147,7 +193,7 @@ public sealed class XtfSia405BezugsmeldungenTests : IDisposable
         return pfad;
     }
 
-    private static string Sia405Xtf(string objekte) => $"""
+    private static string Sia405Xtf(string objekte, string weitereBaskets = "") => $"""
         <?xml version="1.0" encoding="utf-8"?>
         <TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
           <HEADERSECTION VERSION="2.3" SENDER="Test">
@@ -157,6 +203,7 @@ public sealed class XtfSia405BezugsmeldungenTests : IDisposable
             <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="refB1">
         {objekte}
             </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+        {weitereBaskets}
           </DATASECTION>
         </TRANSFER>
         """;

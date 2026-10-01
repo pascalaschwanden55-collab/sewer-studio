@@ -2672,7 +2672,7 @@
       {
         "Context": "XTF405",
         "Level": "Info",
-        "Message": "Organisationsverweise ausserhalb der Datei (nach Norm zulässig, Name nicht übernommen): Datenlieferant refORGFEHLT (1 Haltung)."
+        "Message": "Organisationsverweise ausserhalb der Datei (nach Norm zulässig, Name nicht übernommen): Eigentümer refORGFEHLT (1 Schacht), Datenlieferant refORGFEHLT (1 Haltung)."
       },
       {
         "Context": "XTF405",
@@ -2737,7 +2737,7 @@
       {
         "Context": "XTF405",
         "Level": "Info",
-        "Message": "Organisationsverweise ausserhalb der Datei (nach Norm zulässig, Name nicht übernommen): Datenlieferant refORGFEHLT (1 Haltung)."
+        "Message": "Organisationsverweise ausserhalb der Datei (nach Norm zulässig, Name nicht übernommen): Eigentümer refORGFEHLT (1 Schacht), Datenlieferant refORGFEHLT (1 Haltung)."
       },
       {
         "Context": "XTF405",

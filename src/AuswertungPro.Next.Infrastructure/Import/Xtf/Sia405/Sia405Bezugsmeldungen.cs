@@ -20,18 +20,22 @@ internal static class Sia405Bezugsmeldungen
 
     /// <param name="haltungen">Die Haltungen, die uebernommen werden (nach Dopplungsregel).</param>
     /// <param name="ohneNamen">Die weggefallenen Haltungen ohne Namen.</param>
+    /// <param name="verweise">
+    /// Die Organisationsverweise der Datei, in die schon die Schaechte gezaehlt sind; der
+    /// Hinweis zu externen Organisationen steht so je Datei einmal. Ohne: nur die Haltungen.
+    /// </param>
     public static List<ImportMessage> Erzeuge(
         Sia405Bestand bestand,
         IReadOnlyList<Sia405HaltungMitBezuegen> haltungen,
-        IReadOnlyList<Sia405HaltungObjekt> ohneNamen)
+        IReadOnlyList<Sia405HaltungObjekt> ohneNamen,
+        Sia405Organisationsverweise? verweise = null)
     {
         ArgumentNullException.ThrowIfNull(bestand);
         ArgumentNullException.ThrowIfNull(haltungen);
         ArgumentNullException.ThrowIfNull(ohneNamen);
 
         var meldungen = new List<ImportMessage>();
-        // Rolle + Kennung -> Anzahl Haltungen, in Reihenfolge des ersten Auftretens.
-        var externe = new List<(string Rolle, string Kennung, int Haltungen)>();
+        verweise ??= new Sia405Organisationsverweise(bestand.OrganisationenInDatei);
 
         foreach (var h in haltungen)
         {
@@ -56,9 +60,9 @@ internal static class Sia405Bezugsmeldungen
             if (h.Kanal is { } kanal)
             {
                 if (!Gesetzt(kanal.Eigentuemer))
-                    PruefeOrganisation(meldungen, externe, bestand, kopf, "Eigentümer", kanal.EigentuemerRef, h.EigentuemerAusVerweis);
-                PruefeOrganisation(meldungen, externe, bestand, kopf, "Datenherr", kanal.DatenherrRef, h.Datenherr);
-                PruefeOrganisation(meldungen, externe, bestand, kopf, "Datenlieferant", kanal.DatenlieferantRef, h.Datenlieferant);
+                    WarnungFalls(meldungen, verweise.Pruefe(kopf, "Eigentümer", kanal.EigentuemerRef, h.EigentuemerAusVerweis is not null, schacht: false));
+                WarnungFalls(meldungen, verweise.Pruefe(kopf, "Datenherr", kanal.DatenherrRef, h.Datenherr is not null, schacht: false));
+                WarnungFalls(meldungen, verweise.Pruefe(kopf, "Datenlieferant", kanal.DatenlieferantRef, h.Datenlieferant is not null, schacht: false));
             }
         }
 
@@ -76,18 +80,8 @@ internal static class Sia405Bezugsmeldungen
             Warnung(meldungen, $"{name} ohne TID nicht übernommen: Ohne Objektkennung lässt sie sich nicht eindeutig zuordnen.");
         }
 
-        if (externe.Count > 0)
-        {
-            meldungen.Add(new ImportMessage
-            {
-                Level = "Info",
-                Context = Kontext,
-                Message = "Organisationsverweise ausserhalb der Datei (nach Norm zulässig, Name nicht übernommen): "
-                          + string.Join(", ", externe.Select(e =>
-                              $"{e.Rolle} {e.Kennung} ({e.Haltungen} {(e.Haltungen == 1 ? "Haltung" : "Haltungen")})"))
-                          + "."
-            });
-        }
+        if (verweise.Hinweis(Kontext) is { } hinweis)
+            meldungen.Add(hinweis);
 
         return meldungen;
     }
@@ -120,33 +114,15 @@ internal static class Sia405Bezugsmeldungen
         Warnung(meldungen, kopf + $"Abwasserknotenverweis {knoten} am Haltungspunkt {kennung} ({ende}) zeigt ins Leere – {rueckfall}");
     }
 
-    private static void PruefeOrganisation(
-        List<ImportMessage> meldungen,
-        List<(string Rolle, string Kennung, int Haltungen)> externe,
-        Sia405Bestand bestand,
-        string kopf,
-        string rolle,
-        string kennung,
-        string? aufgeloest)
-    {
-        if (!Gesetzt(kennung) || aufgeloest is not null)
-            return;
-
-        if (bestand.OrganisationenInDatei.Contains(kennung))
-        {
-            Warnung(meldungen, kopf + $"{rolle}-Verweis {kennung} zeigt auf eine Organisation ohne Bezeichnung – {rolle} nicht übernommen.");
-            return;
-        }
-
-        var stelle = externe.FindIndex(e => e.Rolle == rolle && string.Equals(e.Kennung, kennung, StringComparison.OrdinalIgnoreCase));
-        if (stelle < 0)
-            externe.Add((rolle, kennung, 1));
-        else
-            externe[stelle] = externe[stelle] with { Haltungen = externe[stelle].Haltungen + 1 };
-    }
-
     private static void Warnung(List<ImportMessage> meldungen, string text)
         => meldungen.Add(new ImportMessage { Level = "Warn", Context = Kontext, Message = text });
+
+    /// <summary>Eine Warnung zu einer Haltung oder einem Schacht (Kontext XTF405), sofern es eine gibt.</summary>
+    internal static void WarnungFalls(List<ImportMessage> meldungen, string? text)
+    {
+        if (text is not null)
+            Warnung(meldungen, text);
+    }
 
     private static bool Gesetzt(string? wert) => !string.IsNullOrWhiteSpace(wert);
 }
