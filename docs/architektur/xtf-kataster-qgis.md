@@ -729,7 +729,7 @@ ueber `VsaKekUntersuchungsart` in Haltung, Schacht und ungeklaert; danach waehlt
 `VsaKekUntersuchungsWahl` je Haltung die Haupt-Untersuchung; `VsaKekAbbildung` setzt die
 Haltungsfelder, baut die Schachtprotokollzeilen und den Importbeleg. Nicht Zuordenbares
 (Untersuchung ohne Bezeichnung, verwaiste Schaeden, Foto ohne Befund) steht sichtbar in
-`VsaKekBezuege`, wird aber wie bisher nicht gemeldet. **Importbeleg:** Der gespeicherte
+`VsaKekBezuege` und wird seit 01.10.2026 gemeldet (siehe unten). **Importbeleg:** Der gespeicherte
 `ImportFingerprint` von Schachtbegehung und weiterer Untersuchung ist SHA-256 ueber die
 JSON-Form von `VsaKekUntersuchung` samt `VsaKekKanalschaden`/`VsaKekSchachtschaden`.
 Diese drei Klassen nie umbenennen, umordnen oder ergaenzen (Eigenschaften), sonst erkennt
@@ -765,7 +765,32 @@ ein Wiederholungsimport bestehende Begehungen nicht mehr; Waechter:
   Schacht) gegen Duplikate, Video in `ImportVideoPaths`; ohne Befunde keine Fassung.
   `VsaFindingProtocolSynchronizer` gleicht Fassungen mit fremdem Importbeleg nicht mehr mit
   den Befunden der Haupt-Untersuchung ab. Der Importbericht nennt Haupt-Untersuchung und
-  Fassung mit Datum, TID und Befundzahl. `Link_G` setzt der XTF-Weg nicht (WinCan nur per
-  `Befahrungsrollen`-Namenskonvention). Schachtbegehungen und ihr `ImportFingerprint` sind
-  unveraendert. Tests: `XtfVsaKekMehrereUntersuchungenTests`, `UntersuchungsAuswahlTests`.
+  Fassung mit Datum, TID und Befundzahl. `Link_G` siehe unten. Schachtbegehungen und ihr
+  `ImportFingerprint` sind unveraendert. Tests: `XtfVsaKekMehrereUntersuchungenTests`,
+  `UntersuchungsAuswahlTests`.
+- **Link_G beim VSA-KEK-Weg (01.10.2026).** `Link_G` ist wie bei WinCan (`Befahrungsrollen`)
+  und in der Kanalverteilung das Video der Gegenbefahrung. `VsaKekAbbildung.Gegenvideo` setzt
+  es auf das Video der weiteren Untersuchung, wenn genau eine weitere Untersuchung belegt
+  aus der Gegenrichtung der Haupt-Untersuchung kommt (beide `Fliessrichtung` bekannt und
+  verschieden, eigenes Video, nicht das Hauptvideo). Unterschied zu WinCan: Dort belegt nur
+  die Dateinamenskonvention (`~G`/`_G`/`-G`) eine Gegenbefahrung, weil die Richtung einer
+  Datenbank-Untersuchung allein Wiederholung oder Teilaufnahme nicht ausschliesst; in der
+  VSA-KEK-Datei sind Video und Richtung an dieselbe, bereits als eigene Befahrung erkannte
+  Untersuchung gebunden. Uebernahme ueber `MergeEngine` wie `Link` (Handwert bleibt). Das
+  Video bleibt zusaetzlich in `ImportVideoPaths` der Fassung; der Kanalverteiler kopiert es
+  einmal (`-g`). Test: `XtfVsaKekMehrereUntersuchungenTests`.
+- **Importbericht nennt stille Luecken (01.10.2026).** Nur Meldungen, kein Wert und kein
+  Zaehler aendert sich. SIA405 (`Sia405Bezugsmeldungen`, Warn, Kontext XTF405): Kanal-,
+  Rohrprofil- und Haltungspunktverweis ins Leere, Organisation in der Datei ohne
+  Bezeichnung, Haltung ohne Namen (je mit Haltung, TID, Verweis). Organisationsverweise auf
+  Kennungen ausserhalb der Datei sind nach Norm EXTERNAL (wie `DssExportPruefung`) und
+  stehen nur als ein gesammelter Info-Hinweis. VSA-KEK (`VsaKekLueckenmeldungen`, Warn):
+  Untersuchung ohne Bezeichnung, verwaiste Kanal-/Normschachtschaeden, Fotos ohne
+  Kanalschaden und Videos ohne Untersuchung je mit TID; ab 11 Objekten einer Art eine
+  gebuendelte Zeile «n verwaiste …: a, b, … (+k weitere)». SIA405 und VSA-KEK in einer
+  Datei: SIA405 gewinnt weiter, eine Warnung nennt die Zahl liegengebliebener
+  Untersuchungen. `Letzte_Aenderung` im ISO-Format (`2025-10-06`, auch mit Uhrzeit) wird
+  ueber `XtfValueNormalizer.NormalizeDate` zu `dd.MM.yyyy`; der VSA-KEK-`Zeitpunkt` laeuft
+  unveraendert ueber `NormalizeDate_yyyymmdd`. Tests: `XtfSia405BezugsmeldungenTests`,
+  `XtfVsaKekLueckenmeldungenTests`, `XtfSia405MitVsaKekTests`, `XtfSia405LetzteAenderungTests`.
 

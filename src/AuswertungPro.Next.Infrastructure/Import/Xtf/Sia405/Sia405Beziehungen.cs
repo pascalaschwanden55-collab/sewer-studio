@@ -41,12 +41,20 @@ internal static class Sia405Beziehungen
 {
     /// <summary>
     /// Alle Haltungen in Dateireihenfolge. Eine Haltung ohne eigenen Namen und ohne Kanal
-    /// mit Namen faellt heute still weg; sie liesse sich im Projekt keiner Zeile zuordnen.
+    /// mit Namen faellt weg; sie liesse sich im Projekt keiner Zeile zuordnen.
     /// </summary>
     public static List<Sia405HaltungMitBezuegen> Loese(Sia405Bestand bestand)
+        => Loese(bestand, out _);
+
+    /// <summary>
+    /// Wie oben; <paramref name="ohneNamen"/> nennt die weggefallenen Haltungen ohne Namen,
+    /// damit der Importbericht sie melden kann (seit 01.10.2026).
+    /// </summary>
+    public static List<Sia405HaltungMitBezuegen> Loese(Sia405Bestand bestand, out List<Sia405HaltungObjekt> ohneNamen)
     {
         ArgumentNullException.ThrowIfNull(bestand);
 
+        ohneNamen = new List<Sia405HaltungObjekt>();
         var ergebnis = new List<Sia405HaltungMitBezuegen>();
         foreach (var haltung in bestand.Haltungen.Values)
         {
@@ -54,7 +62,10 @@ internal static class Sia405Beziehungen
 
             var haltungsname = !string.IsNullOrWhiteSpace(haltung.Bezeichnung) ? haltung.Bezeichnung : (kanal?.Bezeichnung ?? "");
             if (string.IsNullOrWhiteSpace(haltungsname))
+            {
+                ohneNamen.Add(haltung);
                 continue;
+            }
 
             Sia405Rohrprofil? rohrprofil = null;
             var rohrprofilOhneZiel = false;

@@ -56,7 +56,10 @@ internal static class VsaKekAbbildung
         {
             bezuege.BefundeJeUntersuchung.TryGetValue(gruppe.Haupt.Tid, out var findings);
             bezuege.VideoJeUntersuchung.TryGetValue(gruppe.Haupt.Tid, out var videoLink);
-            records.Add(BaueHaltung(gruppe.Haupt, findings, videoLink, sourcePath, modellName));
+            var record = BaueHaltung(gruppe.Haupt, findings, videoLink, sourcePath, modellName);
+            if (Gegenvideo(gruppe, bezuege.VideoJeUntersuchung, videoLink) is { } gegenvideo)
+                record.SetFieldValue("Link_G", gegenvideo, FieldSource.Xtf, userEdited: false);
+            records.Add(record);
 
             foreach (var w in gruppe.Weitere)
             {
@@ -72,6 +75,43 @@ internal static class VsaKekAbbildung
 
         return new XtfVsaKekErgebnis(records, schaechte, bezuege.Offene.ToList(), bezuege.Untersuchungen, weitere);
     }
+
+    /// <summary>
+    /// Das Video der Gegenbefahrung fuer <c>Link_G</c> — dort fuehrt auch der WinCan-Import
+    /// (<c>Befahrungsrollen</c>) und die Kanalverteilung das Gegeninspektions-Video. Seit
+    /// 01.10.2026. Nur wenn genau eine weitere Untersuchung belegt aus der Gegenrichtung der
+    /// Haupt-Untersuchung kommt (beide Fliessrichtungen bekannt und verschieden) und ein
+    /// eigenes Video hat; zwei Kandidaten werden nicht geraten. Ein von Hand gesetztes
+    /// <c>Link_G</c> schuetzt die Uebernahme ins Projekt (wie bei <c>Link</c>). Das Video
+    /// bleibt zusaetzlich an der Protokollfassung der Gegenbefahrung.
+    /// </summary>
+    private static string? Gegenvideo(
+        VsaKekUntersuchungsWahl.Gruppe<VsaKekUntersuchung> gruppe,
+        IReadOnlyDictionary<string, string> videos,
+        string? hauptvideo)
+    {
+        var hauptrichtung = Richtung(gruppe.Haupt.Fliessrichtung);
+        if (hauptrichtung == 0)
+            return null;
+
+        var kandidaten = gruppe.Weitere
+            .Where(w => Richtung(w.Fliessrichtung) == -hauptrichtung)
+            .Select(w => videos.TryGetValue(w.Tid, out var video) ? video : null)
+            .Where(video => !string.IsNullOrWhiteSpace(video)
+                            && !string.Equals(video, hauptvideo, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return kandidaten.Count == 1 ? kandidaten[0] : null;
+    }
+
+    /// <summary>+1 in, -1 gegen Fliessrichtung, 0 unbekannt.</summary>
+    private static int Richtung(string? fliessrichtung)
+        => XtfValueNormalizer.NormalizeInspectionDirection(fliessrichtung) switch
+        {
+            "In Fliessrichtung" => 1,
+            "Gegen Fliessrichtung" => -1,
+            _ => 0
+        };
 
     /// <summary>
     /// Vollstaendigkeit einer Haltungsuntersuchung fuer <see cref="VsaKekUntersuchungsWahl"/>.

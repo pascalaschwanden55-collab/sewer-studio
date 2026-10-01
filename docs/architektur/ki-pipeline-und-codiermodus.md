@@ -237,7 +237,9 @@ Sieben Befunde mit derselben Wurzel: Ein Teillauf sah aus wie ein vollstaendiger
   ihre Regeln sind bewusst nicht vereinheitlicht.
 - **Modellschritte (AP05b, 30.09.2026):** `MultiModelClsVorfilter`, `MultiModelYoloSchritt` (Umgehung,
   Qualifikationsentzug: nur ausdrueckliches `qualified=true` filtert, Klassenschwellen, COCO-Warnung),
-  `MultiModelDinoSchritt` (degraded = Modellfehler, ohne Box, Grundgeruest-Befund) und `MultiModelSamSchritt`
+  `MultiModelDinoSchritt` (degraded = Modellfehler, ohne Box, Grundgeruest-Befund; seit 01.10.2026 haengt
+  DINO-degraded seinen Grund ueber `MarkTraceDegraded` an, ein vorheriges `detector_unqualified` bleibt im
+  Trace) und `MultiModelSamSchritt`
   (Vollstaendigkeit, `LowScoreBoxes` kein Fehler, Quantifizierung, Befundbau). `MultiModelBildKontext` traegt
   die Werte eines Bildes. `MultiModelSidecarAufruf` ordnet nur die Fehlerart ein (Nutzerabbruch weiterwerfen,
   VRAM = Kapazitaet, sonst Transport); Folgen, Log- und Fortschrittstexte bleiben beim Modell. Der Vorfilter

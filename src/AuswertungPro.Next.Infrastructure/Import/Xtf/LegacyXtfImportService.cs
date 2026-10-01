@@ -181,9 +181,8 @@ public sealed partial class LegacyXtfImportService
                 }
             }
 
-            var records = ParseSia405(doc, out var doppelte);
-            foreach (var meldung in doppelte)
-                stats.Messages.Add(new ImportMessage { Level = "Warn", Context = "XTF405", Message = meldung });
+            var records = ParseSia405(doc, out var meldungen);
+            stats.Messages.AddRange(meldungen);
 
             if (records.Count > 0)
             {
@@ -202,6 +201,20 @@ public sealed partial class LegacyXtfImportService
                 });
 
                 stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF405", Message = $"Importiert {records.Count} Haltungen aus {Path.GetFileName(path)}" });
+
+                // SIA405 hat Vorrang; die VSA-KEK-Untersuchungen derselben Datei bleiben
+                // liegen. Bis 01.10.2026 geschah das ohne Meldung.
+                var liegenGeblieben = isVsa ? VsaKekObjektLeser.Lies(doc).Untersuchungen.Count : 0;
+                if (liegenGeblieben > 0)
+                {
+                    stats.Messages.Add(new ImportMessage
+                    {
+                        Level = "Warn",
+                        Context = "XTF",
+                        Message = $"{Path.GetFileName(path)}: Datei enthält zusätzlich {liegenGeblieben} VSA-KEK-Untersuchung(en), "
+                                  + "die nicht übernommen wurden – die SIA405-Haltungen haben Vorrang."
+                    });
+                }
             }
             else if (isVsa)
             {
@@ -216,7 +229,7 @@ public sealed partial class LegacyXtfImportService
         // VSA_KEK verarbeiten, wenn NICHT bereits erfolgreich als SIA405 importiert
         if (!sia405Imported && isVsa)
         {
-            var ergebnis = ParseVsaKek(doc, path, mediaPaths);
+            var ergebnis = ParseVsaKek(doc, path, mediaPaths, out var luecken);
             stats.Found += ergebnis.Haltungen.Count;
 
             foreach (var rec in ergebnis.Haltungen)
@@ -255,6 +268,8 @@ public sealed partial class LegacyXtfImportService
                     Message = $"Untersuchung \"{offen.Bezeichnung}\" nicht zugeordnet: {offen.Grund}"
                 });
             }
+
+            stats.Messages.AddRange(luecken);
 
             // Weitere Untersuchungen derselben Haltung (z.B. Gegenbefahrung): als eigene
             // Protokollfassung ablegen, erst nach der Uebernahme der Haupt-Untersuchungen.
@@ -411,24 +426,26 @@ public sealed partial class LegacyXtfImportService
         => Common.HoldingKeyNormalizer.Normalize(value);
 
     // ===================== SIA405 =====================
-    private static List<HaltungRecord> ParseSia405(XDocument doc, out List<string> doppelte)
+    private static List<HaltungRecord> ParseSia405(XDocument doc, out List<ImportMessage> meldungen)
     {
         // Drei getrennte Schritte, damit eine neue Feldregel nur die Abbildung beruehrt:
         // 1. Objekte lesen — die Verweise bleiben Kennungen,
         // 2. Bezuege aufloesen — Kanal, Rohrprofil, Organisationen, Schachtnamen,
-        //    danach je Bezeichnung nur die erste Haltung (keine Vermischung),
+        //    danach je Bezeichnung nur die erste Haltung (keine Vermischung); was sich
+        //    nicht aufloesen liess, meldet Sia405Bezugsmeldungen (seit 01.10.2026),
         // 3. fachlich abbilden — welche Angabe in welches Programmfeld geht.
         // Die Uebernahme ins Projekt (Handwertschutz, Konflikte) macht danach
         // MergeRecordIntoProject.
         var bestand = Sia405ObjektLeser.Lies(doc);
-        return Sia405DoppelteBezeichnungen.NurErste(Sia405Beziehungen.Loese(bestand), out doppelte)
-            .Select(Sia405HaltungAbbildung.BaueRecord)
-            .ToList();
+        var haltungen = Sia405DoppelteBezeichnungen.NurErste(Sia405Beziehungen.Loese(bestand, out var ohneNamen), out var doppelte);
+        meldungen = doppelte.Select(m => new ImportMessage { Level = "Warn", Context = "XTF405", Message = m }).ToList();
+        meldungen.AddRange(Sia405Bezugsmeldungen.Erzeuge(bestand, haltungen, ohneNamen));
+        return haltungen.Select(Sia405HaltungAbbildung.BaueRecord).ToList();
     }
 
     // ===================== VSA_KEK =====================
     private static XtfVsaKekErgebnis ParseVsaKek(XDocument doc, string sourcePath,
-        IVsaMediaPathResolver mediaPaths)
+        IVsaMediaPathResolver mediaPaths, out List<ImportMessage> luecken)
     {
         // Gleiche drei Schritte wie bei SIA405:
         // 1. Objekte lesen — Untersuchung, Kanal-/Normschachtschaden, Datei, Bauwerke,
@@ -440,6 +457,8 @@ public sealed partial class LegacyXtfImportService
         // MergeVsaKekSchaechteIntoProject und VsaKekWeitereUntersuchungen.
         var bestand = VsaKekObjektLeser.Lies(doc);
         var bezuege = VsaKekBeziehungen.Loese(bestand, sourcePath, mediaPaths);
+        // Nicht Zuordenbares wird nicht uebernommen, aber seit 01.10.2026 gemeldet.
+        luecken = VsaKekLueckenmeldungen.Erzeuge(bezuege);
         var gruppen = VsaKekUntersuchungsWahl.Waehle(bezuege.Haltungsuntersuchungen, u => u.Bezeichnung, VsaKekAbbildung.Merkmale);
         return VsaKekAbbildung.Baue(bezuege, gruppen, sourcePath, bestand.ModellName);
     }

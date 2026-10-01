@@ -99,9 +99,9 @@ internal sealed class MultiModelDinoSchritt
             bild.RecordFrame(run, bild.YoloMs, bild.DinoMs, 0);
             trace.Path = "dino_degraded";
             trace.DropReason = "dino_degraded";
-            trace.Degraded = true;
-            // Belegtes Verhalten (offener Befund, nicht angleichen): ersetzt statt anzuhaengen.
-            trace.DegradedReason = dinoResult.ErrorCode ?? "dino_degraded";
+            // Anhaengen statt ersetzen (seit 01.10.2026, Befund 4 aus AP05): Ein vorher
+            // gesetzter Grund wie "detector_unqualified" bleibt im Trace erhalten.
+            MultiModelAnalysisService.MarkTraceDegraded(trace, dinoResult.ErrorCode ?? "dino_degraded");
             // Modellfehler: nur Skip-Quote, kein Transport-Ausfall
             return new Ergebnis(MultiModelBildErgebnis.Modellfehler(bild.EstimatedMeter), null);
         }

@@ -73,7 +73,8 @@ internal static class Sia405HaltungAbbildung
         // Inspektionsdatum. Bis 2026-09-03 landete es in "Datum_Jahr" und ueberschrieb
         // dort das echte Inspektionsdatum aus WinCan: Aus 06.10.2025 wurde 03.09.2026.
         // Es gehoert in das Herkunftsfeld, das auch das QGIS-Nachfuellen verwendet.
-        var letzteAenderung = XtfValueNormalizer.NormalizeDate_yyyymmdd(hd.LetzteAenderung);
+        // Seit 01.10.2026 auch im ISO-Format (2025-10-06, mit oder ohne Uhrzeit).
+        var letzteAenderung = XtfValueNormalizer.NormalizeDate(hd.LetzteAenderung);
         if (!string.IsNullOrWhiteSpace(letzteAenderung))
             Setze(rec, FieldKeys.CadastreLastChange, letzteAenderung);
 

@@ -861,7 +861,7 @@
           "Inspektionsrichtung": "",
           "Kosten": "",
           "Lagebestimmung": "",
-          "Letzte_Aenderung": "2025-10-06",
+          "Letzte_Aenderung": "06.10.2025",
           "Lichte_Breite_mm": "300",
           "Linerendmanschette_LEM": "",
           "Link": "",
@@ -2649,6 +2649,36 @@
         "Context": "XTF405",
         "Level": "Warn",
         "Message": "Haltung '100-101' kommt zweimal vor (TID refHALTUNG1, TID refHALTUNG7) – nur die erste übernommen."
+      },
+      {
+        "Context": "XTF405",
+        "Level": "Warn",
+        "Message": "Haltung \"102-103\" (TID refHALTUNG3): Kanalverweis refKANALFEHLT zeigt ins Leere – Kanalangaben (Eigentümer, Status, Nutzungsart u. a.) nicht übernommen."
+      },
+      {
+        "Context": "XTF405",
+        "Level": "Warn",
+        "Message": "Haltung \"102-103\" (TID refHALTUNG3): Rohrprofilverweis refPROFILFEHLT zeigt ins Leere – Profiltyp fehlt, Breite aus Lichte_Breite der Haltung übernommen."
+      },
+      {
+        "Context": "XTF405",
+        "Level": "Warn",
+        "Message": "Haltung \"102-103\" (TID refHALTUNG3): Haltungspunktverweis refPUNKTFEHLT (oben) zeigt ins Leere – Schacht oben nicht übernommen."
+      },
+      {
+        "Context": "XTF405",
+        "Level": "Warn",
+        "Message": "Haltung \"103-104\" (TID refHALTUNG4): Eigentümer-Verweis refORGOHNENAME zeigt auf eine Organisation ohne Bezeichnung – Eigentümer nicht übernommen."
+      },
+      {
+        "Context": "XTF405",
+        "Level": "Warn",
+        "Message": "Haltung ohne Bezeichnung (TID refHALTUNG5) nicht übernommen: Weder die Haltung noch ihr Kanal (Kanalverweis refKANALFEHLT) tragen einen Namen."
+      },
+      {
+        "Context": "XTF405",
+        "Level": "Info",
+        "Message": "Organisationsverweise ausserhalb der Datei (nach Norm zulässig, Name nicht übernommen): Datenlieferant refORGFEHLT (1 Haltung)."
       },
       {
         "Context": "XTF405",

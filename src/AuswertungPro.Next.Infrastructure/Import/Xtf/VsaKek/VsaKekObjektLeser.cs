@@ -89,11 +89,17 @@ internal sealed record VsaKekKanalschadenObjekt(
     VsaKekKanalschaden Werte,
     VsaFinding Befund);
 
-/// <summary>Ein <c>Normschachtschaden</c> mit dem unaufgeloesten Verweis auf seine Untersuchung.</summary>
-internal sealed record VsaKekNormschachtschadenObjekt(string? UntersuchungRef, VsaKekSchachtschaden Werte);
+/// <summary>
+/// Ein <c>Normschachtschaden</c> mit dem unaufgeloesten Verweis auf seine Untersuchung. Die
+/// Kennung steht hier und nicht in <see cref="VsaKekSchachtschaden"/> (Importbeleg).
+/// </summary>
+internal sealed record VsaKekNormschachtschadenObjekt(string? Tid, string? UntersuchungRef, VsaKekSchachtschaden Werte);
 
-/// <summary>Ein <c>Datei</c>-Objekt (Foto oder Video); <c>Objekt</c> ist die unaufgeloeste Kennung.</summary>
-internal readonly record struct VsaKekDatei(string Art, string Klasse, string Objekt, string Bezeichnung, string Relativpfad);
+/// <summary>
+/// Ein <c>Datei</c>-Objekt (Foto oder Video); <c>Objekt</c> ist die unaufgeloeste Kennung,
+/// <c>Tid</c> die eigene Kennung (nur fuer den Importbericht).
+/// </summary>
+internal readonly record struct VsaKekDatei(string Art, string Klasse, string Objekt, string Bezeichnung, string Relativpfad, string Tid = "");
 
 /// <summary>Alle VSA-KEK-Objekte einer Datei; Verweise bleiben hier Kennungen.</summary>
 internal sealed class VsaKekBestand
@@ -329,7 +335,7 @@ internal static class VsaKekObjektLeser
             }
         }
 
-        return new VsaKekNormschachtschadenObjekt(refTid, schachtschaden);
+        return new VsaKekNormschachtschadenObjekt((string?)node.Attribute("TID"), refTid, schachtschaden);
     }
 
     private static VsaKekDatei LiesDatei(XElement node)
@@ -352,7 +358,7 @@ internal static class VsaKekObjektLeser
             }
         }
 
-        return new VsaKekDatei(art, klasse, objekt, bezeichnung, relativpfad);
+        return new VsaKekDatei(art, klasse, objekt, bezeichnung, relativpfad, (string?)node.Attribute("TID") ?? "");
     }
 
     /// <summary>
