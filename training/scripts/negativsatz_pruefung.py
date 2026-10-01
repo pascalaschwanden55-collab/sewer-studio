@@ -27,6 +27,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Mapping, NamedTuple, Sequence
@@ -1369,6 +1370,89 @@ def pruefe_proto_ohne_gold_testhaltung(
                 f"Gold-Testhaltung {eintrag['holding_key']} (Split {eintrag['split']}); "
                 "Gold-Testhaltungen duerfen in keinem Split stehen, auch nicht in validation."
             )
+
+
+# ---------------------------------------------------------------------------
+# Eval-Schutz der Satzbilder (Entscheid 01.10.2026)
+# ---------------------------------------------------------------------------
+
+# Bewusst dieselbe Form und Normalisierung wie EvalContaminationGuard in C#
+# (NormalizeHaltungKey, IsEvalHaltung). Keine eigene Regel: Der C#-Export stoppt
+# jedes Negativbild einer Eval-Haltung (TrainingExportPlanInputBuilder), und der
+# Leser verhaelt sich ebenso, nur mit einer Meldung, die jedes Bild nennt.
+_EVAL_HALTUNGS_MUSTER = re.compile(r"\d[\d.]*[-/]\d[\d.]*")
+
+
+def _ohne_bereichspraefix(schacht: str) -> str:
+    punkt = schacht.rfind(".")
+    return schacht[punkt + 1:] if 0 <= punkt < len(schacht) - 1 else schacht
+
+
+def eval_haltungsschluessel(text: Any) -> str | None:
+    """Wie C# ``NormalizeHaltungKey``: erstes Schachtpaar, Bereichspraefix je Schacht weg.
+
+    Ohne Treffer bleibt der getrimmte Text (er passt dann nur bei exakter
+    Gleichheit); leer ergibt ``None``.
+    """
+    if text is None or not str(text).strip():
+        return None
+    wert = str(text)
+    treffer = _EVAL_HALTUNGS_MUSTER.search(wert)
+    if treffer is None:
+        return wert.strip()
+    teile = re.split(r"[-/]", treffer.group(0))
+    if len(teile) != 2:
+        return treffer.group(0)
+    return f"{_ohne_bereichspraefix(teile[0])}-{_ohne_bereichspraefix(teile[1])}"
+
+
+def ist_eval_haltung(eval_schluessel: Any, haltung: Any) -> bool:
+    """Wie C# ``IsEvalHaltung``: Treffer in beiden Richtungen, Gross-/Kleinschreibung egal.
+
+    ``eval_schluessel`` sind normalisierte Schluessel. Leere Menge oder leere
+    Haltung ergeben ``False``.
+    """
+    geschuetzt = {str(schluessel).casefold() for schluessel in eval_schluessel}
+    if not geschuetzt:
+        return False
+    schluessel = eval_haltungsschluessel(haltung)
+    if schluessel is None:
+        return False
+    if schluessel.casefold() in geschuetzt:
+        return True
+    treffer = _EVAL_HALTUNGS_MUSTER.search(schluessel)
+    if treffer is None or treffer.group(0) != schluessel:
+        return False
+    teile = re.split(r"[-/]", schluessel)
+    return len(teile) == 2 and f"{teile[1]}-{teile[0]}".casefold() in geschuetzt
+
+
+def pruefe_negativbilder_gegen_eval(
+    bilder: Sequence[Mapping[str, Any]],
+    eval_schluessel: Any,
+) -> None:
+    """Kein Negativbild aus einer Eval-/Abnahme-Haltung, in keinem Split.
+
+    Wie der C#-Export wird der Satz abgelehnt statt still gekuerzt; die Meldung
+    nennt jedes betroffene Bild mit Haltung und Split, damit nichts unsichtbar
+    bleibt. Bilder ohne Haltung (alter Pool) werden nicht geprueft, wie in C#.
+    """
+    betroffen = [
+        bild
+        for bild in sorted(bilder, key=lambda wert: str(wert.get("path")))
+        if bild.get("holding_key") is not None
+        and ist_eval_haltung(eval_schluessel, bild["holding_key"])
+    ]
+    if not betroffen:
+        return
+    zeilen = "; ".join(
+        f"{bild['path']} (Haltung {bild['holding_key']}, Split {bild.get('split')})"
+        for bild in betroffen
+    )
+    raise ValueError(
+        f"{len(betroffen)} Negativbild(er) gehoeren zum eingefrorenen Eval-/Abnahme-Set "
+        f"und duerfen nicht ins Training: {zeilen}"
+    )
 
 
 # ---------------------------------------------------------------------------
