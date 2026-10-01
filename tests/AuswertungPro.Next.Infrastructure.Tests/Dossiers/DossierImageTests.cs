@@ -128,7 +128,7 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
             {
                 new DocxImagePlacement("Logo", bildPfad, MaxWidthCm: 4.5)
             });
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         stream.Position = 0;
@@ -136,11 +136,11 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
         var mainPart = reopened.MainDocumentPart!;
 
         var text = string.Concat(
-            mainPart.Document.Body!.Descendants<Text>().Select(t => t.Text));
+            mainPart.Document!.Body!.Descendants<Text>().Select(t => t.Text));
 
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
         Assert.Single(mainPart.ImageParts);
-        Assert.NotEmpty(mainPart.Document.Body!.Descendants<Drawing>());
+        Assert.NotEmpty(mainPart.Document!.Body!.Descendants<Drawing>());
     }
 
     [Fact]
@@ -157,12 +157,12 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
             {
                 new DocxImagePlacement("Logo", bildPfad, MaxWidthCm: 2.0)
             });
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         stream.Position = 0;
         using var reopened = WordprocessingDocument.Open(stream, false);
-        var extent = reopened.MainDocumentPart!.Document.Body!
+        var extent = reopened.MainDocumentPart!.Document!.Body!
             .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>()
             .Single();
 
@@ -184,12 +184,12 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
                 new DocxImagePlacement(
                     "Uebersichtsplan", bildPfad, MaxWidthCm: 2.0, HeightCm: 3.0)
             });
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         stream.Position = 0;
         using var reopened = WordprocessingDocument.Open(stream, false);
-        var extent = reopened.MainDocumentPart!.Document.Body!
+        var extent = reopened.MainDocumentPart!.Document!.Body!
             .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>()
             .Single();
 
@@ -215,12 +215,12 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
                     HeightCm: 3.0,
                     FitWithinBounds: true)
             ]);
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         stream.Position = 0;
         using var reopened = WordprocessingDocument.Open(stream, false);
-        var body = reopened.MainDocumentPart!.Document.Body!;
+        var body = reopened.MainDocumentPart!.Document!.Body!;
         var frame = body
             .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>()
             .Single();
@@ -255,12 +255,12 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
                     HeightCm: 3.0,
                     FitWithinBounds: true)
             ]);
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         stream.Position = 0;
         using var reopened = WordprocessingDocument.Open(stream, false);
-        var body = reopened.MainDocumentPart!.Document.Body!;
+        var body = reopened.MainDocumentPart!.Document!.Body!;
         var frame = body
             .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>()
             .Single();
@@ -290,7 +290,7 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
             {
                 new DocxImagePlacement("Logo", fehlt, MaxWidthCm: 4.5)
             });
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         stream.Position = 0;
@@ -298,7 +298,7 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
         var mainPart = reopened.MainDocumentPart!;
 
         var text = string.Concat(
-            mainPart.Document.Body!.Descendants<Text>().Select(t => t.Text));
+            mainPart.Document!.Body!.Descendants<Text>().Select(t => t.Text));
 
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
         Assert.Contains("Vorne", text, StringComparison.Ordinal);
@@ -317,7 +317,7 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
         using var stream = new MemoryStream();
         using (var document = CreateDocument(stream, "{{@Uebersichtsplan}}"))
         {
-            var body = document.MainDocumentPart!.Document.Body!;
+            var body = document.MainDocumentPart!.Document!.Body!;
             body.Elements<Paragraph>().Single().AppendChild(new Run(new Drawing()));
             body.AppendChild(new Paragraph(new Run(new Text("Kapitel 2"))));
 
@@ -334,7 +334,7 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
 
         stream.Position = 0;
         using var reopened = WordprocessingDocument.Open(stream, false);
-        var bodyText = reopened.MainDocumentPart!.Document.Body!.InnerText;
+        var bodyText = reopened.MainDocumentPart!.Document!.Body!.InnerText;
 
         Assert.Equal("Kapitel 2", bodyText);
         Assert.Empty(reopened.MainDocumentPart.Document.Body!.Descendants<Drawing>());
@@ -364,7 +364,7 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
             {
                 new DocxImagePlacement("Wappen", bildPfad, MaxWidthCm: 2.0)
             });
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         stream.Position = 0;
@@ -372,7 +372,7 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
         var mainPart = reopened.MainDocumentPart!;
 
         var text = string.Concat(
-            mainPart.Document.Body!.Descendants<Text>().Select(t => t.Text));
+            mainPart.Document!.Body!.Descendants<Text>().Select(t => t.Text));
 
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
         Assert.Single(mainPart.ImageParts);
@@ -394,19 +394,19 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
         {
             var mainPart = document.AddMainDocumentPart();
             mainPart.Document = new Document();
-            var body = mainPart.Document.AppendChild(new Body());
+            var body = mainPart.Document!.AppendChild(new Body());
             body.InnerXml = TextfeldAbsatzMitBild;
 
             DocxImagePlaceholderFiller.Fill(document, new[]
             {
                 new DocxImagePlacement("Logo", bildPfad, MaxWidthCm: 4.5)
             });
-            mainPart.Document.Save();
+            mainPart.Document!.Save();
         }
 
         stream.Position = 0;
         using var wieder = WordprocessingDocument.Open(stream, false);
-        var felder = wieder.MainDocumentPart!.Document.Body!
+        var felder = wieder.MainDocumentPart!.Document!.Body!
             .Descendants<TextBoxContent>()
             .ToList();
 
@@ -446,7 +446,7 @@ public sealed class DocxImagePlaceholderFillerTests : IDisposable
             stream, DocumentFormat.OpenXml.WordprocessingDocumentType.Document);
         var mainPart = document.AddMainDocumentPart();
         mainPart.Document = new Document();
-        var body = mainPart.Document.AppendChild(new Body());
+        var body = mainPart.Document!.AppendChild(new Body());
         body.AppendChild(new Paragraph()).Append(NewRun(text));
         return document;
     }

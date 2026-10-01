@@ -29,7 +29,7 @@ public sealed class DossierTocEntryEditorTests
                 ["Übersichtsplan Werkleitungen"] = "Situationsplan Werkleitungen"
             });
 
-        var paragraph = document.MainDocumentPart!.Document.Body!
+        var paragraph = document.MainDocumentPart!.Document!.Body!
             .Elements<Paragraph>()
             .Single();
 
@@ -68,7 +68,7 @@ public sealed class DossierTocEntryEditorTests
                 ]
             });
 
-        var titleRun = document.MainDocumentPart!.Document.Body!
+        var titleRun = document.MainDocumentPart!.Document!.Body!
             .Descendants<Run>()
             .First(run => run.InnerText.StartsWith(
                 "Situationsplan", System.StringComparison.Ordinal));

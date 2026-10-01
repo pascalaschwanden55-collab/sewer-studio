@@ -60,7 +60,7 @@ public sealed class DocxFieldMarkerWriterTests : IDisposable
         DocxPlaceholderFiller.FillRepeatingRows(
             doc, "Themen", [Zeile("Unternehmer", "Muster AG")], "keine");
 
-        var text = doc.MainDocumentPart!.Document.Body!.InnerText;
+        var text = doc.MainDocumentPart!.Document!.Body!.InnerText;
 
         Assert.Contains("Unternehmer", text, StringComparison.Ordinal);
         Assert.Contains("Muster AG", text, StringComparison.Ordinal);
@@ -79,7 +79,7 @@ public sealed class DocxFieldMarkerWriterTests : IDisposable
             [Zeile("A", "x"), Zeile("B", "y"), Zeile("C", "z")],
             "keine");
 
-        var ids = doc.MainDocumentPart!.Document.Body!
+        var ids = doc.MainDocumentPart!.Document!.Body!
             .Descendants<BookmarkStart>()
             .Select(marke => marke.Id?.Value)
             .ToList();
@@ -97,7 +97,7 @@ public sealed class DocxFieldMarkerWriterTests : IDisposable
         DocxPlaceholderFiller.FillRepeatingRows(
             doc, "Themen", [Zeile("A", "x"), Zeile("B", "y")], "keine");
 
-        var body = doc.MainDocumentPart!.Document.Body!;
+        var body = doc.MainDocumentPart!.Document!.Body!;
         var starts = body.Descendants<BookmarkStart>()
             .Where(marke => DossierPdfFieldMarker.IsMarker(marke.Name?.Value))
             .Select(marke => marke.Id!.Value!)
@@ -120,7 +120,7 @@ public sealed class DocxFieldMarkerWriterTests : IDisposable
         DocxPlaceholderFiller.FillRepeatingRows(
             doc, "Themen", [Zeile("A", "x")], "keine");
 
-        var vorlage = doc.MainDocumentPart!.Document.Body!
+        var vorlage = doc.MainDocumentPart!.Document!.Body!
             .Descendants<BookmarkStart>()
             .Single(marke => marke.Name?.Value == "_Toc4711");
 
@@ -135,7 +135,7 @@ public sealed class DocxFieldMarkerWriterTests : IDisposable
         };
 
     private static IReadOnlyList<string> Marken(WordprocessingDocument doc)
-        => doc.MainDocumentPart!.Document.Body!
+        => doc.MainDocumentPart!.Document!.Body!
             .Descendants<BookmarkStart>()
             .Select(marke => marke.Name?.Value ?? "")
             .ToList();

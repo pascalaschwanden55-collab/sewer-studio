@@ -33,7 +33,7 @@ public sealed class DocxPlaceholderFillerTests
             {
                 ["Eigentuemer"] = "Lubag AG"
             });
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         var text = ReadText(stream);
@@ -49,7 +49,7 @@ public sealed class DocxPlaceholderFillerTests
                    paragraph => paragraph.Append(Run("Tel.: {{Telefon}}"))))
         {
             DocxPlaceholderFiller.Fill(document, new Dictionary<string, string>());
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         var text = ReadText(stream);
@@ -68,12 +68,12 @@ public sealed class DocxPlaceholderFillerTests
             {
                 ["Adresse"] = "Landenbergstrasse 34\n6005 Luzern"
             });
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         stream.Position = 0;
         using var reopened = WordprocessingDocument.Open(stream, false);
-        var body = reopened.MainDocumentPart!.Document.Body!;
+        var body = reopened.MainDocumentPart!.Document!.Body!;
 
         Assert.Contains(body.Descendants<Text>(), t => t.Text.Contains("Landenbergstrasse"));
         Assert.Contains(body.Descendants<Text>(), t => t.Text.Contains("6005 Luzern"));
@@ -104,7 +104,7 @@ public sealed class DocxPlaceholderFillerTests
         {
             var mainPart = document.AddMainDocumentPart();
             mainPart.Document = new Document();
-            var body = mainPart.Document.AppendChild(new Body());
+            var body = mainPart.Document!.AppendChild(new Body());
             body.InnerXml = TextfeldAbsatz;
 
             DocxPlaceholderFiller.Fill(document, new Dictionary<string, string>
@@ -112,12 +112,12 @@ public sealed class DocxPlaceholderFillerTests
                 ["Links"] = "Gebietstitel",
                 ["Rechts"] = "Parzelle 30"
             });
-            mainPart.Document.Save();
+            mainPart.Document!.Save();
         }
 
         stream.Position = 0;
         using var wieder = WordprocessingDocument.Open(stream, false);
-        var felder = wieder.MainDocumentPart!.Document.Body!
+        var felder = wieder.MainDocumentPart!.Document!.Body!
             .Descendants<TextBoxContent>()
             .Select(f => string.Concat(f.Descendants<Text>().Select(t => t.Text)))
             .ToList();
@@ -154,7 +154,7 @@ public sealed class DocxPlaceholderFillerTests
             stream, WordprocessingDocumentType.Document);
         var mainPart = document.AddMainDocumentPart();
         mainPart.Document = new Document();
-        var body = mainPart.Document.AppendChild(new Body());
+        var body = mainPart.Document!.AppendChild(new Body());
 
         var paragraph = body.AppendChild(new Paragraph());
         fill(paragraph);
@@ -170,7 +170,7 @@ public sealed class DocxPlaceholderFillerTests
         stream.Position = 0;
         using var document = WordprocessingDocument.Open(stream, false);
         return string.Concat(
-            document.MainDocumentPart!.Document.Body!
+            document.MainDocumentPart!.Document!.Body!
                 .Descendants<Text>()
                 .Select(t => t.Text));
     }
@@ -255,7 +255,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
-        var body = document.MainDocumentPart!.Document.Body!;
+        var body = document.MainDocumentPart!.Document!.Body!;
         var toc = body.Descendants<Paragraph>()
             .First(paragraph => DossierTocStyle.IsEntry(
                 paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value)
@@ -301,7 +301,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
-        var run = document.MainDocumentPart!.Document.Body!
+        var run = document.MainDocumentPart!.Document!.Body!
             .Descendants<Run>()
             .First(candidate => candidate.InnerText == title);
 
@@ -337,7 +337,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
-        var paragraph = document.MainDocumentPart!.Document.Body!
+        var paragraph = document.MainDocumentPart!.Document!.Body!
             .Descendants<Paragraph>()
             .First(p => !p.Descendants<Paragraph>().Any()
                 && p.InnerText.Contains(replacement, StringComparison.Ordinal));
@@ -390,7 +390,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
-        var paragraph = document.MainDocumentPart!.Document.Body!
+        var paragraph = document.MainDocumentPart!.Document!.Body!
             .Descendants<Paragraph>()
             .First(p => !p.Descendants<Paragraph>().Any()
                 && p.InnerText.Contains("Hinweis", StringComparison.Ordinal));
@@ -429,7 +429,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
-        var body = document.MainDocumentPart!.Document.Body!;
+        var body = document.MainDocumentPart!.Document!.Body!;
         var drittesKapitel = body.Elements<Paragraph>().Single(paragraph =>
             paragraph.InnerText.Contains("3.Informationen Sanierung", StringComparison.Ordinal));
         var vierterPunkt = drittesKapitel.NextSibling<Paragraph>();
@@ -466,7 +466,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
-        var paragraphs = document.MainDocumentPart!.Document.Body!
+        var paragraphs = document.MainDocumentPart!.Document!.Body!
             .Elements<Paragraph>()
             .ToList();
         var entries = paragraphs
@@ -512,7 +512,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
         Assert.Contains(
-            document.MainDocumentPart!.Document.Body!.Elements<Paragraph>(),
+            document.MainDocumentPart!.Document!.Body!.Elements<Paragraph>(),
             paragraph => string.Equals(
                 paragraph.InnerText,
                 "3.Protokolle8",
@@ -569,7 +569,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
-        var run = document.MainDocumentPart!.Document.Body!
+        var run = document.MainDocumentPart!.Document!.Body!
             .Descendants<Run>()
             .First(run => run.InnerText.Contains("Ausführende Firma", StringComparison.Ordinal));
 
@@ -618,7 +618,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
-        var paragraph = document.MainDocumentPart!.Document.Body!
+        var paragraph = document.MainDocumentPart!.Document!.Body!
             .Descendants<Paragraph>()
             .First(item => item.InnerText.Contains("Änderungswesen:", StringComparison.Ordinal));
 
@@ -642,7 +642,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
-        var run = document.MainDocumentPart!.Document.Body!
+        var run = document.MainDocumentPart!.Document!.Body!
             .Descendants<Run>()
             .First(item => item.InnerText == "ROT-DATUM");
 
@@ -881,7 +881,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
     private static int CountOwnerTableRows(string path)
     {
         using var document = WordprocessingDocument.Open(path, false);
-        var body = document.MainDocumentPart!.Document.Body!;
+        var body = document.MainDocumentPart!.Document!.Body!;
 
         var table = body.Descendants<Table>().Single(t => t.Descendants<Text>()
             .Any(text => text.Text.Contains("Haus Nr.", StringComparison.Ordinal)));
@@ -1045,7 +1045,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
-        var body = document.MainDocumentPart!.Document.Body!;
+        var body = document.MainDocumentPart!.Document!.Body!;
 
         Assert.DoesNotContain(
             body.Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.DocProperties>(),
@@ -1083,7 +1083,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         using var document = WordprocessingDocument.Open(result.FilePath!, false);
-        var run = document.MainDocumentPart!.Document.Body!
+        var run = document.MainDocumentPart!.Document!.Body!
             .Descendants<Run>()
             .Single(item => item.InnerText.Contains("Haltung 439.01-36051", StringComparison.Ordinal));
 
@@ -1220,7 +1220,7 @@ public sealed class DossierWordTemplateExportServiceTests : IDisposable
 
         var parts = new List<string>
         {
-            string.Concat(mainPart.Document.Body!.Descendants<Text>().Select(t => t.Text))
+            string.Concat(mainPart.Document!.Body!.Descendants<Text>().Select(t => t.Text))
         };
 
         foreach (var footer in mainPart.FooterParts)
@@ -1365,7 +1365,7 @@ public sealed class AusgelieferteDossierWordVorlageTests
     {
         using var document = WordprocessingDocument.Open(VorlagenPfad(), false);
 
-        var zeilen = Zeilen(document.MainDocumentPart!.Document.Body!);
+        var zeilen = Zeilen(document.MainDocumentPart!.Document!.Body!);
 
         var entdoppelt = new List<string>();
         foreach (var zeile in zeilen)
@@ -1383,7 +1383,7 @@ public sealed class AusgelieferteDossierWordVorlageTests
         using var document = WordprocessingDocument.Open(VorlagenPfad(), false);
 
         var fuss = document.MainDocumentPart!.FooterParts
-            .SelectMany(f => Zeilen(f.Footer))
+            .SelectMany(f => Zeilen(f.Footer!))
             .ToList();
 
         Assert.Contains("{{Fusszeile}}", fuss);
@@ -1409,7 +1409,7 @@ public sealed class AusgelieferteDossierWordVorlageTests
         // eingesetzt wuerden sie ihre Position verlieren, weil ein nachtraeglich
         // eingefuegtes Bild im Textfluss sitzt. Nur der Uebersichtsplan ist eine
         // Bildmarke — deshalb bleiben genau zwei Bilder in der Datei.
-        var namen = mainPart.Document.Body!
+        var namen = mainPart.Document!.Body!
             .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.DocProperties>()
             .Select(d => d.Name?.Value ?? string.Empty)
             .ToList();

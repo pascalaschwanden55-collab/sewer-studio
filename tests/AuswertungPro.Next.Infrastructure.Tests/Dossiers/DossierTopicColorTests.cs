@@ -49,7 +49,7 @@ public sealed class DocxPlaceholderColorTests
         var document = WordprocessingDocument.Create(strom, WordprocessingDocumentType.Document);
         var mainPart = document.AddMainDocumentPart();
         mainPart.Document = new Document();
-        var body = mainPart.Document.AppendChild(new Body());
+        var body = mainPart.Document!.AppendChild(new Body());
         body.AppendChild(new Paragraph()).Append(Run(text));
         return document;
     }
@@ -58,7 +58,7 @@ public sealed class DocxPlaceholderColorTests
     {
         strom.Position = 0;
         using var document = WordprocessingDocument.Open(strom, false);
-        var body = document.MainDocumentPart!.Document.Body!;
+        var body = document.MainDocumentPart!.Document!.Body!;
 
         return (
             string.Concat(body.Descendants<Text>().Select(t => t.Text)),
@@ -79,7 +79,7 @@ public sealed class DocxPlaceholderColorTests
                 ["Text" + DocxPlaceholderFiller.FarbSuffix] = "C00000"
             });
 
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         var (text, farbe) = Lies(strom);
@@ -100,7 +100,7 @@ public sealed class DocxPlaceholderColorTests
                 ["Text" + DocxPlaceholderFiller.FarbSuffix] = ""
             });
 
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         Assert.Null(Lies(strom).Farbe);
@@ -123,7 +123,7 @@ public sealed class DocxPlaceholderColorTests
                 ["Text" + DocxPlaceholderFiller.FarbSuffix] = wert
             });
 
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         Assert.Null(Lies(strom).Farbe);
@@ -153,12 +153,12 @@ public sealed class DocxPlaceholderColorTests
                 ["Text"] = "rot fett normal",
                 ["Text" + DossierTopicTextFormatting.StyleRangesSuffix] = format
             });
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         strom.Position = 0;
         using var gelesen = WordprocessingDocument.Open(strom, false);
-        var run = gelesen.MainDocumentPart!.Document.Body!
+        var run = gelesen.MainDocumentPart!.Document!.Body!
             .Descendants<Run>()
             .First(r => r.InnerText == "rot fett");
 
@@ -190,12 +190,12 @@ public sealed class DocxPlaceholderColorTests
                 ["Datum"] = "25.08.2026",
                 ["Datum" + DossierTopicTextFormatting.StyleRangesSuffix] = format
             });
-            document.MainDocumentPart!.Document.Save();
+            document.MainDocumentPart!.Document!.Save();
         }
 
         strom.Position = 0;
         using var gelesen = WordprocessingDocument.Open(strom, false);
-        var runs = gelesen.MainDocumentPart!.Document.Body!
+        var runs = gelesen.MainDocumentPart!.Document!.Body!
             .Descendants<Run>()
             .Where(run => run.InnerText.Length > 0)
             .ToList();
