@@ -1591,6 +1591,11 @@
       {
         "Context": "XTF",
         "Level": "Warn",
+        "Message": "Untersuchung ohne Bezeichnung (TID refUNTERS8) nicht übernommen: Sie lässt sich keiner Haltung und keinem Schacht zuordnen."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
         "Message": "Haltung \"200-201\": Datei führt weitere Untersuchungen. Haupt-Untersuchung: 12.03.2025 (TID refUNTERS1) mit 5 Befunden; zusätzliche Protokollfassung: 15.03.2025 (TID refUNTERS2) mit 2 Befunden abgelegt."
       }
     ],

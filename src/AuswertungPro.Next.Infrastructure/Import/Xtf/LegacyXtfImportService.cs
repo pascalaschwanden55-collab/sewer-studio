@@ -215,7 +215,7 @@ public sealed partial class LegacyXtfImportService
         // VSA_KEK verarbeiten, wenn NICHT bereits erfolgreich als SIA405 importiert
         if (!sia405Imported && isVsa)
         {
-            var ergebnis = ParseVsaKek(doc, path, mediaPaths);
+            var ergebnis = ParseVsaKek(doc, path, mediaPaths, out var luecken);
             stats.Found += ergebnis.Haltungen.Count;
 
             foreach (var rec in ergebnis.Haltungen)
@@ -254,6 +254,8 @@ public sealed partial class LegacyXtfImportService
                     Message = $"Untersuchung \"{offen.Bezeichnung}\" nicht zugeordnet: {offen.Grund}"
                 });
             }
+
+            stats.Messages.AddRange(luecken);
 
             // Weitere Untersuchungen derselben Haltung (z.B. Gegenbefahrung): als eigene
             // Protokollfassung ablegen, erst nach der Uebernahme der Haupt-Untersuchungen.
@@ -429,7 +431,7 @@ public sealed partial class LegacyXtfImportService
 
     // ===================== VSA_KEK =====================
     private static XtfVsaKekErgebnis ParseVsaKek(XDocument doc, string sourcePath,
-        IVsaMediaPathResolver mediaPaths)
+        IVsaMediaPathResolver mediaPaths, out List<ImportMessage> luecken)
     {
         // Gleiche drei Schritte wie bei SIA405:
         // 1. Objekte lesen — Untersuchung, Kanal-/Normschachtschaden, Datei, Bauwerke,
@@ -441,6 +443,8 @@ public sealed partial class LegacyXtfImportService
         // MergeVsaKekSchaechteIntoProject und VsaKekWeitereUntersuchungen.
         var bestand = VsaKekObjektLeser.Lies(doc);
         var bezuege = VsaKekBeziehungen.Loese(bestand, sourcePath, mediaPaths);
+        // Nicht Zuordenbares wird nicht uebernommen, aber seit 01.10.2026 gemeldet.
+        luecken = VsaKekLueckenmeldungen.Erzeuge(bezuege);
         var gruppen = VsaKekUntersuchungsWahl.Waehle(bezuege.Haltungsuntersuchungen, u => u.Bezeichnung, VsaKekAbbildung.Merkmale);
         return VsaKekAbbildung.Baue(bezuege, gruppen, sourcePath, bestand.ModellName);
     }
