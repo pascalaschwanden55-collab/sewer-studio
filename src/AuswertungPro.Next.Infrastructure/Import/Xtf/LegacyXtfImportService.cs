@@ -201,6 +201,20 @@ public sealed partial class LegacyXtfImportService
                 });
 
                 stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF405", Message = $"Importiert {records.Count} Haltungen aus {Path.GetFileName(path)}" });
+
+                // SIA405 hat Vorrang; die VSA-KEK-Untersuchungen derselben Datei bleiben
+                // liegen. Bis 01.10.2026 geschah das ohne Meldung.
+                var liegenGeblieben = isVsa ? VsaKekObjektLeser.Lies(doc).Untersuchungen.Count : 0;
+                if (liegenGeblieben > 0)
+                {
+                    stats.Messages.Add(new ImportMessage
+                    {
+                        Level = "Warn",
+                        Context = "XTF",
+                        Message = $"{Path.GetFileName(path)}: Datei enthält zusätzlich {liegenGeblieben} VSA-KEK-Untersuchung(en), "
+                                  + "die nicht übernommen wurden – die SIA405-Haltungen haben Vorrang."
+                    });
+                }
             }
             else if (isVsa)
             {

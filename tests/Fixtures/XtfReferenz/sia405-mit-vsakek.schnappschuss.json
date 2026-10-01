@@ -478,6 +478,11 @@
         "Context": "XTF405",
         "Level": "Info",
         "Message": "Importiert 1 Haltungen aus sia405-mit-vsakek.xtf"
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "sia405-mit-vsakek.xtf: Datei enthält zusätzlich 1 VSA-KEK-Untersuchung(en), die nicht übernommen wurden – die SIA405-Haltungen haben Vorrang."
       }
     ],
     "Uncertain": 0,
