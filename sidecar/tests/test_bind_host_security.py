@@ -34,7 +34,8 @@ def test_start_script_rejects_non_loopback_before_starting_uvicorn():
         capture_output=True,
         text=True,
         env=env,
-        timeout=15,
+        # Grosszuegig: auf dem CI-Runner brauchte der PowerShell-Start am 01.10.2026 mehr als 15 s.
+        timeout=90,
         check=False,
     )
 
