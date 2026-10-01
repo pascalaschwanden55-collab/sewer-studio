@@ -199,6 +199,39 @@ public sealed class XtfVsaKekMehrereUntersuchungenTests : IDisposable
             Assert.Equal("", linkG);
     }
 
+    /// <summary>
+    /// Codex-Review PR #54: Belegt ein neuer Import die Gegenbefahrung nicht mehr (z. B. neue
+    /// Haupt-Untersuchung einer spaeteren Kampagne), darf ein frueher automatisch aus XTF gesetztes
+    /// Link_G nicht stehen bleiben. Der Merge ueberspringt leere Werte, daher ausdruecklich leeren.
+    /// </summary>
+    [Fact]
+    public void Ein_veraltetes_automatisches_XTF_Link_G_wird_beim_Reimport_geleert()
+    {
+        var (projekt, _) = Importiere(new Datei { ErsteRichtung = "in_Fliessrichtung", ZweiteRichtung = "gegen_Fliessrichtung" });
+        Assert.EndsWith("zweite.mp4", Assert.Single(projekt.Data).GetFieldValue("Link_G"), StringComparison.OrdinalIgnoreCase);
+
+        Importiere(new Datei
+        {
+            ErsteRichtung = "in_Fliessrichtung", ZweiteRichtung = "gegen_Fliessrichtung", ZweiteZeitpunkt = "20250501"
+        }, projekt);
+
+        Assert.Equal("", Assert.Single(projekt.Data).GetFieldValue("Link_G"));
+    }
+
+    [Fact]
+    public void Ein_Link_G_aus_einer_anderen_Quelle_bleibt_beim_XTF_Reimport_stehen()
+    {
+        var projekt = new Project { Name = "Test" };
+        var vorhanden = new HaltungRecord();
+        vorhanden.SetFieldValue(FieldKeys.HoldingName, "200-201", FieldSource.Manual, userEdited: false);
+        vorhanden.SetFieldValue("Link_G", @"Videos\wincan_g.mp4", FieldSource.Legacy, userEdited: false);
+        projekt.Data.Add(vorhanden);
+
+        Importiere(new Datei { ZweiteZeitpunkt = "20250501" }, projekt);
+
+        Assert.Equal(@"Videos\wincan_g.mp4", Assert.Single(projekt.Data).GetFieldValue("Link_G"));
+    }
+
     [Fact]
     public void Ein_von_Hand_gesetztes_Link_G_bleibt_stehen()
     {

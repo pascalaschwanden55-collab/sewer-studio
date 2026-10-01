@@ -107,6 +107,24 @@ internal static class VsaKekAbbildung
     }
 
     /// <summary>
+    /// Codex-Review PR #54 (01.10.2026): Belegt dieser Import keine Gegenbefahrung mehr (z. B.
+    /// neue Haupt-Untersuchung einer spaeteren Kampagne), wird ein frueher automatisch aus XTF
+    /// gesetztes <c>Link_G</c> geleert; der Merge ueberspringt leere Werte und liesse es sonst
+    /// stehen. Nur VSA-KEK setzt <c>Link_G</c> mit Herkunft XTF; ein Wert aus WinCan oder der
+    /// Verteilung (andere Herkunft) und ein Handwert bleiben.
+    /// </summary>
+    internal static void EntferneVeraltetesGegenvideo(HaltungRecord ziel, HaltungRecord quelle)
+    {
+        if (!string.IsNullOrWhiteSpace(quelle.GetFieldValue("Link_G"))
+            || string.IsNullOrWhiteSpace(ziel.GetFieldValue("Link_G"))
+            || !ziel.FieldMeta.TryGetValue("Link_G", out var meta)
+            || meta.Source != FieldSource.Xtf
+            || meta.UserEdited)
+            return;
+        ziel.SetFieldValue("Link_G", "", FieldSource.Xtf, userEdited: false);
+    }
+
+    /// <summary>
     /// Entscheid Pascal 01.10.2026: Eine Gegenbefahrung gehoert zur selben Kampagne, beide
     /// Untersuchungen liegen hoechstens 30 Tage auseinander. Eine Befahrung aus der Gegenrichtung
     /// aus einem anderen Jahr ist keine Gegenbefahrung. Ohne glaubwuerdiges Datum (fehlt,
