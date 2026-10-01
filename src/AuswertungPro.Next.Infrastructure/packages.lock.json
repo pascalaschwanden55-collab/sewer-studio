@@ -17,11 +17,11 @@
       },
       "DocumentFormat.OpenXml": {
         "type": "Direct",
-        "requested": "[3.1.1, )",
-        "resolved": "3.1.1",
-        "contentHash": "2z9QBzeTLNNKWM9SaOSDMegfQk/7hDuElOsmF77pKZMkFRP/GHA/W/4yOAQD9kn15N/FsFxHn3QVYkatuZghiA==",
+        "requested": "[3.5.1, )",
+        "resolved": "3.5.1",
+        "contentHash": "zxdOf5VVCe/uNklbRhj8dVBzQGj3DoqkUuqOp9cAZVuN8mNYDjof1lvSQA2OQNr8Ptc9d7pbA7Azq/ReaI3FpA==",
         "dependencies": {
-          "DocumentFormat.OpenXml.Framework": "3.1.1"
+          "DocumentFormat.OpenXml.Framework": "3.5.1"
         }
       },
       "FirebirdSql.Data.FirebirdClient": {
@@ -101,10 +101,10 @@
       },
       "DocumentFormat.OpenXml.Framework": {
         "type": "Transitive",
-        "resolved": "3.1.1",
-        "contentHash": "6APEp/ElZV58S/4v8mf4Ke3ONEDORs64MqdD64Z7wWpcHANB9oovQsGIwtqjnKihulOj7T0a6IxHIHOfMqKOng==",
+        "resolved": "3.5.1",
+        "contentHash": "U5txtc3ORno73xQx9Lf2gWzfaSZnZwKHfLkTAslhlew9lxe5XbUiCt0dY1fHeAf8yRqszUAe5i/+xLC9R/Xfsw==",
         "dependencies": {
-          "System.IO.Packaging": "8.0.1"
+          "System.IO.Packaging": "10.0.2"
         }
       },
       "ExcelNumberFormat": {
@@ -173,8 +173,8 @@
       },
       "System.IO.Packaging": {
         "type": "Transitive",
-        "resolved": "8.0.1",
-        "contentHash": "KYkIOAvPexQOLDxPO2g0BVoWInnQhPpkFzRqvNrNrMhVT6kqhVr0zEb6KCHlptLFukxnZrjuMVAnxK7pOGUYrw=="
+        "resolved": "10.0.2",
+        "contentHash": "JTpM4z0wpoIHHDvlCU27HsXo+zVnpWib94HXQpzzr+jc/P9NYf4w353AK4MXyGq/grm1mbLi7eXsOsDU8sGmNg=="
       },
       "UglyToad.PdfPig.Core": {
         "type": "Transitive",
