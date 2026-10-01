@@ -73,7 +73,7 @@ public sealed class MultiModelDinoSchrittTests
     }
 
     [Fact]
-    public async Task Eingeschraenkte_Antwort_ist_Modellfehler_und_ersetzt_den_Degraded_Grund()
+    public async Task Eingeschraenkte_Antwort_ist_Modellfehler_und_haengt_den_Degraded_Grund_an()
     {
         var rec = new MultiModelSnapshotRecorder();
         var client = new ScriptedVisionClient(rec) { Dino = _ => new DinoResponse([], 1, Degraded: true, Error: "x", ErrorCode: "dino_oom") };
@@ -88,8 +88,10 @@ public sealed class MultiModelDinoSchrittTests
         Assert.Equal(MultiModelFehlerart.Modell, abschluss.Fehlerart);
         Assert.Equal("dino_degraded", bild.Trace.Path);
         Assert.Equal("dino_degraded", bild.Trace.DropReason);
-        // Belegtes Verhalten (offener Befund 4): der Fehlercode ersetzt den bisherigen Grund.
-        Assert.Equal("dino_oom", bild.Trace.DegradedReason);
+        // Seit 01.10.2026 (Befund 4 aus AP05): angehaengt statt ersetzt; der vorher gesetzte
+        // Grund "detector_unqualified" bleibt im Trace erhalten.
+        Assert.True(bild.Trace.Degraded);
+        Assert.Equal("detector_unqualified;dino_oom", bild.Trace.DegradedReason);
     }
 
     [Fact]
