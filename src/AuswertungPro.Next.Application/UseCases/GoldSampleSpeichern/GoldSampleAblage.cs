@@ -27,9 +27,9 @@ internal sealed class GoldSampleAblage
     }
 
     /// <summary>
-    /// Speichert ein neues Sample oder ersetzt den geladenen Bestand unter Beibehaltung
-    /// der bisherigen Fehlergrenzen. Liefert eine Ablehnung nur, solange das Sample noch
-    /// nicht gespeichert ist.
+    /// Speichert ein neues Sample oder ersetzt den geladenen Bestand. Ein Schreibfehler wird
+    /// in allen Wegen als dieselbe Ablehnung gemeldet, ein Abbruch weitergeworfen. Liefert
+    /// eine Ablehnung nur, solange das Sample noch nicht gespeichert ist.
     /// </summary>
     public async Task<(string? Warning, WorkbenchSaveResult? Rejection)> PersistAsync(
         WorkbenchItem item,
@@ -47,7 +47,7 @@ internal sealed class GoldSampleAblage
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return (null, GoldSampleAufbau.Rejected($"Goldsample konnte nicht gespeichert werden: {UserError.DescribeAndReport(ex, "Goldsample speichern")}"));
+                return (null, Speicherfehler(ex));
             }
         }
         else if (repairsExistingSample)
@@ -69,7 +69,7 @@ internal sealed class GoldSampleAblage
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                return (null, GoldSampleAufbau.Rejected($"Goldsample konnte nicht gespeichert werden: {UserError.DescribeAndReport(ex, "Goldsample speichern")}"));
+                return (null, Speicherfehler(ex));
             }
 
             // Auch ein Nachlabeln mit gleichem Code ersetzt die fachliche Wahrheit
@@ -86,9 +86,19 @@ internal sealed class GoldSampleAblage
             // Neuanlage mit eindeutigem Ergebnis: bei Signatur-Dublett NICHT still
             // weiterlaufen — sonst entstuenden KB-/Teacher-Eintraege ohne JSON-Sample
             // (Waisen). Die inhaltsadressierte Goldkopie ist bei echten Duplikaten
-            // ohnehin dieselbe Datei (kein Muell). Ein Speicherfehler wird hier bewusst
-            // nicht abgefangen (Ist-Verhalten, im Test festgehalten).
-            var added = await _sampleStore.TryAddNewAsync(sample, ct).ConfigureAwait(false);
+            // ohnehin dieselbe Datei (kein Muell). Ein Speicherfehler wird seit 01.10.2026
+            // wie in den Reparaturwegen als Ablehnung gemeldet; ein Abbruch wird weitergeworfen.
+            // Der Store schreibt ueber Temp-Datei und atomares Ersetzen, ein Fehler hinterlaesst
+            // also kein halbes Sample.
+            bool added;
+            try
+            {
+                added = await _sampleStore.TryAddNewAsync(sample, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return (null, Speicherfehler(ex));
+            }
             if (!added)
             {
                 return (null, GoldSampleAufbau.Rejected(
@@ -98,6 +108,14 @@ internal sealed class GoldSampleAblage
 
         return (replaceWarning, null);
     }
+
+    /// <summary>
+    /// Gemeinsame Ablehnung fuer einen Schreibfehler in allen drei Wegen (Neuanlage,
+    /// Nachlabeln, Ersatz bei geaendertem Code): gleicher Text, gleicher Ergebnistyp.
+    /// </summary>
+    private static WorkbenchSaveResult Speicherfehler(Exception ex)
+        => GoldSampleAufbau.Rejected(
+            $"Goldsample konnte nicht gespeichert werden: {UserError.DescribeAndReport(ex, "Goldsample speichern")}");
 
     /// <summary>
     /// Ersetzt ein Bestandssample bei geaenderter Code-Entscheidung (gleiche SampleId, neuer

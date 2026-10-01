@@ -99,6 +99,12 @@ internal sealed record GoldSampleHerkunft(
             return (null, GoldSampleAufbau.Rejected(
                 "PDF-Goldsample kann nicht gespeichert werden: Die Operateurreferenz oder PDF-Prüfspur ist unvollständig oder ungültig."));
         }
+        // Bewusste Doppelsicherung, greift heute nie: Ohne Bestand und mit PDF-Vorschlag
+        // setzt die Ableitung oben sourceType immer auf PdfPhoto. Sie schuetzt die
+        // Trainingsdaten, falls diese Ableitung spaeter geaendert wird (z. B. Herkunft aus
+        // dem Vorschlag selbst): Ein Fund mit PDF-Vorschlag darf dann nicht ohne die
+        // PDF-Pruefspur oben als anderes Gold gespeichert werden. Nicht entfernen.
+        // Festgehalten in GoldSampleSpeichernUseCaseTests.PDF_Vorschlag_ohne_Bestand_ergibt_immer_PDF_Herkunft.
         if (existingSample is null
             && item.SourceSuggestion is not null
             && !isPdfPhoto)
