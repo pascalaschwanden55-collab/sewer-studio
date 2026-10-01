@@ -1596,6 +1596,26 @@
       {
         "Context": "XTF",
         "Level": "Warn",
+        "Message": "Kanalschaden (TID refSCHADENVERWAIST, Code BAB) nicht übernommen: Untersuchungsverweis refUNTERSFEHLT zeigt ins Leere."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "Kanalschaden (TID refSCHADENOHNEREF, Code BAB) nicht übernommen: Untersuchungsverweis fehlt."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "Normschachtschaden (TID refSCHSCHADENVERWAIST, Code DAB) nicht übernommen: Untersuchungsverweis refUNTERSFEHLT zeigt ins Leere."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "Datei \"foto_verwaist.jpg\" (TID refDATEI4) nicht übernommen: Kanalschadenverweis refSCHADENFEHLT zeigt ins Leere."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
         "Message": "Haltung \"200-201\": Datei führt weitere Untersuchungen. Haupt-Untersuchung: 12.03.2025 (TID refUNTERS1) mit 5 Befunden; zusätzliche Protokollfassung: 15.03.2025 (TID refUNTERS2) mit 2 Befunden abgelegt."
       }
     ],

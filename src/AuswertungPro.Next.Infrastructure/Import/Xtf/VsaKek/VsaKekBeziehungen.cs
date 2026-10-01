@@ -11,9 +11,10 @@ internal sealed record XtfOffeneUntersuchung(string Bezeichnung, string Grund);
 /// <summary>
 /// Die Untersuchungen einer Datei mit aufgeloesten Bezuegen, nach Bauwerksart eingeordnet.
 ///
-/// Was sich nicht zuordnen liess, bleibt hier sichtbar, wird aber (wie bisher) weder
-/// uebernommen noch gemeldet: <see cref="OhneBezeichnung"/>, die verwaisten Schaeden und
-/// <see cref="FotosOhneBefund"/>. Eine Meldung dafuer waere eine Verhaltensaenderung.
+/// Was sich nicht zuordnen liess, bleibt hier sichtbar und wird nicht uebernommen:
+/// <see cref="OhneBezeichnung"/>, die verwaisten Schaeden, <see cref="FotosOhneBefund"/> und
+/// <see cref="VideosOhneUntersuchung"/>. Seit 01.10.2026 meldet <c>VsaKekLueckenmeldungen</c>
+/// sie im Importbericht.
 /// </summary>
 internal sealed record VsaKekBezuege(
     IReadOnlyList<VsaKekUntersuchung> Haltungsuntersuchungen,
@@ -25,6 +26,7 @@ internal sealed record VsaKekBezuege(
     IReadOnlyList<VsaKekKanalschadenObjekt> VerwaisteKanalschaeden,
     IReadOnlyList<VsaKekNormschachtschadenObjekt> VerwaisteNormschachtschaeden,
     IReadOnlyList<VsaKekDatei> FotosOhneBefund,
+    IReadOnlyList<VsaKekDatei> VideosOhneUntersuchung,
     int Untersuchungen);
 
 /// <summary>
@@ -93,8 +95,19 @@ internal static class VsaKekBeziehungen
 
         var videoJeUntersuchung = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var fotosOhneBefund = new List<VsaKekDatei>();
+        var videosOhneUntersuchung = new List<VsaKekDatei>();
+        // Gleicher Vergleich wie das spaetere Nachschlagen des Videos (Gross-/Kleinschreibung egal).
+        var bekannteUntersuchungen = new HashSet<string>(untersuchungen.Keys, StringComparer.OrdinalIgnoreCase);
         foreach (var datei in bestand.Dateien)
+        {
+            if (IstVideoOhneUntersuchung(datei, bekannteUntersuchungen))
+            {
+                videosOhneUntersuchung.Add(datei);
+                continue;
+            }
+
             OrdneDateiZu(datei, befundNachObjId, befundNachTid, videoJeUntersuchung, fotosOhneBefund, sourcePath, mediaPaths);
+        }
 
         // Erst jetzt einordnen: Die Einordnung zaehlt die zugeordneten Schaeden.
         var haltungen = new List<VsaKekUntersuchung>();
@@ -122,7 +135,7 @@ internal static class VsaKekBeziehungen
 
         return new VsaKekBezuege(haltungen, schaechte, offene, ohneBezeichnung,
             befundeJeUntersuchung, videoJeUntersuchung,
-            verwaisteKanalschaeden, verwaisteNormschachtschaeden, fotosOhneBefund,
+            verwaisteKanalschaeden, verwaisteNormschachtschaeden, fotosOhneBefund, videosOhneUntersuchung,
             untersuchungen.Count);
     }
 
@@ -145,6 +158,20 @@ internal static class VsaKekBeziehungen
         };
 
     /// <summary>
+    /// Ein Untersuchungs-Video (wie in <see cref="OrdneDateiZu"/> erkannt), dessen Verweis
+    /// fehlt oder auf keine Untersuchung der Datei zeigt. Bis 01.10.2026 wurde es nur nie
+    /// nachgeschlagen und fiel still weg.
+    /// </summary>
+    private static bool IstVideoOhneUntersuchung(VsaKekDatei datei, HashSet<string> bekannteUntersuchungen)
+        => datei.Klasse.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)
+           && IstVideo(datei)
+           && (string.IsNullOrWhiteSpace(datei.Objekt) || !bekannteUntersuchungen.Contains(datei.Objekt));
+
+    private static bool IstVideo(VsaKekDatei datei)
+        => MediaFileTypes.HasVideoExtension(datei.Bezeichnung)
+           || datei.Relativpfad.Contains("Film", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Ordnet ein Datei-Objekt zu: ein Video der Untersuchung (Klasse=Untersuchung, bekannte
     /// Videoendung ODER Relativpfad "Film"; das erste gewinnt) oder ein Foto dem Kanalschaden
     /// (OBJ_ID vor TID; das erste Foto gewinnt). Andere Dateien bleiben unbeachtet.
@@ -158,15 +185,13 @@ internal static class VsaKekBeziehungen
         string sourcePath,
         IVsaMediaPathResolver mediaPaths)
     {
-        var (art, klasse, objekt, bezeichnung, relativpfad) = datei;
+        var (art, klasse, objekt, bezeichnung, relativpfad, _) = datei;
 
         // --- Untersuchungs-Video (Klasse=Untersuchung, zentral bekanntes Video ODER relativpfad=Film) ---
         if (klasse.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)
             && !string.IsNullOrWhiteSpace(objekt))
         {
-            var istVideo = MediaFileTypes.HasVideoExtension(bezeichnung)
-                           || relativpfad.Contains("Film", StringComparison.OrdinalIgnoreCase);
-            if (istVideo)
+            if (IstVideo(datei))
             {
                 var videoPfad = mediaPaths.ResolveVideo(sourcePath, relativpfad, bezeichnung);
                 if (!string.IsNullOrWhiteSpace(videoPfad)

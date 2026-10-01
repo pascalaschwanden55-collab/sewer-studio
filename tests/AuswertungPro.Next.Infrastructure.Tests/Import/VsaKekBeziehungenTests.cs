@@ -39,8 +39,9 @@ public sealed class VsaKekBeziehungenTests
     [Fact]
     public void Nicht_Zuordenbares_bleibt_im_Zwischenergebnis_sichtbar()
     {
-        // Heute ohne Meldung: Untersuchung ohne Bezeichnung, Schaeden ohne gueltigen Bezug,
-        // Foto zu einem fehlenden Kanalschaden. Felder wie <KanalSchadencode> zaehlen nicht.
+        // Nicht uebernommen, seit 01.10.2026 gemeldet (VsaKekLueckenmeldungen): Untersuchung
+        // ohne Bezeichnung, Schaeden ohne gueltigen Bezug, Foto zu einem fehlenden Kanalschaden.
+        // Felder wie <KanalSchadencode> zaehlen nicht.
         Assert.Equal("refUNTERS8", Assert.Single(Bezuege.OhneBezeichnung).Tid);
         Assert.Equal(new[] { "refSCHADENVERWAIST", "refSCHADENOHNEREF" }, Bezuege.VerwaisteKanalschaeden.Select(k => k.Tid));
         Assert.Equal("refUNTERSFEHLT", Assert.Single(Bezuege.VerwaisteNormschachtschaeden).UntersuchungRef);
