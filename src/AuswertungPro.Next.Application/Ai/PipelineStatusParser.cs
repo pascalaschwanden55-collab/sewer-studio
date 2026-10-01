@@ -47,29 +47,25 @@ public static class PipelineStatusParser
     /// Gibt die Zahl oder null zurueck.
     /// </summary>
     public static int? TryExtractFindingCount(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-            return null;
-
-        var m = FindingsPattern.Match(status);
-        if (!m.Success)
-            return null;
-
-        return int.TryParse(m.Groups["count"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count)
-            ? count
-            : null;
-    }
+        => TryExtractCount(status, FindingsPattern);
 
     /// <summary>
     /// Versucht die YOLO-Gesamt-Framezahl aus einem Status-String zu lesen (z.B. "38 gesamt").
     /// Gibt die Zahl oder null zurueck.
     /// </summary>
     public static int? TryExtractYoloTotalFrames(string? status)
+        => TryExtractCount(status, YoloSkipPattern);
+
+    /// <summary>
+    /// Gemeinsame Zaehlregel: leerer Status, Regex-Treffer, invariant-kulturelle
+    /// Ganzzahl-Auswertung ueber die (einzige) Fanggruppe des jeweiligen Musters.
+    /// </summary>
+    private static int? TryExtractCount(string? status, Regex pattern)
     {
         if (string.IsNullOrWhiteSpace(status))
             return null;
 
-        var m = YoloSkipPattern.Match(status);
+        var m = pattern.Match(status);
         if (!m.Success)
             return null;
 

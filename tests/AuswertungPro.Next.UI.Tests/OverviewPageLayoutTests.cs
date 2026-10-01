@@ -40,6 +40,24 @@ public sealed class OverviewPageLayoutTests
     }
 
     [Fact]
+    public void Projektliste_bezeichnet_entfernen_eindeutig_und_nicht_als_ausblenden()
+    {
+        var xaml = ReadOverviewXaml();
+
+        Assert.Contains("Content=\"Entfernen\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Projekt nur aus der Übersicht entfernen", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Ausblenden", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Seitenkopf_zeigt_keinen_speicherstatus_unter_der_ueberschrift()
+    {
+        var xaml = ReadOverviewXaml();
+
+        Assert.DoesNotContain("Text=\"{Binding ProjectStatus}\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Projektliste_hat_genug_breite_fuer_vorschaukarten()
     {
         var converter = new ProjectListWidthConverter();
@@ -51,7 +69,7 @@ public sealed class OverviewPageLayoutTests
 
     private static string ReadOverviewXaml()
     {
-        var root = FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         return File.ReadAllText(Path.Combine(
             root,
             "src",
@@ -61,17 +79,4 @@ public sealed class OverviewPageLayoutTests
             "OverviewPage.xaml"));
     }
 
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (!string.IsNullOrWhiteSpace(dir))
-        {
-            if (File.Exists(Path.Combine(dir, "AuswertungPro.sln")))
-                return dir;
-
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
-    }
 }

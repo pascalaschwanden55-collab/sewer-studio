@@ -1,3 +1,5 @@
+using System.IO;
+using System.Text;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Projects;
@@ -7,7 +9,7 @@ namespace AuswertungPro.Next.Infrastructure.Projects;
 
 public sealed class JsonProjectRepository : IProjectRepository
 {
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     // Oeffentlich, damit die Content-Signatur (JsonProjectContentSignature) exakt dieselbe
     // Serialisierung nutzt wie der echte Save/Load.
@@ -40,32 +42,69 @@ public sealed class JsonProjectRepository : IProjectRepository
         try
         {
             if (!File.Exists(path))
-                return Result<Project>.Fail("APP-NOTFOUND", $"Datei nicht gefunden: {path}");
+                return Result<Project>.Fail(ProjektLadefehler.NichtGefunden, $"Datei nicht gefunden: {path}");
 
             var json = File.ReadAllText(path);
-            var project = JsonSerializer.Deserialize<Project>(json, SerializerOptions) ?? new Project();
+            var project = JsonSerializer.Deserialize<Project>(json, SerializerOptions);
+            if (project is null)
+                return Result<Project>.Fail(ProjektLadefehler.Inhalt, "Die Datei enthält kein gültiges Projekt (JSON-null).");
             if (project.Version > CurrentVersion)
             {
                 return Result<Project>.Fail(
-                    "APP-VERSION",
-                    $"Das Projekt stammt aus einer neueren Programmversion (Projektformat {project.Version}, unterstuetzt bis {CurrentVersion}). " +
-                    "Bitte oeffne es mit der neueren SewerStudio-Version. Die Datei wurde nicht veraendert.");
+                    ProjektLadefehler.Version,
+                    $"Das Projekt stammt aus einer neueren Programmversion (Projektformat {project.Version}, unterstützt bis {CurrentVersion}). " +
+                    "Bitte öffne es mit der neueren SewerStudio-Version. Die Datei wurde nicht verändert.");
             }
 
-            if (project.Version < CurrentVersion)
+            if (project.Version < 2)
             {
                 MigrateToCurrentVersion(project);
                 project.Dirty = true;
             }
 
             project.EnsureMetadataDefaults();
+            ObjektaktenStruktur.Pruefe(project);
+            if (project.Objektakten.Count > 0 && project.Version < 3)
+            { project.Version = 3; project.Dirty = true; }
             _photoReferenceNormalizer.Normalize(project, path);
             ProjectVideoReferenceNormalizer.Normalize(project, path);
+
+            // Auch beim Laden, nicht nur beim Speichern: Die Auswahlmenues fuehren nur
+            // die Begriffe der Norm. Ohne Anhebung zeigte ein Bestandsprojekt dort leer
+            // an, bis es einmal gespeichert wurde. Nur die Schreibweise aendert sich,
+            // die Herkunft bleibt unangetastet - deshalb wird das Projekt dadurch auch
+            // nicht als geaendert markiert.
+            ProjectVocabularyNormalizer.Normalize(project);
+
+            // Die Schachtmasse leben seit 2026-09-03 nur noch in den zwei Zahlenfeldern.
+            // Ein Bestandsprojekt mit dem alten Textfeld ("1100 x 900 mm") wird hier
+            // umgestellt; das ist eine echte Aenderung und wird beim naechsten Speichern
+            // festgehalten.
+            if (AuswertungPro.Next.Application.Schacht.SchachtMasse.UebernimmAlteTextfelder(project.SchaechteData) > 0)
+                project.Dirty = true;
+
             return Result<Project>.Success(project);
+        }
+        catch (JsonException ex)
+        {
+            // Belegt unbrauchbarer Inhalt - hier darf die Wiederherstellung greifen.
+            return Result<Project>.Fail(ProjektLadefehler.Inhalt, ex.Message);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return Result<Project>.Fail(ProjektLadefehler.NichtGefunden, ex.Message);
         }
         catch (Exception ex)
         {
-            return Result<Project>.Fail("APP-LOAD", ex.Message);
+            // Gesperrt, kein Zugriff, Netzlaufwerk weg: Die Datei ist in Ordnung, nur
+            // gerade nicht lesbar. Frueher landete das im selben APP-LOAD wie eine kaputte
+            // Datei - die Wiederherstellung hat daraufhin eine alte Sicherung ueber den
+            // aktuellen Arbeitsstand geschrieben (F1, gemessen 17.09.2026).
+            return Result<Project>.Fail(
+                ProjektLadefehler.Zugriff,
+                $"Die Projektdatei konnte nicht gelesen werden: {ex.Message} "
+                + "Sie wurde nicht verändert. Bitte schliesse Programme, die sie offen halten, "
+                + "und versuche es erneut.");
         }
     }
 
@@ -73,7 +112,7 @@ public sealed class JsonProjectRepository : IProjectRepository
     {
         // Version 1 -> 2 braucht keine Feldumbenennung. EnsureMetadataDefaults fuellt
         // die hinzugekommenen Standardfelder nach dem Laden kontrolliert auf.
-        project.Version = CurrentVersion;
+        project.Version = 2;
     }
 
     public Project DeepCopy(Project source)
@@ -103,8 +142,12 @@ public sealed class JsonProjectRepository : IProjectRepository
             if (string.IsNullOrWhiteSpace(path))
                 return Result.Fail("APP-SAVE", "Speicherpfad ist leer.");
 
+            ObjektaktenStruktur.Pruefe(project);
+            if (project.Objektakten.Count > 0) project.Version = Math.Max(project.Version, 3);
+
             _photoReferenceNormalizer.Normalize(project, path);
             ProjectVideoReferenceNormalizer.Normalize(project, path);
+            ProjectVocabularyNormalizer.Normalize(project);
             project.ModifiedAtUtc = DateTime.UtcNow;
             var json = JsonSerializer.Serialize(project, SerializerOptions);
 
@@ -116,7 +159,12 @@ public sealed class JsonProjectRepository : IProjectRepository
             Directory.CreateDirectory(directory);
 
             tempPath = Path.Combine(directory, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
-            File.WriteAllText(tempPath, json);
+            // Erzwungenes Schreiben auf den Datentraeger VOR dem Umbenennen. Das
+            // Umbenennen fuehrt NTFS im Journal, den Inhalt nicht — ein
+            // Stromausfall dazwischen hinterliess sonst eine projekt.json mit
+            // richtigem Namen und leerem Inhalt. Die .bak-Kopie aus File.Replace
+            // bleibt als zweites Netz (Codeaudit 2026-08-17).
+            WriteDurable(tempPath, json);
 
             if (File.Exists(fullPath))
             {
@@ -151,5 +199,20 @@ public sealed class JsonProjectRepository : IProjectRepository
                 try { File.Delete(tempPath); } catch { /* best effort cleanup */ }
             }
         }
+    }
+
+    /// <summary>
+    /// Schreibt die Zwischendatei und leert den Schreibpuffer bis auf den
+    /// Datentraeger. Erst danach darf umbenannt werden — sonst ist nur die
+    /// Umbenennung dauerhaft, der Inhalt aber nicht.
+    /// </summary>
+    private static void WriteDurable(string tempPath, string json)
+    {
+        var bytes = new UTF8Encoding(false).GetBytes(json);
+        using var stream = new FileStream(
+            tempPath, FileMode.Create, FileAccess.Write, FileShare.None,
+            bufferSize: 4096, FileOptions.WriteThrough);
+        stream.Write(bytes, 0, bytes.Length);
+        stream.Flush(flushToDisk: true);
     }
 }

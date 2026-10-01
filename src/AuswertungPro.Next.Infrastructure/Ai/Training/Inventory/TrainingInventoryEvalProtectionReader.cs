@@ -149,7 +149,7 @@ internal static class TrainingInventoryEvalProtectionReader
 
         if (imageFiles.Count == 0)
         {
-            errors.Add("Der images-Ordner enthaelt keine Eval-Bilder.");
+            errors.Add("Der images-Ordner enthält keine Eval-Bilder.");
             allImagesHaveValidEntries = false;
         }
 
@@ -169,7 +169,7 @@ internal static class TrainingInventoryEvalProtectionReader
             if (!manifest.ImageHashes.TryGetValue(manifestKey, out var expectedHash)
                 || expectedHash is null)
             {
-                errors.Add($"Manifest-Hash fehlt oder ist ungueltig: {manifestKey}");
+                errors.Add($"Manifest-Hash fehlt oder ist ungültig: {manifestKey}");
                 allImagesHaveValidEntries = false;
             }
 
@@ -195,7 +195,7 @@ internal static class TrainingInventoryEvalProtectionReader
             }
             else if (expectedHash is not null)
             {
-                errors.Add($"Manifest-Hash stimmt nicht mit dem Eval-Bild ueberein: {manifestKey}");
+                errors.Add($"Manifest-Hash stimmt nicht mit dem Eval-Bild überein: {manifestKey}");
                 allImagesHaveValidEntries = false;
             }
         }
@@ -233,7 +233,7 @@ internal static class TrainingInventoryEvalProtectionReader
             .Where(path => ImageExtensions.Contains(Path.GetExtension(path)))
             .ToArray();
         foreach (var skippedPath in skippedPaths.Distinct(StringComparer.OrdinalIgnoreCase))
-            errors.Add($"Eval-Bildpfad wurde aus Sicherheitsgruenden uebersprungen: {skippedPath}");
+            errors.Add($"Eval-Bildpfad wurde aus Sicherheitsgründen übersprungen: {skippedPath}");
         return files;
     }
 
@@ -280,13 +280,13 @@ internal static class TrainingInventoryEvalProtectionReader
             }
             else
             {
-                errors.Add("_manifest.json enthaelt keinen gueltigen candidates_count.");
+                errors.Add("_manifest.json enthält keinen gültigen candidates_count.");
             }
 
             if (!root.TryGetProperty("hashes", out var hashEntries)
                 || hashEntries.ValueKind != JsonValueKind.Object)
             {
-                errors.Add("_manifest.json enthaelt kein gueltiges hashes-Objekt.");
+                errors.Add("_manifest.json enthält kein gültiges hashes-Objekt.");
                 return new ManifestReadResult(
                     frozen,
                     false,
@@ -303,13 +303,13 @@ internal static class TrainingInventoryEvalProtectionReader
                 {
                     if (candidatesSha256 is not null)
                     {
-                        errors.Add("Manifest enthaelt _candidates.json mehrfach.");
+                        errors.Add("Manifest enthält _candidates.json mehrfach.");
                         continue;
                     }
 
                     candidatesSha256 = ReadSha256(entry.Value);
                     if (candidatesSha256 is null)
-                        errors.Add("Manifest enthaelt keinen gueltigen SHA-256 fuer _candidates.json.");
+                        errors.Add("Manifest enthält keinen gültigen SHA-256 für _candidates.json.");
                     continue;
                 }
 
@@ -320,32 +320,32 @@ internal static class TrainingInventoryEvalProtectionReader
 
                 if (!imageHashes.TryAdd(key, hash))
                 {
-                    errors.Add($"Manifest enthaelt einen doppelten Bildpfad: {key}");
+                    errors.Add($"Manifest enthält einen doppelten Bildpfad: {key}");
                     imageHashesValid = false;
                     continue;
                 }
 
                 if (hash is null)
                 {
-                    errors.Add($"Manifest enthaelt keinen gueltigen SHA-256: {key}");
+                    errors.Add($"Manifest enthält keinen gültigen SHA-256: {key}");
                     imageHashesValid = false;
                 }
             }
 
             if (imageHashes.Count == 0)
             {
-                errors.Add("Manifest enthaelt keine Hash-Eintraege fuer images/*.");
+                errors.Add("Manifest enthält keine Hash-Einträge für images/*.");
                 imageHashesValid = false;
             }
             if (candidatesSha256 is null)
-                errors.Add("Manifest enthaelt keinen Hash fuer _candidates.json.");
+                errors.Add("Manifest enthält keinen Hash für _candidates.json.");
         }
         catch (Exception ex) when (ex is IOException
                                    or UnauthorizedAccessException
                                    or JsonException
                                    or NotSupportedException)
         {
-            errors.Add($"_manifest.json ist ungueltig oder nicht lesbar: {ex.Message}");
+            errors.Add($"_manifest.json ist ungültig oder nicht lesbar: {ex.Message}");
             imageHashesValid = false;
         }
 
@@ -391,7 +391,7 @@ internal static class TrainingInventoryEvalProtectionReader
                 || manifest.CandidatesSha256 is null
                 || !manifest.CandidatesSha256.Equals(snapshot.Sha256, StringComparison.OrdinalIgnoreCase))
             {
-                errors.Add("_candidates.json stimmt nicht mit dem eingefrorenen Manifest-Hash ueberein.");
+                errors.Add("_candidates.json stimmt nicht mit dem eingefrorenen Manifest-Hash überein.");
                 return new EvalHoldingReadResult(false, holdingKeys);
             }
 
@@ -403,13 +403,13 @@ internal static class TrainingInventoryEvalProtectionReader
 
             if (candidates.GetArrayLength() == 0)
             {
-                errors.Add("_candidates.json enthaelt keine Kandidaten.");
+                errors.Add("_candidates.json enthält keine Kandidaten.");
                 complete = false;
             }
             if (manifest.CandidatesCount is null
                 || manifest.CandidatesCount.Value != candidates.GetArrayLength())
             {
-                errors.Add("candidates_count stimmt nicht mit _candidates.json ueberein.");
+                errors.Add("candidates_count stimmt nicht mit _candidates.json überein.");
                 complete = false;
             }
 
@@ -429,7 +429,7 @@ internal static class TrainingInventoryEvalProtectionReader
                     || keyNode.ValueKind != JsonValueKind.String
                     || !TryNormalizeHoldingKey(keyNode.GetString(), out var normalizedKey))
                 {
-                    errors.Add($"Kandidat {index} enthaelt keinen gueltigen, nichtleeren haltung_key.");
+                    errors.Add($"Kandidat {index} enthält keinen gültigen, nichtleeren haltung_key.");
                     complete = false;
                 }
                 else
@@ -440,7 +440,7 @@ internal static class TrainingInventoryEvalProtectionReader
                 var frameFileName = ReadFrameFileName(candidate);
                 if (frameFileName is null)
                 {
-                    errors.Add($"Kandidat {index} enthaelt keinen gueltigen frame_path.");
+                    errors.Add($"Kandidat {index} enthält keinen gültigen frame_path.");
                     complete = false;
                 }
                 else if (!imageFileNames.Contains(frameFileName))
@@ -468,7 +468,7 @@ internal static class TrainingInventoryEvalProtectionReader
                                    or JsonException
                                    or NotSupportedException)
         {
-            errors.Add($"_candidates.json ist ungueltig oder nicht lesbar: {ex.Message}");
+            errors.Add($"_candidates.json ist ungültig oder nicht lesbar: {ex.Message}");
             complete = false;
         }
 
@@ -558,7 +558,7 @@ internal static class TrainingInventoryEvalProtectionReader
     {
         var reparsePoint = TrainingInventoryPaths.FindReparsePoint(path);
         if (reparsePoint is not null)
-            throw new IOException($"Eval-Pfad enthaelt eine Verknuepfung oder Junction: {reparsePoint}");
+            throw new IOException($"Eval-Pfad enthält eine Verknüpfung oder Junction: {reparsePoint}");
     }
 
     private static bool IsSha256(string? value)

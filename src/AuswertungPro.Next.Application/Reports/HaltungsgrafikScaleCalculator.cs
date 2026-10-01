@@ -67,6 +67,8 @@ public static class HaltungsgrafikScaleCalculator
                 return step;
         }
 
-        return candidates.Last();
+        // Zwischen 8 * 2 und 4 * 5 (z.B. 16,85 m) passt kein Kandidat exakt.
+        // Dann den naechsten groesseren Schritt nehmen, nicht pauschal 50 m.
+        return candidates.FirstOrDefault(step => length / step < 4, candidates.Last());
     }
 }

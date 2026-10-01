@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
@@ -42,6 +43,8 @@ public sealed class SchachtPdfImportMappingTests
     [InlineData("Form Oval\nAbmessung 1000 x 800 mm\nSchachttiefe 2.5", "Oval", "1000 x 800 mm", "2.5")]
     [InlineData("Schachtform quadratisch\nDimension 80 cm x 80 cm\nSchachttiefe 250 cm", "Quadratisch", "800 x 800 mm", "2.5")]
     [InlineData("Schachtform rechteckig\nDimension 1.2 x 0.8 m\nSchachttiefe 3 m", "Rechteckig", "1200 x 800 mm", "3")]
+    [InlineData("Schachtform vieleckig\nDimension 1.2 x 0.8 m\nSchachttiefe 3 m", "Vieleckig", "1200 x 800 mm", "3")]
+    [InlineData("Schachtform unbekannt\nDimension 1.2 x 0.8 m\nSchachttiefe 3 m", "Unbekannt", "1200 x 800 mm", "3")]
     [InlineData("Dimension mm 800\nTiefe (Abstich) m 1.79", "Rund", "800 mm", "1.79")]
     [InlineData("Dimension mm 1200 / 800\nTiefe (Abstich) m 2.4", "Rechteckig", "1200 x 800 mm", "2.4")]
     public void ParseSchachtFields_NormalisiertFormDimensionUndSchachttiefe(
@@ -169,13 +172,68 @@ public sealed class SchachtPdfImportMappingTests
             Assert.Equal("1085605", record.GetFieldValue("Schachtnummer"));
             Assert.Equal("Kontrollschacht", record.GetFieldValue("Funktion"));
             Assert.Equal("Rechteckig", record.GetFieldValue("Schachtform"));
-            Assert.Equal("1200 x 800 mm", record.GetFieldValue("Dimension"));
+            Assert.Equal("1200", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+            Assert.Equal("800", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
             Assert.Equal("2.35", record.GetFieldValue("Schachttiefe"));
             Assert.Equal("18.06.2026", record.GetFieldValue("Ausführung\nDatum/Jahr"));
             Assert.Equal("offen", record.GetFieldValue("Status\noffen/abgeschlossen"));
             Assert.Contains("Schacht: Ueberdeckt", record.GetFieldValue("Primäre Schäden"));
             Assert.Contains("Bemerkungen: ueberdeckt, 2 Einlaeufe", record.GetFieldValue("Primäre Schäden"));
             Assert.Equal("", record.GetFieldValue("Bemerkungen"));
+        }
+        finally
+        {
+            TryDeleteDirectory(tempRoot);
+        }
+    }
+
+    [Fact]
+    public void ImportPdf_FillMissingOnly_ErgaenztAberErsetztKeineSchachtwerteOderProtokolle()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"schacht-pdf-fill-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        var pdfPath = Path.Combine(tempRoot, "20260618_1085605.pdf");
+
+        try
+        {
+            WritePdf(
+                pdfPath,
+                "Schachtprotokoll Schacht Nr. 1085605",
+                "Schachtfunktion            Kontrollschacht",
+                "Dimension                  1000 mm",
+                "ZUSTAND DER SCHACHTBAUTEILE",
+                "Schacht                    Ueberdeckt");
+
+            var project = new Project();
+            var record = new SchachtRecord();
+            record.SetFieldValue("Schachtnummer", "1085605");
+            record.SetFieldValue("Funktion", "Von Hand geprueft");
+            record.SetFieldValue("PDF_Path", "C:/bestand/alt.pdf");
+            record.Protocol = new ProtocolDocument
+            {
+                HaltungId = "1085605",
+                Original = new ProtocolRevision
+                {
+                    Entries = [new ProtocolEntry { Code = "Bestand", Beschreibung = "Original" }]
+                },
+                Current = new ProtocolRevision
+                {
+                    Entries = [new ProtocolEntry { Code = "Bestand", Beschreibung = "Arbeitsstand" }]
+                }
+            };
+            project.SchaechteData.Add(record);
+
+            var stats = new LegacyPdfImportService().ImportPdf(
+                pdfPath,
+                project,
+                fillMissingOnly: true);
+
+            Assert.Equal(0, stats.Errors);
+            Assert.Equal("Von Hand geprueft", record.GetFieldValue("Funktion"));
+            Assert.Equal("1000", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+            Assert.Equal("C:/bestand/alt.pdf", record.GetFieldValue("PDF_Path"));
+            Assert.Equal("Bestand", Assert.Single(record.Protocol.Current.Entries).Code);
+            Assert.Empty(record.Protocol.History);
         }
         finally
         {

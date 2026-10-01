@@ -13,8 +13,8 @@ public sealed class PipelineResultPresenterTests
         {
             FramesAnalyzed = 17,
             DetectionCount = 9,
-            StatsText = "unveraendert",
-            TelemetryText = "unveraendert"
+            StatsText = "unverändert",
+            TelemetryText = "unverändert"
         };
 
         var error = Assert.Throws<ArgumentException>(() =>
@@ -27,12 +27,12 @@ public sealed class PipelineResultPresenterTests
         Assert.False(vm.HasError);
         Assert.Equal(17, vm.FramesAnalyzed);
         Assert.Equal(9, vm.DetectionCount);
-        Assert.Equal("unveraendert", vm.StatsText);
-        Assert.Equal("unveraendert", vm.TelemetryText);
+        Assert.Equal("unverändert", vm.StatsText);
+        Assert.Equal("unverändert", vm.TelemetryText);
     }
 
     [Fact]
-    public void Apply_Rohbefunde_setzt_Endwerte_und_begrenzt_Radar_auf_250()
+    public void Apply_Rohbefunde_setzt_Endwerte_und_erhaelt_alle_Befunde()
     {
         var vm = new VideoAnalysisPipelineViewModel
         {
@@ -65,9 +65,9 @@ public sealed class PipelineResultPresenterTests
             vm,
             Success(detections, [], stats, telemetry));
 
-        Assert.Equal(250, presentation.VisibleDetections.Count);
+        Assert.Equal(251, presentation.VisibleDetections.Count);
         Assert.Equal("Befund 0", presentation.VisibleDetections[0].Label);
-        Assert.Equal("Befund 249", presentation.VisibleDetections[^1].Label);
+        Assert.Equal("Befund 250", presentation.VisibleDetections[^1].Label);
         Assert.Equal(77, vm.FramesAnalyzed);
         Assert.Equal(251, vm.DetectionCount);
         Assert.Equal(5, vm.HighConfidenceCount);
@@ -81,8 +81,8 @@ public sealed class PipelineResultPresenterTests
         Assert.False(vm.IsDone);
         Assert.True(vm.HasError);
         Assert.Equal("alter Fehler", vm.ErrorText);
-        Assert.Equal("alter Status", vm.StatusText);
-        Assert.Equal("alte Phase", vm.PhaseLabel);
+        Assert.Equal("Fertig. Du kannst jetzt übertragen.", vm.StatusText);
+        Assert.Equal("Fertig", vm.PhaseLabel);
     }
 
     [Fact]
@@ -98,11 +98,11 @@ public sealed class PipelineResultPresenterTests
             vm,
             Success(raw, mapped, stats: null, telemetry: null));
 
-        Assert.Equal(250, presentation.VisibleDetections.Count);
+        Assert.Equal(251, presentation.VisibleDetections.Count);
         Assert.Equal("MAP-0", presentation.VisibleDetections[0].Code);
         Assert.Equal(mapped[0].EntryId, presentation.VisibleDetections[0].EntryId);
         Assert.True(presentation.VisibleDetections[0].IsSelected);
-        Assert.Equal("MAP-249", presentation.VisibleDetections[^1].Code);
+        Assert.Equal("MAP-250", presentation.VisibleDetections[^1].Code);
         Assert.Equal(1, vm.DetectionCount);
         Assert.Equal(1, vm.PillarDetectionCount);
     }

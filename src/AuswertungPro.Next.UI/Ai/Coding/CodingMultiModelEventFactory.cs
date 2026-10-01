@@ -47,6 +47,18 @@ public static class CodingMultiModelEventFactory
         }
 
         QuantificationCodeMetaWriter.Apply(entry, code, quant, manifestRule);
+        if (segmented.Origin is { } origin)
+        {
+            entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
+            entry.CodeMeta.Parameters["ai.detector.source"] = origin.SourceName;
+            if (origin.DevelopmentCandidate)
+                entry.CodeMeta.Parameters["ai.detector.purpose"] = "development_candidate";
+            if (origin.HasYolo)
+            {
+                entry.CodeMeta.Parameters["ai.detector.sha256"] = origin.YoloArtifactSha256!;
+                entry.CodeMeta.Parameters["ai.code.detail"] = "Hauptgruppe";
+            }
+        }
         CodingClockPositionEntryWriter.ApplyToEntry(
             entry,
             code,
@@ -58,15 +70,24 @@ public static class CodingMultiModelEventFactory
 
         var aiContext = new CodingEventAiContext
         {
+            ObservationHasTechnicalFailure = segmented.Origin?.HasTechnicalFailure == true,
             SuggestedCode = code,
+            SuggestedByModelId = segmented.Origin?.HasYolo == true ? segmented.Origin.YoloModelName : null,
+            SuggestedByModelSha256 = segmented.Origin?.HasYolo == true ? segmented.Origin.YoloArtifactSha256 : null,
             Confidence = compositeConfidence,
-            Reason = $"{quant.Label} (DINO {dinoConfidence:P0})",
+            Reason = segmented.Origin is { } source
+                ? $"{officialLabel ?? quant.Label} ({DescribeEvidence(source)})"
+                : $"{quant.Label} (DINO {dinoConfidence:P0})",
             Evidence = CodingEventEvidenceMapper.ToSnapshot(
-                evidence ?? new EvidenceVector(
+                evidence ?? (segmented.Origin is { } sourceEvidence
+                    ? new EvidenceVector(YoloConf: sourceEvidence.YoloConfidence,
+                        DinoConf: sourceEvidence.DinoConfidence, SamMaskStability: quant.Confidence,
+                        DamageCategory: code)
+                    : new EvidenceVector(
                     DinoConf: dinoConfidence,
                     SamMaskStability: quant.Confidence,
                     PlausibilityScore: officialLabel != null ? 0.8 : 0.4,
-                    DamageCategory: code)),
+                    DamageCategory: code))),
             SamMaskRle = mask.MaskRle,
             SamMaskImageWidth = (int)Math.Round(imageWidth),
             SamMaskImageHeight = (int)Math.Round(imageHeight),
@@ -78,6 +99,13 @@ public static class CodingMultiModelEventFactory
             aiContext,
             BuildRectangleOverlay(mask, imageWidth, imageHeight));
     }
+
+    private static string DescribeEvidence(CodingLocalizedDetection origin) => string.Join(" + ",
+        new[]
+        {
+            origin.YoloConfidence.HasValue ? $"YOLO {origin.YoloConfidence.Value:P0}" : null,
+            origin.DinoConfidence.HasValue ? $"DINO {origin.DinoConfidence.Value:P0}" : null
+        }.Where(text => text is not null));
 
     private static OverlayGeometry? BuildRectangleOverlay(SamMaskResult mask, double imageWidth, double imageHeight)
     {

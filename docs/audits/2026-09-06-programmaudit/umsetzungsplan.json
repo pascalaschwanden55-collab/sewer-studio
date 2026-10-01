@@ -1,0 +1,75 @@
+[
+  {
+    "id": "Paket 1",
+    "title": "Originale und Projektdateien schützen",
+    "effort": "2–4 Arbeitstage",
+    "depends": "Kann zuerst beginnen",
+    "refs": "A01, A02, A03",
+    "steps": [
+      "Fehlerfälle als kleine Verhaltenstests festhalten.",
+      "Eigentums- und Verknüpfungsprüfung vor Schachtänderungen ergänzen.",
+      "Ordner, Dateinamen und gespeicherte Verweise gemeinsam planen und zurückrollen.",
+      "Projektstruktur und Sicherungen vor Annahme prüfen."
+    ],
+    "done": "Alle drei Gegenproben bestehen mit korrektem Ergebnis. Originalhashes sind gleich. Öffnen, Speichern und Wiederherstellen gültiger Altprojekte funktionieren.",
+    "status": "Umgesetzt und gezielt geprüft; siehe PAKET-1-ERGEBNIS.md."
+  },
+  {
+    "id": "Paket 2",
+    "title": "Den vollständigen Prüfweg wieder grün machen",
+    "effort": "2–4 Arbeitstage",
+    "depends": "Nach Paket 1; Ursachenanalyse kann früher beginnen",
+    "refs": "A04, A05, A06, A10",
+    "steps": [
+      "Neue Logik aus HoldingFolderDistributor auslagern, Fassaden behalten.",
+      "Hängepunkt des Kontextmenütests mit Schrittmarken finden und gezielt korrigieren.",
+      "Python-Namenskonflikt beseitigen und die fehlenden Tests in CI aufnehmen.",
+      "Die bestehende Abdeckungsgrenze anhand des belegten CI-Werts 46,61 % aus Lauf 33967264002 nachziehen; Produktcode-Messung getrennt planen."
+    ],
+    "done": "Vollständiger Release-Build, vier .NET-Suiten, Sidecar, QGIS, Trainingshilfen und alle Architektur-/Abdeckungstore bestehen. Kein unbegründeter Skip."
+  },
+  {
+    "id": "Paket 3",
+    "title": "KI-Qualität und Modellumgebung nachweisen",
+    "effort": "3–6 Arbeitstage plus Mess- und Trainingszeit",
+    "depends": "Paket 1 und 2; geeigneter Abnahmedatensatz erforderlich",
+    "refs": "A08, A09",
+    "steps": [
+      "Mit dem Fachanwender Grenzwerte je Schadenklasse und für Fehlalarme festlegen.",
+      "Trainings-, Entwicklungs- und Abnahmehaltungen sauber trennen.",
+      "Detektor, Klassifikator, DINO, SAM, Meteranzeige und Gesamtablauf getrennt messen.",
+      "Sicherheitsausnahmen überprüfen und eine kompatible Aktualisierung getrennt erproben.",
+      "Nur gemessene Modelle mit Hash und Bericht freigeben; Rückfall verständlich anzeigen."
+    ],
+    "done": "Abnahmebericht mit vorher festgelegten Grenzwerten liegt vor. Referenzvideos werden richtig ausgewertet. Modell- und Klassenstände sind eindeutig. Keine offene unbegründete Sicherheitsausnahme."
+  },
+  {
+    "id": "Paket 4",
+    "title": "Offene Arbeitsabläufe schliessen",
+    "effort": "3–6 Arbeitstage; GEONIS-Termin zusätzlich",
+    "depends": "Stabile Export- und Trainingsverträge aus Paket 2/3",
+    "refs": "A07, A11",
+    "steps": [
+      "Vier Agentenschritte mit bestehenden Diensten verbinden oder den unfertigen Agenten aus dem normalen Ablauf herausnehmen.",
+      "GEONIS-Rückabgleich mit Ausgangswerten, Konfliktvorschau und Änderungsplan entwerfen.",
+      "Rückweg gemeinsam in einer getrennten Ziel-Testdatenbank abnehmen.",
+      "Vollständigen Import mit PDF, XTF und Video auf Kopien repräsentativer Lieferantenprojekte ausführen."
+    ],
+    "done": "Jeder angebotene Arbeitsablauf hat einen erfolgreichen vollständigen Test. Offene Produktteile sind klar bezeichnet. Kein stiller Konflikt beim Rückabgleich."
+  },
+  {
+    "id": "Paket 5",
+    "title": "Bedienung, Leistung und Auslieferung abnehmen",
+    "effort": "2–4 Arbeitstage",
+    "depends": "Nach den funktionsrelevanten Paketen",
+    "refs": "Gesamtabnahme",
+    "steps": [
+      "Alle Navigationsseiten und wichtigen Dialoge mit einem Testprojekt bedienen.",
+      "Neues Projekt → Import → Korrektur → Videoauswertung → Bericht → Export → Sicherung vollständig durchspielen.",
+      "Grosse Projekte auf Laufzeit, Speicherbedarf, Abbruch und Fortschrittsanzeige prüfen.",
+      "Wiederherstellung und Programmstart auf einem getrennten Windows-Profil oder Testrechner prüfen.",
+      "Anleitung und Architekturkarte mit dem fertigen Code abgleichen."
+    ],
+    "done": "Abnahmeprotokoll ohne offene kritische Fehler. Alle Kernausgaben sind fachlich und optisch geprüft. Ein neuer Rechner kann aus der Sicherung wieder arbeitsfähig werden."
+  }
+]

@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using AuswertungPro.Next.UI.Services;
 using Xunit;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
@@ -8,25 +8,17 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class DesignAuditThemeResourceTests
 {
     [Fact]
-    public void CorrectionDialog_uses_theme_resources_and_does_not_shadow_button_styles()
-    {
-        var xaml = ReadUiFile("Views", "Windows", "CorrectionDialog.xaml");
-        var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
-        var themeDark = ReadUiFile("Theme", "Theme.xaml");
-
-        Assert.Contains("x:Key=\"SuccessButton\"", themeLight);
-        Assert.Contains("x:Key=\"SuccessButton\"", themeDark);
-        Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
-    }
-
-    [Fact]
     public void DossierPrintDialog_uses_theme_resources_for_surface_and_text_colors()
     {
         var xaml = ReadUiFile("Views", "Windows", "DossierPrintDialog.xaml");
 
         Assert.Contains("Background=\"{DynamicResource BgBrush}\"", xaml);
         Assert.Contains("Style=\"{StaticResource SecondaryButton}\"", xaml);
-        Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
+        // Optikanalyse 28.09.2026, Aufgabe 3: SuccessButton -> PrimaryButton (Knopfregel, hoechstens
+        // EIN Hauptknopf je Fenster, einheitlicher Primaerstil). HydraulikPrintDialog folgt in
+        // Aufgabe 4 (siehe Test unten).
+        Assert.Contains("Style=\"{StaticResource PrimaryButton}\"", xaml);
+        Assert.DoesNotContain("SuccessButton", xaml);
     }
 
     [Fact]
@@ -36,16 +28,25 @@ public sealed class DesignAuditThemeResourceTests
 
         Assert.Contains("Background=\"{DynamicResource BgBrush}\"", xaml);
         Assert.Contains("Style=\"{StaticResource SecondaryButton}\"", xaml);
-        Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
+        // Optikanalyse 28.09.2026, Aufgabe 4: SuccessButton -> PrimaryButton (Knopfregel, hoechstens
+        // EIN Hauptknopf je Fenster, einheitlicher Primaerstil).
+        Assert.Contains("Style=\"{StaticResource PrimaryButton}\"", xaml);
+        Assert.DoesNotContain("SuccessButton", xaml);
     }
 
     [Fact]
     public void Themes_define_explicit_textblock_styles_for_page_typography()
     {
+        // Wartbarkeit Q3: Die Typografie-Stile stehen einmal in Controls.xaml.
         var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
         var themeDark = ReadUiFile("Theme", "Theme.xaml");
+        var controls = ReadUiFile("Theme", "Controls.xaml");
 
         foreach (var theme in new[] { themeLight, themeDark })
+            foreach (var key in new[] { "PageTitle", "SectionTitle", "Body", "Caption" })
+                Assert.DoesNotContain($"x:Key=\"{key}\"", theme);
+
+        foreach (var theme in new[] { controls })
         {
             AssertStyleContains(theme, "PageTitle",
                 "TargetType=\"TextBlock\"",
@@ -85,7 +86,7 @@ public sealed class DesignAuditThemeResourceTests
         var xaml = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml");
         var code = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml.cs");
 
-        Assert.Contains("Header=\"Maßnahmen\"", xaml);
+        Assert.Contains("Header=\"Massnahmen\"", xaml);
         Assert.Contains("Text=\"{Binding PageTitle}\"", xaml);
         Assert.Contains("Text=\"{Binding PageSubtitle}\"", xaml);
         Assert.Contains("DataContext.MeasureOptions", xaml);
@@ -124,8 +125,14 @@ public sealed class DesignAuditThemeResourceTests
         var dataPage = ReadUiFile("Views", "Pages", "DataPage.xaml");
         var shell = ReadUiFile("ViewModels", "ShellViewModel.cs");
 
-        Assert.Contains("Header=\"Sanierungsmaßnahme bearbeiten\"", dataPage);
-        Assert.Contains("Text=\"Sanierungsmaßnahme\"", dataPage);
+        // Optikanalyse 28.09.2026, Aufgabe 7 (Fix-Runde 2, Controller-Entscheid "Auffindbarkeit
+        // schlaegt Entdoppelung"): "Sanierungsmaßnahme bearbeiten" (eigener Namens-Doppelgaenger)
+        // ist weiterhin entfernt, aber der Zeilenmenue-Eintrag "Sanierungsmassnahmen..." (ss statt
+        // ß, Click="CostsMenu_Click") steht jetzt bewusst SOWOHL im Zeilenmenue ALS AUCH unter
+        // "Weitere Aktionen -> Bearbeiten" - derselbe Handler, zwei Wege dorthin.
+        Assert.Contains("Header=\"Sanierungsmassnahmen...\"", dataPage);
+        Assert.Contains("Click=\"CostsMenu_Click\"", dataPage);
+        Assert.Contains("x:Name=\"WeitereAktionenDropdown\"", dataPage);
         Assert.Contains("NavigateToSanierungsMatrix", shell);
         Assert.Contains("OpenSanierungsMatrix(record);", viewModel);
         Assert.Contains("singleHoldingMode: true", viewModel);
@@ -295,10 +302,10 @@ public sealed class DesignAuditThemeResourceTests
         // Entweder alle Dialoge treten auf oder keiner — halb wirkt zufaellig.
         string[] dialogs =
         [
-            "CorrectionDialog", "ImportPreviewWindow", "RecordDetailsWindow", "DossierPrintDialog",
-            "HydraulikPrintDialog", "MeasureSelectionWindow", "CatalogSelectorWindow", "TextPreviewWindow",
+            "ImportPreviewWindow", "RecordDetailsWindow", "DossierPrintDialog",
+            "HydraulikPrintDialog", "TextPreviewWindow",
             "BeobachtungenWindow", "ObservationCatalogWindow", "CodeCatalogEditorWindow",
-            "PriceCatalogEditorWindow", "MeasureTemplateEditorWindow", "SchachtMassnahmenKatalogEditorWindow"
+            "MeasureTemplateEditorWindow", "SchachtMassnahmenKatalogEditorWindow"
         ];
 
         foreach (var dialog in dialogs)
@@ -306,7 +313,7 @@ public sealed class DesignAuditThemeResourceTests
             var xaml = ReadUiFile("Views", "Windows", $"{dialog}.xaml");
             Assert.True(
                 xaml.Contains("ui:WindowFx.Entrance=\"True\"", StringComparison.Ordinal),
-                $"{dialog} soll beim Oeffnen sanft auftreten.");
+                $"{dialog} soll beim Öffnen sanft auftreten.");
             Assert.Contains("xmlns:ui=\"clr-namespace:AuswertungPro.Next.UI\"", xaml);
         }
 
@@ -339,18 +346,21 @@ public sealed class DesignAuditThemeResourceTests
     {
         var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
         var themeDark = ReadUiFile("Theme", "Theme.xaml");
+        var controls = ReadUiFile("Theme", "Controls.xaml");
 
+        // Zentral im PageTitle-Style (einmal in Controls.xaml), damit jede Seite die Linie
+        // bekommt — auch kuenftige. Der Pinsel wird per DynamicResource gelesen: der Stil wird
+        // beim Designwechsel nicht mehr mit dem Theme ausgetauscht.
+        AssertStyleContains(controls, "PageTitle",
+            "Property=\"TextDecorations\"",
+            "<Pen Thickness=\"2\" Brush=\"{DynamicResource NeuralUnderlineBrush}\"/>");
         foreach (var theme in new[] { themeLight, themeDark })
         {
-            // Zentral im PageTitle-Style, damit jede Seite die Linie bekommt — auch kuenftige.
-            AssertStyleContains(theme, "PageTitle",
-                "Property=\"TextDecorations\"",
-                "<Pen Thickness=\"2\" Brush=\"{StaticResource NeuralUnderlineBrush}\"/>");
+            Assert.DoesNotContain("x:Key=\"PageTitle\"", theme);
             Assert.Contains("x:Key=\"NeuralUnderlineBrush\"", theme);
         }
 
-        // Der Verlauf liegt je Theme, weil GradientStops keine DynamicResource aufnehmen und der
-        // Style ihn nur im eigenen Woerterbuch per StaticResource erreicht.
+        // Der Verlauf liegt je Theme, weil GradientStops keine DynamicResource aufnehmen.
         Assert.Contains("<GradientStop Color=\"#FF2563EB\" Offset=\"0\"/>", themeLight);
         Assert.Contains("<GradientStop Color=\"#FF539BF5\" Offset=\"0\"/>", themeDark);
     }
@@ -448,7 +458,6 @@ public sealed class DesignAuditThemeResourceTests
         var editorXaml = string.Join(
             "\n",
             ReadUiFile("Dialogs", "OptionsEditorWindow.xaml"),
-            ReadUiFile("Dialogs", "OptionsEditorDialog.xaml"),
             ReadUiFile("Dialogs", "CostCatalogEditorDialog.xaml"),
             ReadUiFile("Dialogs", "PositionTemplateEditorDialog.xaml"),
             ReadUiFile("Views", "Windows", "MeasureTemplateEditorWindow.xaml"));
@@ -486,7 +495,9 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Glyph=\"&#xE73E;\"", photoXaml);
         Assert.Contains("Glyph=\"&#xE7A7;\"", photoXaml);
         Assert.Contains("Glyph=\"&#xE74D;\"", photoXaml);
-        Assert.Contains("Glyph=\"&#xEB42;\"", hydraulicsXaml);
+        // Optikanalyse 28.09.2026, Aufgabe 4: der dekorative Icon-Kasten vor dem Titel ist mit der
+        // Vereinheitlichung auf NovaDialogHeader entfallen (kein Icon-Slot im gemeinsamen Kopf,
+        // gleiches Bild wie bei allen anderen umgestellten Fenstern); die Emoji-Sperre bleibt.
         Assert.DoesNotContain("&#x1F4A7;", hydraulicsXaml);
         Assert.DoesNotContain(" | ", rendering);
         Assert.DoesNotContain(" @ ", rendering);
@@ -499,20 +510,17 @@ public sealed class DesignAuditThemeResourceTests
         var xaml = ReadUiFile("Views", "Pages", "MediaConflictsPage.xaml");
 
         Assert.Contains("xmlns:ui=\"clr-namespace:AuswertungPro.Next.UI\"", xaml);
-        Assert.Contains("Glyph=\"&#xE73E;\" FontSize=\"12\" Foreground=\"{DynamicResource SuccessBrush}\"", xaml);
-        Assert.Contains("Glyph=\"&#xE768;\" FontSize=\"12\" Foreground=\"{DynamicResource AccentBrush}\"", xaml);
-        Assert.Contains("Glyph=\"&#xE8A5;\" FontSize=\"12\" Foreground=\"{DynamicResource AccentBrush}\"", xaml);
+        Assert.Contains("Glyph=\"&#xE73E;\" FontSize=\"{DynamicResource TextS}\" Foreground=\"{DynamicResource SuccessBrush}\"", xaml);
+        Assert.Contains("Glyph=\"&#xE768;\" FontSize=\"{DynamicResource TextS}\" Foreground=\"{DynamicResource AccentBrush}\"", xaml);
+        Assert.Contains("Glyph=\"&#xE8A5;\" FontSize=\"{DynamicResource TextS}\" Foreground=\"{DynamicResource AccentBrush}\"", xaml);
         Assert.Contains("Background=\"{DynamicResource SurfaceSubtleBrush}\"", xaml);
     }
 
     [Fact]
-    public void Map_and_counter_inspection_markers_use_fluent_icons()
+    public void Counter_inspection_markers_use_fluent_icons()
     {
-        var map = ReadUiFile("Views", "Pages", "KartePage.xaml");
         var holdings = ReadUiFile("Views", "Pages", "Haltungsansicht", "HaltungsansichtView.xaml");
 
-        Assert.Contains("Glyph=\"&#xE91F;\"", map);
-        Assert.DoesNotContain("Text=\"&#x25CF;\"", map);
         Assert.Contains("Glyph=\"&#xE8AB;\"", holdings);
         Assert.DoesNotContain("Text=\"⇄\"", holdings);
     }
@@ -603,8 +611,11 @@ public sealed class DesignAuditThemeResourceTests
             "new\\(\\\"(?<icon>\\\\u[0-9A-F]{4})\\\",\\s*\\\"(?<title>[^\\\"]+)\\\"");
         var icons = matches.Select(match => match.Groups["icon"].Value).ToArray();
 
+        // 15 -> 16: Navigationspunkt "Dossiers" (Eigentuemerdossier je Liegenschaft).
+        // 16 -> 15: Kartenansicht entfernt; die raeumliche Arbeit laeuft ueber QGIS.
         Assert.Equal(15, matches.Count);
         Assert.Equal(icons.Length, icons.Distinct(StringComparer.Ordinal).Count());
+        Assert.Contains("new(\"\\uE8F1\", \"Dossiers\"", navBlock);
         Assert.Contains("new(\"\\uE80A\", \"Schacht-Matrix\"", navBlock);
         Assert.Contains("new(\"\\uE73E\", \"VSA\"", navBlock);
         Assert.Contains("new(\"\\uE9D9\", \"Diagnose\"", navBlock);
@@ -646,6 +657,21 @@ public sealed class DesignAuditThemeResourceTests
 
     private static void AssertPageTitle(string xaml, string title)
     {
+        // Nova-Etappe 2, Task 18 + Fix-Runde 1: Der Titel liegt seither meist im gemeinsamen
+        // NovaPageHeader-Control (…:NovaPageHeader Title="..."). Statt hier nur die Existenz des
+        // Controls zu pruefen, wird zusaetzlich dessen eigenes Template (Controls/NovaPageHeader.xaml)
+        // an genau denselben Kriterien wie ein literaler Seiten-TextBlock gemessen: PageTitle-Stil
+        // gesetzt (Static ODER Dynamic - siehe Ruling zur Theme-Umschaltung), keine Akzentfarbe.
+        var headerMarker = $"Title=\"{title}\"";
+        var headerIndex = xaml.IndexOf(headerMarker, StringComparison.Ordinal);
+        if (headerIndex >= 0)
+        {
+            var headerStart = xaml.LastIndexOf(":NovaPageHeader", headerIndex, StringComparison.Ordinal);
+            Assert.True(headerStart >= 0, $"Title {title} NovaPageHeader could not be read.");
+            AssertNovaPageHeaderTitleElement();
+            return;
+        }
+
         var marker = $"Text=\"{title}\"";
         var textIndex = xaml.IndexOf(marker, StringComparison.Ordinal);
         Assert.True(textIndex >= 0, $"Title {title} was not found.");
@@ -656,6 +682,33 @@ public sealed class DesignAuditThemeResourceTests
         var element = xaml[elementStart..elementEnd];
 
         Assert.Contains("Style=\"{StaticResource PageTitle}\"", element);
+        Assert.DoesNotContain("NeonCyanBrush", element);
+        Assert.DoesNotContain("AccentBrush", element);
+    }
+
+    /// <summary>
+    /// Fix-Runde 1: Prueft das gemeinsame Control selbst statt sich auf die blosse Existenz des
+    /// Tags zu verlassen. Der Titel-TextBlock im ControlTemplate bindet ueber
+    /// <c>{TemplateBinding Title}</c>, nicht ueber einen literalen Seitentext.
+    /// </summary>
+    private static void AssertNovaPageHeaderTitleElement()
+    {
+        var headerXaml = ReadUiFile("Controls", "NovaPageHeader.xaml");
+        var marker = "Text=\"{TemplateBinding Title}\"";
+        var textIndex = headerXaml.IndexOf(marker, StringComparison.Ordinal);
+        Assert.True(textIndex >= 0, "NovaPageHeader.xaml: Titel-TextBlock (TemplateBinding Title) wurde nicht gefunden.");
+
+        var elementStart = headerXaml.LastIndexOf("<TextBlock", textIndex, StringComparison.Ordinal);
+        var elementEnd = headerXaml.IndexOf("/>", textIndex, StringComparison.Ordinal);
+        Assert.True(elementStart >= 0 && elementEnd > elementStart, "NovaPageHeader.xaml: Titel-TextBlock konnte nicht gelesen werden.");
+        var element = headerXaml[elementStart..elementEnd];
+
+        // Ruling (Fix-Runde 1): Static ODER Dynamic ist am Control zulaessig - anders als bei
+        // Seiten-Titeln erzwingt dieser Waechter keine bestimmte Form.
+        Assert.True(
+            element.Contains("Style=\"{StaticResource PageTitle}\"", StringComparison.Ordinal)
+                || element.Contains("Style=\"{DynamicResource PageTitle}\"", StringComparison.Ordinal),
+            "NovaPageHeader.xaml: Titel-TextBlock traegt weder Static- noch DynamicResource PageTitle.");
         Assert.DoesNotContain("NeonCyanBrush", element);
         Assert.DoesNotContain("AccentBrush", element);
     }

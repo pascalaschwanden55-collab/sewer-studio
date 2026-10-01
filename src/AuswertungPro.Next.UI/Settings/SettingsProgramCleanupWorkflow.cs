@@ -24,7 +24,7 @@ public static class SettingsProgramCleanupWorkflow
     {
         ArgumentNullException.ThrowIfNull(request);
         request.Ui.SetIsRunning(true);
-        request.Ui.SetStatusText("Suche temporaere Programmdaten...");
+        request.Ui.SetStatusText("Suche temporäre Programmdaten...");
 
         try
         {
@@ -34,7 +34,7 @@ public static class SettingsProgramCleanupWorkflow
             if (report.Items.Count == 0)
             {
                 request.Ui.SetStatusText("Keine bereinigbaren Programmdaten gefunden.");
-                request.Toasts.Info("Keine temporaeren Programmdaten gefunden.");
+                request.Toasts.Info("Keine temporären Programmdaten gefunden.");
                 return;
             }
 
@@ -48,7 +48,7 @@ public static class SettingsProgramCleanupWorkflow
                 return;
             }
 
-            request.Ui.SetStatusText("Bereinigung laeuft...");
+            request.Ui.SetStatusText("Bereinigung läuft...");
             var result = await Task.Run(
                 () => request.CleanupService.Clean(request.CleanupRequest)).ConfigureAwait(true);
 
@@ -61,7 +61,7 @@ public static class SettingsProgramCleanupWorkflow
                 return;
             }
 
-            request.Toasts.Warning("Bereinigung mit einzelnen uebersprungenen Dateien beendet.");
+            request.Toasts.Warning("Bereinigung mit einzelnen übersprungenen Dateien beendet.");
             var sample = string.Join(Environment.NewLine, result.FailedPaths.Take(8));
             request.Dialogs.Warn(
                 $"{successText}\n\n{result.FailedPaths.Count} Pfad(e) konnten nicht entfernt werden. " +

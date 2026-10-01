@@ -1,4 +1,4 @@
-﻿using AuswertungPro.Next.UI.Dialogs;
+using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Services;
 using System;
@@ -31,8 +31,20 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 {
     public event Action? RecordsOrderChanged;
 
+    /// <summary>
+    /// Ein Sammellauf hat Feldwerte der Datensaetze geschrieben (Katasterkennungen,
+    /// QGIS-Nachfuellen). Die Seite baut daraufhin das offene Formular neu auf; die
+    /// Tabelle braucht das nicht, sie hoert auf die Datensaetze selbst.
+    /// </summary>
+    public event Action? FelderExternErgaenzt;
+
+    private void MeldeFelderExternErgaenzt() { Verlauf.Leere(AuswertungPro.Next.Application.UseCases.Datenaenderungen.DatenaenderungsVerlauf.GrundUebernahme); FelderExternErgaenzt?.Invoke(); }
+
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
+    private readonly IToastService _toasts;
+    private readonly AuswertungPro.Next.Application.Lookup.IQgisBestandLeser _qgisBestand;
+    private readonly AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser _katasterKennungen;
     private readonly AppSettings _settings;
     private readonly AuswertungPro.Next.Application.Vsa.IVsaEvaluationService _vsa;
     private readonly AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider _codeCatalog;
@@ -74,6 +86,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private bool _disposed;
 
     internal IDialogService Dialogs => _dialogs;
+    internal IToastService Toasts => _toasts;
     internal AppSettings Settings => _settings;
     internal AuswertungPro.Next.Application.Vsa.IVsaEvaluationService Vsa => _vsa;
     internal AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog => _codeCatalog;
@@ -111,6 +124,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public IRelayCommand ResetEmpfohleneSanierungsmassnahmenOptionsCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Reset;
     public IRelayCommand<object?> AddEmpfohleneSanierungsmassnahmenOptionCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Add;
     public IRelayCommand<object?> RemoveEmpfohleneSanierungsmassnahmenOptionCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Remove;
+    public IRelayCommand EditRohrmaterialOptionsCommand => _dropdownCommands.Rohrmaterial.Edit;
+    public IRelayCommand PreviewRohrmaterialOptionsCommand => _dropdownCommands.Rohrmaterial.Preview;
+    public IRelayCommand ResetRohrmaterialOptionsCommand => _dropdownCommands.Rohrmaterial.Reset;
+    public IRelayCommand<object?> AddRohrmaterialOptionCommand => _dropdownCommands.Rohrmaterial.Add;
+    public IRelayCommand<object?> RemoveRohrmaterialOptionCommand => _dropdownCommands.Rohrmaterial.Remove;
     public IRelayCommand<HaltungRecord?> PlayVideoCommand { get; }
     public IRelayCommand<HaltungRecord?> PlayGegenVideoCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenProtocolCommand { get; }
@@ -123,7 +141,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public IRelayCommand<HaltungRecord?> OpenCostsCommand { get; }
     public IRelayCommand<HaltungRecord?> RestoreCostsCommand { get; }
     public IRelayCommand<HaltungRecord?> SuggestMeasuresCommand { get; }
-    public IRelayCommand SuggestAllMeasuresCommand { get; }
     public IRelayCommand<HaltungRecord?> OptimizeSanierungKiCommand { get; }
     public IRelayCommand SearchAndLinkMediaCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenHydraulikCommand { get; }
@@ -139,7 +156,22 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public ObservableCollection<string> PruefungsresultatOptions { get; }
     public ObservableCollection<string> ReferenzpruefungOptions { get; }
     public ObservableCollection<string> EmpfohleneSanierungsmassnahmenOptions { get; }
+
+    /// <summary>Feste Katalogwerte plus eigene Ergaenzungen — Tabelle und Formular zeigen dieselbe Liste.</summary>
+    public ObservableCollection<string> RohrmaterialOptions { get; }
     public ObservableCollection<string> AusgefuehrtDurchOptions { get; }
+
+    // Feste SIA405-Wertelisten fuer die revidierte XTF. Kein Freitext und nicht
+    // erweiterbar: Ein getippter Wert haette kein Gegenstueck im Modell und koennte
+    // deshalb nie in eine XTF geschrieben werden.
+    public ObservableCollection<string> FunktionHierarchischOptions { get; }
+    public ObservableCollection<string> VerbindungsartOptions { get; }
+    public ObservableCollection<string> BettungUmhuellungOptions { get; }
+    public ObservableCollection<string> ProfiltypOptions { get; }
+    public ObservableCollection<string> FunktionHydraulischOptions { get; }
+    public ObservableCollection<string> StatusOptions { get; }
+    public ObservableCollection<string> SanierungsbedarfOptions { get; }
+    public ObservableCollection<string> LagebestimmungOptions { get; }
     public ObservableCollection<ProtocolEntry> SelectedProtocolEntries => _selectedProtocolController.Entries;
     public DataPageStartFilter? StartFilter { get; }
 
@@ -165,10 +197,17 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public bool IsProjectReady => _shell.IsProjectReady;
     public bool IsDataGridReadOnly => !_shell.IsProjectReady;
 
+    /// <summary>
+    /// Schlaegt leere Haltungsfelder beim Kanton nach. Null, wenn das
+    /// ViewModel ohne Dienste entstand.
+    /// </summary>
+    internal AuswertungPro.Next.Application.UseCases.FeldNachschlagUseCase? FeldNachschlag { get; }
+
     public DataPageViewModel(ShellViewModel shell, ServiceProvider services, DataPageStartFilter? startFilter = null)
     {
         _shell = shell;
         _dialogs = services.Dialogs;
+        _toasts = services.Toasts;
         _settings = services.Settings;
         _vsa = services.Vsa;
         _codeCatalog = services.CodeCatalog;
@@ -189,6 +228,17 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _trainingCases = services.TrainingCases;
         StartFilter = startFilter;
         _measureRecommendationService = services.MeasureRecommendation;
+        _qgisBestand = services.QgisBestand;
+        _katasterKennungen = services.KatasterKennungen;
+        _geoShop = services.GeoShop;
+        _geoShopSicherung = services.GeoShopSicherung;
+        _webGisHolen = services.WebGisHolen;
+        ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("haltung", () => _shell.Project, Settings,
+            () => _shell.IsProjectReady, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
+        ObjektakteCommand = Services.ObjektaktenDialog.Befehl("haltung", () => _shell.Project, () => Selected?.Id,
+            Settings, () => _shell.IsProjectReady, () => _shell.MarkProjectDirty(), Save, services.ObjektaktenPakete, _dialogs,
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
         _timers = new DataPageTimerController(
             value => SaveStatus = value,
             value => IsSaveStatusVisible = value,
@@ -208,12 +258,15 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             protocolRegeneration: services.ProtocolSingleRegeneration,
             dossierPhotoAvailability: services.DossierPhotoAvailability,
             inspectionProtocolFiles: services.InspectionProtocolFiles,
+            protocolPdfLayoutSettings: services.ProtocolPdfLayoutSettings,
             openPdf: path => TryOpenFile(path).Success,
             buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
                 _settings.HydraulikPanel,
                 dn,
-                saveSettings: _settings.Save));
+                saveSettings: _settings.Save),
+            toasts: _toasts,
+            berichtsMarke: services.BerichtsMarke);
         _originalPdfController = new DataPageOriginalPdfController(
             _dialogs,
             EnsureProtocolPath,
@@ -241,12 +294,29 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         ReferenzpruefungOptions = new ObservableCollection<string>(_dropdownOptions.LoadReferenzpruefungOptions());
         EmpfohleneSanierungsmassnahmenOptions = new ObservableCollection<string>(
             _dropdownOptions.LoadEmpfohleneSanierungsmassnahmenOptions());
+        RohrmaterialOptions = new ObservableCollection<string>(
+            PipeMaterialOptionList.Compose(_dropdownOptions.LoadRohrmaterialOptions()));
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
+        FunktionHierarchischOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.HierarchicalFunction));
+        VerbindungsartOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.ConnectionType));
+        BettungUmhuellungOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.BeddingEncasement));
+        ProfiltypOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.ProfileType));
+        FunktionHydraulischOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.HydraulicFunction));
+        StatusOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.OperatingStatus));
+        SanierungsbedarfOptions = new ObservableCollection<string>(
+            SanierungsbedarfOptionen.Alle);
+        LagebestimmungOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.PositionAccuracy));
         _measureSuggestionController = new DataPageMeasureSuggestionController(
             _dialogs,
             _measureRecommendationService,
             () => Selected,
-            () => Records,
             value => AddOptionIfMissing(EmpfohleneSanierungsmassnahmenOptions, value),
             () =>
             {
@@ -399,7 +469,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 PreviewEmpfohleneSanierungsmassnahmenOptions,
                 ResetEmpfohleneSanierungsmassnahmenOptions,
                 AddEmpfohleneSanierungsmassnahmenOption,
-                RemoveEmpfohleneSanierungsmassnahmenOption));
+                RemoveEmpfohleneSanierungsmassnahmenOption),
+            new DropdownCommandActions(
+                EditRohrmaterialOptions,
+                PreviewRohrmaterialOptions,
+                ResetRohrmaterialOptions,
+                AddRohrmaterialOption,
+                RemoveRohrmaterialOption));
         PlayVideoCommand = new RelayCommand<HaltungRecord?>(PlayVideo);
         PlayGegenVideoCommand = new RelayCommand<HaltungRecord?>(PlayGegenVideo);
         OpenProtocolCommand = new RelayCommand<HaltungRecord?>(OpenProtocol);
@@ -412,7 +488,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         OpenCostsCommand = new RelayCommand<HaltungRecord?>(OpenCosts, CanOpenCosts);
         RestoreCostsCommand = new RelayCommand<HaltungRecord?>(RestoreCosts, CanRestoreCosts);
         SuggestMeasuresCommand = new RelayCommand<HaltungRecord?>(SuggestMeasures, CanSuggestMeasures);
-        SuggestAllMeasuresCommand = new RelayCommand(SuggestAllMeasures);
         OptimizeSanierungKiCommand = new RelayCommand<HaltungRecord?>(OpenSanierungOptimizationWindow, CanOpenCosts);
         SearchAndLinkMediaCommand = new RelayCommand(OpenMediaSearchWindow);
         OpenHydraulikCommand = new RelayCommand<HaltungRecord?>(OpenHydraulikPanel);
@@ -424,6 +499,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _projectBindingController.Start();
         UpdateLearningInfo();
         LoadTrainedHaltungenAsync().SafeFireAndForget("TrainedHaltungen");
+
+        // Nachschlagen leerer Felder beim Kanton (Kataster/Grundbuch).
+        FeldNachschlag = services.FeldNachschlag;
     }
 
     public void Dispose()
@@ -646,15 +724,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _measureSuggestionController.Suggest(record);
     }
 
-    /// <summary>
-    /// Batch: Fuer alle Haltungen mit Sanierungsbedarf (oder fehlenden Massnahmen)
-    /// automatisch Sanierungsmassnahmen vorschlagen.
-    /// </summary>
-    public void SuggestAllMeasures()
-    {
-        _measureSuggestionController.SuggestAll();
-    }
-
     private void OpenSanierungOptimizationWindow(HaltungRecord? record)
     {
         OpenSanierungsmassnahmenWindow(record, InitialFocusMode.AiOptimization);
@@ -675,7 +744,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
         Selected = record;
         _shell.NavigateToSanierungsMatrix(holding, singleHoldingMode: true, targetRecord: record);
-        _shell.SetStatus($"Sanierungsmaßnahme geöffnet: {holding}");
+        _shell.SetStatus($"Sanierungsmassnahme geöffnet: {holding}");
     }
 
     private void OpenSanierungsmassnahmenWindow(HaltungRecord? record, InitialFocusMode focus)
@@ -779,13 +848,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         {
             var name = record.GetFieldValue(FieldKeys.HoldingName) ?? "(unbekannt)";
             _dialogs.Info(
-                $"Kein Datei- oder Ordnerpfad gefunden fuer Haltung '{name}'.",
+                $"Kein Datei- oder Ordnerpfad gefunden für Haltung '{name}'.",
                 "Ordner");
             return;
         }
 
         if (!_explorerReveal.TryReveal(target, out var error))
-            _dialogs.Warn($"Ordner konnte nicht geoeffnet werden:\n{error}", "Ordner");
+            _dialogs.Warn($"Ordner konnte nicht geöffnet werden:\n{error}", "Ordner");
     }
 
     private SchachtRecord? FindSchachtByNummer(string? nummer)

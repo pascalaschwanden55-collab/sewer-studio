@@ -110,6 +110,22 @@ public sealed class ProtocolZustandTextTests
         Assert.Equal("Laengsriss", ProtocolZustandText.BuildHaltungsgrafikZustandText(entry));
     }
 
+    [Fact]
+    public void BuildHaltungsgrafikZustandText_mit_katalog_enthaelt_titel_und_bemerkung()
+    {
+        var entry = new ProtocolEntry
+        {
+            Code = "BCE",
+            Beschreibung = "Anschluss von 12 Uhr in Schmutzleitung"
+        };
+
+        var text = ProtocolZustandText.BuildHaltungsgrafikZustandText(
+            entry,
+            VsaResolverTestCatalog.CreateDefault());
+
+        Assert.Equal("Rohrende, Anschluss von 12 Uhr in Schmutzleitung", text);
+    }
+
     // --- BuildObservationZustandTextLong ---
 
     [Fact]

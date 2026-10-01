@@ -6,6 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using AuswertungPro.Next.UI.Behaviors;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
@@ -52,9 +55,9 @@ public partial class ProtocolObservationsWindow : Window
         _markDirty = markDirty;
 
         _doc = EnsureDocument(record);
-        HeaderText.Text = string.IsNullOrWhiteSpace(record.GetFieldValue("Haltungsname"))
-            ? "Beobachtungen / Schaeden"
-            : $"Beobachtungen / Schaeden - {record.GetFieldValue("Haltungsname")}";
+        Kopf.Title = string.IsNullOrWhiteSpace(record.GetFieldValue("Haltungsname"))
+            ? "Beobachtungen / Schäden"
+            : $"Beobachtungen / Schäden - {record.GetFieldValue("Haltungsname")}";
         RefreshRevisionHeader();
 
         LoadEntries();
@@ -112,7 +115,7 @@ public partial class ProtocolObservationsWindow : Window
     {
         var rev = _doc.Current;
         var who = string.IsNullOrWhiteSpace(rev.CreatedBy) ? "unbekannt" : rev.CreatedBy;
-        RevisionText.Text = $"Revision: {rev.Comment} / {rev.CreatedAt:dd.MM.yyyy HH:mm} / {who}";
+        Kopf.Subtitle = $"Revision: {rev.Comment} / {rev.CreatedAt:dd.MM.yyyy HH:mm} / {who}";
     }
 
     private ProtocolEntry? SelectedEntry => EntriesGrid.SelectedItem as ProtocolEntry;
@@ -140,7 +143,7 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Protokoll");
             return;
         }
 
@@ -169,11 +172,11 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Protokoll");
             return;
         }
 
-        if (!_sp.Dialogs.Confirm("Beobachtung wirklich loeschen?", "Protokoll"))
+        if (!_sp.Dialogs.Confirm("Beobachtung wirklich löschen?", "Protokoll"))
             return;
 
         entry.IsDeleted = true;
@@ -188,13 +191,39 @@ public partial class ProtocolObservationsWindow : Window
         RefreshRevisionHeader();
     }
 
-    private void EntriesGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void EntriesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (_isOpeningDialog || _isRefreshingEntries)
+        // Nur echte Datenzeilen: ein Doppelklick auf die Spaltenueberschrift oder
+        // in den Leerraum darf nichts oeffnen. VisualTreeSafe statt VisualTreeHelper,
+        // weil GetParent auf einem Text-Run abstuerzt.
+        if (VisualTreeSafe.FindAncestor<DataGridRow>(e.OriginalSource as DependencyObject) is null)
             return;
 
+        OpenSelectedEntryForEdit();
+    }
+
+    private void EntriesGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (!ProtocolObservationsEditTriggerPolicy.OpensEditor(e.Key))
+            return;
+
+        e.Handled = true;
+        OpenSelectedEntryForEdit();
+    }
+
+    /// <summary>
+    /// Oeffnet die gewaehlte Beobachtung und schreibt die Bearbeitung in die
+    /// Revisionsspur. Ausgeloest nur durch Doppelklick oder Enter, nie durch die
+    /// blosse Zeilenauswahl.
+    /// </summary>
+    private void OpenSelectedEntryForEdit()
+    {
         var entry = SelectedEntry;
-        if (entry is null)
+        if (!ProtocolObservationsEditTriggerPolicy.CanOpenEditor(
+                hasSelectedEntry: entry is not null,
+                isOpeningDialog: _isOpeningDialog,
+                isRefreshingEntries: _isRefreshingEntries)
+            || entry is null)
             return;
 
         var before = SerializeEntry(entry);
@@ -217,7 +246,7 @@ public partial class ProtocolObservationsWindow : Window
     {
         if (_sp.CodeSelectionCatalog is null)
         {
-            _sp.Dialogs.Info("Code-Katalog ist nicht verfuegbar.", "Protokoll");
+            _sp.Dialogs.Info("Code-Katalog ist nicht verfügbar.", "Protokoll");
             return false;
         }
 
@@ -259,13 +288,13 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Protokoll");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(_videoPath))
         {
-            _sp.Dialogs.Info("Kein Video verlinkt. Bitte zuerst Video verknuepfen.", "Video");
+            _sp.Dialogs.Info("Kein Video verlinkt. Bitte zuerst Video verknüpfen.", "Video");
             return;
         }
 
@@ -337,15 +366,15 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Training");
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung wählen.", "Training");
             return;
         }
 
         _sp.ProtocolTraining.AddSample(entry, _record.GetFieldValue("Haltungsname"));
-        _sp.Dialogs.Info("Trainingseintrag gespeichert.", "Training");
+        _sp.Toasts.Success("Trainingseintrag gespeichert.");
     }
 
-    private void ExportPdf()
+    private async void ExportPdf()
     {
         var holding = _record.GetFieldValue("Haltungsname");
         var defaultName = $"Haltungsprotokoll_{SanitizeFilePart(holding)}_{DateTime.Now:yyyyMMdd}.pdf";
@@ -359,10 +388,10 @@ public partial class ProtocolObservationsWindow : Window
 
         try
         {
-            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+            ExportPdfButton.IsEnabled = false;
             var options = new HaltungsprotokollPdfOptions
             {
-                LogoPathAbs = File.Exists(logoPath) ? logoPath : null
+                LogoPathAbs = _sp.BerichtsMarke.LogoPfad
             };
 
             var root = _projectFolder;
@@ -370,15 +399,27 @@ public partial class ProtocolObservationsWindow : Window
                 root = AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(_sp.Settings.LastProjectPath)
                        ?? Path.GetDirectoryName(_sp.Settings.LastProjectPath);
             root ??= "";
-            var pdf = _sp.ProtocolPdfExports.BuildHaltungsprotokollPdf(_project, _record, _doc, root, options);
-            File.WriteAllBytes(output, pdf);
+            await BackgroundFileExportRunner.RunAsync(() =>
+            {
+                var pdf = _sp.ProtocolPdfExports.BuildHaltungsprotokollPdf(
+                    _project,
+                    _record,
+                    _doc,
+                    root,
+                    options);
+                File.WriteAllBytes(output, pdf);
+            });
 
-            _sp.Dialogs.Info($"PDF wurde erstellt:\n{output}", "PDF");
+            _sp.Toasts.Success("PDF wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(output, out _));
         }
         catch (Exception ex)
         {
             var userMessage = UserError.DescribeAndReport(ex, "Beobachtungs-PDF erstellen");
             _sp.Dialogs.Error($"PDF konnte nicht erstellt werden:\n{userMessage}", "PDF");
+        }
+        finally
+        {
+            ExportPdfButton.IsEnabled = true;
         }
     }
 

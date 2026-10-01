@@ -44,7 +44,9 @@ public sealed class VsaYoloClassMapDependencyTests
         Assert.Equal(15, snapshot.Classes.Count);
         Assert.Equal(13, snapshot.Classes["SONST_schaden"]);
         Assert.Equal(14, snapshot.Classes["BCC_bogen"]);
-        Assert.Throws<TrainingYoloClassMapException>(() => snapshot.ResolveRequired("BAB"));
+        // BAB ist inzwischen bewusst als freigegebene Goldklasse gebunden. Strikt
+        // bleiben muss die Karte fuer wirklich unbekannte Quellcodes.
+        Assert.Throws<TrainingYoloClassMapException>(() => snapshot.ResolveRequired("XYZ"));
     }
 
     [Fact]
@@ -72,7 +74,7 @@ public sealed class VsaYoloClassMapDependencyTests
     [Fact]
     public void Player_reicht_Teacher_Klassenkarte_weiter_und_Trainingscenter_nur_den_Exportkoordinator()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var player = File.ReadAllText(Path.Combine(
             root, "src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs"));
         var trainingWindow = File.ReadAllText(Path.Combine(

@@ -1,0 +1,319 @@
+# Arbeitsprotokoll
+
+## 2026-09-25: Vorbereitung
+
+- Sicherung vom 24./25.09. beendet: 276590 Dateien kopiert und geprüft, 653,1 GB. 128 verknüpfte Quellen fehlten: 19 PNG, 16 JPG, 78 PDF und 15 MP4. Keine Originale geöffnet oder verändert.
+- Ursprünglicher Projektordner: `C:\Sewer-Studio_KI_5.0`, Branch `feature/webgis-uebertragung`, letzter Commit `630a11c61`.
+- Offener Zustand: 84 geänderte und 122 neue Dateien, zusammen 17.848.087 Byte. Bytegenaue Kopie samt Diff und Prüfsummen in `C:\Users\Besitzer\Documents\ChatGPT\SewerStudio_10Tage_20260925_Snapshot`. Zustand blieb während der Kopie unverändert.
+- Tag `baseline-10tage-20260925` gesetzt; saubere Arbeitskopie auf Branch `codex/ferien-20260925` angelegt. Kein Push.
+- .NET 10.0.112. Schneller Release-Build: 0 Fehler, 5 vorhandene Warnungen. Vollständiger Folge-Build: 0 Fehler, 0 neue Warnungen.
+- Infrastrukturtests: 2697 bestanden, 6 übersprungen; der Test `SanierungsprotokollEchteQuelleTests.EingescannteBegleitprotokolle_LandenBeiIhrenHaltungen` hing und wurde nach 2 Minuten ohne Fortschritt abgebrochen. Pipeline-Tests: 2758 bestanden, 3 übersprungen. UI-Gesamtlauf aus Datenschutzgründen abgebrochen, nachdem ein Infrastrukturtest eine echte Kundenquelle auf D: nutzte. ProjectModernizer: 62 bestanden. Weitere Gesamtläufe erst nach Prüfung der Datenpfade. Zweifache Bildmessung abgeschlossen. Unbeaufsichtigte Verbesserungen sind nicht freigegeben.
+- Cline-Erweiterung 4.1.20 und Ollama mit lokalem `qwen38-128k:latest` sind vorhanden. Das Modell hat einen Werkzeugaufruf mit den richtigen Argumenten in 10,6 s erzeugt. Cline in VS Code ist auf Ollama unter `http://localhost:11434` mit leerem API-Schlüssel eingestellt. Das Kontextfenster wurde auf 16384 begrenzt; die automatische Freigabe erlaubt nur Dateilesen. Ein harmloser Probelauf im Plan-Modus antwortete mit `OK`, ohne Werkzeuge auszuführen. Danach wurde Qwen aus dem Grafikspeicher entladen.
+
+## Entscheidungen nach den Ferien
+
+- Die 206 offenen Originaldateien werden nach den Ferien einzeln mit den neuen Änderungen abgeglichen. Der Nutzer hat die Wahl des Arbeitsstands delegiert; für die laufende Arbeit wurde der saubere Start-Commit gewählt. Eine pauschale Übernahme wäre bei unbekannter Absicht der offenen Dateien riskant.
+
+
+- Freier Speicher vor den Messungen: C: 614 GB, E: 1191 GB. Codex-Wochenkontingent: 18 % genutzt, keine Zusatzguthaben. Claude Code ist über ein Max-Abo angemeldet. Die VS-Code-Anzeige meldete 37 % Wochenverbrauch und 0 % im Fünfstundenfenster. Keine Zahlungen oder Guthaben gekauft.
+
+
+## Bild-Ausgangsmessung (nur Qwen, keine volle KI-Kette)
+
+- EVAL_SET: 120 Bilder; beide Läufe 29/120 exakte Codes (24,2 %), 0 Nullantworten, 0 abweichende Vorhersagen zwischen den Läufen.
+- Mittlere Laufzeit ohne erstes Bild: 797,2 ms und 772,4 ms (Unterschied 3,11 %). Das erste Bild des ersten Laufs enthält das Laden des Modells.
+- Vergleichsgrenze für genau diesen Bildweg: Codes je Bild gleich, keine zusätzlichen technischen Fehler, mittlere Zeit ohne Erstbild höchstens 5 % langsamer als der erste Lauf. Für QualityGate und Videos gibt es noch keine belastbare Grenze.
+- Messdateien und Prüfsummen: C:\Users\Besitzer\Documents\ChatGPT\SewerStudio_10Tage_20260925_Snapshot\eval-baseline-summary.json.
+
+## Video-Ausgangsmessung (technischer Teil der KI-Kette)
+
+- Der Nutzer hat `D:\Haltungen` als Videoordner genannt. Die 17 Haltungen des eingefrorenen EVAL_SET haben dort jeweils ein Video. Vier davon wurden als fester lokaler Referenzsatz gewählt; Originale blieben unverändert. Pfade, Kennungen und SHA-256-Prüfsummen liegen nur im lokalen Snapshot, nicht im Git-Repository.
+- Der erste Start scheiterte, weil in der getrennten Arbeitskopie die Python-Umgebung fehlte. Die vorhandene Umgebung (8,02 GB) und Modellgewichte (2,89 GB) wurden aus dem ursprünglichen Projekt kopiert, ohne Pakete herunterzuladen. Zwei dabei überschriebenen Git-Dateien wurden sofort auf den Stand des Arbeitsbranches zurückgesetzt.
+- Vier Videos zweimal geprüft, pro Durchlauf drei Bilder: 8/8 technische Läufe bestanden; alle Pflichtprüfungen für Dekodierung, YOLO, DINO, SAM, Quantifizierung und produktive Mehrmodell-Verarbeitung grün. Erkennungszahlen je Video waren zwischen beiden Läufen gleich. Der erste Lauf eines Videos war bei der Summe der drei Produktionsbilder rund 29 % langsamer; damit gilt für diesen Wert noch keine ±5-%-Grenze.
+- Diese Prüfung misst keine endgültigen EN-Codes und keine QualityGate-Entscheidung. Dafür bleibt eine eigene Ausgangsmessung nötig. Berichte und Zusammenfassung: `C:\Users\Besitzer\Documents\ChatGPT\SewerStudio_10Tage_20260925_Snapshot\video-baseline-summary.json`.
+
+## Sidecar-Testwerkzeug: Prozessstart und Aufräumen
+
+- Claude Code über das vorhandene Max-Abo prüfte ausschließlich `SidecarProcessLease.cs` ohne Werkzeugzugriff und ohne Kundendaten. Codex prüfte die Hinweise gegen den Code und setzte die Korrektur um. Ein zweiter Claude-Diff-Review meldete zwei berechtigte Nacharbeiten; eine behauptete Prozesslücke bei Nutzerabbruch war durch den allgemeinen `catch` bereits abgedeckt.
+- Das Startzeitlimit begrenzt nun auch den Health-Aufruf und das Lesen der Startausgabe. Prozessausgaben werden nur mit begrenzter Länge behalten. Fehler beim Beenden des selbst gestarteten Sidecars werden gemeldet; wenn Start und Aufräumen fehlschlagen, bleiben beide Ursachen sichtbar.
+- Release-Gesamtbuild nach der letzten Nacharbeit grün, 0 neue Warnungen; beim vorherigen vollständigen Neuaufbau dieselben fünf vorhandenen Warnungen. Drei gezielte Vertragstests grün, echter Drei-Bilder-Videotest nach der Hauptkorrektur grün mit unveränderten Erkennungszahlen. Ein absichtlich auf eine Sekunde begrenzter Start scheiterte korrekt; danach waren weder Port 8100 noch ein Sidecar-Prozess aktiv.
+- Kontingentprüfung nach der Arbeit: Codex-Wochenfenster 20 % genutzt, keine Zusatzguthaben vorhanden oder gekauft. Claude Code ist per `claude.ai` am Max-Abo angemeldet; der aktuelle Claude-Prozentwert wurde bei dieser Prüfung nicht erneut ausgelesen.
+
+## SQLite-Schnappschuss bei offener Wissensdatenbank
+
+- Neuer Regressionstest mit künstlicher SQLite-Datei: Ein bereits benutzter Verbindungspool und eine offene `KnowledgeBaseContext`-Verbindung bleiben bestehen, während ein Eintrag aus dem WAL in eine selbstständige Sicherungsdatei übernommen wird. Die Quelle lässt sich danach weiter beschreiben; die wieder geöffnete Sicherung enthält nur den früheren Stand.
+- Claude Code prüfte ausschließlich den synthetischen Test-Diff. Zwei konkrete Lücken (benutzter Pool, weitere Schreibbarkeit der Quelle) wurden ergänzt. Zwei gezielte Tests bestanden. Release-Gesamtbuild: 0 Fehler, dieselben fünf vorhandenen Warnungen.
+- Dies belegt Sicherung und Wiederöffnen der Wissensdatenbank, keinen fachlichen Import aus einem Fremdformat. Ein solcher Import benötigt einen eigenen, gezielten Test.
+
+## Ferienläufe: Vorbereitung ohne Aktivierung
+
+- In der Codex-App sind zwei tägliche Läufe als pausierte Automation `sewerstudio-ferienarbeit` angelegt. Es wurde kein unbeaufsichtigter Lauf gestartet.
+- `scripts/ferien-lock.ps1` legt die Lauf-Sperre atomar an und protokolliert einen zweiten Start als übersprungen. Ein fremder Token kann die Sperre nicht freigeben. Diese Fälle wurden lokal geprüft; die Sperre ist danach wieder frei.
+- Ohne `tmp/ferien/READY.json` wird jeder Start technisch abgelehnt. Ein unvollständiger Testmarker wurde ebenfalls abgelehnt und sofort wieder entfernt. Der echte Marker existiert nicht. Er muss alle sechs Prüfungen, Ablaufdatum, Arbeitsordner und SHA-256 des lokalen Videoreferenz-Manifests enthalten. Die Zugriffstrennung und der Neustart-/Anmelde-/Fehler-/Fortsetzungs-Probelauf fehlen weiterhin.
+- Der Nutzer hat die Entscheidungsregel danach präzisiert: Während seiner Ferien eigenständig innerhalb der schon vereinbarten Grenzen arbeiten. Kleine geprüfte Änderungen im getrennten Branch brauchen keine erneute Einzelentscheidung. Die Aufgabenliste und die pausierte Automation werden daran angepasst. Die Sicherheitsbedingungen vor unbeaufsichtigten Läufen gelten weiter.
+- Claude Code prüfte nur `scripts/ferien-lock.ps1` über das vorhandene Max-Abo und ohne Werkzeugzugriff. Konkrete Treffer: gleichzeitige Log-Schreibversuche, ungültige Freigabedaten, unbemerkter Git-Fehler und unklare Freigabefehler. Der Code wiederholt kurz bei Log-Kollisionen, blockiert ungültige Daten ausdrücklich und prüft beide Git-Rückgaben. Eine nach Anlage der Sperre fehlschlagende Protokollierung räumt die eigene Sperre auf. PowerShell-Parser: 0 Fehler; ohne READY.json endet Acquire mit Code 5 und ohne Sperre. Ein unvollständiger Testmarker blockierte ebenfalls und wurde entfernt.
+- Qwen 27B startete wegen eines lokalen CUDA-Initialisierungsfehlers nicht auf der Grafikkarte. Die Gegenprüfung lief daraufhin lokal auf der CPU und das Modell wurde danach entladen. Seine drei Hinweise wurden geprüft: Die Log-Kollision ist bereits behoben; der relative Manifestpfad scheitert bei falschem Ort geschlossen; die gemeldete zweite Sperr-Race ist in diesem Ablauf kein belegter Doppelstart. Keine Kundendaten an Claude oder Qwen gegeben.
+- Eine verwaiste Sperrdatei wird bewusst nicht automatisch entfernt, weil ein langer noch aktiver Lauf sonst überlappt werden könnte. Ihr Zustand muss vor einer Freigabe der unbeaufsichtigten Ferienläufe als Stoppsignal dokumentiert und bei Bedarf gemeldet werden.
+- Vollständiger Release-Build nach der Sperrenkorrektur: 0 Fehler, dieselben fünf vorhandenen Warnungen. Codex-Wochenkontingent danach 21 % genutzt, keine Zusatzguthaben.
+
+## Fehlende Verknüpfungen der Komplettsicherung
+
+- Das lokale Sicherungsmanifest wurde nur lesend ausgewertet: 128 fehlende verknüpfte Dateien. C: 19 PNG; D: 16 JPG und 46 PDF; F: 4 PDF; G: 28 PDF und 15 MP4. Alle 128 Quellpfade waren bei der Nachprüfung weiterhin nicht vorhanden. F: war nicht eingebunden. Keine Kundendatei an Claude oder Codex gesendet.
+- Bericht: `docs/reviews/2026-09-25-sicherungsluecken.md`. Er belegt die Lücke der aktuellen Sicherung; ältere Kopien sind nicht nachgewiesen.
+- Prüfung der möglichen Zugriffsgrenze: Die lokale Codex-CLI bietet einen Windows-Sandbox-Befehl. Ein separates Testprofil mit `:root = deny` und sogar ausdrücklichem `deny` für eine ungefährliche Datei im Originalprojekt wurde eingerichtet. Der Sandbox-Prozess lief unter dem eigenen Konto `CodexSandboxOffline`, konnte die Originaldatei aber weiterhin öffnen und den Ordner `D:\Haltungen` auflisten. Das Testprofil wurde wieder entfernt; die normalen Einstellungen sind unverändert. Der Versuch belegt auf diesem Rechner **keine** ausreichende Lesesperre. WSL und Docker sind nicht eingerichtet. Die Automation bleibt pausiert. Offizielle Anleitung: https://learn.chatgpt.com/docs/permissions.
+
+## SQLite-Import bei offener Wissensdatenbank
+
+- Neuer synthetischer Verhaltenstest `KnowledgeBackupOpenDatabaseImportTests`: Eine offene, im WAL beschriebene Wissensdatenbank bleibt beim abgewiesenen Import lesbar. Eine zweite Verbindung sieht denselben alten Wert; `PRAGMA integrity_check` liefert `ok`, und temporäre Importdateien bleiben nicht zurück. Nach Schließen aller Verbindungen gelingt derselbe Import und der neue Wert ist sichtbar.
+- Claude Code prüfte ausschließlich den Testtext ohne Werkzeuge. Der sichtbare Fehlertext und die Inhaltsprüfung wurden nach seinen Hinweisen ergänzt. Seine pauschale Forderung nach einem Datei-Hash wäre bei WAL/Checkpoint kein stabiler Beleg; der Test prüft die wieder geöffnete SQLite-Datenbank direkt. Drei gezielte Backup-Tests bestanden. Vollständiger Release-Build: 0 Fehler, 1 bereits vorhandene Warnung im inkrementellen Lauf; kein neuer Warnungstyp.
+- Produktcode blieb unverändert. Der Import darf während einer noch offenen Verbindung scheitern und meldet dies. Ein automatischer Austausch einer aktiv benutzten Datenbank wäre eine größere Verhaltensänderung und wurde nicht vorgenommen.
+
+## Älteren KI-Audit gegen den Start-Commit geprüft
+
+- Die drei Befunde KI-01 bis KI-03 des Audits vom 23.09. sind im sauberen Start-Commit bereits umgesetzt: unbrauchbare Bilder werden als nicht beurteilbar markiert; ein fehlender konfigurierter Eval-Ordner sperrt die Wissenssuche; gleichzeitige GPU-Ladungen nutzen eine gemeinsame Reservierung. Dazu bestanden 9 Suchschutz-, 6 Bildqualitäts- und 16 Sidecar-Speichertests. Kein doppelter Produktcode geschrieben.
+- Die vier Video-Proben messen derzeit nur den technischen Sidecar-Weg. Ein vollständiger Vergleich der endgültigen EN-Codes und QualityGate-Entscheidungen aus dem Video ist noch offen. Das `CodingReplay`-Werkzeug liegt nur in den geschützten offenen Originaländerungen, nicht im sauberen Start-Commit; es wurde nicht pauschal übernommen.
+
+## QGIS-Videoposition mit künstlichen Daten
+
+- Der bestehende Router-Endpunkt `/qgis/video_position.json` erhält zwei neue Verhaltenstests: 30 Sekunden von 100 bei 50 Metern liefern 15 Meter und kennzeichnen die grobe Quelle; ohne Länge und Stützstellen kommt 404 statt eines erfundenen Markers. Beide UI-Tests und 14 Python-Brückentests bestanden.
+- Das Python-Testpaket enthält noch keinen QGIS-Kartenlauf mit dem echten Plugin. Diese sichtbare Prüfung bleibt offen. Weder Kundenprojekt noch QGIS-Projekt wurden geändert.
+
+
+## Excel-Leistungsverzeichnis mit stabilem Beispiel
+
+- Die bestehenden ClosedXML-Tests für die Haltungs- und Schachtvorlagen prüfen bereits Spalten, Zahlen, Formeln, Diagramme und Formatierung. Zusätzlichen Schutz brauchte das zweiteilige NPK-Leistungsverzeichnis.
+- Neuer Test mit rein künstlichen Positionen aus zwei Kapiteln: Die Firmenansicht enthält keine internen Einheitspreise; beide Ansichten behalten Positionsnummern, Mengen, Preisformat und Rechenformeln. Die interne Ansicht errechnet 250 und 120 CHF als Zwischentotale, 370 CHF netto, 29.97 CHF MwSt und 399.97 CHF brutto. 50 CHF ausgeschlossene Pauschale bleiben separat ausgewiesen.
+- Claude Code prüfte nur den Test-Diff ohne Dateiwerkzeuge und ohne Kundendaten. Seine Hinweise zu Zwischenwerten, Textnummern und Pauschalen wurden ergänzt. 28 gezielte Excel-Tests bestanden; der abschliessende vollständige Release-Build war grün mit 0 Warnungen. Kein Produktcode wurde geändert.
+
+## Kleine Wartbarkeitskorrektur: Compiler-Warnungen
+
+- Der Fototest prüft vor Verwendung ausdrücklich, dass der erfolgreiche Aufnahmevorgang einen Fotopfad geliefert hat. Die Projektprüfung benennt beide Einträge ihrer kleinen Feld-/Katalogliste vollständig; die bisher ignorierten Tupelnamen erzeugen keine Compiler-Warnung mehr. Das Prüfverhalten und öffentliche Verträge bleiben gleich.
+- Drei gezielte Fototests und 17 Tests der Projektprüfung bestanden. Vollständiger Release-Build nach den Änderungen: 0 Fehler, 0 Warnungen. Keine Kundendaten verwendet.
+
+## Wechsel ins direkte VS-Code-Projekt (25.09.)
+
+- Auf ausdrücklichen Wunsch des Nutzers wurden die zwölf geänderten/neuen Dateien aus der getrennten Arbeitskopie in `C:\Sewer-Studio_KI_5.0` übertragen. Vorher wurde geprüft, dass keine dieser Dateien zu den 206 bereits offenen Dateien gehört; der Patch passte ohne Konflikte. Die offenen Arbeiten wurden nicht gestaged oder umgeschrieben.
+- VS Code zeigt das direkte Projekt. Sein Terminal meldete für den vollständigen Release-Build sowie die gezielten Infrastruktur- und UI-Tests jeweils Rückgabecode 0. Der bisherige separate Branch bleibt als Rückfallstand erhalten. Die unbeaufsichtigte Automation ist weiterhin pausiert.
+
+## Ferienläufe im direkten Projekt aktiviert (25.09.)
+
+- Die bestehende Codex-Automation `sewerstudio-ferienarbeit` wurde auf das direkte VS-Code-Projekt umgestellt und für 09:00 und 19:00 aktiviert. Pro Lauf ist nur eine kleine Code-Aufgabe vorgesehen. Claude erhält bei Bedarf ausschliesslich einen bereinigten Diff ohne Dateiwerkzeuge; Qwen bleibt optional und lokal. Codex-Kontingent vor Aktivierung: 23 % des Wochenfensters genutzt; Claude zeigte 39 % Wochenverbrauch. Keine Zusatzguthaben.
+- Der lokale Startschutz erkennt den Branch, ein befristetes Code-Modus-Merkmal und eine Liste von 206 geschützten offenen Pfaden. `Acquire`/`Release`, zweiter gleichzeitiger Start sowie `CheckPath` für geschützte, erlaubte und ausserhalb liegende Pfade wurden geprüft. Claude prüfte nur den Script-Diff und meldete Pfad- und Verknüpfungsrisiken; diese wurden eingegrenzt.
+- `origin` hat im lokalen Repository eine absichtlich ungültige Push-Adresse; die ursprüngliche Adresse liegt nur lokal zur Rückstellung. Kein Push ausgeführt. Die technische Lesesperre ausserhalb des Projekts ist weiter nicht belegt. Darum sind die automatischen Läufe ausdrücklich auf Code und künstliche Tests begrenzt; Kundendaten, Video-/GPU-Messungen und Laufwerke D:/F:/G: bleiben für sie tabu. Das ist eine Verhaltensgrenze, keine nachgewiesene Betriebssystem-Sperre.
+
+## Erster begrenzter Ferienlauf: variabler Excel-Preis
+
+- Die Lauf-Sperre wurde gesetzt; die neue Testdatei und die drei Protokolldateien waren laut `CheckPath` erlaubt. Ein künstlicher NPK-Fall mit variablem Preis und separat ausgewiesener Pauschale prüft beide Reiter. Die Firmenansicht behält Position, Menge und Einheit und zeigt keinen internen Schätzwert im Total. Der interne Reiter zeigt 789.45 CHF; 22.20 CHF Pauschale bleiben ausserhalb der Summe.
+- Claude erhielt im VS-Code-Terminal nur den Test-Diff ohne Dateiwerkzeuge. Sein Hinweis auf Menge/Einheit im Firmenblatt wurde umgesetzt. Der interne Gesamtbetrag bei leerem Einheitspreis ist beim variablen Sammelpreis absichtlich ein fester Wert; hier war der Hinweis keine Änderung am Produkt. Acht gezielte Tests und der vollständige Release-Build bestanden, 0 Warnungen.
+- Die eigene Sperre wurde nach dem Lauf freigegeben. Keine geschützte Datei, Kundendatei oder Fernadresse wurde geändert oder hochgeladen.
+
+## Excel-Leistungsverzeichnis ohne Positionen (25.09.)
+
+- Codex in VS Code nahm einen lesenden Prüfauftrag an, konnte die Datei wegen einer zu engen Formulierung ohne Lesebefehle aber nicht öffnen. Claude Code las nur die synthetische Testdatei und bestätigte die Testlücke. Qwen prüfte die Testidee lokal in Cline ohne Werkzeugfreigaben. Sein Vorschlag setzte die Kopfzeile auf Zeile 1; der echte Export setzt sie auf Zeile 7. Die Zeilenannahme wurde nicht übernommen. Danach wurde Qwen aus dem Grafikspeicher entladen.
+- Neuer synthetischer Test prüft in beiden Reitern die neun Kopfzellen in Zeile 7, das Fehlen von Positionszeilen und einen Gesamtbetrag von null. Keine Produktlogik geändert. Alle 9 Tests der Excel-Testklasse und der vollständige Release-Build bestanden; Build mit 0 Warnungen und 0 Fehlern.
+- Der vollständige Infrastruktur-Testlauf blieb aus, weil er auf diesem Rechner echte Kundendaten auf D: liest. Nur die gezielte Klasse wurde ausgeführt. Die 206 geschützten offenen Dateien blieben unangetastet; kein Push und keine Käufe.
+
+## Wartbarkeit als neuer Schwerpunkt (25.09.)
+
+- Nutzerauftrag auf bestehenden Code und Wartbarkeit eingegrenzt. Die bestehende Automation `sewerstudio-ferienarbeit` auf kleine verhaltensgleiche Aufräumarbeiten umgestellt; Zeitplan 09:00/19:00, Kosten- und Datenschutzgrenzen bleiben bestehen.
+- Die Lauf-Sperre las das Freigabedatum `2026-10-05` durch erneutes Parsen eines bereits deserialisierten Datums als 10. Mai und blockierte den Lauf. `scripts/ferien-lock.ps1` übernimmt JSON-Datumswerte jetzt direkt als UTC-Zeitpunkt und behandelt rohe ISO-Werte mit fester, sprachunabhängiger Form. Geprüft: Acquire erfolgreich, Status zeigt die Sperre mit korrektem Datum, falscher Release-Token wird abgewiesen.
+- `NpkLeistungsverzeichnisExcelExporter.cs`: `WriteSheet` erstellt weiter dieselben zwei Blätter, aber Kopfbereich und Drucklayout liegen nun in benannten privaten Methoden. Die Kopfzeile 7 ist als gemeinsame Konstante definiert. Keine öffentliche Schnittstelle und keine fachliche Formel geändert. Neun gezielte Excel-Tests bestanden; vollständiger Release-Build: 0 Fehler, 0 Warnungen.
+- Qwen wurde für einen lokalen Diff-Blick gestartet. Seine ausführliche Ausgabe lieferte vor dem Abbruch keinen belegten Fehler; die Entscheidung beruht auf eigenem Diff-Abgleich und den Tests. Qwen wurde danach entladen. Keine Cloud-Daten, Käufe oder Pushes.
+
+## Excel-Vorlagenexport: Feldzuordnung getrennt (25.09.)
+
+- Die beiden Exportmethoden enthielten die jeweilige Schleife zur Feldzuordnung mitten im Ablauf für Vorlagenladen, Zeilenstil, Verweise und sicheres Speichern. Die Feldzuordnung für Haltungen und Schächte liegt jetzt in je einer benannten privaten Methode; Reihenfolge, Bedingungen und Fehlerbehandlung blieben gleich. Die öffentlichen Verträge und gespeicherten Formate wurden nicht geändert.
+- 45 gezielte synthetische Excel-Tests bestanden, darunter Datenübertragung, Links, Zahlen und Schutz des bestehenden Ziels. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Claude prüfte ausschliesslich den Code-Diff ohne Werkzeuge mit niedrigem Denkaufwand und meldete keine belegte Verhaltensänderung. Kein API-Schlüssel gesetzt; Nutzung über das vorhandene Abo.
+- Der Nutzer möchte Claude künftig bevorzugt für konkrete Codevorschläge und Prüfungen einsetzen, damit Codex-Kontingent für Auswahl, Integration und Abschlusskontrolle bleibt. Qwen bleibt lokal für kurze mechanische Aufgaben.
+
+## QGIS-Schachtindex und ehrlicher Stand der Selbstständigkeit (25.09.)
+
+- Nutzerhinweis: Die bisherigen Methodenauslagerungen allein belegen noch keine deutliche Verbesserung der Wartbarkeit. Zwei geplante Läufe sind aktiv, aber ein vollständig unbeaufsichtigter Lauf ist noch nicht nachgewiesen; die bisherigen Einträge in `tmp/ferien/run.log` stammen aus manuellen Arbeiten. Das bleibt offen und darf nicht als bestanden gemeldet werden.
+- Claude prüfte den QGIS-Schnappschuss lesend und fand drei Kandidaten. Der Vorschlag, den vorhandenen Rohindex umzubenennen, hätte die Fallback-Geometrie gefährdet. Stattdessen bleibt der Rohindex erhalten und ein normalisierter Schachtindex wird beim Netzladen einmal aufgebaut. Die Auswahl und der Sanierungstyp nutzen denselben Index; zwei wiederholte Aufbereitungen pro Aufruf entfallen. Bei gleichen Normalnamen gewinnt weiterhin der erste Katasterpunkt.
+- Neuer synthetischer Verhaltenstest für einen Schachtnamen mit Leerzeichen bestand vor und nach dem Umbau. Insgesamt 58 gezielte QGIS-Tests bestanden; vollständiger Release-Build: 0 Fehler, 0 Warnungen. Claude prüfte den Diff ohne Werkzeuge; sein Hinweis auf leere Normalnamen wurde gegen den tatsächlichen Code abgeglichen. Die bisherigen Datenformate und Roh-Lookups sind unverändert.
+
+## QGIS-Router: gemeinsame Pfadbereinigung (25.09.)
+
+- GET und POST verwenden jetzt dieselbe private Methode, die den Abfrageteil ab dem ersten `?` entfernt. Der unabhängige Diff-Abgleich ergab gleiches Verhalten auch für Randfälle; die doppelte Logik entfällt.
+- Laut Claude: 47/47 synthetische QGIS-Tests grün, Release-Build mit 0 Fehlern und 0 Warnungen. Diese Läufe wurden hier nicht erneut ausgeführt.
+
+## QGIS: gemeinsame XTF-Pfadauflösung (25.09.)
+
+- Fingerprint und Netzladen nutzen dieselbe private XTF-Pfadauflösung. Der unabhängige Diff-Abgleich bestätigte gleiches Verhalten für null, leere und reine Whitespace-Pfade sowie die `File.Exists`-Prüfungen; der Kommentar beschreibt nun auch die Prüfung im Resolver korrekt.
+- Laut Claude: 140/140 synthetische QGIS-UI-Tests grün; Release-Build mit 0 Fehlern und 0 Warnungen. Für den reinen Kommentar-Nachtrag wurden die Läufe nicht wiederholt.
+
+## SchachtFeldnamen: gemeinsame Filterlogik (25.09.)
+
+- `Feld` und `Schreibweisen` nutzen dieselbe Filterlogik für gleich gefaltete Feldnamen. Die unabhängige Prüfung bestätigte unveränderte Reihenfolge, Treffer und Rückgabewerte; die entfernte Doppelregel ist ein kleiner echter Wartungsgewinn.
+- Laut Claude: 41/41 gezielte Tests grün; Release-Build mit 0 Fehlern und 0 Warnungen. Hier nicht erneut ausgeführt.
+
+## FachzahlParser: gemeinsamer Parse-Ablauf (25.09.)
+
+- `TryParseDecimal` und `TryParseMeasurement` nutzen jetzt denselben Ablauf aus Normalisieren und Parsen; ihre unterschiedlichen Regeln für drei Dezimalstellen bleiben erhalten. Die unabhängige Prüfung bestätigte gleiches Verhalten bei Kultur, Zahlenformat, leeren Eingaben, Fallback-Reihenfolge und Rückgabewerten.
+- Laut Claude: 22/22 gezielte Tests grün; Release-Build mit 0 Fehlern und 0 Warnungen. Hier nicht erneut ausgeführt.
+
+## Schacht-Empfehlung: gemeinsame Auswahl (25.09.)
+
+- Ziel: Die doppelte Auswahl markierter Kostenzeilen für Maßnahmentext und Nettosumme an einer Stelle führen. Claude änderte `SchachtEmpfehlungTextFormatter` und ergänzte einen synthetischen Test; Codex prüfte den Diff unabhängig.
+- Ergebnis: Reihenfolge und Null-Verhalten bleiben gleich. Eine markierte Zeile ohne Text fehlt nur im Maßnahmentext und zählt mit `Qty * UnitPrice` weiter zur Summe (Testfall: 350 + 2 × 60 = 470). **5/5 gezielte Tests bestanden**; der von Codex ausgeführte vollständige Release-Build endete mit **0 Fehlern und 0 Warnungen**.
+- Grenze: Geprüft wurden die synthetischen Formatter-Fälle; kein echter Projektlauf und kein vollständiger Testlauf mit möglichen Kundenquellen.
+
+## Ferienlauf 17 Uhr: NPK-Positionszeile getrennt (25.09.)
+
+- Vorher enthielt `WriteSheet` auch die gesamte Positionszeile. Claude lagerte Zellwerte, Formatierung und die drei Preisfälle in `WritePositionRow` aus; `WriteSheet` behält Kapitel, Zeilenfortschritt und Summen. Codex bestätigte im unabhängigen Diff-Review unveränderte Reihenfolge, Formeln und Ausgabe.
+- 9/9 gezielte synthetische Tests bestanden; vollständiger Release-Build: 0 Fehler, 0 Warnungen. Kein Kunden- oder Medienlauf.
+
+## Ferienlauf 21 Uhr: Meterparser zusammengeführt (25.09.)
+
+- Ziel: Die doppelte Komma-Normalisierung und `double.TryParse`-Regel für erstes und zweites Meterfeld an einer Stelle halten. Claude führte dafür den privaten Helper `ParseMeterGroup` ein; Codex prüfte den Diff unabhängig. Trefferwahl, Regex, Suffix-Treffer, `mm`-Ausschluss und Null-Exception blieben gleich.
+- Baseline laut Claude: 6/6 synthetische Tests; danach bei Codex erneut 6/6. Vollständiger Release-Build bei Codex: 0 Fehler, 0 Warnungen. Kein Kunden- oder Medienlauf.
+
+## Ferienlauf: gemeinsame Dezimalregel im MeasureRecordParser (26.09.)
+
+- Ziel: Die doppelte Dezimalregel in `TryParseDecimal` und im Fallback von `TryParseInt` zusammenführen. Claude änderte `src/AuswertungPro.Next.Infrastructure/Ai/MeasureRecordParser.cs` und ergänzte zwei Rundungsfälle in `tests/AuswertungPro.Next.Infrastructure.Tests/MeasureRecordParserTests.cs`; `TASKS.md`-Punkt 6 ist erledigt.
+- Wartungsgewinn: Eine statt zwei Regeln für Komma-Normalisierung und dezimales Parsen. Direkte Ganzzahlen bleiben zuerst; Null/leer, Punkt/Komma, ungültige Eingaben und kaufmännische Rundung bleiben laut unabhängigem Codex-Diff-Review gleich.
+- Laut Claude: Baseline 59/59, danach 61/61 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Codex gab den Diff unabhängig frei; Tests und Build wurden hier nicht erneut ausgeführt.
+- Restpunkt: Ein gezielter Overflow-Test fehlt. Das bisherige Ausnahmeverhalten beim Umwandeln zu großer Dezimalwerte bleibt erhalten; die Testlücke blockiert diesen kleinen Umbau nicht.
+
+## Ferienlauf 03 Uhr: gemeinsame Zählregel (26.09.)
+
+- Ziel: Die doppelten Prüf- und Parseabläufe für Befundzahl und YOLO-Framezahl in `PipelineStatusParser` zusammenführen. Claude änderte `src/AuswertungPro.Next.Application/Ai/PipelineStatusParser.cs` und ergänzte zwei synthetische Überlauffälle in `tests/AuswertungPro.Next.Pipeline.Tests/PipelineStatusParserTests.cs`.
+- Wartungsgewinn: Eine private Zählregel statt zwei gleicher Abläufe. Die unterschiedlichen Regex-Muster und Fanggruppen, Trefferwahl, Null/ungültige Werte und Rückgaben blieben laut unabhängigem Codex-Diff-Review gleich.
+- Laut Claude: Baseline 24/24, danach 26/26 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Codex gab den Diff frei; Tests und Build wurden hier nicht erneut ausgeführt. `TASKS.md`-Punkt 7 ist erledigt.
+
+## Ferienlauf 05 Uhr: gemeinsame Dezimalregel (26.09.)
+
+- Ziel: Den doppelten Komma-Ersatz und `double.TryParse` für Meterwert und Quantifizierung zusammenführen. Claude änderte `src/AuswertungPro.Next.Infrastructure/Ai/Training/Services/GroundTruthFieldParser.cs` und ergänzte den synthetischen Komma-Fall in `tests/AuswertungPro.Next.Infrastructure.Tests/GroundTruthFieldParserTests.cs`.
+- Wartungsgewinn: Eine Dezimalregel statt zwei. Das unabhängige Codex-Diff-Review bestätigte unveränderte Werte, `NumberStyles.Float`, `InvariantCulture`, Null-/Fehlerverhalten, Einheit, Typ und Trefferwahl.
+- Laut Claude: Baseline 30/30, danach 31/31 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Codex gab den Diff frei; hier keine erneute Ausführung. `TASKS.md`-Punkt 8 ist erledigt.
+- Restpunkt: Kein konkreter Fehler offen; ein Lauf mit echten Projektdaten war nicht Teil dieser synthetischen Prüfung.
+
+## Ferienlauf 07 Uhr: WinCan-Quantifizierung (26.09.)
+
+- Ziel und Wartungsgewinn: Die drei gleichen Blöcke für Regex-Treffer und Komma-Normalisierung in `ExtractQuantValue` nutzen jetzt einen gemeinsamen privaten Helfer. Claude änderte `src/AuswertungPro.Next.Infrastructure/Import/WinCan/WinCanValueNormalizer.cs` und ergänzte Prioritäts- und Ersttrefferfälle in `tests/AuswertungPro.Next.Infrastructure.Tests/WinCanValueNormalizerTests.cs`.
+- Codex prüfte den Diff unabhängig und gab ihn frei: Prozent bleibt vor Grad vor Millimeter; je Muster gewinnt der erste Treffer, ohne Treffer bleibt `null`. Die Methode parst keine Zahl; `InvariantCulture` war hier weder vorher noch nachher beteiligt.
+- Gemeldet: Baseline 70/70, danach 73/73 gezielte synthetische Tests; vollständiger Release-Build 0 Fehler/0 Warnungen. Diese Läufe wurden beim Codex-Review nicht wiederholt. `TASKS.md`-Punkt 9 ist erledigt.
+
+## Wartbarkeitsplan, Etappe 1: ProtocolEntryInputNormalizer (26.09.)
+
+- Ziel: Die zwei Ganzzahl- und Bereichsregeln für Uhrposition und EZ-Wert in `src/AuswertungPro.Next.Application/Protocol/ProtocolEntryInputNormalizer.cs` zusammenführen. Claude führte `TryParseRangedInt` als privaten Helfer ein; die getrennte Ausgabe (`00` und `EZ{value}`), Leerfälle und `hasValue` blieben laut unabhängigem Codex-Diff-Review gleich.
+- Gezielte synthetische `ProtocolEntryInputNormalizerTests`: 79/79 vor der Änderung gemeldet, 79/79 danach von Codex ausgeführt. Der vollständige Release-Build war laut Nutzer erfolgreich. `TASKS.md`-Punkt 10 ist erledigt; die Testdatei blieb unverändert.
+- Grenze: Kein vollständiger Testlauf über alle Projekte, damit keine Kundenquellen oder Infrastrukturtests geöffnet werden. Der vollständige Release-Build wurde von Codex nicht selbst wiederholt.
+
+## Wartbarkeitsplan, Etappe 2: VSA-Katalogpfade (26.09.)
+
+- Ziel und Gewinn: Claude ersetzte die zwei identischen Section-/Node-Suchfolgen in `src/AuswertungPro.Next.Infrastructure/Protocol/VsaCatalogFilePathResolver.cs` durch `ResolveCatalogPath` mit getrennt übergebenen Pfaden, Dateinamen und Umgebungsvariablen. Codex bestätigte im unabhängigen Diff-Review unveränderte Priorität und Behandlung fehlender Dateien.
+- `tests/AuswertungPro.Next.Infrastructure.Tests/Protocol/VsaCatalogFilePathResolverTests.cs` prüft nun beide Katalogarten und die Vorrangstufen. Claude meldete 11/11 gezielte synthetische Tests und den vollständigen Release-Build mit 0 Fehlern/0 Warnungen; Codex wiederholte nur diese 11 Tests mit projektlokalem `TEMP`/`TMP`: 11/11 bestanden.
+- Die frühe Testfassung erreichte bei fehlenden Treffern den Default-Fallback und führte damit Existenzabfragen in festen Systemkatalogordnern aus; ein Lesen von Dateiinhalten dort ist nicht belegt. Die korrigierten Tests beenden beide Katalogsuchen bei projektlokalen synthetischen Dateien. Grenze: Der unveränderte Default-Fallback des Produktivcodes wird damit weiterhin nicht isoliert getestet. Kein vollständiger Infrastrukturtestlauf.
+
+## Wartbarkeitsplan, Etappe 3 – TEIL 1: RetryRequired-Checkpoint (26.09.)
+
+- Ziel und Gewinn: Claude vereinte in `src/AuswertungPro.Next.Infrastructure/Ai/Pipeline/MultiModelAnalysisService.cs` sechs identische `RetryRequired`-Checkpoint-Konstruktionen aus den YOLO-, DINO- und SAM-Fehlerzweigen in `AppendRetryRequiredCheckpointAsync`. Codex verglich den Diff mit HEAD: Checkpoint-Art, Argumente, `await`-Stelle und Reihenfolge zu Trace, Deduplikator und Fehlerzähler bleiben gleich. Die übrige gemeinsame Fehlerregel ist weiterhin offen.
+- `tests/AuswertungPro.Next.Pipeline.Tests/MultiModelAnalysisServiceVramTests.cs` ergänzt SAM-VRAM und eine geordnete Prüfung der ersten drei Journal-Frame-Einträge. Codex korrigierte nur den Kommentar: `TempJournalPaths` ist erst bei gesetztem projektlokalem `TEMP`/`TMP` projektlokal; der Test injiziert einen Trace-Writer für denselben Ordner.
+- Claude meldete 54/54 gezielte synthetische Tests und den vollständigen Release-Build mit 0 Fehlern/0 Warnungen. Codex führte drei betroffene synthetische Testklassen selbst aus: 45/45 bestanden; ein vollständiger Release-Build und ein projektübergreifender Gesamttest wurden von Codex nicht ausgeführt. Für künftige Testläufe `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR` auf geprüfte Projektordner setzen.
+
+## Wartbarkeitsplan, Etappe 3 – TEIL 2: gemeinsame Fehlerfolge (26.09.)
+
+- Ziel und Gewinn: Claude ersetzte in `MultiModelAnalysisService.cs` die sechs gleichen Dreierfolgen aus Trace schreiben, Deduplikator fortschalten und `RetryRequired`-Checkpoint durch `RecordRetryRequiredFrameAsync`. Vorher standen diese drei Schritte 18-mal inline, danach an sechs Aufrufstellen und einmal im Helfer. Codex prüfte den Diff unabhängig: Die Schritte bleiben in derselben Reihenfolge; Modellzeiten, Trace-Gründe, Meldungen, VRAM-Skip und Transport-Outage bleiben in den bisherigen Zweigen.
+- `MultiModelAnalysisServiceResilienceTests.cs` ergänzt den bisher fehlenden allgemeinen YOLO-Transportfehler sowie einen speicherinternen Test für die geordnete Trace- und Checkpoint-Folge der allgemeinen Fehler von YOLO, DINO und SAM. Mit projektlokalem `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR` bestanden vor der Codeänderung laut Claude 47/47 und danach nochmals 47/47 gezielte Tests; Codex wiederholte danach dieselben 47 Tests erfolgreich. Vollständiger Release-Build laut Claude: 0 Fehler, 0 Warnungen. Kein vollständiger Infrastrukturtestlauf.
+- Grenze: Claude prüfte vor dem ausdrücklichen Nachhinweis zweimal nur die Dateigröße einer bestehenden AppData-Telemetriedatei außerhalb des Projekts. Ein Lesen ihres Inhalts oder eine Änderung ist nicht belegt. Danach wurde die Projektgrenze nochmals ausdrücklich gesetzt. Künftige Läufe dürfen auch solche Metadatenabfragen außerhalb des Projekts nicht ausführen.
+
+## Wartbarkeitsplan, Etappe 4 – TEIL 1: Teacher-Phase nach Speicherung (26.09.)
+
+- Ziel und Gewinn: Claude trennte in `AnnotationWorkbenchService.SaveCoreAsync` die nachgelagerte Teacher-Phase (Export und Speichern des Kandidaten) vom dauerhaften Speichern des Goldsamples. `RecordTeacherCandidateAsync` kapselt den bisher rund 40 Zeilen langen Schritt samt eigener Warnungsgrenze; `SaveCoreAsync` zeigt die Reihenfolge Sample → KB-Index → Teacher → Ergebnis nun direkt. Das ist eine Verantwortungsgrenze, keine Änderung am öffentlichen Speichern.
+- Zwei neue synthetische Tests halten fest, dass eine vom KB-Indexer bzw. Teacher-Export geworfene `OperationCanceledException` nach dem gespeicherten Sample weiterhin als sichtbare Warnung behandelt wird. Der Test wirft die Ausnahme ohne abgebrochenen Token; der Fall eines tatsächlich abgebrochenen Tokens während dieser Phase ist damit nicht vollständig simuliert. Codex prüfte den Diff unabhängig: Exportparameter, Annotation, Fehlertext und `Saved`-Ergebnis bleiben gleich. Mit nur Fake-Stores und projektlokalem `TEMP`/`TMP`/`SEWERSTUDIO_TELEMETRY_DIR` bestanden 6/6 gezielte Tests nach der Änderung. Vollständiger Release-Build von Codex: 0 Fehler, 0 Warnungen. Kein vollständiger UI- oder Infrastrukturtestlauf; das bereits offene UI-Testprojekt blieb unangetastet.
+- Abgleich mit `sewer-architektur`: Die bestehende Folge Goldkopie → Sample → KB → Teacher und alle Schnittstellen bleiben gleich. Die Architekturkarte braucht für diese interne Methodentrennung keine Änderung.
+
+## Wartbarkeitsplan, Etappe 4 – TEIL 2: KB-Nachtrag nach gespeichertem Sample (26.09.)
+
+- Ziel und Gewinn: Claude trennte in `src/AuswertungPro.Next.UI/Services/AnnotationWorkbenchService.cs` den KB-Nachtrag als `RecordKbIndexAsync` von der dauerhaften Sample-Speicherung. `SaveCoreAsync` zeigt jetzt die beiden nachgelagerten Schritte KB und Teacher nacheinander; Index, Status-Nachtrag und Fehlerwarnung werden gemeinsam gepflegt.
+- `tests/AuswertungPro.Next.UI.Tests/Ai/Workbench/AnnotationWorkbenchServiceTests.cs` ergänzt einen synthetischen Fall: Der Index gelingt, aber `MergeOrUpdateAsync` scheitert. Das bereits gespeicherte Sample bleibt mit `Saved=true` erhalten, die KB-Warnung ist sichtbar und der Teacher-Schritt läuft weiter.
+- Codex prüfte den Diff unabhängig: `sample.SampleId` ist der zuvor gesetzte `sampleId`; Reihenfolge, Statuszuordnung, `catch (Exception)` einschliesslich Abbruch-Ausnahmen und Warntext blieben gleich. 8/8 gezielte synthetische Tests liefen bei Codex mit projektlokalem `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR` grün. Claude meldete vollständigen Release-Build mit 0 Fehlern und 0 Warnungen. Kein Kunden- oder Medienlauf.
+- Rest: Die vorhergehenden Validierungs- und Goldsample-Phasen sind noch nicht getrennt. Diese Etappe war nur der nicht-transaktionale KB-Nachtrag; keine fachliche Änderung.
+
+## Wartbarkeitsplan, Etappe 4 – TEIL 3: Maskenentscheidung (26.09.)
+
+- Ziel und Gewinn: Claude fasste in `AnnotationWorkbenchService.SaveCoreAsync` die rund 40 Zeilen aus Bildmaßprüfung, SAM-Maskenprüfung und Flächenzählung in `EvaluateGoldMask` zusammen. Im Speicherablauf steht die Entscheidung Gold oder Entwurf jetzt als benannter Schritt; die Maskenregel hat einen eigenen Ort. Es wurde keine Fachregel geändert.
+- `AnnotationWorkbenchServiceTests` ergänzt einen synthetischen Fall für eine Ausnahme beim Lesen der Bildmaße. Wie bisher entsteht ein Entwurf ohne KB-Index oder Teacher. Claude meldete 51/51 gezielte Baseline-Tests. Codex prüfte den Diff unabhängig: Aufrufreihenfolge, Kurzschluss bei fehlender/ungültiger Maske, Flächenzählung und der ungefilterte Fangblock für Bildmaßfehler sind verhaltensgleich. 8/8 passende synthetische Nachtests liefen bei Codex mit projektlokalem `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR` grün; der vollständige Release-Build lief bei Codex mit 0 Fehlern und 0 Warnungen.
+- Grenze: Die übrigen Validierungs-, Goldkopie- und Sample-Speicherphasen bleiben im bisherigen Ablauf. Kein Kunden- oder Medienlauf; die Architekturfolge Goldkopie → Sample → KB → Teacher bleibt unverändert.
+
+## Wartbarkeitsplan, Etappe 4 – TEIL 4: gleiche Abweisungsergebnisse (26.09.)
+
+- Ziel und Gewinn: Claude vereinte 21 exakt gleiche fehlgeschlagene `WorkbenchSaveResult`-Konstruktionen in `AnnotationWorkbenchService.SaveCoreAsync` über `Rejected(message)`. Der Speicherablauf zeigt damit die Ablehnungen ohne fünfmalige Ergebnisparameter; die fünf Ergebniswerte werden an einem Ort gepflegt. Es wurden nur identische Formen ersetzt, keine Meldung und keine Erfolgs- oder Entwurfsform verändert. Diff: 44 Einfügungen, 78 Löschungen, netto 34 Zeilen weniger.
+- Codex prüfte den Diff unabhängig: Alle 21 Aufrufe behalten `Saved=false`, die gleiche Meldung, `SampleId=null`, `KbIndexState="-"` und `TeacherAnnotationId=null`; Auswertungsreihenfolge und Ausnahmegrenzen bleiben gleich. 3/3 gezielte synthetische Ablehnungstests mit Fakes bestanden bei projektlokalem `TEMP`, `TMP` und `SEWERSTUDIO_TELEMETRY_DIR`. Vollständiger Release-Build: 0 Fehler, 0 Warnungen.
+- Grenze: Weitere Validierungs-, Goldkopie- und Sample-Speicherphasen bleiben offen. Kein Kunden- oder Medienlauf; vollständige Infrastrukturtests wurden wegen möglicher echter Kundenpfade nicht gestartet.
+
+## Wartbarkeitsplan, Etappe 4 – TEIL 5: Goldbild-Speicherschritt (26.09.)
+
+- Ziel und Gewinn: `AnnotationWorkbenchService.SaveCoreAsync` zeigt nach dem Eval-Schutz einen benannten Goldbild-Speicherschritt und dann die Maskenentscheidung. `StoreGoldImageAsync` hält Zielordner, die Auswahl zwischen vorhandener Datei und Snapshot-Bytes, Prüfung des gespeicherten Pfads sowie den gebundenen SHA-256 zusammen. Der Hauptablauf enthält 30 Zeilen weniger; die Bildkopie hat damit eine eigene Fehlergrenze. Öffentliche Schnittstellen und Fachregeln sind unverändert.
+- Erst 3/3 vorhandene synthetische Tests grün. Ein neuer Fake-Test für einen Lesefehler beim Hash nach erfolgreicher Kopie war vor dem Umbau grün. Nach dem Umbau 4/4 gezielte Tests grün; vollständiger Release-Build 0 Fehler/0 Warnungen. Codex-Diff-Prüfung: gleicher Pfad, gleiche Bytes, gleiche Extension, gleicher Token, gleiche Hashquelle und alle drei Ablehnungstexte; `OperationCanceledException` bleibt von beiden Fangblöcken ausgenommen. Keine echten Bilddateien gelesen.
+- Claude Code wurde in VS Code mit Sonnet High um die Änderung ohne Shell gebeten. Es nutzte trotzdem eine Bash-Suche; der Lauf wurde vor jeder Dateiänderung unterbrochen. Codex setzte die abgegrenzte Änderung direkt um und prüfte sie. Die 206 vorgefundenen offenen Pfade blieben unangetastet, kein Push oder Merge.
+- Rest: Validierung und Sample-Bau/-Speicherung bleiben im Hauptablauf und sind weiterhin riskant. Vollständige Infrastrukturtests wurden wegen möglicher Kundenpfade nicht ausgeführt.
+## Wartbarkeitsplan, Etappe 4 – TEIL 6: Sample-Persistenz (26.09.)
+
+- Ziel und Gewinn: `SaveCoreAsync` zeigt jetzt nach dem Goldbild und dem Sample-Bau einen benannten Persistenzschritt, danach unmittelbar Entwurf oder KB/Teacher. `PersistSampleAsync` hält die drei Alternativen Neuanlage, Ergänzung bei gleichem Code und Korrektur mit anderem Code samt jeweiliger Warnung/Ablehnung zusammen. Der Hauptablauf wurde um 51 Zeilen kürzer; die Gesamtdatei wuchs um 21 Zeilen, weil die interne Schnittstelle die Warnung und Ablehnung ausdrücklich zurückgibt. Keine Fachregel geändert.
+- 5/5 ausgewählte synthetische Baseline-Tests mit Fake-Stores grün; nach dem Umbau 6/6 Tests grün (Neuanlage, gleicher Code, Codekorrektur, Ergänzung, zwei Signaturkonflikte). Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Codex verglich die drei Zweige: gleiche Aufrufreihenfolge, gleicher Token nur bei `TryAddNewAsync`, dieselben Catch-Filter und Ablehnungstexte. Die ungeschützte Nachbereinigung im Gleich-Code-Zweig bleibt absichtlich ungeschützt.
+- Claude wurde in diesem Lauf nicht erneut beauftragt, weil es im vorherigen Lauf trotz ausdrücklichem Verbot eine Bash-Suche gestartet hatte; der damalige Lauf wurde vor Änderungen gestoppt. Diese Änderung wurde direkt im Projekt ausgeführt und geprüft. Keine echten Kundendaten, Medien, Pushes oder Merges.
+- Rest: Die Validierung und der Bau des `TrainingSample` bleiben in `SaveCoreAsync`. Weitere Eingriffe an diesen Fachregeln benötigen zusätzliche Verhaltenstests. Der vollständige Infrastrukturtest wurde wegen möglicher Kundenpfade nicht gestartet.
+
+## Wartbarkeitsplan, Etappe 6 – TEIL 1: Hauptquellenwahl im Import (27.09.)
+
+- Priorität: Die übrige Etappe 4 betrifft komplexe Validierungs- und Sample-Fachregeln; ohne weitere Ist-Tests wurde dort nicht eingegriffen. Etappe 5 bleibt wegen des vorgefundenen offenen UI-Testprojekts zurückgestellt. Für Etappe 6 war die Formatwahl der Hauptquelle als begrenzter, synthetisch prüfbarer Schritt frei.
+- Ziel und Gewinn: `ProjectImportOrchestrator.Import` zeigt jetzt im Schritt "Quelldaten" getrennt die Hauptquellenwahl und die Bilanzierung. `ImportMainSource` hält die Entscheidung IKAS, IBAK, KINS oder WinCan samt unveränderten Fallback-Meldungen zusammen. Die 33 Zeilen Formatverzweigung verschwanden aus dem Hauptablauf; Zähler, Fehlererfassung und Ergänzungs-XTF bleiben am bisherigen Ort. Die Gesamtdatei wuchs um 7 Zeilen für die benannte Grenze.
+- Vorher und nachher je 3/3 synthetische, projektlokale Importtests (IKAS, IBAK, KINS) grün; `TEMP`, `TMP` und Telemetrie im erlaubten Projektordner. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Codex-Diff-Prüfung: gleiche Branch-Reihenfolge, gleiche Aufrufe, Parameter, Resultate und Fallback-Texte; `OperationCanceledException` wird weiterhin an der ursprünglichen Grenze weitergeworfen. WinCan-Zweig wurde nicht eigenständig mit einem ausgewählten Test belegt.
+- Claude-Panel war in VS Code sichtbar, ohne auslesbaren Abo-Status. Claude wurde wegen des im vorigen Lauf trotz ausdrücklichem Verbot genutzten Bash-Werkzeugs nicht erneut beauftragt. Kein Kundenlauf, Push, Merge oder Kauf.
+- Rest: Archivierung, Fehlerbilanz, Medien- und Protokollverteilung liegen weiterhin im langen Importablauf. Vor jeder weiteren Phase passende lokale Erfolg-, Fehler- und Abbruchtests prüfen.
+
+## Wartbarkeitsplan, Etappe 6 – TEIL 2: WinCan-Verhalten vor weiteren Importphasen (27.09.)
+
+- Ziel: Die nach Teil 1 nur per Diff geprüfte WinCan-Verzweigung synthetisch absichern, bevor weitere Importphasen geändert werden. Drei neue Tests mit einem fest vorgegebenen Detektor und Fake-Importer prüfen Aufruf mit Quellordner und Projekt, Übernahme der Zähler/Meldung, Fehlerbilanz bei Importfehler und Weitergabe von `OperationCanceledException`. Die gemeinsame Test-Fixture erstellt ausschliesslich leere Ordner unter dem geprüften Projekt-`TEMP`.
+- Gewinn: Der WinCan-Zweig hat jetzt einen eigenen, schnellen Verhaltensschutz für Erfolg, Fehler und Abbruch. Das macht spätere Änderungen an der Hauptquellenwahl überprüfbar; Produktionscode und Fachverhalten wurden in diesem Lauf nicht geändert. Vorher 1/1 ausgewählter IKAS-Baseline-Test grün, nachher 4/4 ausgewählte IKAS-/WinCan-Tests grün; vollständiger Release-Build 0 Fehler/0 Warnungen. `git diff --check` ohne Fehler.
+- Grenze: Der Test verwendet einen Fake-Importer und keine echte `.db3`; die reale Datenbankauswertung bleibt ungeprüft. Weitere Importphasen brauchen je einen eigenen Fall für ihren Erfolg, Fehler und Abbruch. Keine Kunden- oder Medienquelle gelesen, kein Push oder Merge.
+
+## Wartbarkeitsplan, Etappe 6 – TEIL 3: Archiv und Pläne als Importphase (27.09.)
+
+- Ziel und Gewinn: `ProjectImportOrchestrator.Import` zeigt in Schritt 4 nur noch den benannten Aufruf `ArchiveSourceAndPlans` innerhalb seiner bisherigen Fehler- und Abbruchgrenze. Der neue private Schritt hält Archivieren, Plan-PDF-Import und deren Ergebnisberichte zusammen. Im Hauptablauf entfallen 20 Zeilen Dateiarbeit; der interne Schritt ist einzeln auffindbar. Keine öffentliche Schnittstelle oder fachliche Reihenfolge geändert.
+- Vor dem Umbau bestanden 3/3 neue synthetische Charakterisierungstests: Archiv- und Planmeldungen samt Planfehler, Archiv-Ausnahme mit Weiterlauf zum WinCan-Fake sowie Abbruch aus dem Archivierer. Danach bestanden 7/7 ausgewählte Importtests einschliesslich WinCan-Routing und IKAS-Archivierung. `TEMP`, `TMP` und Telemetrie zeigten auf geprüfte Projektordner. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Diff-Prüfung: gleiche Aufrufe, Parameter, Meldungen, Bilanzierung und Catch-Reihenfolge.
+- Grenze: Die Tests enthalten keine echte WinCan-Datenbank und lesen keine Kundenmedien. Weitere Importphasen, insbesondere Medien-/Protokollverteilung, bleiben ohne neue Absicherung unangetastet. Kein Push oder Merge.
+- Architekturabgleich: Die Skillkarte beschreibt den bestehenden siebenstufigen Ein-Knopf-Import mit unveränderter Fehlerbilanz und Transaktion. Dieser interne Schritt verändert weder Schichtgrenzen noch Registrierung oder Datenformat; die Karte benötigt deshalb keinen fachlichen Nachtrag. Die Skilldatei außerhalb des Projektordners wurde nicht bearbeitet.
+
+## Wartbarkeitsplan, Etappe 6 – TEIL 4: gleiche Fehlertexte nur einmal bilden (27.09.)
+
+- Ziel und Gewinn: In sieben Importzweigen stand derselbe Fehlertext je zweimal, einmal für die Schrittbilanz und einmal für die Nachrichtenliste. Die lokale Funktion `MeldeFehler` bildet diese feste Folge an einer Stelle ab; jeder Aufrufer gibt seinen bisherigen Schritt und Text nur einmal an. Format, Gesamtzahl, Melde-Reihenfolge und Fehlergrenzen bleiben gleich. Die ergänzende XTF-Quelle verwendet absichtlich verschiedene Texte für Bilanz und Anzeige und wurde deshalb nicht umgestellt.
+- Vor der Codeänderung bestanden 7/7 ausgewählte synthetische Tests. Ein neuer Detektorfehler-Test und ergänzte Assertions halten den identischen Grund in Bilanz und Nachrichten für Detektor, Archivfehler und WinCan-Importerfehler fest. Nach der Änderung bestanden 10/10 ausgewählte Importtests, darunter IKAS, IBAK und KINS. Vollständiger Release-Build: 0 Fehler, 0 Warnungen; Diff ohne Whitespace-Fehler. Alle Tests liefen mit projektlokalem `TEMP`, `TMP` und Telemetrieordner.
+- Grenze: Nicht jeder bestehende Importzweig erhielt einen neuen Einzeltest; die unveränderten Meldungstexte wurden zusätzlich im Diff geprüft. Kein Kunden- oder Medienlauf, kein Push oder Merge. Architekturabgleich: keine neue Schnittstelle, Registrierung oder Datenform; die Skillkarte braucht keinen inhaltlichen Nachtrag.
+
+## Wartbarkeitsplan, Etappe 6 – TEIL 5: Fotoauftrag getrennt (27.09.)
+
+- Ziel und Gewinn: `ProjectImportOrchestrator.Import` zeigt in Schritt 7a nur noch `DistributePhotos`, bevor die Video- und Protokollverteilung beginnt. Der interne Schritt enthält alle Foto-spezifischen Optionen (`IncludeVideos/Pdfs/Schacht=false`), den UI-CollectionLock, Staging, Fortschritt und die Foto-Fehlerbilanz. Im Hauptablauf entfallen 19 Zeilen Auftragsdetails; der Vertrag der Fotoverteilung ist an einer Stelle sichtbar. Die gemeinsame Fehler- und Abbruchgrenze sowie die abschliessende Verteilungsmeldung bleiben am bisherigen Ort.
+- Drei neue synthetische Tests waren vor der Codeänderung grün: Fotoauftrag mit Fehlerbilanz, Verteilerausnahme mit Abschluss des Imports und Abbruch ohne `Dirty`. Nach der Änderung bestanden 6/6 ausgewählte Tests einschliesslich IKAS, IBAK und KINS. Vollständiger Release-Build: 0 Fehler, 0 Warnungen; Diff ohne Whitespace-Fehler. `TEMP`, `TMP` und Telemetrie lagen in geprüften Projektordnern.
+- Grenze: Der Fake-Verteiler prüft den Orchestrator-Vertrag, keine echten Fotos oder Kundendateien. Die weiteren Medien- und Protokollschritte wurden nicht geändert. Kein Push oder Merge. Architekturabgleich: kein neuer Service, keine DI- oder Datenformatänderung; die Skillkarte bleibt inhaltlich richtig.
+
+## Wartbarkeitsplan, Etappe 6 – Korrektur der Foto-Teilphase (27.09.)
+
+- Ein unabhängiger Claude-Review im VS Code beanstandete die versteckten Änderungen an Nachrichtenliste und Fehlerbilanz in `DistributePhotos`. Der reine Auftragshelfer übernimmt jetzt nur noch Verteilungsoptionen, Fortschritt, CollectionLock und Staging. Der Hauptablauf sammelt Nachrichten und Fehler ausdrücklich direkt nach dem Aufruf. Zwei überflüssige Methodenparameter entfallen; das Verhalten und die Reihenfolge bleiben gleich.
+- Die drei synthetischen Fotophasen-Tests bestanden vor und nach der Korrektur jeweils 3/3. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. Testdateien und Telemetrie blieben im geprüften Projektordner. Der vollständige Infrastrukturtest wurde wegen bekannter externer Kundenpfade nicht gestartet.
+- Kein Kundenlauf, Push, Merge oder Kauf. Weitere Medien- und Protokollverteilung bleibt offen. Architekturkarte geprüft: keine neue Schnittstelle, Registrierung, Schicht oder Datenform.
+
+## Wartbarkeitsplan, Etappe 3 – allgemeine Modellfehler-Folge (27.09.)
+
+- Terra prüfte die drei allgemeinen Fehlerzweige lesend und änderte anschliessend als einziger Schreiber `MultiModelAnalysisService.cs`. Die gleiche Folge aus Trace-Code, Retry-Checkpoint und Ausfallentscheidung steht jetzt in `RecordGeneralModelErrorAsync`; YOLO-, DINO- und SAM-spezifische Telemetrie, Meldungen, VRAM-Zweige und `break`/`continue` bleiben in den Zweigen. Drei gleichartige Wartungsstellen wurden zu einer Regel zusammengeführt. Luna prüfte unabhängig Etappe 7 und riet wegen unterschiedlicher Sicherheitsregeln von einer Änderung ab.
+- Die erste Testausführung nach Terras Änderung scheiterte beim Kompilieren: `RegisterSidecarTransportErrorAsync` ist eine lokale Funktion und war aus dem Klassenhelfer nicht erreichbar. Codex korrigierte dies durch Übergabe der vorhandenen lokalen Funktion. Danach bestanden 34/34 synthetische Resilience-Tests wie schon vor der Änderung. Der vollständige Release-Build lief mit 0 Fehlern und 0 Warnungen. `TEMP`, `TMP` und Telemetrie lagen im geprüften Projektordner; kein Video- oder Kundenlauf.
+- Ein zusätzlicher lokaler Qwen-Review über Ollama kam nicht zustande: Das Laden von `qwen38-128k` brach mit einem CUDA-Initialisierungsfehler ab. `ollama ps` zeigte danach kein geladenes Modell. Keine Qwen-Aussage wurde als Prüfergebnis verwendet. Keine Käufe, kostenpflichtigen APIs, Pushes oder Merges. Die Architektur-Skillkarte wurde geprüft: kein neuer Service, keine Registrierung, Schicht oder Datenform.
+
+## Ferienlauf 27.09., 13 Uhr: Fehlergrenze der Medienverteilung
+
+- Etappe 6 weiter abgesichert: Im vorhandenen synthetischen Fotofehler-Test zählt ein neuer Kanal-Verteiler-Fake seine Aufrufe. Nach der Foto-Ausnahme bleibt er bei null; der Import meldet den Fehler und markiert das Projekt wie bisher als geändert. Dadurch ist die gemeinsame Fehlergrenze vor einem späteren Umbau ausdrücklich geschützt. Nur die Testdatei wurde geändert; keine Produktfunktion.
+- Gezielter neuer Test 1/1 und alle drei Fotophasen-Tests 3/3 grün. Vollständiger Release-Build: 0 Fehler, 0 Warnungen. `TEMP` und `TMP` lagen im geprüften Projektordner; kein Kunden- oder Videolauf.
+- Terra fand für die übrige Medien-/Protokollverteilung erst nach weiteren Verhaltenstests einen möglichen Strukturgewinn; ein sofortiger Umbau wäre zu gross und könnte die Reihenfolge oder Fehlergrenze ändern. Luna fand im Exportregister nur bewusst wiederholte Sicherheitsprüfungen, keine sichere Doppelregel. Daher in diesem Lauf kein weiterer Produktcode. Qwen läuft inzwischen als lokales `qwen38-cline:latest` in Cline; eine reine Antwortprobe bestand. Kein Push, Merge, Kauf oder bezahlte API.
+
+## Offene Freigaben und Grenzen
+
+- Die 128 Sicherungslücken umfassen 15 MP4 und 78 PDF; ältere Kopien können existieren, sind hier aber nicht nachgewiesen.
+- Der vollständige Infrastrukturtest liest auf diesem Rechner eine echte Kundenquelle auf D:. Ein solcher Gesamtlauf ist für die Ferienarbeit ungeeignet. Weitere Testauswahl nur nach Datenpfad-Prüfung.
+- VS Code ist nach dem Entsperren erreichbar. Cline und Qwen wurden im getrennten Arbeitsordner nachgewiesen. Ein unbeaufsichtigter Probelauf mit Neustart und Fehlerfällen steht noch aus.
+- Für neue Arbeit wurde der saubere Start-Commit gewählt. Die 206 offenen Originaldateien bleiben unangetastet. Der Nutzer hat `D:\Haltungen` als lokalen Videoordner genannt; vier passende Videos sind im Referenz-Manifest erfasst.
+
+
+- Ausgewählte Tests ohne Kundenquelle: 32 UI-Prüfungen (QGIS, QualityGate-Anzeige, Sicherungstext) und 7 Infrastrukturprüfungen (SQLite-Schnappschuss, Sicherungsprotokoll) bestanden.
+- Das ursprüngliche Projekt blieb nach dem Snapshot unverändert: Commit und Prüfsummen aller 206 Dateien stimmen noch.

@@ -117,7 +117,8 @@ public static class SamMaskRenderer
     /// <summary>
     /// Extrahiert die aeussere Kontur einer Binaermaske als WPF StreamGeometry.
     /// Verwendet horizontales Scanline-Verfahren fuer Kontur-Segmente.
-    /// Die Maske wird auf targetWidth herunterskaliert fuer Performance.
+    /// Die Maske wird auf targetWidth herunterskaliert fuer Performance; dabei bleibt
+    /// jede gesetzte Stelle sichtbar (siehe <see cref="SamMaskDecoder.Downsample"/>).
     /// </summary>
     public static StreamGeometry ExtractContourGeometry(
         bool[,] mask, int origWidth, int origHeight,
@@ -134,9 +135,10 @@ public static class SamMaskRenderer
 
         var ds = SamMaskDecoder.Downsample(mask, maskH, maskW, dsH, dsW);
 
-        // Canvas-Skalierungsfaktoren
-        double scaleX = canvasWidth / origWidth;
-        double scaleY = canvasHeight / origHeight;
+        // Eine verkleinerte Zelle entspricht je Achse genau maskW/dsW bzw. maskH/dsH
+        // Quellpixeln (wie die Blockeinteilung beim Verkleinern), danach Canvas-Skalierung.
+        double scaleX = dsW > 0 ? (double)maskW / dsW * (canvasWidth / origWidth) : 0;
+        double scaleY = dsH > 0 ? (double)maskH / dsH * (canvasHeight / origHeight) : 0;
 
         var geometry = new StreamGeometry();
         using var ctx = geometry.Open();
@@ -158,10 +160,10 @@ public static class SamMaskRenderer
                 else if (!val && inMask)
                 {
                     // Segment Ende: obere und untere Kante zeichnen
-                    double x1 = (segStart / scale) * scaleX;
-                    double x2 = (col / scale) * scaleX;
-                    double y = (row / scale) * scaleY;
-                    double yNext = ((row + 1) / scale) * scaleY;
+                    double x1 = segStart * scaleX;
+                    double x2 = col * scaleX;
+                    double y = row * scaleY;
+                    double yNext = (row + 1) * scaleY;
 
                     // Obere Kante (wenn Zeile darueber nicht in Maske)
                     if (row == 0 || !SamMaskDecoder.HasOverlap(ds, row - 1, segStart, col))
@@ -215,8 +217,9 @@ public static class SamMaskRenderer
 
         var ds = SamMaskDecoder.Downsample(mask, maskH, maskW, dsH, dsW);
 
-        double scaleX = canvasWidth / origWidth;
-        double scaleY = canvasHeight / origHeight;
+        // Wie bei der Kontur: Zelle -> Quellpixel je Achse, danach Canvas-Skalierung.
+        double scaleX = dsW > 0 ? (double)maskW / dsW * (canvasWidth / origWidth) : 0;
+        double scaleY = dsH > 0 ? (double)maskH / dsH * (canvasHeight / origHeight) : 0;
 
         var geometry = new StreamGeometry();
         using var ctx = geometry.Open();
@@ -237,10 +240,10 @@ public static class SamMaskRenderer
                 }
                 else if (!val && inMask)
                 {
-                    double x1 = (segStart / scale) * scaleX;
-                    double x2 = (col / scale) * scaleX;
-                    double y1 = (row / scale) * scaleY;
-                    double y2 = ((row + 1) / scale) * scaleY;
+                    double x1 = segStart * scaleX;
+                    double x2 = col * scaleX;
+                    double y1 = row * scaleY;
+                    double y2 = (row + 1) * scaleY;
 
                     ctx.BeginFigure(new Point(x1, y1), true, true);
                     ctx.LineTo(new Point(x2, y1), false, false);
@@ -351,7 +354,7 @@ public static class SamMaskRenderer
             catch (Exception ex)
             {
                 // Eine defekte Maske darf das Rendern der uebrigen nicht verhindern.
-                logger?.LogWarning(ex, "SamMaskRenderer: Maske {MaskIndex} uebersprungen.", i);
+                logger?.LogWarning(ex, "SamMaskRenderer: Maske {MaskIndex} übersprungen.", i);
             }
         }
 

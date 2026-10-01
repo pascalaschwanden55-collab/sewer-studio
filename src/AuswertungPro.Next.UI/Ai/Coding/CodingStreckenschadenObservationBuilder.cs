@@ -38,7 +38,9 @@ public static class CodingStreckenschadenObservationBuilder
                 ExtentPercent: q.ExtentPercent,
                 VsaCodeHint: null);
 
-            var code = resolveCode(pseudoFinding, meter);
+            var code = seg.Origin?.HasYolo == true
+                ? CodingLocalizedDetectionPlan.ResolveEventCode(seg.Origin)
+                : resolveCode(pseudoFinding, meter);
             if (code == null || !stretchPredicate(code))
                 continue;
 

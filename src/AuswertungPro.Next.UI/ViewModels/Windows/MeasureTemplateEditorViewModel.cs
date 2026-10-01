@@ -28,6 +28,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     private readonly IMeasureTemplateStore _templateStore;
     private readonly ICostCatalogStore _catalogStore;
     private readonly IDialogService _dialogs;
+    private readonly IToastService? _toasts;
     private readonly string? _projectPath;
     private readonly string _legacyTemplatePath;
     private readonly string _activeUserTemplatePath;
@@ -77,8 +78,10 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         ICostCatalogStore catalogStore,
         IDialogService? dialogs = null,
         string? legacyTemplatePath = null,
-        string? activeUserTemplatePath = null)
+        string? activeUserTemplatePath = null,
+        IToastService? toasts = null)
     {
+        _toasts = toasts;
         _projectPath = projectPath;
         _dialogs = dialogs ?? new DialogService();
         _templateStore = templateStore ?? throw new ArgumentNullException(nameof(templateStore));
@@ -191,7 +194,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(TemplateId) || string.IsNullOrWhiteSpace(TemplateName))
         {
-            _dialogs.Warn("ID und Name muessen ausgefuellt sein.", "Hinweis");
+            _dialogs.Warn("ID und Name müssen ausgefüllt sein.", "Hinweis");
             return;
         }
 
@@ -201,7 +204,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
             if (!TryParseQty(row.Qty, out var quantity))
             {
                 _dialogs.Error(
-                    $"Die Menge '{row.Qty}' fuer '{row.Label}' ist ungueltig. " +
+                    $"Die Menge '{row.Qty}' für '{row.Label}' ist ungültig. " +
                     "Bitte eine nichtnegative Zahl eingeben.",
                     "Vorlagen");
                 return;
@@ -233,7 +236,10 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         SelectedTemplate = Templates.FirstOrDefault(t =>
             string.Equals(t.Id, template.Id, StringComparison.OrdinalIgnoreCase));
 
-        _dialogs.Info("Template gespeichert. Die Sanierungs-Matrix liest diese Vorlage.", "OK");
+        if (_toasts is not null)
+            _toasts.Success("Template gespeichert. Die Sanierungs-Matrix liest diese Vorlage.");
+        else
+            _dialogs.Info("Template gespeichert. Die Sanierungs-Matrix liest diese Vorlage.", "Vorlagen");
     }
 
     [RelayCommand]
@@ -245,8 +251,8 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         if (SelectedTemplate == null) return;
 
         var confirmed = _dialogs.Confirm(
-            $"Template '{SelectedTemplate.Name}' wirklich loeschen/deaktivieren?",
-            "Bestaetigen");
+            $"Template '{SelectedTemplate.Name}' wirklich löschen/deaktivieren?",
+            "Bestätigen");
 
         if (!confirmed) return;
 
@@ -331,8 +337,8 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
             : SelectedAvailablePrice.Label;
 
         var confirmed = _dialogs.Confirm(
-            $"Position '{label}' wirklich loeschen?",
-            "Position loeschen");
+            $"Position '{label}' wirklich löschen?",
+            "Position löschen");
 
         if (!confirmed)
             return;
@@ -357,7 +363,10 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
             return;
         }
 
-        _dialogs.Info("Positionen gespeichert. Die Sanierungs-Matrix nutzt denselben Katalog.", "OK");
+        if (_toasts is not null)
+            _toasts.Success("Positionen gespeichert. Die Sanierungs-Matrix nutzt denselben Katalog.");
+        else
+            _dialogs.Info("Positionen gespeichert. Die Sanierungs-Matrix nutzt denselben Katalog.", "Positionen");
     }
 
     private void WarnDuplicateNpkCodes()
@@ -369,9 +378,9 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         var lines = warnings.Select(w =>
             $"{w.NpkCode}: Einheiten {string.Join(", ", w.Units)} ({string.Join(", ", w.ItemKeys)})");
         _dialogs.Warn(
-            "Der Katalog enthaelt gleiche NPK-Nummern mit unterschiedlichen Einheiten:\n\n" +
+            "Der Katalog enthält gleiche NPK-Nummern mit unterschiedlichen Einheiten:\n\n" +
             string.Join("\n", lines) +
-            "\n\nBitte fachlich pruefen; Speichern wird nicht blockiert.",
+            "\n\nBitte fachlich prüfen; Speichern wird nicht blockiert.",
             "NPK-Katalog");
     }
 
@@ -420,7 +429,7 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
             return true;
 
         _dialogs.Error(
-            "Positionen koennen nicht gespeichert werden, weil der Kostenkatalog nicht " +
+            "Positionen können nicht gespeichert werden, weil der Kostenkatalog nicht " +
             $"sicher geladen werden konnte:\n{_catalogLoadError}",
             "Positionen");
         return false;
@@ -448,8 +457,8 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
         var migrate = _dialogs.Confirm(
             "Alte Vorlagen-Bearbeitungen wurden gefunden.\n\n" +
             "Diese alte Datei wurde bisher vom Editor beschrieben, aber von Matrix und Kostenrechner nicht gelesen.\n" +
-            "Jetzt in die aktive Vorlagen-Datei uebernehmen?",
-            "Vorlagen uebernehmen");
+            "Jetzt in die aktive Vorlagen-Datei übernehmen?",
+            "Vorlagen übernehmen");
 
         if (!migrate)
             return;
@@ -473,11 +482,14 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
 
             if (!_templateStore.SaveUserOverrides(overrides, out var error))
             {
-                _dialogs.Error($"Alte Vorlagen konnten nicht uebernommen werden: {error}", "Vorlagen");
+                _dialogs.Error($"Alte Vorlagen konnten nicht übernommen werden: {error}", "Vorlagen");
                 return;
             }
 
-            _dialogs.Info("Alte Vorlagen wurden in die aktive Vorlagen-Datei uebernommen.", "Vorlagen");
+            if (_toasts is not null)
+                _toasts.Success("Alte Vorlagen wurden in die aktive Vorlagen-Datei übernommen.");
+            else
+                _dialogs.Info("Alte Vorlagen wurden in die aktive Vorlagen-Datei übernommen.", "Vorlagen");
         }
         catch (Exception ex)
         {

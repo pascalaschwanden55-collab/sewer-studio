@@ -30,8 +30,9 @@ public sealed class PlaywrightInstallService : IPlaywrightInstallService
             var anyChromium = Directory.EnumerateDirectories(dir, "chromium-*", SearchOption.TopDirectoryOnly).Any();
             return anyChromium;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Playwright-Installationsstatus konnte nicht gelesen werden");
             return false;
         }
     }
@@ -102,7 +103,16 @@ public sealed class PlaywrightInstallService : IPlaywrightInstallService
         }
         catch (OperationCanceledException)
         {
-            try { if (!p.HasExited) p.Kill(entireProcessTree: true); } catch { }
+            try
+            {
+                if (!p.HasExited)
+                    p.Kill(entireProcessTree: true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Abgebrochener Playwright-Installationsprozess konnte nicht beendet werden");
+            }
+
             throw;
         }
 

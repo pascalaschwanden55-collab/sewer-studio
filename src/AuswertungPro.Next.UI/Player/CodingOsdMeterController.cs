@@ -56,6 +56,9 @@ public sealed class CodingOsdMeterController
         => _service = DisposableReferenceLifecycle.DisposeAndClear(_service);
 
     public double ResolveMeter(CodingOsdMeterResolveRequest request)
+        => ResolveMeterWithSource(request).Meter;
+
+    public CodingMeterResolution ResolveMeterWithSource(CodingOsdMeterResolveRequest request)
     {
         var result = CodingMeterResolver.Resolve(
             request.FrameTimestampSeconds,
@@ -68,7 +71,7 @@ public sealed class CodingOsdMeterController
             request.CurrentMeter);
 
         _lastResolvedMeterIsOsd = result.IsOsd;
-        return result.Meter;
+        return result;
     }
 
     public double? EstimateFromVideo(

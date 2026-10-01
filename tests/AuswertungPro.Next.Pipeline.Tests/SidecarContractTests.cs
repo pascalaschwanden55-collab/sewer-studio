@@ -12,7 +12,7 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 
 public class SidecarContractTests
 {
-    private static readonly string RepoRoot = FindRepoRoot();
+    private static readonly string RepoRoot = TestRepoPaths.FindRepositoryRoot();
 
     public static IEnumerable<object[]> SidecarContracts()
     {
@@ -87,20 +87,4 @@ public class SidecarContractTests
             .ToArray();
     }
 
-    private static string FindRepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            if (Directory.Exists(Path.Combine(dir.FullName, ".git"))
-                && Directory.Exists(Path.Combine(dir.FullName, "sidecar")))
-            {
-                return dir.FullName;
-            }
-
-            dir = dir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Could not locate repository root.");
-    }
 }

@@ -1,0 +1,131 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.DossierPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
+        ui:WindowFx.Entrance="True"
+        Title="SewerStudio — Dossier-Vorschau"
+        Width="1400" Height="900"
+        MinWidth="980" MinHeight="630"
+        Loaded="OnPreviewLoaded"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgBrush}">
+
+    <Window.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
+        </Style>
+        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextM}"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="210"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="380"/>
+        </Grid.ColumnDefinitions>
+
+        <controls:NovaDialogHeader Grid.Row="0" Grid.ColumnSpan="3"
+                   Title="Dossier-Vorschau"
+                   Subtitle="Links Kapitel und echte Ausgabeseiten, in der Mitte das fertige Word/PDF-Blatt, rechts die Felder. Ein Klick auf Text springt zum passenden Feld. Nach einer Eingabe wird die Ausgabe nach kurzer Schreibpause aktualisiert."/>
+
+        <DockPanel Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">
+            <TextBlock DockPanel.Dock="Top" Text="Kapitel und Seiten" Margin="0,0,0,6"/>
+            <ListBox x:Name="PageList"
+                     SelectionChanged="OnPageSelected"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource SurfaceBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="0,0,0,1"
+                                        Padding="7,8,5,5"
+                                        Margin="0,5,0,2">
+                                    <TextBlock Text="{Binding Name}"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               FontSize="{DynamicResource TextS}"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"/>
+                                </Border>
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding PageLabel}"
+                                   Margin="12,4,4,4"
+                                   TextWrapping="Wrap"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource SurfaceBrush}"
+                CornerRadius="{DynamicResource RadiusS}" Padding="0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                            HorizontalAlignment="Center" Margin="0,6,0,8">
+                    <Button Content="Ganze Seite"
+                            ToolTip="Passt das vollständige Blatt in die verfügbare Vorschaufläche ein."
+                            Height="28" Padding="10,2" Margin="0,0,14,0"
+                            Click="OnFitPage"/>
+                    <TextBlock Text="Zoom" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Slider x:Name="ZoomSlider" Width="180" Minimum="0.25" Maximum="1.6"
+                            Value="0.85" TickFrequency="0.05"
+                            VerticalAlignment="Center"
+                            ValueChanged="OnZoomChanged"/>
+                    <TextBlock x:Name="ZoomText" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                </StackPanel>
+
+                <ScrollViewer x:Name="SheetScroll" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto" Padding="20"
+                              SizeChanged="OnSheetViewportChanged">
+                    <!-- Das Blatt bringt seine Masse aus der erzeugten PDF-Seite mit. -->
+                    <Border x:Name="Sheet" Background="White" Margin="10"
+                            IsHitTestVisible="False"
+                            PreviewMouseLeftButtonDown="OnBlattGeklickt"
+                            ToolTip="Klick auf einen bearbeitbaren Text springt rechts direkt zu seinem Eingabefeld."
+                            HorizontalAlignment="Center" VerticalAlignment="Top">
+                        <Border.LayoutTransform>
+                            <ScaleTransform x:Name="SheetZoom" ScaleX="0.85" ScaleY="0.85"/>
+                        </Border.LayoutTransform>
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.35"/>
+                        </Border.Effect>
+                    </Border>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <DockPanel Grid.Row="1" Grid.Column="2" Margin="12,0,0,0">
+            <TextBlock DockPanel.Dock="Top" x:Name="FieldsHeader" Text="Felder" Margin="0,0,0,6"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="FieldPanel" Margin="0,0,10,0"/>
+            </ScrollViewer>
+        </DockPanel>
+
+        <Border Grid.Row="2" Grid.ColumnSpan="3" Style="{StaticResource DialogButtonBar}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                <Button Content="Verwerfen" Style="{StaticResource SecondaryButton}"
+                            ToolTip="Schliesst die Vorschau und wirft alle Eingaben dieser Sitzung weg. Das Dossier bleibt so, wie es beim Öffnen war." Width="120" Height="32" Margin="0,0,8,0"
+                        IsCancel="True" Click="OnCancel"/>
+                <Button x:Name="AcceptButton" Content="Übernehmen" Style="{StaticResource PrimaryButton}"
+                            ToolTip="Speichert alle Eingaben der Vorschau in das Dossier und die Gebietsangaben." Width="120" Height="32"
+                        IsDefault="True" IsEnabled="False" Click="OnAccept"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

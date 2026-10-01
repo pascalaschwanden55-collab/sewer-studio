@@ -3,6 +3,7 @@ using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Protocols;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -152,7 +153,7 @@ public sealed class SchachtProtocolImportServiceTests
                 null));
 
         Assert.False(result.IstSchachtprotokoll);
-        Assert.Contains("Texterkennung wurde ausgefuehrt", result.Lesehinweis, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Texterkennung wurde ausgeführt", result.Lesehinweis, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -207,7 +208,8 @@ public sealed class SchachtProtocolImportServiceTests
         Assert.Equal("74467", schacht.GetFieldValue("Schachtnummer"));
         Assert.Equal("Kontrollschacht", schacht.GetFieldValue("Funktion"));
         Assert.Equal("Rund", schacht.GetFieldValue("Schachtform"));
-        Assert.Equal("1000 mm", schacht.GetFieldValue("Dimension"));
+        Assert.Equal("1000", schacht.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("1000", schacht.GetFieldValue(FieldKeys.ShaftDimension2Mm));
         Assert.Equal("2.35", schacht.GetFieldValue("Schachttiefe"));
         Assert.Equal("Schaechte_Verteilt/74467/quelle.pdf", schacht.GetFieldValue("PDF_Path"));
         Assert.NotNull(schacht.Protocol);
@@ -266,6 +268,81 @@ public sealed class SchachtProtocolImportServiceTests
         }
         finally
         {
+            try { Directory.Delete(root, recursive: true); } catch { /* Best effort. */ }
+        }
+    }
+
+    [Fact]
+    public void DistributePdf_GleichnamigesZielMitGleicherGroesseAberAnderemInhalt_BekommtEindeutigenPfad()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "sst_" + Guid.NewGuid().ToString("N"));
+        var sourceFolder = Path.Combine(root, "Quelle");
+        Directory.CreateDirectory(sourceFolder);
+        try
+        {
+            var source = Path.Combine(sourceFolder, "protokoll.pdf");
+            File.WriteAllText(source, "NEU-1234");
+            var destinationFolder = ProjectStructure.SchachtVerteiltDir(root, "74467");
+            Directory.CreateDirectory(destinationFolder);
+            var existing = Path.Combine(destinationFolder, "protokoll.pdf");
+            File.WriteAllText(existing, "ALT-1234");
+            var service = new SchachtProtocolImportService();
+
+            var result = service.DistributePdfWithResult(root, "74467", source);
+
+            var distributed = ProjectPathResolver.ResolveFilePathFromProjectFolder(
+                result.RelativePath,
+                root);
+            Assert.True(result.FileCreated);
+            Assert.NotNull(distributed);
+            Assert.NotEqual(existing, distributed);
+            Assert.Equal("ALT-1234", File.ReadAllText(existing));
+            Assert.Equal("NEU-1234", File.ReadAllText(source));
+            Assert.Equal("NEU-1234", File.ReadAllText(distributed!));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { /* Best effort. */ }
+        }
+    }
+
+    [JunctionFact]
+    public void DistributePdf_VerknuepfteSchachtZielwurzel_SchreibtNichtInFremdenOrdner()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "sst_" + Guid.NewGuid().ToString("N"));
+        var projectFolder = Path.Combine(root, "Projekt");
+        var sourceFolder = Path.Combine(root, "Quelle");
+        var foreignFolder = Path.Combine(root, "Fremd");
+        var targetLink = Path.Combine(projectFolder, ProjectStructure.SchaechteVerteilt);
+        Directory.CreateDirectory(projectFolder);
+        Directory.CreateDirectory(sourceFolder);
+        Directory.CreateDirectory(foreignFolder);
+        var source = Path.Combine(sourceFolder, "protokoll.pdf");
+        File.WriteAllText(source, "KUNDENORIGINAL");
+        JunctionTestSupport.CreateDirectoryLink(targetLink, foreignFolder);
+        try
+        {
+            var service = new SchachtProtocolImportService();
+
+            var error = Assert.Throws<IOException>(() =>
+                service.DistributePdfWithResult(projectFolder, "74467", source));
+
+            Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Empty(Directory.EnumerateFileSystemEntries(foreignFolder));
+            Assert.Equal("KUNDENORIGINAL", File.ReadAllText(source));
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(targetLink))
+                    Directory.Delete(targetLink);
+            }
+            catch
+            {
+                // Test-Aufraeumen ist Best-Effort.
+            }
+
             try { Directory.Delete(root, recursive: true); } catch { /* Best effort. */ }
         }
     }

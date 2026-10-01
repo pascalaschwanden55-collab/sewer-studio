@@ -39,7 +39,7 @@ public sealed class SchattenAuswertungStoreRepository : ISchattenAuswertungStore
         }
         catch (JsonException ex)
         {
-            loadError = $"{Datei} ist beschaedigt: {ex.Message}";
+            loadError = $"{Datei} ist beschädigt: {ex.Message}";
             return new SchattenAuswertungStore();
         }
         catch (Exception ex)

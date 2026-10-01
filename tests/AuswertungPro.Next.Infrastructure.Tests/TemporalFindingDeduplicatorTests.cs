@@ -21,6 +21,7 @@ public class TemporalFindingDeduplicatorTests
         Assert.Equal(5.0, detection.MeterStart);
         Assert.Equal(6.1, detection.MeterEnd);
         Assert.Equal("high", detection.Severity);
+        Assert.Equal(4, detection.SeverityLevel);
         Assert.Equal("BBA", detection.VsaCodeHint);
     }
 

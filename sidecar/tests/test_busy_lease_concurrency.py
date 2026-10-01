@@ -321,6 +321,9 @@ def test_wrapper_muster_sam(monkeypatch):
         def set_image(self, _arr):
             pass
 
+        def reset_predictor(self):
+            pass
+
         def predict(self, **_kwargs):
             hook.block()
             return np.ones((1, 4, 4), dtype=bool), np.array([0.99]), None
@@ -381,7 +384,6 @@ def test_wrapper_muster_bcc(tmp_path, monkeypatch):
     monkeypatch.setattr(
         bcc_test_wrapper, "_load_candidate", lambda candidate, device: (FakeYolo(), None))
     monkeypatch.setattr(bcc_test_wrapper, "_resolve_device", lambda: "cpu")
-    monkeypatch.setattr(bcc_test_wrapper, "_loaded_candidate_sha256", None)
     img = _noise_image_b64()
 
     def invoke():

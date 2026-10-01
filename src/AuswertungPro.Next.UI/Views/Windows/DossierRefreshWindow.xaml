@@ -1,0 +1,51 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.DossierRefreshWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
+        ui:WindowFx.Entrance="True"
+        Title="SewerStudio — Dossier nachführen"
+        Width="620" Height="560"
+        MinWidth="430" MinHeight="390"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgBrush}">
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <controls:NovaDialogHeader x:Name="Header" Grid.Row="0" Title="Dossier nachführen"/>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="ItemPanel"/>
+        </ScrollViewer>
+
+        <TextBlock x:Name="FootText"
+                   Grid.Row="2"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource MutedBrush}"
+                   FontSize="{DynamicResource TextS}"
+                   Margin="0,12,0,0"/>
+
+        <Border Grid.Row="3" Style="{StaticResource DialogButtonBar}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Abbrechen" Style="{StaticResource SecondaryButton}"
+                            ToolTip="Schliesst das Fenster. Das Dossier bleibt unverändert, und nichts gilt als abgelehnt."
+                        Padding="16,7"
+                        Margin="0,0,8,0"
+                        IsCancel="True"
+                        Click="OnCancel"/>
+                <Button x:Name="AcceptButton"
+                        Content="Übernehmen" Style="{StaticResource PrimaryButton}"
+                            ToolTip="Ergänzt das Dossier um die angehakten Einträge. Nicht Angehaktes wird als abgelehnt gemerkt und beim nächsten Nachführen nicht erneut angeboten."
+                        Padding="16,7"
+                        IsDefault="True"
+                        Click="OnAccept"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

@@ -51,21 +51,4 @@ public sealed class ObservationParameterViewModelTests
         Assert.Empty(viewModel.ErrorMessage);
     }
 
-    [Fact]
-    public void Clock_command_trims_selection_and_ignores_empty_input()
-    {
-        var viewModel = new ObservationParameterViewModel(
-            new CodeParameter
-            {
-                Name = "Uhrposition",
-                Type = "clock"
-            },
-            existingValue: "03");
-
-        viewModel.SelectClockCommand.Execute(" 09 ");
-        Assert.Equal("09", viewModel.Value);
-
-        viewModel.SelectClockCommand.Execute("  ");
-        Assert.Equal("09", viewModel.Value);
-    }
 }

@@ -1,0 +1,782 @@
+{
+  "gegenproben": {
+    "auswahl": {
+      "name": "07.6588-6587",
+      "material": "PVC",
+      "dn": "250",
+      "laenge": "28.1",
+      "detail": "07.6588-6587"
+    },
+    "feldsuche": {
+      "vorher": 30,
+      "nachher": 30
+    },
+    "abbrechen": "07.6588-6587",
+    "gespeichert": "2001",
+    "kennzahlen": {
+      "anzahl": 14,
+      "geprueft": 8,
+      "dringend": 3,
+      "text": "8 von 14 Haltungen fachlich geprüft (57,1 %). 4 von der KI analysiert und noch nicht geprüft, 2 ohne Analyse. 3 Haltungen dringend (Z0 oder Z1). Beispielbestand mit 14 Haltungen und 8 Schächten.",
+      "anzeige": "3Haltungen"
+    },
+    "layout": [
+      {
+        "breite": 1367,
+        "hoehe": 768,
+        "zeilen": 7
+      },
+      {
+        "breite": 1440,
+        "hoehe": 900,
+        "zeilen": 9
+      },
+      {
+        "breite": 1920,
+        "hoehe": 1081,
+        "zeilen": 12
+      }
+    ],
+    "codierung": {
+      "vorher": {
+        "id": "h01",
+        "position": 197,
+        "befunde": 3
+      },
+      "nachher": {
+        "id": "h01",
+        "position": 197,
+        "befunde": 4,
+        "player": true,
+        "vsa": false
+      }
+    },
+    "ruhig": {
+      "bildUnveraendert": true,
+      "schleife": false
+    },
+    "wechselVorAbbruch": {
+      "auswahl": "h02",
+      "player": "h01",
+      "dialoge": [
+        "winConfirm",
+        "winPlayer"
+      ],
+      "fokus": "plTimeline"
+    },
+    "wechselNachAbbruch": {
+      "auswahl": "h02",
+      "player": "h01",
+      "dialoge": [
+        "winPlayer"
+      ],
+      "form": "07.6588-6587",
+      "playerName": "78998-79002 · 20251006_78998-79002.mp4"
+    },
+    "dialogSuche": {
+      "fokus": "gsearch",
+      "fokusImOberstenDialog": false
+    },
+    "training": {
+      "vorherFreigabeAktiv": false,
+      "nachBestaetigungAktiv": true,
+      "nachLeerenAktiv": true,
+      "meldung": "Akzeptiert (Vorschau)\nKein Goldsample wurde geschrieben.\nFür Training freigegeben (Vorschau)\nIm Programm: nur persönlich bestätigte Goldsamples mit Box und Maske gelangen in den Export."
+    },
+    "speicherFehler": {
+      "meldung": "Gespeichert (Vorschau)1 Feldwerte im Browserspeicher abgelegt. Keine Projektdatei wurde geschrieben.",
+      "dirty": false,
+      "wert": "2002",
+      "nachNeuladen": 1978
+    },
+    "skriptfehler": []
+  },
+  "player_abbruch": {
+    "vorher": 3,
+    "nachCodierung": 4,
+    "nachBeenden": {
+      "playerOffen": false,
+      "befunde": 4,
+      "neuerBefundVorhanden": true
+    },
+    "beimWiederoeffnenImPlayer": true
+  },
+  "kontrast": [
+    {
+      "theme": "Light",
+      "page": "overview",
+      "count": 135,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "projekt",
+      "count": 107,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "haltungen",
+      "count": 212,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "schaechte",
+      "count": 193,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "import",
+      "count": 115,
+      "minSize": 11,
+      "lows": [
+        {
+          "id": "",
+          "tag": "DIV",
+          "cls": "val",
+          "text": "0",
+          "ratio": 3.517,
+          "font": 28,
+          "foreground": [
+            46,
+            156,
+            74,
+            1
+          ],
+          "background": [
+            255,
+            255,
+            255,
+            1
+          ]
+        }
+      ],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "export",
+      "count": 105,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "medien",
+      "count": 138,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "druck",
+      "count": 134,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "dossiers",
+      "count": 138,
+      "minSize": 11,
+      "lows": [
+        {
+          "id": "",
+          "tag": "DIV",
+          "cls": "val",
+          "text": "1",
+          "ratio": 3.368,
+          "font": 28,
+          "foreground": [
+            224,
+            106,
+            11,
+            1
+          ],
+          "background": [
+            255,
+            255,
+            255,
+            1
+          ]
+        }
+      ],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "matrix",
+      "count": 179,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "smatrix",
+      "count": 132,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "schatten",
+      "count": 75,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "vsa",
+      "count": 73,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "diagnose",
+      "count": 81,
+      "minSize": 11,
+      "lows": [
+        {
+          "id": "",
+          "tag": "SPAN",
+          "cls": "ok",
+          "text": "INFO",
+          "ratio": 3.306,
+          "font": 12,
+          "foreground": [
+            46,
+            156,
+            74,
+            1
+          ],
+          "background": [
+            246,
+            248,
+            251,
+            1
+          ]
+        },
+        {
+          "id": "",
+          "tag": "SPAN",
+          "cls": "ok",
+          "text": "INFO",
+          "ratio": 3.306,
+          "font": 12,
+          "foreground": [
+            46,
+            156,
+            74,
+            1
+          ],
+          "background": [
+            246,
+            248,
+            251,
+            1
+          ]
+        },
+        {
+          "id": "",
+          "tag": "SPAN",
+          "cls": "ok",
+          "text": "INFO",
+          "ratio": 3.306,
+          "font": 12,
+          "foreground": [
+            46,
+            156,
+            74,
+            1
+          ],
+          "background": [
+            246,
+            248,
+            251,
+            1
+          ]
+        },
+        {
+          "id": "",
+          "tag": "SPAN",
+          "cls": "wn",
+          "text": "WARN",
+          "ratio": 4.048,
+          "font": 12,
+          "foreground": [
+            184,
+            100,
+            26,
+            1
+          ],
+          "background": [
+            246,
+            248,
+            251,
+            1
+          ]
+        },
+        {
+          "id": "",
+          "tag": "SPAN",
+          "cls": "ok",
+          "text": "INFO",
+          "ratio": 3.306,
+          "font": 12,
+          "foreground": [
+            46,
+            156,
+            74,
+            1
+          ],
+          "background": [
+            246,
+            248,
+            251,
+            1
+          ]
+        },
+        {
+          "id": "",
+          "tag": "SPAN",
+          "cls": "ok",
+          "text": "INFO",
+          "ratio": 3.306,
+          "font": 12,
+          "foreground": [
+            46,
+            156,
+            74,
+            1
+          ],
+          "background": [
+            246,
+            248,
+            251,
+            1
+          ]
+        },
+        {
+          "id": "",
+          "tag": "SPAN",
+          "cls": "ok",
+          "text": "INFO",
+          "ratio": 3.306,
+          "font": 12,
+          "foreground": [
+            46,
+            156,
+            74,
+            1
+          ],
+          "background": [
+            246,
+            248,
+            251,
+            1
+          ]
+        }
+      ],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "einstellungen",
+      "count": 95,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "player",
+      "count": 75,
+      "minSize": 12,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Light",
+      "page": "codierung",
+      "count": 68,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": [
+        {
+          "id": "vsaFoto1",
+          "tag": "DIV",
+          "cls": "thumb",
+          "text": "Foto 1 · aus Video 03:12",
+          "ratio": 1.556,
+          "font": 12,
+          "foreground": [
+            197,
+            208,
+            226,
+            1
+          ],
+          "background": [
+            255,
+            255,
+            255,
+            1
+          ]
+        },
+        {
+          "id": "",
+          "tag": "DIV",
+          "cls": "thumb",
+          "text": "Foto 2 · kein Foto",
+          "ratio": 1.556,
+          "font": 12,
+          "foreground": [
+            197,
+            208,
+            226,
+            1
+          ],
+          "background": [
+            255,
+            255,
+            255,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "Light",
+      "page": "training",
+      "count": 56,
+      "minSize": 11,
+      "lows": [
+        {
+          "id": "",
+          "tag": "SPAN",
+          "cls": "",
+          "text": "SAM-Maske 91 % in der Box",
+          "ratio": 3.517,
+          "font": 11,
+          "foreground": [
+            255,
+            255,
+            255,
+            1
+          ],
+          "background": [
+            46,
+            156,
+            74,
+            1
+          ]
+        }
+      ],
+      "uncertain": [
+        {
+          "id": "",
+          "tag": "DIV",
+          "cls": "thumb",
+          "text": "foto_0412.jpg",
+          "ratio": 1.384,
+          "font": 12,
+          "foreground": [
+            197,
+            208,
+            226,
+            1
+          ],
+          "background": [
+            238,
+            242,
+            247,
+            1
+          ]
+        },
+        {
+          "id": "",
+          "tag": "DIV",
+          "cls": "thumb",
+          "text": "foto_0413.jpg",
+          "ratio": 1.384,
+          "font": 12,
+          "foreground": [
+            197,
+            208,
+            226,
+            1
+          ],
+          "background": [
+            238,
+            242,
+            247,
+            1
+          ]
+        },
+        {
+          "id": "",
+          "tag": "DIV",
+          "cls": "thumb",
+          "text": "foto_0414.jpg",
+          "ratio": 1.384,
+          "font": 12,
+          "foreground": [
+            197,
+            208,
+            226,
+            1
+          ],
+          "background": [
+            238,
+            242,
+            247,
+            1
+          ]
+        },
+        {
+          "id": "",
+          "tag": "DIV",
+          "cls": "thumb",
+          "text": "foto_0415.jpg",
+          "ratio": 1.384,
+          "font": 12,
+          "foreground": [
+            197,
+            208,
+            226,
+            1
+          ],
+          "background": [
+            238,
+            242,
+            247,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "theme": "Dark",
+      "page": "overview",
+      "count": 135,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "projekt",
+      "count": 107,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "haltungen",
+      "count": 212,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "schaechte",
+      "count": 193,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "import",
+      "count": 115,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "export",
+      "count": 105,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "medien",
+      "count": 138,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "druck",
+      "count": 134,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "dossiers",
+      "count": 138,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "matrix",
+      "count": 179,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "smatrix",
+      "count": 132,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "schatten",
+      "count": 75,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "vsa",
+      "count": 73,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "diagnose",
+      "count": 81,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "einstellungen",
+      "count": 95,
+      "minSize": 11,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "player",
+      "count": 75,
+      "minSize": 12,
+      "lows": [],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "codierung",
+      "count": 68,
+      "minSize": 11,
+      "lows": [
+        {
+          "id": "vsaM2",
+          "tag": "INPUT",
+          "cls": "",
+          "text": "nur Streckenschaden",
+          "ratio": 3.442,
+          "font": 13,
+          "foreground": [
+            117,
+            117,
+            117,
+            1
+          ],
+          "background": [
+            22,
+            34,
+            58,
+            1
+          ]
+        }
+      ],
+      "uncertain": []
+    },
+    {
+      "theme": "Dark",
+      "page": "training",
+      "count": 56,
+      "minSize": 11,
+      "lows": [
+        {
+          "id": "",
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Hand-Box",
+          "ratio": 3.048,
+          "font": 11,
+          "foreground": [
+            255,
+            255,
+            255,
+            1
+          ],
+          "background": [
+            255,
+            90,
+            98,
+            1
+          ]
+        },
+        {
+          "id": "",
+          "tag": "SPAN",
+          "cls": "",
+          "text": "SAM-Maske 91 % in der Box",
+          "ratio": 1.814,
+          "font": 11,
+          "foreground": [
+            255,
+            255,
+            255,
+            1
+          ],
+          "background": [
+            95,
+            216,
+            119,
+            1
+          ]
+        }
+      ],
+      "uncertain": []
+    }
+  ]
+}

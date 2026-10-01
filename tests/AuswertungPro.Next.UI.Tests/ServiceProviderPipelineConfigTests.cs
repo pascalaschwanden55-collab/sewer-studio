@@ -2,11 +2,26 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.UI.Services;
 using Microsoft.Extensions.Logging;
+using System.IO;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class ServiceProviderPipelineConfigTests
 {
+    [Fact]
+    public void SidecarRestart_UsesSameLoopbackProtectedHeadersAsStartup()
+    {
+        var source = File.ReadAllText(TestRepoPaths.RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "ServiceProvider.cs"));
+
+        Assert.Contains(
+            "Headers: AiStartupService.BuildSidecarHeaders(",
+            source,
+            StringComparison.Ordinal);
+    }
+
     [Fact]
     public void PipelineCfg_reflects_ai_start_defaults_applied_after_service_provider_construction()
     {

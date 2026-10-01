@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text.Json;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -22,6 +23,7 @@ public static class CodingEventColumnTransfer
         ObservableCollection<CodingEvent> source,
         ObservableCollection<CodingEvent> target)
     {
+        CodingPointFollowUpPolicy.MarkHumanTouched(ev);
         source.Remove(ev);
         InsertSorted(target, ev);
         return ev;
@@ -31,6 +33,7 @@ public static class CodingEventColumnTransfer
     /// (Original bleibt). Gibt den Clone zurueck.</summary>
     public static CodingEvent Copy(CodingEvent ev, ObservableCollection<CodingEvent> target)
     {
+        CodingPointFollowUpPolicy.MarkHumanTouched(ev);
         var clone = CloneWithNewIds(ev);
         InsertSorted(target, clone);
         return clone;
@@ -77,8 +80,10 @@ public static class CodingEventColumnTransfer
             Mpeg = e.Mpeg,
             Zeit = e.Zeit,
             FotoPaths = e.FotoPaths.ToList(),
+            OriginalFotoPaths = e.OriginalFotoPaths?.ToList() ?? [],
             Source = e.Source,
             CodeMeta = CloneCodeMeta(e.CodeMeta),
+            Training = ProtocolEntryCloner.CloneTrainingMeta(e.Training),
         };
 
     private static ProtocolEntryCodeMeta? CloneCodeMeta(ProtocolEntryCodeMeta? m)
@@ -108,13 +113,31 @@ public static class CodingEventColumnTransfer
             LevelSubMode = o.LevelSubMode,
             EllipseRadiusXMm = o.EllipseRadiusXMm,
             EllipseRadiusYMm = o.EllipseRadiusYMm,
+            SamMask = CloneSamMask(o.SamMask),
             SnapshotPath = o.SnapshotPath,
+        };
+
+    private static OverlaySamMask? CloneSamMask(OverlaySamMask? mask)
+        => mask is null ? null : new OverlaySamMask
+        {
+            MaskRle = mask.MaskRle,
+            ImageWidth = mask.ImageWidth,
+            ImageHeight = mask.ImageHeight,
+            MaskAreaPixels = mask.MaskAreaPixels,
+            Confidence = mask.Confidence,
+            Label = mask.Label
         };
 
     private static CodingEventAiContext? CloneAiContext(CodingEventAiContext? a)
         => a is null ? null : new CodingEventAiContext
         {
+            HumanTouchedAtUtc = a.HumanTouchedAtUtc ?? DateTimeOffset.UtcNow,
+            ObservationHasTechnicalFailure = a.ObservationHasTechnicalFailure,
+            PreviousEvidence = JsonSerializer.Deserialize<System.Collections.Generic.List<CodingProposalEvidenceSnapshot>>(
+                JsonSerializer.Serialize(a.PreviousEvidence))!,
             SuggestedCode = a.SuggestedCode,
+            SuggestedByModelId = a.SuggestedByModelId,
+            SuggestedByModelSha256 = a.SuggestedByModelSha256,
             Confidence = a.Confidence,
             Reason = a.Reason,
             Decision = a.Decision,

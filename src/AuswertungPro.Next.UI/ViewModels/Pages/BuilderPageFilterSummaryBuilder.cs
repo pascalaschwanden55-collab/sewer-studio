@@ -14,8 +14,8 @@ public static class BuilderPageFilterSummaryBuilder
 
         var parts = new List<string>();
 
-        AddFilterPart(parts, "Eigentuemer", criteria.Owner);
-        AddFilterPart(parts, "Ausgefuehrt durch", criteria.ExecutedBy);
+        AddFilterPart(parts, "Eigentümer", criteria.Owner);
+        AddFilterPart(parts, "Ausgeführt durch", criteria.ExecutedBy);
         AddFilterPart(parts, "Sanieren", criteria.Sanieren);
         AddFilterPart(parts, "Material", criteria.Material);
         AddFilterPart(parts, "Status", criteria.Status);

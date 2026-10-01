@@ -127,6 +127,18 @@ public sealed class SettingsSaveWorkflowTests
         Assert.Equal(dir.Path, settings.KantonUriXtfDirectory);
     }
 
+    [Fact]
+    public void Der_Schalter_fuer_KI_Vorschlaege_im_Codiermodus_wird_gespeichert()
+    {
+        var settings = new AppSettings();
+        Assert.True(settings.CodingSuggestionsEnabled); // Standard: ein
+
+        var values = MinimalValues with { CodingSuggestionsEnabled = false };
+        SettingsSaveWorkflow.Save(new SettingsSaveWorkflowRequest(settings, new DiagnosticsOptions(), values, () => { }));
+
+        Assert.False(settings.CodingSuggestionsEnabled);
+    }
+
     private static SettingsSaveValues MinimalValues => new(
         EnableDiagnostics: true,
         PdfToTextPath: null,

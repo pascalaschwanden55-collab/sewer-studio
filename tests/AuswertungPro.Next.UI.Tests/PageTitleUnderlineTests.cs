@@ -6,12 +6,13 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
+using AuswertungPro.Next.UI.Services;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 /// <summary>
-/// Prueft die Titel-Akzentlinie am echten Theme statt am Quelltext: Der Verlauf steckt in einem
+/// Prueft die Titel-Akzentlinie am echten Theme (samt Controls.xaml, wo PageTitle seit Q3 steht) statt am Quelltext: Der Verlauf steckt in einem
 /// Pen in einer TextDecoration — ein tief verschachtelter Freezable-Graph, bei dem eine falsche
 /// Reihenfolge oder ein fehlender Schluessel erst zur Laufzeit auffiele.
 /// </summary>
@@ -67,12 +68,19 @@ public sealed class PageTitleUnderlineTests
     /// <summary>Baut einen TextBlock mit dem echten PageTitle-Style aus dem angegebenen Theme.</summary>
     private static TextBlock CreatePageTitle(string themeFile)
     {
-        using var stream = File.OpenRead(RepoFile("src", "AuswertungPro.Next.UI", "Theme", themeFile));
-        var theme = (ResourceDictionary)XamlReader.Load(stream);
-
+        // Wartbarkeit Q3: PageTitle steht nicht mehr im Theme, sondern einmal in Controls.xaml und
+        // liest den je Theme verschiedenen Pinsel per DynamicResource. Deshalb werden - wie in der
+        // App (App.xaml: Theme zuerst, dann Controls.xaml) - beide Woerterbuecher ueber ihre
+        // pack-URI geladen; Controls.xaml enthaelt Klassenverweise und laesst sich nicht roh per
+        // XamlReader.Load lesen.
+        var themeName = themeFile == "Theme.xaml" ? ThemeManager.Dark : ThemeManager.Light;
         var title = new TextBlock { Text = "Projektuebersicht" };
-        title.Resources.MergedDictionaries.Add(theme);
-        title.Style = (Style)theme["PageTitle"];
+        var controlsUri = new Uri(
+            $"pack://application:,,,/{typeof(ThemeManager).Assembly.GetName().Name};component/Theme/Controls.xaml",
+            UriKind.Absolute);
+        title.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = ThemeManager.GetThemeUri(themeName) });
+        title.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = controlsUri });
+        title.Style = (Style)title.FindResource("PageTitle");
 
         // Style-Setter greifen erst, wenn das Element seine Werte anwendet.
         title.Measure(new Size(500, 100));

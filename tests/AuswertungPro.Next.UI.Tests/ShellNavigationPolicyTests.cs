@@ -12,7 +12,7 @@ public sealed class ShellNavigationPolicyTests
     public void Shell_view_model_has_no_dead_guide_code_when_xaml_has_no_guide_bindings()
     {
         var uiRoot = RepoFile("src", "AuswertungPro.Next.UI");
-        var xamlOffenders = Directory.EnumerateFiles(uiRoot, "*.xaml", SearchOption.AllDirectories)
+        var xamlOffenders = TestXaml.Alle()
             .SelectMany(file =>
             {
                 var relative = Path.GetRelativePath(uiRoot, file);
@@ -133,6 +133,17 @@ public sealed class ShellNavigationPolicyTests
         Assert.False(item.RequiresProject);
         Assert.True(item.IsAvailable);
         Assert.Equal(1.0, item.AvailabilityOpacity);
+    }
+
+    [Theory]
+    [InlineData("Dossiers")]
+    [InlineData("Schattenauswertung")]
+    public void New_navigation_pages_have_a_specific_tooltip(string title)
+    {
+        var item = new ShellViewModel.NavItem("", title, () => new object());
+
+        Assert.NotEqual("Ansicht öffnen.", item.ToolTipDescription);
+        Assert.Contains(".", item.ToolTipDescription, StringComparison.Ordinal);
     }
 
     private sealed class FakeConfirmLeave(bool allowLeave) : IConfirmLeave

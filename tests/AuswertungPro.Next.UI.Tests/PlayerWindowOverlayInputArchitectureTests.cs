@@ -497,7 +497,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.False(File.Exists(inputPath), "Eingabemarker-Eingabe soll nicht mehr in einem PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(inputControllerPath), "Eingabemarker-Eingabe soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(popupControlsPath), "Eingabemarker-Popup-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
-        Assert.True(File.Exists(focusControlsPath), "Eingabemarker-Focus soll ueber die Player-Focus-Controls laufen.");
+        Assert.True(File.Exists(focusControlsPath), "Eingabemarker-Focus soll über die Player-Focus-Controls laufen.");
         Assert.True(File.Exists(inputWorkflowPath), "Eingabemarker-Key- und Auswahlentscheidungen sollen ausserhalb von PlayerWindow laufen.");
         Assert.True(File.Exists(canvasWorkflowPath), "Eingabemarker-Mausentscheidungen sollen ausserhalb von PlayerWindow laufen.");
         Assert.False(File.Exists(markerPath), "Die Eingabemarker-Interaktion soll nicht mehr in einem PlayerWindow-Partial liegen.");
@@ -634,7 +634,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var controlsPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingOverlayInputControls.cs");
         var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingEingabemarkerToggleWorkflow.cs");
 
-        Assert.True(File.Exists(controlsPath), "Eingabemarker-Canvas-Zustand soll ueber den OverlayInput-Control-Adapter laufen.");
+        Assert.True(File.Exists(controlsPath), "Eingabemarker-Canvas-Zustand soll über den OverlayInput-Control-Adapter laufen.");
         Assert.True(File.Exists(toggleWorkflowPath), "Eingabemarker-Toggle-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var interactionController = File.ReadAllText(interactionControllerPath);

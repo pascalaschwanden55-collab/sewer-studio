@@ -25,7 +25,11 @@ public sealed record PipelineRequest(
     int DedupWindowFrames = 3,
     // Echte Haltungslaenge aus den Stammdaten (Haltungslaenge_m). null = unbekannt,
     // dann gilt die 50m-Annahme der Meter-Schaetzung.
-    double? ReachLengthM = null);
+    double? ReachLengthM = null)
+{
+    /// <summary>Gepruefter Haltungs-DN in mm; null bedeutet unbekannt.</summary>
+    public int? PipeDiameterMm { get; init; }
+}
 
 public sealed record PipelineResult(
     ProtocolDocument? Document,
@@ -35,9 +39,9 @@ public sealed record PipelineResult(
     IReadOnlyList<string> Warnings,
     string? Error,
     TelemetrySummary? Telemetry = null,
-    // Incomplete=true: mehr als 10 % der analysierten Frames wurden fehlerbedingt
-    // uebersprungen (Sidecar-/Modellfehler). Das Ergebnis ist nutzbar, aber
-    // unvollstaendig — die UI weist ueber den Warnungspfad darauf hin.
+    // Incomplete=true: Das Video wurde nicht vollstaendig ausgewertet, z.B. wegen
+    // vorzeitigem Frame-Ende, ausgefallenen Analyseschritten oder vielen Fehlerframes.
+    // Konkrete Gruende stehen in Warnings; die UI kennzeichnet den Teillauf.
     bool Incomplete = false)
 {
     public bool IsSuccess => Error is null;
@@ -89,9 +93,8 @@ public sealed record VideoAnalysisResult(
     // laufen weiter und das Ergebnis bleibt review-pflichtig.
     bool? DetectorQualified = null,
     string? DetectorQualificationReason = null,
-    // Incomplete=true: mehr als 10 % der analysierten Frames wurden fehlerbedingt
-    // uebersprungen (Transport- oder Modellfehler). Kein Abbruch, aber das
-    // Ergebnis ist unvollstaendig und wird ueber den Warnungspfad ausgewiesen.
+    // Incomplete=true: Das Video oder erforderliche Analyseschritte wurden nicht
+    // vollstaendig ausgewertet. Der konkrete Grund steht in DegradedReason.
     bool Incomplete = false)
 {
     public bool IsSuccess => Error is null;
@@ -125,7 +128,10 @@ public sealed record RawVideoDetection(
     int? DiameterReductionMm = null,
     EvidenceVector? Evidence = null,
     string? MeterSource = null,
-    bool IsMeterEstimated = false)
+    bool IsMeterEstimated = false,
+    // Exakte fachliche Stufe 1-5. Das bisherige Textfeld Severity bleibt fuer
+    // Anzeige und Kompatibilitaet erhalten.
+    int? SeverityLevel = null)
 {
     public string Code => VsaCodeHint ?? string.Empty;
     public string Label => FindingLabel;

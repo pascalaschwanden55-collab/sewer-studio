@@ -46,9 +46,9 @@ public sealed class TrainingBatchImportRunSummary
         if (TotalNew != 0 || processedCaseCount <= 0)
             return null;
 
-        var diag = $"0 neue Samples aus {processedCaseCount} Faellen.";
+        var diag = $"0 neue Samples aus {processedCaseCount} Fällen.";
         if (Errors > 0) diag += $" {Errors} Fehler (letzter: {_lastError}).";
-        if (_emptyProtocols > 0) diag += $" {_emptyProtocols} ohne Eintraege.";
+        if (_emptyProtocols > 0) diag += $" {_emptyProtocols} ohne Einträge.";
         if (_duplicateOnlyCases > 0) diag += $" {_duplicateOnlyCases} nur Duplikate.";
         if (_missingProtocols > 0) diag += $" {_missingProtocols} fehlende Protokolle.";
         if (_unreadableProtocols > 0) diag += $" {_unreadableProtocols} nicht lesbar.";
@@ -57,7 +57,7 @@ public sealed class TrainingBatchImportRunSummary
 
     public string BuildCompletionStatus()
     {
-        var status = $"Fertig! {TotalNew} Kandidaten gespeichert (Status: Neu). Freigabe ueber Review (Modul I) \u2014 kein Auto-Index.";
+        var status = $"Fertig! {TotalNew} Kandidaten gespeichert (Status: Neu). Freigabe über Review (Modul I) \u2014 kein Auto-Index.";
         if (Errors > 0)
             status += $" {Errors} Fehler.";
         return status;

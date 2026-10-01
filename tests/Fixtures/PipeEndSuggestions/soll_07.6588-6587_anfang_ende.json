@@ -1,0 +1,26 @@
+{
+  "zweck": "Soll-Stellen des Abnahmewegs (Modell direkt, letterbox_pil(640), fps 1, zusammenfassen, staerkste je Video) fuer PipeEndSuggestionLiveAcceptanceTests. Erzeugt 2026-09-04 mit der Gegenprobe lernstufe_paritaet.py; der Sidecar-Weg lieferte nach der Letterbox-Korrektur bildgenau dieselben Werte (max. Abweichung 0,0).",
+  "video": "D:\\Haltungen\\07.6588-6587\\20230927_07.6588-6587.mpg",
+  "haltung": "07.6588-6587",
+  "bilder": 43,
+  "freigaben": {
+    "rohranfang": "40b0315aabc43095c61b196e5bf6011fb2123b7f99a2ccc3ce4a75ca6b910d9b",
+    "rohrende": "fb70e77ce5e3676ac1376c17f1bdfdf208f15c8010f3fa720d395aab7a95a4f2"
+  },
+  "klassen": {
+    "rohranfang": {
+      "zeit_min": 0.0,
+      "zeit_max": 22.0,
+      "peak_zeit": 6.0,
+      "max_wert": 0.9999998807907104,
+      "bilder": 23
+    },
+    "rohrende": {
+      "zeit_min": 17.0,
+      "zeit_max": 42.0,
+      "peak_zeit": 29.0,
+      "max_wert": 0.9499355554580688,
+      "bilder": 26
+    }
+  }
+}

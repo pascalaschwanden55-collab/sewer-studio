@@ -51,8 +51,8 @@ public sealed class DataPageRecordCollectionController
         var name = selected.GetFieldValue("Haltungsname");
         var label = string.IsNullOrWhiteSpace(name) ? "diese Haltung" : $"die Haltung \"{name}\"";
         if (!_confirmDelete(
-                $"Soll {label} wirklich geloescht werden?\n\nDie Zeile inkl. aller Daten wird entfernt.",
-                "Haltung loeschen"))
+                $"Soll {label} wirklich gelöscht werden?\n\nDie Zeile inkl. aller Daten wird entfernt.",
+                "Haltung löschen"))
         {
             return;
         }
@@ -83,7 +83,7 @@ public sealed class DataPageRecordCollectionController
         if (records.Count == 0)
             return;
 
-        if (!_confirmDelete($"{records.Count} Haltung(en) wirklich loeschen?", "Loeschen"))
+        if (!_confirmDelete($"{records.Count} Haltung(en) wirklich löschen?", "Löschen"))
             return;
 
         var project = _getProject();

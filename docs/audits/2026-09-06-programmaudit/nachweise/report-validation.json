@@ -1,0 +1,14 @@
+{
+  "html_bytes": 56920,
+  "links_checked": 71,
+  "ids_checked": 11,
+  "findings": 11,
+  "areas": 31,
+  "packages": 5,
+  "dotnet_counts": {
+    "NotExecuted": 12,
+    "Failed": 2,
+    "Passed": 15095
+  },
+  "errors": []
+}

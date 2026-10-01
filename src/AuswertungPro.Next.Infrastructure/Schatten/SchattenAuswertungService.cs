@@ -213,7 +213,7 @@ public sealed class SchattenAuswertungService : ISchattenAuswertungService
             {
                 Status = SchattenStatus.KiFallback,
                 IsFallback = true,
-                KiFehler = $"Zeitueberschreitung nach {KiTimeoutJeHaltung.TotalSeconds:0}s"
+                KiFehler = $"Zeitüberschreitung nach {KiTimeoutJeHaltung.TotalSeconds:0}s"
             };
         }
         catch (Exception ex)

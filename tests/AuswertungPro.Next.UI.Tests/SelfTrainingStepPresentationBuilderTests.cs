@@ -48,9 +48,9 @@ public sealed class SelfTrainingStepPresentationBuilderTests
             activeVisionModel: "qwen3-vl");
 
         Assert.Equal("B", presentation.CurrentTechniqueGrade);
-        Assert.Equal("Licht: Gut | Schaerfe: Mittel", presentation.CurrentTechniqueDetails);
+        Assert.Equal("Licht: Gut | Schärfe: Mittel", presentation.CurrentTechniqueDetails);
         Assert.Equal("qwen3-vl (GPU)", presentation.ActiveModelName);
-        Assert.Equal(["Technik: B (Licht=Gut, Schaerfe=Mittel)"], presentation.LogLines);
+        Assert.Equal(["Technik: B (Licht=Gut, Schärfe=Mittel)"], presentation.LogLines);
     }
 
     [Fact]

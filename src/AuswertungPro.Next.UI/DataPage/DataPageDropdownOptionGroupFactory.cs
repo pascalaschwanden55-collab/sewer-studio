@@ -8,14 +8,16 @@ public sealed record DataPageDropdownOptionCollections(
     ObservableCollection<string> Eigentuemer,
     ObservableCollection<string> Pruefungsresultat,
     ObservableCollection<string> Referenzpruefung,
-    ObservableCollection<string> EmpfohleneSanierungsmassnahmen);
+    ObservableCollection<string> EmpfohleneSanierungsmassnahmen,
+    ObservableCollection<string> Rohrmaterial);
 
 public sealed record DataPageDropdownOptionGroups(
     DropdownOptionGroupController Sanieren,
     DropdownOptionGroupController Eigentuemer,
     DropdownOptionGroupController Pruefungsresultat,
     DropdownOptionGroupController Referenzpruefung,
-    DropdownOptionGroupController EmpfohleneSanierungsmassnahmen);
+    DropdownOptionGroupController EmpfohleneSanierungsmassnahmen,
+    DropdownOptionGroupController Rohrmaterial);
 
 public static class DataPageDropdownOptionGroupFactory
 {
@@ -30,22 +32,33 @@ public static class DataPageDropdownOptionGroupFactory
 
         return new DataPageDropdownOptionGroups(
             CreateGroup(options.Sanieren, "Sanieren-Liste", ["Nein", "Ja"], actions),
-            CreateGroup(options.Eigentuemer, "Eigentuemer-Liste", fixedEigentuemerOptions, actions),
+            CreateGroup(options.Eigentuemer, "Eigentümer-Liste", fixedEigentuemerOptions, actions),
             CreateGroup(
                 options.Pruefungsresultat,
-                "Pruefungsresultat-Liste",
+                "Prüfungsresultat-Liste",
                 [
+                    // Datenwert, kein Anzeigetext: identisch zu ExcelReportStyle.Farbregeln,
+                    // DropdownOptionsStore und SchaechteDropdownCommandFactory (Excel-
+                    // Farbzuordnung vergleicht exakt diese Zeichenketten). Bewusst ae/oe statt
+                    // Umlaut, damit gespeicherte Projektwerte weiterhin dieselbe Farbe treffen.
                     "Pruefung bestanden",
                     "Pruefung knapp nicht bestanden",
                     "Pruefung nicht bestanden (grob undicht)",
                     "Keine"
                 ],
                 actions),
-            CreateGroup(options.Referenzpruefung, "Referenzpruefung-Liste", ["Ja", "Nein"], actions),
+            CreateGroup(options.Referenzpruefung, "Referenzprüfung-Liste", ["Ja", "Nein"], actions),
             CreateGroup(
                 options.EmpfohleneSanierungsmassnahmen,
                 "Sanierungsmassnahmen-Liste",
                 [""],
+                actions),
+            // Zuruecksetzen bedeutet hier: zurueck auf die reinen Katalogwerte,
+            // also alle eigenen Ergaenzungen weg.
+            CreateGroup(
+                options.Rohrmaterial,
+                "Rohrmaterial-Liste",
+                PipeMaterialOptionList.FixedOptions,
                 actions));
     }
 

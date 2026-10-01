@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -19,15 +19,41 @@ namespace AuswertungPro.Next.Application.Reports;
 
 public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 {
+    private static readonly object PdfGenerationGate = new();
+
     private readonly IProtocolPdfAssetResolver _assets;
+    private readonly IProtocolPdfLayoutSettings? _layoutSettings;
+    private readonly ICodeCatalogProvider? _defaultCodeCatalog;
 
     public ProtocolPdfExporter()
-        : this(new ProtocolPdfAssetFileResolver())
+        : this(new ProtocolPdfAssetFileResolver(), layoutSettings: null, defaultCodeCatalog: null)
+    {
+    }
+
+    public ProtocolPdfExporter(IProtocolPdfLayoutSettings? layoutSettings)
+        : this(new ProtocolPdfAssetFileResolver(), layoutSettings, defaultCodeCatalog: null)
     {
     }
 
     public ProtocolPdfExporter(IProtocolPdfAssetResolver assets)
-        => _assets = assets ?? throw new ArgumentNullException(nameof(assets));
+        : this(assets, layoutSettings: null, defaultCodeCatalog: null)
+    {
+    }
+
+    public ProtocolPdfExporter(IProtocolPdfAssetResolver assets, IProtocolPdfLayoutSettings? layoutSettings)
+        : this(assets, layoutSettings, defaultCodeCatalog: null)
+    {
+    }
+
+    public ProtocolPdfExporter(
+        IProtocolPdfAssetResolver assets,
+        IProtocolPdfLayoutSettings? layoutSettings,
+        ICodeCatalogProvider? defaultCodeCatalog = null)
+    {
+        _assets = assets ?? throw new ArgumentNullException(nameof(assets));
+        _layoutSettings = layoutSettings;
+        _defaultCodeCatalog = defaultCodeCatalog;
+    }
 
     public byte[] BuildPdf(string projectTitle, ProtocolDocument doc, string projectRootAbs)
         => BuildPdf(projectTitle, doc, projectRootAbs, new ProtocolPdfExportOptions());
@@ -42,7 +68,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 
         var aiSummary = options.ShowAiSummary ? BuildAiSummary(entries, options) : null;
 
-        return Document.Create(container =>
+        return GeneratePdf(() => Document.Create(container =>
         {
             container.Page(page =>
             {
@@ -126,7 +152,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                     x.TotalPages();
                 });
             });
-        }).GeneratePdf();
+        }));
     }
 
     public byte[] BuildHaltungsprotokollPdf(
@@ -137,6 +163,15 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
         HaltungsprotokollPdfOptions? options = null)
     {
         options ??= new HaltungsprotokollPdfOptions();
+        // Ohne ausdrueckliche Angabe gilt die Einstellung des Benutzers; fehlt auch die,
+        // bleibt es beim bisherigen Stand mit zwei Fotos je Seite. Die oeffentliche
+        // Eigenschaft bleibt fuer alte Aufrufer trotzdem ein nicht-nullbares int.
+        options = options with
+        {
+            PhotosPerPage = ProtocolPdfPhotoLayout.Normalize(
+                options.RequestedPhotosPerPage ?? _layoutSettings?.PhotosPerPage),
+            CodeCatalog = options.CodeCatalog ?? _defaultCodeCatalog
+        };
         QuestPDF.Settings.License = LicenseType.Community;
 
         var resolvedEntries = ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc);
@@ -178,13 +213,13 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 
         var grafikHeight = HaltungsgrafikExportSizing.ChooseSvgHeight(entries.Count);
         var svg = options.IncludeHaltungsgrafik && length.HasValue && length.Value > 0
-            ? BuildHaltungsgrafikSvg(length.Value, entries, photoNumberMap, startNode, endNode, flowDown, brand, overrideHeight: grafikHeight, unknownGaps: unknownGaps)
+            ? BuildHaltungsgrafikSvg(length.Value, entries, photoNumberMap, startNode, endNode, flowDown, brand, overrideHeight: grafikHeight, unknownGaps: unknownGaps, catalog: options.CodeCatalog)
             : null;
 
         var headerItems = BuildHaltungsprotokollHeaderTable(project, record, inspectionDate, length, holdingLabel);
         var logoBytes = _assets.ResolveLogoBytes(options, projectRootAbs);
 
-        return Document.Create(container =>
+        return GeneratePdf(() => Document.Create(container =>
         {
             container.Page(page =>
             {
@@ -227,7 +262,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                         else
                         {
                             col.Item().Border(0.5f).BorderColor("#D1D5DB").Background("#FAFBFC").Padding(8)
-                                .Text("Keine Distanzdaten fuer eine Haltungsgrafik vorhanden.");
+                                .Text("Keine Distanzdaten für eine Haltungsgrafik vorhanden.");
                         }
                     }
 
@@ -325,7 +360,16 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                     });
                 });
             });
-        }).GeneratePdf();
+        }));
+    }
+
+    private static byte[] GeneratePdf(Func<IDocument> documentFactory)
+    {
+        // QuestPDF kann bei gleichzeitiger Erzeugung mehrerer Protokolle eine
+        // fehlerhafte Textzuordnung schreiben. Dann lesen PDF-Werkzeuge nur
+        // Nullzeichen. Der Export ist selten und wird deshalb bewusst serialisiert.
+        lock (PdfGenerationGate)
+            return documentFactory().GeneratePdf();
     }
 
     public byte[] BuildCsv(ProtocolDocument doc, ProtocolPdfExportOptions? options = null)
@@ -385,7 +429,22 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
         return utf8.GetBytes(sb.ToString());
     }
 
-    private static IReadOnlyList<(string Label, string? Value)> BuildHaltungsprotokollHeaderTable(
+    /// <summary>
+    /// Betreiber der Haltung. Die Haltung selbst weiss es am besten (Spalte
+    /// "Eigentuemer"); das Projekt-Metadatum ist nur der Rueckfall. Vorher wurde
+    /// NUR das Projekt gelesen - und dessen Standardwert ist "Privat", sodass auf
+    /// AWU-Protokollen "Betreiber Privat" stand.
+    /// </summary>
+    internal static string? ResolveBetreiber(Project project, HaltungRecord record)
+    {
+        var ausHaltung = record.GetFieldValue("Eigentuemer");
+        if (!string.IsNullOrWhiteSpace(ausHaltung))
+            return ausHaltung.Trim();
+
+        return GetMeta(project, "Eigentuemer");
+    }
+
+    internal static IReadOnlyList<(string Label, string? Value)> BuildHaltungsprotokollHeaderTable(
         Project project,
         HaltungRecord record,
         string inspectionDate,
@@ -398,18 +457,23 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
             strasse = GetMeta(project, "Strasse");
 
         var projektname = !string.IsNullOrWhiteSpace(project.Description) ? project.Description : project.Name;
+        // Ohne eigene Beschreibung sind GEP und Projektname derselbe Text -
+        // zweimal dieselbe Zeile traegt nichts.
+        var gep = string.Equals(projektname?.Trim(), project.Name?.Trim(), StringComparison.Ordinal)
+            ? null
+            : project.Name;
         var lengthText = length.HasValue ? length.Value.ToString("0.00", CultureInfo.InvariantCulture) : record.GetFieldValue("Haltungslaenge_m");
 
         var all = new List<(string, string?)>
         {
-            ("GEP", project.Name),
+            ("GEP", gep),
             ("Projektname", projektname),
             ("Nr.", record.GetFieldValue("NR")),
             ("Ort", ort),
             ("Strasse", strasse),
             ("Datum", inspectionDate),
             ("Haltung", holdingLabel),
-            ("Betreiber", GetMeta(project, "Eigentuemer")),
+            ("Betreiber", ResolveBetreiber(project, record)),
             ("Auftraggeber", GetMeta(project, "Auftraggeber")),
             ("DN [mm]", record.GetFieldValue("DN_mm")),
             ("Material", record.GetFieldValue("Rohrmaterial")),
@@ -562,10 +626,52 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                     foreach (var item in items)
                     {
                         table.Cell().PaddingVertical(0.8f).Text(item.Label).FontSize(8).FontColor("#6B7280");
+
+                        // Zustandsklasse als Ampel-Chip - dieselben Farben wie in
+                        // Tabelle und Excel-Export (ExcelReportStyle ist die Quelle).
+                        var ampel = item.Label.StartsWith("Zustandsklasse", StringComparison.Ordinal)
+                            ? ResolveZustandsklassenFarbe(item.Value)
+                            : null;
+                        if (ampel is not null)
+                        {
+                            table.Cell().PaddingVertical(0.8f).AlignLeft().Element(z => z
+                                .Background(ampel.Value.Hintergrund)
+                                .PaddingVertical(0.5f).PaddingHorizontal(6)
+                                .Text(NormalizeValue(item.Value))
+                                .FontSize(8.5f).SemiBold()
+                                .FontColor(ampel.Value.Schrift));
+                            continue;
+                        }
+
                         table.Cell().PaddingVertical(0.8f).Text(NormalizeValue(item.Value)).FontSize(8.5f).SemiBold().FontColor("#1F2937");
                     }
                 });
         });
+    }
+
+    /// <summary>
+    /// Ampelfarbe der Zustandsklasse 0..4 - exakt die Werte aus
+    /// <see cref="AuswertungPro.Next.Infrastructure.Export.Excel.ExcelReportStyle"/>,
+    /// damit App-Tabelle, Excel-Bericht und PDF dieselbe Sprache sprechen.
+    /// </summary>
+    internal static (string Hintergrund, string Schrift)? ResolveZustandsklassenFarbe(string? wert)
+    {
+        var klasse = (wert ?? "").Trim();
+        if (klasse.Length == 0)
+            return null;
+
+        foreach (var regel in AuswertungPro.Next.Infrastructure.Export.Excel.ExcelReportStyle.Zustandsklassen)
+        {
+            if (!string.Equals(regel.Wert, klasse, StringComparison.Ordinal))
+                continue;
+
+            var hex = "#" + regel.Farbe[^6..];
+            // Rot und Orange brauchen weisse Schrift, die hellen Stufen dunkle.
+            var weiss = klasse is "0" or "1";
+            return (hex, weiss ? "#FFFFFF" : "#1F2937");
+        }
+
+        return null;
     }
 
     private static void ComposeObservationTable(IContainer container, IReadOnlyList<ProtocolEntry> entries)
@@ -635,7 +741,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
             table.Header(header =>
             {
                 header.Cell().Element(HeaderCell).Text("m+").FontSize(10).SemiBold();
-                header.Cell().Element(HeaderCell).Text("OP Kuerzel").FontSize(10).SemiBold();
+                header.Cell().Element(HeaderCell).Text("OP Kürzel").FontSize(10).SemiBold();
                 header.Cell().Element(HeaderCell).Text("Zustand").FontSize(10).SemiBold();
                 header.Cell().Element(HeaderCell).Text("MPEG").FontSize(10).SemiBold();
                 header.Cell().Element(HeaderCell).Text("Foto").FontSize(10).SemiBold();
@@ -682,9 +788,9 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                 columns.ConstantColumn(38); // m-
                 columns.ConstantColumn(55); // OP
                 columns.RelativeColumn(6);  // Zustand
-                columns.ConstantColumn(45); // Foto
-                columns.ConstantColumn(55); // MPEG
-                columns.ConstantColumn(45); // Zeit
+                columns.ConstantColumn(40); // Foto
+                columns.ConstantColumn(78); // MPEG (Videodateinamen brechen sonst mitten im Wort)
+                columns.ConstantColumn(34); // Zeit
                 columns.RelativeColumn(2);  // Bemerkung
             });
 
@@ -737,7 +843,7 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
                     table.Cell().Element(BodyCell)
                         .Text(ProtocolPdfPhotoSection.ResolveNumberText(entry, photoNumbers))
                         .FontSize(9);
-                    table.Cell().Element(BodyCell).Text(entry.Mpeg?.Trim() ?? "-").FontSize(9);
+                    table.Cell().Element(BodyCell).Text(entry.Mpeg?.Trim() ?? "-").FontSize(7.5f);
                     table.Cell().Element(BodyCell).Text(entry.Zeit.HasValue ? FormatTime(entry.Zeit.Value) : "-").FontSize(9);
                     table.Cell().Element(BodyCell).Text(BuildObservationNotesText(entry)).FontSize(9);
                 }
@@ -749,25 +855,11 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
 
     /// <summary>Akzentfarbe abhaengig von Nutzungsart (dezent, nicht knallig).</summary>
     internal static string ResolveNutzungsartBrand(string nutzungsart)
-    {
-        var n = nutzungsart.ToUpperInvariant();
-        if (n.Contains("SCHMUTZ"))
-            return "#7A6242"; // braun (dezent)
-        if (n.Contains("REGEN") || n.Contains("RAIN") || n.Contains("METEOR") || n.Contains("REIN"))
-            return "#4A7FA5"; // blau (gedaempft)
-        if (n.Contains("MISCH"))
-            return "#8E4A6E"; // magenta (gedaempft)
-        return "#7A8A94"; // neutral grau fuer unbekannte Nutzungsart
-    }
+        => NutzungsartReportColors.Resolve(nutzungsart).Accent;
 
     /// <summary>Helle Akzentfarbe fuer Hintergruende (aus brand abgeleitet).</summary>
-    internal static string ResolveNutzungsartBrandLight(string brand) => brand switch
-    {
-        "#7A6242" => "#F5F0E8", // braun-hell (warm)
-        "#4A7FA5" => "#EBF2F7", // blau-hell (kuehl)
-        "#8E4A6E" => "#F5ECF1", // magenta-hell (sanft)
-        _ => "#F2F4F5"          // neutral-hell (grau)
-    };
+    internal static string ResolveNutzungsartBrandLight(string brand)
+        => NutzungsartReportColors.ResolveLight(brand);
 
     // Dünne Delegation zu HaltungsgrafikSvgBuilder (verhaltensneutral extrahiert).
     private static string BuildHaltungsgrafikSvg(
@@ -779,8 +871,9 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
         bool? flowDown,
         string brand = "#006E9C",
         int? overrideHeight = null,
-        IReadOnlyList<InspectionGap>? unknownGaps = null)
-        => HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(length, entries, photoNumbers, startNode, endNode, flowDown, brand, overrideHeight, unknownGaps);
+        IReadOnlyList<InspectionGap>? unknownGaps = null,
+        ICodeCatalogProvider? catalog = null)
+        => HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(length, entries, photoNumbers, startNode, endNode, flowDown, brand, overrideHeight, unknownGaps, catalog);
 
     private sealed record HaltungsgrafikScale(string? LengthText, string? ScaleText);
 
@@ -815,7 +908,8 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
     internal static string ResolveDamageSymbolCategory(string? rawCode)
         => DamageSymbolClassifier.ResolveDamageSymbolCategory(rawCode);
 
-    private static string ResolveInspectionDate(Project project, HaltungRecord record, ProtocolDocument doc)
+    /// <summary>Inspektionsdatum - auch das Haltungsdossier beschriftet damit seine Fotoseiten.</summary>
+    internal static string ResolveInspectionDate(Project project, HaltungRecord record, ProtocolDocument doc)
     {
         // Prioritaet: Haltungs-spezifisches Aufnahmedatum vor Projekt-Metadaten
         var recordDate = record.GetFieldValue("Datum_Jahr");
@@ -898,4 +992,3 @@ public sealed class ProtocolPdfExporter : IProtocolPdfExporter
     }
 
 }
-

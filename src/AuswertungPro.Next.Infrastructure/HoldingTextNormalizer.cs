@@ -58,6 +58,60 @@ internal static class HoldingTextNormalizer
     }
 
     /// <summary>
+    /// Prueft einen normalisierten Objektschluessel im urspruenglichen Dateinamen.
+    /// Trennzeichen innerhalb des Schluessels duerfen variieren; direkt davor und
+    /// danach muss aber eine echte alphanumerische Grenze liegen. So trifft
+    /// "100-200" auf "H_100-200_001", aber nicht auf "H_100-2000_001".
+    /// </summary>
+    internal static bool ContainsKeyAtBoundary(string text, string key)
+        => ContainsNormalizedKeyAtBoundary(text, NormalizeKey(NormalizeText(key)));
+
+    internal static bool ContainsNormalizedKeyAtBoundary(
+        string text,
+        string normalizedKey)
+    {
+        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(normalizedKey))
+            return false;
+
+        var source = NormalizeText(text);
+        var normalizedChars = new List<char>(source.Length);
+        var sourceIndexes = new List<int>(source.Length);
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (!char.IsLetterOrDigit(source[index]))
+                continue;
+
+            normalizedChars.Add(char.ToLowerInvariant(source[index]));
+            sourceIndexes.Add(index);
+        }
+
+        var normalizedText = new string(normalizedChars.ToArray());
+        var searchFrom = 0;
+        while (searchFrom <= normalizedText.Length - normalizedKey.Length)
+        {
+            var matchIndex = normalizedText.IndexOf(
+                normalizedKey,
+                searchFrom,
+                StringComparison.OrdinalIgnoreCase);
+            if (matchIndex < 0)
+                return false;
+
+            var sourceStart = sourceIndexes[matchIndex];
+            var sourceEnd = sourceIndexes[matchIndex + normalizedKey.Length - 1];
+            var startsAtBoundary = sourceStart == 0
+                                   || !char.IsLetterOrDigit(source[sourceStart - 1]);
+            var endsAtBoundary = sourceEnd == source.Length - 1
+                                 || !char.IsLetterOrDigit(source[sourceEnd + 1]);
+            if (startsAtBoundary && endsAtBoundary)
+                return true;
+
+            searchFrom = matchIndex + 1;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Erstellt einen Seitenbereich-String aus einer sortierten Seitenliste (z.B. "3-7").
     /// </summary>
     internal static string BuildPageRange(IReadOnlyList<int> pages)

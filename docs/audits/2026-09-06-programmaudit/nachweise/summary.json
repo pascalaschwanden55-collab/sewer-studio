@@ -1,0 +1,41 @@
+{
+  "src/": {
+    "files": 2875,
+    "lines": 341865,
+    "callable_declarations": 21772
+  },
+  "tests/": {
+    "files": 2360,
+    "lines": 326838,
+    "callable_declarations": 21064
+  },
+  "tools/": {
+    "files": 202,
+    "lines": 39552,
+    "callable_declarations": 2193
+  },
+  "sidecar/sidecar/": {
+    "files": 32,
+    "lines": 7039,
+    "callable_declarations": 247
+  },
+  "sidecar/tests/": {
+    "files": 60,
+    "lines": 10602,
+    "callable_declarations": 720
+  },
+  "training/": {
+    "files": 139,
+    "lines": 52265,
+    "callable_declarations": 1555
+  },
+  "integrations/": {
+    "files": 4,
+    "lines": 1317,
+    "callable_declarations": 77
+  },
+  "xaml_actions": 605,
+  "python_syntax_errors": [],
+  "project_count": 52,
+  "projects_missing_from_solution": []
+}

@@ -1,0 +1,108 @@
+  AuswertungPro.Next.Domain -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Domain\bin\Debug\net10.0\AuswertungPro.Next.Domain.dll
+  VsaShadowReport.Core -> C:\Sewer-Studio_KI_4.5\tools\VsaShadowReport.Core\bin\Debug\net10.0\VsaShadowReport.Core.dll
+  AuswertungPro.Next.Application -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Application\bin\Debug\net10.0\AuswertungPro.Next.Application.dll
+  AuswertungPro.Next.Infrastructure -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Infrastructure\bin\Debug\net10.0\AuswertungPro.Next.Infrastructure.dll
+  SelfTrainingHarness -> C:\Sewer-Studio_KI_4.5\tools\SelfTrainingHarness\bin\Debug\net10.0\SelfTrainingHarness.dll
+  AuswertungPro.Next.Infrastructure.Tests -> C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.Infrastructure.Tests\bin\Debug\net10.0\AuswertungPro.Next.Infrastructure.Tests.dll
+Testlauf für "C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.Infrastructure.Tests\bin\Debug\net10.0\AuswertungPro.Next.Infrastructure.Tests.dll" (.NETCoreApp,Version=v10.0)
+VSTest-Version 18.0.2 (x64)
+
+Die Testausführung wird gestartet, bitte warten...
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+[xUnit.net 00:00:21.30]     AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_Auskunft_wird_wirklich_als_ISO_8859_1_gelesen [SKIP]
+[xUnit.net 00:00:21.30]     AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_Gemeindeliste_enthaelt_die_19_Urner_Gemeinden [SKIP]
+[xUnit.net 00:00:21.30]     AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Stockwerkeigentum_wird_an_der_echten_Seite_richtig_zerlegt [SKIP]
+[xUnit.net 00:00:21.30]     AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_echten_Dienste_liefern_die_gemessenen_Werte_fuer_Parzelle_439 [SKIP]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_Auskunft_wird_wirklich_als_ISO_8859_1_gelesen [1 ms]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_Gemeindeliste_enthaelt_die_19_Urner_Gemeinden [1 ms]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Stockwerkeigentum_wird_an_der_echten_Seite_richtig_zerlegt [1 ms]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_echten_Dienste_liefern_die_gemessenen_Werte_fuer_Parzelle_439 [1 ms]
+[xUnit.net 00:01:31.53]     AuswertungPro.Next.Infrastructure.Tests.VsaKekCatalogBuilderTests.BuildFromVsaKekArchive_ProducesExpectedManifestRules [SKIP]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.VsaKekCatalogBuilderTests.BuildFromVsaKekArchive_ProducesExpectedManifestRules [1 ms]
+[xUnit.net 00:01:33.37]     AuswertungPro.Next.Infrastructure.Tests.Import.XtfVideoCounterLiveAcceptanceTests.Rohranfang_und_Rohrende_tragen_ihre_videozeit [SKIP]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.Import.XtfVideoCounterLiveAcceptanceTests.Rohranfang_und_Rohrende_tragen_ihre_videozeit [1 ms]
+
+Bestanden!   : Fehler:     0, erfolgreich:  6316, übersprungen:     6, gesamt:  6322, Dauer: 1 m 34 s - AuswertungPro.Next.Infrastructure.Tests.dll (net10.0)
+  AuswertungPro.Next.Domain -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Domain\bin\Debug\net10.0\AuswertungPro.Next.Domain.dll
+  AuswertungPro.Next.Application -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Application\bin\Debug\net10.0\AuswertungPro.Next.Application.dll
+  AuswertungPro.Next.Infrastructure -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Infrastructure\bin\Debug\net10.0\AuswertungPro.Next.Infrastructure.dll
+  StageAExporter -> C:\Sewer-Studio_KI_4.5\tools\StageAExporter\bin\Debug\net10.0\StageAExporter.dll
+  SidecarE2eSmoke -> C:\Sewer-Studio_KI_4.5\tools\SidecarE2eSmoke\bin\Debug\net10.0\SidecarE2eSmoke.dll
+  NightlySoakRunner -> C:\Sewer-Studio_KI_4.5\tools\NightlySoakRunner\bin\Debug\net10.0\NightlySoakRunner.dll
+  AuswertungPro.Next.Pipeline.Tests -> C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.Pipeline.Tests\bin\Debug\net10.0\AuswertungPro.Next.Pipeline.Tests.dll
+Testlauf für "C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.Pipeline.Tests\bin\Debug\net10.0\AuswertungPro.Next.Pipeline.Tests.dll" (.NETCoreApp,Version=v10.0)
+VSTest-Version 18.0.2 (x64)
+
+Die Testausführung wird gestartet, bitte warten...
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+[xUnit.net 00:00:00.82]     AuswertungPro.Next.Pipeline.Tests.SidecarRealVideoIntegrationTests.EchtesVideo_ErfuelltGoldenVertrag [SKIP]
+  Übersprungen AuswertungPro.Next.Pipeline.Tests.SidecarRealVideoIntegrationTests.EchtesVideo_ErfuelltGoldenVertrag [1 ms]
+[xUnit.net 00:00:00.90]     AuswertungPro.Next.Pipeline.Tests.PipeEndSuggestionLiveAcceptanceTests.CSharp_Durchlauf_liefert_dieselben_Stellen_wie_das_Abnahmeskript [SKIP]
+  Übersprungen AuswertungPro.Next.Pipeline.Tests.PipeEndSuggestionLiveAcceptanceTests.CSharp_Durchlauf_liefert_dieselben_Stellen_wie_das_Abnahmeskript [1 ms]
+[xUnit.net 00:00:01.03]     AuswertungPro.Next.Pipeline.Tests.BendSuggestionLiveAcceptanceTests.CSharp_Durchlauf_liefert_dieselben_Stellen_wie_der_Prototyp [SKIP]
+  Übersprungen AuswertungPro.Next.Pipeline.Tests.BendSuggestionLiveAcceptanceTests.CSharp_Durchlauf_liefert_dieselben_Stellen_wie_der_Prototyp [1 ms]
+
+Bestanden!   : Fehler:     0, erfolgreich:  2644, übersprungen:     3, gesamt:  2647, Dauer: 15 s - AuswertungPro.Next.Pipeline.Tests.dll (net10.0)
+  AuswertungPro.Next.Domain -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Domain\bin\Debug\net10.0\AuswertungPro.Next.Domain.dll
+  AuswertungPro.Next.Application -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Application\bin\Debug\net10.0\AuswertungPro.Next.Application.dll
+  AuswertungPro.Next.Infrastructure -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Infrastructure\bin\Debug\net10.0\AuswertungPro.Next.Infrastructure.dll
+  AuswertungPro.Next.UI -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.UI\bin\Debug\net10.0-windows10.0.19041\SewerStudio.dll
+  AuswertungPro.Next.UI.Tests -> C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\bin\Debug\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll
+Testlauf für "C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\bin\Debug\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll" (.NETCoreApp,Version=v10.0)
+VSTest-Version 18.0.2 (x64)
+
+Die Testausführung wird gestartet, bitte warten...
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+[xUnit.net 00:00:50.25]     AuswertungPro.Next.UI.Tests.BeobachtungenWindowIsolatedSmokeTests.Kindprozess_oeffnet_Fenster_mit_echten_App_Ressourcen [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.BeobachtungenWindowIsolatedSmokeTests.Kindprozess_oeffnet_Fenster_mit_echten_App_Ressourcen [1 ms]
+[xUnit.net 00:00:52.85]     AuswertungPro.Next.UI.Tests.ComboBoxAnzeigeIsolatedSmokeTests.Kindprozess_ComboBox_zeigt_die_Beschriftung_statt_ToString [SKIP]
+[xUnit.net 00:00:52.85]     AuswertungPro.Next.UI.Tests.DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests.Kindprozess_Spaltenkopf_erscheint_gross_in_beiden_Themes [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.ComboBoxAnzeigeIsolatedSmokeTests.Kindprozess_ComboBox_zeigt_die_Beschriftung_statt_ToString [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests.Kindprozess_Spaltenkopf_erscheint_gross_in_beiden_Themes [1 ms]
+[xUnit.net 00:00:55.32]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Haltungsseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [SKIP]
+[xUnit.net 00:00:55.32]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz [SKIP]
+[xUnit.net 00:00:55.32]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Haltungsseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [1 ms]
+[xUnit.net 00:01:01.65]     AuswertungPro.Next.UI.Tests.HaltungAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_die_aufgeklappte_Haltung [SKIP]
+[xUnit.net 00:01:01.65]     AuswertungPro.Next.UI.Tests.HaltungsgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Haltungsgrafik [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.HaltungAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_die_aufgeklappte_Haltung [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.HaltungsgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Haltungsgrafik [1 ms]
+[xUnit.net 00:01:04.54]     AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [SKIP]
+[xUnit.net 00:01:04.54]     AuswertungPro.Next.UI.Tests.NovaPageHeaderIsolatedSmokeTests.Kindprozess_SettingsPage_und_BuilderPage_zeigen_den_Seitenkopf_korrekt [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.NovaPageHeaderIsolatedSmokeTests.Kindprozess_SettingsPage_und_BuilderPage_zeigen_den_Seitenkopf_korrekt [1 ms]
+[xUnit.net 00:01:07.56]     AuswertungPro.Next.UI.Tests.OberflaechenBindungsRauchtestTests.Kindprozess_erzeugt_alle_Bedienelemente [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.OberflaechenBindungsRauchtestTests.Kindprozess_erzeugt_alle_Bedienelemente [1 ms]
+[xUnit.net 00:01:08.77]     AuswertungPro.Next.UI.Tests.SchachtgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Schachtgrafik_lesbar [SKIP]
+[xUnit.net 00:01:08.77]     AuswertungPro.Next.UI.Tests.SchaechteAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_den_aufgeklappten_Schacht [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchachtgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Schachtgrafik_lesbar [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_den_aufgeklappten_Schacht [1 ms]
+[xUnit.net 00:01:10.55]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [SKIP]
+[xUnit.net 00:01:10.55]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_Schachtuebersicht_folgt_Datensatzaenderungen_ohne_neue_Bindung [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_Schachtuebersicht_folgt_Datensatzaenderungen_ohne_neue_Bindung [1 ms]
+[xUnit.net 00:01:11.80]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Schaechteseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Schaechteseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [1 ms]
+[xUnit.net 00:01:17.00]     AuswertungPro.Next.UI.Tests.SettingsPageLayoutIsolatedSmokeTests.Kindprozess_Erste_Gruppe_beginnt_oben [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.SettingsPageLayoutIsolatedSmokeTests.Kindprozess_Erste_Gruppe_beginnt_oben [1 ms]
+
+Bestanden!   : Fehler:     0, erfolgreich:  6872, übersprungen:    17, gesamt:  6889, Dauer: 2 m 26 s - AuswertungPro.Next.UI.Tests.dll (net10.0)
+  AuswertungPro.Next.Domain -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Domain\bin\Debug\net10.0\AuswertungPro.Next.Domain.dll
+  AuswertungPro.Next.Application -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Application\bin\Debug\net10.0\AuswertungPro.Next.Application.dll
+  AuswertungPro.Next.Infrastructure -> C:\Sewer-Studio_KI_4.5\src\AuswertungPro.Next.Infrastructure\bin\Debug\net10.0\AuswertungPro.Next.Infrastructure.dll
+  ProjectModernizer -> C:\Sewer-Studio_KI_4.5\tools\ProjectModernizer\bin\Debug\net10.0\ProjectModernizer.dll
+  ProjectModernizer.Tests -> C:\Sewer-Studio_KI_4.5\tests\ProjectModernizer.Tests\bin\Debug\net10.0\ProjectModernizer.Tests.dll
+Testlauf für "C:\Sewer-Studio_KI_4.5\tests\ProjectModernizer.Tests\bin\Debug\net10.0\ProjectModernizer.Tests.dll" (.NETCoreApp,Version=v10.0)
+VSTest-Version 18.0.2 (x64)
+
+Die Testausführung wird gestartet, bitte warten...
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+
+Bestanden!   : Fehler:     0, erfolgreich:    62, übersprungen:     0, gesamt:    62, Dauer: 458 ms - ProjectModernizer.Tests.dll (net10.0)
+
+SewerStudio Schnelltest bestanden.
+To https://github.com/pascalaschwanden55-collab/sewer-studio.git
+   cfccda464..0d3ea8d89  HEAD -> feature/eval-pruefsatz-review
+0d3ea8d896ebeef4165460ca969e025edb136962	refs/heads/feature/eval-pruefsatz-review

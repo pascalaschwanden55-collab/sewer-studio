@@ -12,7 +12,7 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingPipeProximityCalibrationPolicy.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSegmentedFindingsBuildWorkflow.cs");
 
-        Assert.True(File.Exists(policyPath), "Kalibrierableitung fuer SegmentedFinding-Proximity muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(policyPath), "Kalibrierableitung für SegmentedFinding-Proximity muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "SegmentedFinding-Build soll die Kalibrierableitung ausserhalb der PlayerWindow-Partials orchestrieren.");
 
         var analysisContext = File.ReadAllText(analysisContextPath);
@@ -88,7 +88,7 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
         Assert.True(File.Exists(stateControllerPath), "Manueller Kalibrierungszustand soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(manualControllerPath), "Manueller Kalibrierungsbefehl soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pointerControllerPath), "Manuelle Kalibrierungs-Maussteuerung soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(renderControllerPath), "Kalibrierungs-Preview-Rendering soll ueber den Overlay-RenderController laufen.");
+        Assert.True(File.Exists(renderControllerPath), "Kalibrierungs-Preview-Rendering soll über den Overlay-RenderController laufen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var calibration = File.ReadAllText(calibrationPath);
@@ -232,7 +232,7 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
         var playerPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
 
         Assert.True(File.Exists(rendererPath), "Kalibrierungs-Vorschaulinie muss ausserhalb der PlayerWindow-Partials gerendert werden.");
-        Assert.True(File.Exists(renderControllerPath), "Kalibrierungs-Vorschaulinie muss ueber den Overlay-RenderController orchestriert werden.");
+        Assert.True(File.Exists(renderControllerPath), "Kalibrierungs-Vorschaulinie muss über den Overlay-RenderController orchestriert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var calibration = File.ReadAllText(calibrationPath);

@@ -2,6 +2,8 @@ using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
+using AuswertungPro.Next.Domain.Models;
+
 namespace AuswertungPro.Next.Infrastructure.Import.WinCan;
 
 /// <summary>
@@ -67,18 +69,18 @@ internal static class WinCanValueNormalizer
             or "-" or "--" or "n/a" or "k.a.")
             return null;
 
-        // Volltext-Pruefungen
-        if (lower.Contains("regen"))
-            return "Regenwasser";
+        // Volltext-Pruefungen. Die Begriffe selbst stehen in NutzungsartVokabular.
+        if (lower.Contains("regen") || lower.Contains("niederschlag"))
+            return NutzungsartVokabular.Normalisieren("Niederschlagsabwasser");
         if (lower.Contains("schmutz"))
-            return "Schmutzwasser";
+            return NutzungsartVokabular.Normalisieren("Schmutzabwasser");
         if (lower.Contains("misch"))
-            return "Mischabwasser";
+            return NutzungsartVokabular.Normalisieren("Mischabwasser");
 
         // DWA-M150 / ISYBAU / VSA Kurzformen
-        if (lower is "s" or "ks" or "sw") return "Schmutzwasser";
-        if (lower is "r" or "kr" or "rw") return "Regenwasser";
-        if (lower is "m" or "km" or "mw") return "Mischabwasser";
+        if (lower is "s" or "ks" or "sw") return NutzungsartVokabular.Normalisieren("Schmutzabwasser");
+        if (lower is "r" or "kr" or "rw") return NutzungsartVokabular.Normalisieren("Niederschlagsabwasser");
+        if (lower is "m" or "km" or "mw") return NutzungsartVokabular.Normalisieren("Mischabwasser");
 
         // Unbekannte Kurzformen (Schweizer VSA: E, H, F, Z usw.) werden uebersprungen.
         if (t.Length <= 2)
@@ -153,20 +155,16 @@ internal static class WinCanValueNormalizer
     /// Sucht nach Prozent (%), Grad (deg) oder Millimeter (mm) Angaben.
     /// </summary>
     public static string? ExtractQuantValue(string beschreibung)
+        // Prioritaet bleibt Prozent vor Grad vor Millimeter; je Muster gewinnt der erste Treffer.
+        => TryExtractQuantMatch(beschreibung, @"(\d+(?:[.,]\d+)?)\s*%")   // Prozent: "5%", "25 %", "10.5%"
+           ?? TryExtractQuantMatch(beschreibung, @"(\d+(?:[.,]\d+)?)°")    // Grad: "15°", "45 °"
+           ?? TryExtractQuantMatch(beschreibung, @"(\d+(?:[.,]\d+)?)\s*mm"); // Millimeter: "2mm", "0.5 mm"
+
+    /// <summary>Gemeinsame Regel: erster Regex-Treffer, Komma als Dezimaltrennzeichen normalisiert.</summary>
+    private static string? TryExtractQuantMatch(string text, string pattern)
     {
-        // Prozent: "5%", "25 %", "10.5%"
-        var m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*%");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        // Grad: "15°", "45 °"
-        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)°");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        // Millimeter: "2mm", "0.5 mm"
-        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*mm");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        return null;
+        var m = Regex.Match(text, pattern);
+        return m.Success ? m.Groups[1].Value.Replace(',', '.') : null;
     }
 
     /// <summary>
@@ -206,5 +204,25 @@ internal static class WinCanValueNormalizer
             return false;
         var t = type.Trim().ToUpperInvariant();
         return t is "MPG" or "MPEG" or "MP4" or "AVI" or "MOV";
+    }
+
+    /// <summary>
+    /// Liefert den auswertbaren Medientyp einer WinCan-Medienzeile.
+    ///
+    /// Im echten Bestand kommen Zeilen mit leerem OMM_FileType vor (gemessen in zwei von
+    /// fuenf Projekten, jeweils genau die Videozeile). Ohne Rueckfall auf die Dateiendung
+    /// wurde ein vorhandenes Video weder als Video noch als Bild erkannt und still
+    /// verworfen. Der Dateiname ist in diesem Fall die verlaessliche Quelle.
+    /// </summary>
+    public static string? MedientypOderEndung(string? type, string? fileName)
+    {
+        if (!string.IsNullOrWhiteSpace(type))
+            return type;
+
+        if (string.IsNullOrWhiteSpace(fileName))
+            return type;
+
+        var endung = System.IO.Path.GetExtension(fileName);
+        return string.IsNullOrWhiteSpace(endung) ? type : endung.TrimStart('.');
     }
 }

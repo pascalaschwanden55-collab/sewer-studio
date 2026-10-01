@@ -20,10 +20,15 @@ public sealed class SqliteSnapshotCopierDependencyTests
         var field = typeof(FullBackupService).GetField(
             "_sqliteSnapshots",
             BindingFlags.Instance | BindingFlags.NonPublic);
+        var knowledgeBackupField = typeof(AuswertungPro.Next.UI.Services.KnowledgeBackupTransferService).GetField(
+            "_sqliteSnapshots",
+            BindingFlags.Instance | BindingFlags.NonPublic);
 
         Assert.IsType<SqliteSnapshotCopyService>(services.SqliteSnapshots);
         Assert.Same(services.SqliteSnapshots, services.GetService(typeof(ISqliteSnapshotCopier)));
         Assert.NotNull(field);
         Assert.Same(services.SqliteSnapshots, field!.GetValue(services.FullBackup));
+        Assert.NotNull(knowledgeBackupField);
+        Assert.Same(services.SqliteSnapshots, knowledgeBackupField!.GetValue(services.KnowledgeBackup));
     }
 }

@@ -23,7 +23,10 @@ public static class XtfPrimaryDamageFormatter
             ["BCB"] = "Punktuelle Reparatur",
             ["BCC"] = "Krummung der Leitung",
             ["BCD"] = "Rohranfang",
-            ["BCE"] = "Einlauf in Leitung",
+            // BCE ist das Rohrende. Stand bis 2026-08-13 falsch als "Einlauf in
+            // Leitung" hier; der Rest des Systems (VsaCodeTree, ProtocolBoundaryService)
+            // hatte es immer richtig, nur die Anzeige der importierten Befunde nicht.
+            ["BCE"] = "Rohrende",
             ["BDA"] = "Allgemeinzustand, Fotobeispiel",
             ["BDB"] = "Allgemeine Anmerkung",
             ["BDC"] = "Abbruch der Inspektion"
@@ -36,7 +39,7 @@ public static class XtfPrimaryDamageFormatter
             return string.Empty;
 
         var parts = new List<string>();
-        var meter = finding.MeterStart ?? finding.SchadenlageAnfang;
+        var meter = finding.MeterStart;
         if (meter.HasValue)
             parts.Add($"{meter.Value:0.00}m");
 
@@ -73,7 +76,7 @@ public static class XtfPrimaryDamageFormatter
             if (code.Length == 0)
                 continue;
 
-            var meter = finding.MeterStart ?? finding.SchadenlageAnfang;
+            var meter = finding.MeterStart;
             var key = $"{code}|{(meter.HasValue ? meter.Value.ToString("F2") : "")}";
             if (!seen.Add(key))
                 continue;
@@ -94,9 +97,26 @@ public static class XtfPrimaryDamageFormatter
     /// </summary>
     private static string NormalizeCode(string? raw) => XtfValueNormalizer.NormalizeCode(raw);
 
+    // Nur fuer Tests (01.10.2026): Die Klartexte kommen sonst aus dem lokal installierten
+    // WinCan-Katalog; auf einem Rechner ohne WinCan (CI) greifen die Ersatztitel. Referenz-
+    // schnappschuesse muessen ueberall gleich ausfallen. AsyncLocal: gilt nur im laufenden Test.
+    private static readonly AsyncLocal<bool> NurEingebauteTitel = new();
+
+    internal static IDisposable NurEingebauteTitelVerwenden()
+    {
+        NurEingebauteTitel.Value = true;
+        return new TitelRuecksetzer();
+    }
+
+    private sealed class TitelRuecksetzer : IDisposable
+    {
+        public void Dispose() => NurEingebauteTitel.Value = false;
+    }
+
     private static string? ResolveCodeTitle(string code)
     {
-        if (CodeTitles.Value.TryGetValue(code, out var title) && !string.IsNullOrWhiteSpace(title))
+        var titel = NurEingebauteTitel.Value ? FallbackTitles : CodeTitles.Value;
+        if (titel.TryGetValue(code, out var title) && !string.IsNullOrWhiteSpace(title))
             return title;
         return null;
     }

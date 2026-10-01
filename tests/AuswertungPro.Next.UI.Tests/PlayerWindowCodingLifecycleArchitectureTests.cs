@@ -314,7 +314,7 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.False(File.Exists(oldExitPath), "Coding-Exit-Cleanup darf nicht als PlayerWindow-Partial zurueckkehren.");
         Assert.True(File.Exists(controllerPath), "Coding-Exit-Cleanup soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(workflowPath), "Coding-Exit-Finalisierung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
-        Assert.True(File.Exists(policyPath), "Exit-Pruefung fuer BCE/BDC* muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(policyPath), "Exit-Prüfung für BCE/BDC* muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var controllerFactory = File.ReadAllText(controllerFactoryPath);
@@ -389,10 +389,10 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         var ensureWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingHaltungslaengeEnsureWorkflow.cs");
         var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeEnterWorkflow.cs");
 
-        Assert.True(File.Exists(lengthPath), "Haltungslaenge-Fallback gehoert in eine Lifecycle-Length-Partial, nicht in Persistence.");
-        Assert.True(File.Exists(ensureServicePath), "Haltungslaenge-Fallbacklogik gehoert ausserhalb der PlayerWindow-Partials.");
-        Assert.True(File.Exists(ensureServiceFactoryPath), "Haltungslaenge-Eingabe soll ueber Factory verdrahtet werden.");
-        Assert.True(File.Exists(ensureWorkflowPath), "Haltungslaenge-Fallbackaufruf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(lengthPath), "Haltungslänge-Fallback gehört in eine Lifecycle-Length-Partial, nicht in Persistence.");
+        Assert.True(File.Exists(ensureServicePath), "Haltungslänge-Fallbacklogik gehört ausserhalb der PlayerWindow-Partials.");
+        Assert.True(File.Exists(ensureServiceFactoryPath), "Haltungslänge-Eingabe soll über Factory verdrahtet werden.");
+        Assert.True(File.Exists(ensureWorkflowPath), "Haltungslänge-Fallbackaufruf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);
@@ -438,7 +438,7 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeDialogServiceFactory.cs");
         var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingModeDialogWorkflow.cs");
 
-        Assert.True(File.Exists(servicePath), "Coding-Modus-Dialogtexte muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(servicePath), "Coding-Modus-Dialogtexte müssen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "Coding-Modus-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Coding-Modus-Dialogaufrufe sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
 

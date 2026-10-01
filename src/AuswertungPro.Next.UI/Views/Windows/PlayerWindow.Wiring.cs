@@ -32,6 +32,10 @@ public partial class PlayerWindow
             (_, __) => UpdateCodingOverlayViewport(),
             (_, __) => UpdateCodingOverlayViewport(),
             (_, __) => UpdateCodingOverlayViewport());
+
+        // Die Vorschlagsmarker haengen an derselben Spur wie die Befundmarker.
+        PositionSlider.SizeChanged += (_, _) => _suggestionMarkers?.Reposition();
+        SuggestionMarkerCanvas.SizeChanged += (_, _) => _suggestionMarkers?.Reposition();
     }
 
     private void WireKeyboardEvents()

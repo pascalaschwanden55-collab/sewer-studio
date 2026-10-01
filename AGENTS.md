@@ -4,9 +4,11 @@ Immer einfach und ehrlich antworten. Denken und Antworten immer auf Deutsch.
 
 ## Verbindliche Projektbeschreibung
 
-Vor Änderungen zuerst [`CLAUDE.md`](CLAUDE.md) vollständig lesen. Dort stehen der
-aktuelle Aufbau, die KI-Pipeline, wichtige Klassen und fachliche Regeln. Diese Datei
-ist bewusst nur der kurze Einstieg und dupliziert die Architektur nicht.
+Vor Änderungen zuerst [`CLAUDE.md`](CLAUDE.md) vollständig lesen. Dort stehen Aufbau,
+Architekturprinzipien, Querschnittsregeln und Fachbegriffe. Die Fachregeln der einzelnen
+Bereiche (Import, XTF, WebGIS, Dossiers, KI, Training, Oberfläche …) stehen in
+[`docs/architektur/`](docs/architektur/); vor Arbeit in einem Bereich die passende Datei
+lesen. Diese Datei ist bewusst nur der kurze Einstieg und dupliziert die Architektur nicht.
 
 SewerStudio ist heute eine Windows-WPF-Anwendung auf .NET 10. Zum System gehören
 unter anderem:
@@ -56,6 +58,16 @@ dotnet test tests\AuswertungPro.Next.UI.Tests\AuswertungPro.Next.UI.Tests.csproj
 dotnet test tests\ProjectModernizer.Tests\ProjectModernizer.Tests.csproj -c Release --no-build --no-restore
 ```
 
+Schnelllauf für den Alltag in der Oberfläche (überspringt die Tests, die je einen eigenen Testprozess starten):
+
+```powershell
+dotnet test tests\AuswertungPro.Next.UI.Tests\AuswertungPro.Next.UI.Tests.csproj -c Release --no-build --no-restore --filter "Kategorie!=Kindprozess"
+```
+
+Pre-Push-Hook und CI prüfen weiterhin alles, auch die Kindprozess-Tests. Neue Testklassen, die
+`WpfIsolatedTestProcess.RunAsync` aufrufen, tragen `[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]`;
+ein Wächtertest (`TestInfrastrukturWaechterTests`) prüft das.
+
 Bei Sidecar- oder QGIS-Arbeit zusätzlich:
 
 ```powershell
@@ -63,6 +75,15 @@ cd sidecar
 .\.venv\Scripts\python.exe -m pytest -m "not gpu" -q
 cd ..
 python -m unittest discover integrations\qgis\tests -v
+```
+
+Bei Arbeit an `training/scripts` zusätzlich, in einer **eigenen** Umgebung (nicht der
+Sidecar-venv: SAM 2 installiert dort ein Paket `training`, das den Projektordner verdeckt):
+
+```powershell
+python -m venv .venv-training
+.venv-training\Scripts\python.exe -m pip install -r training\scripts\tests\requirements-test.txt
+.venv-training\Scripts\python.exe -m pytest training\scripts\tests -q -p no:cacheprovider
 ```
 
 Neue Funktionen werden mit kurzer, verständlicher Beschreibung, passendem Test und

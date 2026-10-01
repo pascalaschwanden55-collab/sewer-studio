@@ -1,3 +1,4 @@
+﻿using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.DataPage;
@@ -14,7 +15,8 @@ public static class DataPageCellEditController
         string? editedValue,
         Func<string, string, bool> confirmSwitchOffRenovation,
         Action<string, string?> ensureOptionForField,
-        Func<HaltungRecord, string, string, bool> applyHoldingNameChange)
+        Func<HaltungRecord, string, string, bool> applyHoldingNameChange,
+        string? wertBeimOeffnen = null)
     {
         ArgumentNullException.ThrowIfNull(fieldName);
         ArgumentNullException.ThrowIfNull(confirmSwitchOffRenovation);
@@ -42,11 +44,20 @@ public static class DataPageCellEditController
 
         if (fieldName == "Zustandsklasse" && record is not null)
         {
-            record.SetFieldValue(
-                fieldName,
-                editedValue ?? record.GetFieldValue(fieldName),
-                FieldSource.Manual,
-                userEdited: true);
+            // Die Zustandsklasse steht im Nova-Layout in einer Vorlagenspalte (Marke mit
+            // Auswahl 0 bis 4). Deren Bearbeitungselement kann der Textleser nicht lesen; der
+            // Wert steht nach einer echten Auswahl bereits im Datensatz. Deshalb wird hier der
+            // aktuelle Wert gestempelt — aber nur, wenn er sich seit dem Oeffnen der Zelle
+            // wirklich geaendert hat. Fix-Runde 1 (F2): Vorher stempelte schon das blosse
+            // Oeffnen und Schliessen den Wert als Handeingabe und loeste einen Speicherlauf aus.
+            var neuerWert = editedValue ?? record.GetFieldValue(fieldName);
+            if (wertBeimOeffnen is not null
+                && string.Equals(neuerWert, wertBeimOeffnen, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            record.SetFieldValue(fieldName, neuerWert, FieldSource.Manual, userEdited: true);
             return true;
         }
 
@@ -56,10 +67,63 @@ public static class DataPageCellEditController
             return applyHoldingNameChange(record, oldValue, editedValue ?? oldValue);
         }
 
+        if (fieldName is SchachtObenFeld or SchachtUntenFeld
+            && record is not null
+            && editedValue is not null)
+        {
+            ApplySchachtChange(record, fieldName, editedValue, applyHoldingNameChange);
+            return true;
+        }
+
         if (record is not null && editedValue is not null)
             record.SetFieldValue(fieldName, editedValue, FieldSource.Manual, userEdited: true);
 
         return true;
+    }
+
+    /// <summary>Feldname des oberen Schachts.</summary>
+    public const string SchachtObenFeld = "Schacht_oben";
+
+    /// <summary>Feldname des unteren Schachts.</summary>
+    public const string SchachtUntenFeld = "Schacht_unten";
+
+    /// <summary>
+    /// Aendert eine Schachtnummer und zieht den Haltungsnamen mit, sofern er
+    /// aus genau diesen beiden Nummern besteht. Das Umbenennen laeuft ueber
+    /// denselben Weg wie eine direkte Namensaenderung, damit Verteil-Ordner,
+    /// Dateien und der PDF-Text mitgehen. Scheitert es (Name schon vergeben,
+    /// Ordner gesperrt), bleibt die neue Schachtnummer stehen und der Name
+    /// unveraendert — die Meldung dazu kommt aus dem Umbenennungsweg.
+    ///
+    /// Wird von Tabellen-Edit UND Formular-Editor verwendet; die Regel darf
+    /// nicht an zwei Stellen liegen.
+    /// </summary>
+    public static void ApplySchachtChange(
+        HaltungRecord record,
+        string fieldName,
+        string editedValue,
+        Func<HaltungRecord, string, string, bool> applyHoldingNameChange,
+        string? wertBeimOeffnen = null)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        ArgumentNullException.ThrowIfNull(fieldName);
+        ArgumentNullException.ThrowIfNull(applyHoldingNameChange);
+
+        var alterName = record.GetFieldValue(FieldKeys.HoldingName);
+        var altOben = record.GetFieldValue(SchachtObenFeld);
+        var altUnten = record.GetFieldValue(SchachtUntenFeld);
+
+        record.SetFieldValue(fieldName, editedValue, FieldSource.Manual, userEdited: true);
+
+        var neuerName = HoldingNameFromShafts.Ableiten(
+            alterName,
+            altOben,
+            altUnten,
+            record.GetFieldValue(SchachtObenFeld),
+            record.GetFieldValue(SchachtUntenFeld));
+
+        if (neuerName is not null)
+            applyHoldingNameChange(record, alterName, neuerName);
     }
 
     private static void ApplyRenovationChoice(

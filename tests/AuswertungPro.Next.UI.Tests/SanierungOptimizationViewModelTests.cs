@@ -36,7 +36,7 @@ public sealed class SanierungOptimizationViewModelTests
             Confidence = 0.91,
             Reasoning = "Strukturell geeignet",
             CostEstimate = new CostBand { Min = 10_000m, Expected = 12_000m, Max = 14_000m },
-            RiskFlags = ["Grundwasser pruefen"],
+            RiskFlags = ["Grundwasser prüfen"],
             UsedSignals = "Regel + KI"
         });
         await execution;
@@ -49,7 +49,7 @@ public sealed class SanierungOptimizationViewModelTests
         Assert.True(viewModel.TransferToPrimaryCommand.CanExecute(null));
         Assert.Equal("Inliner DN 300", viewModel.AiMeasure);
         Assert.Equal("12000", viewModel.CostExpected);
-        Assert.Equal("Grundwasser pruefen", viewModel.RiskText);
+        Assert.Equal("Grundwasser prüfen", viewModel.RiskText);
     }
 
     [Fact]
@@ -108,6 +108,18 @@ public sealed class SanierungOptimizationViewModelTests
         Assert.Equal("Kurzliner", session.FinalAppliedMeasure);
     }
 
+    [Fact]
+    public void Dispose_gibt_einen_besessenen_KI_Dienst_frei()
+    {
+        var service = new DisposableOptimizationService();
+        var viewModel = new SanierungOptimizationViewModel(CreateRecord(), service, null);
+
+        viewModel.Dispose();
+        viewModel.Dispose();
+
+        Assert.Equal(1, service.DisposeCalls);
+    }
+
     private static HaltungRecord CreateRecord()
     {
         var record = new HaltungRecord();
@@ -148,6 +160,18 @@ public sealed class SanierungOptimizationViewModelTests
             SanierungOptimizationRequest req,
             CancellationToken ct)
             => throw new InvalidOperationException("Dienst nicht erreichbar");
+    }
+
+    private sealed class DisposableOptimizationService : IAiSanierungOptimizationService, IDisposable
+    {
+        public int DisposeCalls { get; private set; }
+
+        public Task<SanierungOptimizationResult> OptimizeAsync(
+            SanierungOptimizationRequest req,
+            CancellationToken ct)
+            => Task.FromResult(new SanierungOptimizationResult());
+
+        public void Dispose() => DisposeCalls++;
     }
 
     private sealed class RecordingSessionStore : IAiOptimizationSessionStore

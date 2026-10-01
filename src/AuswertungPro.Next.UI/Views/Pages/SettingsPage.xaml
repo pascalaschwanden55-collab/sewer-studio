@@ -1,10 +1,15 @@
-<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SettingsPage"
+﻿<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SettingsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:settings="clr-namespace:AuswertungPro.Next.UI.Settings"
-             xmlns:ui="clr-namespace:AuswertungPro.Next.UI">
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+             xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
+             xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
+             xmlns:windows="clr-namespace:AuswertungPro.Next.UI.Views.Windows">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <windows:FileToImageConverter x:Key="BerichtsLogoVorschauConverter"/>
+        <pages:ThemePreferenceToBoolConverter x:Key="ThemeToBool"/>
         <Style x:Key="SettingsSectionGroupBox" TargetType="{x:Type GroupBox}">
             <Setter Property="Margin" Value="0,0,0,12"/>
             <Setter Property="Padding" Value="12,10"/>
@@ -28,27 +33,39 @@
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
-        <Style x:Key="SettingsTextInput" TargetType="{x:Type TextBox}">
+        <Style x:Key="SettingsTextInput"
+               TargetType="{x:Type TextBox}"
+               BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
-        <Style x:Key="SettingsComboInput" TargetType="{x:Type ComboBox}">
+        <Style x:Key="SettingsComboInput"
+               TargetType="{x:Type ComboBox}"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="MinWidth" Value="220"/>
         </Style>
-        <Style x:Key="SettingsBrowseButton" TargetType="{x:Type Button}">
+        <Style x:Key="SettingsBrowseButton"
+               TargetType="{x:Type Button}"
+               BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Width" Value="44"/>
             <Setter Property="Margin" Value="8,0,0,8"/>
         </Style>
-        <Style x:Key="SettingsActionButton" TargetType="{x:Type Button}">
+        <Style x:Key="SettingsActionButton"
+               TargetType="{x:Type Button}"
+               BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Width" Value="160"/>
             <Setter Property="Margin" Value="8,0,0,8"/>
         </Style>
-        <Style x:Key="SettingsWideActionButton" TargetType="{x:Type Button}">
+        <Style x:Key="SettingsWideActionButton"
+               TargetType="{x:Type Button}"
+               BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Width" Value="190"/>
             <Setter Property="Margin" Value="8,0,0,8"/>
         </Style>
-        <Style x:Key="SettingsFieldCheckBox" TargetType="{x:Type CheckBox}">
+        <Style x:Key="SettingsFieldCheckBox"
+               TargetType="{x:Type CheckBox}"
+               BasedOn="{StaticResource {x:Type CheckBox}}">
             <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
@@ -71,13 +88,13 @@
                                     Background="{DynamicResource CardBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
-                                    CornerRadius="6"
+                                    CornerRadius="{DynamicResource RadiusM}"
                                     Padding="10,10,0,10">
                                 <DockPanel LastChildFill="True">
                                     <TextBlock DockPanel.Dock="Top"
                                                Text="Einstellungsbereiche"
                                                Foreground="{DynamicResource MutedBrush}"
-                                               FontSize="11"
+                                               FontSize="{DynamicResource TextXS}"
                                                FontWeight="SemiBold"
                                                Margin="4,0,10,10"/>
                                     <TabPanel x:Name="HeaderPanel"
@@ -115,20 +132,20 @@
             <Setter Property="CornerRadius" Value="4"/>
         </Style>
         <Style x:Key="SettingsMenuHeaderTitle" TargetType="{x:Type TextBlock}">
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextM}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
         <Style x:Key="SettingsMenuHeaderHint" TargetType="{x:Type TextBlock}">
             <Setter Property="Margin" Value="0,2,0,0"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
         <Style x:Key="SettingsMenuSectionLabel" TargetType="{x:Type TextBlock}">
             <Setter Property="Margin" Value="0,0,0,5"/>
-            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
@@ -138,10 +155,14 @@
             <Setter Property="Padding" Value="12,9"/>
             <Setter Property="Margin" Value="0,0,10,6"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="{DynamicResource TextM}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <!-- B8: TabControl uebertraegt die Inhaltsausrichtung des GEWAEHLTEN Reiters auf den
+                 Inhaltsbereich. Mit "Center" stand der Seiteninhalt mittig und liess ueber der
+                 ersten Gruppe rund 200 px leer. Die Kopfzeile des Reiters richtet sich in ihrer
+                 eigenen Vorlage aus und bleibt davon unberuehrt. -->
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
             <Setter Property="HeaderTemplate">
                 <Setter.Value>
                     <DataTemplate>
@@ -154,7 +175,7 @@
                                 <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType={x:Type TabItem}}, Path=(settings:SettingsNavigation.Index)}"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"
-                                           FontSize="11"
+                                           FontSize="{DynamicResource TextXS}"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource MutedBrush}"/>
                             </Border>
@@ -205,7 +226,7 @@
                                 <Border x:Name="AccentStrip"
                                         Grid.Column="0"
                                         Background="{DynamicResource AccentBarBrush}"
-                                        CornerRadius="1.5"
+                                        CornerRadius="{DynamicResource RadiusS}"
                                         Margin="0,6"
                                         Opacity="0"/>
                                 <Border x:Name="HeaderChrome"
@@ -213,7 +234,7 @@
                                         Background="Transparent"
                                         BorderBrush="Transparent"
                                         BorderThickness="1"
-                                        CornerRadius="6"
+                                        CornerRadius="{DynamicResource RadiusM}"
                                         Padding="{TemplateBinding Padding}"
                                         Margin="4,0,0,0">
                                     <ContentPresenter ContentSource="Header"
@@ -252,17 +273,49 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-            <DockPanel Grid.Row="0" Margin="0,0,0,12">
-                <Button DockPanel.Dock="Right"
-                        Content="Speichern"
-                        Command="{Binding SaveCommand}"
-                        Style="{StaticResource PrimaryButton}"
-                        Width="140"
-                        ToolTip="Alle geaenderten Einstellungen dauerhaft speichern."/>
-                <TextBlock Text="Einstellungen" Style="{StaticResource PageTitle}" Margin="0,0,12,0"/>
-            </DockPanel>
+            <ctrl:NovaPageHeader Grid.Row="0" Title="Einstellungen" Margin="0,0,0,12">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Filtert die Gruppen ueber alle Reiter; Umlaute und ae/oe/ue gelten gleich. -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <ui:FluentIcon Glyph="&#xE721;"
+                                       Foreground="{DynamicResource MutedBrush}"
+                                       Margin="0,0,6,0"/>
+                        <Grid Width="260">
+                            <TextBox x:Name="SucheBox"
+                                     TextChanged="SucheBox_TextChanged"
+                                     AutomationProperties.Name="Einstellung suchen"
+                                     ToolTip="Einstellung suchen — zeigt nur passende Gruppen und springt zum ersten Reiter mit Treffer."/>
+                            <TextBlock Text="Einstellung suchen…" IsHitTestVisible="False"
+                                       VerticalAlignment="Center" Margin="2,0,0,0"
+                                       FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=SucheBox}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                        <TextBlock x:Name="SucheTreffer"
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="{DynamicResource TextXS}"
+                                   Foreground="{DynamicResource MutedBrush}"/>
+                    </StackPanel>
+                    <Button Content="Speichern"
+                            Command="{Binding SaveCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Width="140"
+                            ToolTip="Alle geänderten Einstellungen dauerhaft speichern."/>
+                </StackPanel>
+            </ctrl:NovaPageHeader>
 
             <TabControl Grid.Row="1"
+                        x:Name="EinstellungsReiter"
                         Style="{StaticResource SettingsNavigationTabs}"
                         ItemContainerStyle="{StaticResource SettingsNavigationMenuItem}">
                 <TabItem Header="Allgemein"
@@ -288,66 +341,125 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Design" Style="{StaticResource SettingsFieldLabel}"/>
-                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
-                                        <TextBlock Text="Hell" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0"/>
-                                        <ToggleButton IsChecked="{Binding IsDarkTheme, Mode=TwoWay}" Width="64" Height="30">
-                                            <ToggleButton.Template>
-                                                <ControlTemplate TargetType="ToggleButton">
-                                                    <Border x:Name="Track"
-                                                            Background="{DynamicResource SurfaceSubtleBrush}"
-                                                            BorderBrush="{DynamicResource BorderBrush}"
-                                                            BorderThickness="1"
-                                                            CornerRadius="15">
-                                                        <Grid>
-                                                            <Ellipse x:Name="Thumb"
-                                                                     Width="24"
-                                                                     Height="24"
-                                                                     Margin="3"
-                                                                     HorizontalAlignment="Left"
-                                                                     Fill="{DynamicResource CardBrush}"/>
-                                                        </Grid>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsChecked" Value="True">
-                                                            <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                                            <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                                            <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
-                                                        </Trigger>
-                                                        <Trigger Property="IsEnabled" Value="False">
-                                                            <Setter Property="Opacity" Value="0.5"/>
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </ToggleButton.Template>
-                                        </ToggleButton>
-                                        <TextBlock Text="Dunkel" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="8,0,0,0"/>
-                                </StackPanel>
-                                <Button Grid.Row="0" Grid.Column="2"
-                                        Content="Anwenden"
-                                        Command="{Binding ApplyThemeCommand}"
-                                        Style="{StaticResource SettingsActionButton}"
-                                        ToolTip="Hell-/Dunkel-Design anwenden."/>
-                                <TextBlock Text="Hinweis: für volle Umstellung ist ein Neustart nötig."
-                                           Grid.Row="1"
-                                           Grid.Column="1"
-                                           Grid.ColumnSpan="2"
-                                           Margin="0,-2,0,8"
-                                           Foreground="{DynamicResource MutedBrush}"
-                                           FontSize="11"/>
+                                <!-- Aufgabe 13 (Windows-Integration): dritte Wahl "Wie Windows" neben Hell/Dunkel.
+                                     Jede Auswahl wendet sich sofort an und speichert sofort (SettingsThemeWorkflow.ApplyTheme
+                                     ueber OnUiThemeChanged) - kein getrennter "Anwenden"-Knopf und kein Neustart-Hinweis mehr:
+                                     Das Design wird ueber DynamicResource in allen offenen Fenstern sofort neu gezeichnet.
+                                     Fix-Runde 2 (29.09.2026): geprueft, nicht nur behauptet - eine repo-weite Suche nach
+                                     verbliebenem "StaticResource ...Brush" ausserhalb der Theme-Definitionsdateien selbst
+                                     findet nur noch eine einzige, bewusst belassene Stelle (MeasureTemplateEditorWindow.xaml,
+                                     Wasserzeichen-Text in einer VisualBrush ohne normale Vererbungskette - siehe Kommentar
+                                     dort). Alle uebrigen Treffer eines aehnlichen Suchmusters sind Value-Converter mit dem
+                                     Namensmuster "*Brush"/"*BrushConv" (z. B. ZkBrushConv, ZustandsklasseBrush), keine
+                                     Theme-Farbtoken. -->
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Bewegung" Style="{StaticResource SettingsFieldLabel}"/>
-                                <CheckBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Design" Style="{StaticResource SettingsFieldLabel}"/>
+                                <StackPanel Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2"
+                                            Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
+                                    <RadioButton Content="Hell · Glas" GroupName="Design" Margin="0,0,20,0"
+                                                 IsChecked="{Binding UiTheme, Converter={StaticResource ThemeToBool}, ConverterParameter=Light, Mode=TwoWay}"
+                                                 ToolTip="Helles Design, unabhängig von der Windows-Einstellung."/>
+                                    <RadioButton Content="Dunkel · Cockpit" GroupName="Design" Margin="0,0,20,0"
+                                                 IsChecked="{Binding UiTheme, Converter={StaticResource ThemeToBool}, ConverterParameter=Dark, Mode=TwoWay}"
+                                                 ToolTip="Dunkles Design, unabhängig von der Windows-Einstellung."/>
+                                    <RadioButton Content="Wie Windows" GroupName="Design"
+                                                 IsChecked="{Binding UiTheme, Converter={StaticResource ThemeToBool}, ConverterParameter=System, Mode=TwoWay}"
+                                                 ToolTip="Folgt der Windows-Einstellung Hell/Dunkel und wechselt sofort mit, wenn sie sich während des Programmlaufs ändert."/>
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Bewegung" Style="{StaticResource SettingsFieldLabel}"/>
+                                <CheckBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
                                           Content="Dauer-Animationen reduzieren (Puls- und Leuchteffekte aus)"
                                           IsChecked="{Binding ReduceMotion}"
                                           Style="{StaticResource SettingsFieldCheckBox}"
-                                          ToolTip="Schaltet dauerhafte Puls- und Leuchteffekte ab. Rueckmeldung beim Zeigen und Klicken bleibt erhalten. Wirkt ab dem naechsten Fensteraufbau. Nicht angehakt: SewerStudio folgt der Windows-Einstellung fuer Animationen."/>
+                                          ToolTip="Schaltet dauerhafte Puls- und Leuchteffekte ab. Rückmeldung beim Zeigen und Klicken bleibt erhalten. Wirkt ab dem nächsten Fensteraufbau. Nicht angehakt: SewerStudio folgt der Windows-Einstellung für Animationen."/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Hintergrund" Style="{StaticResource SettingsFieldLabel}"/>
+                                <CheckBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                          Content="Hintergrund-Engine (Leitungsnetz im Hintergrund, nur Optik)"
+                                          IsChecked="{Binding HintergrundEngine}"
+                                          Style="{StaticResource SettingsFieldCheckBox}"
+                                          ToolTip="Zeichnet ein leises, sich bewegendes Leitungsnetz hinter der Oberfläche. Reine Optik, reagiert nicht auf Eingaben. Pausiert automatisch bei reduzierter Bewegung und wenn ein Dialog im Vordergrund steht."/>
 
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="Diagnose" Style="{StaticResource SettingsFieldLabel}"/>
                                 <CheckBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
                                           Content="Fehlercodes anzeigen"
                                           IsChecked="{Binding EnableDiagnostics}"
                                           Style="{StaticResource SettingsFieldCheckBox}"/>
+                            </Grid>
+                        </GroupBox>
+
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 8: Die frueheren Menuepunkte "Alte
+                             Haltungsansicht", "Alte Schachtansicht" (je Seite unter Weitere Aktionen ->
+                             Ansicht) und "Klassische Übersicht" (Menü Ansicht) sind entfernt und stehen
+                             jetzt hier. Jedes Häkchen setzt denselben AppSettings-Schalter wie zuvor der
+                             Menüpunkt und speichert sofort. -->
+                        <GroupBox Header="Frühere Ansichten" Style="{StaticResource SettingsSectionGroupBox}">
+                            <StackPanel>
+                                <CheckBox Content="Alte Haltungsansicht verwenden"
+                                          IsChecked="{Binding AlteHaltungsansicht}"
+                                          Style="{StaticResource SettingsFieldCheckBox}"
+                                          ToolTip="Zeigt auf der Haltungen-Seite wieder die frühere Ansicht mit Liste links und Formularkarten statt der Tabelle mit Übersicht und Eingabefeldern. Wirkt beim nächsten Öffnen der Haltungen-Seite."/>
+                                <CheckBox Content="Alte Schachtansicht verwenden"
+                                          IsChecked="{Binding AlteSchachtansicht}"
+                                          Style="{StaticResource SettingsFieldCheckBox}"
+                                          ToolTip="Zeigt auf der Schächte-Seite wieder die frühere Ansicht statt der Tabelle mit Übersicht und Eingabefeldern. Wirkt beim nächsten Öffnen der Schächte-Seite."/>
+                                <CheckBox Content="Klassische Projektübersicht verwenden"
+                                          IsChecked="{Binding KlassischeProjektuebersicht}"
+                                          Style="{StaticResource SettingsFieldCheckBox}"
+                                          ToolTip="Zeigt bei offenem Projekt wieder die bisherige Übersicht mit Projektliste, Vorschau und Vorschau-PDF. Wirkt beim nächsten Öffnen der Übersicht-Seite."/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 15: gemeinsame Quelle für das Logo in
+                             PDF-/Excel-Berichten und im Eigentümerdossier (IBerichtsMarke). Leer =
+                             das mitgelieferte Standardlogo neben dem Programm gilt weiter. -->
+                        <GroupBox Header="Berichte" Style="{StaticResource SettingsSectionGroupBox}">
+                            <Grid Style="{StaticResource SettingsFormGrid}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Logo für Berichte" Style="{StaticResource SettingsFieldLabel}"/>
+                                <TextBox Grid.Row="0" Grid.Column="1"
+                                         Text="{Binding BerichtsLogoAnzeige, Mode=OneWay}"
+                                         IsReadOnly="True"
+                                         Style="{StaticResource SettingsTextInput}"
+                                         ToolTip="Wird in erzeugten PDF-/Excel-Berichten und im Eigentümerdossier verwendet. Ohne eigenes Logo gilt das mitgelieferte Standardlogo neben dem Programm."/>
+                                <Button Grid.Row="0" Grid.Column="2"
+                                        Command="{Binding BrowseBerichtsLogoCommand}"
+                                        Style="{StaticResource SettingsBrowseButton}"
+                                        ToolTip="Logo-Bilddatei auswählen (PNG oder JPG)."
+                                        AutomationProperties.Name="Logo für Berichte auswählen">
+                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                </Button>
+                                <Button Grid.Row="0" Grid.Column="3"
+                                        Content="Zurücksetzen"
+                                        Command="{Binding ResetBerichtsLogoCommand}"
+                                        Style="{StaticResource SettingsActionButton}"
+                                        ToolTip="Eigenes Logo entfernen; danach gilt wieder das mitgelieferte Standardlogo."
+                                        AutomationProperties.Name="Logo für Berichte zurücksetzen"/>
+
+                                <Border Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,2,0,8" Padding="10,8"
+                                        Background="{DynamicResource CardBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="{DynamicResource RadiusS}"
+                                        Visibility="{Binding HatBerichtsLogoVorschau, Converter={StaticResource BoolToVis}}">
+                                    <Image Source="{Binding BerichtsLogoVorschauPfad, Converter={StaticResource BerichtsLogoVorschauConverter}}"
+                                           Height="44" MaxWidth="240"
+                                           Stretch="Uniform"
+                                           ToolTip="Vorschau des aktuell verwendeten Logos."/>
+                                </Border>
                             </Grid>
                         </GroupBox>
 
@@ -366,6 +478,30 @@
                                           SelectedValue="{Binding DataAutoSaveMode, Mode=TwoWay}"
                                           Style="{StaticResource SettingsComboInput}"/>
                             </Grid>
+                        </GroupBox>
+
+                        <GroupBox Header="Haltungsprotokoll (PDF)" Style="{StaticResource SettingsSectionGroupBox}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingsFormGrid}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Fotos pro Seite" Style="{StaticResource SettingsFieldLabel}"/>
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding ProtocolPhotosPerPageOptions}"
+                                              SelectedValuePath="Value"
+                                              DisplayMemberPath="Label"
+                                              SelectedValue="{Binding ProtocolPhotosPerPage, Mode=TwoWay}"
+                                              Style="{StaticResource SettingsComboInput}"/>
+                                </Grid>
+                                <TextBlock Margin="0,6,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="{DynamicResource TextS}"
+                                           Text="Gilt für selbst erzeugte Haltungsprotokolle und die Fotoseiten im Haltungsdossier. Bereits gespeicherte PDF-Dateien ändern sich nicht - dafür die Protokolle neu erzeugen."/>
+                            </StackPanel>
                         </GroupBox>
                     </StackPanel>
                     </ScrollViewer>
@@ -400,7 +536,8 @@
                                 <Button Grid.Row="0" Grid.Column="2"
                                         Command="{Binding BrowseProjectPathCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        ToolTip="Projektdatei auswaehlen.">
+                                        ToolTip="Projektdatei auswählen."
+                                        AutomationProperties.Name="Projektdatei auswählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
 
@@ -411,7 +548,8 @@
                                 <Button Grid.Row="1" Grid.Column="2"
                                         Command="{Binding BrowseProjectsRootCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        ToolTip="Standardordner fuer Projekte auswaehlen.">
+                                        ToolTip="Standardordner für Projekte auswählen."
+                                        AutomationProperties.Name="Standardordner für Projekte auswählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
 
@@ -422,7 +560,8 @@
                                 <Button Grid.Row="2" Grid.Column="2"
                                         Command="{Binding BrowseAbwasserkatasterXtfPathCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        ToolTip="Abwasserkataster-XTF fuer die Kartenansicht auswaehlen.">
+                                        ToolTip="Abwasserkataster-XTF für die Kartenansicht auswählen."
+                                        AutomationProperties.Name="Abwasserkataster-XTF für die Kartenansicht auswählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
                             </Grid>
@@ -449,7 +588,7 @@
                                         Content="Ordner &#xF6;ffnen"
                                         Command="{Binding OpenDataFolderCommand}"
                                         Style="{StaticResource SettingsWideActionButton}"
-                                        ToolTip="Lokalen SewerStudio-Datenordner im Explorer oeffnen."/>
+                                        ToolTip="Lokalen SewerStudio-Datenordner im Explorer öffnen."/>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Logs" Style="{StaticResource SettingsFieldLabel}"/>
                                 <TextBox Grid.Row="1" Grid.Column="1"
@@ -460,7 +599,7 @@
                                         Content="Logs &#xF6;ffnen"
                                         Command="{Binding OpenLogsFolderCommand}"
                                         Style="{StaticResource SettingsWideActionButton}"
-                                        ToolTip="Log-Ordner im Explorer oeffnen."/>
+                                        ToolTip="Log-Ordner im Explorer öffnen."/>
                             </Grid>
                         </GroupBox>
 
@@ -472,7 +611,6 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
@@ -489,40 +627,18 @@
                                 <Button Grid.Row="0" Grid.Column="2"
                                         Command="{Binding CleanProgramDataCommand}"
                                         Style="{StaticResource SettingsWideActionButton}"
-                                        ToolTip="Bekannte temporaere SewerStudio-Daten pruefen und nach Bestaetigung entfernen.">
+                                        ToolTip="Bekannte temporäre SewerStudio-Daten prüfen und nach Bestätigung entfernen.">
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock FontFamily="{DynamicResource FontIcon}"
-                                                   Text="&#xE74D;"
-                                                   FontSize="14"
+                                        <ui:FluentIcon
+                                                   Glyph="&#xE74D;"
+                                                   FontSize="{DynamicResource TextL}"
                                                    Margin="0,0,8,0"/>
-                                        <TextBlock Text="Pruefen und bereinigen"/>
+                                        <TextBlock Text="Prüfen und bereinigen"/>
                                     </StackPanel>
                                 </Button>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0"
-                                           Text="Codex-Agenten-Daten"
-                                           Style="{StaticResource SettingsFieldLabel}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1"
-                                           Text="{Binding CodexArtifactCleanupStatusText}"
-                                           Margin="0,0,12,8"
-                                           VerticalAlignment="Center"
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <Button Grid.Row="1" Grid.Column="2"
-                                        Command="{Binding CleanCodexArtifactsCommand}"
-                                        Style="{StaticResource SettingsWideActionButton}"
-                                        ToolTip="Nur alte, rein erzeugte Codex-Baukopien nach Vorschau und Bestaetigung entfernen.">
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock FontFamily="{DynamicResource FontIcon}"
-                                                   Text="&#xE74D;"
-                                                   FontSize="14"
-                                                   Margin="0,0,8,0"/>
-                                        <TextBlock Text="Agenten-Daten pruefen"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <ProgressBar Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
-                                             Height="4"
+                                <ProgressBar Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                             Style="{StaticResource ProgressBarThin}"
                                              Margin="0,0,0,8"
                                              IsIndeterminate="True"
                                              Visibility="{Binding IsProgramCleanupRunning, Converter={StaticResource BoolToVis}}"/>
@@ -555,9 +671,56 @@
                                         Content="Ablage &#xF6;ffnen"
                                         Command="{Binding OpenRestorePointsFolderCommand}"
                                         Style="{StaticResource SettingsWideActionButton}"
-                                        ToolTip="Ordner mit Wiederherstellungspunkten oeffnen."/>
+                                        ToolTip="Ordner mit Wiederherstellungspunkten öffnen."/>
                             </Grid>
                         </GroupBox>
+
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 10a: Codex-Agenten-Daten sind
+                             Entwicklerwerkzeug-Zwischendaten (Coding-Agent-Baukopien), keine
+                             normale Programmbereinigung. -->
+                        <Expander Header="Erweitert (für Fachleute)" IsExpanded="False" Margin="0,4,0,0">
+                            <GroupBox Header="Codex-Agenten-Daten" Style="{StaticResource SettingsSectionGroupBox}">
+                                <Grid Style="{StaticResource SettingsFormGrid}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0"
+                                               Text="Codex-Agenten-Daten"
+                                               Style="{StaticResource SettingsFieldLabel}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1"
+                                               Text="{Binding CodexArtifactCleanupStatusText}"
+                                               Margin="0,0,12,8"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <Button Grid.Row="0" Grid.Column="2"
+                                            Command="{Binding CleanCodexArtifactsCommand}"
+                                            Style="{StaticResource SettingsWideActionButton}"
+                                            ToolTip="Nur alte, rein erzeugte Codex-Baukopien nach Vorschau und Bestätigung entfernen.">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <ui:FluentIcon
+                                                       Glyph="&#xE74D;"
+                                                       FontSize="{DynamicResource TextL}"
+                                                       Margin="0,0,8,0"/>
+                                            <TextBlock Text="Agenten-Daten prüfen"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <ProgressBar Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                                 Style="{StaticResource ProgressBarThin}"
+                                                 Margin="0,0,0,8"
+                                                 IsIndeterminate="True"
+                                                 Visibility="{Binding IsProgramCleanupRunning, Converter={StaticResource BoolToVis}}"/>
+                                </Grid>
+                            </GroupBox>
+                        </Expander>
                     </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -584,29 +747,32 @@
                                          Style="{StaticResource SettingsTextInput}"/>
                                 <Button Grid.Column="2"
                                         Command="{Binding BrowseVideoFolderCommand}"
-                                        Style="{StaticResource SettingsBrowseButton}">
+                                        Style="{StaticResource SettingsBrowseButton}"
+                                        ToolTip="Video-Ordner wählen"
+                                        AutomationProperties.Name="Video-Ordner wählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
                             </Grid>
                         </GroupBox>
 
-                        <GroupBox Header="Werkzeuge" Style="{StaticResource SettingsSectionGroupBox}">
-                            <Grid Style="{StaticResource SettingsFormGrid}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="180"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="pdftotext.exe" Style="{StaticResource SettingsFieldLabel}"/>
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding PdfToTextPath}"
-                                         Style="{StaticResource SettingsTextInput}"/>
-                                <Button Grid.Column="2"
-                                        Command="{Binding BrowsePdfToTextCommand}"
-                                        Style="{StaticResource SettingsBrowseButton}">
-                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
-                                </Button>
-                            </Grid>
+                        <GroupBox Header="Telefonsuche (search.ch)" Style="{StaticResource SettingsSectionGroupBox}">
+                            <StackPanel>
+                                <TextBlock TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           FontSize="{DynamicResource TextXS}" Margin="0,0,0,8"
+                                           Text="Mit einem Schlüssel von search.ch füllt „Neue Liegenschaft“ Telefon und Mail der Eigentümer vor. Den Schlüssel gibt localsearch auf Antrag heraus; er gilt für search.ch und local.ch gleichermassen — es sind dieselbe Stelle und dieselben Daten. Das Kontingent beträgt 1000 Abfragen im Monat. Ohne Schlüssel bleibt die Suche aus: die Bedingungen erlauben nur die offizielle Schnittstelle und untersagen Massenabfragen ausdrücklich. Quellenangabe im Dossier: Swisscom Directories AG."/>
+                                <Grid Style="{StaticResource SettingsFormGrid}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="API-Schlüssel"
+                                               Style="{StaticResource SettingsFieldLabel}"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding SearchChApiKey}"
+                                             Style="{StaticResource SettingsTextInput}"/>
+                                </Grid>
+                            </StackPanel>
                         </GroupBox>
 
                         <GroupBox Header="Referenzdaten" Style="{StaticResource SettingsSectionGroupBox}">
@@ -626,7 +792,9 @@
                                          Style="{StaticResource SettingsTextInput}"/>
                                 <Button Grid.Row="0" Grid.Column="2"
                                         Command="{Binding BrowseKantonUriXtfDirectoryCommand}"
-                                        Style="{StaticResource SettingsBrowseButton}">
+                                        Style="{StaticResource SettingsBrowseButton}"
+                                        ToolTip="XTF-Ordner Kanton Uri auswählen"
+                                        AutomationProperties.Name="XTF-Ordner Kanton Uri auswählen">
                                     <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                                 </Button>
                                 <TextBlock Grid.Row="1"
@@ -634,10 +802,36 @@
                                            Grid.ColumnSpan="2"
                                            Margin="0,-4,0,8"
                                            Foreground="{DynamicResource MutedBrush}"
-                                           FontSize="11"
+                                           FontSize="{DynamicResource TextXS}"
                                            Text="Gesamter XTF-Datenbestand Kanton Uri: Leitungen und Sch&#xE4;chte."/>
                             </Grid>
                         </GroupBox>
+
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 10a: pdftotext.exe ist ein
+                             Entwickler-/Support-Werkzeug (siehe docs/architektur/schaechte.md «Der PDF-Textleser
+                             wird geprueft gewaehlt»), keine normale Importquelle. -->
+                        <Expander Header="Erweitert (für Fachleute)" IsExpanded="False" Margin="0,4,0,0">
+                            <GroupBox Header="Werkzeuge" Style="{StaticResource SettingsSectionGroupBox}">
+                                <Grid Style="{StaticResource SettingsFormGrid}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="pdftotext.exe" Style="{StaticResource SettingsFieldLabel}"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding PdfToTextPath}"
+                                             Style="{StaticResource SettingsTextInput}"/>
+                                    <Button Grid.Column="2"
+                                            Command="{Binding BrowsePdfToTextCommand}"
+                                            Style="{StaticResource SettingsBrowseButton}"
+                                            ToolTip="pdftotext.exe auswählen"
+                                            AutomationProperties.Name="pdftotext.exe auswählen">
+                                        <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                    </Button>
+                                </Grid>
+                            </GroupBox>
+                        </Expander>
                     </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -663,15 +857,15 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Wiedergabe" Style="{StaticResource SettingsFieldLabel}"/>
                                 <StackPanel Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2">
                                     <CheckBox Content="Hardware-Decoding aktiv" IsChecked="{Binding VideoHwDecoding}" Style="{StaticResource SettingsFieldCheckBox}"/>
-                                    <CheckBox Content="Drop late frames" IsChecked="{Binding VideoDropLateFrames}" Style="{StaticResource SettingsFieldCheckBox}"/>
-                                    <CheckBox Content="Skip frames" IsChecked="{Binding VideoSkipFrames}" Style="{StaticResource SettingsFieldCheckBox}"/>
+                                    <CheckBox Content="Verspätete Bilder verwerfen" IsChecked="{Binding VideoDropLateFrames}" Style="{StaticResource SettingsFieldCheckBox}"
+                                              ToolTip="Bilder, die zu spät zum Anzeigen kommen, werden übersprungen statt die Wiedergabe zu verzögern."/>
+                                    <CheckBox Content="Bilder bei Rückstand überspringen" IsChecked="{Binding VideoSkipFrames}" Style="{StaticResource SettingsFieldCheckBox}"
+                                              ToolTip="Hält bei Rückstand die Wiedergabegeschwindigkeit, statt jedes einzelne Bild zu zeigen."/>
                                 </StackPanel>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Video-Ausgabe" Style="{StaticResource SettingsFieldLabel}"/>
@@ -703,16 +897,6 @@
                                           DisplayMemberPath="Label"
                                           SelectedValue="{Binding VideoNetworkCachingMs, Mode=TwoWay}"
                                           Style="{StaticResource SettingsComboInput}"/>
-
-                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Codec-Threads" Style="{StaticResource SettingsFieldLabel}"/>
-                                <ComboBox Grid.Row="4" Grid.Column="1"
-                                          Width="140"
-                                          HorizontalAlignment="Left"
-                                          ItemsSource="{Binding VideoCodecThreadOptions}"
-                                          SelectedValuePath="Value"
-                                          DisplayMemberPath="Label"
-                                          SelectedValue="{Binding VideoCodecThreads, Mode=TwoWay}"
-                                          Style="{StaticResource SettingsComboInput}"/>
                             </Grid>
                         </GroupBox>
 
@@ -727,6 +911,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Autostart" Style="{StaticResource SettingsFieldLabel}"/>
@@ -735,23 +920,57 @@
                                           IsChecked="{Binding StartAiOnProgramStart}"
                                           Style="{StaticResource SettingsFieldCheckBox}"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Start" Style="{StaticResource SettingsFieldLabel}"/>
-                                <Button Grid.Row="1" Grid.Column="1"
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Codiermodus" Style="{StaticResource SettingsFieldLabel}"/>
+                                <CheckBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                          Content="KI-Vorschläge beim Codieren (Bogen, Rohranfang, Rohrende)"
+                                          IsChecked="{Binding CodingSuggestionsEnabled}"
+                                          ToolTip="Beim Öffnen des Codiermodus prüft die KI das Video im Hintergrund und schlägt Bogen, Rohranfang und Rohrende zum Bestätigen vor."
+                                          Style="{StaticResource SettingsFieldCheckBox}"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Start" Style="{StaticResource SettingsFieldLabel}"/>
+                                <Button Grid.Row="2" Grid.Column="1"
                                         Content="KI jetzt starten"
                                         Command="{Binding StartAiCommand}"
                                         HorizontalAlignment="Left"
                                         Style="{StaticResource SettingsActionButton}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="2"
+                                <TextBlock Grid.Row="2" Grid.Column="2"
                                            Text="{Binding AiStartupStatusText}"
                                            Margin="10,0,0,8"
                                            VerticalAlignment="Center"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            TextTrimming="CharacterEllipsis"/>
                                 <ProgressBar Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
-                                             Height="4"
+                                             Style="{StaticResource ProgressBarThin}"
                                              Margin="0,0,0,8"
                                              IsIndeterminate="True"
                                              Visibility="{Binding IsAiStarting, Converter={StaticResource BoolToVis}}"/>
+                            </Grid>
+                        </GroupBox>
+
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 10a: Codec-Wahl und Modell-Schwellwerte
+                             sind Entwicklereinstellungen, keine Wiedergabe-/Betriebseinstellungen. -->
+                        <Expander Header="Erweitert (für Fachleute)" IsExpanded="False" Margin="0,4,0,0">
+                            <StackPanel>
+                        <GroupBox Header="Video-Codec" Style="{StaticResource SettingsSectionGroupBox}">
+                            <Grid Style="{StaticResource SettingsFormGrid}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Codec-Threads" Style="{StaticResource SettingsFieldLabel}"/>
+                                <ComboBox Grid.Row="0" Grid.Column="1"
+                                          Width="140"
+                                          HorizontalAlignment="Left"
+                                          ItemsSource="{Binding VideoCodecThreadOptions}"
+                                          SelectedValuePath="Value"
+                                          DisplayMemberPath="Label"
+                                          SelectedValue="{Binding VideoCodecThreads, Mode=TwoWay}"
+                                          Style="{StaticResource SettingsComboInput}"/>
                             </Grid>
                         </GroupBox>
 
@@ -778,25 +997,25 @@
                                         IsSnapToTickEnabled="True"
                                         IsMoveToPointEnabled="True"
                                         Margin="0,0,10,8"
-                                        ToolTip="Mindest-Konfidenz fuer YOLO-Detektionen."/>
+                                        ToolTip="Mindest-Konfidenz für YOLO-Detektionen."/>
                                 <Border Grid.Row="0" Grid.Column="2"
                                         Background="{DynamicResource SurfaceSubtleBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="4"
+                                        CornerRadius="{DynamicResource RadiusS}"
                                         Padding="8,4"
                                         Margin="0,0,8,8">
                                     <TextBlock Text="{Binding PipelineYoloConfidence, StringFormat={}{0:P0}}"
-                                               FontFamily="Consolas, Cascadia Mono"
-                                               FontSize="11"
+                                               FontFamily="{DynamicResource FontMono}"
+                                               FontSize="{DynamicResource TextXS}"
                                                Foreground="{DynamicResource TextBrush}"
                                                TextAlignment="Center"/>
                                 </Border>
                                 <Button Grid.Row="0" Grid.Column="3"
-                                        Content="Reset"
+                                        Content="Standard"
                                         Command="{Binding ResetYoloConfidenceCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        Width="64"
+                                        Width="84"
                                         ToolTip="YOLO-Konfidenz auf Standardwert 25 Prozent setzen."/>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="DINO Box" Style="{StaticResource SettingsFieldLabel}"/>
@@ -808,25 +1027,25 @@
                                         IsSnapToTickEnabled="True"
                                         IsMoveToPointEnabled="True"
                                         Margin="0,0,10,8"
-                                        ToolTip="Mindestwert fuer DINO-Box-Erkennung."/>
+                                        ToolTip="Mindestwert für DINO-Box-Erkennung."/>
                                 <Border Grid.Row="1" Grid.Column="2"
                                         Background="{DynamicResource SurfaceSubtleBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="4"
+                                        CornerRadius="{DynamicResource RadiusS}"
                                         Padding="8,4"
                                         Margin="0,0,8,8">
                                     <TextBlock Text="{Binding PipelineDinoBoxThreshold, StringFormat={}{0:P0}}"
-                                               FontFamily="Consolas, Cascadia Mono"
-                                               FontSize="11"
+                                               FontFamily="{DynamicResource FontMono}"
+                                               FontSize="{DynamicResource TextXS}"
                                                Foreground="{DynamicResource TextBrush}"
                                                TextAlignment="Center"/>
                                 </Border>
                                 <Button Grid.Row="1" Grid.Column="3"
-                                        Content="Reset"
+                                        Content="Standard"
                                         Command="{Binding ResetDinoBoxThresholdCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        Width="64"
+                                        Width="84"
                                         ToolTip="DINO-Box-Schwellwert auf Standardwert 25 Prozent setzen."/>
 
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="DINO Text" Style="{StaticResource SettingsFieldLabel}"/>
@@ -838,28 +1057,30 @@
                                         IsSnapToTickEnabled="True"
                                         IsMoveToPointEnabled="True"
                                         Margin="0,0,10,8"
-                                        ToolTip="Mindestwert fuer DINO-Text-Matching."/>
+                                        ToolTip="Mindestwert für DINO-Text-Matching."/>
                                 <Border Grid.Row="2" Grid.Column="2"
                                         Background="{DynamicResource SurfaceSubtleBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="4"
+                                        CornerRadius="{DynamicResource RadiusS}"
                                         Padding="8,4"
                                         Margin="0,0,8,8">
                                     <TextBlock Text="{Binding PipelineDinoTextThreshold, StringFormat={}{0:P0}}"
-                                               FontFamily="Consolas, Cascadia Mono"
-                                               FontSize="11"
+                                               FontFamily="{DynamicResource FontMono}"
+                                               FontSize="{DynamicResource TextXS}"
                                                Foreground="{DynamicResource TextBrush}"
                                                TextAlignment="Center"/>
                                 </Border>
                                 <Button Grid.Row="2" Grid.Column="3"
-                                        Content="Reset"
+                                        Content="Standard"
                                         Command="{Binding ResetDinoTextThresholdCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
-                                        Width="64"
+                                        Width="84"
                                         ToolTip="DINO-Text-Schwellwert auf Standardwert 20 Prozent setzen."/>
                             </Grid>
                         </GroupBox>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -877,27 +1098,32 @@
                             <StackPanel>
                                 <TextBlock Text="KI-Wissen Backup" Margin="0,0,0,6" Foreground="{DynamicResource MutedBrush}"/>
                                 <TextBlock Text="Exportiert alle KI-Lerndaten, Trainingssamples, Einstellungen und Frames als ZIP. Für Backup oder PC-Migration."
-                                           TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8"/>
+                                           TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}" Margin="0,0,0,8"/>
                                 <StackPanel Orientation="Horizontal">
                                     <Button Content="KI-Wissen exportieren" Command="{Binding ExportBackupCommand}" Width="180"
-                                            ToolTip="KI-Wissen, Trainingsdaten und zugehoerige Einstellungen als ZIP sichern."/>
+                                            ToolTip="KI-Wissen, Trainingsdaten und zugehörige Einstellungen als ZIP sichern."/>
                                     <Button Content="KI-Wissen importieren" Command="{Binding ImportBackupCommand}" Margin="8,0,0,0" Width="180"
                                             ToolTip="Gesichertes KI-Wissen aus einer ZIP-Datei wiederherstellen."/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding BackupStatusText}" Margin="0,6,0,0"
-                                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
+                                           Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}"/>
                             </StackPanel>
                         </GroupBox>
 
                         <GroupBox Header="PC-Ausfall-Schutz" Style="{StaticResource SettingsSectionGroupBox}">
                             <StackPanel>
-                                <TextBlock Text="Datensicherung (kompletter PC-Ausfall-Schutz)" Margin="0,0,0,6" Foreground="{DynamicResource MutedBrush}"/>
-                                <TextBlock Text="Spiegelt Programm, Git-Verlauf, Projekte, KI-Gehirn, Einstellungen und Logs in einen gewählten Ordner. Projektvideos sind standardmässig aus Platzgründen ausgeschaltet."
-                                           TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8"/>
+                                <TextBlock Text="Datensicherung für einen PC-Ausfall" Margin="0,0,0,6" Foreground="{DynamicResource MutedBrush}"/>
+                                <TextBlock Text="Sichert Programm, Git-Verlauf, Projekte, verknüpfte Dateien, KI-Gehirn und Einstellungen. Videos sind standardmässig eingeschaltet. Eine Wiederherstellung benötigt zusätzlich die Programminstallation."
+                                           TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}" Margin="0,0,0,8"/>
                                 <CheckBox Content="Projektvideos ebenfalls sichern"
                                           IsChecked="{Binding IncludeProjectVideosInFullBackup}"
                                           Margin="0,0,0,8"
                                           ToolTip="Kann die Sicherung je nach Videobestand stark vergrössern."/>
+                                <TextBlock Text="Weitere Sicherungsordner (ein vollständiger Pfad pro Zeile, z. B. Ihre GeoShop-Ablage)"
+                                           TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding AdditionalBackupFoldersText, UpdateSourceTrigger=LostFocus}"
+                                         AcceptsReturn="True" MinHeight="55" MaxHeight="120"
+                                         VerticalScrollBarVisibility="Auto" Margin="0,0,0,8"/>
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <Button Content="Datensicherung erstellen..."
@@ -907,7 +1133,7 @@
                                         <TextBlock Text="{Binding FullBackupOperation.LastBackupInfo}" Margin="10,0,0,0"
                                                    VerticalAlignment="Center"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   FontSize="11"
+                                                   FontSize="{DynamicResource TextXS}"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
 
@@ -919,17 +1145,16 @@
                                                 <ColumnDefinition Width="58"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <ProgressBar Grid.Column="0"
+                                            <ProgressBar Grid.Column="0" Style="{StaticResource ProgressBarStandard}"
                                                          Minimum="0"
                                                          Maximum="100"
-                                                         Height="10"
                                                          Value="{Binding FullBackupOperation.Percent}"/>
                                             <TextBlock Grid.Column="1"
                                                        Text="{Binding FullBackupOperation.Percent, StringFormat={}{0:0}%}"
                                                        Margin="8,0,0,0"
                                                        VerticalAlignment="Center"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"
-                                                       FontSize="11"/>
+                                                       FontSize="{DynamicResource TextXS}"/>
                                             <Button Grid.Column="2"
                                                     Content="Abbrechen"
                                                     Command="{Binding CancelFullBackupCommand}"
@@ -940,15 +1165,30 @@
                                         <TextBlock Text="{Binding FullBackupOperation.CurrentFile}"
                                                    Margin="0,5,0,0"
                                                    Foreground="{DynamicResource MutedBrush}"
-                                                   FontSize="11"
+                                                   FontSize="{DynamicResource TextXS}"
                                                    TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
 
                                     <TextBlock Text="{Binding FullBackupOperation.StatusText}" Margin="0,6,0,0"
-                                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
+                                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}"/>
                                 </StackPanel>
                             </StackPanel>
                         </GroupBox>
+
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 10a: Programmsicherung mit Quellcode
+                             ist ein Entwickler-Werkzeug, keine normale Datensicherung. -->
+                        <Expander Header="Erweitert (für Fachleute)" IsExpanded="False" Margin="0,4,0,0">
+                            <GroupBox Header="Programmsicherung" Style="{StaticResource SettingsSectionGroupBox}">
+                                <StackPanel>
+                                    <TextBlock Text="Programm mit Quellcode sichern" Margin="0,0,0,6" Foreground="{DynamicResource MutedBrush}"/>
+                                    <TextBlock Text="Nur für Entwicklung/Support: Sichert Quellcode, kompletten Git-Verlauf und Modellgewichte als eine ZIP-Datei — ohne Build-Ausgabe, Python-Umgebung und Kartenkacheln."
+                                               TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextXS}" Margin="0,0,0,8"/>
+                                    <Button Content="Programm sichern" Command="{Binding CreateProgramSnapshotCommand}" Width="180"
+                                            HorizontalAlignment="Left"
+                                            ToolTip="Quellcode, kompletten Git-Verlauf und Modellgewichte als eine ZIP-Datei sichern — ohne Build-Ausgabe, Python-Umgebung und Kartenkacheln."/>
+                                </StackPanel>
+                            </GroupBox>
+                        </Expander>
                     </StackPanel>
                     </ScrollViewer>
                 </TabItem>
@@ -962,563 +1202,57 @@
                          Padding="12,8">
                     <ScrollViewer Style="{StaticResource SettingsTabScrollViewer}">
                     <StackPanel Margin="0,12,0,0">
-        <!-- ═══════════════════════════════════════════════════════════════════
-             PROGRAMM-ANLEITUNG
-             ═══════════════════════════════════════════════════════════════════ -->
-        <Border Margin="0,0,0,0" Padding="0,0,0,4"
-                BorderThickness="0,0,0,2" BorderBrush="{DynamicResource AccentBrush}">
-            <TextBlock Text="Programm-Anleitung  SewerStudio"
-                       FontSize="20" FontWeight="Bold"
-                       Foreground="{DynamicResource AccentBrush}"/>
-        </Border>
+                        <!-- Optikanalyse 28.09.2026, Aufgabe 6: Handbuch und Tastenkuerzel sind
+                             eigene, nicht-modale Fenster geworden (HandbuchWindow/
+                             TastenkuerzelWindow). Dieser Reiter verweist nur noch darauf, statt
+                             die ganze Anleitung hier zu duplizieren (Quelle: HandbuchInhalt). -->
+                        <Border Margin="0,0,0,16" Padding="16,14"
+                                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
+                            <StackPanel>
+                                <TextBlock Text="Handbuch" FontSize="{DynamicResource TextL}" FontWeight="Bold"
+                                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="{DynamicResource TextS}" Margin="0,0,0,12">
+                                    Eine kurze Anleitung zu jeder Seite von SewerStudio - Zweck und
+                                    wichtigste Abläufe. Öffnet auch über F1 (beim Abschnitt der
+                                    gerade gewählten Seite) oder das Menü Hilfe.
+                                </TextBlock>
+                                <Button Content="Handbuch öffnen" HorizontalAlignment="Left"
+                                        Style="{StaticResource SecondaryButton}" Click="HandbuchOeffnen_Click"
+                                        ToolTip="Das Handbuch in einem eigenen Fenster öffnen (wie F1)."/>
+                            </StackPanel>
+                        </Border>
 
-        <TextBlock Text="Vollständige Dokumentation aller Funktionen, KI-Module und Workflows."
-                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,6,0,20" FontSize="12"/>
+                        <Border Margin="0,0,0,16" Padding="16,14"
+                                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
+                            <StackPanel>
+                                <TextBlock Text="Tastenkürzel" FontSize="{DynamicResource TextL}" FontWeight="Bold"
+                                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="{DynamicResource TextS}" Margin="0,0,0,12">
+                                    Alle globalen Tastenkürzel und die Kürzel des Videoplayers an
+                                    einem Ort. Öffnet auch über Strg+F1 oder das Menü Hilfe.
+                                </TextBlock>
+                                <Button Content="Tastenkürzel anzeigen" HorizontalAlignment="Left"
+                                        Style="{StaticResource SecondaryButton}" Click="TastenkuerzelAnzeigen_Click"
+                                        ToolTip="Die Tastenkürzel-Übersicht öffnen (wie Strg+F1)."/>
+                            </StackPanel>
+                        </Border>
 
-        <!-- ── 1. Uebersicht ──────────────────────────────────────────── -->
-        <Border Margin="0,0,0,16" Padding="14,12"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
-            <StackPanel>
-                <TextBlock Text="1. Programmüberblick" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20">
-                    SewerStudio ist eine professionelle Anwendung für die Kanalinspektion und
-                    Zustandsbewertung nach dem Schweizer Standard SN EN 13508-2 (bzw. DIN EN 13508-2).
-                    Die Software vereint Datenerfassung, Videoanalyse, KI-gestützte Schadenserkennung,
-                    VSA-Zustandsbewertung und Sanierungskostenberechnung in einer einzigen Plattform.
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20" Margin="0,8,0,0">
-                    Der typische Arbeitsablauf: Projekt erstellen, Inspektionsdaten importieren (PDF/XTF/WinCan/IBAK),
-                    Videos verknüpfen, KI-Analyse durchführen, VSA-Bewertung berechnen, Sanierungsmaßnahmen
-                    vorschlagen und Ergebnisse als Excel/PDF exportieren.
-                </TextBlock>
-            </StackPanel>
-        </Border>
-
-        <!-- ── 2. Seitennavigation ────────────────────────────────────── -->
-        <Border Margin="0,0,0,16" Padding="14,12"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
-            <StackPanel>
-                <TextBlock Text="2. Seiten und Navigation" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
-
-                <TextBlock Text="Übersicht" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Startseite mit Projektverwaltung. Zeigt alle gespeicherten Projekte, ermöglicht das Erstellen
-                    neuer Projekte und das Öffnen vorhandener *.json-Projektdateien. Das zuletzt geöffnete Projekt
-                    kann per Schnellzugriff fortgesetzt werden.
-                </TextBlock>
-
-                <TextBlock Text="Projekt" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Metadaten des aktuellen Projekts: Name, Beschreibung, Auftraggeber, Gemeinde, Inspektionsdatum,
-                    Firma und Kontaktperson. Diese Angaben erscheinen auf allen exportierten Berichten und Protokollen.
-                </TextBlock>
-
-                <TextBlock Text="Haltungen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Zentrale Datenseite für alle Kanalsegmente (Haltungen). Bearbeitbares DataGrid mit Suche,
-                    Zoom, Zeilenhöhe, Spaltenausrichtung und Multi-Monitor-Support (Abdocken auf zweiten Bildschirm).
-                    Kontextmenü bietet Zugriff auf Protokolle, Videoanalyse, Sanierungsmaßnahmen und Kostenrechner.
-                    Toolbar-Dropdowns: Sanierungsmaßnahmen (Kostenrechner, Vorschlag aus Schadenscodes, Alle Maßnahmen vorschlagen)
-                    und Medien suchen (automatische Video/PDF-Verknüpfung).
-                </TextBlock>
-
-                <TextBlock Text="Schächte" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Verwaltung der Schacht-Inspektionspunkte. Gleiche Funktionen wie Haltungen: Hinzufügen,
-                    Löschen, Verschieben, Suchen, Spaltenbearbeitung und Detailansicht.
-                    Unterstützt PDF-Protokollgenerierung und Foto-Verwaltung.
-                </TextBlock>
-
-                <TextBlock Text="Import" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Importiert Inspektionsdaten aus verschiedenen Quellen:
-                    PDF (OCR via pdftotext oder Formularfelder), XTF/M150/MDB (Austauschformat für Kanalinspektion),
-                    WinCan (TV-Inspektionssoftware), IBAK (Roboter-Inspektionssystem) und KINS (Kombinationsformat).
-                    Option "Nur fehlende Felder auffüllen" ergänzt Daten ohne vorhandene zu überschreiben.
-                </TextBlock>
-
-                <TextBlock Text="Export" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Exportiert Haltungen und Schächte als Excel-Dateien mit konfigurierbaren Vorlagen.
-                    Verteilungsfunktion sortiert exportierte Dateien in Ordnerstrukturen
-                    nach Haltung, Schacht oder Prüfstatus.
-                </TextBlock>
-
-                <TextBlock Text="Medienkonflikte" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Zeigt mehrdeutige oder fehlende Zuordnungen zwischen Videos/PDFs und Haltungen an.
-                    Ermöglicht das manuelle Auflösen von Konflikten bei der automatischen Medienverknüpfung.
-                </TextBlock>
-
-                <TextBlock Text="Druckcenter" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Filterbare Druckansicht mit Kosten-, Eigentümer- und Positionszusammenfassung.
-                    Komplexe Filteroptionen (Suche, Eigentümer, Material, Status, Jahr) mit
-                    Statistiken zu Rehabilitationsquoten und Kostenverteilung. Export als PDF möglich.
-                </TextBlock>
-
-                <TextBlock Text="VSA" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Berechnet die VSA-Zustandsbewertung (Klassen 0-4) für alle Haltungen und Schächte
-                    basierend auf den erfassten Schadencodes. Verwendet den Klassifikationskatalog nach
-                    SN EN 13508-2 mit separaten Regeln für Kanäle und Schächte.
-                </TextBlock>
-
-                <TextBlock Text="Diagnose" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Live-Protokoll mit Anwendungsmeldungen, Fehlern und KI-Diagnosen. Nützlich für
-                    Fehlersuche und Überwachung der KI-Pipeline-Ausführung.
-                </TextBlock>
-
-                <TextBlock Text="Einstellungen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12">
-                    Diese Seite. Konfiguration aller Anwendungsparameter: Dateipfade, Autospeicherung,
-                    Wiederherstellungspunkte, Video-Player-Tuning und Datenordner.
-                </TextBlock>
-            </StackPanel>
-        </Border>
-
-        <!-- ── 3. Fenster und Dialoge ─────────────────────────────────── -->
-        <Border Margin="0,0,0,16" Padding="14,12"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
-            <StackPanel>
-                <TextBlock Text="3. Fenster und Dialoge" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
-
-                <TextBlock Text="Videoplayer" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    VLC-basierter Player für Inspektionsvideos. Unterstützt variable Geschwindigkeit (0.5x-8x),
-                    Live-Scrubbing (Schieberegler ziehen zeigt Bild in Echtzeit), Tastatursteuerung
-                    (Leertaste=Pause, Pfeile=+/-5s, +/-=Geschwindigkeit) und Schadenscode-Marker auf der Zeitleiste.
-                    Klick auf einen Code-Marker springt direkt zur Schadenstelle im Video.
-                </TextBlock>
-
-                <TextBlock Text="Sanierungsmaßnahmen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Vereinheitlichtes Fenster für Kostenberechnung und KI-Optimierung.
-                    Linkes Panel: Haltungskontext (DN, Material, Länge, Zustandsklasse), regelbasierte
-                    Empfehlung, KI-Optimierung mit Konfidenz und Kostenband, Risikobewertung.
-                    Rechtes Panel: Vollständiger Kostenrechner mit 5-Spalten-Layout (Maßnahmen, Kalkulation,
-                    Katalogpositionen). Drag-and-Drop von Katalogpositionen in Maßnahmen-Blöcke.
-                    Footer: Netto/MWST/Total-Summen, Übernehmen, PDF-Export, Speichern.
-                </TextBlock>
-
-                <TextBlock Text="Videoanalyse-Pipeline (KI)" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Orchestriert die Multi-Model KI-Pipeline zur automatischen Schadenserkennung in Videos.
-                    Zeigt Fortschritt der einzelnen Phasen (Frame-Extraktion, YOLO-Detektion, DINO-Beschreibung,
-                    SAM-Segmentierung, Qwen Vision-LLM), detektierte Schäden mit Konfidenzwerten und
-                    generiert automatisch VSA-konforme Schadencodes. Quality-Gate filtert unsichere Ergebnisse.
-                </TextBlock>
-
-                <TextBlock Text="Medien-Suchprogramm" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Batch-Suche für Videos und PDFs mit automatischer Verknüpfung zu Haltungen.
-                    Durchsucht rekursiv Ordner, erkennt Haltungsnamen in Dateinamen und verknüpft
-                    gefundene Medien. Filtermodus: Gefunden, Mehrdeutig, Nicht gefunden.
-                </TextBlock>
-
-                <TextBlock Text="Training Center" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Verwaltung der KI-Trainingsdaten. Scannt PDF/Video-Ordner, generiert Ground-Truth-Samples
-                    aus bestehenden Inspektionsergebnissen, führt Batch-Import durch und indexiert die
-                    Knowledge Base mit Embeddings. Auto-Approval-Funktion für hochkonfidente Ergebnisse.
-                </TextBlock>
-
-                <TextBlock Text="Beobachtungen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Detailansicht für Inspektionsergebnisse einer Haltung mit Foto-Galerie (bis 3 Fotos),
-                    Beobachtungsliste und Kontext-Informationen. Direkter Zugang zur Bearbeitung und
-                    Verwaltung von Schadenfeststellungen.
-                </TextBlock>
-
-                <TextBlock Text="Haltungsdetails" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Kompakte Detailansicht einer einzelnen Haltung mit allen Feldern gruppiert nach
-                    Kategorie (Stammdaten, Inspektion, VSA, Kosten). Direktlink zu Sanierungsmaßnahmen.
-                </TextBlock>
-
-                <TextBlock Text="Beobachtungskatalog" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Nachschlagewerk aller definierten Schadencodes mit VSA-Klassifizierung.
-                    Suchfunktion, Filterung nach Kategorien und Detailansicht mit Beschreibung,
-                    Quantifizierung und Zustandsklassen-Auswirkung.
-                </TextBlock>
-
-                <TextBlock Text="Abgedocktes DataGrid" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12">
-                    Separates Fenster für das DataGrid bei Multi-Monitor-Setups. Das Grid wird aus der
-                    Hauptansicht herausgelöst und kann auf einem zweiten Bildschirm platziert werden.
-                    Alle Bearbeitungsfunktionen bleiben erhalten.
-                </TextBlock>
-            </StackPanel>
-        </Border>
-
-        <!-- ── 4. KI-Module ───────────────────────────────────────────── -->
-        <Border Margin="0,0,0,16" Padding="14,12"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
-            <StackPanel>
-                <TextBlock Text="4. KI-Module und Pipeline" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
-
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20" Margin="0,0,0,12">
-                    SewerStudio verwendet eine Multi-Model KI-Pipeline, die vollständig lokal läuft
-                    (keine Cloud-Anbindung nötig). Die KI-Funktionen erfordern einen laufenden
-                    Ollama-Service und optional den Python-Sidecar-Service für die Vision-Pipeline.
-                </TextBlock>
-
-                <TextBlock Text="4.1 Multi-Model Vision-Pipeline" FontWeight="SemiBold" FontSize="13"
-                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,4">
-                    Die Pipeline verarbeitet Inspektionsvideos in mehreren Stufen:
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
-                    1. Frame-Extraktion: FFmpeg extrahiert Einzelbilder aus dem Video in konfigurierbaren Intervallen.
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
-                    2. YOLO-Detektion: Erkennt und lokalisiert Schäden in jedem Frame (Bounding Boxes).
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
-                    3. DINO-Beschreibung: Beschreibungsbasierte Erkennung mit natürlichsprachlichen Prompts
-                    (z.B. "Riss", "Wurzeleinwuchs", "Rohrbruch") für präzisere Klassifikation.
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
-                    4. SAM-Segmentierung: Pixel-genaue Segmentierung der erkannten Schäden für
-                    Flächenberechnung und Quantifizierung.
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
-                    5. Qwen Vision-LLM: Multimodales Sprachmodell bewertet jeden Befund im Kontext
-                    (Material, Uhrzeit, Position) und ordnet VSA-konforme Schadencodes zu.
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,10">
-                    6. Quality-Gate: Kalman-Filter-basierte Fusion aller Modellergebnisse mit
-                    Unsicherheitsschätzung und automatischer Filterung unplausibler Detektionen.
-                </TextBlock>
-
-                <TextBlock Text="4.2 Ollama-Integration (Lokales LLM)" FontWeight="SemiBold" FontSize="13"
-                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Ollama läuft als lokaler Service und stellt Vision- und Text-Modelle bereit.
-                    Konfigurierbar über Umgebungsvariablen: SEWERSTUDIO_AI_ENABLED (0/1),
-                    SEWERSTUDIO_OLLAMA_URL (Standard: http://localhost:11434), SEWERSTUDIO_AI_VISION_MODEL,
-                    SEWERSTUDIO_AI_TEXT_MODEL und SEWERSTUDIO_AI_EMBED_MODEL. Timeout und Keep-Alive sind einstellbar.
-                    Wird verwendet für: Protokolltexte, Schadensbeschreibungen, Code-Zuordnung und Embeddings.
-                </TextBlock>
-
-                <TextBlock Text="4.3 Knowledge Base (Wissensbank)" FontWeight="SemiBold" FontSize="13"
-                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    SQLite-basierter Speicher mit Vektor-Embeddings für semantische Suche.
-                    Indexiert Trainingsbeispiele, Best Practices und historische Inspektionsergebnisse.
-                    Retrieval-Augmented Generation (RAG): Bei neuen Inspektionen werden ähnliche
-                    früherer Fälle als Kontext für die KI-Bewertung herangezogen.
-                    Der Knowledge-Base-Manager führt Batch-Indexing und Wartung durch.
-                </TextBlock>
-
-                <TextBlock Text="4.4 Quality-Gate (Qualitätssicherung)" FontWeight="SemiBold" FontSize="13"
-                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Mehrstufige Qualitätsprüfung der KI-Ergebnisse:
-                    Evidence-Fusion kombiniert Konfidenzwerte aller Modelle mittels Kalman-Filter.
-                    Monte-Carlo-Dropout schätzt Unsicherheit durch mehrfache Inferenz.
-                    Adaptive Gewichtung lernt automatisch, welchen Modellen bei welchen Schadenstypen
-                    am meisten vertraut werden kann. Kalibrierungsmetriken überwachen die Zuverlässigkeit.
-                    Ergebnisse werden mit Ampelsystem (grün/gelb/rot) klassifiziert.
-                </TextBlock>
-
-                <TextBlock Text="4.5 Selbstlernende Pipeline" FontWeight="SemiBold" FontSize="13"
-                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Auto-Approval: Hochkonfidente Ergebnisse (grüne Ampel) werden automatisch validiert
-                    und in die Knowledge Base aufgenommen.
-                    Review-Queue: Unsichere Ergebnisse (gelb/rot) werden zur manuellen Prüfung vorgelegt.
-                    Feedback-Ingestion: Nutzerkorrekturen werden als Trainingsbeispiele erfasst.
-                    KB-Quality: Automatische Bereinigung und Validierung der Wissensbank-Einträge.
-                </TextBlock>
-
-                <TextBlock Text="4.6 KI-Sanierungsoptimierung" FontWeight="SemiBold" FontSize="13"
-                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Kombiniert regelbasierte und KI-gestützte Empfehlungen für Sanierungsmaßnahmen.
-                    Regelbasiert: Ableitung aus Schadenscodes, Zustandsklasse, Material und DN.
-                    KI-Optimierung: Lokales LLM bewertet Kontext und empfiehlt kostenoptimale Maßnahmen
-                    mit Konfidenzwert und Kostenband (Min/Erwartet/Max).
-                    Validierung: Jeder KI-Vorschlag wird gegen VSA-Regelwerk geprüft.
-                    Fallback: Bei Regelverstößen wird der KI-Vorschlag verworfen und die
-                    regelbasierte Empfehlung verwendet.
-                </TextBlock>
-
-                <TextBlock Text="4.7 Monitoring und Modellverwaltung" FontWeight="SemiBold" FontSize="13"
-                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12">
-                    Accuracy-Dashboard: Echtzeit-Metriken für die Modell-Performance.
-                    Konfidenzverteilung: Histogramm der Vorhersage-Konfidenzwerte zur Drift-Erkennung.
-                    Modell-Registry: Versionierung und Tracking aller eingesetzten KI-Modelle.
-                    Pipeline-Telemetrie: Latenz, Durchsatz und Ressourcenverbrauch der KI-Pipeline.
-                </TextBlock>
-            </StackPanel>
-        </Border>
-
-        <!-- ── 5. Import-Formate ──────────────────────────────────────── -->
-        <Border Margin="0,0,0,16" Padding="14,12"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
-            <StackPanel>
-                <TextBlock Text="5. Unterstützte Import-Formate" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
-
-                <TextBlock Text="PDF-Import" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Inspektionsprotokolle aus PDF-Dateien. Verwendet pdftotext für OCR-Extraktion
-                    oder liest strukturierte Formularfelder direkt. Automatisches Feldmapping erkennt
-                    Haltungsnamen, DN, Material, Länge und Schadencodes aus dem PDF-Text.
-                </TextBlock>
-
-                <TextBlock Text="XTF / M150 / MDB" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Standard-Austauschformat für Kanalinspektion (eXtensible Transport Format).
-                    Unterstützt auch Legacy-Formate: M150-Standard und Microsoft Access MDB-Datenbanken
-                    älterer Inspektionssysteme.
-                </TextBlock>
-
-                <TextBlock Text="WinCan" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Import kompletter WinCan-Projekte (Windows-basiertes TV-Inspektionssystem)
-                    mit allen Haltungen, Schächten, Schadencodes und Medienverknüpfungen.
-                </TextBlock>
-
-                <TextBlock Text="IBAK" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Import von IBAK-Projekten (deutsches Roboter-Inspektionssystem) mit
-                    strukturierten Exporten inklusive Schadensdokumentation.
-                </TextBlock>
-
-                <TextBlock Text="KINS" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Kombinationsformat das WinCan- und IBAK-Import-Services zusammenführt.
-                </TextBlock>
-
-                <TextBlock Text="Merge-Engine" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12">
-                    Alle Importformate verwenden die gleiche Merge-Engine: Importierte Daten werden
-                    intelligent mit lokalen Daten zusammengeführt. Option "Nur fehlende Felder auffüllen"
-                    ergänzt leere Felder ohne vorhandene Werte zu überschreiben.
-                </TextBlock>
-            </StackPanel>
-        </Border>
-
-        <!-- ── 6. Export und Berichte ─────────────────────────────────── -->
-        <Border Margin="0,0,0,16" Padding="14,12"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
-            <StackPanel>
-                <TextBlock Text="6. Export und Berichte" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
-
-                <TextBlock Text="Excel-Export" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Template-basierter Export aller Haltungen und Schächte nach Excel.
-                    Benutzerdefinierte Vorlagen steuern Spaltenzuordnung und Formatierung.
-                </TextBlock>
-
-                <TextBlock Text="Inspektionsprotokoll PDF" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Generiert professionelle PDF-Inspektionsprotokolle mit VSA-Codes, Fotos,
-                    Beobachtungen und KI-generierten Beschreibungen.
-                </TextBlock>
-
-                <TextBlock Text="Kostenzusammenstellung PDF" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Exportiert die Sanierungskostenberechnung als PDF mit Positionsaufstellung,
-                    Einzelpreisen, Mengen und Gesamtkosten inkl. MWST.
-                </TextBlock>
-
-                <TextBlock Text="KI-Dokumentation PDF" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Detaillierte Dokumentation der KI-Erkennung mit Evidence-Vektoren,
-                    Quality-Gate-Metriken und Modellkonfidenz für Nachvollziehbarkeit.
-                </TextBlock>
-
-                <TextBlock Text="Verteilung" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12">
-                    Verteilt exportierte Dateien in Ordnerstrukturen sortiert nach Haltung,
-                    Schacht oder Prüfstatus für organisierte Archivierung.
-                </TextBlock>
-            </StackPanel>
-        </Border>
-
-        <!-- ── 7. VSA-Zustandsbewertung ───────────────────────────────── -->
-        <Border Margin="0,0,0,16" Padding="14,12"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
-            <StackPanel>
-                <TextBlock Text="7. VSA-Zustandsbewertung" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20">
-                    Die VSA-Bewertung klassifiziert den baulichen und betrieblichen Zustand von
-                    Kanälen und Schächten in 5 Klassen (0-4) gemäß SN EN 13508-2:
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,8,0,2">
-                    Klasse 0: Kein Schaden - Kein Handlungsbedarf
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
-                    Klasse 1: Leichter Schaden - Langfristiger Handlungsbedarf
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
-                    Klasse 2: Mittlerer Schaden - Mittelfristiger Handlungsbedarf
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
-                    Klasse 3: Schwerer Schaden - Kurzfristiger Handlungsbedarf
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,10">
-                    Klasse 4: Sehr schwerer Schaden - Sofortiger Handlungsbedarf
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20">
-                    Die Berechnung basiert auf dem Klassifikationskatalog mit separaten Regelwerken
-                    für Kanäle (classification_channels.json) und Schächte (classification_manholes.json).
-                    Jeder erfasste Schadencode wird anhand seines Schweregrad-Faktors, der Quantifizierung
-                    und des Rohr-Materials/DN bewertet. Der schlechteste Einzelwert bestimmt die Gesamtklasse.
-                </TextBlock>
-            </StackPanel>
-        </Border>
-
-        <!-- ── 8. Kostenrechner ───────────────────────────────────────── -->
-        <Border Margin="0,0,0,16" Padding="14,12"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
-            <StackPanel>
-                <TextBlock Text="8. Kostenrechner und Sanierung" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20">
-                    Der integrierte Kostenrechner kalkuliert Sanierungskosten auf Basis eines
-                    konfigurierbaren Katalogs mit Einheitspreisen.
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,8,0,2">
-                    Maßnahmen-Vorlagen: Vordefinierte Sanierungsverfahren (z.B. Inliner GFK, Inliner Nadelfilz,
-                    Kurzliner, Manschetten, Robotersanierung) mit voreingestellten Positionen.
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,2">
-                    Katalogpositionen: Einzelne Leistungspositionen mit Einheit und Preis.
-                    Per Drag-and-Drop in Maßnahmen-Blöcke ziehbar.
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,2">
-                    Automatische Preisberechnung: DN-abhängige Preise, längenabhängige Mengen
-                    und Anschluss-Zuschläge werden automatisch berechnet.
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,2">
-                    Vorlagen speichern: Angepasste Positionen können als neue Vorlage gespeichert werden.
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,0">
-                    Transfer-Markierung: Rechtsklick auf Positionen markiert sie grün für den
-                    selektiven Übertrag in andere Systeme.
-                </TextBlock>
-            </StackPanel>
-        </Border>
-
-        <!-- ── 9. Tastaturkuerzel ─────────────────────────────────────── -->
-        <Border Margin="0,0,0,16" Padding="14,12"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
-            <StackPanel>
-                <TextBlock Text="9. Tastaturkürzel" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
-
-                <TextBlock Text="Allgemein" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
-                           FontFamily="Consolas" Text="F11          Fokusmodus ein/aus"/>
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,8"
-                           FontFamily="Consolas" Text="Doppelklick  Protokoll/KI öffnen (auf Haltung)"/>
-
-                <TextBlock Text="Videoplayer" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
-                           FontFamily="Consolas" Text="Leertaste    Play/Pause umschalten"/>
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
-                           FontFamily="Consolas" Text="Pfeil rechts +5 Sekunden vorspulen"/>
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
-                           FontFamily="Consolas" Text="Pfeil links  -5 Sekunden zurückspulen"/>
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
-                           FontFamily="Consolas" Text="+            Geschwindigkeit erhöhen (+0.25x)"/>
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
-                           FontFamily="Consolas" Text="-            Geschwindigkeit verringern (-0.25x)"/>
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
-                           FontFamily="Consolas" Text="S            Video stoppen"/>
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
-                           FontFamily="Consolas" Text="P            Video pausieren"/>
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,0"
-                           FontFamily="Consolas" Text="R            Video fortsetzen"/>
-            </StackPanel>
-        </Border>
-
-        <!-- ── 10. Umgebungsvariablen ─────────────────────────────────── -->
-        <Border Margin="0,0,0,16" Padding="14,12"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
-            <StackPanel>
-                <TextBlock Text="10. KI-Konfiguration (Umgebungsvariablen)" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
-
-                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20" Margin="0,0,0,8">
-                    Die KI-Module werden über Umgebungsvariablen konfiguriert.
-                    Alle Variablen sind optional - Standardwerte werden verwendet wenn nicht gesetzt.
-                </TextBlock>
-
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
-                           Text="SEWERSTUDIO_AI_ENABLED=1"/>
-                <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,8"
-                           Text="KI-Funktionen aktivieren (0=deaktiviert, 1=aktiviert)"/>
-
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
-                           Text="SEWERSTUDIO_OLLAMA_URL=http://localhost:11434"/>
-                <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,8"
-                           Text="Adresse des Ollama-Service"/>
-
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
-                           Text="SEWERSTUDIO_AI_VISION_MODEL=qwen3.5:27b"/>
-                <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,8"
-                           Text="Vision-Modell für Bildanalyse (Multimodal)"/>
-
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
-                           Text="SEWERSTUDIO_AI_TEXT_MODEL=qwen3.5:27b"/>
-                <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,8"
-                           Text="Text-Modell für Protokolle und Beschreibungen"/>
-
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
-                           Text="SEWERSTUDIO_AI_EMBED_MODEL=nomic-embed-text"/>
-                <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,8"
-                           Text="Embedding-Modell für Knowledge Base (Semantische Suche)"/>
-
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
-                           Text="SEWERSTUDIO_SIDECAR_URL=http://localhost:8100"/>
-                <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,8"
-                           Text="Python-Sidecar für YOLO/DINO/SAM Vision-Pipeline"/>
-
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
-                           Text="SEWERSTUDIO_FFMPEG=ffmpeg"/>
-                <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,0"
-                           Text="Pfad zu FFmpeg für Video-Frame-Extraktion"/>
-            </StackPanel>
-        </Border>
-
-        <!-- ── Version ────────────────────────────────────────────────── -->
-        <Border Margin="0,0,0,20" Padding="14,10"
-                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource CardBrush}" CornerRadius="6">
-            <StackPanel>
-                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" FontWeight="SemiBold"
-                           TextAlignment="Center"
-                           Text="{x:Static ui:AppIdentity.DisplayVersion}"/>
-                <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" TextAlignment="Center" Margin="0,2,0,0">
-                    SewerStudio - Professionelle Kanalinspektion und KI-Analyse
-                </TextBlock>
-            </StackPanel>
-        </Border>
-
+                        <Border Padding="14,10"
+                                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                                Background="{DynamicResource CardBrush}" CornerRadius="{DynamicResource RadiusM}">
+                            <StackPanel>
+                                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
+                                           TextAlignment="Center"
+                                           Text="{x:Static ui:AppIdentity.DisplayVersion}"/>
+                                <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextXS}" TextAlignment="Center" Margin="0,2,0,0">
+                                    SewerStudio - Professionelle Kanalinspektion und KI-Analyse
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                     </ScrollViewer>
                 </TabItem>

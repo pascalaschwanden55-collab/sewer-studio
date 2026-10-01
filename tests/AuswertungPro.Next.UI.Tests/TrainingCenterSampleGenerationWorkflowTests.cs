@@ -140,7 +140,9 @@ public sealed class TrainingCenterSampleGenerationWorkflowTests
         await TrainingCenterSampleGenerationWorkflow.RunAsync(request);
 
         Assert.False(state.IsBusy);
-        Assert.Equal("Fehler bei Sample-Generierung: kaputt", state.StatusText);
+        Assert.Equal(
+            "Fehler bei Sample-Generierung: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
+            state.StatusText);
     }
 
     private static TrainingCenterSampleGenerationWorkflowRequest CreateRequest(

@@ -76,7 +76,7 @@ public partial class BeobachtungenWindow : Window
         if (!string.IsNullOrWhiteSpace(holdingName))
         {
             Title = $"Beobachtungen - {holdingName}";
-            HeaderText.Text = $"Beobachtungen - {holdingName}";
+            HeaderText.Title = $"Beobachtungen - {holdingName}";
         }
 
         ProtocolButton.Click += (_, _) =>
@@ -109,12 +109,12 @@ public partial class BeobachtungenWindow : Window
         if (!string.IsNullOrWhiteSpace(holdingName))
         {
             Title = $"Beobachtungen - {holdingName}";
-            HeaderText.Text = $"Beobachtungen - {holdingName}";
+            HeaderText.Title = $"Beobachtungen - {holdingName}";
         }
         else
         {
             Title = "Beobachtungen";
-            HeaderText.Text = "Beobachtungen";
+            HeaderText.Title = "Beobachtungen";
         }
     }
 

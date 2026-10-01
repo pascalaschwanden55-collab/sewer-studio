@@ -16,7 +16,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// HTTP client for the Python FastAPI Vision Sidecar.
 /// Pattern mirrors OllamaClient – simple, typed HTTP calls.
 /// </summary>
-public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
+public sealed class VisionPipelineClient : IVisionPipelineClient, ILernstufeClient, IDisposable
 {
     public const string ExpectedSidecarVersion = "1.2.0";
     private readonly HttpClient _http;
@@ -69,7 +69,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
         // BaseAddress auf einem GETEILTEN HttpClient (VideoAnalysisPipelineService nutzt fuer
         // mehrere Clients dieselbe Instanz) wirft InvalidOperationException, sobald der Client
         // schon einen Request gesendet hat -> der Multi-Model-Hauptpfad bricht ab. (Audit R1)
-        _sendSidecarToken = IsLoopbackUri(baseUri);
+        _sendSidecarToken = SidecarEndpointPolicy.IsLoopback(baseUri);
         _sidecarToken = _sendSidecarToken
             ? SidecarTokenResolver.Resolve(sidecarToken)
             : null;
@@ -124,7 +124,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
 
             int code = (int)resp.StatusCode;
             if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                return new PipelineHealthCheckResult(true, false, code, null, "Token ungueltig/fehlt");
+                return new PipelineHealthCheckResult(true, false, code, null, "Token ungültig/fehlt");
 
             if (!resp.IsSuccessStatusCode)
                 return new PipelineHealthCheckResult(true, true, code, null, $"HTTP {code}");
@@ -132,7 +132,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
             var json = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var health = JsonSerializer.Deserialize<SidecarHealthResponse>(json, JsonOpts);
             if (health is null)
-                return new PipelineHealthCheckResult(true, true, code, null, "Health-Antwort war leer oder ungueltig");
+                return new PipelineHealthCheckResult(true, true, code, null, "Health-Antwort war leer oder ungültig");
             if (!string.Equals(health.Version, ExpectedSidecarVersion, StringComparison.Ordinal))
             {
                 return new PipelineHealthCheckResult(
@@ -160,7 +160,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     }
 
     /// <summary>
-    /// Nur-lesende Vorschau mit einem validierten, nicht produktiven BCC-Kandidaten.
+    /// Nur-lesende Vorschau mit einem manifest- und hashgeprueften BCC-Kandidaten.
     /// Der Sidecar waehlt das Modell selbst; der Client uebergibt keinen Dateipfad.
     /// </summary>
     public async Task<BccTestYoloResponse> DetectBccTestYoloAsync(
@@ -173,6 +173,81 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
                 request,
                 ct)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Nur-lesende Vorschau mit einem exakt per ID und SHA-256 angehefteten Kandidaten.
+    /// Ein Modellpfad ist nicht Teil dieses Vertrags.
+    /// </summary>
+    public async Task<BccTestYoloResponse> DetectBccTestYoloAsync(
+        BccTestYoloRequest request,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!IsSafeCandidateId(request.CandidateId)
+            || !IsSha256(request.CandidateSha256))
+        {
+            throw new ArgumentException(
+                "Für den BCC-Modelltest sind eine exakte Kandidaten-ID und ein SHA-256 erforderlich.",
+                nameof(request));
+        }
+
+        return await PostInferenceAsync<BccTestYoloRequest, BccTestYoloResponse>(
+                "/detect/yolo/bcc-test",
+                "YOLO-Test",
+                request,
+                ct)
+            .ConfigureAwait(false);
+    }
+
+    public Task<BccTestCandidatesResponse> GetBccTestCandidatesAsync(
+        CancellationToken ct = default)
+        => GetAsync<BccTestCandidatesResponse>(
+            "/detect/yolo/bcc-test/candidates",
+            ct);
+
+    /// <summary>
+    /// Freigegebene Bild-Einordner (Rohranfang/Rohrende) samt gemessener Guete.
+    /// </summary>
+    public Task<LernstufenResponse> GetLernstufenAsync(CancellationToken ct = default)
+        => GetAsync<LernstufenResponse>("/classify/lernstufen", ct);
+
+    /// <summary>
+    /// Ordnet EIN Bild mit einer exakt per Klasse und Gewicht-SHA-256 angehefteten
+    /// Lernstufe ein. Ein Modellpfad ist nicht Teil dieses Vertrags; Klasse und
+    /// Hash werden vor dem Senden gegen das Sidecar-Muster geprueft.
+    /// </summary>
+    public async Task<LernstufeResponse> ClassifyLernstufeAsync(
+        LernstufeRequest request,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!IsLernstufeKlasse(request.Klasse) || !IsSha256(request.GewichtSha256))
+        {
+            throw new ArgumentException(
+                "Für eine Lernstufe sind ein Klassenname (a-z, _) und ein SHA-256 des Gewichts erforderlich.",
+                nameof(request));
+        }
+
+        return await PostInferenceAsync<LernstufeRequest, LernstufeResponse>(
+                "/classify/lernstufe",
+                "Lernstufe",
+                request,
+                ct)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>Sidecar-Muster ^[a-z][a-z_]{0,31}$ (LernstufeRequest.klasse).</summary>
+    private static bool IsLernstufeKlasse(string? value)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length > 32 || !char.IsAsciiLetterLower(value[0]))
+            return false;
+        foreach (var character in value)
+        {
+            if (!char.IsAsciiLetterLower(character) && character != '_')
+                return false;
+        }
+        return true;
     }
 
     /// <summary>
@@ -200,6 +275,57 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     }
 
     // ── Internal ──────────────────────────────────────────────────────────
+
+    private static bool IsSafeCandidateId(string? value)
+    {
+        if (string.IsNullOrEmpty(value)
+            || value.Length > 128
+            || !char.IsAsciiLetterOrDigit(value[0]))
+        {
+            return false;
+        }
+
+        foreach (var character in value)
+        {
+            if (!char.IsAsciiLetterOrDigit(character)
+                && character is not '_' and not '-')
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static bool IsSha256(string? value)
+        => value is { Length: 64 } && value.All(Uri.IsHexDigit);
+
+    /// <summary>
+    /// Liest eine kleine Sidecar-Metadatenantwort mit derselben Token-Grenze.
+    /// </summary>
+    private async Task<TResponse> GetAsync<TResponse>(
+        string endpoint,
+        CancellationToken ct)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, BuildUri(endpoint));
+        AddSidecarTokenHeader(req);
+        using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
+        var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            if (IsClientSidecarRequestError(resp.StatusCode))
+                throw new SidecarBadRequestException(endpoint, resp.StatusCode, body);
+
+            throw new HttpRequestException(
+                $"Sidecar {endpoint} returned {(int)resp.StatusCode}: {body}",
+                inner: null,
+                statusCode: resp.StatusCode);
+        }
+
+        return JsonSerializer.Deserialize<TResponse>(body, JsonOpts)
+            ?? throw new InvalidOperationException(
+                $"Antwort von {endpoint} konnte nicht gelesen werden.");
+    }
 
     /// <summary>
     /// Inferenzaufrufe (YOLO/DINO/SAM/cls) mit Per-Request-Cap (Paket 3/C):
@@ -258,7 +384,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
             catch (Exception ex) when (IsSidecarUnavailableError(ex))
             {
                 throw new SidecarUnavailableException(
-                    $"Vision-Sidecar {endpoint} ist nicht verfuegbar: {ex.Message}",
+                    $"Vision-Sidecar {endpoint} ist nicht verfügbar: {ex.Message}",
                     ex);
             }
         }
@@ -319,7 +445,8 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
                 && string.Equals(errorBody.Code, "insufficient_vram", StringComparison.Ordinal))
             {
                 throw new SidecarInsufficientVramException(
-                    endpoint, errorBody.FreeGb, errorBody.RequiredGb, errorBody.ReservedGb);
+                    endpoint, errorBody.FreeGb, errorBody.RequiredGb, errorBody.ReservedGb,
+                    errorBody.Reason, errorBody.UsedGb, errorBody.BudgetGb);
             }
 
             throw new HttpRequestException(
@@ -329,7 +456,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
         }
 
         var result = JsonSerializer.Deserialize<TResponse>(body, JsonOpts)
-            ?? throw new InvalidOperationException($"Failed to deserialize response from {endpoint}");
+            ?? throw new InvalidOperationException($"Antwort von {endpoint} konnte nicht gelesen werden.");
 
         if (result is YoloResponse yolo)
             await WriteTelemetryBestEffortAsync(
@@ -346,7 +473,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     /// Echter Vertrag des Sidecars (main.py exception_handler): code und die Zahlen
     /// stehen auf TOP-EBENE, "detail" ist ein Klartext-String —
     /// {"detail": "insufficient VRAM", "code": "insufficient_vram", "slot"?, "free_gb"?,
-    /// "required_gb"?, "reserved_gb"?}.
+    /// "required_gb"?, "reserved_gb"?, "reason"?, "used_gb"?, "budget_gb"?}.
     /// Toleranz: ein verschachteltes Format {"detail": {"code": ...}} wird ebenfalls
     /// akzeptiert; "detail" als nackter String zaehlt nur, wenn kein Top-Level-Code
     /// existiert. Beschaedigte oder anders geformte Bodys liefern null (= bisheriges
@@ -365,6 +492,9 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
             var free = ReadOptionalGb(root, "free_gb");
             var required = ReadOptionalGb(root, "required_gb");
             var reserved = ReadOptionalGb(root, "reserved_gb");
+            var reason = ReadOptionalString(root, "reason");
+            var used = ReadOptionalGb(root, "used_gb");
+            var budget = ReadOptionalGb(root, "budget_gb");
 
             if (code is null && root.TryGetProperty("detail", out var detail))
             {
@@ -378,12 +508,15 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
                     free ??= ReadOptionalGb(detail, "free_gb");
                     required ??= ReadOptionalGb(detail, "required_gb");
                     reserved ??= ReadOptionalGb(detail, "reserved_gb");
+                    reason ??= ReadOptionalString(detail, "reason");
+                    used ??= ReadOptionalGb(detail, "used_gb");
+                    budget ??= ReadOptionalGb(detail, "budget_gb");
                 }
             }
 
             return code is null && free is null && required is null && reserved is null
                 ? null
-                : new SidecarErrorBody(code, free, required, reserved);
+                : new SidecarErrorBody(code, free, required, reserved, reason, used, budget);
         }
         catch (JsonException)
         {
@@ -404,7 +537,9 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
             ? value
             : null;
 
-    private sealed record SidecarErrorBody(string? Code, double? FreeGb, double? RequiredGb, double? ReservedGb);
+    private sealed record SidecarErrorBody(
+        string? Code, double? FreeGb, double? RequiredGb, double? ReservedGb,
+        string? Reason, double? UsedGb, double? BudgetGb);
 
     private static SidecarTelemetryEvent CreateTelemetryEvent(
         string endpoint,
@@ -446,17 +581,6 @@ public sealed class VisionPipelineClient : IVisionPipelineClient, IDisposable
     {
         if (_sendSidecarToken && !string.IsNullOrWhiteSpace(_sidecarToken))
             request.Headers.TryAddWithoutValidation(SidecarTokenResolver.HeaderName, _sidecarToken);
-    }
-
-    private static bool IsLoopbackUri(Uri uri)
-    {
-        if (uri.IsLoopback)
-            return true;
-
-        var host = uri.Host.Trim();
-        return string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase);
     }
 
 }

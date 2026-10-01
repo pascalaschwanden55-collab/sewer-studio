@@ -57,9 +57,15 @@ public sealed class CodingBoundaryContext
         _executor = executor;
     }
 
-    public async Task<bool> EnsureStartAsync(
+    public Task<bool> EnsureStartAsync(CodingAnalyzedFrameEvidence frame)
+        => EnsureStartCoreAsync(frame.Meter, frame.ImageBytes, frame);
+
+    public Task<bool> EnsureStartAsync(double currentMeter, byte[]? analyzedFrameBytes)
+        => EnsureStartCoreAsync(currentMeter, analyzedFrameBytes, null);
+
+    private async Task<bool> EnsureStartCoreAsync(
         double currentMeter,
-        byte[]? analyzedFrameBytes)
+        byte[]? analyzedFrameBytes, CodingAnalyzedFrameEvidence? frame)
     {
         var result = await _executor.EnsureStartAsync(
             new CodingBoundaryStartCommandRequest(
@@ -70,7 +76,7 @@ public sealed class CodingBoundaryContext
                 ImportEvents: _sources.ImportEvents(),
                 CodingSessionService: _sources.CodingSessionService(),
                 FirstCleanFrameSeconds: _sources.FirstCleanFrameSeconds(),
-                AnalyzedFrameBytes: analyzedFrameBytes),
+                AnalyzedFrameBytes: analyzedFrameBytes) { AnalyzedFrame = frame },
             new CodingBoundaryStartCommandActions(
                 request => CodingBoundaryEventWorkflow.EnsureStartAsync(request, _workflowActions)));
 
@@ -80,6 +86,12 @@ public sealed class CodingBoundaryContext
     public void EnsureEnd(
         double fallbackEndMeter,
         byte[]? analyzedFrameBytes = null)
+        => EnsureEndCore(fallbackEndMeter, analyzedFrameBytes, null);
+
+    public void EnsureEnd(CodingAnalyzedFrameEvidence frame)
+        => EnsureEndCore(frame.Meter, frame.ImageBytes, frame);
+
+    private void EnsureEndCore(double fallbackEndMeter, byte[]? analyzedFrameBytes, CodingAnalyzedFrameEvidence? frame)
     {
         _executor.EnsureEnd(
             new CodingBoundaryEndCommandRequest(
@@ -87,11 +99,11 @@ public sealed class CodingBoundaryContext
                 ViewEvents: _sources.ViewEvents(),
                 ImportEvents: _sources.ImportEvents(),
                 CodingSessionService: _sources.CodingSessionService(),
-                OsdMeter: _sources.OsdMeter(),
+                OsdMeter: frame is null ? _sources.OsdMeter() : frame.MeterFromOsd ? frame.Meter : null,
                 FallbackEndMeter: fallbackEndMeter,
                 ViewModelEndMeter: _sources.ViewModelEndMeter(),
-                FallbackVideoTime: _sources.FallbackVideoTime(),
-                AnalyzedFrameBytes: analyzedFrameBytes),
+                FallbackVideoTime: frame?.CaptureTime ?? _sources.FallbackVideoTime(),
+                AnalyzedFrameBytes: analyzedFrameBytes) { AnalyzedFrame = frame },
             new CodingBoundaryEndCommandActions(
                 request => CodingBoundaryEventWorkflow.EnsureEnd(request, _workflowActions)));
     }

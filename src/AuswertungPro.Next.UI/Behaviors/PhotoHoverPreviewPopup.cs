@@ -111,6 +111,7 @@ public sealed class PhotoHoverPreviewPopup : Popup
             bitmap.BeginInit();
             bitmap.UriSource = new Uri(resolvedPath, UriKind.Absolute);
             bitmap.CacheOption = BitmapCacheOption.OnLoad;   // Datei sofort schliessen
+            bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache; // Geaenderte Fotos neu lesen
             var decodeWidth = (int)Math.Ceiling(maxWidth * dpiScale);
             if (decodeWidth > 0)
                 bitmap.DecodePixelWidth = decodeWidth;       // spart Speicher, scharf genug fuer die Box

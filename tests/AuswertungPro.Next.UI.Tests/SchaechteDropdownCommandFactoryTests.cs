@@ -42,9 +42,9 @@ public sealed class SchaechteDropdownCommandFactoryTests
         Assert.Equal(
             [
                 "Sanieren-Liste",
-                "Eigentuemer-Liste",
-                "Pruefungsresultat-Liste",
-                "Referenzpruefung-Liste"
+                "Eigentümer-Liste",
+                "Prüfungsresultat-Liste",
+                "Referenzprüfung-Liste"
             ],
             previews.Select(item => item.Title));
         Assert.Equal(4, saveCalls);
@@ -106,6 +106,6 @@ public sealed class SchaechteDropdownCommandFactoryTests
         => new(
             new ObservableCollection<string> { "Sanieren alt" },
             new ObservableCollection<string> { "Eigentuemer alt" },
-            new ObservableCollection<string> { "Pruefung alt" },
+            new ObservableCollection<string> { "Prüfung alt" },
             new ObservableCollection<string> { "Referenz alt" });
 }

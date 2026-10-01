@@ -40,7 +40,7 @@ internal sealed class ImportProtocolRegenerationController
         if (string.IsNullOrWhiteSpace(projectFolder))
         {
             _dialogs.Info(
-                "Projekt bitte zuerst speichern, dann koennen die eigenen Protokolle erzeugt werden.",
+                "Projekt bitte zuerst speichern, dann können die eigenen Protokolle erzeugt werden.",
                 "Protokoll neu generieren");
             return;
         }
@@ -53,7 +53,7 @@ internal sealed class ImportProtocolRegenerationController
             return;
         }
 
-        actions.SetProgress("Eigene Protokolle (_E, mit Fotos) werden fuer die Verteilung erzeugt...");
+        actions.SetProgress("Eigene Protokolle (_E, mit Fotos) werden für die Verteilung erzeugt...");
         var result = await Task.Run(() =>
             _service.RegenerateAll(project, projectFolder, _codeCatalog));
         actions.SetProgress(string.Empty);
@@ -68,7 +68,7 @@ internal sealed class ImportProtocolRegenerationController
             + $"\n  {result.Errors} Fehler";
         if (!saved)
         {
-            summary += "\n\nAenderungen uebernommen, aber nicht gespeichert. Bitte erneut speichern."
+            summary += "\n\nÄnderungen übernommen, aber nicht gespeichert. Bitte erneut speichern."
                 + ProjectSaveAttempt.ErrorDetails(saveError);
         }
 
@@ -81,10 +81,10 @@ internal sealed class ImportProtocolRegenerationController
 
         actions.SetStatus(saved
             ? "Eigene Protokolle neu generiert"
-            : "Eigene Protokolle uebernommen, aber nicht gespeichert");
+            : "Eigene Protokolle übernommen, aber nicht gespeichert");
         Action<string, string> showResult = saved ? _dialogs.Info : _dialogs.Warn;
         showResult(
-            summary + "\n\nDie eigenen Protokolle (_E) liegen jetzt in Haltungen_Verteilt und sind ueber "
+            summary + "\n\nDie eigenen Protokolle (_E) liegen jetzt in Haltungen_Verteilt und sind über "
             + "das Feld „Eigenes Protokoll“ (PDF_Eigen) verlinkt.",
             "Protokoll neu generieren");
     }

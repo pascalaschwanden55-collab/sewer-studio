@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Startup;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.Startup;
 using Xunit;
 
@@ -760,6 +762,7 @@ public sealed class SidecarRestartServiceTests : IDisposable
             WindowStyle = ProcessWindowStyle.Hidden
         });
         Assert.NotNull(process);
+        var startzeit = process.StartTime.ToUniversalTime();
 
         try
         {
@@ -770,7 +773,9 @@ public sealed class SidecarRestartServiceTests : IDisposable
 
             lifetime.StopTrackedProcess(process.Id);
 
-            Assert.True(process.WaitForExit(milliseconds: 5_000), "Der verfolgte Prozess muss gezielt beendet werden.");
+            Assert.True(
+                process.WaitForExit(milliseconds: 5_000),
+                "Der verfolgte Prozess muss gezielt beendet werden. " + Kontext(process, startzeit));
             Assert.False(lifetime.HasTrackedStartedProcesses);
         }
         finally
@@ -779,5 +784,37 @@ public sealed class SidecarRestartServiceTests : IDisposable
                 process.Kill(entireProcessTree: true);
             lifetime.StopAllStartedProcesses();
         }
+    }
+
+    /// <summary>
+    /// Warum der Kill nicht griff — nur fuer die Fehlermeldung, nicht fuer die Pruefung.
+    ///
+    /// Der Test ist selten und nicht reproduzierbar fehlgeschlagen (einmal in mehreren
+    /// vollen Laeufen) und meldete dabei nur "nicht beendet". Diese Angaben trennen beim
+    /// naechsten Mal die drei moeglichen Ursachen: Prozess schon weg, Startzeit passt
+    /// nicht mehr, oder die Programmdatei-Pruefung hat den Kill verhindert.
+    ///
+    /// Bewusst OHNE BestEffort-Mitschnitt: Der Fehlerkanal ist prozessweit, und
+    /// KnowledgeBasePathsTests im selben Testprojekt verwendet ihn ebenfalls — ein
+    /// Mitschnitt hier koennte dort die erwartete Meldung wegnehmen.
+    /// </summary>
+    private static string Kontext(Process process, DateTime startzeitBeimVerfolgen)
+    {
+        var teile = new List<string>();
+        try
+        {
+            using var erneut = Process.GetProcessById(process.Id);
+            var jetzt = erneut.StartTime.ToUniversalTime();
+            teile.Add($"HasExited={erneut.HasExited}");
+            teile.Add($"Startzeit gleich={jetzt == startzeitBeimVerfolgen} ({startzeitBeimVerfolgen:O} vs {jetzt:O})");
+            try { teile.Add($"MainModule={erneut.MainModule?.FileName}"); }
+            catch (Exception ex) { teile.Add($"MainModule=<{ex.GetType().Name}: {ex.Message}>"); }
+        }
+        catch (Exception ex)
+        {
+            teile.Add($"Prozess nicht lesbar: {ex.GetType().Name}");
+        }
+
+        return string.Join(" | ", teile);
     }
 }

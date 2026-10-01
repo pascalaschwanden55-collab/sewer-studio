@@ -17,7 +17,7 @@ public static class KinsDbfWhitelistEnricher
     public static void Use(IKinsDbfWhitelistEnricher enricher)
         => throw new NotSupportedException(
             "Die globale KINS-DBF-Anreicherung kann nicht mehr ausgetauscht werden. " +
-            "IKinsDbfWhitelistEnricher bitte per Konstruktor uebergeben.");
+            "IKinsDbfWhitelistEnricher bitte per Konstruktor übergeben.");
 
     public static KinsDbfEnrichResult Apply(
         Project project,

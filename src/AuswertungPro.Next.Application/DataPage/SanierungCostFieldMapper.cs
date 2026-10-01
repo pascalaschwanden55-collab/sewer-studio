@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Cost;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.DataPage;
@@ -52,18 +53,70 @@ public static class SanierungCostFieldMapper
         var value = string.Join(Environment.NewLine, recommendation.Measures);
         record.SetFieldValue(FieldKeys.RecommendedRehabilitationMeasures, value, FieldSource.Unknown, userEdited: false);
 
-        if (recommendation.EstimatedTotalCost is not null)
-            record.SetFieldValue(FieldKeys.Cost, recommendation.EstimatedTotalCost.Value.ToString("0.00", CultureInfo.InvariantCulture), FieldSource.Unknown, userEdited: false);
-        if (recommendation.RenovierungInlinerM is not null)
-            record.SetFieldValue(FieldKeys.LinerRenovationMeters, MeasuresTextBuilder.FormatDecimal(recommendation.RenovierungInlinerM.Value), FieldSource.Unknown, userEdited: false);
-        if (recommendation.RenovierungInlinerStk is not null)
-            record.SetFieldValue(FieldKeys.LinerRenovationCount, MeasuresTextBuilder.FormatInt(recommendation.RenovierungInlinerStk.Value), FieldSource.Unknown, userEdited: false);
-        if (recommendation.AnschluesseVerpressen is not null)
-            record.SetFieldValue(FieldKeys.ConnectionsToGrout, MeasuresTextBuilder.FormatInt(recommendation.AnschluesseVerpressen.Value), FieldSource.Unknown, userEdited: false);
-        if (recommendation.ReparaturManschette is not null)
-            record.SetFieldValue(FieldKeys.RepairSleeve, MeasuresTextBuilder.FormatInt(recommendation.ReparaturManschette.Value), FieldSource.Unknown, userEdited: false);
-        if (recommendation.ReparaturKurzliner is not null)
-            record.SetFieldValue(FieldKeys.ShortLinerRepair, MeasuresTextBuilder.FormatInt(recommendation.ReparaturKurzliner.Value), FieldSource.Unknown, userEdited: false);
+        SetAutomaticValue(record, FieldKeys.Cost,
+            recommendation.EstimatedTotalCost?.ToString("0.00", CultureInfo.InvariantCulture));
+        SetAutomaticValue(record, FieldKeys.LinerRenovationMeters,
+            recommendation.RenovierungInlinerM is null
+                ? null
+                : MeasuresTextBuilder.FormatDecimal(recommendation.RenovierungInlinerM.Value));
+        SetAutomaticValue(record, FieldKeys.LinerRenovationCount,
+            recommendation.RenovierungInlinerStk is null
+                ? null
+                : MeasuresTextBuilder.FormatInt(recommendation.RenovierungInlinerStk.Value));
+        SetAutomaticValue(record, FieldKeys.ConnectionsToGrout,
+            recommendation.AnschluesseVerpressen is null
+                ? null
+                : MeasuresTextBuilder.FormatInt(recommendation.AnschluesseVerpressen.Value));
+        SetAutomaticValue(record, FieldKeys.RepairSleeve,
+            recommendation.ReparaturManschette is null
+                ? null
+                : MeasuresTextBuilder.FormatInt(recommendation.ReparaturManschette.Value));
+        SetAutomaticValue(record, FieldKeys.ShortLinerRepair,
+            recommendation.ReparaturKurzliner is null
+                ? null
+                : MeasuresTextBuilder.FormatInt(recommendation.ReparaturKurzliner.Value));
+    }
+
+    /// <summary>
+    /// Entfernt eine alte KI-/Lernlogik-Empfehlung samt automatisch geschaetzten
+    /// Kosten und Mengen. Handwerte und importierte Werte bleiben unveraendert.
+    /// Rueckgabe: true, wenn mindestens ein Feld geleert wurde.
+    /// </summary>
+    public static bool ClearAutomaticRecommendation(HaltungRecord record)
+    {
+        if (record is null)
+            return false;
+
+        var changed = false;
+        foreach (var field in CostFieldNames)
+            changed |= ClearAutomaticField(record, field);
+        return changed;
+    }
+
+    private static void SetAutomaticValue(HaltungRecord record, string field, string? value)
+    {
+        if (value is null)
+        {
+            ClearAutomaticField(record, field);
+            return;
+        }
+
+        record.SetFieldValue(field, value, FieldSource.Unknown, userEdited: false);
+    }
+
+    private static bool ClearAutomaticField(HaltungRecord record, string field)
+    {
+        if (string.IsNullOrEmpty(record.GetFieldValue(field)))
+            return false;
+        if (!record.FieldMeta.TryGetValue(field, out var meta)
+            || meta.UserEdited
+            || meta.Source != FieldSource.Unknown)
+        {
+            return false;
+        }
+
+        record.SetFieldValue(field, "", FieldSource.Unknown, userEdited: false);
+        return true;
     }
 
     /// <summary>
@@ -156,8 +209,11 @@ public static class SanierungCostFieldMapper
         }
         else
         {
-            var hasMeasures = cost is not null
-                && cost.Measures.Any(m => m.Lines.Any(l => l.Selected && l.Qty > 0m));
+            // Dieselbe Regel wie ueberall sonst - jetzt an einer Stelle. Sie stand
+            // hier und in MeasurePricingEngine handgeschrieben, waehrend
+            // SchachtLvCostLoader eine schwaechere benutzte (Gesamtaudit
+            // 2026-08-18, F-01). Verhalten unveraendert.
+            var hasMeasures = ExportableCostRule.HasExportableLine(cost);
             if (!hasMeasures)
             {
                 foreach (var f in QuantityFieldNames)

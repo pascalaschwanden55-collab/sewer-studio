@@ -35,7 +35,7 @@ public sealed class CodingApplyEmptyProtocolDialogWorkflowTests
         var result = CodingApplyEmptyProtocolDialogWorkflow.Execute(
             new CodingApplyEmptyProtocolGuardResult(
                 RequiresConfirmation: true,
-                Message: "Befunde wirklich loeschen?",
+                Message: "Befunde wirklich löschen?",
                 Title: "Leere Codierung"),
             new CodingApplyEmptyProtocolDialogWorkflowActions(
                 CreateDialogService: () =>
@@ -45,6 +45,6 @@ public sealed class CodingApplyEmptyProtocolDialogWorkflowTests
                 }));
 
         Assert.False(result);
-        Assert.Equal(["service", "dialog:Befunde wirklich loeschen?:Leere Codierung"], calls);
+        Assert.Equal(["service", "dialog:Befunde wirklich löschen?:Leere Codierung"], calls);
     }
 }

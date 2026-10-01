@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.Views.Controls;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
@@ -23,6 +24,9 @@ public partial class SchachtansichtView : UserControl
         InitializeComponent();
         RestoreSchadenHeight();
         IsVisibleChanged += (_, _) => RefreshAll();
+        Detail.CanCustomize = true;
+        Detail.LayoutChanged += Detail_LayoutChanged;
+        Detail.LayoutResetRequested += Detail_LayoutResetRequested;
         Unloaded += (_, _) => SubscribeSelectedRecord(null);
     }
 
@@ -55,8 +59,6 @@ public partial class SchachtansichtView : UserControl
             RefreshAll();
         }
     }
-
-    public IReadOnlyList<string> ZustandsklasseOptions => ZustandsklasseColorPalette.SelectionOptions;
 
     public Action<string, SchachtRecord>? ActionRequested { get; set; }
 
@@ -109,8 +111,8 @@ public partial class SchachtansichtView : UserControl
 
         if (SchachtList.SelectedItem is not SchachtRecord record || DetailBuilder is null)
         {
-            Detail.Header = "Kein Schacht gewaehlt";
-            Detail.SubHeader = "Links einen Schacht waehlen.";
+            Detail.Header = "Kein Schacht gewählt";
+            Detail.SubHeader = "Links einen Schacht wählen.";
             Detail.Groups = Array.Empty<RecordDetailGroup>();
             DamageList.ItemsSource = Array.Empty<SchachtDamageLine>();
             return;
@@ -118,9 +120,37 @@ public partial class SchachtansichtView : UserControl
 
         var number = record.GetFieldValue("Schachtnummer");
         Detail.Header = string.IsNullOrWhiteSpace(number) ? "Schachtdetails" : $"Schacht {number}";
-        Detail.SubHeader = "Alle Felder editierbar - Aenderungen erscheinen sofort in der Tabelle.";
-        Detail.Groups = DetailBuilder(record);
+        Detail.SubHeader = "Alle Felder editierbar - Änderungen erscheinen sofort in der Tabelle.";
+        Detail.Groups = RecordDetailLayoutApplier.Apply(
+            DetailBuilder(record),
+            RecordDetailLayoutSettingsMapper.ToLayout(_settings?.SchaechtePageLayout?.DetailLayout));
         DamageList.ItemsSource = DamageLineBuilder?.Invoke(record) ?? Array.Empty<SchachtDamageLine>();
+    }
+
+    // Anpassen-Modus: der Benutzer hat Spalten oder Karten veraendert.
+    // Schaechte haben ihr eigenes Layout, unabhaengig von den Haltungen.
+    private void Detail_LayoutChanged(object? sender, RecordDetailLayoutChangedEventArgs e)
+    {
+        _ = sender;
+        var layout = _settings?.SchaechtePageLayout;
+        if (layout is null)
+            return;
+
+        layout.DetailLayout = RecordDetailLayoutSettingsMapper.ToSettings(e.Layout);
+        _settings!.Save();
+    }
+
+    private void Detail_LayoutResetRequested(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        var layout = _settings?.SchaechtePageLayout;
+        if (layout is null)
+            return;
+
+        layout.DetailLayout = new DetailLayoutSettings();
+        _settings!.Save();
+        RefreshAll();
     }
 
     private void RestoreSchadenHeight()
@@ -179,13 +209,6 @@ public partial class SchachtansichtView : UserControl
         _ = sender;
         _ = e;
         RaiseAction("details");
-    }
-
-    private void ZustandsklasseValue_Click(object sender, RoutedEventArgs e)
-    {
-        _ = e;
-        if (sender is Button { Tag: string value })
-            RaiseAction($"zustandsklasse:{value}");
     }
 
     private void CtxMoveUp_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("moveup"); }

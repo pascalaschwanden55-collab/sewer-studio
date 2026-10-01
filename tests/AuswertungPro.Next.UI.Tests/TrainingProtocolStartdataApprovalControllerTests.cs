@@ -56,7 +56,7 @@ public sealed class TrainingProtocolStartdataApprovalControllerTests
         Assert.Equal(1, result.ApprovedCount);
         Assert.Equal(2, result.ItemCount);
         Assert.Equal("1/2 Protokoll-Startdaten freigegeben.", result.StatusText);
-        Assert.Equal(["Startdaten-Freigabe Fehler (BAB): defekt"], result.ErrorLogTexts);
+        Assert.Equal(["Startdaten-Freigabe Fehler (BAB): Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog."], result.ErrorLogTexts);
         Assert.Equal(["item-2"], approvedIds);
     }
 

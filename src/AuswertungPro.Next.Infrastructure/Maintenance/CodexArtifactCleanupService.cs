@@ -34,7 +34,7 @@ public sealed class CodexArtifactCleanupService : ICodexArtifactCleanupService
 
         if (CodexArtifactCandidateInspector.IsReparsePoint(context.ArtifactRoot))
         {
-            warnings.Add("Der Ordner .codex-artifacts ist eine Verknuepfung und bleibt geschuetzt.");
+            warnings.Add("Der Ordner .codex-artifacts ist eine Verknüpfung und bleibt geschützt.");
             return BuildReport(context, items, warnings);
         }
 
@@ -100,7 +100,7 @@ public sealed class CodexArtifactCleanupService : ICodexArtifactCleanupService
                     context.ActivityCutoffUtc);
                 if (!inspection.CanDelete)
                 {
-                    failures.Add($"{originalPath}: Sicherheitspruefung vor dem Loeschen fehlgeschlagen.");
+                    failures.Add($"{originalPath}: Sicherheitsprüfung vor dem Löschen fehlgeschlagen.");
                     continue;
                 }
 

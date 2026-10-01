@@ -161,7 +161,11 @@ internal sealed class DataPageProjectBindingController : IDisposable
     }
 
     private void OnRecordsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        => HaltungRunningNumberService.AssignNr(_getRecords());
+    {
+        HaltungRunningNumberService.AssignNr(_getRecords());
+        foreach (var command in _selectionCommands)
+            command?.NotifyCanExecuteChanged();
+    }
 
     public void Dispose()
     {

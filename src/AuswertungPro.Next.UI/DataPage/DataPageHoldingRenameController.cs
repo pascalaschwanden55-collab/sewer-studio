@@ -51,7 +51,7 @@ internal static class DataPageHoldingRenameController
         record.SetFieldValue(FieldKeys.HoldingName, newName, FieldSource.Manual, userEdited: true);
         PdfCorrectionMetadata.RegisterHoldingRename(project, oldName, newName);
 
-        var pdfPaths = CollectPdfPaths(record, projectPath);
+        var pdfPaths = CollectPdfPaths(record, projectPath, showWarning);
         if (pdfPaths.Count == 0)
             return true;
 
@@ -60,14 +60,15 @@ internal static class DataPageHoldingRenameController
         {
             showError(
                 $"{rewrite.Failed} Protokoll-PDF(s) konnten nicht aktualisiert werden.\n" +
-                "Die bisherigen PDF-Dateien wurden nicht ueberschrieben.",
+                "Die bisherigen PDF-Dateien wurden nicht überschrieben.",
                 "PDF nicht aktualisiert");
         }
 
         return true;
     }
 
-    private static List<string> CollectPdfPaths(HaltungRecord record, string? projectPath)
+    private static List<string> CollectPdfPaths(
+        HaltungRecord record, string? projectPath, Action<string, string> showWarning)
     {
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var field in new[] { FieldKeys.PdfPath, FieldKeys.PdfAll })
@@ -83,7 +84,14 @@ internal static class DataPageHoldingRenameController
                     && IsProjectHoldingPdf(resolved, projectPath)
                     && resolved.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                 {
-                    paths.Add(resolved);
+                    try
+                    {
+                        paths.Add(ProjectPathResolver.EnsureWritableProjectPath(resolved, projectPath));
+                    }
+                    catch (Exception ex)
+                    {
+                        showWarning($"Protokoll-PDF wird nicht geändert:\n{UserError.DescribeAndReport(ex, "Protokoll-PDF beim Umbenennen")}", "PDF nicht aktualisiert");
+                    }
                 }
             }
         }

@@ -12,4 +12,11 @@
     <ProjectReference Include="..\..\src\AuswertungPro.Next.Application\AuswertungPro.Next.Application.csproj" />
     <ProjectReference Include="..\..\src\AuswertungPro.Next.Infrastructure\AuswertungPro.Next.Infrastructure.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\src\AuswertungPro.Next.UI\Data\vsa_kek_2020_catalog_manifest.json">
+      <Link>Data\vsa_kek_2020_catalog_manifest.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

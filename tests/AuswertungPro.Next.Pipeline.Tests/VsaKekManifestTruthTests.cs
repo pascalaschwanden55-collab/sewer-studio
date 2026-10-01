@@ -61,6 +61,14 @@ public sealed class VsaKekManifestTruthTests
         AssertTitleContains(titles, "BBDZ", "Bodenmaterial dringt ein");
     }
 
+    [Fact]
+    public void Manifest_locks_polyethylene_material_code()
+    {
+        var titles = LoadManifestTitles();
+
+        AssertTitleContains(titles, "AEDXO", "Polyethylen");
+    }
+
     // Robustheits-Riegel: JEDER Code, den die KI-Befundliste als nackten Code
     // anzeigen kann, MUSS im Katalog einen deutschen Klartext haben (Titel != Code).
     // Quelle des Code-Raums:
@@ -133,7 +141,7 @@ public sealed class VsaKekManifestTruthTests
 
     private static Dictionary<string, string> LoadManifestTitles()
     {
-        var path = FindManifestPath();
+        var path = TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json");
         using var stream = File.OpenRead(path);
         using var doc = JsonDocument.Parse(stream);
 
@@ -149,7 +157,7 @@ public sealed class VsaKekManifestTruthTests
 
     private static Dictionary<string, List<JsonElement>> LoadManifestParameters()
     {
-        var path = FindManifestPath();
+        var path = TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json");
         using var stream = File.OpenRead(path);
         using var doc = JsonDocument.Parse(stream);
 
@@ -165,26 +173,6 @@ public sealed class VsaKekManifestTruthTests
                 StringComparer.OrdinalIgnoreCase);
     }
 
-    private static string FindManifestPath()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            var candidate = Path.Combine(
-                current.FullName,
-                "src",
-                "AuswertungPro.Next.UI",
-                "Data",
-                "vsa_kek_2020_catalog_manifest.json");
-
-            if (File.Exists(candidate))
-                return candidate;
-
-            current = current.Parent;
-        }
-
-        throw new FileNotFoundException("VSA-KEK-Katalogmanifest wurde nicht gefunden.");
-    }
 
     private static void AssertTitleContains(
         IReadOnlyDictionary<string, string> titles,

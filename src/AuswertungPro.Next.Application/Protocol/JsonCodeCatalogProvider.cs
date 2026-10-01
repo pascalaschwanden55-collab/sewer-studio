@@ -178,7 +178,7 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
             }
 
             if (string.IsNullOrWhiteSpace(codeDef.Title))
-                errors.Add($"Title fehlt fuer Code '{SafeCodeLabel(codeDef.Code, row)}'.");
+                errors.Add($"Title fehlt für Code '{SafeCodeLabel(codeDef.Code, row)}'.");
         }
 
         return errors;
@@ -218,7 +218,7 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
             LastLoadWarnings = Array.Empty<string>();
             LastLoadErrors = new[]
             {
-                $"Code-Katalog konnte nicht gelesen werden: {ex.Message}"
+                $"Code-Katalog konnte nicht gelesen werden: {UserError.DescribeAndReport(ex, "Code-Katalog lesen")}"
             };
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
@@ -15,6 +16,38 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CodingSessionViewModelFeedbackTests
 {
+    [Fact]
+    public void CreateEvent_speichert_Overlayzahlen_kulturunabhaengig()
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        var session = new FakeCodingSessionService();
+        using var vm = new CodingSessionViewModel(session, new FakeOverlayToolService());
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-CH");
+            vm.SelectedCode = "BBA";
+            vm.CurrentOverlay = new OverlayGeometry
+            {
+                Q1Mm = 12.3,
+                Q2Mm = 4.5,
+                ClockFrom = 6.5,
+                DnRatioPercent = 33.3
+            };
+
+            vm.CreateEventCommand.Execute(null);
+
+            var parameters = Assert.IsType<ProtocolEntryCodeMeta>(session.LastEntry!.CodeMeta).Parameters;
+            Assert.Equal("12.3", parameters["vsa.q1"]);
+            Assert.Equal("4.5", parameters["vsa.q2"]);
+            Assert.Equal("6.5", parameters["vsa.uhr.von"]);
+            Assert.Equal("33.3", parameters["vsa.dn.ratio"]);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+        }
+    }
+
     [Fact]
     public void NewAiContext_DefaultsToIgnoredDecision()
     {
@@ -184,6 +217,7 @@ public sealed class CodingSessionViewModelFeedbackTests
 
     private sealed class FakeCodingSessionService : ICodingSessionService
     {
+        public ProtocolEntry? LastEntry { get; private set; }
         public double CurrentMeter => 0;
         public double EndMeter => 0;
         public double ProgressPercent => 0;
@@ -203,7 +237,11 @@ public sealed class CodingSessionViewModelFeedbackTests
         public void MoveNext(double stepSizeM = 0.5) { }
         public void MovePrevious(double stepSizeM = 0.5) { }
         public void MoveToMeter(double meter) { }
-        public CodingEvent AddEvent(ProtocolEntry entry, OverlayGeometry? overlay = null) => new() { Entry = entry, Overlay = overlay };
+        public CodingEvent AddEvent(ProtocolEntry entry, OverlayGeometry? overlay = null)
+        {
+            LastEntry = entry;
+            return new CodingEvent { Entry = entry, Overlay = overlay };
+        }
         public void UpdateEvent(Guid eventId, ProtocolEntry entry, OverlayGeometry? overlay = null) { }
         public void RemoveEvent(Guid eventId) { }
         public Task IndexConfirmedSampleAsync(

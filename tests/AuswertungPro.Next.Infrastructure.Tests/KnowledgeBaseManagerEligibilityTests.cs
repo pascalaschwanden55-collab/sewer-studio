@@ -61,6 +61,21 @@ public class KnowledgeBaseManagerEligibilityTests : IDisposable
     }
 
     [Fact]
+    public void IndexWorthy_True_ForPersonallyConfirmedPdfPhotoWithStrictProvenance()
+    {
+        var sample = BaseSample();
+        sample.SourceType = SourceTypeNames.PdfPhoto;
+        sample.SourceReferenceCode = "BAB";
+        sample.SourceReferenceDescription = "Riss laengs, 12 Uhr, Scheitel";
+        sample.Notes =
+            "PDF-Operateurreferenz: 20231123_06.887943-90327.pdf; " +
+            "SHA-256=8a7cfb71d1289694b8a650fe2c49357840fe1935ac120b8fb83d24f899c99c6f; " +
+            "Seite=3; Foto=231123_115548_266.jpg; Zuordnung=time_meter_text";
+
+        Assert.True(KnowledgeBaseManager.IsIndexWorthy(sample));
+    }
+
+    [Fact]
     public void IndexWorthy_True_WhenInspectionDateMissing_RetrievalIsRecencyAgnostic()
     {
         // Entkopplung Retrieval <-> Training (2026-06-20): ein fachlich gueltiges Sample OHNE
@@ -193,6 +208,27 @@ public class KnowledgeBaseManagerEligibilityTests : IDisposable
         Assert.False(KnowledgeBaseManager.IsIndexWorthy(sample));
     }
 
+    [Fact]
+    public void IndexWorthy_False_ForInventedSubcodeWithKnownMainCode()
+    {
+        var sample = BaseSample();
+        sample.Code = "BABZZ";
+
+        Assert.NotNull(VsaCodeResolver.LookupLabel(sample.Code));
+        Assert.False(VsaCodeResolver.IsExactSelectableCode(sample.Code));
+        Assert.False(KnowledgeBaseManager.IsIndexWorthy(sample));
+    }
+
+    [Fact]
+    public void ExactSelectableCode_RejectsObservedOrNonSelectableCatalogEntries()
+    {
+        VsaCodeResolver.ConfigureCatalog(new SelectionCatalog());
+
+        Assert.True(VsaCodeResolver.IsExactSelectableCode("BAB"));
+        Assert.False(VsaCodeResolver.IsExactSelectableCode("BABXA"));
+        Assert.False(VsaCodeResolver.IsExactSelectableCode("BABXB"));
+    }
+
     [Theory]
     [InlineData("Riss laengs — Lage und Ausmass ergaenzen")]
     [InlineData("Riss laengs — Lage und Ausmass ergänzen")]
@@ -227,6 +263,45 @@ public class KnowledgeBaseManagerEligibilityTests : IDisposable
 
         public IReadOnlyList<string> AllowedCodes()
             => Codes.Select(c => c.Code).ToList();
+
+        public IReadOnlyList<string> Validate(IReadOnlyList<CodeDefinition>? codes = null)
+            => Array.Empty<string>();
+    }
+
+    private sealed class SelectionCatalog : ICodeCatalogProvider
+    {
+        private static readonly CodeDefinition[] Codes =
+        {
+            new() { Code = "BAB", Title = "Risse", IsSelectable = true },
+            new()
+            {
+                Code = "BABXA",
+                Title = "Beobachtete Erweiterung",
+                IsSelectable = true,
+                IsObservedExtension = true,
+            },
+            new() { Code = "BABXB", Title = "Nur Ueberschrift", IsSelectable = false },
+        };
+
+        public IReadOnlyList<CodeDefinition> GetAll() => Codes;
+
+        public bool TryGet(string code, out CodeDefinition def)
+        {
+            def = Codes.FirstOrDefault(candidate => string.Equals(
+                      candidate.Code,
+                      code,
+                      StringComparison.OrdinalIgnoreCase))
+                  ?? new CodeDefinition();
+            return !string.IsNullOrWhiteSpace(def.Code);
+        }
+
+        public void Save(IReadOnlyList<CodeDefinition> codes)
+            => throw new InvalidOperationException("Test catalog is read-only.");
+
+        public IReadOnlyList<string> AllowedCodes()
+            => Codes.Where(code => code.IsSelectable && !code.IsObservedExtension)
+                .Select(code => code.Code)
+                .ToList();
 
         public IReadOnlyList<string> Validate(IReadOnlyList<CodeDefinition>? codes = null)
             => Array.Empty<string>();

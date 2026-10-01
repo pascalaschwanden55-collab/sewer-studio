@@ -9,10 +9,13 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Lookup;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Behaviors;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
@@ -25,7 +28,7 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 public partial class SchaechtePage : UserControl
 {
     private SchaechtePageViewModel Vm => DataContext as SchaechtePageViewModel
-        ?? throw new InvalidOperationException("SchaechtePage benoetigt SchaechtePageViewModel als DataContext.");
+        ?? throw new InvalidOperationException("SchaechtePage benötigt SchaechtePageViewModel als DataContext.");
     private AppSettings Settings => Vm.Settings;
     private IDialogService Dialogs => Vm.Dialogs;
 
@@ -49,7 +52,17 @@ public partial class SchaechtePage : UserControl
     private readonly SchaechtePageSubscriptionController _subscriptionController;
     private readonly SchaechteRecordDetailsBuilder _recordDetailsBuilder;
     private SchachtMassnahmenDialogController? _massnahmenController;
+    // Alle Nachschlag-Befehle der Seite teilen sich diese Sperre: immer
+    // nur eine Abfrage zur Zeit.
+    private readonly NachschlagTor _nachschlagTor = new();
     private bool _isRestoringLayout;
+
+    /// <summary>
+    /// Der Wert der Zustandsklasse beim Oeffnen der Zelle (Task 6, Fix-Runde 1). Nur damit
+    /// laesst sich beim Schliessen sagen, ob wirklich eine andere Klasse gewaehlt wurde: Die
+    /// Marke ist eine Vorlagenspalte, deren Editierelement der Textleser nicht lesen kann.
+    /// </summary>
+    private string? _zustandsklasseBeimOeffnen;
 
     public SchaechtePage()
     {
@@ -86,15 +99,18 @@ public partial class SchaechtePage : UserControl
         _recordDetailsBuilder = new SchaechteRecordDetailsBuilder(
             ResolveOptions,
             ResolveViewModelCommand,
-            CommitSchachtDetailKonsolidiert,
-            () => _vm is not null);
+            CommitSchachtDetailMitVerlauf,
+            () => _vm is not null,
+            BaueNachschlagBefehl,
+            BaueStrassenBefehl);
 
         SchachtansichtView.DetailBuilder = BuildRecordDetailsForAnsicht;
         SchachtansichtView.DamageLineBuilder = SchachtDamageLineBuilder.Build;
         SchachtansichtView.ActionRequested = RouteSchachtansichtAction;
-        SchachtansichtToggle.IsChecked = true;
-        SchachtansichtView.Visibility = Visibility.Visible;
-        Grid.Visibility = Visibility.Collapsed;
+        // Robuster Grundzustand bis zum DataContext-Wechsel (wie DataPage): Standard ist die
+        // Nova-Arbeitsflaeche; OnDataContextChanged wendet ShowSchaechteNovaLayout an.
+        // Die Ansicht selbst wendet VerdrahteAufklappListe() am Ende des Konstruktors an.
+        SchachtansichtToggle.IsChecked = false;
 
         DataContextChanged += OnDataContextChanged;
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
@@ -102,6 +118,9 @@ public partial class SchaechtePage : UserControl
 
         Loaded += (_, __) =>
         {
+            // Nach einem Unloaded sind Controller und Abo abgemeldet; WPF kann dieselbe Seite
+            // wieder laden. Verdrahte() ist mehrfach sicher aufrufbar.
+            _aufklappListe?.Verdrahte();
             _columnAlignmentToolbar.UpdateButtons();
             ApplySearchFilter();
         };
@@ -112,7 +131,11 @@ public partial class SchaechtePage : UserControl
             _searchDebounceTimer.Stop();
             _layoutSaveDebounceTimer.Stop();
             SaveLayoutToSettings();
+            _aufklappListe?.Dispose();
         };
+        SizeChanged += (_, __) => ApplyDrawerHeight();
+        VerdrahteNovaWorkspace();
+        VerdrahteAufklappListe();
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -125,6 +148,7 @@ public partial class SchaechtePage : UserControl
             _subscriptionController.Detach();
             _massnahmenController = null;
             SchachtansichtView.Settings = null;
+            VerdrahteAufklappAbo(null);
             return;
         }
 
@@ -136,8 +160,11 @@ public partial class SchaechtePage : UserControl
             _vm.SchachtRecommendationCosts,
             this,
             MarkProjectDirty,
-            ApplySearchFilter);
+            ApplySearchFilter,
+            _vm.SchachtCostCatalog);
         _subscriptionController.Switch(_vm.Columns, _vm.Records, () => _vm.Records);
+        InitNovaWorkspace(_vm);
+        VerdrahteAufklappAbo(_vm);
     }
 
     private void RebuildColumns()
@@ -154,14 +181,22 @@ public partial class SchaechtePage : UserControl
         {
             foreach (var col in _vm.Columns)
             {
+                // Nova-Etappe 2b: Der Anzeigename wird EINMAL geholt; der Tabellenkopf schreibt
+                // gross (siehe DataPageColumnFactory, GrossbuchstabenConverter-Doku).
+                // GetDisplayHeader bleibt selbst unveraendert, weil SchaechteRecordDetailsBuilder
+                // denselben Text auch als normale Feldbeschriftung im Formular verwendet.
+                var kopf = GetDisplayHeader(col);
+                var grossKopf = GrossbuchstabenConverter.Anwenden(kopf) ?? kopf;
+
+                var istZustandsklasse = IsZustandsklasseColumn(col);
                 DataGridColumn column;
                 if (IsCostColumn(col))
                 {
                     column = DataGridCostColumnFactory.Create(col, col);
                 }
-                else if (IsZustandsklasseColumn(col))
+                else if (istZustandsklasse)
                 {
-                    column = CreateZustandsklasseColumn(col);
+                    column = CreateZustandsklasseColumn(col, grossKopf);
                 }
                 else if (TryResolveDropdownColumnSpec(col, out var spec))
                 {
@@ -170,8 +205,8 @@ public partial class SchaechtePage : UserControl
                         col,
                         spec.ItemsSourcePath,
                         tag: new ComboBindingTag(col, spec.OptionField),
-                        lostKeyboardFocus: ComboBox_LostKeyboardFocus,
-                        selectionChanged: ComboBox_SelectionChanged,
+                        lostKeyboardFocus: ComboBox_LostKeyboardFocusMitVerlauf,
+                        selectionChanged: ComboBox_SelectionChangedMitVerlauf,
                         allowFreeText: spec.AllowFreeText,
                         bindIsProjectReady: false,
                         menuCommands: spec.Managed
@@ -182,34 +217,67 @@ public partial class SchaechtePage : UserControl
                                 spec.RemoveCommand,
                                 spec.AddCommand)
                             : null,
-                        useSelectedItemWhenNotFreeText: spec.Managed);
+                        useSelectedItemWhenNotFreeText: spec.Managed,
+                        // Ohne eigene Liste: Altwert der Zeile hinten anhaengen, sonst erscheint er leer (A15).
+                        itemsBinding: SchachtNormoptionen.FuerSpalte(col)
+                                      ?? (!spec.Managed && !spec.AllowFreeText
+                                          ? SchachtTabellenAuswahl.FuerSpalte(col, spec.ItemsSourcePath)
+                                          : null));
                 }
                 else
                 {
                     column = new DataGridTextColumn
                     {
-                        Header = GetDisplayHeader(col),
                         Binding = new Binding($"Fields[{col}]")
                         {
                             Mode = BindingMode.TwoWay,
                             UpdateSourceTrigger = UpdateSourceTrigger.LostFocus
                         },
+                        // Nova-Fixwelle 2b (P3): Ein zu langer Wert wird mit Auslassungspunkten
+                        // gekuerzt statt hart abgeschnitten ("KontrollschachDorfstrasse").
+                        // Runde 2: Zahlenspalten bekommen zusaetzlich das rechte Polster.
+                        ElementStyle = NovaTextZellenStil.MitAuslassungspunkten(
+                            DataPageColumnStyleRules.IstZahlenspalte(col, SchachtFeldnamen.Falte)),
                         Width = DataGridLength.SizeToHeader,
-                        MinWidth = 90
+                        MinWidth = 90,
+                        // Die GEONIS-Kennung ist nur Anzeige; der Export liest das Geonis-Objekt.
+                        IsReadOnly = string.Equals(
+                            SchachtFeldnamen.Falte(col),
+                            SchachtFeldnamen.Falte(FieldKeys.GeonisId),
+                            StringComparison.Ordinal)
                     };
                 }
 
-                column.Header = GetDisplayHeader(col);
+                column.Header = grossKopf;
                 column.SetValue(FrameworkElement.TagProperty, col);
-                ApplyColorStyle(column, col);
-                column.MinWidth = 90;
-                Grid.Columns.Add(column);
 
-                var defaultHorizontal = IsCostColumn(col)
-                    ? HorizontalAlignment.Right
-                    : HorizontalAlignment.Left;
+                // Die Zustandsklasse traegt ihre Farbe seit Etappe 2b in der Marke, nicht mehr
+                // in der ganzen Zelle: sonst stuende der Chip auf einer zweiten Farbflaeche.
+                if (!istZustandsklasse)
+                    ApplyColorStyle(column, col);
+                // Nova-Fixwelle 2b (P3): Volltext oben im Hinweis, Herkunftszeile darunter —
+                // dieselbe Regel wie in der Haltungsliste.
+                column.CellStyle = DataGridFieldMetaTooltipStyleFactory.Create(col, column.CellStyle, mitVolltext: true);
+                column.MinWidth = 90;
+                // Startbreite aus dem Prototyp; ein gespeichertes Spaltenlayout gewinnt, weil
+                // es erst mit RestoreLayoutFromSettings gelesen wird.
+                if (NovaSpaltenbreiten.Startbreite(col, SchachtFeldnamen.Falte) is double startbreite)
+                    column.Width = new DataGridLength(startbreite);
+                Grid.Columns.Add(column);
+                _columnFields[column] = col;
+
+                // Nova-Fixwelle 2b (P1): Zahlen stehen rechts, auch die beiden Schachtmasse.
+                // Schachtfelder heissen nach der Excel-Kopfzeile, deshalb der gefaltete
+                // Vergleich. Eine gespeicherte Nutzerausrichtung gewinnt weiterhin: Sie kommt
+                // erst mit RestoreLayoutFromSettings.
+                var defaultHorizontal =
+                    IsCostColumn(col) || DataPageColumnStyleRules.IstZahlenspalte(col, SchachtFeldnamen.Falte)
+                        ? HorizontalAlignment.Right
+                        : HorizontalAlignment.Left;
                 _columnAlignmentToolbar.SetAlignment(column, defaultHorizontal, VerticalAlignment.Center);
             }
+
+            ErgaenzeProtokollspalte();
         }
         finally
         {
@@ -229,21 +297,12 @@ public partial class SchaechtePage : UserControl
             column.CellStyle = colorStyle;
     }
 
-    private DataGridColumn CreateZustandsklasseColumn(string recordField)
-    {
-        return new DataGridComboBoxColumn
-        {
-            Header = GetDisplayHeader(recordField),
-            ItemsSource = ZustandsklasseColorPalette.SelectionOptions,
-            SelectedItemBinding = new Binding($"Fields[{recordField}]")
-            {
-                Mode = BindingMode.TwoWay,
-                UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
-            },
-            Width = DataGridLength.SizeToHeader,
-            MinWidth = 90
-        };
-    }
+    /// <summary>
+    /// Nova-Etappe 2b: dieselbe Marke wie in der Haltungsliste. Anzeigen als Chip mit lesbarer
+    /// Tinte, bearbeiten weiterhin als Auswahl 0 bis 4.
+    /// </summary>
+    private DataGridColumn CreateZustandsklasseColumn(string recordField, string header)
+        => ZustandsklasseChipColumnFactory.Create(recordField, header);
 
     private void Grid_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
     {
@@ -251,6 +310,7 @@ public partial class SchaechtePage : UserControl
         _ = e;
 
         _columnAlignmentToolbar.TrackSelectedCells();
+        AktualisiereFelderDrawer();
     }
 
     private void Grid_CurrentCellChanged(object sender, EventArgs e)
@@ -323,6 +383,11 @@ public partial class SchaechtePage : UserControl
     private void RestoreLayoutFromSettings()
     {
         var layout = Settings.SchaechtePageLayout;
+
+        // Nova-Fixwelle 2b, Runde 2: VOR dem Wiederherstellen; Schachtfelder heissen nach der
+        // Kopfzeile der Excel-Vorlage, deshalb der gefaltete Vergleich.
+        if (layout is not null)
+            ZahlenRechtsMigration.WendeAn(layout, Settings.Save, SchachtFeldnamen.Falte);
 
         _isRestoringLayout = true;
         try
@@ -468,14 +533,17 @@ public partial class SchaechtePage : UserControl
             return;
 
         var record = ResolveRecordFromComboBox(combo);
-        if (record is null)
+        if (record is null
+            || !vm.CanMutateRecord(record, "Schachtfeld ändern"))
             return;
 
         var value = DataGridEditedTextValueResolver.ResolveComboBoxValue(combo);
         if (string.IsNullOrWhiteSpace(value))
             return;
+        // Nur echte Aenderungen: Blosses Verlassen stempelte sonst eine Handmarke (Audit A15).
+        if (!SchachtTabellenAuswahl.IstAenderung(record.GetFieldValue(tag.RecordField), value)) return;
 
-        record.SetFieldValue(tag.RecordField, value);
+        record.SetFieldValue(tag.RecordField, value, FieldSource.Manual, userEdited: true);
         vm.EnsureOptionForField(tag.OptionField, value);
         MarkProjectDirty();
         ApplySearchFilter();
@@ -493,19 +561,62 @@ public partial class SchaechtePage : UserControl
         return Grid.CurrentItem as SchachtRecord;
     }
 
+    private void Grid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
+    {
+        _ = sender;
+
+        _zustandsklasseBeimOeffnen = e.Row?.Item is SchachtRecord geoeffnet
+            && e.Column?.GetValue(FrameworkElement.TagProperty) is string feld
+            && IsZustandsklasseColumn(feld)
+                ? geoeffnet.GetFieldValue(feld)
+                : null;
+
+        if (e.Row?.Item is not SchachtRecord record
+            || DataContext is not SchaechtePageViewModel vm
+            || vm.CanMutateRecord(record, "Schachtfeld ändern"))
+        {
+            return;
+        }
+
+        e.Cancel = true;
+    }
+
     private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
         _ = sender;
+
+        var zustandsklasseBeimOeffnen = _zustandsklasseBeimOeffnen;
+        _zustandsklasseBeimOeffnen = null;
 
         if (e.EditAction != DataGridEditAction.Commit)
             return;
         if (e.Row?.Item is not SchachtRecord record)
             return;
+        if (DataContext is not SchaechtePageViewModel vm
+            || !vm.CanMutateRecord(record, "Schachtfeld ändern"))
+        {
+            e.Cancel = true;
+            return;
+        }
         if (e.Column.GetValue(FrameworkElement.TagProperty) is not string recordField)
             return;
 
         if (IsCostColumn(recordField))
         {
+            MarkProjectDirty();
+            ApplySearchFilter();
+            return;
+        }
+
+        // Die Zustandsklasse steht in einer Vorlagenspalte: Ihr Editierelement ist ein
+        // ContentPresenter, aus dem der Textleser nichts holen kann. Die Auswahl hat ihren Wert
+        // ueber die Bindung schon geschrieben — hier wird nur noch Herkunft und Handmarkierung
+        // nachgezogen, und das nur bei echter Aenderung.
+        if (IsZustandsklasseColumn(recordField))
+        {
+            if (!SchaechteFieldEditController.ApplyZustandsklasse(recordField, record, zustandsklasseBeimOeffnen))
+                return;
+
             MarkProjectDirty();
             ApplySearchFilter();
             return;
@@ -559,8 +670,8 @@ public partial class SchaechtePage : UserControl
 
         var schacht = GetSchachtNumber(record);
         var title = string.IsNullOrWhiteSpace(schacht)
-            ? "Primaere Schaeden"
-            : $"Primaere Schaeden - Schacht {schacht}";
+            ? "Primäre Schäden"
+            : $"Primäre Schäden - Schacht {schacht}";
 
         ShowTextPreview(title, content);
         e.Handled = true;
@@ -582,8 +693,7 @@ public partial class SchaechtePage : UserControl
         if (project is null)
             return;
 
-        project.ModifiedAtUtc = DateTime.UtcNow;
-        project.Dirty = true;
+        _vm.ScheduleAutoSave();
     }
 
     private static Project? GetCurrentProject()
@@ -626,9 +736,7 @@ public partial class SchaechtePage : UserControl
     {
         _ = sender;
         _ = e;
-        var showAnsicht = SchachtansichtToggle.IsChecked == true;
-        SchachtansichtView.Visibility = showAnsicht ? Visibility.Visible : Visibility.Collapsed;
-        Grid.Visibility = showAnsicht ? Visibility.Collapsed : Visibility.Visible;
+        WendeSchachtAnsichtAn();
     }
 
     private void RouteSchachtansichtAction(string actionKey, SchachtRecord record)
@@ -637,13 +745,6 @@ public partial class SchaechtePage : UserControl
             return;
 
         _vm.Selected = record;
-        if (actionKey.StartsWith("zustandsklasse:", StringComparison.Ordinal))
-        {
-            var value = actionKey["zustandsklasse:".Length..];
-            CommitSchachtDetailField(record, "Zustandsklasse", value);
-            return;
-        }
-
         var e = new RoutedEventArgs();
         switch (actionKey)
         {
@@ -687,6 +788,15 @@ public partial class SchaechtePage : UserControl
             "ReferenzpruefungOptions" => _vm.ReferenzpruefungOptions,
             "AusgefuehrtDurchOptions" => _vm.AusgefuehrtDurchOptions,
             "SchachtformOptions" => _vm.SchachtformOptions,
+            "BelastungsklasseOptions" => _vm.BelastungsklasseOptions,
+            "SchachtFunktionOptions" => _vm.SchachtFunktionOptions,
+            "BauwerksartOptions" => _vm.BauwerksartOptions,
+            "VersickerungsartOptions" => _vm.VersickerungsartOptions,
+            "SchachtMaterialOptions" => _vm.SchachtMaterialOptions,
+            "StatusOptions" => _vm.StatusOptions,
+            "SanierungsbedarfOptions" => _vm.SanierungsbedarfOptions,
+            "NutzungsartOptions" => _vm.NutzungsartOptions, // WebGIS-Listen (23.09.2026)
+            "LagebestimmungOptions" => _vm.LagebestimmungOptions,
             _ => Array.Empty<string>()
         };
     }
@@ -699,21 +809,6 @@ public partial class SchaechtePage : UserControl
         return _vm.GetType().GetProperty(propertyName)?.GetValue(_vm) as ICommand;
     }
 
-    private void CommitSchachtDetailField(SchachtRecord record, string recordField, string? value)
-    {
-        var next = value ?? string.Empty;
-        if (!SchaechteFieldEditController.Apply(
-                recordField,
-                record,
-                next,
-                ApplySchachtNumberChange,
-                EnsureSchachtOption))
-            return;
-
-        MarkProjectDirty();
-        ApplySearchFilter();
-    }
-
     private void EnsureSchachtOption(string optionField, string? value)
         => _vm?.EnsureOptionForField(optionField, value);
 
@@ -722,6 +817,12 @@ public partial class SchaechtePage : UserControl
     // Schachtnummer-Umbenennung laeuft wie gehabt; Optionen/Filter werden einmal aktualisiert.
     private void CommitSchachtDetailKonsolidiert(SchachtRecord record, KonsolidiertesSchachtFeld feld, string? value)
     {
+        if (_vm is null
+            || !_vm.CanMutateRecord(record, "Schachtdetail ändern"))
+        {
+            return;
+        }
+
         var next = value ?? string.Empty;
 
         if (string.Equals(feld.PrimaerKey, "Schachtnummer", StringComparison.Ordinal))
@@ -733,7 +834,7 @@ public partial class SchaechtePage : UserControl
         else
         {
             foreach (var key in feld.AlleKeys)
-                record.SetFieldValue(key, next);
+                record.SetFieldValue(key, next, FieldSource.Manual, userEdited: true);
         }
 
         if (_vm is not null)
@@ -758,32 +859,42 @@ public partial class SchaechtePage : UserControl
             GetCurrentProject(),
             (message, title) => DialogHost.Current.Error(message, title));
 
+    /// <summary>
+    /// Nova-Fixwelle 2b, Runde 2: Derselbe <see cref="DataPageRightClickController"/> wie auf
+    /// der Haltungsseite. Vorher entschied dieser Pfad selbst — und kannte den Schutz gegen
+    /// virtuelle Spalten nicht: „Spalte leeren" auf dem Kopf der Protokollspalte schrieb
+    /// <c>Nova_Protokoll</c> in JEDEN Schachtdatensatz. Zwei Wege zu derselben Entscheidung
+    /// heisst, dass nur einer den Schutz bekommt.
+    /// </summary>
     private void Grid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (ClearColumnModeButton.IsChecked == true)
-        {
-            var header = VisualTreeSafe.FindAncestor<DataGridColumnHeader>((DependencyObject)e.OriginalSource);
-            if (header?.Column is not null)
-            {
-                var fieldName = header.Column.GetValue(FrameworkElement.TagProperty) as string;
-                if (!string.IsNullOrWhiteSpace(fieldName))
-                {
-                    var displayName = header.Column.Header?.ToString() ?? fieldName;
-                    ClearColumn(fieldName, displayName);
-                    e.Handled = true;
-                    return;
-                }
-            }
-        }
+        if (e.OriginalSource is not DependencyObject originalSource)
+            return;
 
-        var row = VisualTreeSafe.FindAncestor<DataGridRow>((DependencyObject)e.OriginalSource);
-        if (row is not null)
-            Grid.SelectedItem = row.Item;
+        var header = VisualTreeSafe.FindAncestor<DataGridColumnHeader>(originalSource);
+        var row = VisualTreeSafe.FindAncestor<DataGridRow>(originalSource);
+
+        var ergebnis = DataPageRightClickController.Resolve(
+            ClearColumnModeButton.IsChecked == true,
+            header?.Column.GetValue(FrameworkElement.TagProperty) as string,
+            header?.Column.Header?.ToString(),
+            row?.Item);
+
+        switch (ergebnis.Action)
+        {
+            case DataPageRightClickAction.ClearColumn when ergebnis.FieldName is { } feld:
+                ClearColumnMitVerlauf(feld, ergebnis.DisplayName ?? feld);
+                e.Handled = true;
+                break;
+            case DataPageRightClickAction.SelectRow:
+                Grid.SelectedItem = ergebnis.RowItem;
+                break;
+        }
     }
 
     private void ClearColumn(string fieldName, string displayName)
     {
-        if (_vm is null)
+        if (_vm is null || !_vm.CanMutateShaftData)
             return;
 
         if (!DialogHost.Current.ConfirmWarn(
@@ -793,8 +904,15 @@ public partial class SchaechtePage : UserControl
             return;
         }
 
+        // Bewusstes Leeren ist ebenfalls eine Entscheidung des Menschen und darf
+        // nicht spaeter von einem automatischen Schreiber wieder gefuellt werden.
         foreach (var record in _vm.Records)
-            record.SetFieldValue(fieldName, string.Empty);
+        {
+            if (!_vm.CanMutateRecord(record, "Schachtspalte leeren"))
+                return;
+
+            record.SetFieldValue(fieldName, string.Empty, FieldSource.Manual, userEdited: true);
+        }
 
         MarkProjectDirty();
     }
@@ -861,7 +979,15 @@ public partial class SchaechtePage : UserControl
     }
 
     private void OpenSchachtMassnahmen(SchachtRecord record)
-        => _massnahmenController?.Open(record);
+    {
+        if (_vm is null
+            || !_vm.CanMutateRecord(record, "Sanierungsmassnahmen bearbeiten"))
+        {
+            return;
+        }
+
+        _massnahmenController?.Open(record);
+    }
 
     private static SchaechteFileActionController CreateFileActionController(
         SchaechtePageViewModel viewModel)

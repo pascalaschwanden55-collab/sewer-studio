@@ -34,7 +34,7 @@ public sealed class VsaCodeEntryValidatorTests
     public void ValidateQuantField_ungueltige_zahl_gibt_fehler()
     {
         var rule = new QuantField { Pflicht = "O" };
-        Assert.Equal("Ungueltige Zahl", VsaCodeEntryValidator.ValidateQuantField("abc", rule));
+        Assert.Equal("Ungültige Zahl", VsaCodeEntryValidator.ValidateQuantField("abc", rule));
     }
 
     [Fact]
@@ -75,6 +75,16 @@ public sealed class VsaCodeEntryValidatorTests
         var rule = new QuantField { Min = 0, Max = 100 };
         Assert.Null(VsaCodeEntryValidator.ValidateQuantField("0", rule));
         Assert.Null(VsaCodeEntryValidator.ValidateQuantField("100", rule));
+    }
+
+    [Fact]
+    public void ValidateQuantField_nennt_einheit_bei_grenzfehler()
+    {
+        var rule = new QuantField { Einheit = "mm", Min = 0 };
+
+        Assert.Equal(
+            ">= 0 mm",
+            VsaCodeEntryValidator.ValidateQuantField("-1", rule));
     }
 
     // ── IsValidClock ─────────────────────────────────────────────────

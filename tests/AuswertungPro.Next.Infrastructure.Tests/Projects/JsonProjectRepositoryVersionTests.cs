@@ -69,7 +69,8 @@ public sealed class JsonProjectRepositoryVersionTests : IDisposable
         var result = new JsonProjectRepository().Load(path);
 
         Assert.True(result.Ok, result.ErrorMessage);
-        Assert.Equal(JsonProjectRepository.CurrentVersion, result.Value!.Version);
+        // Ohne neue Objektakten bleibt das kompatible Bestandsformat erhalten.
+        Assert.Equal(2, result.Value!.Version);
         Assert.True(result.Value.Dirty);
     }
 }

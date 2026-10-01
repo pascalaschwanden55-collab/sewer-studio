@@ -1,6 +1,6 @@
-# SewerStudio auf einem neuen PC einrichten
+﻿# SewerStudio auf einem neuen PC einrichten
 
-Diese Anleitung gilt fuer SewerStudio 4.5 unter Windows. Sie trennt Programm,
+Diese Anleitung gilt fuer SewerStudio 5.0 unter Windows. Sie trennt Programm,
 Projekte und das KI-Gehirn, damit ein Update keine Nutzdaten ueberschreibt.
 
 ## 1. Vor dem Wechsel sichern

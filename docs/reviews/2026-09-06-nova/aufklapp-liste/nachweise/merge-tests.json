@@ -1,0 +1,14 @@
+[
+  {
+    "pruefung": "ui-merge",
+    "bestanden": 295,
+    "fehler": 0,
+    "uebersprungen": 7
+  },
+  {
+    "pruefung": "infrastruktur-merge",
+    "bestanden": 28,
+    "fehler": 0,
+    "uebersprungen": 0
+  }
+]

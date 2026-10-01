@@ -12,6 +12,12 @@ public sealed class CodingProtocolEntryCopierTests
         var meta = new ProtocolEntryCodeMeta { Code = "BAB" };
         meta.Parameters["p"] = "v";
         var ai = new ProtocolEntryAiMeta { SuggestedCode = "BAB", Confidence = 0.91 };
+        var training = new ProtocolEntryTrainingMeta
+        {
+            SkipAutomaticPersistence = true,
+            SkipReason = "Fotoannotation bereits separat gespeichert",
+            PhotoAnnotationSampleIds = ["photo-sample-1"]
+        };
         var source = new ProtocolEntry
         {
             Code = "BAB",
@@ -24,12 +30,20 @@ public sealed class CodingProtocolEntryCopierTests
             Source = ProtocolEntrySource.Ai,
             CodeMeta = meta,
             Ai = ai,
-            FotoPaths = ["a.png"]
+            FotoPaths = ["overlay.png"],
+            OriginalFotoPaths = ["original.png"],
+            Training = training
         };
-        var target = new ProtocolEntry { Code = "OLD", FotoPaths = ["old.png"] };
+        var target = new ProtocolEntry
+        {
+            Code = "OLD",
+            FotoPaths = ["old.png"],
+            OriginalFotoPaths = ["old-original.png"]
+        };
 
         CodingProtocolEntryCopier.CopyValues(source, target);
         source.FotoPaths.Add("late.png");
+        source.OriginalFotoPaths.Add("late-original.png");
 
         Assert.Equal("BAB", target.Code);
         Assert.Equal("Riss", target.Beschreibung);
@@ -41,7 +55,14 @@ public sealed class CodingProtocolEntryCopierTests
         Assert.Equal(ProtocolEntrySource.Ai, target.Source);
         Assert.Same(meta, target.CodeMeta);
         Assert.Same(ai, target.Ai);
-        Assert.Equal(["a.png"], target.FotoPaths);
+        Assert.Equal(["overlay.png"], target.FotoPaths);
+        Assert.Equal(["original.png"], target.OriginalFotoPaths);
+        Assert.NotSame(training, target.Training);
+        Assert.True(target.Training!.SkipAutomaticPersistence);
+        Assert.Equal(["photo-sample-1"], target.Training.PhotoAnnotationSampleIds);
+
+        training.PhotoAnnotationSampleIds.Add("photo-sample-2");
+        Assert.Single(target.Training.PhotoAnnotationSampleIds);
     }
 
     [Fact]
@@ -59,7 +80,13 @@ public sealed class CodingProtocolEntryCopierTests
             Source = ProtocolEntrySource.Manual,
             CodeMeta = new ProtocolEntryCodeMeta { Code = "BCA" },
             Ai = new ProtocolEntryAiMeta { SuggestedCode = "BCA" },
-            FotoPaths = ["new.png"]
+            FotoPaths = ["new-overlay.png"],
+            OriginalFotoPaths = ["new-original.png"],
+            Training = new ProtocolEntryTrainingMeta
+            {
+                SkipAutomaticPersistence = true,
+                PhotoAnnotationSampleIds = ["photo-sample-3"]
+            }
         };
         var originalAi = new ProtocolEntryAiMeta { SuggestedCode = "OLD" };
         var target = new ProtocolEntry
@@ -68,11 +95,13 @@ public sealed class CodingProtocolEntryCopierTests
             Mpeg = "target-film.mp4",
             Source = ProtocolEntrySource.Ai,
             Ai = originalAi,
-            FotoPaths = ["old.png"]
+            FotoPaths = ["old.png"],
+            OriginalFotoPaths = ["old-original.png"]
         };
 
         CodingProtocolEntryCopier.CopyEditableValues(source, target);
         source.FotoPaths.Add("late.png");
+        source.OriginalFotoPaths.Add("late-original.png");
 
         Assert.Equal("BCA", target.Code);
         Assert.Equal("Anschluss", target.Beschreibung);
@@ -80,9 +109,13 @@ public sealed class CodingProtocolEntryCopierTests
         Assert.Equal(2.7, target.MeterEnd);
         Assert.True(target.IsStreckenschaden);
         Assert.Equal(TimeSpan.FromSeconds(23), target.Zeit);
-        Assert.Equal(["new.png"], target.FotoPaths);
+        Assert.Equal(["new-overlay.png"], target.FotoPaths);
+        Assert.Equal(["new-original.png"], target.OriginalFotoPaths);
         Assert.Equal("target-film.mp4", target.Mpeg);
         Assert.Equal(ProtocolEntrySource.Ai, target.Source);
         Assert.Same(originalAi, target.Ai);
+        Assert.NotSame(source.Training, target.Training);
+        Assert.True(target.Training!.SkipAutomaticPersistence);
+        Assert.Equal(["photo-sample-3"], target.Training.PhotoAnnotationSampleIds);
     }
 }

@@ -1,4 +1,4 @@
-using System.Windows.Input;
+﻿using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 using AuswertungPro.Next.UI.Views.Windows;
@@ -16,17 +16,23 @@ internal sealed class SchaechteRecordDetailsBuilder
     private readonly Func<string, ICommand?> _resolveCommand;
     private readonly Action<SchachtRecord, KonsolidiertesSchachtFeld, string?> _commit;
     private readonly Func<bool> _canResolveDropdowns;
+    private readonly Func<SchachtRecord, string, ICommand?>? _resolveNachschlag;
+    private readonly Func<SchachtRecord, string, ICommand?>? _resolveStrasse;
 
     internal SchaechteRecordDetailsBuilder(
         Func<string, IEnumerable<string>> resolveOptions,
         Func<string, ICommand?> resolveCommand,
         Action<SchachtRecord, KonsolidiertesSchachtFeld, string?> commit,
-        Func<bool>? canResolveDropdowns = null)
+        Func<bool>? canResolveDropdowns = null,
+        Func<SchachtRecord, string, ICommand?>? resolveNachschlag = null,
+        Func<SchachtRecord, string, ICommand?>? resolveStrasse = null)
     {
         _resolveOptions = resolveOptions ?? throw new ArgumentNullException(nameof(resolveOptions));
         _resolveCommand = resolveCommand ?? throw new ArgumentNullException(nameof(resolveCommand));
         _commit = commit ?? throw new ArgumentNullException(nameof(commit));
         _canResolveDropdowns = canResolveDropdowns ?? (() => true);
+        _resolveNachschlag = resolveNachschlag;
+        _resolveStrasse = resolveStrasse;
     }
 
     internal List<RecordDetailGroup> Build(
@@ -64,11 +70,12 @@ internal sealed class SchaechteRecordDetailsBuilder
         }
 
         WireRenovationVisibility(renovationSwitch, renovationDependents);
-        AddGroup(groups, buckets, "Stammdaten", "Identifikation und Lage des Schachts.");
-        AddGroup(groups, buckets, "Zustand und Inspektion", "Bewertung, Schaeden und Pruefresultate.");
-        AddGroup(groups, buckets, "Sanierung und Kosten", "Massnahmen, Kosten und Mengenangaben.");
-        AddGroup(groups, buckets, "Dokumente und Medien", "Verknuepfte Dateien, PDFs und Links.");
-        AddGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.");
+        SchachtNormoptionen.Verbinde(buckets.Values.SelectMany(items => items), record);
+        AddGroup(groups, buckets, "Stammdaten", "Identifikation und Lage des Schachts.", RecordDetailGroupKind.MasterData);
+        AddGroup(groups, buckets, "Zustand und Inspektion", "Bewertung, Schäden und Prüfresultate.", RecordDetailGroupKind.Condition);
+        AddGroup(groups, buckets, "Sanierung und Kosten", "Massnahmen, Kosten und Mengenangaben.", RecordDetailGroupKind.RenovationCosts);
+        AddGroup(groups, buckets, "Dokumente und Medien", "Verknüpfte Dateien, PDFs und Links.", RecordDetailGroupKind.Documents);
+        AddGroup(groups, buckets, "Weitere Angaben", "Felder ohne klare Zuordnung.", RecordDetailGroupKind.Additional);
         return groups;
     }
 
@@ -102,6 +109,12 @@ internal sealed class SchaechteRecordDetailsBuilder
         SchachtRecord record)
     {
         var label = GetDisplayHeader(field.AnzeigeName);
+        // Nachschlagen beim Kanton: Das Item entscheidet selbst, ob der
+        // Menuepunkt sichtbar wird (leeres Feld mit bekannter Quelle).
+        var nachschlagen = _resolveNachschlag?.Invoke(record, field.AnzeigeName);
+        // Strasse vom Nachbarbauteil: eigene Uebertragung im Projekt,
+        // keine amtliche Auskunft - deshalb ein eigener Menuepunkt.
+        var strasse = _resolveStrasse?.Invoke(record, field.AnzeigeName);
         var highlightKind = RecordDetailHighlightPolicy.Resolve(field.AnzeigeName);
         void Commit(string? value) => _commit(record, field, value);
 
@@ -119,7 +132,10 @@ internal sealed class SchaechteRecordDetailsBuilder
                 resetOptionsCommand: spec.Managed ? _resolveCommand(spec.ResetCommand) : null,
                 addOptionCommand: spec.Managed ? _resolveCommand(spec.AddCommand) : null,
                 removeOptionCommand: spec.Managed ? _resolveCommand(spec.RemoveCommand) : null,
-                highlightKind: highlightKind);
+                highlightKind: highlightKind,
+                nachschlagenCommand: nachschlagen,
+                strasseUebernehmenCommand: strasse)
+            { FieldName = field.AnzeigeName };
         }
 
         var normalized = Normalize(field.AnzeigeName);
@@ -134,24 +150,42 @@ internal sealed class SchaechteRecordDetailsBuilder
                 isCombo: true,
                 allowFreeText: false,
                 options: ZustandsklasseColorPalette.SelectionOptions,
-                highlightKind: highlightKind);
+                highlightKind: highlightKind,
+                nachschlagenCommand: nachschlagen,
+                strasseUebernehmenCommand: strasse)
+            { FieldName = field.AnzeigeName };
         }
+
+        // Die GEONIS-Kennung ist nur Anzeige (Wahrheit: Geonis-Objekt, dort liest der Export).
+        var isReadOnly = string.Equals(
+            SchachtFeldnamen.Falte(field.AnzeigeName),
+            SchachtFeldnamen.Falte(FieldKeys.GeonisId),
+            StringComparison.Ordinal);
 
         return new RecordDetailItem(
             label,
             field.Wert,
             commitValue: Commit,
+            isReadOnly: isReadOnly,
             isMultiline: isMultiline,
-            highlightKind: highlightKind);
+            highlightKind: highlightKind,
+            nachschlagenCommand: nachschlagen,
+            strasseUebernehmenCommand: strasse)
+        {
+            FieldName = field.AnzeigeName,
+            PruefeWert = SchachtFeldnamen.Falte(field.AnzeigeName) is "dimension1mm" or "dimension2mm"
+                ? SiaAbmessung.SchachtmassFehler : null
+        };
     }
 
     private static void AddGroup(
         ICollection<RecordDetailGroup> groups,
         IReadOnlyDictionary<string, List<RecordDetailItem>> buckets,
         string title,
-        string description)
+        string description,
+        RecordDetailGroupKind kind)
     {
         if (buckets.TryGetValue(title, out var items) && items.Count > 0)
-            groups.Add(new RecordDetailGroup(title, description, items));
+            groups.Add(new RecordDetailGroup(title, description, items, kind));
     }
 }

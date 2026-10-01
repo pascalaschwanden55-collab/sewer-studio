@@ -1,0 +1,199 @@
+﻿using System.Threading;
+using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Lookup;
+using AuswertungPro.Next.Application.UseCases;
+
+namespace AuswertungPro.Next.Infrastructure.Tests;
+
+/// <summary>
+/// Der UseCase darf eine Quelle nur dann befragen, wenn sie fuer das Feld
+/// zustaendig ist. Beim Grundbuch ist das keine Feinheit: Jede unnoetige
+/// Abfrage zaehlt gegen die Drosselung des Kantons.
+/// </summary>
+public sealed class FeldNachschlagUseCaseTests
+{
+    private sealed class FesterAnbieter : IFeldWertNachschlag
+    {
+        private readonly FeldNachschlagErgebnis _ergebnis;
+        public int Aufrufe { get; private set; }
+
+        public FesterAnbieter(FeldNachschlagErgebnis ergebnis) => _ergebnis = ergebnis;
+
+        public Task<FeldNachschlagErgebnis> SucheAsync(
+            FeldNachschlagAnfrage anfrage, CancellationToken ct = default)
+        {
+            Aufrufe++;
+            return Task.FromResult(_ergebnis);
+        }
+    }
+
+    private static FesterAnbieter Findet(string wert)
+        => new(new FeldNachschlagErgebnis.Gefunden(
+            new FeldVorschlag(wert, "Testquelle", "Kataster")));
+
+    private static FesterAnbieter FindetNichts()
+        => new(new FeldNachschlagErgebnis.NichtGefunden("nichts"));
+
+    [Fact]
+    public async Task Funktion_geht_an_den_Kataster_nicht_ans_Grundbuch()
+    {
+        var kataster = Findet("Schlammsammler");
+        var grundbuch = FindetNichts();
+        var useCase = new FeldNachschlagUseCase(kataster, grundbuch);
+
+        var ergebnis = await useCase.SucheAsync(new FeldNachschlagAnfrage("33429", "Funktion"));
+
+        Assert.IsType<FeldNachschlagErgebnis.Gefunden>(ergebnis);
+        Assert.Equal(1, kataster.Aufrufe);
+        Assert.Equal(0, grundbuch.Aufrufe);
+    }
+
+    [Fact]
+    public async Task Die_Strasse_geht_ans_Grundbuch_nicht_an_den_Kataster()
+    {
+        var kataster = FindetNichts();
+        var grundbuch = Findet("Gotthardstrasse 12");
+        var useCase = new FeldNachschlagUseCase(kataster, grundbuch);
+
+        var ergebnis = await useCase.SucheAsync(new FeldNachschlagAnfrage("33429", "Strasse"));
+
+        Assert.IsType<FeldNachschlagErgebnis.Gefunden>(ergebnis);
+        Assert.Equal(0, kataster.Aufrufe);
+        Assert.Equal(1, grundbuch.Aufrufe);
+    }
+
+    [Fact]
+    public async Task Der_Schacht_Eigentuemer_geht_ans_Schachtnetz_nicht_ans_Grundbuch()
+    {
+        // Gemeint ist der Eigentuemer des BAUWERKS (Privat, Abwasser Uri,
+        // Kanton Uri, eine Gemeinde) - nicht der Grundstuecksbesitzer.
+        var kataster = FindetNichts();
+        var grundbuch = Findet("Muster, Hans");
+        var haltungsnetz = Findet("Abwasser Uri");
+        var schachtnetz = Findet("Privat");
+        var useCase = new FeldNachschlagUseCase(
+            kataster, grundbuch, null, haltungsnetz, schachtnetz);
+
+        var ergebnis = await useCase.SucheAsync(
+            new FeldNachschlagAnfrage("33434", "Eigentuemer", BauteilArt.Schacht));
+
+        Assert.Equal(
+            "Privat",
+            Assert.IsType<FeldNachschlagErgebnis.Gefunden>(ergebnis).Vorschlag.Wert);
+        Assert.Equal(1, schachtnetz.Aufrufe);
+        Assert.Equal(0, grundbuch.Aufrufe);
+        Assert.Equal(0, haltungsnetz.Aufrufe);
+        Assert.Equal(0, kataster.Aufrufe);
+    }
+
+    [Fact]
+    public async Task Auch_die_Schreibweise_mit_Umlaut_geht_ans_Schachtnetz()
+    {
+        var schachtnetz = Findet("Privat");
+        var useCase = new FeldNachschlagUseCase(
+            FindetNichts(), FindetNichts(), null, FindetNichts(), schachtnetz);
+
+        var ergebnis = await useCase.SucheAsync(
+            new FeldNachschlagAnfrage("33434", "Eigentümer", BauteilArt.Schacht));
+
+        Assert.IsType<FeldNachschlagErgebnis.Gefunden>(ergebnis);
+        Assert.Equal(1, schachtnetz.Aufrufe);
+    }
+
+    [Fact]
+    public async Task Der_Haltungs_Eigentuemer_geht_weiterhin_ans_Haltungsnetz()
+    {
+        // Beide Bauteilarten fragen dieselbe Quelle, aber verschiedene Ebenen.
+        // Wuerden sie sich denselben Anbieter teilen, kaeme fuer den Schacht
+        // die Antwort der Leitung.
+        var haltungsnetz = Findet("Abwasser Uri");
+        var schachtnetz = Findet("Privat");
+        var useCase = new FeldNachschlagUseCase(
+            FindetNichts(), FindetNichts(), null, haltungsnetz, schachtnetz);
+
+        var ergebnis = await useCase.SucheAsync(
+            new FeldNachschlagAnfrage("36262-36275", "Eigentuemer", BauteilArt.Haltung));
+
+        Assert.Equal(
+            "Abwasser Uri",
+            Assert.IsType<FeldNachschlagErgebnis.Gefunden>(ergebnis).Vorschlag.Wert);
+        Assert.Equal(1, haltungsnetz.Aufrufe);
+        Assert.Equal(0, schachtnetz.Aufrufe);
+    }
+
+    [Fact]
+    public async Task Ohne_angeschlossenes_Schachtnetz_wird_nichts_geraten()
+    {
+        // Ohne Netzzugriff darf der Grundstuecksbesitzer nicht ersatzweise
+        // als Bauwerkseigentuemer erscheinen.
+        var grundbuch = Findet("Muster, Hans");
+        var useCase = new FeldNachschlagUseCase(FindetNichts(), grundbuch);
+
+        var ergebnis = await useCase.SucheAsync(
+            new FeldNachschlagAnfrage("33434", "Eigentuemer", BauteilArt.Schacht));
+
+        Assert.IsType<FeldNachschlagErgebnis.NichtGefunden>(ergebnis);
+        Assert.Equal(0, grundbuch.Aufrufe);
+    }
+
+    [Fact]
+    public async Task Ein_unbekanntes_Feld_wird_gar_nicht_erst_abgefragt()
+    {
+        var kataster = FindetNichts();
+        var grundbuch = FindetNichts();
+        var useCase = new FeldNachschlagUseCase(kataster, grundbuch);
+
+        var ergebnis = await useCase.SucheAsync(new FeldNachschlagAnfrage("33429", "Kosten"));
+
+        Assert.IsType<FeldNachschlagErgebnis.NichtGefunden>(ergebnis);
+        Assert.Equal(0, kataster.Aufrufe);
+        Assert.Equal(0, grundbuch.Aufrufe);
+    }
+
+    [Fact]
+    public void Jedes_unterstuetzte_Feld_hat_genau_eine_Quelle()
+    {
+        foreach (var art in new[] { BauteilArt.Schacht, BauteilArt.Haltung })
+        {
+            Assert.NotEmpty(FeldQuellenTabelle.UnterstuetzteFelder(art));
+            foreach (var feld in FeldQuellenTabelle.UnterstuetzteFelder(art))
+                Assert.NotNull(FeldQuellenTabelle.QuelleFuer(feld, art));
+        }
+    }
+
+    [Fact]
+    public void Sanierungs_und_Kostenfelder_haben_keine_Quelle()
+    {
+        // Diese Felder fuellt der Bearbeiter selbst. Wuerde der Menuepunkt
+        // dort erscheinen, waere er eine leere Zusage.
+        Assert.Null(FeldQuellenTabelle.QuelleFuer("Kosten"));
+        Assert.Null(FeldQuellenTabelle.QuelleFuer("Zustandsklasse"));
+        Assert.Null(FeldQuellenTabelle.QuelleFuer("Massnahmen"));
+        Assert.Null(FeldQuellenTabelle.QuelleFuer(null));
+    }
+
+    [Fact]
+    public void Der_Eigentuemer_einer_Haltung_kommt_nicht_aus_dem_Kataster()
+    {
+        // Der QGIS-Export nach XTF plattet die Eigentuemer-Zuordnung ein: Dort
+        // tragen alle Leitungen denselben Verweis, obwohl der Kopf der Datei
+        // 27 verschiedene Eigentuemer nennt. Der Kataster wuerde deshalb
+        // "Abwasser Uri" auch fuer eine private Leitung behaupten.
+        //
+        // Der Abwassernetz-Dienst kennt sie noch: Am 2026-08-30 lieferte er
+        // fuer 36262-36275, 33458-36051 und 36275-35558 jeweils "Privat".
+        var quelle = FeldQuellenTabelle.QuelleFuer("Eigentuemer", BauteilArt.Haltung);
+
+        Assert.NotEqual(FeldQuelle.Kataster, quelle);
+        Assert.Equal(FeldQuelle.Abwassernetz, quelle);
+        Assert.Equal(
+            FeldQuelle.Abwassernetz,
+            FeldQuellenTabelle.QuelleFuer("Eigentümer", BauteilArt.Haltung));
+
+        // Beim Schacht gilt dasselbe: Gefragt ist der Eigentuemer des
+        // Bauwerks, nicht der Besitzer des Grundstuecks darunter.
+        Assert.Equal(
+            FeldQuelle.Abwassernetz,
+            FeldQuellenTabelle.QuelleFuer("Eigentuemer", BauteilArt.Schacht));
+    }
+}

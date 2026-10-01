@@ -73,7 +73,7 @@ public sealed class ObservationParameterValidatorTests
             value: "X", out var error);
 
         Assert.False(ok);
-        Assert.Contains("ungueltigen Wert", error);
+        Assert.Contains("ungültigen Wert", error);
     }
 
     // ── Number ────────────────────────────────────────────────────────────────

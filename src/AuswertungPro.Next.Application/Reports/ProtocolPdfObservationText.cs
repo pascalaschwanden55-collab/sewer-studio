@@ -131,13 +131,19 @@ internal static class ProtocolPdfObservationText
     }
 
     internal static string BuildPhotoCaptionLine2(ProtocolEntry entry)
+        => BuildPhotoCaptionLine2(entry, catalog: null);
+
+    internal static string BuildPhotoCaptionLine2(
+        ProtocolEntry entry,
+        ICodeCatalogProvider? catalog)
     {
         var code = string.IsNullOrWhiteSpace(entry.Code) ? "" : entry.Code.Trim();
-        var desc = entry.Beschreibung?.Trim();
-        if (string.IsNullOrWhiteSpace(desc))
-            desc = BuildParameterShortText(entry);
-        if (string.IsNullOrWhiteSpace(desc))
-            desc = entry.CodeMeta?.Notes?.Trim();
+        var desc = catalog is null
+            ? BuildLegacyPhotoCaptionDescription(entry)
+            : ObservationZustandBuilder.Build(entry, catalog);
+
+        if (string.Equals(desc, "-", StringComparison.Ordinal))
+            desc = string.Empty;
 
         if (!string.IsNullOrWhiteSpace(desc))
             desc = Shorten(desc, 90);
@@ -147,6 +153,16 @@ internal static class ProtocolPdfObservationText
         if (!string.IsNullOrWhiteSpace(code))
             return code;
         return desc ?? string.Empty;
+    }
+
+    private static string? BuildLegacyPhotoCaptionDescription(ProtocolEntry entry)
+    {
+        var description = entry.Beschreibung?.Trim();
+        if (string.IsNullOrWhiteSpace(description))
+            description = BuildParameterShortText(entry);
+        if (string.IsNullOrWhiteSpace(description))
+            description = entry.CodeMeta?.Notes?.Trim();
+        return description;
     }
 
     internal static string BuildPhotoTimeText(ProtocolEntry entry)

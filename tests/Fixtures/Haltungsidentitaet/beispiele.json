@@ -1,0 +1,129 @@
+{
+  "zweck": "Gemeinsame Faelle fuer die Regel 'dieselbe physische Haltung, auch in Gegenrichtung'. Python (training/scripts/haltungsidentitaet.py, Vorpruefung gold_stock_audit.normalize_holding_key) und C# (EvalContaminationGuard.NormalizeHaltungKey / IsEvalHaltung) lesen dieselbe Datei.",
+  "felder": {
+    "eingabe": "Rohtext wie er als CaseId/Haltungsname vorkommt (null moeglich).",
+    "eval_schluessel": "Bereits normalisierter Schluessel der reservierten Eval-Haltung.",
+    "gleiche_haltung": "Gemeinsame Erwartung: gehoert die Eingabe zur Eval-Haltung (Gegenrichtung eingeschlossen)? Gilt fuer Python UND C#.",
+    "python.normalisiert": "gold_stock_audit.normalize_holding_key(eingabe); null = keine belastbare Haltung.",
+    "python.physisch": "haltungsidentitaet.physischer_schluessel(python.normalisiert); null, wenn nicht normalisierbar.",
+    "csharp.normalisiert": "EvalContaminationGuard.NormalizeHaltungKey(eingabe); null nur bei leerer Eingabe.",
+    "abweichung": "Nur gesetzt, wo Python und C# bewusst verschieden rechnen."
+  },
+  "faelle": [
+    {
+      "id": "gleiche-richtung",
+      "eingabe": "100-200",
+      "eval_schluessel": "100-200",
+      "gleiche_haltung": true,
+      "python": { "normalisiert": "100-200", "physisch": "100|200" },
+      "csharp": { "normalisiert": "100-200" }
+    },
+    {
+      "id": "gegenrichtung",
+      "eingabe": "200-100",
+      "eval_schluessel": "100-200",
+      "gleiche_haltung": true,
+      "python": { "normalisiert": "200-100", "physisch": "100|200" },
+      "csharp": { "normalisiert": "200-100" }
+    },
+    {
+      "id": "andere-haltung",
+      "eingabe": "100-300",
+      "eval_schluessel": "100-200",
+      "gleiche_haltung": false,
+      "python": { "normalisiert": "100-300", "physisch": "100|300" },
+      "csharp": { "normalisiert": "100-300" }
+    },
+    {
+      "id": "gleiche-nummer-beidseitig",
+      "eingabe": "100-100",
+      "eval_schluessel": "100-100",
+      "gleiche_haltung": true,
+      "python": { "normalisiert": "100-100", "physisch": "100|100" },
+      "csharp": { "normalisiert": "100-100" }
+    },
+    {
+      "id": "bereichspraefix-mit-punkt",
+      "eingabe": "06.24379-06.24377",
+      "eval_schluessel": "24377-24379",
+      "gleiche_haltung": true,
+      "python": { "normalisiert": "24379-24377", "physisch": "24377|24379" },
+      "csharp": { "normalisiert": "24379-24377" }
+    },
+    {
+      "id": "punkt-nummer-gegenrichtung",
+      "eingabe": "07.638905-78998",
+      "eval_schluessel": "78998-638905",
+      "gleiche_haltung": true,
+      "python": { "normalisiert": "638905-78998", "physisch": "638905|78998" },
+      "csharp": { "normalisiert": "638905-78998" }
+    },
+    {
+      "id": "leerzeichen-aussen",
+      "eingabe": "  100-200 ",
+      "eval_schluessel": "200-100",
+      "gleiche_haltung": true,
+      "python": { "normalisiert": "100-200", "physisch": "100|200" },
+      "csharp": { "normalisiert": "100-200" }
+    },
+    {
+      "id": "schraegstrich-trenner",
+      "eingabe": "100/200",
+      "eval_schluessel": "200-100",
+      "gleiche_haltung": true,
+      "python": { "normalisiert": "100-200", "physisch": "100|200" },
+      "csharp": { "normalisiert": "100-200" }
+    },
+    {
+      "id": "jahr-anhaengsel",
+      "eingabe": "634-581/2025_Saniert",
+      "eval_schluessel": "581-634",
+      "gleiche_haltung": true,
+      "python": { "normalisiert": "634-581", "physisch": "581|634" },
+      "csharp": { "normalisiert": "634-581" }
+    },
+    {
+      "id": "grossschreibung-text-davor",
+      "eingabe": "HALTUNG 200-100",
+      "eval_schluessel": "100-200",
+      "gleiche_haltung": true,
+      "python": { "normalisiert": "200-100", "physisch": "100|200" },
+      "csharp": { "normalisiert": "200-100" }
+    },
+    {
+      "id": "buchstaben-praefix-ohne-paar",
+      "eingabe": "u-80792",
+      "eval_schluessel": "80792-505377",
+      "gleiche_haltung": false,
+      "python": { "normalisiert": null, "physisch": null },
+      "csharp": { "normalisiert": "u-80792" },
+      "abweichung": "Ohne Zifferpaar liefert Python null (unsicherer Wert ist nie eine Haltung), C# die getrimmte Eingabe (matcht nur bei exakter Gleichheit). Beide ergeben: keine Eval-Haltung."
+    },
+    {
+      "id": "pseudo-id",
+      "eingabe": "foto_12",
+      "eval_schluessel": "100-200",
+      "gleiche_haltung": false,
+      "python": { "normalisiert": null, "physisch": null },
+      "csharp": { "normalisiert": "foto_12" },
+      "abweichung": "Wie bei 'u-80792': Python null, C# getrimmte Eingabe."
+    },
+    {
+      "id": "leer",
+      "eingabe": "",
+      "eval_schluessel": "100-200",
+      "gleiche_haltung": false,
+      "python": { "normalisiert": null, "physisch": null },
+      "csharp": { "normalisiert": null }
+    },
+    {
+      "id": "null",
+      "eingabe": null,
+      "eval_schluessel": "100-200",
+      "gleiche_haltung": false,
+      "python": { "normalisiert": null, "physisch": null },
+      "csharp": { "normalisiert": null }
+    }
+  ],
+  "ungueltig_fuer_physischen_schluessel": ["", "100", "-200", "100-", "u-"]
+}

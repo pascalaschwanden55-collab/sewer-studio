@@ -25,6 +25,74 @@ public sealed class DataGridStandardTextColumnFactoryTests
         });
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (F4): Die Drei-Zeilen-Grenze gilt nur im Nova-Layout. Die alte
+    /// Haltungsansicht bleibt unveraendert — dort wird keine Zelle gekuerzt.
+    /// </summary>
+    [Fact]
+    public void Die_Hoehengrenze_gilt_nur_auf_ausdruecklichen_Wunsch()
+    {
+        RunOnSta(() =>
+        {
+            var ohne = DataGridStandardTextColumnFactory.Create("Bemerkungen", "Bemerkungen");
+            Assert.DoesNotContain(
+                ohne.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == System.Windows.FrameworkElement.MaxHeightProperty);
+
+            var mit = DataGridStandardTextColumnFactory.Create(
+                "Bemerkungen", "Bemerkungen", UpdateSourceTrigger.LostFocus, hoeheBegrenzen: true);
+            Assert.Contains(
+                mit.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == System.Windows.FrameworkElement.MaxHeightProperty
+                    && Equals(setter.Value, AuswertungPro.Next.UI.DataPage.DataPageColumnStyleRules.MaximaleZellenhoehe));
+        });
+    }
+
+    /// <summary>
+    /// Nova-Fixwelle 2b (P3): Im Nova-Layout kuerzt eine zu schmale Zelle mit
+    /// Auslassungspunkten. Die alte Haltungsansicht bleibt unveraendert.
+    /// </summary>
+    [Fact]
+    public void Auslassungspunkte_gibt_es_nur_im_Nova_Layout()
+    {
+        RunOnSta(() =>
+        {
+            var ohne = DataGridStandardTextColumnFactory.Create("Strasse", "STRASSE");
+            Assert.DoesNotContain(
+                ohne.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == TextBlock.TextTrimmingProperty);
+
+            var mit = DataGridStandardTextColumnFactory.Create(
+                "Strasse", "STRASSE", UpdateSourceTrigger.LostFocus, hoeheBegrenzen: true);
+            var trimming = Assert.Single(
+                mit.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == TextBlock.TextTrimmingProperty);
+            Assert.Equal(System.Windows.TextTrimming.CharacterEllipsis, trimming.Value);
+        });
+    }
+
+    /// <summary>
+    /// Nova-Fixwelle 2b, Runde 2: Eine rechtsbuendige Zahl braucht ein rechtes Polster, sonst
+    /// klebt sie an der Nachbarspalte („200Kreisprofil"). Textspalten bekommen es nicht.
+    /// </summary>
+    [Fact]
+    public void Zahlenspalten_haben_ein_rechtes_Polster()
+    {
+        RunOnSta(() =>
+        {
+            var zahl = DataGridStandardTextColumnFactory.Create("DN_mm", "DN MM");
+            var polster = Assert.Single(
+                zahl.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == System.Windows.FrameworkElement.MarginProperty);
+            Assert.Equal(new System.Windows.Thickness(0, 0, 6, 0), polster.Value);
+
+            var text = DataGridStandardTextColumnFactory.Create("Strasse", "STRASSE");
+            Assert.DoesNotContain(
+                text.ElementStyle.Setters.OfType<System.Windows.Setter>(),
+                setter => setter.Property == System.Windows.FrameworkElement.MarginProperty);
+        });
+    }
+
     private static void RunOnSta(Action action)
     {
         Exception? exception = null;

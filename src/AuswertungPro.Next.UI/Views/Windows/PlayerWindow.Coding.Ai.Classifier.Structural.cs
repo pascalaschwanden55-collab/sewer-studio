@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
@@ -9,22 +10,20 @@ public partial class PlayerWindow
 {
     private bool TryHandleStructuralClassifierResult(
         SingleFrameResult mmResult,
-        double captureTimestampSec,
-        double? frameOsdMeter)
+        CodingAnalyzedFrameEvidence frame)
     {
-        var result = CodingStructuralClassifierCommandWorkflow.Execute(
+        var result = CodingStructuralClassifierCommandWorkflow.ExecuteAnalyzedFrame(
             new CodingStructuralClassifierCommandRequest(
                 Result: mmResult,
-                CaptureTimestampSeconds: captureTimestampSec,
-                FrameOsdMeter: frameOsdMeter,
-                CurrentVideoTime: _codingSessionHost.CurrentVideoTime,
-                FallbackVideoTime: TimeSpan.FromSeconds(captureTimestampSec),
+                CaptureTimestampSeconds: frame.CaptureTime.TotalSeconds,
+                FrameOsdMeter: frame.HasSameFrameOsd ? frame.Meter : null,
+                CurrentVideoTime: frame.CaptureTime,
+                FallbackVideoTime: frame.CaptureTime,
                 ViewEvents: _codingSessionHost.EventCollection,
                 CodingSessionService: _codingSessionRuntimeOwner.Service,
-                MeterFromOsd: _codingOsdMeterController.LastResolvedMeterIsOsd),
+                MeterFromOsd: frame.MeterFromOsd), frame,
             new CodingStructuralClassifierCommandActions(
-                ResolveMeterForFrame: (timestamp, osdMeter) =>
-                    ResolveCodingMeterForFrame(timestamp, osdMeter),
+                ResolveMeterForFrame: (_, _) => frame.Meter,
                 ExecuteResultWorkflow: request => CodingStructuralClassifierResultWorkflow.Execute(
                     request,
                     new CodingStructuralClassifierResultWorkflowActions(
@@ -36,7 +35,7 @@ public partial class PlayerWindow
                             CodingFindingsList,
                             finding,
                             resolvedCode),
-                        entry => AttachAnalyzedFramePhoto(entry),
+                        entry => frame.AttachPhoto(entry, (e, bytes) => _codingPhotoAttachmentController.AttachExactAnalyzedFramePhoto(e, bytes)),
                         RefreshCodingEventsList,
                         (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail)))));
         return result.Handled;

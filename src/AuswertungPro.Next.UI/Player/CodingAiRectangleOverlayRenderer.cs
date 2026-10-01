@@ -17,9 +17,15 @@ public sealed record CodingAiRectangleOverlayRenderStyle(
 
 public static class CodingAiRectangleOverlayRenderer
 {
+    /// <summary>
+    /// Zeichnet eine KI-Box mit Beschriftung. Die Ecken gehen durch <paramref name="toPixel"/>,
+    /// der das tatsaechlich sichtbare Videorechteck kennt; <paramref name="canvasWidth"/> und
+    /// <paramref name="canvasHeight"/> begrenzen nur die Lage der Beschriftung.
+    /// </summary>
     public static bool Render(
         Canvas canvas,
         OverlayGeometry overlay,
+        Func<NormalizedPoint, Point> toPixel,
         double canvasWidth,
         double canvasHeight,
         string? code,
@@ -28,19 +34,18 @@ public static class CodingAiRectangleOverlayRenderer
     {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(overlay);
+        ArgumentNullException.ThrowIfNull(toPixel);
         ArgumentNullException.ThrowIfNull(style);
 
         if (overlay.ToolType != OverlayToolType.Rectangle || overlay.Points.Count < 4)
             return false;
 
-        var rx = overlay.Points[0].X * canvasWidth;
-        var ry = overlay.Points[0].Y * canvasHeight;
-        var rw = (overlay.Points[2].X - overlay.Points[0].X) * canvasWidth;
-        var rh = (overlay.Points[2].Y - overlay.Points[0].Y) * canvasHeight;
-        var rectLeft = Math.Min(rx, rx + rw);
-        var rectTop = Math.Min(ry, ry + rh);
-        var rectAbsW = Math.Abs(rw);
-        var rectAbsH = Math.Abs(rh);
+        var corner = toPixel(overlay.Points[0]);
+        var opposite = toPixel(overlay.Points[2]);
+        var rectLeft = Math.Min(corner.X, opposite.X);
+        var rectTop = Math.Min(corner.Y, opposite.Y);
+        var rectAbsW = Math.Abs(opposite.X - corner.X);
+        var rectAbsH = Math.Abs(opposite.Y - corner.Y);
 
         var rect = new Rectangle
         {
@@ -83,8 +88,16 @@ public static class CodingAiRectangleOverlayRenderer
             }
         };
         labelBorder.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var lx = Math.Clamp(rectLeft, 2, canvasWidth - labelBorder.DesiredSize.Width - 2);
-        var ly = Math.Clamp(rectTop - labelBorder.DesiredSize.Height - 4, 2, canvasHeight - labelBorder.DesiredSize.Height - 2);
+        var labelWidth = labelBorder.DesiredSize.Width;
+        var labelHeight = labelBorder.DesiredSize.Height;
+
+        // Passt die Beschriftung nicht in die Flaeche (z. B. vor dem ersten Layout), bleibt
+        // nur die Box. Sonst waere die Obergrenze fuer die Lage kleiner als die Untergrenze.
+        if (labelWidth + 4 > canvasWidth || labelHeight + 4 > canvasHeight)
+            return true;
+
+        var lx = Math.Clamp(rectLeft, 2, canvasWidth - labelWidth - 2);
+        var ly = Math.Clamp(rectTop - labelHeight - 4, 2, canvasHeight - labelHeight - 2);
         Canvas.SetLeft(labelBorder, lx);
         Canvas.SetTop(labelBorder, ly);
         canvas.Children.Add(labelBorder);

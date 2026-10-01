@@ -95,7 +95,7 @@ public sealed class StandardAiDecisionPolicyTests
     {
         var d = Decide(new AiDecisionSignals(confidence, TrafficLight.Green, KbAgreement: true, EpistemicUncertainty: 0.05));
         Assert.Equal(AiDecisionOutcome.Reject, d.Outcome);
-        Assert.Contains("ngueltig", d.Reason); // "Ungueltige Sicherheit ..."
+        Assert.Contains("ngültig", d.Reason); // "Ungültige Sicherheit ..."
     }
 
     [Theory] // Unsicherheit "vorhanden, aber unbrauchbar" (auch negativ!) -> nie AutoAccept.

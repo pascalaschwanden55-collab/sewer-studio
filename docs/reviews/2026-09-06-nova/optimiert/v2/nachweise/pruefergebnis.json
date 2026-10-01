@@ -1,0 +1,499 @@
+{
+  "datei": "C:\\Users\\Besitzer\\AppData\\Local\\Temp\\claude\\c--Sewer-Studio-KI-4-5\\36597848-2e40-4572-9106-7af25c588a9e\\scratchpad\\SewerStudio-Nova-Optimiert-v2.html",
+  "zeit": "2026-09-06T13:27:40.480Z",
+  "ergebnisse": [
+    {
+      "id": "A1",
+      "name": "Dokument: DOCTYPE, UTF-8, lang=de, viewport",
+      "ergebnis": "bestanden",
+      "detail": "CSS1Compat UTF-8"
+    },
+    {
+      "id": "A2",
+      "name": "Keine externen Schriften oder Skripte",
+      "ergebnis": "bestanden",
+      "detail": "Systemschriften Segoe UI / Cascadia Mono"
+    },
+    {
+      "id": "A3",
+      "name": "Umlaute im lokalen Aufruf lesbar",
+      "ergebnis": "bestanden",
+      "detail": "8 von 14 Haltungen fachlich geprüft (57,1 %). 4 von der KI a"
+    },
+    {
+      "id": "A4",
+      "name": "Alle 15 Seiten über die Navigation erreichbar",
+      "ergebnis": "bestanden",
+      "detail": "15 von 15"
+    },
+    {
+      "id": "A5",
+      "name": "Drei Fenster öffnen: Player, Training Studio, VSA-Codierung",
+      "ergebnis": "bestanden",
+      "detail": "true/true/true"
+    },
+    {
+      "id": "A6",
+      "name": "Keine Skriptfehler beim Durchklicken",
+      "ergebnis": "bestanden",
+      "detail": "keine"
+    },
+    {
+      "id": "B1",
+      "name": "Wechsel auf 07.6588-6587: Formular, Übersicht und Medien folgen",
+      "ergebnis": "bestanden",
+      "detail": "{\"material\":\"PVC\",\"dn\":\"250\",\"laenge\":\"28.1\",\"video\":true}"
+    },
+    {
+      "id": "B2",
+      "name": "Zurück auf 78998-79002: Beton, 300, 42.30",
+      "ergebnis": "bestanden",
+      "detail": "{\"material\":\"Beton\",\"dn\":\"300\",\"laenge\":\"42.3\"}"
+    },
+    {
+      "id": "B3",
+      "name": "Ungespeicherte Änderung sichtbar (Badge, Zeilenmarke, Speichern aktiv)",
+      "ergebnis": "bestanden",
+      "detail": "badge true save true mark true"
+    },
+    {
+      "id": "B4",
+      "name": "Wechsel bei Änderungen fragt nach; Abbrechen bleibt auf der Haltung",
+      "ergebnis": "bestanden",
+      "detail": "dialog true role alertdialog bleibt true"
+    },
+    {
+      "id": "B5",
+      "name": "Verwerfen und wechseln: Ziel gewählt, Ursprung unverändert",
+      "ergebnis": "bestanden",
+      "detail": "jetzt 07.6588-6587 true, Baujahr h01 = 1978"
+    },
+    {
+      "id": "B6",
+      "name": "Speichern und wechseln: Wert im Bestand, Ziel gewählt",
+      "ergebnis": "bestanden",
+      "detail": "Baujahr h02 = 1995"
+    },
+    {
+      "id": "B7",
+      "name": "Gespeicherter Wert überlebt Neuladen (Browserspeicher, kein Projektschreiben)",
+      "ergebnis": "bestanden",
+      "detail": "nach Neuladen 1995"
+    },
+    {
+      "id": "B8",
+      "name": "Verwerfen ohne Wechsel setzt Feld zurück",
+      "ergebnis": "bestanden",
+      "detail": ""
+    },
+    {
+      "id": "C1",
+      "name": "Feldsuche „Baujahr\" bei Haltungen lässt Schachtfelder unberührt",
+      "ergebnis": "bestanden",
+      "detail": "Schachtfelder 30 → 30, Haltungsfelder sichtbar: Baujahr"
+    },
+    {
+      "id": "C2",
+      "name": "Ansichtswechsel bei Haltungen ändert Schachtansicht und Schachtauswahl nicht",
+      "ergebnis": "bestanden",
+      "detail": "Schacht s01→s01, Ansicht S: Kompakt 9"
+    },
+    {
+      "id": "C3",
+      "name": "„Alle zu\" wirkt nur auf die eigene Seite",
+      "ergebnis": "bestanden",
+      "detail": "S offen true, H offen false"
+    },
+    {
+      "id": "C4",
+      "name": "Schachtsuche arbeitet eigenständig",
+      "ergebnis": "bestanden",
+      "detail": "Schächte 1, Haltungen 14"
+    },
+    {
+      "id": "C5",
+      "name": "Feldsuche bei Schächten lässt Haltungsfelder unberührt",
+      "ergebnis": "bestanden",
+      "detail": "S 1, H 36"
+    },
+    {
+      "id": "D1",
+      "name": "Dringend = Z0 + Z1",
+      "ergebnis": "bestanden",
+      "detail": "3 = 1 + 2"
+    },
+    {
+      "id": "D2",
+      "name": "Legende summiert auf die Gesamtzahl",
+      "ergebnis": "bestanden",
+      "detail": "14 = 14"
+    },
+    {
+      "id": "D3",
+      "name": "Prozent mit Zähler und Nenner, korrekt gerundet",
+      "ergebnis": "bestanden",
+      "detail": "8 von 14 Haltungen fachlich geprüft (57,1 %). 4 vo"
+    },
+    {
+      "id": "D4",
+      "name": "Kosten-KPI = Summe Haltungen + Schächte",
+      "ergebnis": "bestanden",
+      "detail": "243'900CHF"
+    },
+    {
+      "id": "D5",
+      "name": "Text unterscheidet fachlich geprüft, KI analysiert und ohne Analyse",
+      "ergebnis": "bestanden",
+      "detail": ""
+    },
+    {
+      "id": "E1",
+      "name": "„Nächste Haltung prüfen\" wählt eine offene Haltung und öffnet den Player",
+      "ergebnis": "bestanden",
+      "detail": "h01 78998-79002 · 20251006_78998-79002.mp4 (analysiert)"
+    },
+    {
+      "id": "E2",
+      "name": "Player: Dialogrolle, aria-modal, Name, Fokus im Dialog",
+      "ergebnis": "bestanden",
+      "detail": "focus true role dialog"
+    },
+    {
+      "id": "E3",
+      "name": "Ereignis erfassen → Abbrechen: kehrt zum Player zurück, nichts übernommen, Position gleich",
+      "ergebnis": "bestanden",
+      "detail": "{\"vsa\":false,\"player\":true,\"pos\":202,\"n\":3,\"focus\":\"plNewEvent\"}"
+    },
+    {
+      "id": "E4",
+      "name": "Ereignis erfassen → Übernehmen: Befund im Player-Entwurf, Bestand noch unverändert, Player offen, Haltung und Position erhalten",
+      "ergebnis": "bestanden",
+      "detail": "{\"vsa\":false,\"player\":true,\"pos\":202,\"n\":4,\"bestand\":3,\"id\":\"h01\",\"sel\":\"h01\"} Fehlerhinweis bei Ende<Start: true"
+    },
+    {
+      "id": "E5",
+      "name": "Esc bei Entwurf fragt nach; Verwerfen schliesst den Player; Fokus kehrt zum Auslöser oder zur gewählten Zeile",
+      "ergebnis": "bestanden",
+      "detail": "focus h01"
+    },
+    {
+      "id": "E6",
+      "name": "Training Studio → Katalog → Übernehmen: Code im Studio, Studio bleibt offen",
+      "ergebnis": "bestanden",
+      "detail": "{\"studio\":true,\"vsa\":false,\"code\":\"BBCA\",\"focus\":\"stCatalog\"}"
+    },
+    {
+      "id": "E7",
+      "name": "Studio: Vorschlag, Bestätigung und Trainingsfreigabe sind getrennte Schritte",
+      "ergebnis": "bestanden",
+      "detail": "Freigabe erst nach Akzeptieren aktiv"
+    },
+    {
+      "id": "F1",
+      "name": "„Ruhig\" stoppt die Hintergrund-Engine (Canvas unverändert, Schleife aus)",
+      "ergebnis": "bestanden",
+      "detail": "vorher läuft true, nachher false, Canvas gleich true"
+    },
+    {
+      "id": "F2",
+      "name": "Wahl „ruhig\" bleibt nach Neuladen erhalten",
+      "ergebnis": "bestanden",
+      "detail": ""
+    },
+    {
+      "id": "F3",
+      "name": "Engine pausiert, solange ein Fenster die Ansicht verdeckt",
+      "ergebnis": "bestanden",
+      "detail": "sichtbar true, bei Dialog false"
+    },
+    {
+      "id": "F4",
+      "name": "Systemeinstellung „Bewegung reduzieren\" stoppt Engine und Pulsanimation auch bei „bewegt\"",
+      "ergebnis": "bestanden",
+      "detail": "engine false, animation none"
+    },
+    {
+      "id": "G1",
+      "name": "Enter auf Navigationseintrag Export öffnet die Exportseite",
+      "ergebnis": "bestanden",
+      "detail": ""
+    },
+    {
+      "id": "G2",
+      "name": "Ctrl+K, Suchtext, Enter: springt zur gefundenen Haltung",
+      "ergebnis": "bestanden",
+      "detail": "{\"page\":\"page-haltungen\",\"sel\":\"h10\"} Treffer 2"
+    },
+    {
+      "id": "G3",
+      "name": "F3 fokussiert die Haltungssuche",
+      "ergebnis": "bestanden",
+      "detail": ""
+    },
+    {
+      "id": "G4",
+      "name": "Pfeiltasten und Enter wählen Zeilen in der Liste",
+      "ergebnis": "bestanden",
+      "detail": "h02"
+    },
+    {
+      "id": "G5",
+      "name": "F1 öffnet Tastenkürzel, Fokus bleibt im Dialog, Esc schliesst",
+      "ergebnis": "bestanden",
+      "detail": ""
+    },
+    {
+      "id": "G6",
+      "name": "Jede Schaltfläche hat Text, aria-label oder Titel",
+      "ergebnis": "bestanden",
+      "detail": "0 ohne Bezeichnung"
+    },
+    {
+      "id": "G7",
+      "name": "Sichtbarer Tastaturfokus definiert",
+      "ergebnis": "bestanden",
+      "detail": ""
+    },
+    {
+      "id": "H-1366",
+      "name": "1366×768: mindestens sechs Haltungen sichtbar, Eingabefelder und Übersicht im Bild",
+      "ergebnis": "bestanden",
+      "detail": "7 Zeilen sichtbar, Eingabefelder true, Übersicht true"
+    },
+    {
+      "id": "HP-1366",
+      "name": "1366×768: Player zeigt Wiedergabe, Zeit, Übernehmen und Seitenspalte ohne Scrollen",
+      "ergebnis": "bestanden",
+      "detail": "{\"play\":true,\"time\":true,\"apply\":true,\"side\":true,\"sideW\":338.2401428222656}"
+    },
+    {
+      "id": "HS-1366",
+      "name": "1366×768: Training Studio: Codier- und Freigabespalte vollständig erreichbar",
+      "ergebnis": "bestanden",
+      "detail": "{\"colInView\":true,\"colW\":330,\"releaseReachable\":true,\"acceptVisibleAtTop\":true}"
+    },
+    {
+      "id": "H-1440",
+      "name": "1440×900: mindestens sechs Haltungen sichtbar, Eingabefelder und Übersicht im Bild",
+      "ergebnis": "bestanden",
+      "detail": "9 Zeilen sichtbar, Eingabefelder true, Übersicht true"
+    },
+    {
+      "id": "HP-1440",
+      "name": "1440×900: Player zeigt Wiedergabe, Zeit, Übernehmen und Seitenspalte ohne Scrollen",
+      "ergebnis": "bestanden",
+      "detail": "{\"play\":true,\"time\":true,\"apply\":true,\"side\":true,\"sideW\":338.2401428222656}"
+    },
+    {
+      "id": "HS-1440",
+      "name": "1440×900: Training Studio: Codier- und Freigabespalte vollständig erreichbar",
+      "ergebnis": "bestanden",
+      "detail": "{\"colInView\":true,\"colW\":330,\"releaseReachable\":true,\"acceptVisibleAtTop\":true}"
+    },
+    {
+      "id": "H-1920",
+      "name": "1920×1080: mindestens sechs Haltungen sichtbar, Eingabefelder und Übersicht im Bild",
+      "ergebnis": "bestanden",
+      "detail": "12 Zeilen sichtbar, Eingabefelder true, Übersicht true"
+    },
+    {
+      "id": "HP-1920",
+      "name": "1920×1080: Player zeigt Wiedergabe, Zeit, Übernehmen und Seitenspalte ohne Scrollen",
+      "ergebnis": "bestanden",
+      "detail": "{\"play\":true,\"time\":true,\"apply\":true,\"side\":true,\"sideW\":338.2401428222656}"
+    },
+    {
+      "id": "HS-1920",
+      "name": "1920×1080: Training Studio: Codier- und Freigabespalte vollständig erreichbar",
+      "ergebnis": "bestanden",
+      "detail": "{\"colInView\":true,\"colW\":330,\"releaseReachable\":true,\"acceptVisibleAtTop\":true}"
+    },
+    {
+      "id": "I1-hell",
+      "name": "Schriftgrösse hell: kleinster sichtbarer Text ≥ 11 px auf 15 Seiten und 3 Fenstern",
+      "ergebnis": "bestanden",
+      "detail": "kleinste 11 px (overview: kbd „F1\"), 18 Ansichten"
+    },
+    {
+      "id": "I2-hell",
+      "name": "Kontrast hell: normaler Text ≥ 4,5:1 auf 15 Seiten, 3 Fenstern, Eingaben und Platzhaltern (deckende Hintergründe)",
+      "ergebnis": "bestanden",
+      "detail": "2112 Textelemente, 0 unter 4,5:1"
+    },
+    {
+      "id": "I3-hell",
+      "name": "Kontrast hell: Projektziel 4,5:1 auch für grossen Text (WCAG erlaubt dort 3:1)",
+      "ergebnis": "bestanden",
+      "detail": "kein grosser Text unter 4,5:1"
+    },
+    {
+      "id": "I4-hell",
+      "name": "Kontrast hell: Texte auf Verläufen gesondert gelistet (nicht als Verstoss gewertet)",
+      "ergebnis": "nicht geprüft",
+      "detail": "keine"
+    },
+    {
+      "id": "I1-dunkel",
+      "name": "Schriftgrösse dunkel: kleinster sichtbarer Text ≥ 11 px auf 15 Seiten und 3 Fenstern",
+      "ergebnis": "bestanden",
+      "detail": "kleinste 11 px (overview: kbd „F1\"), 18 Ansichten"
+    },
+    {
+      "id": "I2-dunkel",
+      "name": "Kontrast dunkel: normaler Text ≥ 4,5:1 auf 15 Seiten, 3 Fenstern, Eingaben und Platzhaltern (deckende Hintergründe)",
+      "ergebnis": "bestanden",
+      "detail": "2112 Textelemente, 0 unter 4,5:1"
+    },
+    {
+      "id": "I3-dunkel",
+      "name": "Kontrast dunkel: Projektziel 4,5:1 auch für grossen Text (WCAG erlaubt dort 3:1)",
+      "ergebnis": "bestanden",
+      "detail": "kein grosser Text unter 4,5:1"
+    },
+    {
+      "id": "I4-dunkel",
+      "name": "Kontrast dunkel: Texte auf Verläufen gesondert gelistet (nicht als Verstoss gewertet)",
+      "ergebnis": "nicht geprüft",
+      "detail": "keine"
+    },
+    {
+      "id": "J1",
+      "name": "Export nennt Ziel und Ergebnis und sagt, dass keine Datei geschrieben wurde",
+      "ergebnis": "bestanden",
+      "detail": "Nur Vorschau: es wurde keine Datei geschrieben.VorgangHaltungen.xlsxZiel im Prog"
+    },
+    {
+      "id": "J2",
+      "name": "Revidierte XTF wird vom GEONIS-Rückabgleich unterschieden",
+      "ergebnis": "bestanden",
+      "detail": ""
+    },
+    {
+      "id": "J3",
+      "name": "Nicht umgesetzte Aktionen sind gekennzeichnet und erklären sich",
+      "ergebnis": "bestanden",
+      "detail": "181 Aktionen mit Kennzeichnung ◌"
+    },
+    {
+      "id": "J4",
+      "name": "Leerzustand erscheint, wenn ein Filter keine Fälle hat",
+      "ergebnis": "bestanden",
+      "detail": ""
+    },
+    {
+      "id": "J5",
+      "name": "Lade- und Erfolgszustand (Schattenlauf) sichtbar und als Simulation benannt",
+      "ergebnis": "bestanden",
+      "detail": ""
+    },
+    {
+      "id": "J6",
+      "name": "KI-Prozentwerte werden als Modellsicherheit erklärt; Bestätigung getrennt",
+      "ergebnis": "bestanden",
+      "detail": ""
+    },
+    {
+      "id": "J7",
+      "name": "Skriptfehler im gesamten Lauf",
+      "ergebnis": "bestanden",
+      "detail": "keine"
+    },
+    {
+      "id": "K1",
+      "name": "R01 Abbrechen: Rückfrage ohne Player, Auswahl und Entwurf bleiben auf 07.6588-6587",
+      "ergebnis": "bestanden",
+      "detail": "{\"before\":{\"sel\":\"h02\",\"player\":false,\"confirm\":true,\"dialoge\":[\"winConfirm\"]},\"after\":{\"sel\":\"h02\",\"player\":false,\"form\":\"07.6588-6587\",\"dirty\":true,\"page\":\"page-overview\"}}"
+    },
+    {
+      "id": "K2",
+      "name": "R01 Verwerfen und wechseln: Auswahl, Formular und Player gemeinsam auf 78998-79002, Ursprung unverändert",
+      "ergebnis": "bestanden",
+      "detail": "{\"sel\":\"h01\",\"player\":true,\"playerId\":\"h01\",\"form\":\"78998-79002\",\"page\":\"page-haltungen\",\"h02\":1994}"
+    },
+    {
+      "id": "K3",
+      "name": "R01 KI-Aufgabenliste: Rückfrage vor dem Player; Speichern und wechseln übernimmt Wert und öffnet den richtigen Player",
+      "ergebnis": "bestanden",
+      "detail": "{\"sel\":\"h01\",\"player\":true,\"playerId\":\"h01\",\"h02\":\"2003\",\"dirty\":false}"
+    },
+    {
+      "id": "K4",
+      "name": "R06 Beenden ohne Übernahme verwirft neuen, bestätigten, gelöschten Befund und Prüfstatus; Bestand unverändert; beim Wiederöffnen weg",
+      "ergebnis": "bestanden",
+      "detail": "{\"changes\":3,\"bestandGleich\":true,\"reopened\":false}"
+    },
+    {
+      "id": "K5",
+      "name": "R06 Codierung übernehmen schreibt den Entwurf in den Bestand und die Übersicht",
+      "ergebnis": "bestanden",
+      "detail": "{\"player\":false,\"hat\":true,\"side\":true}"
+    },
+    {
+      "id": "K6",
+      "name": "R06 Esc oder Schliessen bei Entwurf fragt nach; Zurück zum Player behält Entwurf und Fenster",
+      "ergebnis": "bestanden",
+      "detail": "{\"confirm\":true,\"title\":\"Codierung nicht übernommen\"}"
+    },
+    {
+      "id": "K7",
+      "name": "R02 Akzeptieren, dann Felder leeren: Freigabe gesperrt; erzwungener Klick wird abgelehnt",
+      "ergebnis": "bestanden",
+      "detail": "{\"r0\":true,\"r1\":true,\"r2\":true,\"note\":\"Freigabe abgelehnt: Beschreibung braucht mindestens 10 Zeich\"}"
+    },
+    {
+      "id": "K8",
+      "name": "R02 Jede Änderung (Stufe, Bildauswahl) hebt die Bestätigung auf; nach erneutem Akzeptieren ist die Freigabe möglich und wird danach wieder gesperrt",
+      "ergebnis": "bestanden",
+      "detail": "{\"r3\":true,\"r4\":true,\"r5\":true,\"r6\":true}"
+    },
+    {
+      "id": "K9",
+      "name": "R03 Speicherfehler: Fehlermeldung statt Erfolg, Entwurf und Marke bleiben, Bestand unverändert",
+      "ergebnis": "bestanden",
+      "detail": "{\"toast\":\"Nicht gespeichertSpeichern fehlgeschlagen: Der Browserspeicher hat die Daten nicht angenommen (zum Beispiel voll oder gesperrt). Die Eingabe bleibt erhalten, du kannst es erneut versuchen.\",\"dirty\":true,\"bestand\":1978,\"feld\":\"2002\",\"saveEnabled\":true}"
+    },
+    {
+      "id": "K10",
+      "name": "R03 „Speichern und wechseln\" wechselt bei Speicherfehler nicht; Hinweis im Dialog",
+      "ergebnis": "bestanden",
+      "detail": "{\"confirmOpen\":true,\"note\":\"Speichern fehlgeschlagen: Der Browserspeicher hat die Daten nicht angenommen (zum Beispiel voll oder gesperrt). Die Eingabe bleibt erhalten, du kannst es erneut versuchen.\",\"sel\":\"h01\",\"dirty\":true}"
+    },
+    {
+      "id": "K11",
+      "name": "R03 Wiederholung nach Fehler speichert erfolgreich und überlebt das Neuladen",
+      "ergebnis": "bestanden",
+      "detail": "{\"f3\":{\"toast\":\"Gespeichert (Vorschau)1 Feldwerte im Browserspeicher abgelegt. Keine Projektdatei wurde geschrieben.\",\"dirty\":false,\"bestand\":\"2002\"},\"f4\":\"2002\"}"
+    },
+    {
+      "id": "K12",
+      "name": "R04 Ctrl+K und F3 verlassen weder Player noch Codierfenster; Shift+Tab und Tab bleiben im obersten Dialog",
+      "ergebnis": "bestanden",
+      "detail": "{\"c1\":true,\"c2\":true,\"c3\":true,\"c4\":true,\"tabBleibt\":true,\"erstes\":\"Tastenkürzel F1\"}"
+    },
+    {
+      "id": "K13",
+      "name": "R04 Drei Dialogebenen: Esc schliesst je die oberste, Fokus kehrt Ebene für Ebene zurück",
+      "ergebnis": "bestanden",
+      "detail": "winPlayer,winVsa,winHelp|true → winPlayer,winVsa|true → winPlayer|true → 0|btnPlayerH"
+    },
+    {
+      "id": "K14-1366",
+      "name": "1366×768: weiterhin 7 vollständige Zeilen sichtbar",
+      "ergebnis": "bestanden",
+      "detail": "7 Zeilen"
+    },
+    {
+      "id": "K14-1440",
+      "name": "1440×900: weiterhin 9 vollständige Zeilen sichtbar",
+      "ergebnis": "bestanden",
+      "detail": "9 Zeilen"
+    },
+    {
+      "id": "K14-1920",
+      "name": "1920×1080: weiterhin 12 vollständige Zeilen sichtbar",
+      "ergebnis": "bestanden",
+      "detail": "12 Zeilen"
+    }
+  ],
+  "skriptfehler": []
+}

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
@@ -8,6 +9,40 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageMeasureSuggestionControllerTests
 {
+    // Der Betrag wird schweizerisch dargestellt, egal was Windows eingestellt hat.
+    // Ohne diese Festlegung zeigte derselbe Stand auf dem Entwicklerrechner 1'250.00 und
+    // auf dem englischen CI-Rechner 1,250.00 — der Test wurde dort rot, ohne dass sich am
+    // Code etwas geaendert hatte.
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("de-DE")]
+    [InlineData("de-CH")]
+    public void Der_Kostenbetrag_haengt_nicht_von_der_Rechnerkultur_ab(string kultur)
+    {
+        var vorher = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(kultur);
+        try
+        {
+            var record = Record("H1");
+            var dialogs = new CapturingDialogService();
+            var controller = CreateController(
+                dialogs,
+                new FakeMeasureRecommendationService(
+                    _ => Recommendation(new[] { "Inliner" }, 1250m, similarCases: 3, trained: true)),
+                selected: null,
+                recommendedOptions: new ObservableCollection<string>());
+
+            controller.Suggest(record);
+
+            var erwartet = 1250m.ToString("N2", CultureInfo.GetCultureInfo("de-CH"));
+            Assert.Contains($"Geschätzte Kosten: {erwartet}", dialogs.LastInfo!.Value.Message);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = vorher;
+        }
+    }
+
     [Fact]
     public void Suggest_nutzt_selected_fallback_und_meldet_fehlende_vorschlaege()
     {
@@ -23,7 +58,7 @@ public sealed class DataPageMeasureSuggestionControllerTests
 
         controller.Suggest(null);
 
-        Assert.Equal(("Noch keine Vorschlaege verfuegbar. Bitte zuerst einige Haltungen mit Massnahmen bewerten.", "Massnahmen"), dialogs.LastInfo);
+        Assert.Equal(("Noch keine Vorschläge verfügbar. Bitte zuerst einige Haltungen mit Massnahmen bewerten.", "Massnahmen"), dialogs.LastInfo);
         var requested = Assert.Single(service.RequestedRecords);
         Assert.Same(record, requested);
         Assert.Equal(0, dirty);
@@ -55,74 +90,17 @@ public sealed class DataPageMeasureSuggestionControllerTests
         Assert.Equal("1250.00", record.GetFieldValue("Kosten"));
         Assert.Equal(new[] { "Inliner", "Manschette" }, options);
         Assert.Equal(1, dirty);
-        Assert.Equal("Maßnahmenvorschlag mit Kostenschätzung gesetzt (1250.00, KI-Modell)", statuses.Single());
+        Assert.Equal("Massnahmenvorschlag mit Kostenschätzung gesetzt (1250.00, KI-Modell)", statuses.Single());
         Assert.Equal((3, 1250m), learning.Single());
         Assert.Equal(
-            ("Inliner\nManschette\n\nGeschaetzte Kosten: 1’250.00\n\nQuelle: KI-Modell (3 aehnliche Faelle)", "Empfohlene Sanierungsmassnahmen"),
+            ("Inliner\nManschette\n\nGeschätzte Kosten: 1’250.00\n\nQuelle: KI-Modell (3 ähnliche Fälle)", "Empfohlene Sanierungsmassnahmen"),
             dialogs.LastInfo);
-    }
-
-    [Fact]
-    public void SuggestAll_meldet_leere_liste_ohne_dirty_status()
-    {
-        var dialogs = new CapturingDialogService();
-        var dirty = 0;
-        var statuses = new List<string>();
-        var controller = CreateController(
-            dialogs,
-            new FakeMeasureRecommendationService(_ => Recommendation(new[] { "Inliner" })),
-            records: new List<HaltungRecord>(),
-            markDirty: () => dirty++,
-            setStatus: statuses.Add);
-
-        controller.SuggestAll();
-
-        Assert.Equal(("Keine Haltungen vorhanden.", "Massnahmen"), dialogs.LastInfo);
-        Assert.Equal(0, dirty);
-        Assert.Empty(statuses);
-    }
-
-    [Fact]
-    public void SuggestAll_fuellt_geeignete_haltungen_und_zaehlt_skips_und_leere_empfehlungen()
-    {
-        var fill = Record("H1", pruefung: "Sanierungsbedarf");
-        var manual = Record("H2", pruefung: "Sanierungsbedarf", existingMeasures: "Manuell", userEditedMeasures: true);
-        var clean = Record("H3", pruefung: "Keine");
-        var noSuggestion = Record("H4", pruefung: "beobachten");
-        var records = new List<HaltungRecord> { fill, manual, clean, noSuggestion };
-        var dialogs = new CapturingDialogService();
-        var options = new ObservableCollection<string>();
-        var statuses = new List<string>();
-        var dirty = 0;
-        var service = new FakeMeasureRecommendationService(record =>
-            ReferenceEquals(record, noSuggestion)
-                ? MeasureRecommendationResult.Empty
-                : Recommendation(new[] { "Kurzliner" }));
-        var controller = CreateController(
-            dialogs,
-            service,
-            records: records,
-            recommendedOptions: options,
-            markDirty: () => dirty++,
-            setStatus: statuses.Add);
-
-        controller.SuggestAll();
-
-        Assert.Equal("Kurzliner", fill.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
-        Assert.Equal("Manuell", manual.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
-        Assert.True(string.IsNullOrEmpty(clean.GetFieldValue("Empfohlene_Sanierungsmassnahmen")));
-        Assert.True(string.IsNullOrEmpty(noSuggestion.GetFieldValue("Empfohlene_Sanierungsmassnahmen")));
-        Assert.Equal(new[] { "Kurzliner" }, options);
-        Assert.Equal(1, dirty);
-        Assert.Equal("Maßnahmen: 1 Haltungen befüllt, 2 übersprungen, 1 ohne Vorschlag", statuses.Single());
-        Assert.Equal(new[] { fill, noSuggestion }, service.RequestedRecords);
     }
 
     private static DataPageMeasureSuggestionController CreateController(
         CapturingDialogService dialogs,
         IMeasureRecommendationService service,
         HaltungRecord? selected = null,
-        IReadOnlyList<HaltungRecord>? records = null,
         ObservableCollection<string>? recommendedOptions = null,
         Action? markDirty = null,
         Action<string>? setStatus = null,
@@ -131,7 +109,6 @@ public sealed class DataPageMeasureSuggestionControllerTests
             dialogs,
             service,
             getSelected: () => selected,
-            getRecords: () => records ?? Array.Empty<HaltungRecord>(),
             addRecommendedOption: value => AddIfMissing(recommendedOptions ?? new ObservableCollection<string>(), value),
             markProjectDirty: markDirty ?? (() => { }),
             setStatus: setStatus ?? (_ => { }),
@@ -227,13 +204,13 @@ public sealed class DataPageMeasureSuggestionControllerTests
         public void Error(string message, string title = "Fehler")
             => throw new NotSupportedException();
 
-        public bool Confirm(string message, string title = "Bestaetigung")
+        public bool Confirm(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
 
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true)
             => throw new NotSupportedException();
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
     }
 }

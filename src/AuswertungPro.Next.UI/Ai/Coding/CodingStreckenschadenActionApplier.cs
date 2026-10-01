@@ -40,8 +40,18 @@ public static class CodingStreckenschadenActionApplier
                         videoTime);
                     attachAnalyzedFramePhoto(draft.Entry);
                     var ev = codingSessionService.AddEvent(draft.Entry);
-                    ev.MeterAtCapture = instr.StartMeter;
-                    ev.AiContext = draft.AiContext;
+                    // EventAdded kann synchron einen menschlichen Kontext setzen.
+                    // Diesen weder zuruecksetzen noch als unberuehrt weiterreichen.
+                    if (ev.AiContext is not null || ev.Overlay is not null || ev.ReviewContext is not null)
+                    {
+                        ev.AiContext ??= draft.AiContext;
+                        CodingPointFollowUpPolicy.MarkHumanTouched(ev);
+                    }
+                    else
+                    {
+                        ev.MeterAtCapture = instr.StartMeter;
+                        ev.AiContext = draft.AiContext;
+                    }
                     anyChanged = true;
                     break;
                 }

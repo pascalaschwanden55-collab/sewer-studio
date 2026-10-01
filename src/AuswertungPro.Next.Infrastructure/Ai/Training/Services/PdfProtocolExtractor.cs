@@ -229,7 +229,7 @@ public sealed class PdfProtocolExtractor
                 var ocrText = TryExtractTextWithOcrFallback(path, doc.NumberOfPages);
                 if (ocrText.SkippedByBudget)
                 {
-                    NoteProblemPdf(path, $"OCR uebersprungen (Budget): {ocrText.Message}");
+                    NoteProblemPdf(path, $"OCR übersprungen (Budget): {ocrText.Message}");
                     return Array.Empty<GroundTruthEntry>();
                 }
 
@@ -267,7 +267,7 @@ public sealed class PdfProtocolExtractor
                 var reason = usedOcrFallback
                     ? "OCR versucht, 0 Befunde"
                     : LooksLikeUndecodableFontEncoding(text)
-                        ? "nicht dekodierbares Custom-Font-Encoding (hoher Steuerzeichenanteil, keine Textanker) -> OCR oder Re-Export noetig"
+                        ? "nicht dekodierbares Custom-Font-Encoding (hoher Steuerzeichenanteil, keine Textanker) -> OCR oder Re-Export nötig"
                     : "Text vorhanden, aber 0 Befunde erkannt (evtl. unbekanntes Format)";
                 NoteProblemPdf(path, reason);
             }

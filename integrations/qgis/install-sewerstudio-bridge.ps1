@@ -3,7 +3,7 @@ param(
     [string]$ProfileRoot,
     [switch]$AllProfiles,
     # Zentrales Plugin-Archiv: dort landet IMMER eine Kopie (Ordner + versioniertes ZIP).
-    [string]$BackupDir = "D:\QGIS_V4.03\AWU_Plugins"
+    [string]$BackupDir = "D:\QGIS_V4.2\AWU_Plugins"
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,7 +20,7 @@ function Get-QgisPluginRoots {
 
     $qgisRoot = Join-Path $env:APPDATA "QGIS"
     if (-not (Test-Path -LiteralPath $qgisRoot)) {
-        return @((Join-Path $qgisRoot "QGIS3\profiles\default\python\plugins"))
+        return @((Join-Path $qgisRoot "QGIS4\profiles\default\python\plugins"))
     }
 
     $roots = New-Object System.Collections.Generic.List[string]
@@ -39,7 +39,7 @@ function Get-QgisPluginRoots {
         }
 
     if ($roots.Count -eq 0) {
-        $roots.Add((Join-Path $qgisRoot "QGIS3\profiles\default\python\plugins"))
+        $roots.Add((Join-Path $qgisRoot "QGIS4\profiles\default\python\plugins"))
     }
 
     return $roots.ToArray()

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -42,6 +42,8 @@ public sealed class DataPagePrintController
     private readonly Func<DataPageDossierPrintAvailability, DossierPrintOptions?> _selectDossierPrintOptions;
     private readonly Func<Project, HaltungRecord, SchachtRecord?, SchachtRecord?, HydraulikCalcResult?, string, DossierPrintOptions, Task<byte[]>> _buildDossierPdfAsync;
     private readonly IPdfMergeService _pdfMerge;
+    private readonly Func<IReadOnlyList<string>, byte[]> _mergeRequiredOriginals;
+    private readonly Func<byte[], IReadOnlyList<string>, byte[]> _mergeWithRequiredOriginals;
     private readonly string _baseDirectory;
     private readonly Func<string, bool> _fileExists;
     private readonly Action<string, byte[]> _writeAllBytes;
@@ -53,6 +55,12 @@ public sealed class DataPagePrintController
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
     private readonly IProjectCostStoreRepository _projectCosts;
+    private readonly IProtocolPdfLayoutSettings? _protocolPdfLayoutSettings;
+    private readonly IToastService? _toasts;
+    // Gemeinsame Quelle fuer das Logo in Berichten (Optikanalyse 28.09.2026, Aufgabe 15).
+    // Ohne Injektion (Alt-/Testkonstruktoren) gilt weiter die bisherige feste
+    // Berechnung ueber _baseDirectory/_fileExists.
+    private readonly IBerichtsMarke? _berichtsMarke;
 
     [Obsolete("Kompatibilitaetskonstruktor. Neue Aufrufer muessen einen sicheren PDF-Oeffner injizieren.")]
     public DataPagePrintController(
@@ -124,7 +132,10 @@ public sealed class DataPagePrintController
         Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
         IProtocolSingleRegenerationService? protocolRegeneration = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
-        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
+        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null,
+        IToastService? toasts = null,
+        IBerichtsMarke? berichtsMarke = null)
         : this(
             dialogs,
             getProjectFolder,
@@ -135,13 +146,15 @@ public sealed class DataPagePrintController
             getLastProjectPath: getLastProjectPath,
             findSchachtByNummer: findSchachtByNummer,
             buildDossierHydraulikCalculation: buildDossierHydraulikCalculation,
-            regenerateOne: protocolRegeneration is null
-                ? null
-                : (project, folder, record, document) =>
-                    protocolRegeneration.RegenerateOne(project, folder, record, document),
+            // Immer ueber den eingebauten Erzeuger: nur so gilt die Einstellung
+            // "Fotos pro Seite" auch fuer das neu erzeugte _E-Protokoll.
+            regenerateOne: CreateRegenerateOne(protocolRegeneration, protocolPdfExporter),
             openPdf: openPdf,
             dossierPhotoAvailability: dossierPhotoAvailability,
-            inspectionProtocolFiles: inspectionProtocolFiles)
+            inspectionProtocolFiles: inspectionProtocolFiles,
+            protocolPdfLayoutSettings: protocolPdfLayoutSettings,
+            toasts: toasts,
+            berichtsMarke: berichtsMarke)
     {
     }
 
@@ -158,7 +171,10 @@ public sealed class DataPagePrintController
         Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
         IProtocolSingleRegenerationService? protocolRegeneration = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
-        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
+        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null,
+        IToastService? toasts = null,
+        IBerichtsMarke? berichtsMarke = null)
         : this(
             dialogs,
             protocolPdfExporter,
@@ -171,7 +187,10 @@ public sealed class DataPagePrintController
             buildDossierHydraulikCalculation,
             protocolRegeneration,
             dossierPhotoAvailability,
-            inspectionProtocolFiles)
+            inspectionProtocolFiles,
+            protocolPdfLayoutSettings,
+            toasts,
+            berichtsMarke)
     {
         _pdfMerge = pdfMerge ?? throw new ArgumentNullException(nameof(pdfMerge));
     }
@@ -262,7 +281,10 @@ public sealed class DataPagePrintController
         Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null,
         Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
-        IInspectionProtocolFileLocator? inspectionProtocolFiles = null)
+        IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
+        IProtocolPdfLayoutSettings? protocolPdfLayoutSettings = null,
+        IToastService? toasts = null,
+        IBerichtsMarke? berichtsMarke = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
@@ -293,15 +315,30 @@ public sealed class DataPagePrintController
             : new DelegatePdfMergeService(
                 mergeOriginals ?? mergeFallback.MergeOriginals,
                 mergeWithOriginals ?? mergeFallback.MergeWithOriginals);
+        // Injizierte Merge-Funktionen sind ein alter Test-/Kompatibilitaetsweg.
+        // Der produktive Dienst wird fuer Dossiers immer auf Vollstaendigkeit geprueft.
+        _mergeRequiredOriginals = mergeOriginals is null
+            ? paths => PdfMergeVerification.MergeRequiredOriginals(_pdfMerge, paths)
+            : mergeOriginals;
+        _mergeWithRequiredOriginals = mergeWithOriginals is null
+            ? (generated, paths) => PdfMergeVerification.MergeWithRequiredOriginals(
+                _pdfMerge, generated, paths)
+            : mergeWithOriginals;
+        // Kein stiller statischer Rueckfall: der wuerde sich einen zweiten PDF-Erzeuger
+        // ohne die Benutzereinstellung bauen. Die produktiven Aufrufwege reichen den
+        // eingebauten Dienst immer durch.
         _regenerateOne = regenerateOne
-            ?? ((project, folder, record, doc) =>
-                AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationService.RegenerateOne(project, folder, record, doc));
+            ?? ((_, _, _, _) => throw new InvalidOperationException(
+                "Protokoll-Neuerzeugung ist nicht verdrahtet."));
         _openPdf = openPdf ?? throw new ArgumentNullException(nameof(openPdf));
         _dossierPhotoAvailability = dossierPhotoAvailability
             ?? DataPageDossierAvailability.CompatibilityService;
         _inspectionProtocolFiles = inspectionProtocolFiles
             ?? DataPageProtocolPathResolver.CompatibilityService;
         _projectCosts = projectCosts ?? throw new ArgumentNullException(nameof(projectCosts));
+        _protocolPdfLayoutSettings = protocolPdfLayoutSettings;
+        _toasts = toasts;
+        _berichtsMarke = berichtsMarke;
     }
 
     public async Task PrintDossierPdfAsync(Project project, HaltungRecord? record)
@@ -310,7 +347,7 @@ public sealed class DataPagePrintController
 
         if (record is null)
         {
-            _dialogs.Info("Bitte zuerst eine Haltung auswaehlen.", "Dossier");
+            _dialogs.Info("Bitte zuerst eine Haltung auswählen.", "Dossier");
             return;
         }
 
@@ -373,10 +410,9 @@ public sealed class DataPagePrintController
             if (selectedOptions.IncludeHydraulik && hydraulikAvailable)
                 calcResult = _buildDossierHydraulikCalculation(record, hydraulikAvailability.DnMm);
 
-            var logoPath = Path.Combine(_baseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
             var options = selectedOptions with
             {
-                LogoPathAbs = _fileExists(logoPath) ? logoPath : null,
+                LogoPathAbs = ResolveLogoPath(),
                 HoldingCost = selectedOptions.IncludeKostenschaetzung ? holdingCost : null,
                 OriginalPdfPaths = selectedOptions.IncludeOriginalProtokolle ? originalPdfPaths : null,
             };
@@ -394,7 +430,7 @@ public sealed class DataPagePrintController
             if (!printableSections.HasAnySection)
             {
                 _dialogs.Info(
-                    "Die ausgewaehlte Kombination enthaelt keine druckbaren Inhalte.",
+                    "Die ausgewählte Kombination enthält keine druckbaren Inhalte.",
                     "Dossier");
                 return;
             }
@@ -407,18 +443,21 @@ public sealed class DataPagePrintController
             }
             else
             {
-                pdf = await Task.Run(() => _pdfMerge.MergeOriginals(originalPdfPaths));
+                pdf = await Task.Run(() => _mergeRequiredOriginals(originalPdfPaths));
                 if (pdf.Length == 0)
-                    throw new UserFacingException("Die Original-Protokolle konnten nicht zusammengefuehrt werden.");
+                    throw new UserFacingException("Die Original-Protokolle konnten nicht zusammengeführt werden.");
 
                 originalsAlreadyMerged = true;
             }
 
             if (!originalsAlreadyMerged && options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0)
-                pdf = await Task.Run(() => _pdfMerge.MergeWithOriginals(pdf, originalPdfPaths));
+                pdf = await Task.Run(() => _mergeWithRequiredOriginals(pdf, originalPdfPaths));
 
             await _writeAllBytesAsync(output, pdf);
-            _dialogs.Info($"Dossier wurde erstellt:\n{output}", "Dossier");
+            if (_toasts is not null)
+                _toasts.Success("Dossier wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(output, out _));
+            else
+                _dialogs.Info($"Dossier wurde erstellt:\n{output}", "Dossier");
         }
         catch (Exception ex)
         {
@@ -427,9 +466,21 @@ public sealed class DataPagePrintController
         }
     }
 
+    // Gemeinsame Quelle (Optikanalyse 28.09.2026, Aufgabe 15): mit injizierter
+    // IBerichtsMarke gilt die Einstellung "Logo für Berichte"; ohne Injektion
+    // (Alt-/Testkonstruktoren) bleibt die bisherige feste Berechnung erhalten.
+    private string? ResolveLogoPath()
+    {
+        if (_berichtsMarke is not null)
+            return _berichtsMarke.LogoPfad;
+
+        var logoPath = BerichtsLogoResolver.DefaultLogoPath(_baseDirectory);
+        return _fileExists(logoPath) ? logoPath : null;
+    }
+
     private bool ConfirmDirtyDossierPrint()
         => _dialogs.ConfirmWarn(
-            "ACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt.\n\n" +
+            "ACHTUNG: Es gibt ungespeicherte Änderungen im Projekt.\n\n" +
             "Das Dossier verwendet den zuletzt gespeicherten Stand der Sanierungs-Matrix. Trotzdem drucken?",
             "Dossier",
             defaultNo: true);
@@ -438,14 +489,14 @@ public sealed class DataPagePrintController
     {
         if (record is null)
         {
-            _dialogs.Info("Bitte zuerst eine Haltung auswaehlen.", "Hydraulik PDF");
+            _dialogs.Info("Bitte zuerst eine Haltung auswählen.", "Hydraulik PDF");
             return;
         }
 
         var calc = _buildHydraulikCalculation(record);
         if (calc is null)
         {
-            _dialogs.Warn("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF");
+            _dialogs.Warn("Hydraulik-Berechnung konnte nicht durchgeführt werden.\nBitte DN und Gefälle prüfen.", "Hydraulik PDF");
             return;
         }
 
@@ -465,16 +516,18 @@ public sealed class DataPagePrintController
 
         try
         {
-            var logoPath = Path.Combine(_baseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
             var options = selectedOptions with
             {
-                LogoPathAbs = _fileExists(logoPath) ? logoPath : null
+                LogoPathAbs = ResolveLogoPath()
             };
 
             var pdf = await _buildHydraulikPdfAsync(record, calc, options);
             await _writeAllBytesAsync(output, pdf);
 
-            _dialogs.Info($"PDF wurde erstellt:\n{output}", "Hydraulik PDF");
+            if (_toasts is not null)
+                _toasts.Success("Hydraulik-PDF wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(output, out _));
+            else
+                _dialogs.Info($"PDF wurde erstellt:\n{output}", "Hydraulik PDF");
         }
         catch (Exception ex)
         {
@@ -493,7 +546,7 @@ public sealed class DataPagePrintController
 
         if (record is null)
         {
-            _dialogs.Info("Bitte zuerst eine Haltung auswaehlen.", "Haltungsprotokoll AWU");
+            _dialogs.Info("Bitte zuerst eine Haltung auswählen.", "Haltungsprotokoll AWU");
             return;
         }
 
@@ -515,7 +568,7 @@ public sealed class DataPagePrintController
             if (string.IsNullOrWhiteSpace(dest))
             {
                 _dialogs.Info(
-                    "Fuer diese Haltung liegt kein Haltungsname vor — der Zielordner kann nicht bestimmt werden.",
+                    "Für diese Haltung liegt kein Haltungsname vor — der Zielordner kann nicht bestimmt werden.",
                     "Haltungsprotokoll AWU");
                 return;
             }
@@ -525,13 +578,31 @@ public sealed class DataPagePrintController
 
             // PDF direkt anzeigen; nur wenn das nicht klappt, den Pfad melden.
             if (!_openPdf(dest!))
-                _dialogs.Info($"AWU-Haltungsprotokoll wurde erstellt:\n{dest}", "Haltungsprotokoll AWU");
+            {
+                if (_toasts is not null)
+                    _toasts.Success("AWU-Haltungsprotokoll wurde erstellt.", "Datei öffnen", () => ExplorerRevealService.TryReveal(dest, out _));
+                else
+                    _dialogs.Info($"AWU-Haltungsprotokoll wurde erstellt:\n{dest}", "Haltungsprotokoll AWU");
+            }
         }
         catch (Exception ex)
         {
             var userMessage = UserError.DescribeAndReport(ex, "AWU-Haltungsprotokoll erstellen");
             _dialogs.Error($"AWU-Haltungsprotokoll konnte nicht erstellt werden:\n{userMessage}", "Haltungsprotokoll AWU");
         }
+    }
+
+    private static Func<Project, string, HaltungRecord, ProtocolDocument, string?> CreateRegenerateOne(
+        IProtocolSingleRegenerationService? protocolRegeneration,
+        IProtocolPdfExporter protocolPdfExporter)
+    {
+        ArgumentNullException.ThrowIfNull(protocolPdfExporter);
+
+        var service = protocolRegeneration
+            ?? new AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationAdapter(protocolPdfExporter);
+
+        return (project, folder, record, document) =>
+            service.RegenerateOne(project, folder, record, document);
     }
 
     private static Func<Project, HaltungRecord, ProtocolDocument, string, HaltungsprotokollPdfOptions, byte[]> CreateBuildAwuPdf(
@@ -591,12 +662,12 @@ public sealed class DataPagePrintController
         return paths;
     }
 
-    private static DossierPrintOptions? SelectDossierPrintOptionsWithDialog(DataPageDossierPrintAvailability availability)
+    private DossierPrintOptions? SelectDossierPrintOptionsWithDialog(DataPageDossierPrintAvailability availability)
     {
-        var dialog = new DossierPrintDialog
-        {
-            Owner = System.Windows.Application.Current?.MainWindow
-        };
+        var dialog = _protocolPdfLayoutSettings is null
+            ? new DossierPrintDialog()
+            : new DossierPrintDialog(_protocolPdfLayoutSettings);
+        dialog.Owner = System.Windows.Application.Current?.MainWindow;
         dialog.SetAvailability(
             availability.HasSchachtVon,
             availability.SchachtVonNr,

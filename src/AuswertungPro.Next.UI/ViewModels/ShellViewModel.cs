@@ -11,8 +11,11 @@ using AuswertungPro.Next.Infrastructure.Projects;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Settings;
+using AuswertungPro.Next.UI.Dossiers;
 
 namespace AuswertungPro.Next.UI.ViewModels;
 
@@ -36,6 +39,7 @@ public static class ShellNavigationPolicy
 public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPlayerShellProjectContext
 {
     private readonly ServiceProvider _sp;
+    private readonly IImportTransactionRecoveryService _importTransactionRecovery;
     private bool _disposed;
 
     [ObservableProperty] private string _title = "SewerStudio";
@@ -69,7 +73,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     partial void OnCurrentModeChanged(ShellMode value)
     {
         OnPropertyChanged(nameof(IsMenuVisible));
-        SaveCommand?.NotifyCanExecuteChanged();
+        NotifyShellOperationCommands();
     }
 
     public IRelayCommand SaveCommand { get; }
@@ -78,6 +82,15 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     public IRelayCommand SaveAsProjectCommand { get; }
     public IRelayCommand OpenPriceCatalogCommand { get; }
     public IRelayCommand OpenTemplateEditorCommand { get; }
+    /// <summary>Optikanalyse 28.09.2026, Aufgabe 5 («Programmidentitaet»): oeffnet «Über SewerStudio».
+    /// Aufgabe 6 verdrahtet dafuer den Hilfe-Menuepunkt.</summary>
+    public IRelayCommand ShowAboutCommand { get; }
+    /// <summary>Aufgabe 6: oeffnet das Handbuch. Der Parameter ist der Seitenschluessel
+    /// (<c>NavItem.Title</c> der aktuell gewaehlten Seite, z. B. aus F1); unbekannt/leer -&gt;
+    /// «Übersicht» (<see cref="Services.HandbuchInhalt.Finde"/>).</summary>
+    public IRelayCommand<string?> OpenHandbuchCommand { get; }
+    /// <summary>Aufgabe 6: oeffnet die Tastenkürzel-Übersicht.</summary>
+    public IRelayCommand OpenTastenkuerzelCommand { get; }
     public IRelayCommand ToggleFocusModeCommand { get; }
     public IRelayCommand SwitchProjectCommand { get; }
     [ObservableProperty] private bool _isProjectReady;
@@ -109,34 +122,37 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     public object CollectionLock => _collectionLock;
 
     public ShellViewModel(ServiceProvider services, SystemMonitorService? monitor = null)
+        : this(services, monitor, importTransactionRecovery: null)
+    {
+    }
+
+    internal ShellViewModel(
+        ServiceProvider services,
+        SystemMonitorService? monitor,
+        IImportTransactionRecoveryService? importTransactionRecovery)
     {
         ArgumentNullException.ThrowIfNull(services);
 
         _sp = services;
+        _importTransactionRecovery = importTransactionRecovery
+            ?? services.ImportTransactionRecovery;
         Monitor = monitor ?? new SystemMonitorService();
         EnableCollectionSync(_project);
 
         NavItems = new List<NavItem>
         {
-            new("\uE9D2", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp), canOpenWithoutProject: true),
+            // F3: Bei offenem Projekt die neue Uebersicht, ausser der Benutzer hat im Menue
+            // "Ansicht" die klassische Uebersicht gewaehlt. Ohne Projekt gilt immer die
+            // klassische Seite — sie ist zugleich der Projektstarter.
+            new("\uE9D2", "Uebersicht", () => CurrentMode == ShellMode.Workspace && IsProjectReady && _sp.Settings.ShowUebersichtNovaLayout
+                ? new Pages.ProjektUebersichtPageViewModel(this, _sp)
+                : new Pages.OverviewPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this, _sp)),
             new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this, _sp)),
             // Segoe MDL2: Import = Download, Export = Upload
             new("\uE896", "Import", () => new Pages.ImportPageViewModel(this, _sp)),
             new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp), canOpenWithoutProject: true),
-            new("\uE707", "Karte", () => new AuswertungPro.Next.UI.Views.Pages.KartePage
-            {
-                DataContext = new Pages.KarteViewModel(
-                    this,
-                    settings: _sp.Settings,
-                    networkFeatures: _sp.NetworkFeatures,
-                    playVideo: KarteVideoLauncher.Create(_sp),
-                    inspectionProtocolFiles: _sp.InspectionProtocolFiles,
-                    katasterXtfPaths: _sp.KatasterXtfPaths,
-                    offlineBasemapPaths: _sp.OfflineBasemapPaths,
-                    basemapLayers: _sp.BasemapLayers)
-            }),
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(
                 getProject: () => Project,
                 getProjectFolder: GetProjectFolder,
@@ -154,6 +170,33 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 shellOpen: _sp.ShellOpen,
                 explorerReveal: _sp.ExplorerReveal)),
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this, _sp)),
+            new("\uE8F1", "Dossiers", () => new Pages.DossiersPageViewModel(
+                getProject: () => Project,
+                getProjectFolder: GetProjectFolder,
+                getProjectFilePath: () => _sp.Settings.LastProjectPath,
+                store: _sp.DossierStore,
+                wordExport: _sp.DossierWordExport,
+                componentLists: _sp.DossierComponentLists,
+                attachments: _sp.DossierAttachments,
+                pdfAssembly: _sp.DossierPdfAssembly,
+                dialogWindows: new Dossiers.WpfDossierDialogs(
+                    _sp.DossierParcels,
+                    _sp.DossierParcelLookup,
+                    _sp.DossierBatchProposal,
+                    _sp.DossierDirectory,
+                    _sp.DossierPlanImages,
+                    _sp.DossierPlanAdjuster,
+                    _sp.DossierPlanPublications,
+                    _sp.DossierOutputPreview,
+                    _sp.DossierPreviewPages),
+                costStores: _sp.CostStores,
+                dialogs: _sp.Dialogs,
+                toasts: _sp.Toasts,
+                shellOpen: _sp.ShellOpen,
+                explorerReveal: _sp.ExplorerReveal,
+                holdingActions: DossierHoldingActionFactory.Create(this, _sp),
+                shaftActions: DossierShaftActionFactory.Create(this, _sp),
+                settings: _sp.Settings)),
             new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this, _sp)),
             new("\uE80A", "Schacht-Matrix", () => new Pages.SchachtSanierungsMatrixPageViewModel(this, _sp)),
             // Segoe MDL2 E8AA = "ViewAll": zwei Auswertungen nebeneinander (Mensch vs. Schatten-KI)
@@ -171,7 +214,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 xtfImport: _sp.XtfImport,
                 pdfImport: _sp.PdfImport,
                 vsaEvaluation: _sp.Vsa,
-                measureRecommendation: _sp.MeasureRecommendation,
                 setStatus: SetStatus,
                 createImportRestorePoint: TryCreateImportRestorePoint,
                 refreshTitleAndDirty: RefreshTitleAndDirty)),
@@ -179,7 +221,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 _sp.LogTailReader,
                 _sp.DiagnosticsPackages,
                 _sp.Dialogs,
-                _sp.FolderOpen)),
+                _sp.FolderOpen,
+                toasts: _sp.Toasts)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(
                 settings: _sp.Settings,
                 diagnostics: _sp.Diagnostics,
@@ -196,15 +239,27 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         };
         RefreshNavigationAvailability();
 
-        SaveCommand = new RelayCommand(SaveProject, () => CurrentMode == ShellMode.Workspace);
-        NewProjectCommand = new RelayCommand(StartNewProjectDraft);
-        SwitchProjectCommand = new RelayCommand(SwitchProject);
-        OpenProjectCommand = new AsyncRelayCommand(OpenProjectWithDialogAsync);
-        SaveAsProjectCommand = new RelayCommand(SaveProjectAs);
+        SaveCommand = new RelayCommand(
+            SaveProject,
+            () => CurrentMode == ShellMode.Workspace && CanSaveProjectFromShell());
+        NewProjectCommand = new RelayCommand(
+            StartNewProjectDraft,
+            CanLeaveShellContextFromOperationGuards);
+        SwitchProjectCommand = new RelayCommand(
+            SwitchProject,
+            CanLeaveShellContextFromOperationGuards);
+        OpenProjectCommand = new AsyncRelayCommand(
+            OpenProjectWithDialogAsync,
+            CanLeaveShellContextFromOperationGuards);
+        SaveAsProjectCommand = new RelayCommand(SaveProjectAs, CanSaveProjectFromShell);
         OpenPriceCatalogCommand = new RelayCommand(OpenPriceCatalog);
         OpenTemplateEditorCommand = new RelayCommand(OpenTemplateEditor);
+        ShowAboutCommand = new RelayCommand(ShowAbout);
+        OpenHandbuchCommand = new RelayCommand<string?>(OpenHandbuch);
+        OpenTastenkuerzelCommand = new RelayCommand(OpenTastenkuerzel);
         ToggleFocusModeCommand = new RelayCommand(() => IsFocusMode = !IsFocusMode);
 
+        InitNova();
         EnterLauncher();
         Monitor.Start();
 
@@ -220,7 +275,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 return;
 
             // Seiten mit ungespeichertem Zustand duerfen den Wechsel stoppen (Audit W2).
-            if (!ShellLeaveGuard.CanLeave(CurrentPage))
+            if (!ConfirmLeaveCurrentContext())
             {
                 _suppressLeaveGuard = true;
                 SelectedNavItem = _navItemBeforeChange;
@@ -241,6 +296,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         _disposed = true;
         AiActivityTracker.ActiveChanged -= OnAiActivityChanged;
         AiRuntimeStatusTracker.Changed -= ApplyAiRuntimeStatus;
+        MotionSettings.EngineChanged -= OnHintergrundEngineGeaendert;
+        GlobaleSuche?.Dispose();
+        _novaStatusBeobachter?.Dispose();
+        UnregisterShellOperationGuards();
+        LoeseDatenVerlauf();
         Monitor.Dispose();
         SetCurrentPage(null);
         GC.SuppressFinalize(this);
@@ -263,6 +323,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         AiRuntimeTitle = status.Title;
         AiRuntimeStatusLabel = status.StatusText;
         AiRuntimeLoadedModels = status.ModelText;
+        OnPropertyChanged(nameof(KiBereitschaftText));
+        OnPropertyChanged(nameof(IstKiBereit));
     }
 
     private void OnAiActivityChanged(bool active, string label)
@@ -327,6 +389,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             : "SewerStudio";
         Title = Project.Dirty ? $"● {name}" : name;
         OnPropertyChanged(nameof(IsDirty));
+        AktualisiereNovaKopfzeile();
     }
 
     private void RefreshNavigationAvailability()
@@ -337,16 +400,22 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
     public void SetStatus(string text) => Subtitle = text;
 
+    /// <summary>
+    /// Zaehlt jeden Projektwechsel. Ein Ladevorgang merkt sich den Stand beim Start und
+    /// uebernimmt sein Ergebnis nur, wenn inzwischen kein anderes Projekt begonnen wurde
+    /// (Auditbefund 12).
+    /// </summary>
+    public long ProjectGeneration { get; private set; }
+
     public void ReplaceProject(Project p)
     {
+        ProjectGeneration++;
         _project = p;
         EnableCollectionSync(p);
+        BindeDatenVerlauf(p);
         OnPropertyChanged(nameof(Project));
         SetStatus($"Projekt: {p.Name}");
         RefreshTitleAndDirty();
-
-        // Kartennetz im Hintergrund vorladen -> die Karte ist beim ersten Oeffnen sofort da.
-        Mapping.KarteNetzVorladen.ImHintergrund(_sp, p);
     }
 
     /// <summary>
@@ -357,6 +426,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     {
         BindingOperations.EnableCollectionSynchronization(p.Data, _collectionLock);
         BindingOperations.EnableCollectionSynchronization(p.SchaechteData, _collectionLock);
+        BeobachteHaltungsliste(p);
     }
 
     public void NavigateTo(string title)
@@ -372,7 +442,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         if (target is null)
             return;
 
-        if (!ShellLeaveGuard.CanLeave(CurrentPage))
+        if (!ConfirmLeaveCurrentContext())
             return;
 
         CurrentMode = ShellMode.Workspace;
@@ -383,6 +453,37 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         SetCurrentPage(new Pages.DataPageViewModel(this, _sp, startFilter));
     }
 
+    /// <summary>Oeffnet die Datenseite und waehlt dort genau diese Haltung aus.</summary>
+    public void NavigateToHolding(HaltungRecord? record)
+    {
+        if (record is null)
+            return;
+
+        NavigateTo("Haltungen");
+        if (CurrentPage is not Pages.DataPageViewModel dataPage)
+            return;
+
+        // Ausdruecklicher Sprung: in der Aufklapp-Liste klappt die Haltung dabei auf.
+        dataPage.ZeigeHaltung(record);
+        var name = record.GetFieldValue(FieldKeys.HoldingName) ?? "(ohne Name)";
+        SetStatus($"Haltung geöffnet: {name}");
+    }
+
+    /// <summary>Oeffnet die Schachtseite und waehlt dort genau diesen Schacht aus.</summary>
+    public void NavigateToShaft(SchachtRecord? record)
+    {
+        if (record is null)
+            return;
+
+        NavigateTo("Schaechte");
+        if (CurrentPage is not Pages.SchaechtePageViewModel shaftPage)
+            return;
+
+        shaftPage.Selected = record;
+        var number = SchaechteColumnPolicy.GetSchachtNumber(record);
+        SetStatus($"Schacht geöffnet: {number}");
+    }
+
     public void NavigateToSanierungsMatrix(string? holding, bool singleHoldingMode = false, HaltungRecord? targetRecord = null)
     {
         var target = NavItems.FirstOrDefault(x => string.Equals(x.Title, "Sanierungs-Matrix", StringComparison.OrdinalIgnoreCase));
@@ -390,7 +491,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             return;
 
         // Direkter Seitenwechsel am Nav-Handler vorbei -> Leave-Guard hier ebenfalls (Audit W2).
-        if (!ShellLeaveGuard.CanLeave(CurrentPage))
+        if (!ConfirmLeaveCurrentContext())
             return;
 
         if (singleHoldingMode)
@@ -417,6 +518,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     /// <summary>Zurueck zum Start-Bildschirm (Projektauswahl).</summary>
     public void EnterLauncher()
     {
+        if (!ConfirmOperationGuardsAllowLeave())
+            return;
+
         _suppressLeaveGuard = true;
         SelectedNavItem = null;
         _suppressLeaveGuard = false;
@@ -445,6 +549,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     /// <summary>Wechselt in den Arbeitsbereich und navigiert auf die Landeseite.</summary>
     public void EnterWorkspaceOn(string navTitle)
     {
+        if (!ConfirmOperationGuardsAllowLeave())
+            return;
+
         CurrentMode = ShellMode.Workspace;
         NavigateTo(navTitle);
     }
@@ -459,6 +566,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     /// <summary>Legt aus dem Draft-Infoblatt Projektordner + projekt.json an.</summary>
     public bool CreateProjectFromDraft()
     {
+        if (!ConfirmOperationGuardsAllowLeave())
+            return false;
+
         var name = Project.Name?.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -469,7 +579,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         var baseDir = _sp.Settings.ProjectsRootDirectory;
         if (string.IsNullOrWhiteSpace(baseDir))
         {
-            baseDir = _sp.Dialogs.SelectFolder("Projekte-Verzeichnis waehlen", @"D:\Projekt");
+            baseDir = _sp.Dialogs.SelectFolder("Projekte-Verzeichnis wählen", @"D:\Projekt");
             if (string.IsNullOrWhiteSpace(baseDir))
                 return false;
 
@@ -526,8 +636,18 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         if (!TryBeginOpen(path))
             return false;
 
-        var (res, recovery) = LoadOrRecover(path);
-        return ApplyLoadOutcome(path, res, recovery);
+        var startGeneration = ProjectGeneration;
+
+        // Die Sperre umfasst NUR das Laden. Die Uebernahme danach speichert unter Umstaenden
+        // automatisch (z.B. reparierte Fotoverweise) — das darf sie nicht blockieren.
+        (Result<Project> res, ProjectRecoveryResult? recovery, ImportRecoveryResult? importRecovery) outcome;
+        using (BeginProjectLoadOperation())
+        {
+            outcome = LoadOrRecover(path);
+        }
+
+        return ApplyLoadOutcome(
+            path, outcome.res, outcome.recovery, outcome.importRecovery, startGeneration);
     }
 
     /// <summary>
@@ -540,18 +660,33 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         if (!TryBeginOpen(path))
             return false;
 
-        (Result<Project> res, ProjectRecoveryResult? recovery) outcome;
+        (
+            Result<Project> res,
+            ProjectRecoveryResult? recovery,
+            ImportRecoveryResult? importRecovery) outcome;
+        var startGeneration = ProjectGeneration;
+        // Auditbefund 12: Waehrend des Ladens duerfen Neu/Oeffnen/Wechsel nicht laufen —
+        // sonst entsteht ein Entwurf, den dieses Ergebnis anschliessend ersetzen wuerde.
+        using (BeginProjectLoadOperation())
         using (Busy.Enter("Projekt wird geladen …"))
         {
             outcome = await Task.Run(() => LoadOrRecover(path));
         }
 
-        return ApplyLoadOutcome(path, outcome.res, outcome.recovery);
+        return ApplyLoadOutcome(
+            path,
+            outcome.res,
+            outcome.recovery,
+            outcome.importRecovery,
+            startGeneration);
     }
 
     /// <summary>Vorab-Pruefungen + Dirty-Guard (schnell, UI-Thread). false = abbrechen.</summary>
     private bool TryBeginOpen(string path)
     {
+        if (!ConfirmOperationGuardsAllowLeave())
+            return false;
+
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
             SetStatus("Datei nicht gefunden");
@@ -561,20 +696,81 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         return ConfirmDiscardUnsavedChanges();
     }
 
-    /// <summary>Reines Laden inkl. AP-01-Rettung — hintergrundtauglich, kein UI-Zugriff.</summary>
-    private (Result<Project> res, ProjectRecoveryResult? recovery) LoadOrRecover(string path)
+    /// <summary>
+    /// Reines Laden inkl. Projekt- und Import-Recovery — hintergrundtauglich, kein UI-Zugriff.
+    /// </summary>
+    private (
+        Result<Project> res,
+        ProjectRecoveryResult? recovery,
+        ImportRecoveryResult? importRecovery) LoadOrRecover(string path)
     {
         var res = _sp.Projects.Load(path);
-        if (res.Ok && res.Value is not null)
-            return (res, null);
+        // Nur eine belegt beschaedigte oder fehlende Datei darf eine Sicherung einspielen.
+        // Eine gesperrte oder zu neue Datei ist in Ordnung; frueher wurde sie in Quarantaene
+        // verschoben und der alte Sicherungsstand darueber gespeichert (F1, 17.09.2026).
+        var recovery = res.Ok && res.Value is not null
+            ? null
+            : ProjektLadefehler.DarfSicherungEinspielen(res.ErrorCode)
+                ? _sp.ProjectRecovery.TryRecover(path, _sp.Projects)
+                : null;
 
-        // AP-01: Beschaedigte projekt.json aus .bak/Restore-Point retten (nur Daten, Dialog folgt spaeter).
-        return (res, _sp.ProjectRecovery.TryRecover(path, _sp.Projects));
+        var loaded = res.Ok && res.Value is not null
+            ? res.Value
+            : recovery is { Recovered: true, Project: not null }
+                ? recovery.Project
+                : null;
+        if (loaded is null)
+            return (res, recovery, null);
+
+        var importRecoveryRoot = ProjectFileLocator.ProjectRootFromFile(path);
+        var importRecovery = string.IsNullOrWhiteSpace(importRecoveryRoot)
+            ? null
+            : _importTransactionRecovery.RecoverIfNeeded(
+                importRecoveryRoot,
+                loaded.LastCommittedImportTxId);
+
+        if (importRecovery is { Outcome: ImportRecoveryOutcome.Blocked }
+            && recovery is { Recovered: true, Project: not null })
+        {
+            var materialization = _sp.ProjectRecovery.MaterializeRecoveredProjectForRetry(
+                path,
+                recovery,
+                _sp.Projects);
+            importRecovery = AppendRecoveryDetail(importRecovery, materialization);
+        }
+
+        return (res, recovery, importRecovery);
     }
 
+    private static ImportRecoveryResult AppendRecoveryDetail(
+        ImportRecoveryResult importRecovery,
+        ProjectRecoveryMaterializationResult materialization)
+        => importRecovery with
+        {
+            Message = string.IsNullOrWhiteSpace(importRecovery.Message)
+                ? materialization.Detail
+                : importRecovery.Message + " " + materialization.Detail,
+            ProjectFolderModified = importRecovery.ProjectFolderModified
+                || materialization.ProjectFolderModified
+        };
+
     /// <summary>Uebernahme des Ladeergebnisses (UI-Thread): Dialoge, Merkliste, ReplaceProject.</summary>
-    private bool ApplyLoadOutcome(string path, Result<Project> res, ProjectRecoveryResult? recovery)
+    internal bool ApplyLoadOutcome(
+        string path,
+        Result<Project> res,
+        ProjectRecoveryResult? recovery,
+        ImportRecoveryResult? importRecovery,
+        long startGeneration)
     {
+        // Waehrend eines langsamen Ladens kann der Benutzer ein neues Projekt begonnen
+        // haben. Dieses verspaetete Ergebnis darf den frischen Entwurf nicht ersetzen
+        // (Auditbefund 12) — der Dirty-Guard lief vor dem Laden und gilt nicht mehr.
+        if (startGeneration != ProjectGeneration)
+        {
+            SetStatus("Laden verworfen: Es wurde inzwischen ein anderes Projekt geöffnet.");
+            return false;
+        }
+
         Project loaded;
         if (res.Ok && res.Value is not null)
         {
@@ -582,26 +778,30 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         }
         else if (recovery is { Recovered: true, Project: not null })
         {
-            _sp.Dialogs.Warn(
-                "Das Projekt war beschaedigt und wurde aus einer Sicherungskopie wiederhergestellt.\n\n" +
-                $"Wiederhergestellt aus: {recovery.RecoveredFromPath}\n" +
-                (recovery.QuarantinedPath is null
-                    ? string.Empty
-                    : $"Beschaedigte Datei gesichert als: {recovery.QuarantinedPath}\n") +
-                "\nBitte pruefe das Projekt und speichere es.",
-                "Projekt wiederhergestellt");
-
             loaded = recovery.Project;
             loaded.Dirty = true; // erzwingt Neuspeicherung der guten Version an den Originalpfad
+        }
+        else if (!ProjektLadefehler.DarfSicherungEinspielen(res.ErrorCode))
+        {
+            // Nicht beschaedigt, sondern zu neu oder gerade nicht lesbar: kein Ruecksetzen,
+            // keine Quarantaene, keine irrefuehrende Beschaedigungsmeldung.
+            _sp.Dialogs.Error(
+                "Das Projekt wurde nicht geöffnet.\n\n" +
+                $"Datei: {path}\n\n" +
+                $"{res.ErrorMessage}\n\n" +
+                "Die Datei wurde NICHT verändert, und es wurde keine Sicherung eingespielt.",
+                "Projekt nicht geöffnet");
+            SetStatus($"Nicht geöffnet: {res.ErrorMessage}");
+            return false;
         }
         else
         {
             _sp.Dialogs.Error(
-                "Das Projekt konnte nicht geoeffnet werden, und es wurde keine gueltige Sicherungskopie gefunden.\n\n" +
+                "Das Projekt konnte nicht geöffnet werden, und es wurde keine gültige Sicherungskopie gefunden.\n\n" +
                 $"Datei: {path}\n" +
                 $"Fehler: {res.ErrorMessage}\n\n" +
-                "Die Originaldatei wurde NICHT veraendert. Bitte pruefe eine Datensicherung.",
-                "Projekt beschaedigt");
+                "Die Originaldatei wurde NICHT verändert. Bitte prüfe eine Datensicherung.",
+                "Projekt beschädigt");
             SetStatus($"Fehler: {res.ErrorMessage}");
             return false;
         }
@@ -609,20 +809,29 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         // Vor jeder Uebernahme pruefen: Ein vorhandener, aber unlesbarer Marker ist
         // kein "kein Import". In diesem Fall bleibt das aktuell offene Projekt aktiv.
         string? importRecoveryMessage = null;
-        var importRecoveryRoot = ProjectFileLocator.ProjectRootFromFile(path);
-        if (!string.IsNullOrWhiteSpace(importRecoveryRoot))
+        if (importRecovery is not null)
         {
-            var importRecovery = _sp.ImportTransactionRecovery.RecoverIfNeeded(
-                importRecoveryRoot,
-                loaded.LastCommittedImportTxId);
             if (importRecovery.Outcome
                 == AuswertungPro.Next.Application.Import.ImportRecoveryOutcome.Blocked)
             {
                 var message = importRecovery.Message
-                    ?? "Die Import-Wiederherstellung konnte nicht sicher geprueft werden.";
+                    ?? "Die Import-Wiederherstellung konnte nicht sicher geprüft werden.";
+                // Der Zusatz "nicht veraendert" darf nur stehen, wenn er stimmt. Frueher hing
+                // er pauschal an jeder gesperrten Meldung - auch neben "3 Datei(en)
+                // zurueckgenommen". Eine Box, die sich selbst widerspricht, glaubt der Leser
+                // in der beruhigenden Haelfte und sucht die fehlenden Dateien nicht.
+                // Die Import-Recovery ist nicht zwingend die erste Dateioperation:
+                // ProjectRecovery kann die beschaedigte projekt.json zuvor bereits
+                // in Quarantaene verschoben haben. Auch das ist eine echte Aenderung
+                // im Projektordner und muss im gemeinsamen Ergebnis sichtbar bleiben.
+                var projektOrdnerWurdeVeraendert = importRecovery.ProjectFolderModified
+                    || !string.IsNullOrWhiteSpace(recovery?.QuarantinedPath);
+                var nachsatz = projektOrdnerWurdeVeraendert
+                    ? "\n\nDas Projekt wurde nicht geöffnet. Im Projektordner wurde bereits "
+                      + "etwas verändert - bitte den obigen Hinweis prüfen."
+                    : "\n\nDas Projekt wurde nicht geöffnet und nicht verändert.";
                 _sp.Dialogs.Error(
-                    message
-                    + "\n\nDas Projekt wurde nicht geoeffnet und nicht veraendert.",
+                    message + nachsatz,
                     "Import-Wiederherstellung gesperrt");
                 SetStatus(message);
                 return false;
@@ -634,6 +843,21 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             {
                 importRecoveryMessage = importRecovery.Message;
             }
+        }
+
+        // Erst nach einer erfolgreichen Import-Recovery warnen. Bei Blocked wird das
+        // Projekt nicht uebernommen; ein vorheriges "wiederhergestellt, bitte speichern"
+        // waere daher ein zweites, widersprechendes Dialogfenster.
+        if (recovery is { Recovered: true, Project: not null })
+        {
+            _sp.Dialogs.Warn(
+                "Das Projekt war beschädigt und wurde aus einer Sicherungskopie wiederhergestellt.\n\n" +
+                $"Wiederhergestellt aus: {recovery.RecoveredFromPath}\n" +
+                (recovery.QuarantinedPath is null
+                    ? string.Empty
+                    : $"Beschädigte Datei gesichert als: {recovery.QuarantinedPath}\n") +
+                "\nBitte prüfe das Projekt und speichere es.",
+                "Projekt wiederhergestellt");
         }
 
         // Jedes erfolgreiche Oeffnen pflegt die Merkliste (setzt auch LastProjectPath) —
@@ -660,6 +884,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
     public bool TryOpenProjectWithDialog()
     {
+        if (!ConfirmOperationGuardsAllowLeave())
+            return false;
+
         var path = _sp.Dialogs.OpenFile("Projekt öffnen", "Projekt (*.json)|*.json");
         if (path is null)
             return false;
@@ -669,6 +896,9 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     /// <summary>AP-50: Async-Variante fuer die Menue-/Command-Nutzung mit Ladeanzeige.</summary>
     public async Task<bool> TryOpenProjectWithDialogAsync()
     {
+        if (!ConfirmOperationGuardsAllowLeave())
+            return false;
+
         var path = _sp.Dialogs.OpenFile("Projekt öffnen", "Projekt (*.json)|*.json");
         if (path is null)
             return false;
@@ -683,16 +913,16 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     {
         // Erst die aktive Seite fragen — die Sanierungs-Matrix haelt ihren Kosten-Stand
         // ausserhalb von Project.Dirty (costs.json), siehe Audit K1/W2.
-        if (!ShellLeaveGuard.CanLeave(CurrentPage))
+        if (!ConfirmLeaveCurrentContext())
             return false;
 
         if (Project is null || !Project.Dirty)
             return true;
 
         var answer = _sp.Dialogs.ConfirmCancel(
-            "Das aktuelle Projekt hat ungespeicherte Aenderungen.\n\n" +
+            "Das aktuelle Projekt hat ungespeicherte Änderungen.\n\n" +
             "Vor dem Fortfahren speichern?",
-            "Ungespeicherte Aenderungen");
+            "Ungespeicherte Änderungen");
 
         return answer switch
         {
@@ -702,112 +932,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         };
     }
 
-    private void SaveProject()
-        => TrySaveProject();
-
-    public bool TrySaveProject()
-    {
-        // Save nutzt den letzten Pfad NUR, wenn das aktuelle Projekt wirklich von dort
-        // stammt (HasPersistedProject). Sonst zeigt LastProjectPath noch auf das zuvor
-        // geoeffnete Projekt und "Speichern" wuerde dessen Datei still ueberschreiben.
-        var path = NormalizeProjectPath(_sp.Settings.LastProjectPath);
-        bool isNewPath = false;
-        if (string.IsNullOrWhiteSpace(path) || !HasPersistedProject)
-        {
-            var defaultName = MakeSafeFileName(Project.Name);
-            path = _sp.Dialogs.SaveFile("Projekt speichern", "Projekt (*.json)|*.json", ".json", defaultName);
-            if (path is null)
-            {
-                SetStatus("Speichern abgebrochen");
-                return false;
-            }
-            isNewPath = true;
-        }
-
-        EnsureProjectDirectory(path);
-        if (_sp.Settings.EnableRestorePoints)
-            TryCreateProjectRestorePoint(path);
-
-        var res = _sp.Projects.Save(Project, path);
-        if (!res.Ok)
-        {
-            ShowProjectSaveError(path, res.ErrorMessage);
-            SetStatus($"Fehler: {res.ErrorMessage}");
-            return false;
-        }
-
-        // Merkliste/LastProjectPath erst NACH erfolgreichem Schreiben setzen (Audit P0-5b):
-        // bei einem neuen Pfad wuerde ein Schreibfehler sonst LastProjectPath auf eine nie
-        // erzeugte Datei zeigen lassen.
-        if (isNewPath)
-        {
-            _sp.Settings.AddRecentProject(NormalizeProjectPath(path)); // setzt auch LastProjectPath
-            _sp.Settings.Save();
-        }
-        IsProjectReady = true;
-        HasPersistedProject = true;
-        RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
-        SetStatus("Gespeichert");
-        _sp.Toasts.Success("Projekt gespeichert");
-        return true;
-    }
-
-    public bool TrySaveProjectAs()
-    {
-        var defaultName = MakeSafeFileName(Project.Name);
-        var path = _sp.Dialogs.SaveFile("Projekt speichern unter", "Projekt (*.json)|*.json", ".json", defaultName);
-        if (path is null)
-        {
-            SetStatus("Speichern abgebrochen");
-            return false;
-        }
-
-        path = NormalizeProjectPath(path);
-
-        // Transaktionale Reihenfolge (Audit P0-5b): ZUERST tatsaechlich speichern. Merkliste,
-        // LastProjectPath und "bereit"-Status erst NACH erfolgreichem Schreiben setzen — sonst
-        // zeigt LastProjectPath bei einem Schreibfehler auf eine Datei, die es nie gab.
-        EnsureProjectDirectory(path);
-        if (_sp.Settings.EnableRestorePoints)
-            TryCreateProjectRestorePoint(path);
-
-        var res = _sp.Projects.Save(Project, path);
-        if (!res.Ok)
-        {
-            ShowProjectSaveError(path, res.ErrorMessage);
-            SetStatus($"Fehler: {res.ErrorMessage}");
-            return false;
-        }
-
-        _sp.Settings.AddRecentProject(path); // Merkliste pflegen (setzt auch LastProjectPath)
-        _sp.Settings.Save();
-        MarkProjectReady();
-        HasPersistedProject = true;
-        RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
-        SetStatus($"Gespeichert: {Path.GetFileName(path)}");
-        _sp.Toasts.Success($"Gespeichert: {Path.GetFileName(path)}");
-        return true;
-    }
-
-    private void ShowProjectSaveError(string path, string? error)
-    {
-        _sp.Dialogs.Error(
-            "Das Projekt konnte nicht gespeichert werden. Die vorhandene Projektdatei wurde nicht geloescht.\n\n" +
-            $"Ziel: {path}\n" +
-            $"Fehler: {error}\n\n" +
-            "Bitte pruefe freien Speicherplatz, Schreibschutz und Zugriffsrechte. " +
-            "Versuche danach 'Speichern unter' in einem anderen Ordner.",
-            "Projekt nicht gespeichert");
-    }
-
     private async Task OpenProjectWithDialogAsync()
     {
         if (await TryOpenProjectWithDialogAsync())
             EnterWorkspaceOn("Uebersicht");
     }
-
-    private void SaveProjectAs()
-        => TrySaveProjectAs();
 
     public void MarkProjectReady()
         => IsProjectReady = true;
@@ -866,89 +995,5 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
     private ProjectRestorePointResult TryCreateProjectRestorePoint(string projectPath) =>
         _sp.ProjectRestorePoints.TryCreateForProjectFile(projectPath);
-
-    private void OpenPriceCatalog()
-    {
-        // EIN Preis-Katalog: derselbe, den Kostenrechner und Sanierungs-Matrix nutzen
-        // (cost_catalog.json über CostCatalogStore). Der alte PriceCatalogEditor wird
-        // bewusst nicht mehr geöffnet, damit es nur einen anwendbaren Katalog gibt.
-        var dialog = new Dialogs.CostCatalogEditorDialog(
-            _sp.Settings.LastProjectPath,
-            _sp.CostStores.CreateCostCatalogStore());
-        dialog.ShowDialog();
-    }
-
-    private void OpenTemplateEditor()
-    {
-        var vm = new Windows.MeasureTemplateEditorViewModel(
-            _sp.Settings.LastProjectPath,
-            _sp.CostStores.CreateMeasureTemplateStore(),
-            _sp.CostStores.CreateCostCatalogStore(),
-            _sp.Dialogs);
-        var window = new Views.Windows.MeasureTemplateEditorWindow
-        {
-            DataContext = vm
-        };
-        window.ShowDialog();
-    }
-
-    public sealed partial class NavItem : ObservableObject
-    {
-        private bool _isAvailable = true;
-
-        public NavItem(string icon, string title, Func<object> createPage, bool? canOpenWithoutProject = null)
-        {
-            Icon = icon;
-            Title = title;
-            CreatePage = createPage;
-            CanOpenWithoutProject = canOpenWithoutProject ?? ShellNavigationPolicy.CanOpenWithoutProject(title);
-        }
-
-        public string Icon { get; }
-
-        public string Title { get; }
-
-        public string ToolTipDescription => Title switch
-        {
-            "Uebersicht" => "Projekt-Cockpit mit Zustands-, Kosten- und Fortschrittsauswertung.",
-            "Projekt" => "Projektstammdaten, Speicherort und Bearbeitungsdaten pflegen.",
-            "Haltungen" => "Haltungen pruefen, filtern, Videos und Protokolle oeffnen.",
-            "Schaechte" => "Schachtdaten anzeigen, kontrollieren und zugehoerige Protokolle oeffnen.",
-            "Import" => "Inspektionsdaten, PDFs, Videos und Zusatzquellen ins Projekt uebernehmen.",
-            "Export" => "Excel- und PDF-Ausgaben fuer Auswertung und Weitergabe erzeugen.",
-            "Karte" => "Haltungen raeumlich ansehen und von der Karte aus oeffnen.",
-            "Medienkonflikte" => "Fehlende, doppelte oder mehrdeutige Medienzuordnungen klaeren.",
-            "Druckcenter" => "Dossiers und Berichte fuer Haltungen oder Projektumfang erstellen.",
-            "Sanierungs-Matrix" => "Massnahmen, Kosten und Varianten fuer Sanierung bearbeiten.",
-            "Schacht-Matrix" => "Sanierungsmassnahmen und Kosten je Schacht (NPK Kap. 700) erfassen.",
-            "VSA" => "VSA-Zustandsklassen und Bewertungsdaten kontrollieren.",
-            "Diagnose" => "Logs, Diagnoseinformationen und technische Details pruefen.",
-            "Einstellungen" => "Pfade, Theme, KI-Start und Programmverhalten konfigurieren.",
-            _ => "Ansicht oeffnen."
-        };
-
-        public string ToolTipShortcut => string.Empty;
-
-        public Func<object> CreatePage { get; }
-
-        public bool CanOpenWithoutProject { get; }
-
-        public bool RequiresProject => !CanOpenWithoutProject;
-
-        public bool IsAvailable
-        {
-            get => _isAvailable;
-            private set
-            {
-                if (SetProperty(ref _isAvailable, value))
-                    OnPropertyChanged(nameof(AvailabilityOpacity));
-            }
-        }
-
-        public double AvailabilityOpacity => IsAvailable ? 1.0 : 0.5;
-
-        public void UpdateAvailability(bool isProjectReady)
-            => IsAvailable = isProjectReady || CanOpenWithoutProject;
-    }
 
 }

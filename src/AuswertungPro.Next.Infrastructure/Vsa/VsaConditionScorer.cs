@@ -64,7 +64,7 @@ internal static class VsaConditionScorer
                     Abminderung = null,
                     Dringlichkeitszahl = null
                 };
-                na.Notes.Add("Nur unbekannte Schadenscodes – Bewertung nicht moeglich.");
+                na.Notes.Add("Nur unbekannte Schadenscodes – Bewertung nicht möglich.");
                 return na;
             }
 
@@ -78,7 +78,7 @@ internal static class VsaConditionScorer
                     Abminderung = null,
                     Dringlichkeitszahl = null
                 };
-                na.Notes.Add($"Keine bewertbaren EZ fuer diese Anforderung (Codes ohne EZ: {string.Join(", ", skippedCodes)}).");
+                na.Notes.Add($"Keine bewertbaren EZ für diese Anforderung (Codes ohne EZ: {string.Join(", ", skippedCodes)}).");
                 return na;
             }
 
@@ -143,7 +143,7 @@ internal static class VsaConditionScorer
         };
 
         // Zusammenfassung
-        result.Notes.Add($"Beitraege={entries.Count}; EZmin={ezMin}; A={abminderung:F2}; RB={randbedingungen:F4}");
+        result.Notes.Add($"Beiträge={entries.Count}; EZmin={ezMin}; A={abminderung:F2}; RB={randbedingungen:F4}");
 
         // Einzelbeitraege auflisten
         foreach (var e in entries)
@@ -166,9 +166,7 @@ internal static class VsaConditionScorer
     internal static double ComputeLengthFactor(VsaFinding finding, double minLength)
     {
         double? actualLength = null;
-        if (finding.SchadenlageAnfang.HasValue && finding.SchadenlageEnde.HasValue)
-            actualLength = Math.Abs(finding.SchadenlageEnde.Value - finding.SchadenlageAnfang.Value);
-        else if (finding.MeterStart.HasValue && finding.MeterEnd.HasValue)
+        if (finding.MeterStart.HasValue && finding.MeterEnd.HasValue)
             actualLength = Math.Abs(finding.MeterEnd.Value - finding.MeterStart.Value);
 
         return actualLength.HasValue && actualLength.Value > minLength
@@ -198,15 +196,16 @@ internal static class VsaConditionScorer
         _    => 1.00
     };
 
-    // Tabelle 4: Nutzungsart
-    private static double ComputeB2(string? value) => value?.Trim() switch
+    // Tabelle 4: Nutzungsart. Zuerst auf den Normbegriff bringen, damit auch alte
+    // Schreibweisen aus Bestandsprojekten denselben Faktor ergeben wie heute erfasste.
+    private static double ComputeB2(string? value) => NutzungsartVokabular.Normalisieren(value) switch
     {
-        "Bachwasser"        => 1.10,
-        "Industrieabwasser" => 0.90,
-        "Schmutzwasser" or "Schmutzabwasser" => 0.95,
-        "Mischabwasser"     => 1.00,
-        "Regenwasser" or "Meteorwasser"      => 1.05,
-        _                   => 1.00
+        "Bachwasser"             => 1.10,
+        "Industrieabwasser"      => 0.90,
+        "Schmutzabwasser"        => 0.95,
+        "Mischabwasser"          => 1.00,
+        "Niederschlagsabwasser"  => 1.05,
+        _                        => 1.00
     };
 
     // Tabelle 5: Grundwasserspiegel

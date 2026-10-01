@@ -1,0 +1,168 @@
+﻿{
+  "version": 1,
+  "parameters": "--vulnerable --include-transitive",
+  "sources": [
+    "https://api.nuget.org/v3/index.json"
+  ],
+  "projects": [
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/src/AuswertungPro.Next.Application/AuswertungPro.Next.Application.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/src/AuswertungPro.Next.Domain/AuswertungPro.Next.Domain.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/src/AuswertungPro.Next.Infrastructure/AuswertungPro.Next.Infrastructure.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/src/AuswertungPro.Next.UI/AuswertungPro.Next.UI.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tests/AuswertungPro.Next.Infrastructure.Tests/AuswertungPro.Next.Infrastructure.Tests.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/IliCatalogReader/IliCatalogReader.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/VsaClassificationRuleBuilder/VsaClassificationRuleBuilder.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/VsaShadowReport/VsaShadowReport.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/SidecarE2eSmoke/SidecarE2eSmoke.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/EvalSetBenchmark/EvalSetBenchmark.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/SelfTrainingHarness/SelfTrainingHarness.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/ClassifierPilot/ClassifierPilot.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/EvalSetManifestHasher/EvalSetManifestHasher.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/ClassifierDatasetBuilder/ClassifierDatasetBuilder.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/VsaShadowReport.Core/VsaShadowReport.Core.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/ProjectModernizer/ProjectModernizer.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tests/ProjectModernizer.Tests/ProjectModernizer.Tests.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/EvalSetV2Builder/EvalSetV2Builder.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/AiQualityReport/AiQualityReport.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/FullBackupSmoke/FullBackupSmoke.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/NightlySoakRunner/NightlySoakRunner.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/TrainingDataInventory/TrainingDataInventory.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/StageAExporter/StageAExporter.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/PersonalGoldMigration/PersonalGoldMigration.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/GoldBrainSeparation/GoldBrainSeparation.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/AiDocPdf/AiDocPdf.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/AuswertungPro.MeasureCatalogCli/AuswertungPro.MeasureCatalogCli.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/BasemapDownloader/BasemapDownloader.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/BefundMatcher/BefundMatcher.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/CadasterDbReader/CadasterDbReader.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/CadastreTableBuilder/CadastreTableBuilder.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/DiagnosticPdfParser/DiagnosticPdfParser.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/DichtheitDistributeTest/DichtheitDistributeTest.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/FachwissenIndexer/FachwissenIndexer.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/IbakPdfAnalyzer/IbakPdfAnalyzer.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/InspectionDateAudit/InspectionDateAudit.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/KbCodeCleanup/KbCodeCleanup.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/KnowledgeBaseInspector/KnowledgeBaseInspector.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/MdbSchemaReaderApp/MdbSchemaReader.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/PdfCoverageAudit/PdfCoverageAudit.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/PdfHeaderReader/PdfHeaderReader.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/PdfImageAnalyzer/PdfImageAnalyzer.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/PdfCodeScanner/PdfCodeScanner.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/QuickPdfAnalyzer/QuickPdfAnalyzer.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/SewerStudio.AiTestRunner/SewerStudio.AiTestRunner.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/SewerStudioMcpServer/SewerStudioMcpServer.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/StammdatenExporter/StammdatenExporter.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/VsaPdfExtractor/VsaPdfExtractor.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/DetectReleaseHoldoutPdfExtractor/DetectReleaseHoldoutPdfExtractor.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/KostenfallAufbau/KostenfallAufbau.csproj"
+    },
+    {
+      "path": "C:/Sewer-Studio_KI_5.0/tools/CodingReplay/CodingReplay.csproj"
+    }
+  ]
+}

@@ -61,7 +61,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
     public ObservableCollection<MeasureOption> MeasureOptions { get; } = new();
 
     [ObservableProperty] private string _pageTitle = "Schacht-Matrix";
-    [ObservableProperty] private string _pageSubtitle = "Pro Schacht eine Massnahme waehlen — Menge (Stk/Std/m) selbst eingeben.";
+    [ObservableProperty] private string _pageSubtitle = "Massnahmen und Kosten je Schacht";
     [ObservableProperty] private decimal _gesamtTotal;
     [ObservableProperty] private decimal _maxRowTotal;
     [ObservableProperty] private int _belegteSchaechte;
@@ -141,9 +141,9 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
     private void Reload()
     {
         if (_hasUnsavedChanges &&
-            !_dialogs.Confirm("Nicht gespeicherte Aenderungen gehen beim Neuladen verloren.\nTrotzdem neu laden?", PageTitle))
+            !_dialogs.Confirm("Nicht gespeicherte Änderungen gehen beim Neuladen verloren.\nTrotzdem neu laden?", PageTitle))
         {
-            Status = "Neu laden abgebrochen (offene Aenderungen).";
+            Status = "Neu laden abgebrochen (offene Änderungen).";
             return;
         }
 
@@ -195,15 +195,15 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         SelectedRow = Rows.FirstOrDefault();
 
         Status = Rows.Count == 0
-            ? "Keine Schaechte geladen (Projekt mit importierten Schacht-Protokollen oeffnen)."
-            : $"{Rows.Count} Schaechte geladen.";
+            ? "Keine Schächte geladen (Projekt mit importierten Schacht-Protokollen öffnen)."
+            : $"{Rows.Count} Schächte geladen.";
 
         var calculationLoadError = BuildCalculationLoadError();
         if (_storeLoadError is not null)
         {
             Status = $"WARNUNG: {_storeLoadError} — Speichern ist gesperrt, bestehende Kosten bleiben unangetastet.";
             _dialogs.Warn(
-                $"Schacht-Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit schacht_costs.json nicht mit einem leeren Stand ueberschrieben wird.",
+                $"Schacht-Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit schacht_costs.json nicht mit einem leeren Stand überschrieben wird.",
                 "Schacht-Matrix");
         }
         else if (calculationLoadError is not null)
@@ -211,7 +211,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
             Status = $"FEHLER: {calculationLoadError} - Berechnungen und Speichern sind gesperrt.";
             _dialogs.Error(
                 $"{calculationLoadError}\n\n" +
-                "Berechnungen und Speichern sind gesperrt, damit bestehende Schacht-Kosten nicht mit leeren Ersatzdaten veraendert werden.",
+                "Berechnungen und Speichern sind gesperrt, damit bestehende Schacht-Kosten nicht mit leeren Ersatzdaten verändert werden.",
                 "Schacht-Matrix");
         }
     }
@@ -290,10 +290,10 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
 
         if (row.Menge <= 0m)
         {
-            row.Hinweis = "Menge muss groesser als 0 sein - Berechnung gesperrt";
+            row.Hinweis = "Menge muss grösser als 0 sein - Berechnung gesperrt";
             Status =
-                $"FEHLER: Menge fuer {row.Schachtnummer} muss groesser als 0 sein. " +
-                "Bestehende Kosten bleiben unveraendert.";
+                $"FEHLER: Menge für {row.Schachtnummer} muss grösser als 0 sein. " +
+                "Bestehende Kosten bleiben unverändert.";
             return;
         }
 
@@ -399,7 +399,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
 
         _touchedSchaechte.Clear();
         _hasUnsavedChanges = false;
-        Status = $"Schacht-Kosten gespeichert ({_store.ByHolding.Count} Schacht/Schaechte).";
+        Status = $"Schacht-Kosten gespeichert ({_store.ByHolding.Count} Schacht/Schächte).";
         _dashboardRefresh.NotifyCostsChanged();
     }
 
@@ -414,7 +414,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
 
         return invalidShafts.Count == 0
             ? null
-            : $"Menge muss groesser als 0 sein bei: {string.Join(", ", invalidShafts)}";
+            : $"Menge muss grösser als 0 sein bei: {string.Join(", ", invalidShafts)}";
     }
 
     public bool ConfirmLeave()
@@ -422,7 +422,7 @@ public sealed partial class SchachtSanierungsMatrixPageViewModel : ObservableObj
         if (!_hasUnsavedChanges)
             return true;
         return _dialogs.Confirm(
-            "Es gibt nicht gespeicherte Schacht-Kosten.\nSeite trotzdem verlassen (Aenderungen gehen verloren)?",
+            "Es gibt nicht gespeicherte Schacht-Kosten.\nSeite trotzdem verlassen (Änderungen gehen verloren)?",
             PageTitle);
     }
 }

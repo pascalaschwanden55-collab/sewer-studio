@@ -1,0 +1,26 @@
+﻿[
+    {
+        "project":  "AuswertungPro.Next.Infrastructure.Tests",
+        "exitCode":  0,
+        "started":  "2026-09-08T06:34:48.0954249+02:00",
+        "ended":  "2026-09-08T06:37:15.5508192+02:00"
+    },
+    {
+        "project":  "AuswertungPro.Next.Pipeline.Tests",
+        "exitCode":  0,
+        "started":  "2026-09-08T06:37:15.6602366+02:00",
+        "ended":  "2026-09-08T06:37:32.3898951+02:00"
+    },
+    {
+        "project":  "AuswertungPro.Next.UI.Tests",
+        "exitCode":  1,
+        "started":  "2026-09-08T06:37:32.3928955+02:00",
+        "ended":  "2026-09-08T06:41:09.1363295+02:00"
+    },
+    {
+        "project":  "ProjectModernizer.Tests",
+        "exitCode":  0,
+        "started":  "2026-09-08T06:41:09.1383304+02:00",
+        "ended":  "2026-09-08T06:41:10.8730467+02:00"
+    }
+]

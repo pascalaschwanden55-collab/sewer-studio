@@ -31,19 +31,19 @@ public sealed class AiDocumentationPdfBuilder
         var enableSteps = new List<string>
         {
             "SEWERSTUDIO_AI_ENABLED=1",
-            "Ollama laeuft (SEWERSTUDIO_OLLAMA_URL, Default http://localhost:11434)",
+            "Ollama läuft (SEWERSTUDIO_OLLAMA_URL, Default http://localhost:11434)",
             "Modelle: SEWERSTUDIO_AI_VISION_MODEL (qwen3-vl:8b-q8)",
             "Modelle: SEWERSTUDIO_AI_TEXT_MODEL (nomic-embed-text)",
             "Embeddings: SEWERSTUDIO_AI_EMBED_MODEL (nomic-embed-text)",
-            "FFmpeg verfuegbar (SEWERSTUDIO_FFMPEG oder PATH)",
+            "FFmpeg verfügbar (SEWERSTUDIO_FFMPEG oder PATH)",
             "VSA Code-Katalog vorhanden (XML/JSON)"
         };
 
         var runtimeSteps = new List<string>
         {
-            "MeterStart/MeterEnd/Zeit gueltig (keine Formatfehler).",
+            "MeterStart/MeterEnd/Zeit gültig (keine Formatfehler).",
             "Code-Katalog geladen (AllowedCodes != leer).",
-            "Video- oder Foto-Pfad vorhanden, falls Bildanalyse gewuenscht."
+            "Video- oder Foto-Pfad vorhanden, falls Bildanalyse gewünscht."
         };
 
         var logSteps = new List<string>
@@ -64,7 +64,7 @@ public sealed class AiDocumentationPdfBuilder
 
                 page.Header().Column(col =>
                 {
-                    col.Item().Text("Sewer Studio - KI Uebersicht").FontSize(18).Bold();
+                    col.Item().Text("SewerStudio - KI Übersicht").FontSize(18).Bold();
                     col.Item().Text($"Stand: {createdText}").FontSize(9).FontColor(Colors.Grey.Darken2);
                 });
 
@@ -87,11 +87,11 @@ public sealed class AiDocumentationPdfBuilder
                     col.Item().Element(c => ComposeBulletList(c, logSteps));
 
                     col.Item().PaddingTop(4).Text("Hinweis Massnahmen-KI (Lernlogik)").FontSize(12).Bold();
-                    col.Item().Text("Empfehlungen werden aus gelernten Faellen erzeugt (MeasureRecommendationService). " +
-                                   "Training erfolgt beim Speichern; Status ueber \"KI-Status\".").FontSize(9);
+                    col.Item().Text("Empfehlungen werden aus gelernten Fällen erzeugt (MeasureRecommendationService). " +
+                                   "Training erfolgt beim Speichern; Status über \"KI-Status\".").FontSize(9);
                 });
 
-                page.Footer().AlignRight().Text("Sewer Studio – KI").FontSize(8).FontColor(Colors.Grey.Darken1);
+                page.Footer().AlignRight().Text("SewerStudio – KI").FontSize(8).FontColor(Colors.Grey.Darken1);
             });
         }).GeneratePdf();
     }

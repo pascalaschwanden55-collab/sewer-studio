@@ -169,8 +169,8 @@ public sealed class DataPageRecordCollectionControllerTests
         Assert.Equal(new[] { "A" }, project.Data.Select(r => r.GetFieldValue("Haltungsname")).ToArray());
         Assert.Same(project.Data[0], selected);
         Assert.Equal(1, confirmCalls);
-        Assert.Equal("2 Haltung(en) wirklich loeschen?", confirmMessage);
-        Assert.Equal("Loeschen", confirmTitle);
+        Assert.Equal("2 Haltung(en) wirklich löschen?", confirmMessage);
+        Assert.Equal("Löschen", confirmTitle);
         Assert.Equal(1, autosaves);
     }
 

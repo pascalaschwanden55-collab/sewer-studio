@@ -169,7 +169,7 @@ public sealed class TrainingBatchImportRunRequestFactoryTests
         request.SetLogText("log-text");
         request.SetProgressValue(2);
         request.SetProgressMax(9);
-        request.SetStatusText("laeuft");
+        request.SetStatusText("läuft");
         request.Log("meldung");
         request.UpdateLivePreview(new TrainingBatchImportLivePreview("case", "code", "meter", "frame"));
         request.OnUi(() => calls.Add("inside-ui"));
@@ -197,7 +197,7 @@ public sealed class TrainingBatchImportRunRequestFactoryTests
         Assert.Contains("save-state", calls);
         Assert.Contains("extract-preview", calls);
         Assert.Contains("busy:True", calls);
-        Assert.Contains("status:laeuft", calls);
+        Assert.Contains("status:läuft", calls);
         Assert.Contains("preview:case:code:meter:frame", calls);
         Assert.Contains("on-ui", calls);
         Assert.Contains("inside-ui", calls);

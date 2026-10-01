@@ -3,25 +3,41 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ClosedXML.Excel;
+using AuswertungPro.Next.Application.Export;
 
 namespace AuswertungPro.Next.Infrastructure.Export.Excel;
 
-public sealed record SchaechteTemplateColumnReadResult(string TemplatePath, IReadOnlyList<string> Columns)
+public sealed record SchaechteTemplateColumnReadResult(
+    string TemplatePath,
+    IReadOnlyList<string> Columns,
+    string? ErrorMessage = null)
 {
     public bool TemplateFound => !string.IsNullOrWhiteSpace(TemplatePath);
+    public bool TemplateReadable => TemplateFound && string.IsNullOrWhiteSpace(ErrorMessage);
 }
 
 public sealed class SchaechteTemplateColumnFileReader : ISchaechteTemplateColumnReader
 {
-    private const int HeaderRow = 12;
+    // Eine Quelle fuer die Zeilennummer - siehe ExcelVorlagenLayout.
+    private const int HeaderRow = ExcelVorlagenLayout.KopfZeile;
 
     public SchaechteTemplateColumnReadResult LoadFromExportDirectory(string baseDirectory)
     {
-        var templatePath = ResolveTemplatePath(baseDirectory);
-        if (string.IsNullOrWhiteSpace(templatePath) || !File.Exists(templatePath))
-            return new SchaechteTemplateColumnReadResult(string.Empty, Array.Empty<string>());
+        try
+        {
+            var templatePath = ResolveTemplatePath(baseDirectory);
+            if (string.IsNullOrWhiteSpace(templatePath) || !File.Exists(templatePath))
+                return new SchaechteTemplateColumnReadResult(string.Empty, Array.Empty<string>());
 
-        return new SchaechteTemplateColumnReadResult(templatePath, ReadColumns(templatePath));
+            return new SchaechteTemplateColumnReadResult(templatePath, ReadColumns(templatePath));
+        }
+        catch (Exception)
+        {
+            return new SchaechteTemplateColumnReadResult(
+                string.Empty,
+                Array.Empty<string>(),
+                "Die Schacht-Excel-Vorlage ist nicht lesbar.");
+        }
     }
 
     public IReadOnlyList<string> ReadColumns(string templatePath)
@@ -58,12 +74,19 @@ public sealed class SchaechteTemplateColumnFileReader : ISchaechteTemplateColumn
         if (!Directory.Exists(exportDirectory))
             return string.Empty;
 
-        var exact = Path.Combine(exportDirectory, "Schaechte.xlsx");
+        var exact = Path.Combine(exportDirectory, "Schächte.xlsx");
         if (File.Exists(exact))
             return exact;
 
+        // Aeltere Installationen verwendeten die ASCII-Schreibweise.
+        var legacy = Path.Combine(exportDirectory, "Schaechte.xlsx");
+        if (File.Exists(legacy))
+            return legacy;
+
         return Directory
             .GetFiles(exportDirectory, "*.xlsx")
+            .Where(path => !Path.GetFileName(path).StartsWith("~$", StringComparison.Ordinal))
+            .OrderBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault(path =>
                 Path.GetFileName(path).Contains("ch", StringComparison.OrdinalIgnoreCase) &&
                 Path.GetFileName(path).Contains("te", StringComparison.OrdinalIgnoreCase))

@@ -92,9 +92,7 @@ public sealed class DistributionDirectoryTreeResolver : IDistributionDirectoryTr
         {
             var basis = _patternResolver.ResolveSegment(sanierungDateiPattern, context);
             var jahr = _patternResolver.ResolveSegment("{Jahr}", context);
-            var sanierungOrdner = string.IsNullOrWhiteSpace(basis)
-                ? $"Saniert {jahr}".TrimEnd()
-                : $"{basis}_Saniert {jahr}".TrimEnd();
+            var sanierungOrdner = DistributionSanierungFolderName.Build(basis, jahr);
             segmente.Add(ProjectPathResolver.SanitizePathSegment(sanierungOrdner));
         }
 
@@ -112,4 +110,13 @@ public sealed class DistributionDirectoryTreeResolver : IDistributionDirectoryTr
 
         segmente.Add(ProjectPathResolver.SanitizePathSegment(aufgeloest));
     }
+}
+
+/// <summary>Einheitlicher Name der zusaetzlichen Ablageebene fuer Sanierungsdateien.</summary>
+public static class DistributionSanierungFolderName
+{
+    public static string Build(string? resolvedBase, string? resolvedYear)
+        => string.IsNullOrWhiteSpace(resolvedBase)
+            ? $"Saniert {resolvedYear}".TrimEnd()
+            : $"{resolvedBase}_Saniert {resolvedYear}".TrimEnd();
 }

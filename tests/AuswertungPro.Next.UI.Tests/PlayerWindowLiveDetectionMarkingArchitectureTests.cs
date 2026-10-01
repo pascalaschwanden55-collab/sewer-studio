@@ -76,7 +76,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         Assert.False(File.Exists(oldSegmentationPath), "SAM-Segmentierung darf nicht als PlayerWindow-Partial zurueckkehren.");
         Assert.True(File.Exists(segmentationFactoryPath), "SAM-Segmentierungsverdrahtung soll ausserhalb des PlayerWindow-Konstruktors liegen.");
         Assert.True(File.Exists(segmentationControllerPath), "SAM-Segmentierung und Maskensteuerung sollen in einem eigenen Controller liegen.");
-        Assert.True(File.Exists(maskOverlayControllerPath), "SAM-Maskenrendering soll ueber einen Player-Controller laufen.");
+        Assert.True(File.Exists(maskOverlayControllerPath), "SAM-Maskenrendering soll über einen Player-Controller laufen.");
         Assert.True(File.Exists(segmentWorkflowPath), "SAM-Segmentierungsentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(renderWorkflowPath), "SAM-Masken-Renderentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.NotNull(controllerField);
@@ -179,7 +179,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
 
         Assert.True(File.Exists(helperPath), "Manuelle Markier-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(activationWorkflowPath), "Manuelle Markier-Pause soll im Aktivierungsworkflow orchestriert werden.");
-        Assert.True(File.Exists(catalogOpenWorkflowPath), "Katalog-Oeffnen soll die manuelle Markier-Pause ausserhalb von PlayerWindow orchestrieren.");
+        Assert.True(File.Exists(catalogOpenWorkflowPath), "Katalog-Öffnen soll die manuelle Markier-Pause ausserhalb von PlayerWindow orchestrieren.");
 
         var helper = File.ReadAllText(helperPath);
         var controller = File.ReadAllText(controllerPath);
@@ -218,9 +218,9 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
 
         Assert.True(File.Exists(catalogPath), "LiveDetection-Markkatalog-Wiring soll aus dem grossen Marking-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "LiveDetection-Markkatalog-Workflow soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(workflowFactoryPath), "LiveDetection-Markkatalog-Workflow soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(workflowFactoryPath), "LiveDetection-Markkatalog-Workflow soll über Factory verdrahtet werden.");
         Assert.True(File.Exists(displayWorkflowPath), "LiveDetection-Markkatalog-Serviceaufruf soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(openWorkflowPath), "LiveDetection-Markkatalog-Oeffnen soll ausserhalb von PlayerWindow entschieden werden.");
+        Assert.True(File.Exists(openWorkflowPath), "LiveDetection-Markkatalog-Öffnen soll ausserhalb von PlayerWindow entschieden werden.");
 
         var marking = File.ReadAllText(markingPath);
         var catalog = File.ReadAllText(catalogPath);
@@ -328,7 +328,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
 
         Assert.True(File.Exists(trainingPath), "Manual-Mark-Training-Speicherung soll aus dem grossen Marking-Partial heraus.");
         Assert.True(File.Exists(appenderPath), "Manual-Mark-Session-Anlage soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(frameExporterPath), "Manual-Mark-Training soll den bestehenden FrameExporter fuer Tempframe-I/O nutzen.");
+        Assert.True(File.Exists(frameExporterPath), "Manual-Mark-Training soll den bestehenden FrameExporter für Tempframe-I/O nutzen.");
         Assert.True(File.Exists(annotationWriterPath), "Manual-Mark-Training soll den bestehenden AnnotationWriter nutzen.");
         Assert.True(File.Exists(seedSelectionWorkflowPath), "Manual-Mark-Codeauswahl soll den Code-Explorer ausserhalb der PlayerWindow-Partials orchestrieren.");
         Assert.True(File.Exists(commandWorkflowPath), "Manual-Mark-Training-Befehl soll Auswahl, Speichern, Ergebnis und Fehler ausserhalb der PlayerWindow-Partials orchestrieren.");
@@ -398,7 +398,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         Assert.Contains("new LiveDetectionManualMarkTrainingController", controllerSetFactory);
         Assert.True(
             CountOccurrences(controllerSetFactory, "annotationWriter,") >= 2,
-            "Bestaetigung und manuelle Markierung sollen denselben Trainings-Schreiber erhalten.");
+            "Bestätigung und manuelle Markierung sollen denselben Trainings-Schreiber erhalten.");
         Assert.Contains(".SelectSeed(", seedSelectionWorkflow);
         Assert.Contains("actions.SelectEntry()", commandWorkflow);
         Assert.Contains("actions.SaveTrainingAsync(selectedEntry)", commandWorkflow);

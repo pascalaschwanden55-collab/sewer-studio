@@ -49,6 +49,55 @@ public sealed class DataGridWrappingTextColumnFactoryTests
         });
     }
 
+    [Fact]
+    public void Create_bases_runtime_styles_on_the_active_application_theme()
+    {
+        RunOnSta(() =>
+        {
+            var displayBase = new Style(typeof(TextBlock));
+            var editBase = new Style(typeof(TextBox));
+
+            var column = DataGridWrappingTextColumnFactory.Create(
+                "Empfohlene_Sanierungsmassnahmen",
+                "Empfohlene Sanierungsmassnahmen",
+                type => type == typeof(TextBox) ? editBase : displayBase);
+
+            Assert.Same(displayBase, column.ElementStyle.BasedOn);
+            Assert.Same(editBase, column.EditingElementStyle.BasedOn);
+        });
+    }
+
+    /// <summary>
+    /// Fix-Runde 1 (F4): Die Drei-Zeilen-Grenze gilt nur im Nova-Layout, und die Spalte setzt
+    /// keinen eigenen Hinweis mehr — der Volltext steht zusammen mit der Herkunftszeile im
+    /// Hinweis der Zelle (DataGridFieldMetaTooltipStyleFactory).
+    /// </summary>
+    [Fact]
+    public void Hoehengrenze_nur_auf_Wunsch_und_kein_eigener_Hinweis()
+    {
+        RunOnSta(() =>
+        {
+            var ohne = DataGridWrappingTextColumnFactory.Create(
+                "Empfohlene_Sanierungsmassnahmen", "Empfohlene Sanierungsmassnahmen");
+            Assert.DoesNotContain(
+                ohne.ElementStyle.Setters.OfType<Setter>(),
+                setter => setter.Property == FrameworkElement.MaxHeightProperty);
+            Assert.DoesNotContain(
+                ohne.ElementStyle.Setters.OfType<Setter>(),
+                setter => setter.Property == FrameworkElement.ToolTipProperty);
+
+            var mit = DataGridWrappingTextColumnFactory.Create(
+                "Empfohlene_Sanierungsmassnahmen", "Empfohlene Sanierungsmassnahmen", hoeheBegrenzen: true);
+            AssertStyleSetter(
+                mit.ElementStyle,
+                FrameworkElement.MaxHeightProperty,
+                AuswertungPro.Next.UI.DataPage.DataPageColumnStyleRules.MaximaleZellenhoehe);
+            Assert.DoesNotContain(
+                mit.ElementStyle.Setters.OfType<Setter>(),
+                setter => setter.Property == FrameworkElement.ToolTipProperty);
+        });
+    }
+
     private static void AssertStyleSetter(Style? style, DependencyProperty property, object expectedValue)
     {
         Assert.NotNull(style);

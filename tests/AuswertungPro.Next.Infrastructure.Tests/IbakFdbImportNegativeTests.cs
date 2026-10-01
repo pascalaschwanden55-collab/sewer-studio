@@ -7,6 +7,25 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class IbakFdbImportNegativeTests
 {
     [Fact]
+    public void FindBundledFbClient_VerwendetNurDenProgrammordner()
+    {
+        var programDirectory = Path.Combine(Path.GetTempPath(), "sewerstudio-program");
+        var checkedPaths = new List<string>();
+
+        var result = IbakExportImportService.FindBundledFbClient(
+            programDirectory,
+            path =>
+            {
+                checkedPaths.Add(path);
+                return true;
+            });
+
+        var expected = Path.Combine(programDirectory, "fbclient.dll");
+        Assert.Equal(expected, result);
+        Assert.Equal([expected], checkedPaths);
+    }
+
+    [Fact]
     public void ImportIbakExport_KaputteFdb_BleibtUnveraendertUndDatenTxtWirdWeiterImportiert()
     {
         var root = Path.Combine(Path.GetTempPath(), $"ibak-fdb-negative-{Guid.NewGuid():N}");
@@ -24,8 +43,7 @@ public sealed class IbakFdbImportNegativeTests
         var fdbPath = Path.Combine(dataDirectory, "Arizona.fdb");
         var original = "Keine Firebird-Datenbank; Kundenoriginal."u8.ToArray();
         File.WriteAllBytes(fdbPath, original);
-        // Erzwingt einen schnellen, lokalen Client-Ladefehler statt eines moeglichen
-        // Verbindungsversuchs zu einem installierten Firebird-Dienst.
+        // Fremde Exportpakete duerfen ihre eigene native Bibliothek nicht laden.
         File.WriteAllBytes(Path.Combine(root, "fbclient.dll"), [0x00, 0x01, 0x02]);
         var project = new Project();
 

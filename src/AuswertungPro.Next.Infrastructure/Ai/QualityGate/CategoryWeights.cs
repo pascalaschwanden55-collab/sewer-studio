@@ -31,7 +31,7 @@ public sealed class CategoryWeights
     /// <summary>Sets weights from array in canonical order.</summary>
     public void FromArray(double[] w)
     {
-        if (w.Length != 8) throw new ArgumentException("Expected 8 weights.");
+        if (w.Length != 8) throw new ArgumentException("Es werden genau 8 Gewichte erwartet.");
         WYolo = w[0]; WDino = w[1]; WSam = w[2]; WQwen = w[3];
         WLlm = w[4]; WKb = w[5]; WKbAgreement = w[6]; WPlausibility = w[7];
     }

@@ -16,7 +16,8 @@ internal static class TrainingStudioMaskOverlayRenderer
     public static RenderResult Render(
         Canvas canvas,
         WorkbenchSegmentation segmentation,
-        Rect imageArea)
+        Rect imageArea,
+        bool isValidForGold = true)
     {
         if (string.IsNullOrWhiteSpace(segmentation.MaskRle))
             return new RenderResult(false, null);
@@ -26,7 +27,7 @@ internal static class TrainingStudioMaskOverlayRenderer
             || imageArea.Width <= 0
             || imageArea.Height <= 0)
         {
-            return new RenderResult(false, "Segmentierung ist vorhanden, aber ihre Bildgroesse ist ungueltig.");
+            return new RenderResult(false, "Segmentierung ist vorhanden, aber ihre Bildgrösse ist ungültig.");
         }
 
         try
@@ -45,10 +46,17 @@ internal static class TrainingStudioMaskOverlayRenderer
                 segmentation.MaskImageHeight,
                 imageArea.Width,
                 imageArea.Height);
+            var overlayColor = isValidForGold
+                ? Color.FromRgb(0, 255, 80)
+                : Colors.Orange;
             canvas.Children.Add(new Path
             {
                 Data = fillGeometry,
-                Fill = new SolidColorBrush(Color.FromArgb(72, 0, 255, 80)),
+                Fill = new SolidColorBrush(Color.FromArgb(
+                    72,
+                    overlayColor.R,
+                    overlayColor.G,
+                    overlayColor.B)),
                 IsHitTestVisible = false,
                 RenderTransform = transform,
             });
@@ -62,7 +70,7 @@ internal static class TrainingStudioMaskOverlayRenderer
             canvas.Children.Add(new Path
             {
                 Data = contourGeometry,
-                Stroke = new SolidColorBrush(Color.FromArgb(255, 0, 255, 80)),
+                Stroke = new SolidColorBrush(overlayColor),
                 StrokeThickness = 3,
                 IsHitTestVisible = false,
                 RenderTransform = transform,

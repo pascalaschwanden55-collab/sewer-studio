@@ -6,6 +6,39 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageHydraulikReportCalculatorTests
 {
+    [Theory]
+    [InlineData("300", "")]
+    [InlineData("", "5")]
+    [InlineData("300", "0")]
+    [InlineData("300", "-2")]
+    [InlineData("300", "NaN")]
+    [InlineData("300", "Infinity")]
+    public void Bericht_erfindet_keine_fehlenden_oder_ungueltigen_projektwerte(string dn, string slope)
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, dn, FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.SlopePromille, slope, FieldSource.Manual, true);
+        var saved = false;
+        var result = DataPageHydraulikReportCalculator.BuildReportCalculation(record,
+            new HydraulikPanelSettings { Dn = 300, Gefaelle = 5 },
+            saveSettings: () => saved = true);
+        Assert.Null(result);
+        Assert.False(saved);
+        Assert.False(DataPageHydraulikReportCalculator.ReadAvailability(record).IsAvailable);
+    }
+
+    [Fact]
+    public void Bericht_verwendet_das_gefaelle_der_haltung_statt_des_letzten_panels()
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, "300", FieldSource.Manual, true);
+        record.SetFieldValue(FieldKeys.SlopePromille, "2,5", FieldSource.Manual, true);
+        var result = DataPageHydraulikReportCalculator.BuildReportCalculation(record,
+            new HydraulikPanelSettings { Gefaelle = 7 });
+        Assert.NotNull(result);
+        Assert.Equal(2.5, result.Gefaelle_Promille);
+    }
+
     [Fact]
     public void Dn_parsing_lebt_nicht_mehr_in_der_ui()
         => Assert.Null(typeof(DataPageHydraulikReportCalculator).GetMethod("ParseDnMm"));
@@ -34,11 +67,12 @@ public sealed class DataPageHydraulikReportCalculatorTests
     }
 
     [Fact]
-    public void BuildReportCalculation_nutzt_record_dn_material_settings_und_halbfuellung()
+    public void BuildReportCalculation_nutzt_record_dn_gefaelle_material_settings_und_halbfuellung()
     {
         var record = new HaltungRecord();
         record.SetFieldValue("DN_mm", "400", FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Rohrmaterial", "PVC", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.SlopePromille, "7", FieldSource.Manual, userEdited: true);
         var settings = new HydraulikPanelSettings
         {
             Gefaelle = 7,
@@ -67,6 +101,7 @@ public sealed class DataPageHydraulikReportCalculatorTests
         var record = new HaltungRecord();
         record.SetFieldValue("DN_mm", "400", FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Rohrmaterial", "PVC", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.SlopePromille, "5", FieldSource.Manual, userEdited: true);
         var settings = new HydraulikPanelSettings
         {
             Wasserstand = 90,

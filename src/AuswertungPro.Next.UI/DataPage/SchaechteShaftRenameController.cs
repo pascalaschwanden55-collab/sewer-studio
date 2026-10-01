@@ -36,10 +36,20 @@ internal static class SchaechteShaftRenameController
             return false;
         }
 
-        record.SetFieldValue("Schachtnummer", newNumber);
+        List<string> pdfPaths;
+        try
+        {
+            pdfPaths = CollectPdfPaths(record, projectPath);
+        }
+        catch (Exception ex)
+        {
+            showError(UserError.DescribeAndReport(ex, "Protokoll-PDF beim Umbenennen"), "PDF nicht aktualisiert");
+            return false;
+        }
+
+        record.SetFieldValue("Schachtnummer", newNumber, FieldSource.Manual, userEdited: true);
         PdfCorrectionMetadata.RegisterShaftRename(project, oldNumber, newNumber);
 
-        var pdfPaths = CollectPdfPaths(record, projectPath);
         if (pdfPaths.Count == 0)
             return true;
 
@@ -51,7 +61,7 @@ internal static class SchaechteShaftRenameController
         {
             showError(
                 $"{rewrite.Failed} Protokoll-PDF(s) konnten nicht aktualisiert werden.\n" +
-                "Die bisherigen PDF-Dateien wurden nicht ueberschrieben.",
+                "Die bisherigen PDF-Dateien wurden nicht überschrieben.",
                 "PDF nicht aktualisiert");
         }
 
@@ -69,7 +79,10 @@ internal static class SchaechteShaftRenameController
 
             foreach (var part in raw.Split(';', StringSplitOptions.RemoveEmptyEntries))
             {
-                var resolved = ProjectPathResolver.ResolveFilePath(part.Trim(), projectPath);
+                if (!part.Trim().EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var safePath = ProjectPathResolver.EnsureWritableProjectPath(part.Trim(), projectPath);
+                var resolved = ProjectPathResolver.ResolveFilePath(safePath, projectPath);
                 if (!string.IsNullOrWhiteSpace(resolved)
                     && resolved.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                 {

@@ -1,3 +1,5 @@
+﻿using System.Collections.Generic;
+using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
@@ -10,11 +12,19 @@ public static class DichtheitImportDistributor
 {
     private static readonly DichtheitImportDistributionService DefaultService = new();
 
+    /// <param name="Fehler">
+    /// Dateien, die nicht verteilt werden konnten (Lesefehler, Ablage gescheitert). Getrennt von
+    /// «nicht zugeordnet», damit der Import sie in seiner Fehlerbilanz zaehlt.
+    /// </param>
     public sealed record Result(
         int Verteilt,
         int NichtZugeordnet,
         int Uebersprungen,
-        IReadOnlyList<string> Messages);
+        IReadOnlyList<string> Messages,
+        IReadOnlyList<string>? Fehler = null)
+    {
+        public IReadOnlyList<string> FehlerListe => Fehler ?? [];
+    }
 
     public static Result Distribute(
         Project project,
@@ -27,5 +37,5 @@ public static class DichtheitImportDistributor
         => DefaultService.FindeUnsichereKandidaten(sourceFolder);
 
     internal static IReadOnlyList<string> FindeKandidaten(string sourceFolder)
-        => DefaultService.FindeKandidaten(sourceFolder);
+        => DefaultService.FindeKandidaten(sourceFolder).Select(p => p.Pfad).ToList();
 }

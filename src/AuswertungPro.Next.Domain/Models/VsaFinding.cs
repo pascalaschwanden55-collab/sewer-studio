@@ -12,6 +12,13 @@ namespace AuswertungPro.Next.Domain.Models
         public double? LL { get; set; }
         public string? Raw { get; set; } // Optional: Originaltext
 
+        // Herkunft aus der XTF: TID des Kanalschadens und der zugehoerigen Untersuchung.
+        // Nur gesetzt, wenn der Befund aus einer XTF eingelesen wurde. Erlaubt es, beim
+        // Erzeugen einer revidierten XTF genau das urspruengliche Element wiederzufinden,
+        // statt es ueber Code und Meter erraten zu muessen.
+        public string? KanalschadenTid { get; set; }
+        public string? UntersuchungTid { get; set; }
+
         // WinCan/Export/Overlay Felder
         public double? MeterStart { get; set; }
         public double? MeterEnd { get; set; }

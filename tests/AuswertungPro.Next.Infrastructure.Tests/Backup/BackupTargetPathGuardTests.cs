@@ -19,7 +19,7 @@ public sealed class BackupTargetPathGuardTests
                     ? FileAttributes.Directory | FileAttributes.ReparsePoint
                     : FileAttributes.Directory));
 
-        Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class BackupTargetPathGuardTests
                     ? FileAttributes.Directory | FileAttributes.ReparsePoint
                     : FileAttributes.Directory));
 
-        Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public sealed class BackupTargetPathGuardTests
                     ? throw new UnauthorizedAccessException("gesperrt")
                     : FileAttributes.Directory));
 
-        Assert.Contains("nicht sicher geprueft", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nicht sicher geprüft", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -1,7 +1,13 @@
 namespace AuswertungPro.Next.Application.Import;
 
 /// <summary>Ausgelesene Texte einer PDF-Datei, getrennt nach Seiten.</summary>
-public sealed record PdfTextExtractionResult(IReadOnlyList<string> Pages, string FullText);
+/// <param name="Leser">Welcher Textleser die Seiten geliefert hat.</param>
+/// <param name="LeserHinweis">Grund der Leserwahl, leer bei der geprueften Regelwahl.</param>
+public sealed record PdfTextExtractionResult(
+    IReadOnlyList<string> Pages,
+    string FullText,
+    PdfLeserArt Leser = PdfLeserArt.PdfToText,
+    string LeserHinweis = "");
 
 /// <summary>
 /// Liest PDF-Text mit begrenzter Dateigroesse, Seitenzahl und Ausgabemenge.

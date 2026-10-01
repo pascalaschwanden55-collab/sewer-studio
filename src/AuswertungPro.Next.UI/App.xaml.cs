@@ -29,6 +29,7 @@ using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.LiveControl;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.QgisBridge;
 using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.UI.Services;
@@ -46,12 +47,14 @@ namespace AuswertungPro.Next.UI
         private LiveControlServer? _liveControlServer;
         private QgisBridgeServer? _qgisBridgeServer;
         private SingleInstanceGuard? _singleInstanceGuard;
+        private WindowsThemeFollowService? _windowsThemeFollow;
+        private HighContrastFollowService? _highContrastFollow;
 
         // Tageslogs aelter als dieser Wert werden beim Start geloescht (Aufbewahrung).
         private const int LogRetentionDays = 60;
 
         public static IServiceProvider Services
-            => _services ?? throw new InvalidOperationException("Services are not initialized.");
+            => _services ?? throw new InvalidOperationException("Dienste sind noch nicht initialisiert.");
 
         protected override async void OnStartup(StartupEventArgs e)
         {
@@ -65,7 +68,7 @@ namespace AuswertungPro.Next.UI
                 if (!_singleInstanceGuard.TryAcquire())
                 {
                     DialogHost.Current.Info(
-                        "SewerStudio laeuft bereits. Bitte verwende das geoeffnete Programmfenster.",
+                        "SewerStudio läuft bereits. Bitte verwende das geöffnete Programmfenster.",
                         "SewerStudio bereits gestartet");
                     Shutdown(0);
                     return;
@@ -93,7 +96,20 @@ namespace AuswertungPro.Next.UI
                 ButtonFx.RegisterGlobal();
                 if (settings.AiStartOnProgramStart && AiStartupService.ApplyRuntimeDefaults(settings))
                     settings.SaveImmediate();
-                ThemeManager.ApplyTheme(Resources, settings.UiTheme);
+                ThemeManager.ApplyTheme(Resources, ThemeManager.ResolveEffectiveTheme(settings.UiTheme));
+
+                // Aufgabe 13 (Windows-Integration): bei Design "Wie Windows" auf einen spaeteren
+                // Hell/Dunkel-Wechsel in den Windows-Einstellungen reagieren, ohne Neustart.
+                _windowsThemeFollow = new WindowsThemeFollowService(
+                    () => settings.UiTheme,
+                    theme => ThemeManager.ApplyTheme(Resources, theme),
+                    Dispatcher);
+                _windowsThemeFollow.Start();
+
+                // Hochkontrast ueberlagert Hell/Dunkel/Wie Windows unabhaengig von der
+                // Design-Wahl, solange Windows selbst im Hochkontrast-Modus laeuft.
+                _highContrastFollow = new HighContrastFollowService(Resources);
+                _highContrastFollow.Start();
 
                 // Logging
                 var logDir = Path.Combine(AppSettings.AppDataDir, "logs");
@@ -190,6 +206,15 @@ namespace AuswertungPro.Next.UI
                 };
                 MainWindow = mainWindow;
                 mainWindow.Show();
+                // Die Bruecke FRAGT die laufende Videoposition beim Player ab; der Player
+                // meldet nichts und weiss davon nichts. Gilt fuer beide Wege (eigener
+                // Server und Live-Control), weil beide denselben Router verwenden.
+                QgisBridgeVideoPosition.SetzeQuelle(QgisVideoPositionController.Lies);
+                // Rueckweg: Klick in der QGIS-Karte springt im offenen Video an diese
+                // Stelle. Mehr kann dieser Weg nicht — er oeffnet kein Video, wechselt
+                // keine Haltung und veraendert keine Daten.
+                QgisBridgeVideoSprung.SetzeZiel(QgisVideoPositionController.Springe);
+
                 // Haelt Live-Control bereits Port 8765, liefert ER die /qgis-Endpunkte mit aus —
                 // dann braucht es keinen zweiten Listener (Port-Konflikt).
                 if (_liveControlServer is null)
@@ -265,6 +290,8 @@ namespace AuswertungPro.Next.UI
             _services?.AiStartedProcesses.StopAllStartedProcesses();
             try
             {
+                _windowsThemeFollow?.Dispose();
+                _highContrastFollow?.Dispose();
                 _services?.KnowledgeRealtimeMirror.Dispose();
                 _qgisBridgeServer?.Dispose();
                 _liveControlServer?.Dispose();
@@ -412,14 +439,19 @@ namespace AuswertungPro.Next.UI
                 Fluent.GetBackdrop(window) == FluentBackdrop.Mica);
         }
 
-        private static System.Windows.Media.ImageSource? LoadDefaultWindowIcon()
+        // Aufgabe 5 (Programmidentitaet): internal statt private, damit AboutWindow dasselbe
+        // geladene Programmsymbol fuer die grosse Anzeige im Fensterinhalt wiederverwenden kann,
+        // ohne die Ladelogik ein zweites Mal zu schreiben.
+        internal static System.Windows.Media.ImageSource? LoadDefaultWindowIcon()
         {
             if (_appWindowIcon is not null)
             {
                 return _appWindowIcon;
             }
 
-            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+            // Aufgabe 5 (Programmidentitaet): Fenstersymbol ist das Programmsymbol (app.ico, dasselbe
+            // wie ApplicationIcon im csproj); das Kundenlogo bleibt unveraendert in Berichten/Dossiers.
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "app.ico");
             if (!File.Exists(iconPath))
             {
                 return null;

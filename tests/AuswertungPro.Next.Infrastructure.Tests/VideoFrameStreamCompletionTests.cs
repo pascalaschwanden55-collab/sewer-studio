@@ -42,7 +42,7 @@ public sealed class VideoFrameStreamCompletionTests
 
         Assert.False(completion.IsComplete);
         Assert.NotNull(completion.Reason);
-        Assert.Contains("fruehes EOF", completion.Reason);
+        Assert.Contains("frühes EOF", completion.Reason);
         Assert.Contains("4 von 10", completion.Reason);
     }
 

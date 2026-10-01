@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -43,5 +44,50 @@ public sealed class OfferPdfExportServiceTests
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             service.ExportAsync(new OfferPdfModel(), "   "));
+    }
+
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 15: mit injizierter <see cref="IBerichtsMarke"/> geht
+    /// deren Pfad an den Renderer — die gemeinsame Quelle statt der fest eingetragenen Datei
+    /// neben dem Programm.
+    /// </summary>
+    [Fact]
+    public async Task ExportAsync_verwendet_die_injizierte_IBerichtsMarke_statt_des_festen_Standardpfads()
+    {
+        string? seenLogo = null;
+        var service = new OfferPdfExportService(
+            (_, _, _, logoPath, _) =>
+            {
+                seenLogo = logoPath;
+                return Task.CompletedTask;
+            },
+            new StubBerichtsMarke(@"D:\Firmenlogos\aktuelles-logo.png"));
+
+        await service.ExportAsync(new OfferPdfModel(), "C:/ziel/angebot.pdf");
+
+        Assert.Equal(@"D:\Firmenlogos\aktuelles-logo.png", seenLogo);
+    }
+
+    [Fact]
+    public async Task ExportAsync_ohne_IBerichtsMarke_verwendet_weiterhin_den_festen_Standardpfad()
+    {
+        string? seenLogo = null;
+        var service = new OfferPdfExportService(
+            (_, _, _, logoPath, _) =>
+            {
+                seenLogo = logoPath;
+                return Task.CompletedTask;
+            },
+            berichtsMarke: null);
+
+        await service.ExportAsync(new OfferPdfModel(), "C:/ziel/angebot.pdf");
+
+        Assert.EndsWith(Path.Combine("Assets", "Brand", "abwasser-uri-logo.png"), seenLogo);
+    }
+
+    private sealed class StubBerichtsMarke : IBerichtsMarke
+    {
+        public StubBerichtsMarke(string? logoPfad) => LogoPfad = logoPfad;
+        public string? LogoPfad { get; }
     }
 }

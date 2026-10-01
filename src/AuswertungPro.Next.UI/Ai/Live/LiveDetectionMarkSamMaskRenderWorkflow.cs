@@ -41,12 +41,9 @@ public static class LiveDetectionMarkSamMaskRenderWorkflow
                 return Result(LiveDetectionMarkSamMaskRenderOutcome.Skipped);
 
             var segmentation = request.Segmentation;
-            if (segmentation.IsBend && actions.ContainsVanishingPoint(segmentation))
-            {
-                actions.ShowBendMarker(segmentation.VanishX, segmentation.VanishY, rect);
-                return Result(LiveDetectionMarkSamMaskRenderOutcome.BendMarkerShown);
-            }
-
+            // IsBend ist ein zusaetzliches Geometriesignal, aber keine Segmentierung.
+            // Im manuellen Codierablauf muss vor dem Codierfenster immer die echte
+            // SAM-Maske sichtbar sein; ein Oval darf sie nicht ersetzen.
             var samResponse = new SamResponse(
                 new[] { segmentation.Mask },
                 segmentation.ImageWidth,
@@ -57,7 +54,7 @@ public static class LiveDetectionMarkSamMaskRenderWorkflow
         }
         catch (Exception ex)
         {
-            actions.TraceError($"[Mark-SAM] Masken-Render uebersprungen: {ex.Message}");
+            actions.TraceError($"[Mark-SAM] Masken-Render übersprungen: {ex.Message}");
             return Result(LiveDetectionMarkSamMaskRenderOutcome.Failed);
         }
     }

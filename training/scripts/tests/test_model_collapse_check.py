@@ -232,6 +232,16 @@ class ModelCollapseCheckTests(unittest.TestCase):
             args.images_dir,
         )
 
+    def test_help_laesst_sich_ohne_formatfehler_anzeigen(self) -> None:
+        with (
+            mock.patch.object(sys, "argv", ["prog", "--help"]),
+            mock.patch("sys.stdout"),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            MODULE._parse_args()
+
+        self.assertEqual(0, raised.exception.code)
+
     def test_predict_uses_explicit_imgsz(self) -> None:
         result = SimpleNamespace(
             boxes=SimpleNamespace(

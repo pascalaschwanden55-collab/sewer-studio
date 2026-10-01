@@ -24,7 +24,7 @@
                     <StackPanel Margin="0,0,18,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding GesamtTotal, StringFormat='Total (exkl. MwSt): {0:N2} CHF'}"
                                    FontWeight="SemiBold" HorizontalAlignment="Right"/>
-                        <TextBlock Text="{Binding BelegteSchaechte, StringFormat='{}{0} Schächte mit Maßnahme'}"
+                        <TextBlock Text="{Binding BelegteSchaechte, StringFormat='{}{0} Schächte mit Massnahme'}"
                                    Opacity="0.7" HorizontalAlignment="Right"/>
                     </StackPanel>
                     <Button Content="Neu laden" Command="{Binding ReloadCommand}" Margin="0,0,8,0"/>
@@ -49,7 +49,7 @@
                 <DataGridTextColumn Header="Funktion" Binding="{Binding Funktion}" IsReadOnly="True" Width="1.2*"/>
                 <DataGridTextColumn Header="Resultat" Binding="{Binding Resultat}" IsReadOnly="True" Width="1.4*"/>
 
-                <DataGridTemplateColumn Header="Maßnahme" Width="2*">
+                <DataGridTemplateColumn Header="Massnahme" Width="2*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <ComboBox ItemsSource="{Binding DataContext.MeasureOptions,
@@ -98,7 +98,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Grid x:Name="BalkenHost" Margin="4,6">
-                                <Border HorizontalAlignment="Left" CornerRadius="2"
+                                <Border HorizontalAlignment="Left" CornerRadius="{DynamicResource RadiusS}"
                                         Background="{DynamicResource AccentBrush}" Opacity="0.35"
                                         ToolTip="{Binding Total, StringFormat='{}{0:N2} CHF'}">
                                     <Border.Width>
@@ -118,6 +118,23 @@
                 <DataGridTextColumn Header="Hinweis" Binding="{Binding Hinweis}" IsReadOnly="True" Width="150"/>
             </DataGrid.Columns>
         </DataGrid>
+
+        <uc:EmptyStateControl Grid.Row="1"
+                              IsHitTestVisible="False"
+                              Icon="&#xE80A;"
+                              Title="Noch keine Massnahmen"
+                              Message="Sobald Schächte mit erfasstem Sanierungsbedarf im Projekt vorhanden sind, erscheinen sie hier zur Auswahl.">
+            <uc:EmptyStateControl.Style>
+                <Style TargetType="uc:EmptyStateControl">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasItems, ElementName=SchachtRowsGrid}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </uc:EmptyStateControl.Style>
+        </uc:EmptyStateControl>
 
         <!-- Status -->
         <TextBlock Grid.Row="2" Text="{Binding Status}" Opacity="0.7" Margin="2,8,0,0"/>

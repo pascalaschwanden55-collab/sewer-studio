@@ -12,6 +12,7 @@ namespace AuswertungPro.Next.Infrastructure.Import.Protocols;
 /// </summary>
 public sealed class SchachtProtocolImportService :
     ISchachtProtocolImportService,
+    ISchachtProtocolRebuildService,
     ISchachtProtocolDistributionResultService
 {
     private readonly IPdfTextExtractor _pdfTextExtractor;
@@ -37,9 +38,25 @@ public sealed class SchachtProtocolImportService :
     public SchachtProtocolParseResult Parse(string pdfPfad)
     {
         var extraction = _pdfTextExtractor.ExtractPages(pdfPfad);
-        return ParseWithOcrFallback(
+        var ergebnis = ParseWithOcrFallback(
             extraction.FullText,
             () => _ocrReader.TryRead(pdfPfad));
+
+        // Welcher Leser gelesen hat, gehoert in den Bericht: Ein stiller Wechsel auf den
+        // eingebauten Leser waere sonst nicht erkennbar, und genau daran haengt die
+        // Vollstaendigkeit der Anschlusstabelle.
+        if (extraction.Leser == PdfLeserArt.Eingebaut && !string.IsNullOrWhiteSpace(extraction.LeserHinweis))
+        {
+            var hinweis = "Gelesen mit dem eingebauten Leser. " + extraction.LeserHinweis.Trim();
+            ergebnis = ergebnis with
+            {
+                Lesehinweis = string.IsNullOrWhiteSpace(ergebnis.Lesehinweis)
+                    ? hinweis
+                    : ergebnis.Lesehinweis.TrimEnd() + " " + hinweis
+            };
+        }
+
+        return ergebnis;
     }
 
     internal static SchachtProtocolParseResult ParseWithOcrFallback(
@@ -56,7 +73,7 @@ public sealed class SchachtProtocolImportService :
         {
             return directResult with
             {
-                Lesehinweis = "Das PDF enthaelt lesbaren Text, wurde aber nicht als Schachtprotokoll erkannt."
+                Lesehinweis = "Das PDF enthält lesbaren Text, wurde aber nicht als Schachtprotokoll erkannt."
             };
         }
 
@@ -66,7 +83,7 @@ public sealed class SchachtProtocolImportService :
             return directResult with
             {
                 Lesehinweis = "Das PDF ist vermutlich ein Bild-Scan ohne Textebene. " +
-                              $"Die Texterkennung konnte nicht ausgefuehrt werden: {ocr.Message}"
+                              $"Die Texterkennung konnte nicht ausgeführt werden: {ocr.Message}"
             };
         }
 
@@ -75,7 +92,7 @@ public sealed class SchachtProtocolImportService :
         {
             return ocrResult with
             {
-                Lesehinweis = "Die Texterkennung wurde ausgefuehrt, der Inhalt wurde aber nicht als Schachtprotokoll erkannt."
+                Lesehinweis = "Die Texterkennung wurde ausgeführt, der Inhalt wurde aber nicht als Schachtprotokoll erkannt."
             };
         }
 
@@ -104,7 +121,10 @@ public sealed class SchachtProtocolImportService :
         return new SchachtProtocolParseResult(
             true, pf.SchachtNummer, pf.Datum, pf.Funktion,
             pf.Schachtform, pf.Dimension, pf.Schachttiefe, pf.PrimaereSchaeden,
-            pf.Bemerkungen, pf.Status, pf.Link, damages);
+            pf.Bemerkungen, pf.Status, pf.Link, damages)
+        {
+            Zusatz = SchachtProtocolZusatzParser.Parse(fullText)
+        };
     }
 
     private static bool IsEmptyOrNearlyEmpty(string? text)
@@ -130,13 +150,35 @@ public sealed class SchachtProtocolImportService :
     }
 
     public void Apply(SchachtRecord ziel, SchachtProtocolParseResult ergebnis, string pdfPfadFuerFeld)
+        => Write(ziel, ergebnis, pdfPfadFuerFeld, rebuildFromProtocol: false);
+
+    /// <summary>
+    /// Aktualisieren eines einzelnen, bereits verknuepften Schachts: Das gerade neu
+    /// gelesene Protokoll ersetzt seinen Stand vollstaendig.
+    /// </summary>
+    public void Rebuild(SchachtRecord ziel, SchachtProtocolParseResult ergebnis, string pdfPfadFuerFeld)
+        => Write(ziel, ergebnis, pdfPfadFuerFeld, rebuildFromProtocol: true);
+
+    private static void Write(
+        SchachtRecord ziel,
+        SchachtProtocolParseResult ergebnis,
+        string pdfPfadFuerFeld,
+        bool rebuildFromProtocol)
     {
         var pf = new LegacyPdfImportService.ParsedSchachtFields(
             ergebnis.Schachtnummer, ergebnis.Datum, ergebnis.Funktion,
             ergebnis.Schachtform, ergebnis.Dimension, ergebnis.Schachttiefe,
             ergebnis.PrimaereSchaeden, ergebnis.Bemerkungen, ergebnis.Status, ergebnis.Link);
         var key = (ergebnis.Schachtnummer ?? "").Trim();
-        SchachtProtocolApplier.Apply(ziel, key, pf, ergebnis.Schaeden, pdfPfadFuerFeld);
+        SchachtProtocolApplier.Apply(
+            ziel,
+            key,
+            pf,
+            ergebnis.Schaeden,
+            pdfPfadFuerFeld,
+            rebuildFromProtocol);
+        if (ergebnis.Zusatz is { IstLeer: false } zusatz)
+            SchachtProtocolApplier.ApplyZusatz(ziel, zusatz, rebuildFromProtocol, onlyMissing: false);
     }
 
     public string DistributePdf(
@@ -153,16 +195,45 @@ public sealed class SchachtProtocolImportService :
         string schachtnummer,
         string pdfQuelle)
     {
-        var destDir = ProjectStructure.SchachtVerteiltDir(projektOrdner, schachtnummer);
+        var writePathGuard = new ProjectWritePathGuard(projektOrdner);
+        var destDir = writePathGuard.EnsureSafeDirectoryTarget(
+            ProjectStructure.SchachtVerteiltDir(projektOrdner, schachtnummer));
         Directory.CreateDirectory(destDir);
+        writePathGuard.EnsureSafeDirectoryTarget(destDir);
 
-        var dest = Path.Combine(destDir, Path.GetFileName(pdfQuelle));
-        var fileCreated = !File.Exists(dest);
-        if (fileCreated)
-            File.Copy(pdfQuelle, dest, overwrite: false);
+        var preferredDestination = writePathGuard.EnsureSafeFileTarget(
+            Path.Combine(destDir, Path.GetFileName(pdfQuelle)));
+        if (File.Exists(preferredDestination)
+            && VerifiedImportFileCopy.ContentsEqual(pdfQuelle, preferredDestination))
+        {
+            return new SchachtProtocolDistributionResult(
+                ProjectPathResolver.MakeRelative(preferredDestination, projektOrdner),
+                FileCreated: false);
+        }
+
+        var destination = File.Exists(preferredDestination)
+            ? ResolveUniquePath(preferredDestination)
+            : preferredDestination;
+        destination = writePathGuard.EnsureSafeFileTarget(destination);
+        File.Copy(pdfQuelle, destination, overwrite: false);
 
         return new SchachtProtocolDistributionResult(
-            ProjectPathResolver.MakeRelative(dest, projektOrdner),
-            fileCreated);
+            ProjectPathResolver.MakeRelative(destination, projektOrdner),
+            FileCreated: true);
+    }
+
+    private static string ResolveUniquePath(string preferredPath)
+    {
+        var directory = Path.GetDirectoryName(preferredPath) ?? string.Empty;
+        var stem = Path.GetFileNameWithoutExtension(preferredPath);
+        var extension = Path.GetExtension(preferredPath);
+        for (var suffix = 1; suffix < 1000; suffix++)
+        {
+            var candidate = Path.Combine(directory, $"{stem}_{suffix:00}{extension}");
+            if (!File.Exists(candidate) && !Directory.Exists(candidate))
+                return candidate;
+        }
+
+        throw new IOException($"Kein freier Dateiname für das Schachtprotokoll gefunden: {preferredPath}");
     }
 }

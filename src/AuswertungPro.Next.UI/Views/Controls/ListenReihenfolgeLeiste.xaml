@@ -1,0 +1,46 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Controls.ListenReihenfolgeLeiste"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+             x:Name="Root">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="Sichtbar"/>
+    </UserControl.Resources>
+    <StackPanel Margin="8,5">
+        <WrapPanel VerticalAlignment="Center">
+            <ToggleButton IsChecked="{Binding IstAktiv, ElementName=Root, Mode=TwoWay}"
+                          Style="{DynamicResource CompactToggleButton}" Margin="0,0,10,0"
+                          ToolTip="Reihenfolge mit der Maus oder einer Zielposition ändern">
+                <StackPanel Orientation="Horizontal">
+                    <ui:FluentIcon Glyph="&#xE8CB;" Margin="0,0,6,0"/>
+                    <TextBlock Text="Reihenfolge ändern"/>
+                </StackPanel>
+            </ToggleButton>
+            <TextBlock Text="Zum Verschieben an der Nr. ziehen" VerticalAlignment="Center"
+                       Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}"/>
+        </WrapPanel>
+        <WrapPanel Margin="0,6,0,0" Visibility="{Binding IstAktiv, ElementName=Root, Converter={StaticResource Sichtbar}}">
+            <TextBlock Text="{Binding AuswahlText, ElementName=Root}" VerticalAlignment="Center"
+                       FontWeight="SemiBold" Margin="0,0,12,0"/>
+            <TextBlock Text="An Position" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <TextBox x:Name="PositionBox" Width="64" VerticalContentAlignment="Center"
+                     KeyDown="Position_KeyDown" AutomationProperties.Name="Neue Position"
+                     ToolTip="Gewünschte Nummer eingeben und Enter drücken"/>
+            <Button Content="Verschieben" Click="Verschieben_Click" Style="{DynamicResource ToolbarButton}"
+                    Margin="6,0,12,0"/>
+            <Button Content="An den Anfang" Click="Anfang_Click" Style="{DynamicResource ToolbarButton}" Margin="0,0,6,0"/>
+            <Button Content="Ans Ende" Click="Ende_Click" Style="{DynamicResource ToolbarButton}" Margin="0,0,12,0"/>
+            <Button Content="Fertig" Click="Fertig_Click" Style="{DynamicResource ToolbarButtonAccent}"/>
+        </WrapPanel>
+        <TextBlock Text="{Binding Hinweis, ElementName=Root}" TextWrapping="Wrap" Margin="0,3,0,0"
+                   Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource TextS}">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Style.Triggers>
+                        <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+    </StackPanel>
+</UserControl>

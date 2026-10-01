@@ -33,18 +33,35 @@ public static class DataGridSearchFilterController
     {
         ArgumentNullException.ThrowIfNull(getSearchText);
 
+        ApplyFilter(
+            view,
+            records,
+            getFilter: () => string.IsNullOrWhiteSpace(getSearchText()) ? null : matches,
+            updateSearchResultInfo,
+            deferRefresh);
+    }
+
+    public static void ApplyFilter<TRecord>(
+        ICollectionView? view,
+        IEnumerable<TRecord> records,
+        Func<Predicate<TRecord>?> getFilter,
+        Action<int> updateSearchResultInfo,
+        Action<Action> deferRefresh)
+    {
+        ArgumentNullException.ThrowIfNull(getFilter);
+
         if (view is null)
             return;
 
         if (view is IEditableCollectionView editableView &&
             (editableView.IsAddingNew || editableView.IsEditingItem))
         {
-            deferRefresh(() => Apply(view, records, getSearchText, matches, updateSearchResultInfo, deferRefresh));
+            deferRefresh(() => ApplyFilter(view, records, getFilter, updateSearchResultInfo, deferRefresh));
             return;
         }
 
-        var searchText = getSearchText();
-        if (string.IsNullOrWhiteSpace(searchText))
+        var filter = getFilter();
+        if (filter is null)
         {
             using (view.DeferRefresh())
                 view.Filter = null;
@@ -53,7 +70,7 @@ public static class DataGridSearchFilterController
         }
 
         using (view.DeferRefresh())
-            view.Filter = obj => obj is TRecord record && matches(record);
+            view.Filter = obj => obj is TRecord record && filter(record);
 
         updateSearchResultInfo(view.Cast<object>().Count());
     }

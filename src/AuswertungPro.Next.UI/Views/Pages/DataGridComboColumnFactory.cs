@@ -45,12 +45,16 @@ public static class DataGridComboColumnFactory
         bool allowFreeText,
         bool bindIsProjectReady,
         DataGridComboColumnMenuCommands? menuCommands = null,
-        bool useSelectedItemWhenNotFreeText = true)
+        bool useSelectedItemWhenNotFreeText = true,
+        BindingBase? itemsBinding = null)
     {
         ArgumentNullException.ThrowIfNull(lostKeyboardFocus);
         ArgumentNullException.ThrowIfNull(selectionChanged);
 
         var displayFactory = CreateDisplayFactory(fieldName);
+        var normAnzeige = new AuswertungPro.Next.UI.DataPage.SiaBegriffAnzeige();
+        if (itemsSourcePath is "SchachtFunktionOptions" or "VersickerungsartOptions")
+            displayFactory.SetBinding(TextBlock.TextProperty, new Binding($"Fields[{fieldName}]") { Converter = normAnzeige });
         var comboFactory = CreateComboFactory(
             fieldName,
             itemsSourcePath,
@@ -63,6 +67,14 @@ public static class DataGridComboColumnFactory
 
         if (menuCommands is not null)
             comboFactory.SetValue(FrameworkElement.ContextMenuProperty, CreateContextMenu(menuCommands));
+        if (itemsBinding is not null)
+            comboFactory.SetBinding(ComboBox.ItemsSourceProperty, itemsBinding);
+        if (itemsSourcePath is "SchachtFunktionOptions" or "VersickerungsartOptions")
+        {
+            var text = new FrameworkElementFactory(typeof(TextBlock));
+            text.SetBinding(TextBlock.TextProperty, new Binding { Converter = normAnzeige });
+            comboFactory.SetValue(ItemsControl.ItemTemplateProperty, new DataTemplate { VisualTree = text });
+        }
 
         return new DataGridTemplateColumn
         {
@@ -77,6 +89,10 @@ public static class DataGridComboColumnFactory
     {
         var displayFactory = new FrameworkElementFactory(typeof(TextBlock));
         displayFactory.SetBinding(TextBlock.TextProperty, new Binding($"Fields[{fieldName}]"));
+        displayFactory.SetBinding(TextBlock.ForegroundProperty, new Binding("Foreground")
+        {
+            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
+        });
         displayFactory.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
         displayFactory.SetBinding(TextBlock.VerticalAlignmentProperty, new Binding("VerticalContentAlignment")
         {
@@ -133,12 +149,24 @@ public static class DataGridComboColumnFactory
         {
             RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
         });
-        if (allowFreeText || !useSelectedItemWhenNotFreeText)
+        if (allowFreeText)
         {
             comboFactory.SetBinding(ComboBox.TextProperty, new Binding($"Fields[{fieldName}]")
             {
                 Mode = BindingMode.TwoWay,
                 UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+            });
+        }
+        else if (!useSelectedItemWhenNotFreeText)
+        {
+            // Feste Liste ohne Freitext (Schachttabelle, Audit A15 23.09.2026): Nur mit Textsuche waehlt die
+            // ComboBox den gespeicherten Wert aus — ohne blieb die Anzeige leer. Die Bindung geht nur ins
+            // Steuerelement: Geschrieben wird allein ueber den Commit-Handler, der Handmarke und Umwandlung
+            // setzt. Vorher leerte die Wahl des leeren Eintrags das Feld still am Datensatz vorbei.
+            comboFactory.SetValue(ComboBox.IsTextSearchEnabledProperty, true);
+            comboFactory.SetBinding(ComboBox.TextProperty, new Binding($"Fields[{fieldName}]")
+            {
+                Mode = BindingMode.OneWay,
             });
         }
         else
@@ -169,8 +197,8 @@ public static class DataGridComboColumnFactory
 
         contextMenu.Items.Add(CreateCommandMenuItem("Liste bearbeiten...", commands.EditCommand, false));
         contextMenu.Items.Add(CreateCommandMenuItem("Vorschau", commands.PreviewCommand, false));
-        contextMenu.Items.Add(CreateCommandMenuItem("Zuruecksetzen auf Standard", commands.ResetCommand, false));
-        contextMenu.Items.Add(CreateCommandMenuItem("Wert hinzufuegen", commands.AddCommand, true));
+        contextMenu.Items.Add(CreateCommandMenuItem("Zurücksetzen auf Standard", commands.ResetCommand, false));
+        contextMenu.Items.Add(CreateCommandMenuItem("Wert hinzufügen", commands.AddCommand, true));
         contextMenu.Items.Add(CreateCommandMenuItem("Wert entfernen", commands.RemoveCommand, true));
         return contextMenu;
     }

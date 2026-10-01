@@ -1,0 +1,105 @@
+<Window x:Class="AuswertungPro.Next.UI.Views.Windows.StrassenUebernahmeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
+        ui:WindowFx.Entrance="True"
+        Title="SewerStudio — Strasse übernehmen"
+        Width="620"
+        Height="560"
+        MinWidth="430" MinHeight="390"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgLightBrush}"
+        Foreground="{DynamicResource TextBrush}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <controls:NovaDialogHeader x:Name="Kopf" Grid.Row="0"/>
+
+        <Border Grid.Row="1"
+                Background="{DynamicResource CardBrush}"
+                CornerRadius="{DynamicResource RadiusS}"
+                Padding="8">
+            <Grid>
+            <ListView x:Name="Liste"
+                      BorderThickness="0"
+                      Background="Transparent">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Width="40">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding Uebernehmen, Mode=TwoWay}"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn x:Name="NummerSpalte" Width="150"
+                                        DisplayMemberBinding="{Binding Nummer}"/>
+                        <GridViewColumn Header="Strasse" Width="180"
+                                        DisplayMemberBinding="{Binding Wert}"/>
+                        <GridViewColumn Header="Herkunft" Width="200"
+                                        DisplayMemberBinding="{Binding Herkunft}"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+
+            <controls:EmptyStateControl IsHitTestVisible="False"
+                                        Icon="&#xE8A5;"
+                                        Title="Keine Vorschläge"
+                                        Message="Es gibt keine übernehmbaren Strassennamen für diese Auswahl.">
+                <controls:EmptyStateControl.Style>
+                    <Style TargetType="controls:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems, ElementName=Liste}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </controls:EmptyStateControl.Style>
+            </controls:EmptyStateControl>
+            </Grid>
+        </Border>
+
+        <!-- Widerspruechliche Nachbarn: sichtbar lassen, aber nicht entscheiden -->
+        <TextBlock x:Name="OffeneText"
+                   Grid.Row="2"
+                   Visibility="Collapsed"
+                   Foreground="{DynamicResource MutedBrush}"
+                   TextWrapping="Wrap"
+                   Margin="0,12,0,0"/>
+
+        <Border Grid.Row="3" Style="{StaticResource DialogButtonBar}" Margin="0,18,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="AlleKnopf"
+                    Content="Alle"
+                    MinWidth="80"
+                    Style="{StaticResource SecondaryButton}"
+                    Margin="0,0,10,0"
+                    Click="Alle_Click"/>
+            <Button x:Name="KeineKnopf"
+                    Content="Keine"
+                    MinWidth="80"
+                    Style="{StaticResource SecondaryButton}"
+                    Margin="0,0,20,0"
+                    Click="Keine_Click"/>
+            <Button Content="Abbrechen"
+                    MinWidth="100"
+                    Style="{StaticResource SecondaryButton}"
+                    Margin="0,0,10,0"
+                    IsCancel="True"/>
+            <Button x:Name="UebernehmenKnopf"
+                    Content="Übernehmen"
+                    MinWidth="120"
+                    Style="{StaticResource PrimaryButton}"
+                    IsDefault="True"
+                    Click="Uebernehmen_Click"/>
+        </StackPanel>
+        </Border>
+    </Grid>
+</Window>

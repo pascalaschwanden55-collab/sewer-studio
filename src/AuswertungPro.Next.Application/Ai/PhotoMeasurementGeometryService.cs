@@ -51,7 +51,7 @@ public static class PhotoMeasurementGeometryService
         SortDeformationPoints(IReadOnlyList<NormalizedPoint> points, double centerX, double centerY)
     {
         if (points.Count < 4)
-            throw new ArgumentException("Es werden genau 4 Punkte benoetigt.", nameof(points));
+            throw new ArgumentException("Es werden genau 4 Punkte benötigt.", nameof(points));
 
         var pool = new List<NormalizedPoint>(points);
 
@@ -346,14 +346,31 @@ public static class PhotoMeasurementGeometryService
             return null;
 
         double polygonAreaPx = ShoelaceAreaPx(points, renderWidth, renderHeight);
-        double pipeRadiusPx = PipeRadiusPx(normalizedDiameter, renderWidth, renderHeight);
-        double reductionPercent = CrossSectionPercent(polygonAreaPx, pipeRadiusPx);
+
+        // Ohne Kalibrierung gibt es KEINEN Prozentwert. Der Querschnitt bezieht
+        // sich auf die Rohrflaeche, und die ist ohne Referenz unbekannt. Frueher
+        // sprang hier PipeRadiusPx mit seinem Zeichen-Standard 0,7 ein - also der
+        // Annahme, das Rohr fuelle 70 % des Bildes - und lieferte einen Wert, der
+        // ueber PhotoMeasurementResultMapper ins Q1-Feld des Protokolls wanderte.
+        // Bei einem Rohr, das tatsaechlich 50 % fuellt, erschien eine echte
+        // 30-Prozent-Verlegung dadurch als 15 %; bei 90 % als 50 %. Aus dieser
+        // Zahl folgt bei BBC/BBA/BBB/BAI die Schadensstufe (Audit 2026-08-17).
+        //
+        // Das Polygon selbst wird weiter geliefert: Der Mensch soll seine
+        // Markierung sehen: nur die erfundene Zahl entfaellt.
+        bool istKalibriert = normalizedDiameter > 0;
+        double? pipeRadiusPx = istKalibriert
+            ? PipeRadiusPx(normalizedDiameter, renderWidth, renderHeight)
+            : null;
+        double? reductionPercent = pipeRadiusPx is { } radius
+            ? CrossSectionPercent(polygonAreaPx, radius)
+            : null;
 
         var geometry = new OverlayGeometry
         {
             ToolType = OverlayToolType.CrossSection,
             Points = points.Select(p => new NormalizedPoint(p.X, p.Y)).ToList(),
-            FillPercent = Math.Round(reductionPercent, 1)
+            FillPercent = reductionPercent is { } prozent ? Math.Round(prozent, 1) : null
         };
 
         return new PhotoMeasurementCrossSectionGeometry(
@@ -389,8 +406,20 @@ public static class PhotoMeasurementGeometryService
         NormalizedPoint end,
         double minNormalizedSize = 0.01)
     {
-        double minX = Math.Min(start.X, end.X), maxX = Math.Max(start.X, end.X);
-        double minY = Math.Min(start.Y, end.Y), maxY = Math.Max(start.Y, end.Y);
+        if (!double.IsFinite(start.X)
+            || !double.IsFinite(start.Y)
+            || !double.IsFinite(end.X)
+            || !double.IsFinite(end.Y))
+        {
+            return null;
+        }
+
+        // Die Maus kann mit Capture ausserhalb des sichtbaren Fotos losgelassen
+        // werden. Die SAM-Box muss trotzdem vollstaendig im Bild bleiben.
+        double minX = Math.Clamp(Math.Min(start.X, end.X), 0.0, 1.0);
+        double maxX = Math.Clamp(Math.Max(start.X, end.X), 0.0, 1.0);
+        double minY = Math.Clamp(Math.Min(start.Y, end.Y), 0.0, 1.0);
+        double maxY = Math.Clamp(Math.Max(start.Y, end.Y), 0.0, 1.0);
         if (maxX - minX < minNormalizedSize || maxY - minY < minNormalizedSize)
             return null;
 
@@ -644,12 +673,17 @@ public sealed record PhotoMeasurementCalibrationGeometry(
     double NormalizedDiameter,
     NormalizedPoint PipeCenter);
 
+/// <summary>
+/// Ergebnis der Querschnittsmessung. <see cref="ReductionPercent"/> und
+/// <see cref="PipeRadiusPx"/> sind null, wenn keine Kalibrierung vorliegt —
+/// dann ist die Verminderung nicht messbar und darf auch nicht geschaetzt werden.
+/// </summary>
 public sealed record PhotoMeasurementCrossSectionGeometry(
     OverlayGeometry Geometry,
-    double ReductionPercent,
+    double? ReductionPercent,
     NormalizedPoint LabelPoint,
     double PolygonAreaPx,
-    double PipeRadiusPx);
+    double? PipeRadiusPx);
 
 public sealed record PhotoMeasurementLineGeometry(
     OverlayGeometry Geometry,

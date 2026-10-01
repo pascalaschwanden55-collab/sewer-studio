@@ -1,0 +1,405 @@
+﻿{
+    "Files":  [
+                  {
+                      "File":  "Start-SewerStudio.ps1",
+                      "Lines":  31,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "3037BB211DBE9C533210327F8805EED3AE97B136FC7CF50B353763658F164B41"
+                  },
+                  {
+                      "File":  "tools\\git-hooks\\Install-PrePushHook.ps1",
+                      "Lines":  22,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "E7DB7D80DACEBF2E18F5AFD880DDFF7C85051BA1D9695D5C6C485879F0F3E06F"
+                  },
+                  {
+                      "File":  ".github\\scripts\\check-dotnet-vulnerable.ps1",
+                      "Lines":  94,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "D9D7E5D65DBEF327A9FC29418D672934DE1F7B0962022C29541EDD901FEFDB4C"
+                  },
+                  {
+                      "File":  ".github\\scripts\\check-coverage.ps1",
+                      "Lines":  133,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "AFD162A22D0BE5D882E376572A4C90D60462BCFEC5ACD6FE518E077DE3B583D9"
+                  },
+                  {
+                      "File":  "tools\\VideoLabelTool\\start.bat",
+                      "Lines":  5,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "2754540F1A928F88B05FBC9D13A3FC778693A43E7B1836F2AC8C0D5BFF04D0BE"
+                  },
+                  {
+                      "File":  "tools\\new-agent-worktree.ps1",
+                      "Lines":  48,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "1242D735A5610F25125BBD806FA6B10C98A8541D2CFABE90377DBE6F59B34DBC"
+                  },
+                  {
+                      "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                      "Lines":  411,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "E4022BE4F6B8FD697BA1F550658925E693293A3FECC8CAF127A360FF0D9F6F59"
+                  },
+                  {
+                      "File":  "tools\\PdfProtocolIngest\\Sidecar_stoppen.bat",
+                      "Lines":  22,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "C37F793290AEBF37592980FDCFF639C2BEA7398F9344403B7BEEA14775F8CC25"
+                  },
+                  {
+                      "File":  "tools\\PdfProtocolIngest\\Sidecar_starten.bat",
+                      "Lines":  15,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "794923DE8F33D9E9D62D7B7C0CE3C7BD5D4F5D48B95540DD5DE85D0750857013"
+                  },
+                  {
+                      "File":  "tools\\PdfProtocolIngest\\Sidecar_Doktor.bat",
+                      "Lines":  25,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "DF82DA85473B72CBFF31D1ED0D0012A5A1FE8C09A51CE8F3181EEB4791D6B189"
+                  },
+                  {
+                      "File":  "tools\\PdfProtocolIngest\\Schritt3_Tuersteher_trainieren.bat",
+                      "Lines":  31,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "B9EA56017A7B9A8EB680DCD887E4F01F5D33FFFE98145C3B22E6AEBD754BFABB"
+                  },
+                  {
+                      "File":  "tools\\PdfProtocolIngest\\Schritt2_Trainingspaket_bauen.bat",
+                      "Lines":  20,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "3EC74749FDC930166058DB7EE8A3D56133B79135376A30033F81BFA2301CB0C4"
+                  },
+                  {
+                      "File":  "tools\\PdfProtocolIngest\\Schritt1_Bilder_schneiden.bat",
+                      "Lines":  19,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "512B86CCDB0DC2EB41EE23CB1288D79229FFAFA9A7FCEDB8BE03EC732FFE5DEA"
+                  },
+                  {
+                      "File":  "tools\\PdfProtocolIngest\\Klassifikator_Autopilot.bat",
+                      "Lines":  25,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "F026641AA7B8880037BC1CE1E40AD63466B11354B4B7770690C68E94A21367ED"
+                  },
+                  {
+                      "File":  "tools\\PdfProtocolIngest\\Autobox_Pilot.bat",
+                      "Lines":  38,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "B395F0F729588E4CA50C1505D80315850F59FAC0D1C572E75CF2424412C4C294"
+                  },
+                  {
+                      "File":  "tools\\PdfProtocolIngest\\Anreichern_Klassifikator_Datensatz.bat",
+                      "Lines":  18,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "C5AD26230AFD257692F534FC0131E04977A0309E62023C96BD9756572A57256C"
+                  },
+                  {
+                      "File":  "tools\\EvalVisibilityReview\\start_visibility_review.ps1",
+                      "Lines":  50,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "876A89A2E820C759709C544F856A1F8738FEAA65F40E58F223F50C91AA192E1C"
+                  },
+                  {
+                      "File":  "tools\\EvalVisibilityReview\\start_osd_protokoll_qa.ps1",
+                      "Lines":  22,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "ABE2DF6DA3198A0F1C74F97EEFE58833736F0EFD9252FABD6A1F9D91ED72C04C"
+                  },
+                  {
+                      "File":  "tools\\EvalVisibilityReview\\start_osd_layout_review.ps1",
+                      "Lines":  19,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "F3A581FF0E1090AC7647C186628E0442461C7A3A878C837DDFCF8F932C5696C6"
+                  },
+                  {
+                      "File":  "tools\\EvalVisibilityReview\\start_eval_metadata_review.ps1",
+                      "Lines":  47,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "57A3EE11BE477747F728F5A28E1D6D4B6D1A1FA8632E957173D24245C4E17FA8"
+                  },
+                  {
+                      "File":  "tools\\EvalVisibilityReview\\start_detect_release_holdout_review.ps1",
+                      "Lines":  57,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "49760DF9C836475EB0E728482984DD1B5FFC5F3ABF61D991FD78408050530B83"
+                  },
+                  {
+                      "File":  "tools\\EvalVisibilityReview\\start_detect_gold_error_review.ps1",
+                      "Lines":  28,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "5E8C09742610B174CD1FCC4EA5357A8D39C08727E4FC40E236A869D44A50DB1C"
+                  },
+                  {
+                      "File":  "tools\\EvalVisibilityReview\\start_bcc_pdf_precision_review.ps1",
+                      "Lines":  34,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "26DBC8B88A63C067E414D9B7E1D8F294BCDDC47066A8D3A48FE80C2157605E3B"
+                  },
+                  {
+                      "File":  "tools\\EvalVisibilityReview\\NEGATIVPRUEFUNG-STARTEN.cmd",
+                      "Lines":  47,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "27429C86B00870C5AA0D3D77D2A6FE43DBBE8EDF9519989AFB53F06F6B57BF0C"
+                  },
+                  {
+                      "File":  "tools\\EvalVisibilityReview\\ANSCHLUSS-NEGATIVPRUEFUNG-STARTEN.cmd",
+                      "Lines":  47,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "9961D015EC0CF846753E9AB1180386A8F818C8680F35B40F588C07EE73E60DB3"
+                  },
+                  {
+                      "File":  "tools\\Publish-SewerStudio.ps1",
+                      "Lines":  279,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "A717195CA9CBE03243BB2EB38E85EC6089FBFAEA58CDEF3D26738BA9FB853BB4"
+                  },
+                  {
+                      "File":  "scripts\\ki-release-gate.ps1",
+                      "Lines":  137,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "A13C8244AF64A245BCB3B4DCB6238EC36F349D8AEDE4738DB5C851DC21AE1578"
+                  },
+                  {
+                      "File":  "integrations\\qgis\\install-sewerstudio-bridge.ps1",
+                      "Lines":  97,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "22E3CF1626BB1C5EE7D8038938CA5480EDC47BB74E6CCF5C7B6DA04C0872390C"
+                  },
+                  {
+                      "File":  "sidecar\\build_engine.ps1",
+                      "Lines":  403,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "BAD2BB2AAF8352FDA9AB80A85C318B5C6BBF8841756AADE8BD40AA521E41E15A"
+                  },
+                  {
+                      "File":  "sidecar\\setup.ps1",
+                      "Lines":  137,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "90FFACC1B0FAFA4C7629B489432B17BA5DF1BF5290A282E887B64053D391AC01"
+                  },
+                  {
+                      "File":  "sidecar\\start_sidecar.ps1",
+                      "Lines":  135,
+                      "ParseErrors":  [
+
+                                      ],
+                      "Sha256":  "B2552574F6A0A1B4FE49F27FF8F5B589A77BC3A6BE2916CE87CEF112F5012C21"
+                  }
+              ],
+    "Functions":  [
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "Stoppe",
+                          "Line":  57,
+                          "EndLine":  61
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "Melde",
+                          "Line":  63,
+                          "EndLine":  63
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "Gut",
+                          "Line":  64,
+                          "EndLine":  64
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "Warne",
+                          "Line":  65,
+                          "EndLine":  65
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "IstUnterhalb",
+                          "Line":  67,
+                          "EndLine":  72
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "PruefeElementsAbgesteckt",
+                          "Line":  74,
+                          "EndLine":  87
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "EchteEinstellungen",
+                          "Line":  89,
+                          "EndLine":  103
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "ProjektStamm",
+                          "Line":  106,
+                          "EndLine":  111
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "Spiegelkopie",
+                          "Line":  113,
+                          "EndLine":  118
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "Bestandsliste",
+                          "Line":  120,
+                          "EndLine":  139
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "BelegOrdner",
+                          "Line":  141,
+                          "EndLine":  141
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "SchreibeBestand",
+                          "Line":  143,
+                          "EndLine":  155
+                      },
+                      {
+                          "File":  "tools\\Absturzprobe\\Absturzprobe.ps1",
+                          "Name":  "VergleicheBestaende",
+                          "Line":  157,
+                          "EndLine":  191
+                      },
+                      {
+                          "File":  "tools\\Publish-SewerStudio.ps1",
+                          "Name":  "Invoke-Native",
+                          "Line":  74,
+                          "EndLine":  86
+                      },
+                      {
+                          "File":  "tools\\Publish-SewerStudio.ps1",
+                          "Name":  "Copy-RequiredFile",
+                          "Line":  88,
+                          "EndLine":  100
+                      },
+                      {
+                          "File":  "tools\\Publish-SewerStudio.ps1",
+                          "Name":  "Write-Utf8NoBom",
+                          "Line":  102,
+                          "EndLine":  110
+                      },
+                      {
+                          "File":  "integrations\\qgis\\install-sewerstudio-bridge.ps1",
+                          "Name":  "Get-QgisPluginRoots",
+                          "Line":  16,
+                          "EndLine":  46
+                      },
+                      {
+                          "File":  "sidecar\\build_engine.ps1",
+                          "Name":  "Invoke-Native",
+                          "Line":  33,
+                          "EndLine":  50
+                      },
+                      {
+                          "File":  "sidecar\\build_engine.ps1",
+                          "Name":  "Get-CommandOutput",
+                          "Line":  52,
+                          "EndLine":  68
+                      },
+                      {
+                          "File":  "sidecar\\build_engine.ps1",
+                          "Name":  "Write-TempPythonScript",
+                          "Line":  70,
+                          "EndLine":  82
+                      },
+                      {
+                          "File":  "sidecar\\build_engine.ps1",
+                          "Name":  "Invoke-PythonBlock",
+                          "Line":  84,
+                          "EndLine":  100
+                      },
+                      {
+                          "File":  "sidecar\\build_engine.ps1",
+                          "Name":  "Resolve-TrtExec",
+                          "Line":  102,
+                          "EndLine":  118
+                      },
+                      {
+                          "File":  "sidecar\\build_engine.ps1",
+                          "Name":  "Get-Sha256",
+                          "Line":  120,
+                          "EndLine":  128
+                      },
+                      {
+                          "File":  "sidecar\\build_engine.ps1",
+                          "Name":  "Get-PythonInfo",
+                          "Line":  130,
+                          "EndLine":  186
+                      },
+                      {
+                          "File":  "sidecar\\setup.ps1",
+                          "Name":  "Invoke-Native",
+                          "Line":  12,
+                          "EndLine":  24
+                      }
+                  ],
+    "ParserVersion":  "5.1.26100.9278"
+}

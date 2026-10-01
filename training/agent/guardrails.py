@@ -8,9 +8,10 @@ Bewusst nur Standardbibliothek -> ohne LLM-SDK importierbar und damit einfach te
 from __future__ import annotations
 
 import shutil
+import socket
 import subprocess
+import urllib.error
 import urllib.request
-from pathlib import Path
 from typing import Optional
 
 from config import (
@@ -28,13 +29,19 @@ class GuardrailViolation(Exception):
 def sidecar_running(timeout: float = 1.5) -> bool:
     """True, wenn der Sidecar erreichbar ist (== Prozess laeuft == haelt evtl. VRAM).
 
-    Konservativ: jeder Verbindungsfehler gilt als 'nicht erreichbar' -> False.
+    Auch ein HTTP-Fehler oder ein offener Sidecar-Port gilt als erreichbar.
     """
     try:
         with urllib.request.urlopen(SIDECAR_HEALTH_URL, timeout=timeout) as resp:
             return 200 <= resp.status < 300
+    except urllib.error.HTTPError:
+        return True
     except Exception:
-        return False
+        try:
+            with socket.create_connection(("127.0.0.1", 8100), timeout=timeout):
+                return True
+        except OSError:
+            return False
 
 
 def gpu_free_vram_mb() -> Optional[int]:
@@ -84,22 +91,4 @@ def assert_eval_split_allowed(split: str) -> None:
         raise GuardrailViolation(
             f"Split '{split}' ist versiegelt (Abnahme/Gold). Der Agent darf ausschliesslich "
             "auf Dev-Val messen. Die Abnahme laeuft manuell je Release-Kandidat."
-        )
-
-
-# ── Pfad-Sandbox (Schreibzugriffe eingrenzen) ────────────────────────────────
-def path_is_within(child: Path, parent: Path) -> bool:
-    """True, wenn 'child' innerhalb von 'parent' liegt (verhindert Streu-Schreibzugriffe)."""
-    try:
-        Path(child).resolve().relative_to(Path(parent).resolve())
-        return True
-    except (ValueError, OSError):
-        return False
-
-
-def assert_write_allowed(target: Path, allowed_root: Path) -> None:
-    """Schreibziele muessen innerhalb des erlaubten Wurzelordners (z.B. reports/) liegen."""
-    if not path_is_within(target, allowed_root):
-        raise GuardrailViolation(
-            f"Schreibziel '{target}' liegt ausserhalb des erlaubten Ordners '{allowed_root}'."
         )

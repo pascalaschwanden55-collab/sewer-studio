@@ -52,6 +52,56 @@ public sealed class TrainingSampleMergeTests
     }
 
     [Fact]
+    public void ApplyUpdatableFields_uebernimmt_externe_Referenz_ohne_sie_bei_Teilupdate_zu_loeschen()
+    {
+        var target = new TrainingSample
+        {
+            SampleId = "x",
+            SourceReferenceCode = "BABBC",
+            SourceReferenceDescription = "Alter Operateurbefund",
+        };
+
+        TrainingSampleMerge.ApplyUpdatableFields(
+            target,
+            new TrainingSample { SampleId = "x" });
+
+        Assert.Equal("BABBC", target.SourceReferenceCode);
+        Assert.Equal("Alter Operateurbefund", target.SourceReferenceDescription);
+
+        TrainingSampleMerge.ApplyUpdatableFields(
+            target,
+            new TrainingSample
+            {
+                SampleId = "x",
+                SourceReferenceCode = "BAFBE",
+                SourceReferenceDescription = "Korrigierte PDF-Referenz",
+            });
+
+        Assert.Equal("BAFBE", target.SourceReferenceCode);
+        Assert.Equal("Korrigierte PDF-Referenz", target.SourceReferenceDescription);
+    }
+
+    [Fact]
+    public void ApplyUpdatableFields_uebernimmt_Exportzeitpunkt_ohne_bestehenden_zu_loeschen()
+    {
+        var existingExportedUtc = new DateTime(2026, 7, 20, 19, 10, 2, DateTimeKind.Utc);
+        var newExportedUtc = new DateTime(2026, 7, 28, 14, 15, 30, DateTimeKind.Utc);
+        var target = new TrainingSample { SampleId = "x", ExportedUtc = existingExportedUtc };
+
+        TrainingSampleMerge.ApplyUpdatableFields(
+            target,
+            new TrainingSample { SampleId = "x", ExportedUtc = null });
+
+        Assert.Equal(existingExportedUtc, target.ExportedUtc);
+
+        TrainingSampleMerge.ApplyUpdatableFields(
+            target,
+            new TrainingSample { SampleId = "x", ExportedUtc = newExportedUtc });
+
+        Assert.Equal(newExportedUtc, target.ExportedUtc);
+    }
+
+    [Fact]
     public void ApplyUpdatableFields_UebernimmtGoldFelder()
     {
         var target = new TrainingSample { SampleId = "s1", Code = "BCA" };

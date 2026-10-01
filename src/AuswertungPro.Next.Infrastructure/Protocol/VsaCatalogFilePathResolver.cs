@@ -83,69 +83,57 @@ public sealed class VsaCatalogFilePathResolver : IVsaCatalogPathResolver
     private static string? ResolveSectionCatalogPath(
         VsaCatalogPathRequest request,
         Func<string, string?> getEnvironmentVariable)
-    {
-        var configured = ResolveConfiguredCatalog(
+        => ResolveCatalogPath(
+            request,
             request.SectionCatalogPath,
-            Vsa2019CatalogResolver.SectionCatalogFileName);
-        if (!string.IsNullOrWhiteSpace(configured))
-            return configured;
-
-        var environmentFile = getEnvironmentVariable(
-            VsaCatalogPathNames.SectionCatalogPathEnvironmentVariable);
-        if (IsCanonicalCatalog(environmentFile, Vsa2019CatalogResolver.SectionCatalogFileName))
-            return environmentFile;
-
-        var environmentRoot = getEnvironmentVariable(
-            VsaCatalogPathNames.SectionCatalogRootEnvironmentVariable);
-        var fromEnvironmentRoot = FindCatalog(
-            environmentRoot,
-            Vsa2019CatalogResolver.SectionCatalogFileName);
-        if (!string.IsNullOrWhiteSpace(fromEnvironmentRoot))
-            return fromEnvironmentRoot;
-
-        var fromWinCan = FindCatalog(
-            request.WinCanCatalogDirectory,
-            Vsa2019CatalogResolver.SectionCatalogFileName);
-        if (!string.IsNullOrWhiteSpace(fromWinCan))
-            return fromWinCan;
-
-        return FindFirstCatalog(
-            GetDefaultCatalogRoots(request.LastProjectPath),
-            Vsa2019CatalogResolver.SectionCatalogFileName);
-    }
+            Vsa2019CatalogResolver.SectionCatalogFileName,
+            VsaCatalogPathNames.SectionCatalogPathEnvironmentVariable,
+            VsaCatalogPathNames.SectionCatalogRootEnvironmentVariable,
+            getEnvironmentVariable);
 
     private static string? ResolveNodeCatalogPath(
         VsaCatalogPathRequest request,
         Func<string, string?> getEnvironmentVariable)
-    {
-        var configured = ResolveConfiguredCatalog(
+        => ResolveCatalogPath(
+            request,
             request.NodeCatalogPath,
-            Vsa2019CatalogResolver.NodeCatalogFileName);
+            Vsa2019CatalogResolver.NodeCatalogFileName,
+            VsaCatalogPathNames.NodeCatalogPathEnvironmentVariable,
+            VsaCatalogPathNames.NodeCatalogRootEnvironmentVariable,
+            getEnvironmentVariable);
+
+    /// <summary>
+    /// Gemeinsame Suchfolge fuer Section- und Node-Katalog: konfigurierter Pfad &gt;
+    /// Umgebungsdatei &gt; Umgebungsordner &gt; WinCan-Ordner &gt; Standard-Katalogwurzeln.
+    /// Section und Node unterscheiden sich nur im konfigurierten Pfad, im Dateinamen und
+    /// in den Umgebungsvariablennamen.
+    /// </summary>
+    private static string? ResolveCatalogPath(
+        VsaCatalogPathRequest request,
+        string? configuredPath,
+        string fileName,
+        string filePathEnvironmentVariable,
+        string rootEnvironmentVariable,
+        Func<string, string?> getEnvironmentVariable)
+    {
+        var configured = ResolveConfiguredCatalog(configuredPath, fileName);
         if (!string.IsNullOrWhiteSpace(configured))
             return configured;
 
-        var environmentFile = getEnvironmentVariable(
-            VsaCatalogPathNames.NodeCatalogPathEnvironmentVariable);
-        if (IsCanonicalCatalog(environmentFile, Vsa2019CatalogResolver.NodeCatalogFileName))
+        var environmentFile = getEnvironmentVariable(filePathEnvironmentVariable);
+        if (IsCanonicalCatalog(environmentFile, fileName))
             return environmentFile;
 
-        var environmentRoot = getEnvironmentVariable(
-            VsaCatalogPathNames.NodeCatalogRootEnvironmentVariable);
-        var fromEnvironmentRoot = FindCatalog(
-            environmentRoot,
-            Vsa2019CatalogResolver.NodeCatalogFileName);
+        var environmentRoot = getEnvironmentVariable(rootEnvironmentVariable);
+        var fromEnvironmentRoot = FindCatalog(environmentRoot, fileName);
         if (!string.IsNullOrWhiteSpace(fromEnvironmentRoot))
             return fromEnvironmentRoot;
 
-        var fromWinCan = FindCatalog(
-            request.WinCanCatalogDirectory,
-            Vsa2019CatalogResolver.NodeCatalogFileName);
+        var fromWinCan = FindCatalog(request.WinCanCatalogDirectory, fileName);
         if (!string.IsNullOrWhiteSpace(fromWinCan))
             return fromWinCan;
 
-        return FindFirstCatalog(
-            GetDefaultCatalogRoots(request.LastProjectPath),
-            Vsa2019CatalogResolver.NodeCatalogFileName);
+        return FindFirstCatalog(GetDefaultCatalogRoots(request.LastProjectPath), fileName);
     }
 
     private static string? ResolveConfiguredCatalog(string? configuredPath, string fileName)

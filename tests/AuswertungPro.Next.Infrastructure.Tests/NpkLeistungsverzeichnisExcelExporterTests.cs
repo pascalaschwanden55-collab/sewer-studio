@@ -113,11 +113,196 @@ public sealed class NpkLeistungsverzeichnisExcelExporterTests
         }
     }
 
+    [Fact]
+    public void Beispiel_LV_behaelt_Positionen_Formeln_Summen_und_Preistrennung()
+    {
+        // Kuenftige Aenderungen muessen den fachlichen Inhalt beider Reiter erhalten.
+        // Ein XLSX-Dateihash waere wegen ZIP-Metadaten kein verlaesslicher Vergleich.
+        var positions = new[]
+        {
+            Fixed("612.110", 2.5m, 100m, 250m) with { Chapter = "600", NpkCodeD16 = "612.110" },
+            Fixed("711.100", 3m, 40m, 120m) with { Chapter = "700", Dn = null }
+        };
+        var bytes = NpkLeistungsverzeichnisExcelExporter.BuildWorkbook(
+            positions, projectName: "Musterprojekt", excludedPauschaleTotal: 50m,
+            excludedPauschaleCount: 1);
+
+        using var wb = Open(bytes);
+        foreach (var sheetName in new[] { "Zum Ausfüllen", "Kalkulation (intern)" })
+        {
+            var ws = wb.Worksheet(sheetName);
+            Assert.Contains("Musterprojekt", ws.Cell(4, 1).GetString());
+            Assert.Equal("EP CHF", ws.Cell(7, ColEp).GetString());
+            Assert.Equal("Total CHF", ws.Cell(7, ColTotal).GetString());
+
+            var first = PositionRow(ws, "612.110");
+            var second = PositionRow(ws, "711.100");
+            Assert.Equal(XLDataType.Text, first.Cell(ColNpk).DataType);
+            Assert.Equal("612.110", first.Cell(2).GetString());
+            Assert.Equal(2.5d, first.Cell(ColMenge).GetDouble());
+            Assert.Equal(3d, second.Cell(ColMenge).GetDouble());
+            Assert.Equal("#,##0.00", first.Cell(ColTotal).Style.NumberFormat.Format);
+            Assert.Equal($"E{first.RowNumber()}*G{first.RowNumber()}",
+                first.Cell(ColTotal).FormulaA1.TrimStart('='));
+            Assert.Equal($"E{second.RowNumber()}*G{second.RowNumber()}",
+                second.Cell(ColTotal).FormulaA1.TrimStart('='));
+
+            var subtotalRows = ws.RowsUsed().Where(r =>
+                r.Cell(3).GetString().StartsWith("Zwischentotal", System.StringComparison.Ordinal))
+                .ToArray();
+            Assert.Equal(2, subtotalRows.Length);
+            Assert.All(subtotalRows, r => Assert.True(r.Cell(ColTotal).HasFormula));
+
+            var grand = ws.RowsUsed().Single(r => r.Cell(3).GetString() == "TOTAL (exkl. MwSt.)");
+            var vat = ws.RowsUsed().Single(r => r.Cell(3).GetString().StartsWith("MwSt", System.StringComparison.Ordinal));
+            var includingVat = ws.RowsUsed().Single(r => r.Cell(3).GetString() == "TOTAL (inkl. MwSt.)");
+            var excluded = ws.RowsUsed().Single(r => r.Cell(3).GetString().StartsWith("Nicht enthaltene Pauschalkosten", System.StringComparison.Ordinal));
+            Assert.Contains("1 Haltung(en)", excluded.Cell(3).GetString());
+            Assert.Equal(50d, excluded.Cell(ColTotal).GetDouble());
+            Assert.Equal($"H{grand.RowNumber()}*0.081", vat.Cell(ColTotal).FormulaA1.TrimStart('='));
+            Assert.Equal($"H{grand.RowNumber()}+H{vat.RowNumber()}", includingVat.Cell(ColTotal).FormulaA1.TrimStart('='));
+            Assert.DoesNotContain($"H{excluded.RowNumber()}", grand.Cell(ColTotal).FormulaA1);
+
+            if (sheetName == "Zum Ausfüllen")
+            {
+                Assert.True(first.Cell(ColEp).IsEmpty());
+                Assert.True(second.Cell(ColEp).IsEmpty());
+                Assert.Equal(XLColor.FromHtml("#FEF9C3"), first.Cell(ColEp).Style.Fill.BackgroundColor);
+            }
+            else
+            {
+                Assert.Equal(100d, first.Cell(ColEp).GetDouble());
+                Assert.Equal(40d, second.Cell(ColEp).GetDouble());
+                wb.RecalculateAllFormulas();
+                Assert.Equal(250d, subtotalRows[0].Cell(ColTotal).GetDouble(), 2);
+                Assert.Equal(120d, subtotalRows[1].Cell(ColTotal).GetDouble(), 2);
+                Assert.Equal(370d, grand.Cell(ColTotal).GetDouble(), 2);
+                Assert.Equal(29.97d, vat.Cell(ColTotal).GetDouble(), 2);
+                Assert.Equal(399.97d, includingVat.Cell(ColTotal).GetDouble(), 2);
+            }
+        }
+    }
+
+    [Fact]
+    public void Leeres_LV_behaelt_spaltenkoepfe_ohne_positionszeilen()
+    {
+        var bytes = NpkLeistungsverzeichnisExcelExporter.BuildWorkbook(
+            System.Array.Empty<AggregatedPosition>());
+
+        using var wb = Open(bytes);
+        wb.RecalculateAllFormulas();
+        foreach (var sheetName in new[] { "Zum Ausfüllen", "Kalkulation (intern)" })
+        {
+            var ws = wb.Worksheet(sheetName);
+            var headers = Enumerable.Range(1, 9)
+                .Select(column => ws.Cell(7, column).GetString());
+
+            Assert.Equal(
+                new[] { "NPK", "NPK D/16", "Position", "DN", "Menge", "Einheit", "EP CHF", "Total CHF", "Haltungen" },
+                headers);
+            Assert.DoesNotContain(ws.RowsUsed().Where(row => row.RowNumber() > 7),
+                row => !row.Cell(ColNpk).IsEmpty());
+            var grandTotal = ws.RowsUsed().Single(row =>
+                row.Cell(3).GetString() == "TOTAL (exkl. MwSt.)");
+            Assert.Equal(0d, grandTotal.Cell(ColTotal).GetDouble(), 2);
+        }
+    }
+
+    [Fact]
+    public void Variabler_Preis_bleibt_nur_in_der_internen_Kalkulation()
+    {
+        var variable = Fixed("612.120", 5m, 100m, 789.45m) with
+        {
+            IsVariablePrice = true,
+            UnitPrice = null
+        };
+        var bytes = NpkLeistungsverzeichnisExcelExporter.BuildWorkbook(
+            new[] { variable }, excludedPauschaleTotal: 22.20m);
+
+        using var wb = Open(bytes);
+        var offer = wb.Worksheet("Zum Ausfüllen");
+        var internalSheet = wb.Worksheet("Kalkulation (intern)");
+        var offerPosition = PositionRow(offer, "612.120");
+        var internalPosition = PositionRow(internalSheet, "612.120");
+
+        Assert.Equal(5d, offerPosition.Cell(ColMenge).GetDouble());
+        Assert.Equal("m", offerPosition.Cell(6).GetString());
+        Assert.Equal("Position 612.120", offerPosition.Cell(3).GetString());
+        Assert.True(offerPosition.Cell(ColEp).IsEmpty());
+        Assert.True(offerPosition.Cell(ColTotal).HasFormula);
+        Assert.True(internalPosition.Cell(ColEp).IsEmpty());
+        Assert.False(internalPosition.Cell(ColTotal).HasFormula);
+        Assert.Equal(789.45d, internalPosition.Cell(ColTotal).GetDouble(), 2);
+
+        wb.RecalculateAllFormulas();
+        var offerTotal = offer.RowsUsed().Single(r => r.Cell(3).GetString() == "TOTAL (exkl. MwSt.)");
+        var internalTotal = internalSheet.RowsUsed().Single(r => r.Cell(3).GetString() == "TOTAL (exkl. MwSt.)");
+        Assert.Equal(0d, offerTotal.Cell(ColTotal).GetDouble(), 2);
+        Assert.Equal(789.45d, internalTotal.Cell(ColTotal).GetDouble(), 2);
+        Assert.Contains(offer.RowsUsed(), r =>
+            r.Cell(3).GetString().StartsWith("Nicht enthaltene Pauschalkosten", System.StringComparison.Ordinal)
+            && r.Cell(ColTotal).GetDouble() == 22.20d);
+        Assert.Contains(internalSheet.RowsUsed(), r =>
+            r.Cell(3).GetString().StartsWith("Nicht enthaltene Pauschalkosten", System.StringComparison.Ordinal)
+            && r.Cell(ColTotal).GetDouble() == 22.20d);
+    }
+
     private static IXLRangeRow PositionRow(IXLWorksheet ws, string npk)
     {
         var row = ws.RangeUsed()?.RowsUsed()
             .FirstOrDefault(r => r.Cell(ColNpk).GetString().Contains(npk));
         Assert.NotNull(row);
         return row!;
+    }
+
+    /// <summary>
+    /// Optikanalyse 28.09.2026, Aufgabe 15: mit injizierter <see cref="IBerichtsMarke"/> gilt
+    /// deren Pfad statt des fest eingetragenen Standardpfads.
+    /// </summary>
+    [Fact]
+    public void ResolveLogoPath_verwendet_die_injizierte_IBerichtsMarke()
+    {
+        var service = new NpkLeistungsverzeichnisExcelExportService(
+            new StubBerichtsMarke(@"D:\Firmenlogos\aktuelles-logo.png"));
+
+        Assert.Equal(@"D:\Firmenlogos\aktuelles-logo.png", service.ResolveLogoPath(null));
+    }
+
+    [Fact]
+    public void ResolveLogoPath_bevorzugt_einen_ausdruecklich_uebergebenen_und_vorhandenen_Pfad()
+    {
+        var eigenerPfad = Path.GetTempFileName();
+        try
+        {
+            var service = new NpkLeistungsverzeichnisExcelExportService(
+                new StubBerichtsMarke(@"D:\Firmenlogos\aktuelles-logo.png"));
+
+            Assert.Equal(eigenerPfad, service.ResolveLogoPath(eigenerPfad));
+        }
+        finally
+        {
+            File.Delete(eigenerPfad);
+        }
+    }
+
+    [Fact]
+    public void ResolveLogoPath_ohne_Injektion_prueft_weiterhin_den_festen_Standardpfad()
+    {
+        // Ohne injizierte IBerichtsMarke gilt weiterhin der alte, fest berechnete Pfad neben
+        // dem Programm. Im Testlauf liegt dort keine Bilddatei (kein Export_Vorlage-Asset in
+        // diesem Testprojekt) - genau das ist der geforderte saubere Rueckfall: null, kein
+        // erfundener Pfad, kein Absturz.
+        var service = new NpkLeistungsverzeichnisExcelExportService();
+
+        var appLogo = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+        var erwartet = File.Exists(appLogo) ? appLogo : null;
+
+        Assert.Equal(erwartet, service.ResolveLogoPath(null));
+    }
+
+    private sealed class StubBerichtsMarke : AuswertungPro.Next.Application.Reports.IBerichtsMarke
+    {
+        public StubBerichtsMarke(string? logoPfad) => LogoPfad = logoPfad;
+        public string? LogoPfad { get; }
     }
 }

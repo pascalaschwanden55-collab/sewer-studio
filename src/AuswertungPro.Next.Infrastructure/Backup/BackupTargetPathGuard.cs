@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 
 namespace AuswertungPro.Next.Infrastructure.Backup;
 
@@ -33,8 +34,8 @@ internal static class BackupTargetPathGuard
             var parent = Path.GetDirectoryName(current);
             if (string.IsNullOrWhiteSpace(parent))
             {
-                throw new InvalidDataException(
-                    $"Zielroot konnte nicht bis zum Laufwerks- oder Freigabe-Root geprueft werden: {root}");
+                throw BackupTargetBoundary.Fail(
+                    $"Zielroot konnte nicht bis zum Laufwerks- oder Freigabe-Root geprüft werden: {root}");
             }
 
             current = Normalize(parent);
@@ -45,7 +46,7 @@ internal static class BackupTargetPathGuard
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
         if (Path.IsPathRooted(relativePath))
-            throw new InvalidDataException($"Zielpfad muss relativ sein: {relativePath}");
+            throw BackupTargetBoundary.Fail($"Zielpfad muss relativ sein: {relativePath}");
 
         var root = Normalize(targetRoot);
         var candidate = Normalize(Path.Combine(root, relativePath));
@@ -66,7 +67,7 @@ internal static class BackupTargetPathGuard
         var candidate = Normalize(targetPath);
         if (!IsSameOrInside(root, candidate))
         {
-            throw new InvalidDataException(
+            throw BackupTargetBoundary.Fail(
                 $"Zielpfad liegt ausserhalb des Sicherungsroots: {candidate}");
         }
 
@@ -78,30 +79,48 @@ internal static class BackupTargetPathGuard
             var parent = Path.GetDirectoryName(current);
             if (string.IsNullOrWhiteSpace(parent))
             {
-                throw new InvalidDataException(
-                    $"Zielpfad konnte nicht bis zum Sicherungsroot geprueft werden: {candidate}");
+                throw BackupTargetBoundary.Fail(
+                    $"Zielpfad konnte nicht bis zum Sicherungsroot geprüft werden: {candidate}");
             }
 
             current = Normalize(parent);
             if (!IsSameOrInside(root, current))
             {
-                throw new InvalidDataException(
-                    $"Zielpfad verlaesst den Sicherungsroot: {candidate}");
+                throw BackupTargetBoundary.Fail(
+                    $"Zielpfad verlässt den Sicherungsroot: {candidate}");
             }
         }
     }
 
-    public static void EnsureTreeIsSafe(string targetRoot)
+    /// <summary>
+    /// Prueft den ganzen Zielbaum. Bei einem grossen Ziel dauert das lange
+    /// (Buerglen 23.09.2026: 274'334 Dateien, ein Durchlauf ueber zehn Minuten),
+    /// deshalb sind Abbruch und Lebenszeichen additiv nachruestbar.
+    /// </summary>
+    /// <param name="ct">
+    /// Abbruch. Ohne ihn wirkte "Abbrechen" waehrend dieser Pruefung nicht und das
+    /// Laufjournal blieb offen stehen.
+    /// </param>
+    /// <param name="beiEintrag">
+    /// Meldet die Zahl der bisher geprueften Eintraege. Ohne dieses Lebenszeichen
+    /// steht der Balken still und ein laufender Abschluss sieht aus wie ein Haenger.
+    /// </param>
+    public static void EnsureTreeIsSafe(
+        string targetRoot,
+        CancellationToken ct = default,
+        Action<int>? beiEintrag = null)
     {
         var root = Normalize(targetRoot);
         EnsureRootIsSafe(root);
         if (!Directory.Exists(root))
             return;
 
+        var geprueft = 0;
         var stack = new Stack<string>();
         stack.Push(root);
         while (stack.Count > 0)
         {
+            ct.ThrowIfCancellationRequested();
             var current = stack.Pop();
             string[] entries;
             try
@@ -113,8 +132,8 @@ internal static class BackupTargetPathGuard
                                        or PathTooLongException
                                        or NotSupportedException)
             {
-                throw new InvalidDataException(
-                    $"Zielordner konnte nicht sicher geprueft werden: {current}",
+                throw BackupTargetBoundary.Fail(
+                    $"Zielordner konnte nicht sicher geprüft werden: {current}",
                     ex);
             }
 
@@ -127,9 +146,20 @@ internal static class BackupTargetPathGuard
                 {
                     stack.Push(entry);
                 }
+
+                if (++geprueft % MeldeJeEintraege == 0)
+                    beiEintrag?.Invoke(geprueft);
             }
         }
+
+        beiEintrag?.Invoke(geprueft);
     }
+
+    /// <summary>
+    /// Wie oft die Baumpruefung ein Lebenszeichen gibt. Haeufig genug, dass der
+    /// Balken sichtbar laeuft, selten genug, dass die Oberflaeche nicht flutet.
+    /// </summary>
+    private const int MeldeJeEintraege = 2000;
 
     private static void EnsureEntryIsNotReparsePoint(
         string path,
@@ -145,16 +175,16 @@ internal static class BackupTargetPathGuard
                                    or PathTooLongException
                                    or NotSupportedException)
         {
-            throw new InvalidDataException(
-                $"Zielpfad konnte nicht sicher geprueft werden: {path}",
+            throw BackupTargetBoundary.Fail(
+                $"Zielpfad konnte nicht sicher geprüft werden: {path}",
                 ex);
         }
 
         if (attributes is not null
             && (attributes.Value & FileAttributes.ReparsePoint) != 0)
         {
-            throw new InvalidDataException(
-                $"Verknuepfung im Sicherungs-Zielpfad wurde blockiert: {path}");
+            throw BackupTargetBoundary.Fail(
+                $"Verknüpfung im Sicherungs-Zielpfad wurde blockiert: {path}");
         }
     }
 
@@ -196,7 +226,7 @@ internal static class BackupTargetPathGuard
     {
         var pathRoot = Path.GetPathRoot(path);
         if (string.IsNullOrWhiteSpace(pathRoot))
-            throw new InvalidDataException($"Zielpfad besitzt keinen Laufwerks- oder Freigabe-Root: {path}");
+            throw BackupTargetBoundary.Fail($"Zielpfad besitzt keinen Laufwerks- oder Freigabe-Root: {path}");
         return Normalize(pathRoot);
     }
 

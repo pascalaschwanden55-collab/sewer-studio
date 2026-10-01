@@ -286,6 +286,223 @@ public sealed class TrainingSamplesStorePersistenceTests
         });
     }
 
+    [Fact]
+    public async Task TryAddNew_erkennt_legacy_Signatur_mit_gleicher_Box_als_Dublette()
+    {
+        await WithTempStore(async _ =>
+        {
+            var legacy = Sample(
+                "wb_legacy",
+                TrainingSample.BuildCanonicalSignature("H-TEST", "BAB", 1.0, 1.0));
+            SetBox(legacy, 0.5, 0.5, 0.2, 0.2);
+            await TrainingSamplesStore.SaveAsync([legacy]);
+
+            var duplicate = Sample(
+                "wb_neu",
+                TrainingSample.BuildCanonicalSignature(
+                    "H-TEST", "BAB", 1.0, 1.0, 0.5, 0.5, 0.2, 0.2));
+            SetBox(duplicate, 0.5, 0.5, 0.2, 0.2);
+
+            Assert.False(await TrainingSamplesStore.Current.TryAddNewAsync(duplicate));
+            Assert.Single(await TrainingSamplesStore.LoadAsync());
+        });
+    }
+
+    [Fact]
+    public async Task TryAddNew_erlaubt_zweite_Box_neben_legacy_Sample()
+    {
+        await WithTempStore(async _ =>
+        {
+            var legacy = Sample(
+                "wb_legacy",
+                TrainingSample.BuildCanonicalSignature("H-TEST", "BAB", 1.0, 1.0));
+            SetBox(legacy, 0.5, 0.5, 0.2, 0.2);
+            await TrainingSamplesStore.SaveAsync([legacy]);
+
+            var secondObject = Sample(
+                "wb_neu",
+                TrainingSample.BuildCanonicalSignature(
+                    "H-TEST", "BAB", 1.0, 1.0, 0.2, 0.2, 0.1, 0.1));
+            SetBox(secondObject, 0.2, 0.2, 0.1, 0.1);
+
+            Assert.True(await TrainingSamplesStore.Current.TryAddNewAsync(secondObject));
+            Assert.Equal(2, (await TrainingSamplesStore.LoadAsync()).Count);
+        });
+    }
+
+    [Fact]
+    public async Task Die_Herkunft_eines_Vorschlags_ueberlebt_das_Speichern_und_Laden()
+    {
+        // Ein Feld, das beim Schreiben verloren geht, taeuscht Nachvollziehbarkeit
+        // vor: Die Herkunft laesst sich nachtraeglich nicht rekonstruieren.
+        await WithTempStore(async _ =>
+        {
+            var beeinflusst = Sample("mit-vorschlag", "sig-1");
+            beeinflusst.Code = "BAJC";
+            beeinflusst.SuggestionProvenance = new TrainingSampleSuggestionProvenance
+            {
+                Origin = TrainingSampleSuggestionOrigin.SuggestionShown,
+                ModelId = "bcc_nc15_seed44_20260808",
+                ModelSha256 = new string('a', 64),
+                SuggestedCode = "BCCYB",
+                SuggestedConfidence = 0.57
+            };
+
+            var eigen = Sample("ohne-vorschlag", "sig-2");
+            eigen.SuggestionProvenance = new TrainingSampleSuggestionProvenance
+            {
+                Origin = TrainingSampleSuggestionOrigin.Independent
+            };
+
+            await TrainingSamplesStore.SaveAsync([beeinflusst, eigen]);
+            var geladen = await TrainingSamplesStore.LoadAsync();
+
+            var wieder = Assert.Single(geladen, s => s.SampleId == "mit-vorschlag");
+            Assert.Equal(
+                TrainingSampleSuggestionOrigin.SuggestionShown,
+                wieder.SuggestionProvenance?.Origin);
+            Assert.Equal("bcc_nc15_seed44_20260808", wieder.SuggestionProvenance?.ModelId);
+            Assert.Equal("BCCYB", wieder.SuggestionProvenance?.SuggestedCode);
+            Assert.Equal(0.57, wieder.SuggestionProvenance?.SuggestedConfidence);
+            Assert.False(SuggestionProvenancePolicy.IsUnbiasedForMeasurement(wieder));
+            // Abweichender Code gegenueber dem Vorschlag: das ist eine Korrektur.
+            Assert.True(SuggestionProvenancePolicy.CarriesNewInformation(wieder));
+
+            var selbst = Assert.Single(geladen, s => s.SampleId == "ohne-vorschlag");
+            Assert.True(SuggestionProvenancePolicy.IsUnbiasedForMeasurement(selbst));
+        });
+    }
+
+    [Fact]
+    public async Task Eine_echte_Altdatei_ohne_Herkunftsfeld_laedt_und_gilt_als_unbekannt()
+    {
+        // Der gesamte bestehende Goldbestand wurde ohne dieses Feld geschrieben.
+        // Er muss weiter laden — und darf dabei nie stillschweigend als
+        // unabhaengig codiert gelten, sonst waere jede Messung wertlos.
+        await WithTempStore(async path =>
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            await File.WriteAllTextAsync(
+                path,
+                """
+                [
+                  {
+                    "SampleId": "alt",
+                    "CaseId": "H-ALT",
+                    "Code": "BAB",
+                    "Beschreibung": "Riss laengs",
+                    "MeterStart": 1.0,
+                    "MeterEnd": 1.0,
+                    "Signature": "sig-alt",
+                    "Status": 1
+                  }
+                ]
+                """);
+
+            var geladen = Assert.Single(await TrainingSamplesStore.LoadAsync());
+
+            Assert.Equal("alt", geladen.SampleId);
+            Assert.Null(geladen.SuggestionProvenance);
+            Assert.Equal(
+                TrainingSampleSuggestionOrigin.Unknown,
+                SuggestionProvenancePolicy.ResolveOrigin(geladen));
+            Assert.False(SuggestionProvenancePolicy.IsUnbiasedForMeasurement(geladen));
+            Assert.False(SuggestionProvenancePolicy.CarriesNewInformation(geladen));
+        });
+    }
+
+    [Fact]
+    public async Task Ersetzung_wiederholt_sich_wenn_ein_Leser_die_Zieldatei_kurz_haelt()
+    {
+        // Windows verweigert eine atomare Ersetzung, solange ein anderer Leser die
+        // Zieldatei offen hat — unabhaengig vom Freigabemodus. Der Spiegeldienst
+        // liest die 18 MB grosse Trainingsdatei nach jedem Speichern; genau dabei
+        // ist am 2026-08-07 der Codiermodus mit "Access to the path is denied"
+        // abgebrochen. Ein voruebergehend gesperrtes Ziel ist kein Datenfehler.
+        var versuche = 0;
+        var wartezeiten = new List<int>();
+
+        await TrainingSampleFileStore.ReplaceAtomicallyAsync(
+            "quelle.tmp",
+            "ziel.json",
+            move: (_, _) =>
+            {
+                versuche++;
+                if (versuche < 3)
+                    throw new UnauthorizedAccessException("Access to the path is denied.");
+            },
+            delay: milliseconds =>
+            {
+                wartezeiten.Add(milliseconds);
+                return Task.CompletedTask;
+            });
+
+        Assert.Equal(3, versuche);
+        Assert.Equal(2, wartezeiten.Count);
+        Assert.All(wartezeiten, wartezeit => Assert.True(wartezeit > 0));
+    }
+
+    [Fact]
+    public async Task Ersetzung_meldet_den_Fehler_wenn_die_Sperre_bleibt()
+    {
+        // Eine dauerhaft gesperrte Datei bleibt ein echter Fehler: Der Speichervorgang
+        // darf niemals stillschweigend gelingen, ohne dass die Datei ersetzt wurde.
+        var versuche = 0;
+
+        var fehler = await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => TrainingSampleFileStore.ReplaceAtomicallyAsync(
+                "quelle.tmp",
+                "ziel.json",
+                move: (_, _) =>
+                {
+                    versuche++;
+                    throw new UnauthorizedAccessException("Access to the path is denied.");
+                },
+                delay: _ => Task.CompletedTask));
+
+        Assert.Contains("denied", fehler.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(versuche > 3, $"Es wurde nur {versuche} Mal versucht.");
+    }
+
+    [Fact]
+    public async Task SaveAsync_gelingt_waehrend_ein_Leser_die_Datei_kurz_offen_haelt()
+    {
+        await WithTempStore(async path =>
+        {
+            await TrainingSamplesStore.SaveAsync([Sample("erst", "sig-1")]);
+
+            // Der Leser haelt die Datei so, wie es der Spiegeldienst waehrend des
+            // Hashens tut, und gibt sie danach wieder frei.
+            using var leser = new FileStream(
+                path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            var freigabe = Task.Run(async () =>
+            {
+                await Task.Delay(250);
+                leser.Dispose();
+            });
+
+            await TrainingSamplesStore.SaveAsync([Sample("erst", "sig-1"), Sample("zweit", "sig-2")]);
+            await freigabe;
+
+            Assert.Equal(2, (await TrainingSamplesStore.LoadAsync()).Count);
+        });
+    }
+
+    private static void SetBox(
+        TrainingSample sample,
+        double x,
+        double y,
+        double width,
+        double height)
+    {
+        sample.MeterStart = 1.0;
+        sample.MeterEnd = 1.0;
+        sample.BboxXCenter = x;
+        sample.BboxYCenter = y;
+        sample.BboxWidth = width;
+        sample.BboxHeight = height;
+    }
+
     private static TrainingSample Sample(
         string id,
         string signature,

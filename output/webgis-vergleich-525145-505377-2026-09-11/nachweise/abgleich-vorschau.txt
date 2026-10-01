@@ -1,0 +1,22 @@
+Quelle: D:\QGIS_V4.2\GeoShop\2026-09\34UR_Abwasser_DSS_2020_1.xtf
+1 Bauteile ändern; 0 leere Fachfelder ergänzen.
+Gefüllte Fachfelder bleiben erhalten. Es werden keine neuen Haltungen oder Schächte angelegt.
+Kennungen werden für den XTF-Export übernommen. Das ist noch keine Freigabe für den GEONIS-Rückimport.
+Die XTF liefert kein bestätigtes GN_LAST_EDITED_DATE. Der Konfliktabgleich mit Trigonet bleibt offen.
+
+--- 525145-505377 ---
+Objektakte: Originalwerte und verknüpfte Deckel/Ereignisse ergänzen (vorhandene Handwerte bleiben).
+  Normschacht ch24gwkd1TE9LaBp: Letzte_Aenderung=20241202; Baujahr=2018; BaulicherZustand=Z3; Bemerkung=Tiefe 1.82m; Bezeichnung=505377; Sanierungsbedarf=langfristig; Status=in_Betrieb; Zugaenglichkeit=zugaenglich; Dimension1=800; Dimension2=800; Funktion=Kontroll_Einsteigschacht; Material=Beton
+  Kanal ch24gwkd2FabRvaW: Letzte_Aenderung=20241121; BaulicherZustand=Z2; Bezeichnung=525145-505377; Bruttokosten=0.00; Sanierungsbedarf=mittelfristig; Status=in_Betrieb; Bettung_Umhuellung=unbekannt; FunktionHierarchisch=PAA.Sammelkanal; FunktionHydraulisch=Freispiegelleitung; Nutzungsart_Ist=Mischabwasser; Verbindungsart=unbekannt
+  Abwasserknoten ch24gwkd3XcJCyYp: Letzte_Aenderung=20241202; Bemerkung=Tiefe 1.80m; Bezeichnung=525145; Hoehengenauigkeit=plusminus_3cm
+  Rohrprofil ch24gwkd3obhLa8B: Letzte_Aenderung=20210228; Bezeichnung=unbekannt; Profiltyp=unbekannt
+  Abwasserknoten ch24gwkd5tTVGGvo: Letzte_Aenderung=20241202; Bemerkung=Tiefe 1.82m; Bezeichnung=505377; Hoehengenauigkeit=plusminus_6cm; Sohlenkote=505.900
+  Normschacht ch24gwkdOaO8mZtW: Letzte_Aenderung=20241202; BaulicherZustand=Z3; Bemerkung=Tiefe 1.80m; Bezeichnung=525145; Sanierungsbedarf=mittelfristig; Status=in_Betrieb; Zugaenglichkeit=zugaenglich; Funktion=Kontroll_Einsteigschacht; Material=unbekannt
+  Haltung ch24gwkdVy2uiPfJ: Letzte_Aenderung=20241121; Bezeichnung=525145-505377; LaengeEffektiv=11.44; Lagebestimmung=genau; Lichte_Hoehe=250; Material=Beton_Normalbeton
+  Haltungspunkt ch24gwkdcFPcB0IM: Letzte_Aenderung=20260829; Bezeichnung=A454675
+  Haltungspunkt ch24gwkdsMxuOqnt: Letzte_Aenderung=20260829; Bezeichnung=E454675; Kote=505.910
+
+Ohne Übernahme / zur Prüfung:
+525145-505377: Eigentümer ist nur als Verweis vorhanden; ohne Organisationsobjekt wird kein Eigentümer ergänzt.
+
+Nach der Übernahme das Projekt speichern. Die Quelldatei bleibt unverändert.

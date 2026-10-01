@@ -14,15 +14,15 @@ internal static class KnowledgeMirrorMarker
         ArgumentNullException.ThrowIfNull(content);
         var lines = ReadLines(content);
         if (lines.Count == 0 || !string.Equals(lines[0], Header, StringComparison.Ordinal))
-            throw new InvalidDataException("Der KI-Spiegel-Marker besitzt keinen gueltigen Kopf.");
+            throw new InvalidDataException("Der KI-Spiegel-Marker besitzt keinen gültigen Kopf.");
 
         var source = ReadSingleValue(lines, "Source");
         if (!PathsEqual(source, expectedSourceRoot))
-            throw new InvalidDataException("Der KI-Spiegel-Marker gehoert zu einer anderen Quelle.");
+            throw new InvalidDataException("Der KI-Spiegel-Marker gehört zu einer anderen Quelle.");
 
         var target = ReadSingleValue(lines, "Target");
         if (!PathsEqual(target, expectedTargetRoot))
-            throw new InvalidDataException("Der KI-Spiegel-Marker gehoert zu einem anderen Ziel.");
+            throw new InvalidDataException("Der KI-Spiegel-Marker gehört zu einem anderen Ziel.");
     }
 
     public static bool MatchesLegacyLog(

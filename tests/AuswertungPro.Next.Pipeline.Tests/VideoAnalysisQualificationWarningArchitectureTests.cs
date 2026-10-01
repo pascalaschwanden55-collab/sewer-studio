@@ -18,9 +18,9 @@ public sealed class VideoAnalysisQualificationWarningArchitectureTests
 
         Assert.Contains("videoResult.DetectorQualified == false", source);
         Assert.Contains(
-            "WARNUNG: YOLO nicht freigegeben – DINO/SAM laufen weiter; Ergebnis manuell pruefen.",
+            "WARNUNG: YOLO nicht freigegeben – DINO/SAM laufen weiter; Ergebnis manuell prüfen.",
             source);
-        Assert.Contains("Manuelle Pruefung erforderlich:", source);
+        Assert.Contains("Manuelle Prüfung erforderlich:", source);
         Assert.Contains("videoResult.Degraded", source);
     }
 

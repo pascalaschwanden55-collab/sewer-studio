@@ -1,6 +1,5 @@
 using System.IO;
 using System.Reflection;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Vsa;
@@ -24,6 +23,13 @@ public sealed class VsaPageViewModelDependencyTests
         Assert.DoesNotContain(fields, field => field.FieldType == typeof(ShellViewModel));
         Assert.DoesNotContain(fields, field => field.FieldType == typeof(ServiceProvider));
         Assert.Contains(fields, field => field.FieldType == typeof(IStoredImportFilePathResolver));
+
+        var constructorParameters = typeof(VsaPageViewModel)
+            .GetConstructors()
+            .SelectMany(constructor => constructor.GetParameters());
+        Assert.DoesNotContain(
+            constructorParameters,
+            parameter => parameter.ParameterType.Name == "IMeasureRecommendationService");
     }
 
     [Fact]
@@ -48,7 +54,7 @@ public sealed class VsaPageViewModelDependencyTests
     }
 
     [Fact]
-    public async Task Lauf_nutzt_genau_die_uebergebenen_Dienste_und_aktualisiert_das_Projekt()
+    public async Task Lauf_bewertet_ohne_automatisch_Massnahmen_zu_erzeugen()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"SewerStudio_VsaVm_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
@@ -74,7 +80,6 @@ public sealed class VsaPageViewModelDependencyTests
                 [xtfPath],
                 [pdfPath]);
             var vsa = new RecordingVsaEvaluation();
-            var measures = new RecordingMeasureRecommendation();
             var statuses = new List<string>();
             var restoreLabels = new List<string>();
             var refreshCount = 0;
@@ -88,7 +93,6 @@ public sealed class VsaPageViewModelDependencyTests
                 xtfImport: xtf,
                 pdfImport: pdf,
                 vsaEvaluation: vsa,
-                measureRecommendation: measures,
                 setStatus: statuses.Add,
                 createImportRestorePoint: restoreLabels.Add,
                 refreshTitleAndDirty: () => refreshCount++);
@@ -115,19 +119,40 @@ public sealed class VsaPageViewModelDependencyTests
             Assert.Equal("werkzeuge/pdftotext.exe", pdf.PdfToTextPath);
             Assert.True(pdf.FillMissingOnly);
             Assert.Equal(1, vsa.CallCount);
-            Assert.Equal(1, measures.CallCount);
             Assert.Equal(new[] { "VSA-Daten" }, restoreLabels);
             Assert.Equal(1, refreshCount);
-            Assert.Equal("VSA berechnet + 1 Maßnahmen", statuses[^1]);
+            Assert.Equal("VSA berechnet", statuses[^1]);
             Assert.Contains("Berechnet für 1 Records", vm.Summary, StringComparison.Ordinal);
-            Assert.Equal("Kurzliner", record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
-            Assert.True(project.Dirty);
+            Assert.DoesNotContain("Sanierungsmassnahmen:", vm.Summary, StringComparison.Ordinal);
+            Assert.Equal("", record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
+            Assert.False(project.Dirty);
             Assert.False(vm.IsBusy);
         }
         finally
         {
             Directory.Delete(tempDir, recursive: true);
         }
+    }
+
+    [Fact]
+    public void Haltungsseite_bietet_nur_den_einzelnen_Massnahmenvorschlag_an()
+    {
+        var dataPage = File.ReadAllText(RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "DataPage.xaml"));
+        var details = File.ReadAllText(RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Controls",
+            "RecordDetailsView.xaml"));
+
+        Assert.DoesNotContain("Alle Maßnahmen vorschlagen", dataPage, StringComparison.Ordinal);
+        Assert.Contains("Vorschlag für diese Haltung erstellen", dataPage, StringComparison.Ordinal);
+        Assert.Contains("Vorschlag für diese Haltung", details, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -151,7 +176,6 @@ public sealed class VsaPageViewModelDependencyTests
             xtfImport: xtf,
             pdfImport: pdf,
             vsaEvaluation: vsa,
-            measureRecommendation: new RecordingMeasureRecommendation(),
             setStatus: _ => { },
             createImportRestorePoint: restoreLabels.Add,
             refreshTitleAndDirty: () => { });
@@ -248,31 +272,4 @@ public sealed class VsaPageViewModelDependencyTests
             => Result<string>.Success(string.Empty);
     }
 
-    private sealed class RecordingMeasureRecommendation : IMeasureRecommendationService
-    {
-        public int CallCount { get; private set; }
-
-        public MeasureRecommendationResult Recommend(HaltungRecord record, int maxSuggestions = 5)
-        {
-            CallCount++;
-            return new MeasureRecommendationResult(
-                Measures: new[] { "Kurzliner" },
-                EstimatedTotalCost: 1200m,
-                RenovierungInlinerM: null,
-                RenovierungInlinerStk: null,
-                AnschluesseVerpressen: null,
-                ReparaturManschette: null,
-                ReparaturKurzliner: 1,
-                SimilarCasesCount: 3,
-                UsedTrainedModel: false);
-        }
-
-        public MeasureLearningStats GetStats()
-            => new(0, 0, 0, false, null, null, string.Empty);
-
-        public MeasureModelTrainingResult TrainModel(int minSamples = 25)
-            => new(false, 0, minSamples, string.Empty, null, null);
-
-        public bool Learn(HaltungRecord record) => false;
-    }
 }

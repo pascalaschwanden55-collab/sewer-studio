@@ -1,0 +1,16 @@
+{
+  "zweck": "Klassennamen der produktiven yolo26m-Gewichte, damit die VSA-Zuordnung ueberall pruefbar ist.",
+  "hinweis": "Bewusst ohne Gewichtspfade und ohne Datei-Hashes — die sind rechnergebunden. Aendern sich die produktiven Klassen, muss diese Liste mitgezogen werden; der Test meldet die Abweichung.",
+  "names": {
+    "0": "crack",
+    "1": "fracture",
+    "2": "deformation",
+    "3": "displacement",
+    "4": "intrusion",
+    "5": "root",
+    "6": "deposit",
+    "7": "infiltration",
+    "8": "connection",
+    "9": "structural_other"
+  }
+}

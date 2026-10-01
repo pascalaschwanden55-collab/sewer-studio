@@ -15,13 +15,7 @@ public static class FachzahlParser
 {
     /// <summary>Parst eine Fachzahl; false bei leerer, ungueltiger oder mehrdeutiger Eingabe.</summary>
     public static bool TryParseDecimal(string? raw, out decimal value)
-    {
-        value = 0m;
-        if (!TryNormalizeToInvariant(raw, allowThreeDecimalPlaces: false, out var normalized))
-            return false;
-
-        return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out value);
-    }
+        => TryParse(raw, allowThreeDecimalPlaces: false, out value);
 
     /// <summary>
     /// Parst Laengen und Mengen. In diesem fachlich bekannten Messwert-Kontext sind
@@ -29,9 +23,13 @@ public static class FachzahlParser
     /// gruppierter Form (Apostroph/Leerzeichen oder vollstaendige Gruppen) zulaessig.
     /// </summary>
     public static bool TryParseMeasurement(string? raw, out decimal value)
+        => TryParse(raw, allowThreeDecimalPlaces: true, out value);
+
+    /// <summary>Normalisiert und parst gemeinsam fuer <see cref="TryParseDecimal"/> und <see cref="TryParseMeasurement"/>.</summary>
+    private static bool TryParse(string? raw, bool allowThreeDecimalPlaces, out decimal value)
     {
         value = 0m;
-        if (!TryNormalizeToInvariant(raw, allowThreeDecimalPlaces: true, out var normalized))
+        if (!TryNormalizeToInvariant(raw, allowThreeDecimalPlaces, out var normalized))
             return false;
 
         return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out value);

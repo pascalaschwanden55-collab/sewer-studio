@@ -4,6 +4,7 @@ using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Kins;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -208,6 +209,89 @@ public sealed class KinsImportServiceTests
         var rec = Assert.Single(project.Data);
         // Der Schluessel darf nicht auf den kuerzeren KINS-Namen "23654-23038" verkuerzt werden.
         Assert.Equal("23654-23038-1", rec.GetFieldValue("Haltungsname"));
+    }
+
+    [Fact]
+    public void ImportKinsExport_MehrdeutigerSegmentPraefix_LegtExakteHaltungAn()
+    {
+        using var dir = new TempDir();
+        File.WriteAllText(
+            Path.Combine(dir.Path, "kiDVDaten.txt"),
+            string.Join(Environment.NewLine, new[]
+            {
+                "Schmutzwasser 23654 -> 23038 @Datei=A001.MPG",
+                "   0.0m Rohranfang  @Pos=0:00:00"
+            }));
+
+        var project = new Project();
+        foreach (var suffix in new[] { "-1", "-2" })
+        {
+            var existing = project.CreateNewRecord();
+            existing.SetFieldValue(
+                "Haltungsname",
+                $"23654-23038{suffix}",
+                FieldSource.Xtf,
+                userEdited: false);
+            project.AddRecord(existing);
+        }
+
+        var sut = new KinsImportService(
+            new FakeWinCanImport(Result<ImportStats>.Fail("X", "should not run")),
+            new FakeIbakImport(Result<ImportStats>.Fail("X", "should not run")));
+
+        var res = sut.ImportKinsExport(dir.Path, project);
+
+        Assert.True(res.Ok, res.ErrorMessage);
+        Assert.Equal(3, project.Data.Count);
+        var imported = Assert.Single(
+            project.Data,
+            record => record.GetFieldValue("Haltungsname") == "23654-23038");
+        Assert.NotNull(imported.Protocol);
+        Assert.NotEmpty(imported.Protocol.Current.Entries);
+        Assert.All(
+            project.Data.Where(record => record.GetFieldValue("Haltungsname") != "23654-23038"),
+            record => Assert.True(
+                record.Protocol is null || record.Protocol.Current.Entries.Count == 0));
+    }
+
+    [Fact]
+    public void ImportKinsExport_HeaderOhneBeobachtungen_LaesstBestehendesProtokollUnveraendert()
+    {
+        using var dir = new TempDir();
+        File.WriteAllText(
+            Path.Combine(dir.Path, "kiDVDaten.txt"),
+            "Schmutzwasser 23654 -> 23038 @Datei=A001.MPG");
+
+        var project = new Project();
+        var existing = project.CreateNewRecord();
+        existing.SetFieldValue("Haltungsname", "23654-23038", FieldSource.Xtf, userEdited: false);
+        existing.Protocol = new ProtocolDocument
+        {
+            HaltungId = "23654-23038",
+            Original = new ProtocolRevision
+            {
+                Entries = [new ProtocolEntry { Code = "BAB", Beschreibung = "Bestehend" }]
+            },
+            Current = new ProtocolRevision
+            {
+                Entries = [new ProtocolEntry { Code = "BAB", Beschreibung = "Bestehend" }]
+            }
+        };
+        project.AddRecord(existing);
+
+        var sut = new KinsImportService(
+            new FakeWinCanImport(Result<ImportStats>.Fail("X", "should not run")),
+            new FakeIbakImport(Result<ImportStats>.Fail("X", "should not run")));
+
+        var res = sut.ImportKinsExport(dir.Path, project);
+
+        Assert.True(res.Ok, res.ErrorMessage);
+        Assert.Single(existing.Protocol.Current.Entries);
+        Assert.Equal("BAB", existing.Protocol.Current.Entries[0].Code);
+        Assert.Empty(existing.Protocol.History);
+        Assert.Contains(
+            res.Value!.Messages,
+            message => message.Contains("Keine Beobachtungen", StringComparison.Ordinal));
     }
 
     [Fact]

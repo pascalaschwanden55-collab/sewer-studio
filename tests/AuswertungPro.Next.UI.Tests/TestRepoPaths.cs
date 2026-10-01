@@ -23,11 +23,11 @@ internal static class TestRepoPaths
         throw new DirectoryNotFoundException("Repository-Root mit AuswertungPro.sln wurde nicht gefunden.");
     }
 
-    public static string FindRepoRoot()
-        => FindRepositoryRoot();
-
     public static string RepoFile(params string[] segments)
         => Path.Combine(new[] { FindRepositoryRoot() }.Concat(segments).ToArray());
+
+    public static string RepoText(params string[] segments)
+        => File.ReadAllText(RepoFile(segments));
 
     private static IEnumerable<string> CandidateStarts()
     {

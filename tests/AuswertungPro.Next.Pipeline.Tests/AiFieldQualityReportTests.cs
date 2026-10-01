@@ -86,7 +86,7 @@ public sealed class AiFieldQualityReportTests
             Assert.True(File.Exists(files.JsonPath));
             Assert.True(File.Exists(files.MarkdownPath));
             Assert.True(File.Exists(files.IssuesCsvPath));
-            Assert.Contains("KI-Qualitaetsbericht", File.ReadAllText(files.MarkdownPath));
+            Assert.Contains("KI-Qualitätsbericht", File.ReadAllText(files.MarkdownPath));
         }
         finally
         {

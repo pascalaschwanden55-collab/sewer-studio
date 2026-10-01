@@ -27,7 +27,7 @@ public static class TrainingInventoryReportOutputPolicy
             if (reparsePoint is not null)
             {
                 throw new InvalidOperationException(
-                    $"Such- und Schutzwurzeln duerfen keine Verknuepfung oder Junction enthalten: {reparsePoint}");
+                    $"Such- und Schutzwurzeln dürfen keine Verknüpfung oder Junction enthalten: {reparsePoint}");
             }
         }
         var paths = new TrainingInventoryReportOutputPaths(
@@ -75,12 +75,12 @@ public static class TrainingInventoryReportOutputPolicy
         if (!PathsEqual(revalidated.ReportPath, outputPaths.ReportPath)
             || !PathsEqual(revalidated.Sha256Path, outputPaths.Sha256Path))
         {
-            throw new InvalidOperationException("Berichtsziel hat sich seit der Vorpruefung geaendert.");
+            throw new InvalidOperationException("Berichtsziel hat sich seit der Vorprüfung geändert.");
         }
 
         var writeTargets = WriteTargets(outputPaths).ToArray();
         if (sourcePaths.Any(source => writeTargets.Any(target => PathsEqual(source, target))))
-            throw new InvalidOperationException("Der Bericht darf keine Trainingsquelle ueberschreiben.");
+            throw new InvalidOperationException("Der Bericht darf keine Trainingsquelle überschreiben.");
     }
 
     private static IEnumerable<string> WriteTargets(TrainingInventoryReportOutputPaths paths)
@@ -102,7 +102,7 @@ public static class TrainingInventoryReportOutputPolicy
             if (reparsePoint is not null)
             {
                 throw new InvalidOperationException(
-                    $"Der Berichtspfad darf keine Verknuepfung oder Junction enthalten: {reparsePoint}");
+                    $"Der Berichtspfad darf keine Verknüpfung oder Junction enthalten: {reparsePoint}");
             }
         }
     }

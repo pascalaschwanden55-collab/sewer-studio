@@ -62,6 +62,26 @@ public static class ViewCustomizationStore
     /// </summary>
     public static void Save() => _settings?.Save();
 
+    /// <summary>Die gespeicherte Kachelgroesse der Foto-Galerie (Default 124).</summary>
+    public static double GetPhotoGalleryTileSize()
+        => _settings?.PhotoGalleryTileSize is { } size && double.IsFinite(size) ? size : 124d;
+
+    /// <summary>
+    /// Setzt die Kachelgroesse ueber die Live-Instanz und speichert sie. Ohne
+    /// konfigurierte Live-Instanz (Configure nie gerufen, etwa im Designer) wird
+    /// nichts geschrieben — eine eigene Dateikopie gibt es nicht (AP-2,
+    /// Audit 2026-08-10): Eine Momentaufnahme wuerde beim Speichern alle
+    /// seitdem geaenderten Einstellungen verwerfen.
+    /// </summary>
+    public static void SetPhotoGalleryTileSize(double value)
+    {
+        var settings = _settings;
+        if (settings is null)
+            return;
+        settings.PhotoGalleryTileSize = value;
+        settings.Save();
+    }
+
     /// <summary>Nur fuer Tests: Store-Referenz zuruecksetzen.</summary>
     internal static void ResetForTests() => _settings = null;
 }

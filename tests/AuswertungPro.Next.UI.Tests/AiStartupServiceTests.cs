@@ -137,6 +137,86 @@ public sealed class AiStartupServiceTests
     }
 
     [Fact]
+    public async Task StartAsync_DoesNotSendSidecarTokenToNonLoopbackEndpoint()
+    {
+        var launcher = new FakeAiStartupLauncher
+        {
+            OllamaReachable = true,
+            SidecarReachable = true
+        };
+        var settings = new AppSettings
+        {
+            AiEnabled = true,
+            PipelineMultiModelEnabled = true,
+            PipelineMode = "multimodel",
+            AiOllamaUrl = "http://localhost:11434",
+            PipelineSidecarUrl = "http://192.168.1.20:8100",
+            PipelineSidecarToken = "darf-nicht-ins-lan"
+        };
+
+        await AiStartupService.StartAsync(
+            settings,
+            launcher,
+            sidecarScriptPath: null,
+            ct: CancellationToken.None);
+
+        Assert.NotEmpty(launcher.SidecarRequestHeaders);
+        Assert.All(launcher.SidecarRequestHeaders, Assert.Null);
+    }
+
+    [Fact]
+    public async Task Orchestrator_loest_den_Sidecar_Token_nach_dem_Erststart_neu_auf()
+    {
+        var temp = CreateTempSidecarScript();
+        try
+        {
+            var launcher = new FakeAiStartupLauncher
+            {
+                OllamaReachable = true,
+                SidecarReachable = false
+            };
+            var resolverCalls = 0;
+            IReadOnlyDictionary<string, string>? ResolveHeaders()
+            {
+                resolverCalls++;
+                return resolverCalls == 1
+                    ? null
+                    : new Dictionary<string, string>
+                    {
+                        ["X-Sidecar-Token"] = "token-aus-neuer-datei"
+                    };
+            }
+
+            var input = new AiStartupOrchestratorInput(
+                new Uri("http://localhost:11434"),
+                new Uri("http://localhost:8100"),
+                SidecarHeaders: null,
+                PreloadRequests: [],
+                SidecarScriptPath: temp.ScriptPath,
+                PowerShellExe: "powershell",
+                SettingsChanged: false,
+                SidecarHeadersProvider: ResolveHeaders);
+
+            var result = await AiStartupOrchestrator.StartAsync(
+                input,
+                launcher,
+                progress: null,
+                CancellationToken.None);
+
+            Assert.True(result.SidecarReachable);
+            Assert.True(resolverCalls >= 2);
+            Assert.Contains(launcher.SidecarRequestHeaders, headers =>
+                headers is not null
+                && headers.TryGetValue("X-Sidecar-Token", out var token)
+                && token == "token-aus-neuer-datei");
+        }
+        finally
+        {
+            Directory.Delete(temp.Root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task StartAsync_does_not_start_processes_when_endpoints_are_reachable()
     {
         var temp = CreateTempSidecarScript();
@@ -544,6 +624,7 @@ public sealed class AiStartupServiceTests
         public List<AiStartupProcessRequest> StartedProcesses { get; } = new();
         public List<string> PreloadedModels { get; } = new();
         public List<string> WarmedModels { get; } = new();
+        public List<IReadOnlyDictionary<string, string>?> SidecarRequestHeaders { get; } = new();
 
         public Task<bool> IsReachableAsync(
             Uri baseUri,
@@ -552,6 +633,8 @@ public sealed class AiStartupServiceTests
             CancellationToken ct)
         {
             var reachable = baseUri.Port == 11434 ? OllamaReachable : SidecarReachable;
+            if (baseUri.Port != 11434)
+                SidecarRequestHeaders.Add(headers);
             return Task.FromResult(reachable);
         }
 
@@ -598,6 +681,7 @@ public sealed class AiStartupServiceTests
             IReadOnlyDictionary<string, string>? headers,
             CancellationToken ct)
         {
+            SidecarRequestHeaders.Add(headers);
             if (!SidecarReachable)
                 return Task.FromResult(new AiStartupWarmupResult(false, Array.Empty<string>(), "nicht erreichbar"));
 

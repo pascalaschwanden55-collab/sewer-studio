@@ -15,6 +15,11 @@ python tools/VideoLabelTool/server.py
 ```
 Dann im Browser **http://localhost:8200/** oeffnen.
 
+Der lokale Server gibt Token, Befundliste, Clips und Trainingsframes nur an die
+von ihm selbst geladene Browserseite aus. Fremde Webseiten und headerlose direkte
+Zugriffe auf diese Datenrouten werden abgewiesen. Die Startseite bleibt lokal
+ohne Anmeldung erreichbar und holt den Sitzungstoken selbst.
+
 Standard ist jetzt **Mix von allen verfuegbaren Klassen** aus dem neueren Datensatz
 `C:\KI_BRAIN\yolo_vsa_cls_dataset_v3_bal`. Im Browser kannst du oben bei
 **Klasse** zwischen `Alle / Mix` und einzelnen Codes wie `BCA`, `BCC`, `BAB` wechseln.

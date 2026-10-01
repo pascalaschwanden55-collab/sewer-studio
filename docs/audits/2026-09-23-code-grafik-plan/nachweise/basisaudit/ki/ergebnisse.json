@@ -1,0 +1,18 @@
+{
+  "hinweis": "Aufgezeichnete Ergebnisse der am 23.09.2026 ausgefuehrten isolierten Proben. Echte Service-/Workflow-DLLs bzw. originale Python-Managerlogik, kuenstliche Daten; kein Netz, keine GPU, keine Modelle.",
+  "bildqualitaet": [
+    {"frameClass":"too_dark","IsRelevant":false,"Degraded":false,"Error":null,"outcome":"NoDamage","status":"Kein Schaden erkannt","color":"#FF22C55E","safetyHolds":false},
+    {"frameClass":"too_blurry","IsRelevant":false,"Degraded":false,"Error":null,"outcome":"NoDamage","status":"Kein Schaden erkannt","color":"#FF22C55E","safetyHolds":false},
+    {"frameClass":"too_bright","IsRelevant":false,"Degraded":false,"Error":null,"outcome":"NoDamage","status":"Kein Schaden erkannt","color":"#FF22C55E","safetyHolds":false},
+    {"frameClass":"too_uniform","IsRelevant":false,"Degraded":false,"Error":null,"outcome":"NoDamage","status":"Kein Schaden erkannt","color":"#FF22C55E","safetyHolds":false},
+    {"frameClass":"empty","IsRelevant":false,"Degraded":false,"Error":null,"outcome":"NoDamage","status":"Kein Schaden erkannt","color":"#FF22C55E","safetyHolds":true}
+  ],
+  "evalschutz": [
+    {"test":"valid-root","returnedSampleIds":[],"safetyHolds":true},
+    {"test":"missing-configured-root","returnedSampleIds":["eval-sample"],"safetyHolds":false}
+  ],
+  "vram": [
+    {"test":"parallel_stale_free_measurement","initial_free_gb":20,"required_reserve_gb":12,"loaded":["DINO 4 GB","SAM 6 GB"],"fake_free_after_loads_gb":10.0,"errors":[],"safetyHolds":false},
+    {"test":"fresh_free_measurement","free_gb":16,"required_gb":18,"safetyHolds":true}
+  ]
+}

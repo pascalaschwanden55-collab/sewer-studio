@@ -9,7 +9,7 @@ public sealed class VsaClassificationCutoverTests
 {
     private static VsaEvaluationService CreateService()
     {
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
         var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
         return new VsaEvaluationService(channelsTable, manholesTable);

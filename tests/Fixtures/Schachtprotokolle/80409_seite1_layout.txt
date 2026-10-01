@@ -1,0 +1,45 @@
+ GEP Aufnahmen Altdorf 2025
+ Schachtprotokoll                                                    Nr. 80409
+ Schachttyp                Kontrollschacht
+ Dimension mm              900/1100
+ Medium                    Mischabwasser
+ Material Schacht          Fertigbetonelement
+ Material Deckel           Guss und Beton                                         Deckel DN m       0.66
+
+
+ Tiefe (Abstich) m                                  3.45
+ Trennwand Meteor-/ Schmutzwasser (cm)
+
+ Zustand der Bauteile                                                                               Mängelfrei
+ Schachtdeckel           gerissen           ausgebrochen      korrodiert          klemmt            verschraubt
+ Deckelrahmen            gerissen           ausgebrochen      lose
+ Schachthals             gerissen           ausgebrochen      korrodiert          Fugen mangelhaft verputzt
+ Konus                   gerissen           ausgebrochen      korrodiert          Fugen mangelhaft verputzt
+ Schachtrohr             gerissen           ausgebrochen      korrodiert          Fugen mangelhaft verputzt
+ Bankett                 gerissen         ● ausgebrochen      korrodiert        ● Ablagerungen
+ Durchlaufrinne          gerissen           ausgebrochen      korrodiert        ● Ablagerungen
+ Anschluss               gerissen              ausgebrochen                mangelhaft eingebunden
+ Verkalkung            ✔ Konus              Schachtrohr       Bankett             Gerinne           Anschluss
+ Fremdwasser             Konus              Schachtrohr       Bankett             Gerinne           Anschluss
+ Leiter/Steigeisen     ✔ vorhanden          fehlt             zu kurz             verrostet         defekt
+ Tauchbogen              vorhanden          fehlt             defekt              nicht notwendig
+
+Anschlüsse                                                                              A1
+Nr     Aus/Ein   DN mm     Tiefe m          Material
+1 Auslauf        250      3.45        Beton                                E3
+2 Einlauf        250      3.38        Beton
+3 Einlauf        100      0.60        Polyvinylchlorid
+4 Einlauf        200      3.25        Polyvinylchlorid
+5 -                                   -                                                              E1
+6 -                                   -                                                 E2
+7 -                                   -                                            S1         S2             S3
+
+8 -                                   -
+                                                                 Foto Nr.
+9 -                                   -
+10 -                                  -
+
+Datum 24/09/2025                    Bemerkung Einlauf 3 Ausgebrochen
+
+Visum Muster
+

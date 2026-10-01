@@ -11,6 +11,28 @@ def _client():
     return TestClient(app)
 
 
+def test_health_runs_detector_hash_check_outside_event_loop(monkeypatch):
+    from sidecar.routes import health as health_route
+
+    calls = []
+
+    async def recording_to_thread(function, *args, **kwargs):
+        calls.append(function)
+        return function(*args, **kwargs)
+
+    monkeypatch.setattr(health_route.asyncio, "to_thread", recording_to_thread)
+    monkeypatch.setattr(
+        health_route.detector_qualification,
+        "evaluate_active_detector",
+        lambda: {"qualified": False, "status": "test"},
+    )
+
+    response = _client().get("/health")
+
+    assert response.status_code == 200
+    assert calls == [health_route.detector_qualification.evaluate_active_detector]
+
+
 def test_health_degraded_when_dino_or_sam_weights_missing(tmp_path, monkeypatch):
     from sidecar.config import settings
 

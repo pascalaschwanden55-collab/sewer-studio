@@ -171,7 +171,7 @@ internal static class PersonalGoldBrainCommitJournalStore
                 StringComparison.Ordinal))
         {
             throw new InvalidDataException(
-                $"Besitzmarker des erzeugten Gold-Arbeitsstands ist ungueltig: {root}");
+                $"Besitzmarker des erzeugten Gold-Arbeitsstands ist ungültig: {root}");
         }
     }
 
@@ -186,7 +186,7 @@ internal static class PersonalGoldBrainCommitJournalStore
             paths.LocalSafetyRoot,
             paths.CommitJournalPath);
         if (File.Exists(paths.CommitJournalPath))
-            throw new IOException("Commit-Journal konnte nicht geloescht werden.");
+            throw new IOException("Commit-Journal konnte nicht gelöscht werden.");
     }
 
     private static void ValidateMetadata(PersonalGoldBrainCommitJournal journal)
@@ -194,22 +194,22 @@ internal static class PersonalGoldBrainCommitJournalStore
         if (journal.SchemaVersion != 1)
             throw new InvalidDataException("Commit-Journal besitzt eine unbekannte Version.");
         if (!Guid.TryParseExact(journal.TransactionId, "N", out _))
-            throw new InvalidDataException("Commit-Journal besitzt keine gueltige Transaktions-ID.");
+            throw new InvalidDataException("Commit-Journal besitzt keine gültige Transaktions-ID.");
         if (journal.StartedUtc == default)
-            throw new InvalidDataException("Commit-Journal besitzt keinen gueltigen Startzeitpunkt.");
+            throw new InvalidDataException("Commit-Journal besitzt keinen gültigen Startzeitpunkt.");
         if (journal.LegacyProtocolTrainingWasPresent)
         {
             if (journal.LegacyProtocolTrainingSha256 is not { Length: 64 }
                 || journal.LegacyProtocolTrainingSha256.Any(character => !Uri.IsHexDigit(character)))
             {
                 throw new InvalidDataException(
-                    "Commit-Journal besitzt keine gueltige Protokoll-Pruefsumme.");
+                    "Commit-Journal besitzt keine gültige Protokoll-Prüfsumme.");
             }
         }
         else if (journal.LegacyProtocolTrainingSha256 is not null)
         {
             throw new InvalidDataException(
-                "Commit-Journal enthaelt eine unerwartete Protokoll-Pruefsumme.");
+                "Commit-Journal enthält eine unerwartete Protokoll-Prüfsumme.");
         }
     }
 
@@ -225,7 +225,7 @@ internal static class PersonalGoldBrainCommitJournalStore
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                $"Commit-Journal enthaelt einen nicht kanonischen Pfad: {name}.");
+                $"Commit-Journal enthält einen nicht kanonischen Pfad: {name}.");
         }
     }
 }

@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Threading.Tasks;
 using System.Windows.Media;
@@ -84,7 +85,7 @@ public static class CodingAiInitializationWorkflow
         catch (Exception ex)
         {
             actions.SetCodingAiState(
-                $"Fehler: {ex.Message}",
+                $"Fehler: {UserError.DescribeAndReport(ex, "KI-Codierung initialisieren")}",
                 PlayerStatusColors.Error,
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(actions.GetModelName())}");
             actions.SetAnalyzeButtonEnabled(false);

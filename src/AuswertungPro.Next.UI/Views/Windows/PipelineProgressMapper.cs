@@ -61,6 +61,9 @@ internal sealed class PipelineProgressMapper
     internal PipelineProgressEffects Apply(PipelineProgress progress)
     {
         ArgumentNullException.ThrowIfNull(progress);
+        // Bereits gepostete Meldungen duerfen den dauerhaften Abschluss nicht verdecken.
+        if (_viewModel.IsDone)
+            return default;
 
         var isVideoPhase = IsVideoPhase(progress.Phase);
         ApplyCommonState(progress, isVideoPhase);

@@ -50,20 +50,25 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         var negativeImages = BuildNegativeImages(
             request.NegativeImages,
             protectedImageHashes,
-            positiveImages);
+            protectedHoldingKeys,
+            positiveImages,
+            request.ClassMap);
         var images = positiveImages
             .Concat(negativeImages)
             .OrderBy(image => image.ImageSha256, StringComparer.Ordinal)
             .ToArray();
+        ValidatePhysicalHoldingSplits(images);
         var sourcePaths = BuildSourcePathMap(exportable, request.NegativeImages);
-        var trainHoldings = positiveImages
+        var trainHoldings = images
             .Where(image => image.Target == TrainingExportTarget.Train)
+            .Where(image => !IsLegacyNegativePoolImage(image))
             .Select(image => image.HoldingKey)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var validationHoldings = positiveImages
+        var validationHoldings = images
             .Where(image => image.Target == TrainingExportTarget.Validation)
+            .Where(image => !IsLegacyNegativePoolImage(image))
             .Select(image => image.HoldingKey)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
@@ -117,18 +122,18 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         if (!request.EvaluationProtectionComplete)
         {
             throw new TrainingExportPlanException(
-                "Der Eval-/Abnahme-Schutz ist nicht vollstaendig. Der Trainings-Export bleibt gesperrt.");
+                "Der Eval-/Abnahme-Schutz ist nicht vollständig. Der Trainings-Export bleibt gesperrt.");
         }
         if (request.Registry.ProtectedSets.Count == 0)
         {
             throw new TrainingExportPlanException(
-                "Das Exportregister enthaelt kein versiegeltes Dev-Val- oder Abnahme-Set.");
+                "Das Exportregister enthält kein versiegeltes Dev-Val- oder Abnahme-Set.");
         }
         if (request.Candidates.Any(candidate =>
                 candidate.InventoryDisposition == TrainingInventoryDisposition.EvaluationNotChecked))
         {
             throw new TrainingExportPlanException(
-                "Mindestens eine Trainingsquelle wurde nicht gegen Eval/Abnahme geprueft.");
+                "Mindestens eine Trainingsquelle wurde nicht gegen Eval/Abnahme geprüft.");
         }
     }
 
@@ -157,7 +162,7 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         {
             var key = EvalContaminationGuard.NormalizeHaltungKey(item.Key);
             if (string.IsNullOrWhiteSpace(key))
-                throw new TrainingExportPlanException("Das Exportregister enthaelt eine leere Haltung.");
+                throw new TrainingExportPlanException("Das Exportregister enthält eine leere Haltung.");
             if (!normalized.TryAdd(key, item.Value))
                 throw new TrainingExportPlanException($"Haltung '{key}' steht mehrfach im Exportregister.");
         }
@@ -191,7 +196,8 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         var exclusion = MapDisposition(candidate.InventoryDisposition);
         if (exclusion is null
             && ((imageSha256 is not null && protectedImageHashes.Contains(imageSha256))
-                || (!string.IsNullOrWhiteSpace(holdingKey) && protectedHoldingKeys.Contains(holdingKey))))
+                || (!string.IsNullOrWhiteSpace(holdingKey)
+                    && EvalContaminationGuard.IsEvalHaltung(protectedHoldingKeys, holdingKey))))
         {
             exclusion = TrainingExportExclusionReason.EvaluationLocked;
         }
@@ -214,12 +220,12 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         if (string.IsNullOrWhiteSpace(candidate.FramePath))
             throw InconsistentCandidate(source, "Bildpfad fehlt");
         if (imageSha256 is null)
-            throw InconsistentCandidate(source, "vollstaendiger Bild-SHA-256 fehlt");
+            throw InconsistentCandidate(source, "vollständiger Bild-SHA-256 fehlt");
         var imageExtension = NormalizeRequiredImageExtension(candidate.ImageExtension, source);
         if (string.IsNullOrWhiteSpace(holdingKey))
             throw InconsistentCandidate(source, "explizite Haltung fehlt");
         if (candidate.BoundingBox?.IsValid != true)
-            throw InconsistentCandidate(source, "BoundingBox ist ungueltig");
+            throw InconsistentCandidate(source, "BoundingBox ist ungültig");
         if (!holdingRoles.TryGetValue(holdingKey, out var holdingRole))
         {
             throw new TrainingExportPlanException(
@@ -237,7 +243,7 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         catch (TrainingYoloClassMapException ex)
         {
             throw new TrainingExportPlanException(
-                $"Klasse fuer '{source.StableKey}' ist nicht exportbereit: {ex.Message}",
+                $"Klasse für '{source.StableKey}' ist nicht exportbereit: {ex.Message}",
                 ex);
         }
         if (!resolution.ShouldExport)
@@ -289,7 +295,7 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
             if (holdings.Length != 1)
             {
                 throw new TrainingExportPlanException(
-                    $"Dasselbe Bild {group.Key} ist widerspruechlichen Haltungen zugeordnet.");
+                    $"Dasselbe Bild {group.Key} ist widersprüchlichen Haltungen zugeordnet.");
             }
             var targets = entries.Select(candidate => candidate.Target!.Value).Distinct().ToArray();
             if (targets.Length != 1)
@@ -304,7 +310,7 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
             if (extensions.Length != 1)
             {
                 throw new TrainingExportPlanException(
-                    $"Dasselbe Bild {group.Key} hat widerspruechliche Dateiformate.");
+                    $"Dasselbe Bild {group.Key} hat widersprüchliche Dateiformate.");
             }
 
             var labels = entries
@@ -349,7 +355,9 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
     private static IReadOnlyList<TrainingExportPlannedImage> BuildNegativeImages(
         IReadOnlyList<TrainingExportNegativeImage> negatives,
         IReadOnlySet<string> protectedImageHashes,
-        IReadOnlyList<TrainingExportPlannedImage> positiveImages)
+        IReadOnlySet<string> protectedHoldingKeys,
+        IReadOnlyList<TrainingExportPlannedImage> positiveImages,
+        TrainingYoloClassMapSnapshot classMap)
     {
         if (negatives.Count == 0)
             return [];
@@ -372,16 +380,21 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
             if (protectedImageHashes.Contains(sha256))
             {
                 throw new TrainingExportPlanException(
-                    $"Negativbild {sha256} gehoert zum eingefrorenen Eval-/Abnahme-Set.");
+                    $"Negativbild {sha256} gehört zum eingefrorenen Eval-/Abnahme-Set.");
             }
 
+            var binding = PrepareNegativeBinding(
+                negative,
+                sha256,
+                protectedHoldingKeys,
+                classMap);
             var extension = NormalizeRequiredImageExtension(
                 Path.GetExtension(negative.Path),
                 new TrainingExportSourceRef(TrainingExportSourceType.TrainingSample, $"negative:{sha256[..12]}"));
             images.Add(new TrainingExportPlannedImage(
                 sha256,
-                TrainingExportNegativePool.HoldingKey,
-                negative.SplitHint ?? ComputeNegativeTarget(sha256),
+                binding.HoldingKey,
+                binding.Target,
                 $"img_{sha256}{extension}",
                 Array.Empty<TrainingExportPlannedLabel>())
             {
@@ -390,6 +403,137 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         }
 
         return images;
+    }
+
+    private static PreparedNegativeBinding PrepareNegativeBinding(
+        TrainingExportNegativeImage negative,
+        string normalizedImageSha256,
+        IReadOnlySet<string> protectedHoldingKeys,
+        TrainingYoloClassMapSnapshot classMap)
+    {
+        var hasNewBinding = negative.NegativeSourceType is not null
+                            || negative.HoldingKey is not null
+                            || negative.PhysicalHoldingKey is not null
+                            || negative.NegativeSetId is not null
+                            || negative.NegativeSetManifestSha256 is not null
+                            || negative.QueueId is not null
+                            || negative.ReviewSha256 is not null
+                            || negative.QueueManifestSha256 is not null
+                            || negative.CandidatesSha256 is not null
+                            || negative.ClassMapVersion is not null
+                            || negative.ClassMapSha256 is not null
+                            || negative.VsaManifestHash is not null
+                            || negative.ReviewItemId is not null
+                            || negative.ReviewDecision is not null;
+        if (!hasNewBinding)
+        {
+            return new PreparedNegativeBinding(
+                TrainingExportNegativePool.HoldingKey,
+                negative.SplitHint ?? ComputeNegativeTarget(normalizedImageSha256));
+        }
+
+        if (!string.Equals(
+                negative.NegativeSourceType,
+                "reviewed_negative_set",
+                StringComparison.Ordinal)
+            || string.IsNullOrWhiteSpace(negative.HoldingKey)
+            || string.IsNullOrWhiteSpace(negative.PhysicalHoldingKey)
+            || negative.SplitHint is null
+            || string.IsNullOrWhiteSpace(negative.NegativeSetId)
+            || string.IsNullOrWhiteSpace(negative.NegativeSetManifestSha256)
+            || string.IsNullOrWhiteSpace(negative.QueueId)
+            || string.IsNullOrWhiteSpace(negative.ReviewSha256)
+            || string.IsNullOrWhiteSpace(negative.QueueManifestSha256)
+            || string.IsNullOrWhiteSpace(negative.CandidatesSha256)
+            || negative.ClassMapVersion is null
+            || string.IsNullOrWhiteSpace(negative.ClassMapSha256)
+            || string.IsNullOrWhiteSpace(negative.VsaManifestHash)
+            || string.IsNullOrWhiteSpace(negative.ReviewItemId)
+            || !string.Equals(
+                negative.ReviewDecision,
+                "all_classes_clear",
+                StringComparison.Ordinal))
+        {
+            throw new TrainingExportPlanException(
+                "Ein neuer Negativbild-Eintrag muss alle Felder der strikten Provenienzbindung vollständig enthalten.");
+        }
+
+        var holdingKey = EvalContaminationGuard.NormalizeHaltungKey(negative.HoldingKey);
+        if (string.IsNullOrWhiteSpace(holdingKey))
+            throw new TrainingExportPlanException("Ein neuer Negativbild-Eintrag hat keine gültige Haltung.");
+        if (!TrainingExportHoldingIdentity.IsCompleteNumericPair(holdingKey))
+        {
+            throw new TrainingExportPlanException(
+                $"Negativbild-Haltung '{holdingKey}' ist kein vollständiges numerisches Schachtpaar.");
+        }
+        if (!string.Equals(negative.HoldingKey, holdingKey, StringComparison.Ordinal)
+            || !string.Equals(
+                negative.PhysicalHoldingKey,
+                TrainingExportHoldingIdentity.PhysicalKey(holdingKey),
+                StringComparison.Ordinal))
+        {
+            throw new TrainingExportPlanException(
+                "Negativbild-Haltung ist nicht exakt normalisiert oder widerspricht der physischen Haltung.");
+        }
+        RequireNegativeSetId(negative.NegativeSetId);
+        RequireLowercaseSha256(negative.NegativeSetManifestSha256, "Negativ-Set-Manifest-Hash");
+        RequireLowercaseSha256(negative.QueueId, "Negativ-Queue-ID");
+        RequireLowercaseSha256(negative.ReviewSha256, "Negativ-Review-Hash");
+        RequireLowercaseSha256(negative.QueueManifestSha256, "Negativ-Queue-Manifest-Hash");
+        RequireLowercaseSha256(negative.CandidatesSha256, "Negativ-Kandidaten-Hash");
+        RequireLowercaseSha256(negative.ClassMapSha256, "Negativ-Klassenkarten-Hash");
+        RequireLowercaseSha256(negative.VsaManifestHash, "Negativ-VSA-Manifest-Hash");
+        TrainingNegativeClassMapBinding.Validate(negative, classMap);
+        if (EvalContaminationGuard.IsEvalHaltung(protectedHoldingKeys, holdingKey))
+        {
+            throw new TrainingExportPlanException(
+                $"Negativbild-Haltung '{holdingKey}' gehört zum eingefrorenen Eval-/Abnahme-Set.");
+        }
+
+        return new PreparedNegativeBinding(holdingKey, negative.SplitHint.Value);
+    }
+
+    private static void ValidatePhysicalHoldingSplits(
+        IReadOnlyList<TrainingExportPlannedImage> images)
+    {
+        var targets = new Dictionary<string, (string HoldingKey, TrainingExportTarget Target)>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var image in images.Where(image => !IsLegacyNegativePoolImage(image)))
+        {
+            var physicalKey = TrainingExportHoldingIdentity.PhysicalKey(image.HoldingKey);
+            if (targets.TryGetValue(physicalKey, out var previous)
+                && previous.Target != image.Target)
+            {
+                throw new TrainingExportPlanException(
+                    $"Haltung '{previous.HoldingKey}'/'{image.HoldingKey}' liegt zugleich in Train und Dev-Val.");
+            }
+
+            targets.TryAdd(physicalKey, (image.HoldingKey, image.Target));
+        }
+    }
+
+    private static bool IsLegacyNegativePoolImage(TrainingExportPlannedImage image)
+        => image.IsNegative
+           && string.Equals(
+               image.HoldingKey,
+               TrainingExportNegativePool.HoldingKey,
+               StringComparison.Ordinal);
+
+    private static void RequireNegativeSetId(string value)
+    {
+        RequireLowercaseSha256(value, "Negativ-Set-ID");
+    }
+
+    private static void RequireLowercaseSha256(string value, string label)
+    {
+        if (value.Length != 64
+            || value.Any(character =>
+                character is not (>= '0' and <= '9')
+                    and not (>= 'a' and <= 'f')))
+        {
+            throw new TrainingExportPlanException(
+                $"{label} muss ein exakt 64-stelliger lowercase SHA-256 sein.");
+        }
     }
 
     /// <summary>
@@ -434,7 +578,7 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
     {
         ArgumentNullException.ThrowIfNull(sourceHashes);
         if (sourceHashes.Count == 0)
-            throw new TrainingExportPlanException("Der Live-Inventarlauf enthaelt keine Quellen-Hashes.");
+            throw new TrainingExportPlanException("Der Live-Inventarlauf enthält keine Quellen-Hashes.");
 
         var normalized = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var item in sourceHashes)
@@ -613,7 +757,7 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
     {
         var normalized = value?.Trim();
         if (normalized is not { Length: 64 } || !normalized.All(Uri.IsHexDigit))
-            throw new TrainingExportPlanException($"{label} ist kein gueltiger SHA-256.");
+            throw new TrainingExportPlanException($"{label} ist kein gültiger SHA-256.");
     }
 
     private static TrainingExportPlanException InconsistentCandidate(
@@ -633,4 +777,8 @@ public sealed class TrainingExportPlanService : ITrainingExportPlanService
         string? ClassName,
         TrainingExportBoundingBox? BoundingBox,
         TrainingExportExclusionReason? ExclusionReason);
+
+    private sealed record PreparedNegativeBinding(
+        string HoldingKey,
+        TrainingExportTarget Target);
 }

@@ -2,6 +2,8 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 
+using AuswertungPro.Next.UI.DataPage;
+
 namespace AuswertungPro.Next.UI.Views.Pages;
 
 public partial class DataPage
@@ -80,11 +82,16 @@ public partial class DataPage
         _columnAlignmentToolbar.ApplyVerticalAlignment(VerticalAlignment.Bottom);
     }
 
+    /// <summary>Laden und Speichern liegen in <see cref="DataPageLayoutPersistenz"/>.</summary>
     private void RestoreLayoutFromSettings()
-    {
-        var layout = Settings.DataPageLayout;
-        _columnLayoutController.Restore(Grid.Columns, layout);
-    }
+        => DataPageLayoutPersistenz.Restore(Grid, _columnLayoutController, SettingsOderNull);
+
+    private void SaveLayoutToSettings()
+        => DataPageLayoutPersistenz.Save(Grid, _columnLayoutController, SettingsOderNull);
+
+    /// <summary>Die Einstellungen — oder null, solange die Seite kein ViewModel hat.</summary>
+    private AppSettings? SettingsOderNull
+        => DataContext is AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel ? Settings : null;
 
     private void QueueLayoutSave()
     {
@@ -93,20 +100,5 @@ public partial class DataPage
 
         _layoutSaveDebounceTimer.Stop();
         _layoutSaveDebounceTimer.Start();
-    }
-
-    private void SaveLayoutToSettings()
-    {
-        // Beim Entladen der Seite (Unloaded-Handler) kann der DataContext bereits
-        // null sein. Dann gibt es nichts zu speichern — keinen Zugriff auf Vm/Settings
-        // erzwingen (wuerde sonst werfen).
-        if (_columnLayoutController.IsRestoring || Grid.Columns.Count == 0
-            || DataContext is not AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel)
-            return;
-
-        var layout = Settings.DataPageLayout ?? new DataPageLayoutSettings();
-        layout.Columns = _columnLayoutController.Capture(Grid.Columns).Columns;
-        Settings.DataPageLayout = layout;
-        Settings.Save();
     }
 }

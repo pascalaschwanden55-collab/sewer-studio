@@ -22,14 +22,16 @@ public sealed class MeasureRecordParserTests
     [InlineData("BAB", "BAB")]
     [InlineData("  BAB  ", "BAB")]
     [InlineData("B", "")]           // zu kurz
-    [InlineData("ABCDEFGHIJKLM", "")]  // zu lang (>12)
+    [InlineData("ABCDEFGHI", "")]  // zu lang (>8)
     [InlineData("123", "")]         // kein Buchstabe
+    [InlineData("0.00m", "")]       // Meterangabe ist kein Schadenscode
+    [InlineData("A01", "")]         // Operator-Code ist kein VSA-Schadenscode
     [InlineData("SCHADEN", "")]     // reserviertes Wort
     [InlineData("SCHAEDEN", "")]    // reserviertes Wort
     [InlineData("KEINE", "")]       // reserviertes Wort
     [InlineData("BA-B", "BAB")]     // Sonderzeichen werden entfernt
     [InlineData("BCC", "BCC")]
-    [InlineData("BAB_1", "BAB_1")]  // Unterstrich erlaubt
+    [InlineData("BAB_1", "")]       // Ziffern/Unterstrich sind nicht erlaubt
     public void NormalizeCode_ReturnsExpected(string? input, string expected)
         => Assert.Equal(expected, MeasureRecordParser.NormalizeCode(input));
 
@@ -113,6 +115,48 @@ public sealed class MeasureRecordParserTests
     }
 
     [Fact]
+    public void ExtractDamageCodes_MeterZuerst_NimmtDenCodeStattDerMeterangabe()
+    {
+        var rec = new HaltungRecord();
+        rec.SetFieldValue(
+            "Primaere_Schaeden",
+            "0.00m BCD Rohranfang\n8.42m BAB Riss\n16.85m BCE Rohrende",
+            FieldSource.Manual,
+            userEdited: false);
+
+        var codes = MeasureRecordParser.ExtractDamageCodes(rec);
+
+        Assert.Equal(new[] { "BAB" }, codes);
+    }
+
+    [Fact]
+    public void ExtractDamageCodes_IgnoriertBestandescodesUndAllgemeinzustand()
+    {
+        var rec = new HaltungRecord();
+        rec.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BCD" });
+        rec.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BCE" });
+        rec.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BDA" });
+        rec.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BBCC" });
+
+        var codes = MeasureRecordParser.ExtractDamageCodes(rec);
+
+        Assert.Equal(new[] { "BBCC" }, codes);
+    }
+
+    [Fact]
+    public void ExtractDamageCodes_PdfMitOperatorCode_NimmtVsaCode()
+    {
+        var rec = new HaltungRecord();
+        rec.SetFieldValue(
+            "Primaere_Schaeden",
+            "A01 BAFCE @0.00m (Riss)",
+            FieldSource.Manual,
+            userEdited: false);
+
+        Assert.Equal(new[] { "BAFCE" }, MeasureRecordParser.ExtractDamageCodes(rec));
+    }
+
+    [Fact]
     public void ExtractDamageCodes_ReturnsSorted()
     {
         var rec = new HaltungRecord();
@@ -150,6 +194,13 @@ public sealed class MeasureRecordParserTests
     [InlineData("5", 5)]
     [InlineData("3.7", 4)]   // rundet kaufmaennisch
     [InlineData("3,2", 3)]   // Komma als Dezimaltrennzeichen
+    [InlineData("2,5", 3)]   // Mittelwert rundet aufwaerts (AwayFromZero)
+    [InlineData("-3,5", -4)] // Mittelwert bei negativem Wert rundet von Null weg
+    [InlineData("2147483647", int.MaxValue)]
+    [InlineData("-2147483648", int.MinValue)]
+    [InlineData("2147483648", null)]    // ausserhalb int: nicht lesbar statt Ausnahme
+    [InlineData("-2147483649", null)]
+    [InlineData("99999999999,5", null)]
     public void TryParseInt_ReturnsExpected(string? input, int? expected)
         => Assert.Equal(expected, MeasureRecordParser.TryParseInt(input));
 

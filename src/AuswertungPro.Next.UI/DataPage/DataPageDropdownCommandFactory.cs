@@ -7,7 +7,8 @@ public sealed record DataPageDropdownCommandSet(
     DropdownCommandGroup Eigentuemer,
     DropdownCommandGroup Pruefungsresultat,
     DropdownCommandGroup Referenzpruefung,
-    DropdownCommandGroup EmpfohleneSanierungsmassnahmen);
+    DropdownCommandGroup EmpfohleneSanierungsmassnahmen,
+    DropdownCommandGroup Rohrmaterial);
 
 public static class DataPageDropdownCommandFactory
 {
@@ -16,13 +17,15 @@ public static class DataPageDropdownCommandFactory
         DropdownCommandActions eigentuemer,
         DropdownCommandActions pruefungsresultat,
         DropdownCommandActions referenzpruefung,
-        DropdownCommandActions empfohleneSanierungsmassnahmen)
+        DropdownCommandActions empfohleneSanierungsmassnahmen,
+        DropdownCommandActions rohrmaterial)
     {
         return new DataPageDropdownCommandSet(
             DropdownCommandFactory.Create(sanieren),
             DropdownCommandFactory.Create(eigentuemer),
             DropdownCommandFactory.Create(pruefungsresultat),
             DropdownCommandFactory.Create(referenzpruefung),
-            DropdownCommandFactory.Create(empfohleneSanierungsmassnahmen));
+            DropdownCommandFactory.Create(empfohleneSanierungsmassnahmen),
+            DropdownCommandFactory.Create(rohrmaterial));
     }
 }

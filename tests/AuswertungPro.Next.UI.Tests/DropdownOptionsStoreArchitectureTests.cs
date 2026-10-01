@@ -7,7 +7,7 @@ public sealed class DropdownOptionsStoreArchitectureTests
     [Fact]
     public void ViewModels_nutzen_den_injizierten_Dropdown_Speicher()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var pages = Path.Combine(root, "src", "AuswertungPro.Next.UI", "ViewModels", "Pages");
         var files = new[]
         {

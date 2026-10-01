@@ -11,7 +11,7 @@ import numpy as np
 
 from ..config import settings
 from ..cuda_errors import looks_like_cuda_failure, looks_like_oom
-from ..gpu_manager import gpu_manager, ModelSlot, ModelUnloadedError
+from ..gpu_manager import gpu_manager, InsufficientVramError, ModelSlot, ModelUnloadedError
 from ..schemas.detection import DinoDetection, DinoResponse
 from .image_decode import decode_image_safe
 
@@ -155,9 +155,10 @@ def detect(
                 box_threshold=box_threshold,
                 text_threshold=text_threshold,
             )
-    except ModelUnloadedError:
+    except (ModelUnloadedError, InsufficientVramError):
         # Unload-Race (Paket 3/B) darf NICHT in ein degraded-200 laufen: der
         # zentrale Handler liefert 503, der C#-Client wiederholt den Request.
+        # Ein echter VRAM-Mangel braucht denselben Vertrag samt Kapazitaetsdaten.
         raise
     except Exception as exc:
         # OOM/CUDA-Fehler re-raisen, damit der zentrale Handler VRAM freigibt und 503 liefert;

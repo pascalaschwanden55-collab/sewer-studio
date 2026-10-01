@@ -239,7 +239,11 @@ public sealed class ProtocolDataIntegrityTests
             var project = new Project();
             var record = new HaltungRecord();
             record.SetFieldValue("Haltungsname", "H-01", FieldSource.Manual, userEdited: false);
-            record.SetFieldValue("Rohrmaterial", "PVC", FieldSource.Manual, userEdited: true);
+            // Bewusst "Steinzeug": ein Begriff, den das MaterialVokabular unveraendert
+            // laesst. "PVC" wird seit 2026-08-29 beim Laden auf "Polyvinylchlorid"
+            // angehoben - dieser Test prueft Herkunft, Befunde und Revisionen, nicht
+            // die Schreibweise des Materials.
+            record.SetFieldValue("Rohrmaterial", "Steinzeug", FieldSource.Manual, userEdited: true);
             record.VsaFindings.Add(new VsaFinding
             {
                 KanalSchadencode = "BAB",
@@ -269,7 +273,7 @@ public sealed class ProtocolDataIntegrityTests
             Assert.True(load.Ok, load.ErrorMessage);
             var loaded = Assert.Single(load.Value!.Data);
 
-            Assert.Equal("PVC", loaded.GetFieldValue("Rohrmaterial"));
+            Assert.Equal("Steinzeug", loaded.GetFieldValue("Rohrmaterial"));
             Assert.True(loaded.FieldMeta["Rohrmaterial"].UserEdited);
             var finding = Assert.Single(loaded.VsaFindings);
             Assert.Equal("BAB", finding.KanalSchadencode);

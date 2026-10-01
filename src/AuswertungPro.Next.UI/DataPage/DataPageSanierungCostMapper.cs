@@ -15,6 +15,10 @@ public static class DataPageSanierungCostMapper
     public static void ApplyRecommendation(HaltungRecord record, MeasureRecommendationResult recommendation)
         => SanierungCostFieldMapper.ApplyRecommendation(record, recommendation);
 
+    /// <inheritdoc cref="SanierungCostFieldMapper.ClearAutomaticRecommendation"/>
+    public static bool ClearAutomaticRecommendation(HaltungRecord record)
+        => SanierungCostFieldMapper.ClearAutomaticRecommendation(record);
+
     /// <inheritdoc cref="SanierungCostFieldMapper.ApplyCosts"/>
     public static void ApplyCosts(HaltungRecord record, HoldingCost cost, bool includeCosts = true)
         => SanierungCostFieldMapper.ApplyCosts(record, cost, includeCosts);

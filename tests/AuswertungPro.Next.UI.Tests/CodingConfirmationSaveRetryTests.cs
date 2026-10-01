@@ -39,7 +39,7 @@ public sealed class CodingConfirmationSaveRetryTests
             Request(caseId: "H-100"));
 
         Assert.False(result.Success);
-        Assert.Equal("KB nicht erreichbar", result.Error);
+        Assert.Equal("Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.", result.Error);
         Assert.Contains(logged, message => message.Contains("KB nicht erreichbar"));
     }
 

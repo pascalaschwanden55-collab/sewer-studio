@@ -1,0 +1,147 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Backup;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.UI.Services;
+
+namespace AuswertungPro.Next.UI.Settings;
+
+public sealed record SettingsProgramSnapshotWorkflowRequest(
+    IDialogService Dialogs,
+    Action<string> SetStatusText,
+    Func<string> GetProgramRoot,
+    Func<ProgramSnapshotRequest, IProgress<string>?, CancellationToken, Task<ProgramSnapshotResult>> CreateAsync,
+    Func<DateTime> Now,
+    /// <summary>
+    /// Schreibt Grund und Luecken ins Programmlog. Ein abgelehnter Lauf lieferte
+    /// bisher nur einen Dialog und hinterliess keine Spur. null verwendet den
+    /// zentralen Logkanal.
+    /// </summary>
+    Action<string>? Log = null,
+    IToastService? Toasts = null);
+
+/// <summary>
+/// Fuehrt den Benutzer durch die Programm-Momentaufnahme: Ziel waehlen, packen,
+/// Ergebnis melden. Enthaelt bewusst keine Auswahl- oder Dateilogik — die liegt
+/// im <see cref="IProgramSnapshotService"/>.
+/// </summary>
+public static class SettingsProgramSnapshotWorkflow
+{
+    private const string DialogTitle = "Programm sichern";
+
+    public static async Task RunAsync(
+        SettingsProgramSnapshotWorkflowRequest request,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var log = request.Log ?? (message => BestEffort.ReportWarning(message));
+
+        var programRoot = request.GetProgramRoot();
+        if (string.IsNullOrWhiteSpace(programRoot))
+        {
+            request.Dialogs.Warn("Der Programmordner wurde nicht gefunden.", DialogTitle);
+            return;
+        }
+
+        var defaultName = $"SewerStudio_Programm_{request.Now():yyyy-MM-dd}";
+        var path = request.Dialogs.SaveFile(
+            "Programm-Momentaufnahme speichern",
+            "ZIP-Archiv (*.zip)|*.zip",
+            ".zip",
+            defaultName);
+        if (path is null)
+            return;
+
+        request.SetStatusText("Programm wird gepackt...");
+        try
+        {
+            var result = await request
+                .CreateAsync(
+                    new ProgramSnapshotRequest(programRoot, path),
+                    new Progress<string>(request.SetStatusText),
+                    ct)
+                .ConfigureAwait(true);
+
+            if (!result.Success)
+            {
+                log($"[Programm-Momentaufnahme] Fehlgeschlagen (Ziel {path}): " +
+                    $"{result.Error ?? "ohne Angabe"}");
+                request.SetStatusText($"Fehler: {result.Error}");
+                request.Dialogs.Error($"Die Momentaufnahme ist fehlgeschlagen:\n{result.Error}", DialogTitle);
+                return;
+            }
+
+            var sizeMb = result.SizeBytes / (1024.0 * 1024.0);
+            var unreadable = result.UnreadableDirectoriesOrEmpty;
+
+            request.SetStatusText(unreadable.Count > 0
+                ? $"Programm gesichert mit {unreadable.Count} unlesbaren Ordnern: "
+                  + $"{result.FileCount} Dateien, {sizeMb:F1} MB"
+                : $"Programm gesichert: {result.FileCount} Dateien, {sizeMb:F1} MB");
+
+            var skippedHint = result.SkippedReparsePoints > 0
+                ? $"\nÜbersprungene Verknüpfungen: {result.SkippedReparsePoints}"
+                : string.Empty;
+            var checksumHint = string.IsNullOrEmpty(result.ArchiveSha256)
+                ? string.Empty
+                : $"\nPrüfsumme: {result.ArchiveSha256[..16]}... (vollständig in {Path.GetFileName(path)}.sha256)";
+
+            // Eine Sicherung mit Luecken darf nicht wie eine vollstaendige aussehen.
+            if (unreadable.Count > 0)
+            {
+                foreach (var ordner in unreadable)
+                    log($"[Programm-Momentaufnahme] Ordner nicht gelesen: {ordner}");
+
+                const int maxAnzeige = 10;
+                var liste = string.Join("\n", unreadable.Take(maxAnzeige).Select(d => $"  - {d}"));
+                var mehr = unreadable.Count > maxAnzeige
+                    ? $"\n  ... und {unreadable.Count - maxAnzeige} weitere"
+                    : string.Empty;
+
+                request.Dialogs.Warn(
+                    "Programm-Momentaufnahme erstellt, aber UNVOLLSTÄNDIG.\n\n" +
+                    $"Diese {unreadable.Count} Ordner konnten nicht gelesen werden und fehlen:\n" +
+                    liste + mehr + "\n\n" +
+                    $"Dateien: {result.FileCount}\n" +
+                    $"Grösse: {sizeMb:F1} MB\n" +
+                    $"Pfad: {path}{skippedHint}{checksumHint}\n\n" +
+                    "Die unersetzlichen Ordner (Quellcode, Tests, Werkzeuge, Sidecar, Git-Verlauf) " +
+                    "sind vollständig — sonst wäre die Sicherung abgebrochen.",
+                    DialogTitle);
+                return;
+            }
+
+            if (request.Toasts is not null)
+            {
+                request.Toasts.Success(
+                    $"Programm-Momentaufnahme erstellt: {result.FileCount} Dateien, {sizeMb:F1} MB.",
+                    "Datei öffnen",
+                    () => ExplorerRevealService.TryReveal(path, out _));
+            }
+            else
+            {
+                request.Dialogs.Info(
+                    "Programm-Momentaufnahme erstellt.\n\n" +
+                    $"Dateien: {result.FileCount}\n" +
+                    $"Grösse: {sizeMb:F1} MB\n" +
+                    $"Pfad: {path}{skippedHint}{checksumHint}\n\n" +
+                    "Enthalten sind Quellcode, der vollständige Git-Verlauf und die Modellgewichte. " +
+                    "Build-Ausgabe, Python-Umgebung und Kartenkacheln fehlen bewusst — sie entstehen neu.",
+                    DialogTitle);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            request.SetStatusText("Momentaufnahme abgebrochen.");
+        }
+        catch (Exception ex)
+        {
+            var userMessage = UserError.DescribeAndReport(ex, "Programm-Momentaufnahme");
+            request.SetStatusText($"Fehler: {userMessage}");
+            request.Dialogs.Error($"Die Momentaufnahme ist fehlgeschlagen:\n{userMessage}", DialogTitle);
+        }
+    }
+}

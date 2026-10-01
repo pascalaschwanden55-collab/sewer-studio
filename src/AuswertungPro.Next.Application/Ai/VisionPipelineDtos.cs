@@ -81,6 +81,18 @@ public sealed record YoloRequest(
     [property: JsonPropertyName("confidence_threshold")] double ConfidenceThreshold
 );
 
+/// <summary>
+/// Getrennter BCC-Testrequest. Es werden nur eine Kandidaten-ID und der erwartete
+/// Gewicht-Hash uebertragen, niemals ein Modellpfad.
+/// </summary>
+public sealed record BccTestYoloRequest(
+    [property: JsonPropertyName("image_base64")] string ImageBase64,
+    [property: JsonPropertyName("confidence_threshold")] double ConfidenceThreshold,
+    [property: JsonPropertyName("candidate_id")] string CandidateId,
+    [property: JsonPropertyName("candidate_sha256")] string CandidateSha256,
+    [property: JsonPropertyName("meter_format")] string? MeterFormat = null
+);
+
 public sealed record YoloDetectionDto(
     [property: JsonPropertyName("x1")] double X1,
     [property: JsonPropertyName("y1")] double Y1,
@@ -110,7 +122,7 @@ public sealed record YoloResponse(
 
 /// <summary>
 /// Antwort des getrennten, nicht produktiven BCC-Trainingskandidaten.
-/// <see cref="Available"/> ist false, wenn kein sicher validierter Kandidat bereitsteht.
+/// <see cref="Available"/> ist false, wenn kein sicher pruefbarer Kandidat bereitsteht.
 /// </summary>
 public sealed record BccTestYoloResponse(
     [property: JsonPropertyName("available")] bool Available,
@@ -122,7 +134,25 @@ public sealed record BccTestYoloResponse(
     [property: JsonPropertyName("candidate_id")] string CandidateId,
     [property: JsonPropertyName("candidate_sha256")] string CandidateSha256,
     [property: JsonPropertyName("model_name")] string ModelName,
-    [property: JsonPropertyName("device")] string Device
+    [property: JsonPropertyName("device")] string Device,
+    [property: JsonPropertyName("frame_usable")] bool FrameUsable = true,
+    [property: JsonPropertyName("quality_reason")] string? QualityReason = null,
+    [property: JsonPropertyName("meter_value")] double? MeterValue = null
+);
+
+/// <summary>Pfadfreie Metadaten eines manifest- und hashgeprueften BCC-Testkandidaten.</summary>
+public sealed record BccTestCandidateInfo(
+    [property: JsonPropertyName("candidate_id")] string CandidateId,
+    [property: JsonPropertyName("candidate_sha256")] string CandidateSha256,
+    [property: JsonPropertyName("map50")] double Map50,
+    [property: JsonPropertyName("epochs_completed")] int EpochsCompleted,
+    [property: JsonPropertyName("created_utc")] string CreatedUtc
+);
+
+public sealed record BccTestCandidatesResponse(
+    [property: JsonPropertyName("available")] bool Available,
+    [property: JsonPropertyName("error")] string? Error,
+    [property: JsonPropertyName("candidates")] IReadOnlyList<BccTestCandidateInfo> Candidates
 );
 
 // ── YOLO Classify ─────────────────────────────────────────────────────────
@@ -248,8 +278,12 @@ public sealed record SamResponse(
 /// <summary>Qualifikationsstand des aktiven Detektors aus der Sidecar-Statusdatei.</summary>
 public sealed record SidecarDetectorQualification(
     [property: JsonPropertyName("qualified")] bool Qualified,
-    [property: JsonPropertyName("reason")] string? Reason
+    [property: JsonPropertyName("reason")] string? Reason,
+    [property: JsonPropertyName("artifact")] SidecarDetectorArtifact? Artifact = null
 );
+
+public sealed record SidecarDetectorArtifact(
+    [property: JsonPropertyName("sha256")] string? Sha256);
 
 // ── Training Export ─────────────────────────────────────────────────────────
 
@@ -323,3 +357,44 @@ public sealed record PipelineHealthCheckResult(
     int? StatusCode,
     SidecarHealthResponse? Health,
     string? Error);
+
+// ── Lernstufen (Rohranfang/Rohrende): /classify/lernstufen und /classify/lernstufe ──
+
+/// <summary>
+/// Eine freigegebene Lernstufe, wie der Sidecar sie fuehrt. Der Client waehlt
+/// daraus eine Klasse und schickt ihren Gewicht-Hash zurueck; einen Modellpfad
+/// kann er nicht vorgeben.
+/// </summary>
+public sealed record LernstufeInfo(
+    [property: JsonPropertyName("klasse")] string Klasse,
+    [property: JsonPropertyName("gewicht_sha256")] string GewichtSha256,
+    [property: JsonPropertyName("freigabe_sha256")] string FreigabeSha256,
+    [property: JsonPropertyName("precision")] double Precision,
+    [property: JsonPropertyName("recall")] double Recall,
+    [property: JsonPropertyName("regel")] string Regel
+);
+
+public sealed record LernstufenResponse(
+    [property: JsonPropertyName("lernstufen")] IReadOnlyList<LernstufeInfo> Lernstufen
+);
+
+/// <summary>Klasse und erwarteter Gewicht-Hash fuer EIN Bild. Kein Modellpfad.</summary>
+/// <param name="Imgsz">Bildgroesse der Abnahme (cls_runs/*_640); der Sidecar-Standard ist derselbe Wert.</param>
+public sealed record LernstufeRequest(
+    [property: JsonPropertyName("image_base64")] string ImageBase64,
+    [property: JsonPropertyName("klasse")] string Klasse,
+    [property: JsonPropertyName("gewicht_sha256")] string GewichtSha256,
+    [property: JsonPropertyName("imgsz")] int Imgsz = 640
+);
+
+/// <summary>Nur eine Konfidenz fuer das GANZE Bild — diese Modelle liefern keine Box.</summary>
+public sealed record LernstufeResponse(
+    [property: JsonPropertyName("klasse")] string Klasse,
+    [property: JsonPropertyName("konfidenz")] double Konfidenz,
+    [property: JsonPropertyName("gewicht_sha256")] string GewichtSha256,
+    [property: JsonPropertyName("freigabe_sha256")] string FreigabeSha256,
+    [property: JsonPropertyName("precision")] double Precision,
+    [property: JsonPropertyName("recall")] double Recall,
+    [property: JsonPropertyName("device")] string? Device,
+    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs
+);

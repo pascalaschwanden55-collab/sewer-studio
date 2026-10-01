@@ -111,7 +111,7 @@ public sealed class IbakExportImportService : IIbakImportService
                 if (holding.Entries.Count == 0)
                 {
                     uncertain++;
-                    messages.Add($"Keine Beobachtungen in Daten.txt fuer Haltung {holding.Holding}");
+                    messages.Add($"Keine Beobachtungen in Daten.txt für Haltung {holding.Holding}");
                     continue;
                 }
 
@@ -157,27 +157,34 @@ public sealed class IbakExportImportService : IIbakImportService
 
         // Fallback: Praefix-Match an Segmentgrenze (kein unscharfes Contains mehr,
         // das 100-200 mit 100-2000 verwechselt hat).
-        foreach (var r in project.Data)
-        {
-            var v = NormalizeHoldingKey(r.GetFieldValue("Haltungsname"));
-            if (string.IsNullOrWhiteSpace(v))
-                continue;
-            if (Common.HoldingKeyMatch.IsBoundaryPrefixMatch(v, key))
-                return r;
-        }
+        var prefixMatches = project.Data
+            .Where(r =>
+            {
+                var value = NormalizeHoldingKey(r.GetFieldValue("Haltungsname"));
+                return !string.IsNullOrWhiteSpace(value)
+                       && Common.HoldingKeyMatch.IsBoundaryPrefixMatch(value, key);
+            })
+            .Take(2)
+            .ToList();
+        if (prefixMatches.Count == 1)
+            return prefixMatches[0];
 
         // Fallback 2: Knoten-Prefix-tolerant (z.B. 10.1064892 == 1064892, 07.1028055 == 1028055)
         var keyStripped = StripNodePrefixes(key);
-        foreach (var r in project.Data)
-        {
-            var v = NormalizeHoldingKey(r.GetFieldValue("Haltungsname"));
-            if (string.IsNullOrWhiteSpace(v))
-                continue;
-            if (string.Equals(StripNodePrefixes(v), keyStripped, StringComparison.OrdinalIgnoreCase))
-                return r;
-        }
+        var strippedMatches = project.Data
+            .Where(r =>
+            {
+                var value = NormalizeHoldingKey(r.GetFieldValue("Haltungsname"));
+                return !string.IsNullOrWhiteSpace(value)
+                       && string.Equals(
+                           StripNodePrefixes(value),
+                           keyStripped,
+                           StringComparison.OrdinalIgnoreCase);
+            })
+            .Take(2)
+            .ToList();
 
-        return null;
+        return strippedMatches.Count == 1 ? strippedMatches[0] : null;
     }
 
     private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, IProtocolService protocolService)
@@ -194,11 +201,10 @@ public sealed class IbakExportImportService : IIbakImportService
     {
         // IBAK-Exporte nutzen L_, L__ oder H__ als Video-Prefix
         var prefixes = new[] { $"L__{holdingKey}", $"L_{holdingKey}", $"H__{holdingKey}" };
-        var videoExtensions = new[] { ".mpg", ".mpeg", ".mp4", ".avi", ".mov" };
 
         var matches = index.Keys
-            .Where(k => prefixes.Any(p => k.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-            .Where(k => videoExtensions.Any(ext => k.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+            .Where(k => prefixes.Any(p => HasPrefixAtBoundary(k, p)))
+            .Where(MediaFileTypes.HasVideoExtension)
             .Select(k => ResolveFile(index, k))
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -209,6 +215,11 @@ public sealed class IbakExportImportService : IIbakImportService
 
         record.SetFieldValue("Link", matches[0]!, FieldSource.Legacy, userEdited: false);
     }
+
+    private static bool HasPrefixAtBoundary(string value, string prefix)
+        => value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+           && (value.Length == prefix.Length
+               || !char.IsLetterOrDigit(value[prefix.Length]));
 
     private static void LinkHoldingPdf(HaltungRecord record, string holdingKey, Dictionary<string, List<string>> index)
     {
@@ -427,7 +438,7 @@ public sealed class IbakExportImportService : IIbakImportService
         }
 
         if (queue.Count > 0)
-            messages.Add($"IBAK: Nicht zugeordnete Fotos fuer Haltung {holdingKey}: {queue.Count}");
+            messages.Add($"IBAK: Nicht zugeordnete Fotos für Haltung {holdingKey}: {queue.Count}");
     }
 
     private static void AddPhotoPath(ProtocolEntry entry, string? photo)
@@ -482,7 +493,7 @@ public sealed class IbakExportImportService : IIbakImportService
             using var workingCopy = IbakFdbWorkingCopy.Create(fdbPath);
             var cs = _connectionOptions.CreatePhotoMap(
                 workingCopy.DatabasePath,
-                TryFindFbClient(exportRoot));
+                FindBundledFbClient());
 
             using var conn = new FbConnection(cs.ToString());
             conn.Open();
@@ -554,7 +565,7 @@ public sealed class IbakExportImportService : IIbakImportService
         }
         catch (Exception ex)
         {
-            messages.Add($"IBAK FDB: Zugriff fehlgeschlagen ({ex.Message}). Fallback auf Dateinamen. Falls no client library: Firebird Client installieren oder fbclient.dll bereitstellen.");
+            messages.Add($"IBAK FDB: Zugriff fehlgeschlagen ({ex.Message}). Fallback auf Dateinamen. Falls no client library: Firebird Client installieren oder fbclient.dll im Programmordner bereitstellen.");
         }
 
         return result;
@@ -627,20 +638,13 @@ public sealed class IbakExportImportService : IIbakImportService
         return preferred ?? candidates[0];
     }
 
-    private static string? TryFindFbClient(string exportRoot)
+    internal static string? FindBundledFbClient(
+        string? applicationDirectory = null,
+        Func<string, bool>? fileExists = null)
     {
-        var candidates = new[]
-        {
-            Path.Combine(exportRoot, "fbclient.dll"),
-            Path.Combine(exportRoot, "Data", "fbclient.dll"),
-            Path.Combine(AppContext.BaseDirectory, "fbclient.dll")
-        };
-
-        foreach (var c in candidates)
-            if (File.Exists(c))
-                return c;
-
-        return null;
+        var trustedDirectory = applicationDirectory ?? AppContext.BaseDirectory;
+        var candidate = Path.Combine(trustedDirectory, "fbclient.dll");
+        return (fileExists ?? File.Exists)(candidate) ? candidate : null;
     }
 
     // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser

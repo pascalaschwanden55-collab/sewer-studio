@@ -4,6 +4,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
@@ -98,6 +99,24 @@ public sealed class XtfMediaPathSecurityTests
     }
 
     [Fact]
+    public void ResolvePhoto_DateinameMitVerzeichnisbruch_WirdVerworfen()
+    {
+        using var temp = new TempDir();
+        var documents = temp.CreateSubdir("export/Dokumente");
+        var outside = temp.CreateSubdir("outside");
+        var ausbruch = Path.Combine(outside, "foto.jpg");
+        File.WriteAllText(ausbruch, "foto");
+
+        var result = new VsaMediaPathFileResolver().ResolvePhoto(
+            Path.Combine(documents, "export.xtf"),
+            relativeFolder: null,
+            fileName: Path.Combine("Medien", "..", "..", "..", "outside", "foto.jpg"));
+
+        Assert.Equal(string.Empty, result);
+        Assert.True(File.Exists(ausbruch));
+    }
+
+    [Fact]
     public void ResolvePhoto_RelativpfadInnerhalbDesXtfVerzeichnisses_BleibtErlaubt()
     {
         using var temp = new TempDir();
@@ -111,6 +130,71 @@ public sealed class XtfMediaPathSecurityTests
             Path.Combine(documents, "export.xtf"), "Medien", "foto.jpg");
 
         Assert.Equal(foto, result, ignoreCase: true);
+    }
+
+    [JunctionFact]
+    public void ResolveVideo_VerknuepfterKandidatenordner_WirdNichtBetreten()
+    {
+        using var temp = new TempDir();
+        var documents = temp.CreateSubdir("export/Dokumente");
+        var external = temp.CreateSubdir("fremd");
+        var externalVideo = Path.Combine(external, "film.mp4");
+        File.WriteAllText(externalVideo, "fremdes-video");
+        var videoLink = Path.Combine(documents, "Video");
+        JunctionTestSupport.CreateDirectoryLink(videoLink, external);
+
+        try
+        {
+            var result = new VsaMediaPathFileResolver().ResolveVideo(
+                Path.Combine(documents, "export.xtf"),
+                relativeFolder: null,
+                fileName: "film.mp4");
+
+            var expectedFallback = Path.Combine(documents, "film.mp4")
+                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+            var normalizedResult = result
+                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+
+            Assert.Equal(expectedFallback, normalizedResult, ignoreCase: true);
+            Assert.False(string.Equals(
+                Path.Combine(videoLink, "film.mp4")
+                    .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar),
+                normalizedResult,
+                StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            try { Directory.Delete(videoLink); } catch { }
+        }
+    }
+
+    [JunctionFact]
+    public void ResolvePhoto_Dateiverknuepfung_WirdNichtAlsQuelleAufgeloest()
+    {
+        using var temp = new TempDir();
+        var documents = temp.CreateSubdir("export/Dokumente");
+        var external = temp.CreateSubdir("fremd");
+        var externalPhoto = Path.Combine(external, "foto.jpg");
+        File.WriteAllText(externalPhoto, "fremdes-foto");
+        var photoLink = Path.Combine(documents, "foto.jpg");
+        File.CreateSymbolicLink(photoLink, externalPhoto);
+
+        try
+        {
+            var result = new VsaMediaPathFileResolver().ResolvePhoto(
+                Path.Combine(documents, "export.xtf"),
+                relativeFolder: null,
+                fileName: "foto.jpg");
+
+            Assert.Equal(
+                Path.GetFullPath(Path.Combine(documents, "Foto", "foto.jpg")),
+                Path.GetFullPath(result),
+                ignoreCase: true);
+        }
+        finally
+        {
+            try { File.Delete(photoLink); } catch { }
+        }
     }
 
     // ---------------- Resolver: UNC-Sperre (S2-3) ----------------

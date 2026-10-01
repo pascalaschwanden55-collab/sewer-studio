@@ -18,8 +18,8 @@ public static class AiOptimizationSessionStore
     [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IAiOptimizationSessionStore store) =>
         throw new NotSupportedException(
-            "Der globale Speicher fuer KI-Sanierungssitzungen kann nicht mehr ausgetauscht werden. " +
-            "IAiOptimizationSessionStore bitte per Konstruktor uebergeben.");
+            "Der globale Speicher für KI-Sanierungssitzungen kann nicht mehr ausgetauscht werden. " +
+            "IAiOptimizationSessionStore bitte per Konstruktor übergeben.");
 
     public static Task SaveAsync(AiOptimizationSession session) =>
         Current.SaveAsync(session);

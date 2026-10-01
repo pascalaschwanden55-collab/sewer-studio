@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
@@ -66,12 +67,11 @@ app = FastAPI(
 
 @app.exception_handler(InsufficientVramError)
 async def handle_insufficient_vram(request: Request, exc: InsufficientVramError):
-    """VRAM-Zulassung verweigert (Paket 3/B): kontrollierter 503 mit maschinenlesbarem
-    Detail — OHNE dass ein Ladeversuch stattgefunden hat."""
-    logger.warning(
-        "VRAM-Zulassung verweigert fuer %s: %.1f GB frei < %.1f GB benoetigt.",
-        exc.slot.value, exc.free_gb, exc.required_gb,
-    )
+    """VRAM-Zulassung verweigert: kontrollierter 503 mit maschinenlesbarem Detail.
+
+    Ein Budgetfehler kann auch durch die Nachmessung nach dem Laden entstehen.
+    """
+    logger.warning("VRAM-Zulassung verweigert fuer %s: %s", exc.slot.value, exc)
     return JSONResponse(
         {
             "detail": "insufficient VRAM",
@@ -81,6 +81,9 @@ async def handle_insufficient_vram(request: Request, exc: InsufficientVramError)
             "required_gb": round(exc.required_gb, 2),
             # Paket 2: abgezogene Ollama-Reserve im Detail (additiv, abwaertskompatibel).
             "reserved_gb": round(exc.reserved_gb, 2),
+            "reason": exc.reason,
+            "used_gb": round(exc.used_gb, 2) if exc.used_gb is not None else None,
+            "budget_gb": round(exc.budget_gb, 2) if exc.budget_gb is not None else None,
         },
         status_code=503,
     )
@@ -186,6 +189,82 @@ def _resolve_or_create_token() -> str:
 
 def _auth_token() -> str:
     return (settings.auth_token or "").strip()
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_validation_error(request: Request, exc: RequestValidationError):
+    """Validierungsfehler OHNE die Eingabe zurueckspiegeln.
+
+    Der Standardhandler von FastAPI nimmt bei jedem Fehler das ungueltige
+    Eingabeobjekt als ``input`` in die Antwort auf. Verfehlt ein CONTAINER-Feld
+    seinen Typ - etwa ``samples`` als Objekt statt als Liste, oder ein
+    unbekanntes Feld auf oberster Ebene -, dann ist dieses Objekt der gesamte
+    Anfragekoerper samt Base64-Bildern. Gemessen am 2026-08-18: ein Koerper von
+    200 KB erzeugte eine Antwort von 101 KB mit dem Base64-Inhalt darin.
+
+    Bei den meisten Fehlerformen (falscher Literalwert, unbekanntes Feld in
+    einem Sample) blieb die Antwort dagegen bei rund 1,1 KB - die Spiegelung war
+    also nie das Normalverhalten, aber sie war moeglich.
+
+    Geliefert werden nur Ort, stabiler Code und eine kurze Meldung. Der
+    Aufrufer weiss damit, WO es klemmt, bekommt aber nie seine eigenen
+    Nutzdaten zurueck (Gesamtaudit 2026-08-18, R-01).
+    """
+    fehler = [
+        {
+            "loc": [str(teil) for teil in (einzeln.get("loc") or ())],
+            "type": str(einzeln.get("type") or "validation_error"),
+        }
+        for einzeln in exc.errors()[:20]
+    ]
+    return JSONResponse(
+        {
+            "detail": "Request validation failed.",
+            "code": "validation_error",
+            "errors": fehler,
+        },
+        status_code=422,
+    )
+
+
+@app.middleware("http")
+async def enforce_request_size_limit(request: Request, call_next):
+    """Groessengrenze VOR JSON und Pydantic.
+
+    Bis hierher wurde erst in der Route geprueft - also nachdem der ganze
+    Koerper als Zeichenkette und Objektbaum im Speicher stand.
+    """
+    grenze = int(getattr(settings, "max_request_bytes", 0) or 0)
+    if grenze > 0:
+        angegeben = request.headers.get("content-length")
+        transfer_encoding = request.headers.get("transfer-encoding")
+        braucht_laenge = request.method.upper() in {"POST", "PUT", "PATCH"}
+        if braucht_laenge and (angegeben is None or transfer_encoding):
+            return JSONResponse(
+                {
+                    "detail": "Content-Length required.",
+                    "code": "content_length_required",
+                },
+                status_code=411,
+            )
+        if angegeben is not None:
+            try:
+                if int(angegeben) > grenze:
+                    return JSONResponse(
+                        {
+                            "detail": "Request body too large.",
+                            "code": "request_too_large",
+                            "limit_bytes": grenze,
+                        },
+                        status_code=413,
+                    )
+            except ValueError:
+                return JSONResponse(
+                    {"detail": "Invalid Content-Length.", "code": "invalid_content_length"},
+                    status_code=400,
+                )
+
+    return await call_next(request)
 
 
 @app.middleware("http")

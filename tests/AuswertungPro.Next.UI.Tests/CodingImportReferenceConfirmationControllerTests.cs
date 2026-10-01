@@ -62,7 +62,7 @@ public sealed class CodingImportReferenceConfirmationControllerTests
         Assert.Equal(CodingImportReferenceConfirmationOutcome.Confirmed, result);
         Assert.Equal(["persist:BCA", "success", "refresh-match"], calls);
         Assert.Equal(CodingUserDecision.Accepted, selectedEvent.ReviewContext?.Decision);
-        Assert.Equal("Import bestaetigt (ins Brain)", selectedEvent.ReviewContext?.Reason);
+        Assert.Equal("Import bestätigt (ins Brain)", selectedEvent.ReviewContext?.Reason);
     }
 
     private static CodingEvent Event(string code)

@@ -72,7 +72,7 @@ public sealed class CostCalculatorLoadErrorTests
 
         viewModel.SaveCommand.Execute(null);
 
-        Assert.Contains("Laenge", dialogs.LastError, StringComparison.Ordinal);
+        Assert.Contains("Länge", dialogs.LastError, StringComparison.Ordinal);
         Assert.Contains("Speichern gesperrt", dialogs.LastError, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(temp.Path, "Projektdateien", "costs", "costs.json")));
     }
@@ -126,7 +126,7 @@ public sealed class CostCalculatorLoadErrorTests
 
         viewModel.SaveCommand.Execute(null);
 
-        Assert.Contains("groesser als 0", dialogs.LastError, StringComparison.Ordinal);
+        Assert.Contains("grösser als 0", dialogs.LastError, StringComparison.Ordinal);
         Assert.Contains("Speichern gesperrt", dialogs.LastError, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(temp.Path, "Projektdateien", "costs", "costs.json")));
     }
@@ -188,7 +188,7 @@ public sealed class CostCalculatorLoadErrorTests
         dialogs.LastError = "";
         viewModel.ApplyTotalCommand.Execute(null);
 
-        Assert.Contains("Uebernahme gesperrt", dialogs.LastError, StringComparison.Ordinal);
+        Assert.Contains("Übernahme gesperrt", dialogs.LastError, StringComparison.Ordinal);
         Assert.Contains(expectedField, dialogs.LastError, StringComparison.Ordinal);
         Assert.Equal(0, applyCalls);
 
@@ -216,9 +216,9 @@ public sealed class CostCalculatorLoadErrorTests
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") { }
         public void Error(string message, string title = "Fehler") => LastError = message;
-        public bool Confirm(string message, string title = "Bestaetigung") => true;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => true;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Yes;
+        public bool Confirm(string message, string title = "Bestätigung") => true;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => true;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Yes;
     }
 
     private sealed class TempDir : IDisposable

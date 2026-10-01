@@ -66,11 +66,15 @@ public sealed class TemporalCodeVotingService : ITemporalCodeVotingService
         }
 
         // Hysterese: ein bereits bestaetigter Code bleibt an derselben Stelle aktiv,
-        // solange das Fenster noch mindestens eine Stimme fuer ihn enthaelt — einzelne
-        // Kipper (LEER/anderer Code) reissen den laufenden Befund nicht mehr auf.
+        // solange das Fenster noch mindestens eine Stimme fuer ihn enthaelt — ein Bild ohne
+        // eigenen Vorschlag (LEER/keine Entscheidung) reisst den laufenden Befund nicht auf.
         // Er faellt erst, wenn die Kamera weiterfaehrt oder das Fenster ihn verliert
         // (bzw. ein anderer Code selbst die Mehrheit erreicht, siehe oben).
+        // Entscheid 01.10.2026: Ein Bild mit eigenem, abweichendem Vorschlag uebernimmt den
+        // fremden bestaetigten Code NICHT; es bleibt unbestaetigt (null), das Fenster selbst
+        // und der bestaetigte Code bleiben fuer die naechsten Bilder unveraendert.
         if (_lastConfirmedCode is not null
+            && (normalized is null || normalized == _lastConfirmedCode)
             && Math.Abs(meter - _lastConfirmedMeter) <= MeterRadius
             && _window.Any(e => e.Code == _lastConfirmedCode && Math.Abs(e.Meter - meter) <= MeterRadius))
         {

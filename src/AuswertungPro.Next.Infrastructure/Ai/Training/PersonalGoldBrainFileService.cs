@@ -31,7 +31,7 @@ internal static class PersonalGoldBrainFileService
                     || IsInside(normalized[right], normalized[left]))
                 {
                     throw new InvalidDataException(
-                        $"Archiv-, Quell- und Arbeitsordner duerfen sich nicht ueberlappen: " +
+                        $"Archiv-, Quell- und Arbeitsordner dürfen sich nicht überlappen: " +
                         $"{normalized[left]} / {normalized[right]}");
                 }
             }
@@ -56,7 +56,7 @@ internal static class PersonalGoldBrainFileService
         while (true)
         {
             if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-                throw new InvalidDataException($"Verknuepfung im geschuetzten Pfad: {current}");
+                throw new InvalidDataException($"Verknüpfung im geschützten Pfad: {current}");
             if (string.Equals(current, root, StringComparison.OrdinalIgnoreCase))
                 return;
 
@@ -138,7 +138,7 @@ internal static class PersonalGoldBrainFileService
             EnsureMutationPathIsSafe(targetSafetyRoot, target);
             EnsureMutationPathIsSafe(targetSafetyRoot, temporary);
             if (File.Exists(temporary) || Directory.Exists(temporary))
-                throw new IOException($"Temporaeres Kopierziel existiert bereits: {temporary}");
+                throw new IOException($"Temporäres Kopierziel existiert bereits: {temporary}");
             await using (var input = new FileStream(
                              source,
                              FileMode.Open,
@@ -161,7 +161,7 @@ internal static class PersonalGoldBrainFileService
             var sourceHash = await HashAsync(source, cancellationToken).ConfigureAwait(false);
             var targetHash = await HashAsync(temporary, cancellationToken).ConfigureAwait(false);
             if (!sourceHash.Equals(targetHash, StringComparison.OrdinalIgnoreCase))
-                throw new IOException($"Pruefsumme stimmt nach dem Kopieren nicht: {source}");
+                throw new IOException($"Prüfsumme stimmt nach dem Kopieren nicht: {source}");
 
             EnsureMutationPathIsSafe(targetSafetyRoot, temporary);
             EnsureMutationPathIsSafe(targetSafetyRoot, target);
@@ -209,7 +209,7 @@ internal static class PersonalGoldBrainFileService
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if ((File.GetAttributes(entry) & FileAttributes.ReparsePoint) != 0)
-                    throw new InvalidDataException($"Verknuepfung im zu kopierenden Ordner: {entry}");
+                    throw new InvalidDataException($"Verknüpfung im zu kopierenden Ordner: {entry}");
 
                 var target = Path.Combine(current.Target, Path.GetFileName(entry));
                 if (Directory.Exists(entry))
@@ -271,7 +271,7 @@ internal static class PersonalGoldBrainFileService
         var temporary = path + ".tmp";
         EnsureMutationPathIsSafe(targetSafetyRoot, temporary);
         if (File.Exists(temporary) || Directory.Exists(temporary))
-            throw new IOException($"Temporaeres Schreibziel existiert bereits: {temporary}");
+            throw new IOException($"Temporäres Schreibziel existiert bereits: {temporary}");
         try
         {
             var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(content);
@@ -360,7 +360,7 @@ internal static class PersonalGoldBrainFileService
         while (!Directory.Exists(current))
         {
             current = Path.GetDirectoryName(current)
-                      ?? throw new DirectoryNotFoundException($"Kein vorhandener Stamm fuer {path}");
+                      ?? throw new DirectoryNotFoundException($"Kein vorhandener Stamm für {path}");
         }
         return current;
     }

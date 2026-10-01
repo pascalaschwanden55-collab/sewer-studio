@@ -94,4 +94,50 @@ public sealed class TrainingStudioMaskOverlayRendererTests
 
         Assert.Null(threadError);
     }
+
+    [Fact]
+    public void Sichtbare_aber_nicht_goldfaehige_Maske_wird_orange_statt_gruen_gezeichnet()
+    {
+        Exception? threadError = null;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var canvas = new Canvas();
+                var segmentation = new WorkbenchSegmentation(
+                    MaskRle: "0,5,2,9",
+                    MaskImageWidth: 4,
+                    MaskImageHeight: 4,
+                    AreaPercent: 12.5,
+                    StatusText: "Maske erstellt.",
+                    Degraded: false);
+
+                var result = TrainingStudioMaskOverlayRenderer.Render(
+                    canvas,
+                    segmentation,
+                    new Rect(0, 0, 200, 100),
+                    isValidForGold: false);
+
+                Assert.True(result.Rendered);
+                var fill = Assert.IsType<System.Windows.Shapes.Path>(canvas.Children[0]);
+                var contour = Assert.IsType<System.Windows.Shapes.Path>(canvas.Children[1]);
+                var fillColor = Assert.IsType<SolidColorBrush>(fill.Fill).Color;
+                Assert.Equal(72, fillColor.A);
+                Assert.Equal(Colors.Orange.R, fillColor.R);
+                Assert.Equal(Colors.Orange.G, fillColor.G);
+                Assert.Equal(Colors.Orange.B, fillColor.B);
+                Assert.Equal(Colors.Orange, Assert.IsType<SolidColorBrush>(contour.Stroke).Color);
+            }
+            catch (Exception ex)
+            {
+                threadError = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(threadError);
+    }
 }

@@ -10,6 +10,33 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageVideoAnalysisControllerTests
 {
+    [Theory]
+    [InlineData("300", 300)]
+    [InlineData("600", 600)]
+    [InlineData("600,0", 600)]
+    [InlineData("1'000", 1000)]
+    [InlineData("", null)]
+    [InlineData("unbekannt", null)]
+    [InlineData("0", null)]
+    [InlineData("-300", null)]
+    [InlineData("NaN", null)]
+    [InlineData("Infinity", null)]
+    [InlineData("300,5", null)]
+    [InlineData("2147483648", null)]
+    public void Open_UebergibtGeprueftenHaltungsdurchmesser(string rawDiameter, int? expected)
+    {
+        var record = Record("H-01", length: "12");
+        record.SetFieldValue(FieldKeys.NominalDiameterMm, rawDiameter, FieldSource.Manual, userEdited: false);
+        PipelineRequest? captured = null;
+        using var controller = CreateController(new CapturingDialogService(),
+            showPipelineWindow: (request, _) => { captured = request; return null; });
+
+        controller.Open(record);
+
+        Assert.NotNull(captured);
+        Assert.Equal(expected, captured.PipeDiameterMm);
+    }
+
     [Fact]
     public void Open_ignoriert_null_record_ohne_pfad_oder_dialog()
     {
@@ -196,7 +223,7 @@ public sealed class DataPageVideoAnalysisControllerTests
         Assert.False(missing.Ok);
         Assert.Contains("nicht im geladenen Projekt gefunden", missing.Message);
         Assert.True(found.Ok);
-        Assert.Equal("KI-Videoanalyse fuer 'h-01' gestartet.", found.Message);
+        Assert.Equal("KI-Videoanalyse für 'h-01' gestartet.", found.Message);
 
         var action = Assert.Single(scheduled);
         action();
@@ -317,16 +344,16 @@ public sealed class DataPageVideoAnalysisControllerTests
         public void Error(string message, string title = "Fehler")
             => throw new NotSupportedException();
 
-        public bool Confirm(string message, string title = "Bestaetigung")
+        public bool Confirm(string message, string title = "Bestätigung")
         {
             LastConfirm = (message, title);
             return ConfirmResult;
         }
 
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true)
             => throw new NotSupportedException();
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
             => throw new NotSupportedException();
     }
 }

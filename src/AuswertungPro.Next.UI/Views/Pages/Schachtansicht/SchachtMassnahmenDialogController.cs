@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -22,6 +22,7 @@ internal sealed class SchachtMassnahmenDialogController
     private readonly IDialogService _dialogs;
     private readonly ISchachtMassnahmenKatalogStore _katalog;
     private readonly IProjectCostStoreRepository _repository;
+    private readonly ICostCatalogStore? _catalogStore;
     private readonly FrameworkElement _ownerElement;
     private readonly Action _markProjectDirty;
     private readonly Action _refreshPage;
@@ -33,7 +34,8 @@ internal sealed class SchachtMassnahmenDialogController
         IProjectCostStoreRepository repository,
         FrameworkElement ownerElement,
         Action markProjectDirty,
-        Action refreshPage)
+        Action refreshPage,
+        ICostCatalogStore? catalogStore = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
@@ -42,6 +44,7 @@ internal sealed class SchachtMassnahmenDialogController
         _ownerElement = ownerElement ?? throw new ArgumentNullException(nameof(ownerElement));
         _markProjectDirty = markProjectDirty ?? throw new ArgumentNullException(nameof(markProjectDirty));
         _refreshPage = refreshPage ?? throw new ArgumentNullException(nameof(refreshPage));
+        _catalogStore = catalogStore;
     }
 
     public void Open(SchachtRecord record)
@@ -57,7 +60,19 @@ internal sealed class SchachtMassnahmenDialogController
             _dialogs.Error(
                 $"Bestehende Schacht-Empfehlungen konnten nicht gelesen werden:\n{loadError}\n\n" +
                 "Bearbeiten und Speichern sind gesperrt, damit die vorhandene Datei nicht " +
-                "ueberschrieben wird. Bitte die Datei pruefen und danach erneut oeffnen.",
+                "überschrieben wird. Bitte die Datei prüfen und danach erneut öffnen.",
+                "Sanierungsmassnahmen");
+            return;
+        }
+
+        var katalog = _katalog.Load(out var katalogError);
+        if (katalogError is not null)
+        {
+            _dialogs.Error(
+                $"Die Schacht-Massnahmenliste konnte nicht gelesen werden:\n{katalogError}\n\n" +
+                "Bearbeiten und Speichern sind gesperrt, damit die selbst gepflegte Liste " +
+                "nicht durch die Standardliste ersetzt wird. Bitte die Datei prüfen und " +
+                "danach erneut öffnen.",
                 "Sanierungsmassnahmen");
             return;
         }
@@ -68,16 +83,33 @@ internal sealed class SchachtMassnahmenDialogController
 
         var viewModel = new SchachtMassnahmenViewModel(
             record,
-            _katalog.Load(),
+            katalog,
             bestehend,
             onUebernehmen: cost => Persist(_repository, store, schachtNummer, cost, projectPath),
-            onListeBearbeiten: EditKatalog);
+            onListeBearbeiten: EditKatalog,
+            vatRate: ResolveVatRate(projectPath));
 
         var window = new SchachtMassnahmenWindow(viewModel)
         {
             Owner = Window.GetWindow(_ownerElement)
         };
         window.ShowDialog();
+    }
+
+    /// <summary>
+    /// MWST-Satz des Projektkatalogs. Ohne lesbaren Katalog gilt der App-Standard —
+    /// dieselbe Regel wie in der Schacht-Matrix.
+    /// </summary>
+    private decimal ResolveVatRate(string? projectPath)
+    {
+        if (_catalogStore is null)
+            return CostCalculatorLogicService.DefaultVatRate;
+
+        var catalog = _catalogStore.LoadMerged(projectPath ?? "", out var catalogError);
+        if (catalogError is not null)
+            return CostCalculatorLogicService.DefaultVatRate;
+
+        return catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
     }
 
     private void Persist(
@@ -116,8 +148,19 @@ internal sealed class SchachtMassnahmenDialogController
 
     private IReadOnlyList<SchachtMassnahmeKatalogEintrag>? EditKatalog()
     {
-        var viewModel = new SchachtMassnahmenKatalogEditorViewModel(
-            _katalog.Load());
+        var bestand = _katalog.Load(out var loadError);
+        if (loadError is not null)
+        {
+            // Ohne diese Sperre zeigt der Editor die Standardliste, der Anwender
+            // bestaetigt sie, und die echte Liste ist beim Speichern weg (Audit M2).
+            _dialogs.Error(
+                $"Die Massnahmenliste konnte nicht gelesen werden:\n{loadError}\n\n" +
+                "Das Bearbeiten ist gesperrt, damit die vorhandene Liste nicht ersetzt wird.",
+                "Massnahmenliste");
+            return null;
+        }
+
+        var viewModel = new SchachtMassnahmenKatalogEditorViewModel(bestand);
         var owner = System.Windows.Application.Current?.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive)
                     ?? Window.GetWindow(_ownerElement);
         var window = new SchachtMassnahmenKatalogEditorWindow(viewModel) { Owner = owner };
@@ -125,7 +168,14 @@ internal sealed class SchachtMassnahmenDialogController
         if (window.ShowDialog() != true)
             return null;
 
-        _katalog.Save(viewModel.Ergebnis);
+        if (!_katalog.Save(viewModel.Ergebnis, out var saveError))
+        {
+            _dialogs.Error(
+                $"Die Massnahmenliste konnte nicht gespeichert werden:\n{saveError}",
+                "Massnahmenliste");
+            return null;
+        }
+
         return viewModel.Ergebnis;
     }
 }

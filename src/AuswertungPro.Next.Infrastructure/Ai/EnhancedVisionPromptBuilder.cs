@@ -282,7 +282,15 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
 
         sb.AppendLine("KONTEXT AUS VORHERIGER ANALYSE (Computer Vision Modelle):");
         sb.AppendLine($"- Bild: {ctx.ImageWidth}x{ctx.ImageHeight} px");
-        sb.AppendLine($"- Rohrdurchmesser: DN{pipeDiameterMm}");
+        if (pipeDiameterMm > 0)
+        {
+            sb.AppendLine($"- Rohrdurchmesser: DN{pipeDiameterMm}");
+            sb.AppendLine("- Rohrbild nicht kalibriert: Grössen sind nur eine Schätzung mit 70 % Rohrbreite im Bild, keine gemessenen Werte.");
+        }
+        else
+        {
+            sb.AppendLine("- Rohrdurchmesser: unbekannt. Keine Millimetergrössen aus dem Bild ableiten; Messwerte als null belassen.");
+        }
         sb.AppendLine();
 
         if (ctx.DinoDetections.Count > 0)
@@ -304,7 +312,10 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
             sb.AppendLine("SEGMENTIERUNGSERGEBNISSE (SAM – pixelgenaue Masken):");
             foreach (var q in quantified)
             {
-                sb.AppendLine($"  - {q.Label}: Höhe={q.HeightMm}mm, Breite={q.WidthMm}mm, " +
+                var dimensions = q.HeightMm is not null && q.WidthMm is not null
+                    ? $"Höhe={q.HeightMm}mm, Breite={q.WidthMm}mm"
+                    : "Höhe und Breite unbekannt";
+                sb.AppendLine($"  - {q.Label}: {dimensions}, " +
                     $"Ausdehnung={q.ExtentPercent}%, Querschnitt={q.CrossSectionReductionPercent}%, " +
                     $"Uhrlage={q.ClockPosition ?? "?"}");
             }

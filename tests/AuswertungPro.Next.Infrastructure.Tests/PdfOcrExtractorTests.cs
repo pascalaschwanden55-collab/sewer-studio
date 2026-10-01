@@ -30,7 +30,7 @@ public sealed class PdfOcrExtractorTests : IDisposable
 
         Assert.False(result.Success);
         Assert.Null(result.Text);
-        Assert.Equal("Ungueltige Seitennummer.", result.Message);
+        Assert.Equal("Ungültige Seitennummer.", result.Message);
     }
 
     [Fact]

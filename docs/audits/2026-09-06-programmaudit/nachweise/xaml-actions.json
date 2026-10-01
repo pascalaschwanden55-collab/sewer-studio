@@ -1,0 +1,3632 @@
+[
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/XtfExportVorschauWindow.xaml",
+    "line": 101,
+    "kind": "Click",
+    "target": "OnSchreiben"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/VideoAnalysisPipelineWindow.xaml",
+    "line": 428,
+    "kind": "Click",
+    "target": "Start_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/VideoAnalysisPipelineWindow.xaml",
+    "line": 618,
+    "kind": "Click",
+    "target": "Undock_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/VideoAnalysisPipelineWindow.xaml",
+    "line": 717,
+    "kind": "SelectionChanged",
+    "target": "OverlayModeCombo_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/VideoAnalysisPipelineWindow.xaml",
+    "line": 914,
+    "kind": "Click",
+    "target": "Cancel_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/VideoAnalysisPipelineWindow.xaml",
+    "line": 919,
+    "kind": "Click",
+    "target": "Accept_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 43,
+    "kind": "Click",
+    "target": "LoadPhotos_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 45,
+    "kind": "Click",
+    "target": "LoadPdfProtocol_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 48,
+    "kind": "Click",
+    "target": "LoadPdfFolders_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 51,
+    "kind": "Click",
+    "target": "OpenGoldInbox_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 54,
+    "kind": "Click",
+    "target": "LoadGoldInbox_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 57,
+    "kind": "Click",
+    "target": "LoadReviewQueue_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 59,
+    "kind": "Click",
+    "target": "LoadIncompleteGoldQueue_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 62,
+    "kind": "Command",
+    "target": "{Binding LoadGoldQualityReviewCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 65,
+    "kind": "Click",
+    "target": "LoadAllIncompleteGoldQueue_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 68,
+    "kind": "Click",
+    "target": "OpenGoldAlbum_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 71,
+    "kind": "Command",
+    "target": "{Binding StartAiCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 93,
+    "kind": "Click",
+    "target": "CancelPdfImport_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 148,
+    "kind": "Command",
+    "target": "{Binding RefreshGoldProgressCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 216,
+    "kind": "SelectionChanged",
+    "target": "PreviewModelBox_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 219,
+    "kind": "Command",
+    "target": "{Binding RefreshPreviewModelsCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 225,
+    "kind": "Command",
+    "target": "{Binding RunPreviewDetectionCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 265,
+    "kind": "Command",
+    "target": "{Binding FotoMitKiPruefenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 331,
+    "kind": "Click",
+    "target": "OpenCodeExplorer_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 345,
+    "kind": "Command",
+    "target": "{Binding SetSeverityCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 348,
+    "kind": "Command",
+    "target": "{Binding SetSeverityCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 351,
+    "kind": "Command",
+    "target": "{Binding SetSeverityCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 354,
+    "kind": "Command",
+    "target": "{Binding SetSeverityCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 357,
+    "kind": "Command",
+    "target": "{Binding SetSeverityCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 375,
+    "kind": "Command",
+    "target": "{Binding AcceptCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 377,
+    "kind": "Command",
+    "target": "{Binding CorrectCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 387,
+    "kind": "Command",
+    "target": "{Binding DiscardCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 389,
+    "kind": "Command",
+    "target": "{Binding NextItemCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 407,
+    "kind": "Command",
+    "target": "{Binding AddAnotherEventCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 411,
+    "kind": "Command",
+    "target": "{Binding FinishImageCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 427,
+    "kind": "SelectionChanged",
+    "target": "PdfThumbnailQueue_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 472,
+    "kind": "Click",
+    "target": "ChooseBendSuggestionVideo_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 474,
+    "kind": "Command",
+    "target": "{Binding StartScanCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 476,
+    "kind": "Command",
+    "target": "{Binding CancelScanCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 506,
+    "kind": "MouseDoubleClick",
+    "target": "BendSuggestionGrid_MouseDoubleClick"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingStudioWindow.xaml",
+    "line": 541,
+    "kind": "Click",
+    "target": "OpenBendSuggestionPreview_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 52,
+    "kind": "Command",
+    "target": "{Binding BrowseRootFolderCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 55,
+    "kind": "Command",
+    "target": "{Binding ClearRootFoldersCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 61,
+    "kind": "Command",
+    "target": "{Binding ScanCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 62,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 64,
+    "kind": "Command",
+    "target": "{Binding DistributeHaltungCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 67,
+    "kind": "Command",
+    "target": "{Binding BatchImportAndIndexCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 75,
+    "kind": "Command",
+    "target": "{Binding CheckKnowledgeBaseCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 78,
+    "kind": "Command",
+    "target": "{Binding ReconcileGoldToKbCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 86,
+    "kind": "Command",
+    "target": "{Binding CancelBatchCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 184,
+    "kind": "Command",
+    "target": "{Binding ApproveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 185,
+    "kind": "Command",
+    "target": "{Binding RejectCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 186,
+    "kind": "Command",
+    "target": "{Binding SetNewCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 189,
+    "kind": "Command",
+    "target": "{Binding GenerateSamplesCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 273,
+    "kind": "Command",
+    "target": "{Binding ApproveSampleCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 274,
+    "kind": "Command",
+    "target": "{Binding RejectSampleCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 275,
+    "kind": "Command",
+    "target": "{Binding RemoveSampleCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 282,
+    "kind": "Command",
+    "target": "{Binding LoadSamplesCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 284,
+    "kind": "Command",
+    "target": "{Binding ExportYoloCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 288,
+    "kind": "Command",
+    "target": "{Binding ExportApprovedCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 311,
+    "kind": "Command",
+    "target": "{Binding RunSelfTrainingCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 319,
+    "kind": "Command",
+    "target": "{Binding PauseSelfTrainingCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 328,
+    "kind": "Command",
+    "target": "{Binding StopSelfTrainingCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 660,
+    "kind": "Command",
+    "target": "{Binding ApproveSelectedReviewCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 661,
+    "kind": "Command",
+    "target": "{Binding RejectSelectedReviewCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 677,
+    "kind": "Command",
+    "target": "{Binding SuggestProtocolStartdataCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 681,
+    "kind": "Click",
+    "target": "ReleaseStartdata_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 775,
+    "kind": "Click",
+    "target": "ReviewSegmentSam_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 841,
+    "kind": "Command",
+    "target": "{Binding ApproveSelectedReviewCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 848,
+    "kind": "Click",
+    "target": "ReviewCorrect_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 856,
+    "kind": "Command",
+    "target": "{Binding RejectSelectedReviewCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 961,
+    "kind": "SelectionChanged",
+    "target": "TeacherFilter_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 971,
+    "kind": "Click",
+    "target": "VideoLabelToolOpen_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 975,
+    "kind": "Click",
+    "target": "TeacherRefresh_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/TrainingCenterWindow.xaml",
+    "line": 983,
+    "kind": "Click",
+    "target": "TeacherDelete_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/StrassenUebernahmeWindow.xaml",
+    "line": 68,
+    "kind": "Click",
+    "target": "Alle_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/StrassenUebernahmeWindow.xaml",
+    "line": 73,
+    "kind": "Click",
+    "target": "Keine_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/StrassenUebernahmeWindow.xaml",
+    "line": 79,
+    "kind": "Click",
+    "target": "Uebernehmen_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SchachtMassnahmenWindow.xaml",
+    "line": 48,
+    "kind": "MouseDoubleClick",
+    "target": "KatalogList_MouseDoubleClick"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SchachtMassnahmenWindow.xaml",
+    "line": 71,
+    "kind": "Command",
+    "target": "{Binding DataContext.HinzufuegenCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SchachtMassnahmenWindow.xaml",
+    "line": 108,
+    "kind": "Command",
+    "target": "{Binding DataContext.EntfernenCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SchachtMassnahmenWindow.xaml",
+    "line": 131,
+    "kind": "Command",
+    "target": "{Binding ListeBearbeitenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SchachtMassnahmenWindow.xaml",
+    "line": 138,
+    "kind": "Command",
+    "target": "{Binding UebernehmenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SchachtMassnahmenWindow.xaml",
+    "line": 140,
+    "kind": "Command",
+    "target": "{Binding AbbrechenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SchachtMassnahmenKatalogEditorWindow.xaml",
+    "line": 44,
+    "kind": "Command",
+    "target": "{Binding HinzufuegenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SchachtMassnahmenKatalogEditorWindow.xaml",
+    "line": 51,
+    "kind": "Command",
+    "target": "{Binding EntfernenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SchachtMassnahmenKatalogEditorWindow.xaml",
+    "line": 62,
+    "kind": "Command",
+    "target": "{Binding SpeichernCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SchachtMassnahmenKatalogEditorWindow.xaml",
+    "line": 64,
+    "kind": "Command",
+    "target": "{Binding AbbrechenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 107,
+    "kind": "Command",
+    "target": "{Binding ApplyRuleToCalcCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 133,
+    "kind": "Command",
+    "target": "{Binding OptimizationVm.OptimizeCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 208,
+    "kind": "Command",
+    "target": "{Binding ApplyAiToCalcCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 300,
+    "kind": "Click",
+    "target": "WarningItem_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 307,
+    "kind": "Click",
+    "target": "SuppressWarning_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 406,
+    "kind": "SelectionChanged",
+    "target": "MeasuresList_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 407,
+    "kind": "MouseDoubleClick",
+    "target": "MeasuresList_MouseDoubleClick"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 412,
+    "kind": "Command",
+    "target": "{Binding CostCalcVm.EditPositionTemplatesCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 434,
+    "kind": "Command",
+    "target": "{Binding CostCalcVm.SortMeasuresCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 447,
+    "kind": "Command",
+    "target": "{Binding DataContext.CostCalcVm.RemoveMeasureCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 455,
+    "kind": "Command",
+    "target": "{Binding DataContext.CostCalcVm.MoveMeasureUpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 461,
+    "kind": "Command",
+    "target": "{Binding DataContext.CostCalcVm.MoveMeasureDownCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 469,
+    "kind": "Command",
+    "target": "{Binding DataContext.CostCalcVm.SaveTemplateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 518,
+    "kind": "Command",
+    "target": "{Binding DataContext.MoveLineUpCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 525,
+    "kind": "Command",
+    "target": "{Binding DataContext.MoveLineDownCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 532,
+    "kind": "Command",
+    "target": "{Binding DataContext.RemoveLineCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 612,
+    "kind": "Command",
+    "target": "{Binding CostCalcVm.ApplyTotalCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 615,
+    "kind": "Command",
+    "target": "{Binding CostCalcVm.ExportPdfCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 619,
+    "kind": "Command",
+    "target": "{Binding CostCalcVm.SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/SanierungsmassnahmenWindow.xaml",
+    "line": 622,
+    "kind": "Command",
+    "target": "{Binding CloseCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/RecordDetailsWindow.xaml",
+    "line": 27,
+    "kind": "Command",
+    "target": "{Binding CloseCommand, ElementName=Root}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 197,
+    "kind": "Click",
+    "target": "ShowShortcutOverlay_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 317,
+    "kind": "Click",
+    "target": "ConfirmSaveRetry_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 329,
+    "kind": "Click",
+    "target": "ConfirmAccept_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 336,
+    "kind": "Click",
+    "target": "ConfirmEdit_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 344,
+    "kind": "Click",
+    "target": "ConfirmReject_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 370,
+    "kind": "Click",
+    "target": "DetectionAccept_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 377,
+    "kind": "Click",
+    "target": "DetectionCorrect_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 385,
+    "kind": "Click",
+    "target": "DetectionSkip_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 469,
+    "kind": "Click",
+    "target": "CodingPrevious_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 479,
+    "kind": "Click",
+    "target": "CodingNext_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 500,
+    "kind": "Click",
+    "target": "ToolsDropdown_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 519,
+    "kind": "Click",
+    "target": "CodingCalibrate_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 527,
+    "kind": "Click",
+    "target": "CodingToolRect_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 606,
+    "kind": "Click",
+    "target": "CodingLiveAi_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 612,
+    "kind": "Click",
+    "target": "CodingAnalyzeFrame_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 619,
+    "kind": "Click",
+    "target": "CodingClearOverlays_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 631,
+    "kind": "Click",
+    "target": "Eingabemarker_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 665,
+    "kind": "SelectionChanged",
+    "target": "CmbEingabemarker_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 775,
+    "kind": "Click",
+    "target": "CodingApply_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 781,
+    "kind": "Click",
+    "target": "CodingModeExit_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 881,
+    "kind": "Click",
+    "target": "Play_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 888,
+    "kind": "Click",
+    "target": "Pause_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 895,
+    "kind": "Click",
+    "target": "Stop_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 909,
+    "kind": "Click",
+    "target": "QuickScan_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 929,
+    "kind": "Click",
+    "target": "LiveDetection_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 940,
+    "kind": "Click",
+    "target": "ManualMark_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 953,
+    "kind": "Click",
+    "target": "MarkTool_Punkt_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 960,
+    "kind": "Click",
+    "target": "MarkTool_Ellipse_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 968,
+    "kind": "Click",
+    "target": "MarkTool_Freihand_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 975,
+    "kind": "Click",
+    "target": "MarkTool_Rechteck_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 990,
+    "kind": "Click",
+    "target": "CodingMode_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 1001,
+    "kind": "Click",
+    "target": "CodingScreenshot_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 1052,
+    "kind": "Click",
+    "target": "Speed05_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 1054,
+    "kind": "Click",
+    "target": "Speed1_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 1056,
+    "kind": "Click",
+    "target": "Speed15_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 1058,
+    "kind": "Click",
+    "target": "Speed2_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 1060,
+    "kind": "Click",
+    "target": "Speed4_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 1062,
+    "kind": "Click",
+    "target": "Speed8_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 1086,
+    "kind": "Click",
+    "target": "MuteButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerWindow.xaml",
+    "line": 1152,
+    "kind": "Click",
+    "target": "CloseShortcutOverlay_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 61,
+    "kind": "Click",
+    "target": "RunCodingProtocolMatch_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 71,
+    "kind": "Click",
+    "target": "CodingAcceptGreenMatches_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 113,
+    "kind": "Click",
+    "target": "CodingTakePhoto_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 134,
+    "kind": "MouseDoubleClick",
+    "target": "CodingEvents_DoubleClick"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 135,
+    "kind": "SelectionChanged",
+    "target": "CodingEvents_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 138,
+    "kind": "Click",
+    "target": "CodingEventEdit_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 141,
+    "kind": "Click",
+    "target": "CodingEventShowPhotos_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 146,
+    "kind": "Click",
+    "target": "CodingEventCloseStretch_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 160,
+    "kind": "Click",
+    "target": "CodingEventSeek_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 164,
+    "kind": "Click",
+    "target": "CodingEventDelete_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 354,
+    "kind": "Click",
+    "target": "CodingAcceptDefect_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 363,
+    "kind": "Click",
+    "target": "CodingEditDefect_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 372,
+    "kind": "Click",
+    "target": "CodingRejectDefect_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 410,
+    "kind": "MouseDoubleClick",
+    "target": "ImportEvents_DoubleClick"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 413,
+    "kind": "Click",
+    "target": "ImportConfirmToBrain_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 416,
+    "kind": "Click",
+    "target": "ImportConfirm_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 419,
+    "kind": "Click",
+    "target": "ImportShowPhotos_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 422,
+    "kind": "Click",
+    "target": "ImportEdit_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 425,
+    "kind": "Click",
+    "target": "ImportSeek_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 534,
+    "kind": "MouseDoubleClick",
+    "target": "Suggestions_DoubleClick"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 537,
+    "kind": "Click",
+    "target": "SuggestionSeek_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 540,
+    "kind": "Click",
+    "target": "SuggestionConfirm_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 543,
+    "kind": "Click",
+    "target": "SuggestionReject_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 613,
+    "kind": "Click",
+    "target": "CodingSelectCode_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PlayerCodingSidePanel.xaml",
+    "line": 622,
+    "kind": "Click",
+    "target": "CodingCreateEvent_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 396,
+    "kind": "Click",
+    "target": "BtnOk_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 403,
+    "kind": "Click",
+    "target": "BtnCancel_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 407,
+    "kind": "Click",
+    "target": "BtnUndo_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 415,
+    "kind": "Click",
+    "target": "BtnDelete_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 446,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 448,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 450,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 452,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 454,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 456,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 458,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 460,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 462,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 464,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 466,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 468,
+    "kind": "Click",
+    "target": "PositionPreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 484,
+    "kind": "Click",
+    "target": "AnglePreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 486,
+    "kind": "Click",
+    "target": "AnglePreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 488,
+    "kind": "Click",
+    "target": "AnglePreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 490,
+    "kind": "Click",
+    "target": "AnglePreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 492,
+    "kind": "Click",
+    "target": "AnglePreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 494,
+    "kind": "Click",
+    "target": "AnglePreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PhotoMeasurementWindow.xaml",
+    "line": 496,
+    "kind": "Click",
+    "target": "AnglePreset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/PersonalGoldAlbumWindow.xaml",
+    "line": 41,
+    "kind": "Command",
+    "target": "{Binding LoadCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/ObservationCatalogWindow.xaml",
+    "line": 68,
+    "kind": "SelectionChanged",
+    "target": "SearchList_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/ObservationCatalogWindow.xaml",
+    "line": 102,
+    "kind": "SelectionChanged",
+    "target": "Column_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MediaSearchWindow.xaml",
+    "line": 59,
+    "kind": "Click",
+    "target": "Browse_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MediaSearchWindow.xaml",
+    "line": 75,
+    "kind": "Click",
+    "target": "Start_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MediaSearchWindow.xaml",
+    "line": 77,
+    "kind": "Click",
+    "target": "CancelSearch_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MediaSearchWindow.xaml",
+    "line": 159,
+    "kind": "Click",
+    "target": "Apply_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MediaSearchWindow.xaml",
+    "line": 161,
+    "kind": "Click",
+    "target": "Close_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MeasureTemplateEditorWindow.xaml",
+    "line": 27,
+    "kind": "Command",
+    "target": "{Binding NewTemplateCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MeasureTemplateEditorWindow.xaml",
+    "line": 28,
+    "kind": "Command",
+    "target": "{Binding DeleteTemplateCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MeasureTemplateEditorWindow.xaml",
+    "line": 71,
+    "kind": "Command",
+    "target": "{Binding AddCatalogItemCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MeasureTemplateEditorWindow.xaml",
+    "line": 78,
+    "kind": "Command",
+    "target": "{Binding RemoveCatalogItemCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MeasureTemplateEditorWindow.xaml",
+    "line": 85,
+    "kind": "Command",
+    "target": "{Binding SaveCatalogCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MeasureTemplateEditorWindow.xaml",
+    "line": 96,
+    "kind": "MouseDoubleClick",
+    "target": "PriceItem_DoubleClick"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MeasureTemplateEditorWindow.xaml",
+    "line": 149,
+    "kind": "Command",
+    "target": "{Binding SaveTemplateCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MeasureTemplateEditorWindow.xaml",
+    "line": 150,
+    "kind": "Command",
+    "target": "{Binding DeleteLineCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MeasureTemplateEditorWindow.xaml",
+    "line": 151,
+    "kind": "Command",
+    "target": "{Binding MoveLineUpCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/MeasureTemplateEditorWindow.xaml",
+    "line": 154,
+    "kind": "Command",
+    "target": "{Binding MoveLineDownCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/ImportPreviewWindow.xaml",
+    "line": 70,
+    "kind": "Click",
+    "target": "CloseButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/ImportPreviewWindow.xaml",
+    "line": 72,
+    "kind": "Click",
+    "target": "ExecuteButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/HydraulikPrintDialog.xaml",
+    "line": 79,
+    "kind": "Click",
+    "target": "Cancel_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/HydraulikPrintDialog.xaml",
+    "line": 82,
+    "kind": "Click",
+    "target": "Ok_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/FloatingGridWindow.xaml",
+    "line": 33,
+    "kind": "Click",
+    "target": "DockBack_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/FeldVorschlagWindow.xaml",
+    "line": 53,
+    "kind": "SelectionChanged",
+    "target": "KandidatenListe_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/FeldVorschlagWindow.xaml",
+    "line": 69,
+    "kind": "Click",
+    "target": "Uebernehmen_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierShaftPickerWindow.xaml",
+    "line": 47,
+    "kind": "SelectionChanged",
+    "target": "OnGroupChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierShaftPickerWindow.xaml",
+    "line": 55,
+    "kind": "Click",
+    "target": "OnSelectVisible"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierShaftPickerWindow.xaml",
+    "line": 114,
+    "kind": "Click",
+    "target": "OnClear"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierShaftPickerWindow.xaml",
+    "line": 117,
+    "kind": "Click",
+    "target": "OnCancel"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierShaftPickerWindow.xaml",
+    "line": 120,
+    "kind": "Click",
+    "target": "OnApply"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierRefreshWindow.xaml",
+    "line": 47,
+    "kind": "Click",
+    "target": "OnAccept"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierRefreshWindow.xaml",
+    "line": 51,
+    "kind": "Click",
+    "target": "OnCancel"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPrintDialog.xaml",
+    "line": 110,
+    "kind": "Click",
+    "target": "Cancel_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPrintDialog.xaml",
+    "line": 113,
+    "kind": "Click",
+    "target": "Ok_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPreviewWindow.xaml",
+    "line": 42,
+    "kind": "SelectionChanged",
+    "target": "OnPageSelected"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPreviewWindow.xaml",
+    "line": 81,
+    "kind": "Click",
+    "target": "OnFitPage"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPreviewWindow.xaml",
+    "line": 122,
+    "kind": "Click",
+    "target": "OnCancel"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPreviewWindow.xaml",
+    "line": 125,
+    "kind": "Click",
+    "target": "OnAccept"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPlanWindow.xaml",
+    "line": 33,
+    "kind": "Click",
+    "target": "OnRotateLeft"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPlanWindow.xaml",
+    "line": 41,
+    "kind": "Click",
+    "target": "OnRotateRight"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPlanWindow.xaml",
+    "line": 45,
+    "kind": "Click",
+    "target": "OnRotateHalf"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPlanWindow.xaml",
+    "line": 49,
+    "kind": "Click",
+    "target": "OnCrop"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPlanWindow.xaml",
+    "line": 83,
+    "kind": "Click",
+    "target": "OnCancel"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPlanWindow.xaml",
+    "line": 86,
+    "kind": "Click",
+    "target": "OnAccept"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierParcelLookupWindow.xaml",
+    "line": 56,
+    "kind": "Click",
+    "target": "OnLookup"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierParcelLookupWindow.xaml",
+    "line": 77,
+    "kind": "Click",
+    "target": "OnSkip"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierParcelLookupWindow.xaml",
+    "line": 80,
+    "kind": "Click",
+    "target": "OnCancel"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierParcelLookupWindow.xaml",
+    "line": 83,
+    "kind": "Click",
+    "target": "OnAccept"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPageSelectionWindow.xaml",
+    "line": 47,
+    "kind": "Click",
+    "target": "OnAlle"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPageSelectionWindow.xaml",
+    "line": 52,
+    "kind": "Click",
+    "target": "OnKeine"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierPageSelectionWindow.xaml",
+    "line": 59,
+    "kind": "Click",
+    "target": "OnErzeugen"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierHoldingPickerWindow.xaml",
+    "line": 47,
+    "kind": "SelectionChanged",
+    "target": "OnGroupChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierHoldingPickerWindow.xaml",
+    "line": 55,
+    "kind": "Click",
+    "target": "OnSelectVisible"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierHoldingPickerWindow.xaml",
+    "line": 118,
+    "kind": "Click",
+    "target": "OnClear"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierHoldingPickerWindow.xaml",
+    "line": 121,
+    "kind": "Click",
+    "target": "OnCancel"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierHoldingPickerWindow.xaml",
+    "line": 124,
+    "kind": "Click",
+    "target": "OnApply"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierEditWindow.xaml",
+    "line": 140,
+    "kind": "Click",
+    "target": "OnAddOwner"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierEditWindow.xaml",
+    "line": 143,
+    "kind": "Click",
+    "target": "OnRemoveOwner"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierEditWindow.xaml",
+    "line": 151,
+    "kind": "Click",
+    "target": "OnChoosePlan"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierEditWindow.xaml",
+    "line": 154,
+    "kind": "Click",
+    "target": "OnClearPlan"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierEditWindow.xaml",
+    "line": 197,
+    "kind": "Click",
+    "target": "OnAddTopic"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierEditWindow.xaml",
+    "line": 200,
+    "kind": "Click",
+    "target": "OnRemoveTopic"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierEditWindow.xaml",
+    "line": 226,
+    "kind": "Click",
+    "target": "OnAddChange"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierEditWindow.xaml",
+    "line": 229,
+    "kind": "Click",
+    "target": "OnRemoveChange"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierEditWindow.xaml",
+    "line": 259,
+    "kind": "Click",
+    "target": "OnCancel"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierEditWindow.xaml",
+    "line": 262,
+    "kind": "Click",
+    "target": "OnSave"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierBatchWindow.xaml",
+    "line": 29,
+    "kind": "Click",
+    "target": "OnStart"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierBatchWindow.xaml",
+    "line": 32,
+    "kind": "Click",
+    "target": "OnCancelSearch"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierBatchWindow.xaml",
+    "line": 76,
+    "kind": "Click",
+    "target": "OnCreate"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierBatchWindow.xaml",
+    "line": 78,
+    "kind": "Click",
+    "target": "OnClose"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierAreaWindow.xaml",
+    "line": 87,
+    "kind": "Click",
+    "target": "OnAddTopic"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierAreaWindow.xaml",
+    "line": 90,
+    "kind": "Click",
+    "target": "OnRemoveTopic"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierAreaWindow.xaml",
+    "line": 92,
+    "kind": "Click",
+    "target": "OnTopicUp"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierAreaWindow.xaml",
+    "line": 96,
+    "kind": "Click",
+    "target": "OnTopicDown"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierAreaWindow.xaml",
+    "line": 132,
+    "kind": "Click",
+    "target": "OnCancel"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/DossierAreaWindow.xaml",
+    "line": 135,
+    "kind": "Click",
+    "target": "OnSave"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/CodeCatalogEditorWindow.xaml",
+    "line": 78,
+    "kind": "Command",
+    "target": "{Binding NewCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/CodeCatalogEditorWindow.xaml",
+    "line": 79,
+    "kind": "Command",
+    "target": "{Binding DeleteCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/CodeCatalogEditorWindow.xaml",
+    "line": 83,
+    "kind": "Command",
+    "target": "{Binding ValidateCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/CodeCatalogEditorWindow.xaml",
+    "line": 84,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/CodeCatalogEditorWindow.xaml",
+    "line": 85,
+    "kind": "Command",
+    "target": "{Binding CancelCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/BeobachtungenWindow.xaml",
+    "line": 118,
+    "kind": "Click",
+    "target": "OpenPhotoLink_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Windows/BeobachtungenWindow.xaml",
+    "line": 132,
+    "kind": "Click",
+    "target": "OpenFilmLink_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/ProtocolObservationsWindow.xaml",
+    "line": 81,
+    "kind": "MouseDoubleClick",
+    "target": "EntriesGrid_MouseDoubleClick"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/VsaPage.xaml",
+    "line": 35,
+    "kind": "Command",
+    "target": "{Binding RunCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 270,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 357,
+    "kind": "Command",
+    "target": "{Binding ApplyThemeCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 454,
+    "kind": "Command",
+    "target": "{Binding BrowseProjectPathCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 466,
+    "kind": "Command",
+    "target": "{Binding BrowseProjectsRootCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 478,
+    "kind": "Command",
+    "target": "{Binding BrowseAbwasserkatasterXtfPathCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 506,
+    "kind": "Command",
+    "target": "{Binding OpenDataFolderCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 517,
+    "kind": "Command",
+    "target": "{Binding OpenLogsFolderCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 546,
+    "kind": "Command",
+    "target": "{Binding CleanProgramDataCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 568,
+    "kind": "Command",
+    "target": "{Binding CleanCodexArtifactsCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 612,
+    "kind": "Command",
+    "target": "{Binding OpenRestorePointsFolderCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 642,
+    "kind": "Command",
+    "target": "{Binding BrowseVideoFolderCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 663,
+    "kind": "Command",
+    "target": "{Binding BrowsePdfToTextCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 708,
+    "kind": "Command",
+    "target": "{Binding BrowseKantonUriXtfDirectoryCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 831,
+    "kind": "Command",
+    "target": "{Binding StartAiCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 887,
+    "kind": "Command",
+    "target": "{Binding ResetYoloConfidenceCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 917,
+    "kind": "Command",
+    "target": "{Binding ResetDinoBoxThresholdCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 947,
+    "kind": "Command",
+    "target": "{Binding ResetDinoTextThresholdCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 972,
+    "kind": "Command",
+    "target": "{Binding ExportBackupCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 974,
+    "kind": "Command",
+    "target": "{Binding ImportBackupCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 976,
+    "kind": "Command",
+    "target": "{Binding CreateProgramSnapshotCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 996,
+    "kind": "Command",
+    "target": "{Binding CreateFullBackupCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SettingsPage.xaml",
+    "line": 1027,
+    "kind": "Command",
+    "target": "{Binding CancelFullBackupCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchattenauswertungPage.xaml",
+    "line": 62,
+    "kind": "Command",
+    "target": "{Binding NeuLadenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchattenauswertungPage.xaml",
+    "line": 66,
+    "kind": "Command",
+    "target": "{Binding AbbrechenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchattenauswertungPage.xaml",
+    "line": 71,
+    "kind": "Command",
+    "target": "{Binding StartenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 21,
+    "kind": "Checked",
+    "target": "SchachtansichtToggle_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 22,
+    "kind": "Unchecked",
+    "target": "SchachtansichtToggle_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 33,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 39,
+    "kind": "Command",
+    "target": "{Binding AddCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 45,
+    "kind": "Command",
+    "target": "{Binding RemoveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 54,
+    "kind": "Command",
+    "target": "{Binding MoveUpCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 60,
+    "kind": "Command",
+    "target": "{Binding MoveDownCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 69,
+    "kind": "Command",
+    "target": "{Binding FeldnamenAufraeumenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 78,
+    "kind": "Command",
+    "target": "{Binding QgisFelderErgaenzenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 87,
+    "kind": "Command",
+    "target": "{Binding KatasterKennungenErgaenzenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 98,
+    "kind": "Command",
+    "target": "{Binding RefreshProtocolCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 105,
+    "kind": "Command",
+    "target": "{Binding ImportProtocolCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 112,
+    "kind": "Command",
+    "target": "{Binding ErgaenzeStammdatenAusPdfsCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 124,
+    "kind": "Click",
+    "target": "StrassenStapel_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 157,
+    "kind": "Command",
+    "target": "{Binding ClearSearchCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 173,
+    "kind": "Click",
+    "target": "MoveToPosition_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 185,
+    "kind": "Click",
+    "target": "GoToRow_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 224,
+    "kind": "Click",
+    "target": "AlignLeftButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 232,
+    "kind": "Click",
+    "target": "AlignCenterButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 240,
+    "kind": "Click",
+    "target": "AlignRightButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 251,
+    "kind": "Click",
+    "target": "AlignTopButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 258,
+    "kind": "Click",
+    "target": "AlignMiddleButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 265,
+    "kind": "Click",
+    "target": "AlignBottomButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 323,
+    "kind": "Click",
+    "target": "DetailsMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 326,
+    "kind": "Click",
+    "target": "SanierungsmassnahmenMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 330,
+    "kind": "Click",
+    "target": "ProtokollMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 333,
+    "kind": "Click",
+    "target": "OpenContainingFolderMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchaechtePage.xaml",
+    "line": 397,
+    "kind": "Command",
+    "target": "{Binding CancelStammdatenErgaenzungCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchachtSanierungsMatrixPage.xaml",
+    "line": 30,
+    "kind": "Command",
+    "target": "{Binding ReloadCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SchachtSanierungsMatrixPage.xaml",
+    "line": 31,
+    "kind": "Command",
+    "target": "{Binding SpeichernCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Schachtansicht/SchachtansichtView.xaml",
+    "line": 25,
+    "kind": "SelectionChanged",
+    "target": "SchachtList_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Schachtansicht/SchachtansichtView.xaml",
+    "line": 38,
+    "kind": "Click",
+    "target": "CtxMoveUp_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Schachtansicht/SchachtansichtView.xaml",
+    "line": 41,
+    "kind": "Click",
+    "target": "CtxMoveDown_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Schachtansicht/SchachtansichtView.xaml",
+    "line": 45,
+    "kind": "Click",
+    "target": "CtxDetails_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Schachtansicht/SchachtansichtView.xaml",
+    "line": 48,
+    "kind": "Click",
+    "target": "CtxSanierung_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Schachtansicht/SchachtansichtView.xaml",
+    "line": 51,
+    "kind": "Click",
+    "target": "CtxOpenPdf_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Schachtansicht/SchachtansichtView.xaml",
+    "line": 54,
+    "kind": "Click",
+    "target": "CtxOpenFolder_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Schachtansicht/SchachtansichtView.xaml",
+    "line": 58,
+    "kind": "Click",
+    "target": "CtxDelete_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Schachtansicht/SchachtansichtView.xaml",
+    "line": 158,
+    "kind": "Click",
+    "target": "DamageDetails_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Schachtansicht/SchachtansichtView.xaml",
+    "line": 168,
+    "kind": "MouseDoubleClick",
+    "target": "DamageList_MouseDoubleClick"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SanierungsMatrixPage.xaml",
+    "line": 36,
+    "kind": "Command",
+    "target": "{Binding KatalogBearbeitenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SanierungsMatrixPage.xaml",
+    "line": 38,
+    "kind": "Command",
+    "target": "{Binding ReloadCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SanierungsMatrixPage.xaml",
+    "line": 39,
+    "kind": "Command",
+    "target": "{Binding SpeichernCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SanierungsMatrixPage.xaml",
+    "line": 287,
+    "kind": "Command",
+    "target": "{Binding DetailUebernehmenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SanierungsMatrixPage.xaml",
+    "line": 292,
+    "kind": "Command",
+    "target": "{Binding DetailVerwerfenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/SanierungsMatrixPage.xaml",
+    "line": 324,
+    "kind": "Command",
+    "target": "{Binding DataContext.SaveTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ProjectPage.xaml",
+    "line": 22,
+    "kind": "Command",
+    "target": "{Binding AnlegenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ProjectPage.xaml",
+    "line": 26,
+    "kind": "Command",
+    "target": "{Binding AbbrechenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ProjectPage.xaml",
+    "line": 31,
+    "kind": "Command",
+    "target": "{Binding SaveAsCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ProjectPage.xaml",
+    "line": 36,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ProjectPage.xaml",
+    "line": 39,
+    "kind": "Click",
+    "target": "CloseButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml",
+    "line": 31,
+    "kind": "Command",
+    "target": "{Binding ToggleProjectListCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml",
+    "line": 40,
+    "kind": "Command",
+    "target": "{Binding NewCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml",
+    "line": 131,
+    "kind": "Command",
+    "target": "{Binding ClearFilterCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml",
+    "line": 151,
+    "kind": "MouseDoubleClick",
+    "target": "ProjectListBox_MouseDoubleClick"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml",
+    "line": 262,
+    "kind": "Command",
+    "target": "{Binding OpenSelectedCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml",
+    "line": 267,
+    "kind": "Command",
+    "target": "{Binding DeleteSelectedCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml",
+    "line": 349,
+    "kind": "Command",
+    "target": "{Binding PrintPreviewPdfCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/OverviewPage.xaml",
+    "line": 363,
+    "kind": "Command",
+    "target": "{Binding OpenSelectedCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 102,
+    "kind": "Command",
+    "target": "{Binding RefreshCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 110,
+    "kind": "Command",
+    "target": "{Binding ResolveFromCandidateCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 118,
+    "kind": "Command",
+    "target": "{Binding ResolveManualCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 138,
+    "kind": "Command",
+    "target": "{Binding DataContext.ResolveSuggestedCommand, ElementName=MediaConflictsRoot}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 142,
+    "kind": "Command",
+    "target": "{Binding DataContext.AutoResolveLearnedCommand, ElementName=MediaConflictsRoot}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 147,
+    "kind": "Command",
+    "target": "{Binding DataContext.ClearLearnedMappingsCommand, ElementName=MediaConflictsRoot}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 283,
+    "kind": "Command",
+    "target": "{Binding PlaySelectedCandidateCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 291,
+    "kind": "Command",
+    "target": "{Binding ResolveFromCandidateCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 299,
+    "kind": "Command",
+    "target": "{Binding ResolveManualCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 319,
+    "kind": "Command",
+    "target": "{Binding DataContext.PlaySuggestedSourceCommand, ElementName=MediaConflictsRoot}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 323,
+    "kind": "Command",
+    "target": "{Binding DataContext.OpenPdfCommand, ElementName=MediaConflictsRoot}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 327,
+    "kind": "Command",
+    "target": "{Binding DataContext.OpenSelectedCandidateCommand, ElementName=MediaConflictsRoot}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 331,
+    "kind": "Command",
+    "target": "{Binding DataContext.OpenSuggestedSourceCommand, ElementName=MediaConflictsRoot}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 335,
+    "kind": "Command",
+    "target": "{Binding DataContext.OpenInfoCommand, ElementName=MediaConflictsRoot}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 339,
+    "kind": "Command",
+    "target": "{Binding DataContext.OpenHoldingFolderCommand, ElementName=MediaConflictsRoot}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/MediaConflictsPage.xaml",
+    "line": 344,
+    "kind": "Command",
+    "target": "{Binding DataContext.ResolveSuggestedCommand, ElementName=MediaConflictsRoot}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 18,
+    "kind": "Command",
+    "target": "{Binding ImportKanalProjektCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 27,
+    "kind": "Command",
+    "target": "{Binding ProtokollNeuGenerierenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 40,
+    "kind": "Command",
+    "target": "{Binding ImportPdfCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 48,
+    "kind": "Command",
+    "target": "{Binding ImportSchachtPdfsFolderCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 59,
+    "kind": "Click",
+    "target": "DropdownButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 69,
+    "kind": "Command",
+    "target": "{Binding ImportXtfCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 74,
+    "kind": "Command",
+    "target": "{Binding ImportWinCanCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 79,
+    "kind": "Command",
+    "target": "{Binding ImportIbakCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 84,
+    "kind": "Command",
+    "target": "{Binding ImportKinsCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 89,
+    "kind": "Command",
+    "target": "{Binding ImportSchachtProCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 100,
+    "kind": "Command",
+    "target": "{Binding ExportImportSummaryCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 108,
+    "kind": "Command",
+    "target": "{Binding OpenLastReportCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 117,
+    "kind": "Command",
+    "target": "{Binding OpenReportFolderCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 128,
+    "kind": "Command",
+    "target": "{Binding MakeProjectPortableCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 137,
+    "kind": "Command",
+    "target": "{Binding AssignPhotosFromFolderCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 163,
+    "kind": "Command",
+    "target": "{Binding ReloadCatalogCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ImportPage.xaml",
+    "line": 189,
+    "kind": "Command",
+    "target": "{Binding CancelImportCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 66,
+    "kind": "SelectionChanged",
+    "target": "HaltungList_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 78,
+    "kind": "Click",
+    "target": "CtxMoveUp_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 81,
+    "kind": "Click",
+    "target": "CtxMoveDown_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 85,
+    "kind": "Click",
+    "target": "CtxBeobachtungen_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 89,
+    "kind": "Click",
+    "target": "CtxPlay_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 92,
+    "kind": "Click",
+    "target": "CtxPlayGegen_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 95,
+    "kind": "Click",
+    "target": "CtxPrintAwu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 98,
+    "kind": "Click",
+    "target": "CtxOpenPdf_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 101,
+    "kind": "Click",
+    "target": "CtxOpenFolder_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 104,
+    "kind": "Click",
+    "target": "CtxCosts_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 108,
+    "kind": "Click",
+    "target": "CtxDelete_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 192,
+    "kind": "Click",
+    "target": "SchadenAdd_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/Haltungsansicht/HaltungsansichtView.xaml",
+    "line": 215,
+    "kind": "MouseDoubleClick",
+    "target": "SchadenList_MouseDoubleClick"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 43,
+    "kind": "Command",
+    "target": "{Binding ExportCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 51,
+    "kind": "Command",
+    "target": "{Binding ExportSchaechteCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 66,
+    "kind": "Click",
+    "target": "DropdownButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 76,
+    "kind": "Command",
+    "target": "{Binding DistributeHoldingsNormalCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 81,
+    "kind": "Command",
+    "target": "{Binding DistributeHoldingsSanierungCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 87,
+    "kind": "Command",
+    "target": "{Binding DistributeShaftsNormalCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 92,
+    "kind": "Command",
+    "target": "{Binding DistributeShaftsSanierungCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 98,
+    "kind": "Command",
+    "target": "{Binding DistributeDichtheitCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 106,
+    "kind": "Command",
+    "target": "{Binding AbgleichenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 169,
+    "kind": "Command",
+    "target": "{Binding BrowseExcelExportRootCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 206,
+    "kind": "Command",
+    "target": "{Binding ErzeugeXtfRevisionCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 235,
+    "kind": "Command",
+    "target": "{Binding ErzeugeXtfNeuCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 250,
+    "kind": "Command",
+    "target": "{Binding OeffneXtfOrdnerCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 287,
+    "kind": "Command",
+    "target": "{Binding BrowseRootCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 337,
+    "kind": "Command",
+    "target": "{Binding DataContext.AddOrdnerPatternBlockCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 344,
+    "kind": "Command",
+    "target": "{Binding RemoveLastOrdnerPatternBlockCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 346,
+    "kind": "Command",
+    "target": "{Binding ClearOrdnerPatternCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 375,
+    "kind": "Command",
+    "target": "{Binding DataContext.AddUnterordnerPatternBlockCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 382,
+    "kind": "Command",
+    "target": "{Binding RemoveLastUnterordnerPatternBlockCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/ExportPage.xaml",
+    "line": 384,
+    "kind": "Command",
+    "target": "{Binding ClearUnterordnerPatternCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 62,
+    "kind": "Command",
+    "target": "{Binding EditAreaCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 65,
+    "kind": "Command",
+    "target": "{Binding OpenTemplateCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 68,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 71,
+    "kind": "Command",
+    "target": "{Binding RefreshCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 74,
+    "kind": "Command",
+    "target": "{Binding CreateFromProjectCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 102,
+    "kind": "Command",
+    "target": "{Binding NewDossierCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 113,
+    "kind": "Command",
+    "target": "{Binding MoveDossierUpCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 117,
+    "kind": "Command",
+    "target": "{Binding MoveDossierDownCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 382,
+    "kind": "Command",
+    "target": "{Binding PlacementTarget.DataContext.PlayHoldingVideoCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 390,
+    "kind": "Command",
+    "target": "{Binding PlacementTarget.DataContext.OpenHoldingProtocolCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 399,
+    "kind": "Command",
+    "target": "{Binding PlacementTarget.DataContext.NavigateToHoldingCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 471,
+    "kind": "Command",
+    "target": "{Binding PlacementTarget.DataContext.OpenShaftProtocolCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 480,
+    "kind": "Command",
+    "target": "{Binding PlacementTarget.DataContext.NavigateToShaftCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 508,
+    "kind": "Command",
+    "target": "{Binding EditHoldingsCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 511,
+    "kind": "Command",
+    "target": "{Binding EditShaftsCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 514,
+    "kind": "Command",
+    "target": "{Binding RefreshDossierCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 517,
+    "kind": "Command",
+    "target": "{Binding EditDossierCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 520,
+    "kind": "Command",
+    "target": "{Binding PreviewCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 523,
+    "kind": "Command",
+    "target": "{Binding CreateWordCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 526,
+    "kind": "Command",
+    "target": "{Binding CreateHoldingListCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 529,
+    "kind": "Command",
+    "target": "{Binding CreateShaftListCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 532,
+    "kind": "Command",
+    "target": "{Binding CollectAttachmentsCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 535,
+    "kind": "Command",
+    "target": "{Binding AssemblePdfCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 538,
+    "kind": "Command",
+    "target": "{Binding OpenFolderCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 541,
+    "kind": "Command",
+    "target": "{Binding DeleteDossierCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DossiersPage.xaml",
+    "line": 545,
+    "kind": "SelectionChanged",
+    "target": "OnStatusChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DiagnosticsPage.xaml",
+    "line": 12,
+    "kind": "Command",
+    "target": "{Binding RefreshCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DiagnosticsPage.xaml",
+    "line": 13,
+    "kind": "Command",
+    "target": "{Binding OpenLogFolderCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DiagnosticsPage.xaml",
+    "line": 15,
+    "kind": "Command",
+    "target": "{Binding CreatePackageCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 112,
+    "kind": "Checked",
+    "target": "HaltungsansichtToggle_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 113,
+    "kind": "Unchecked",
+    "target": "HaltungsansichtToggle_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 124,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 131,
+    "kind": "Command",
+    "target": "{Binding AddCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 138,
+    "kind": "Command",
+    "target": "{Binding RemoveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 148,
+    "kind": "Command",
+    "target": "{Binding QgisFelderErgaenzenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 157,
+    "kind": "Command",
+    "target": "{Binding KatasterKennungenErgaenzenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 168,
+    "kind": "Click",
+    "target": "DropdownButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 178,
+    "kind": "Click",
+    "target": "CostsMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 184,
+    "kind": "Command",
+    "target": "{Binding PlacementTarget.DataContext.OptimizeSanierungKiCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 190,
+    "kind": "Click",
+    "target": "SuggestMeasuresMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 199,
+    "kind": "Click",
+    "target": "MediaSearchMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 208,
+    "kind": "Click",
+    "target": "StrassenStapel_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 217,
+    "kind": "Click",
+    "target": "DropdownButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 227,
+    "kind": "Click",
+    "target": "HydraulikMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 232,
+    "kind": "Click",
+    "target": "HydraulikPrint_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 241,
+    "kind": "Click",
+    "target": "DossierPrint_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 252,
+    "kind": "Click",
+    "target": "UndockGrid_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 261,
+    "kind": "Click",
+    "target": "DropdownButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 272,
+    "kind": "Command",
+    "target": "{Binding MoveUpCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 277,
+    "kind": "Command",
+    "target": "{Binding MoveDownCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 335,
+    "kind": "Click",
+    "target": "AlignLeftButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 343,
+    "kind": "Click",
+    "target": "AlignCenterButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 351,
+    "kind": "Click",
+    "target": "AlignRightButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 361,
+    "kind": "Click",
+    "target": "AlignTopButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 370,
+    "kind": "Click",
+    "target": "AlignMiddleButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 379,
+    "kind": "Click",
+    "target": "AlignBottomButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 414,
+    "kind": "Command",
+    "target": "{Binding ClearSearchCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 427,
+    "kind": "Click",
+    "target": "MoveToPosition_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 439,
+    "kind": "Click",
+    "target": "GoToRow_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 468,
+    "kind": "Click",
+    "target": "DockBackFromPlaceholder_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 526,
+    "kind": "Click",
+    "target": "MoveRecordUpMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 529,
+    "kind": "Click",
+    "target": "MoveRecordDownMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 533,
+    "kind": "Click",
+    "target": "BeobachtungenMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 538,
+    "kind": "Command",
+    "target": "{Binding PlacementTarget.DataContext.OpenVideoAiPipelineCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 543,
+    "kind": "Click",
+    "target": "PlayMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 546,
+    "kind": "Click",
+    "target": "PlayGegenMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 549,
+    "kind": "Click",
+    "target": "PrintAwuHaltungsprotokollMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 552,
+    "kind": "Click",
+    "target": "OpenOriginalPdfMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 555,
+    "kind": "Click",
+    "target": "OpenDichtheitPdfMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 558,
+    "kind": "Click",
+    "target": "OpenContainingFolderMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 561,
+    "kind": "Click",
+    "target": "CostsMenu_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/DataPage.xaml",
+    "line": 565,
+    "kind": "Click",
+    "target": "DeleteSelectedRows_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 63,
+    "kind": "SelectionChanged",
+    "target": "SavedViewsBox_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 66,
+    "kind": "Click",
+    "target": "SaveViewButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 70,
+    "kind": "Click",
+    "target": "DeleteViewButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 74,
+    "kind": "Command",
+    "target": "{Binding RefreshCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 78,
+    "kind": "Click",
+    "target": "SpaltenButton_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 83,
+    "kind": "Command",
+    "target": "{Binding ResetFiltersCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 436,
+    "kind": "Command",
+    "target": "{Binding PlacementTarget.DataContext.PrintSingleKostenblattCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 442,
+    "kind": "Command",
+    "target": "{Binding PlacementTarget.DataContext.PrintSingleDossierCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 584,
+    "kind": "Command",
+    "target": "{Binding OpenLastExportedPdfCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 597,
+    "kind": "Command",
+    "target": "{Binding PrintPdfCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 610,
+    "kind": "Command",
+    "target": "{Binding ExportPdfCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 640,
+    "kind": "Command",
+    "target": "{Binding ExportNpkOfferPdfCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 645,
+    "kind": "Command",
+    "target": "{Binding ExportNpkLeistungsverzeichnisCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Pages/BuilderPage.xaml",
+    "line": 650,
+    "kind": "Command",
+    "target": "{Binding ExportNpkLeistungsverzeichnisExcelCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 38,
+    "kind": "Command",
+    "target": "{Binding EditOptionsCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 50,
+    "kind": "Command",
+    "target": "{Binding PreviewOptionsCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 62,
+    "kind": "Command",
+    "target": "{Binding ResetOptionsCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 74,
+    "kind": "Command",
+    "target": "{Binding AddOptionCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 87,
+    "kind": "Command",
+    "target": "{Binding RemoveOptionCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 114,
+    "kind": "Command",
+    "target": "{Binding NachschlagenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 126,
+    "kind": "Command",
+    "target": "{Binding StrasseUebernehmenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 147,
+    "kind": "Command",
+    "target": "{Binding NachschlagenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 159,
+    "kind": "Command",
+    "target": "{Binding StrasseUebernehmenCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 250,
+    "kind": "SelectionChanged",
+    "target": "EditorComboBox_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 259,
+    "kind": "SelectionChanged",
+    "target": "EditorComboBox_SelectionChanged"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 299,
+    "kind": "Click",
+    "target": "CustomizeStart_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 317,
+    "kind": "Click",
+    "target": "CustomizeReset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 321,
+    "kind": "Click",
+    "target": "CustomizeDone_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 496,
+    "kind": "Click",
+    "target": "HideField_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 576,
+    "kind": "Click",
+    "target": "ShowField_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Views/Controls/RecordDetailsView.xaml",
+    "line": 587,
+    "kind": "Command",
+    "target": "{Binding SuggestMeasuresCommand, ElementName=Root}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 12,
+    "kind": "Command",
+    "target": "{Binding ToggleFocusModeCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 13,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 14,
+    "kind": "Command",
+    "target": "{Binding OpenProjectCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 15,
+    "kind": "Command",
+    "target": "{Binding NewProjectCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 36,
+    "kind": "Command",
+    "target": "{Binding SwitchProjectCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 52,
+    "kind": "Command",
+    "target": "{Binding NewProjectCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 58,
+    "kind": "Command",
+    "target": "{Binding OpenProjectCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 64,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 70,
+    "kind": "Command",
+    "target": "{Binding SaveAsProjectCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 77,
+    "kind": "Click",
+    "target": "Exit_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 85,
+    "kind": "Click",
+    "target": "OpenCodeCatalog_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 91,
+    "kind": "Command",
+    "target": "{Binding OpenPriceCatalogCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 97,
+    "kind": "Command",
+    "target": "{Binding OpenTemplateEditorCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 103,
+    "kind": "Click",
+    "target": "StartAi_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 110,
+    "kind": "Click",
+    "target": "OpenTrainingCenter_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 116,
+    "kind": "Click",
+    "target": "OpenTrainingStudio_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 127,
+    "kind": "Click",
+    "target": "OpenSystemMonitor_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/MainWindow.xaml",
+    "line": 145,
+    "kind": "Click",
+    "target": "OpenSystemMonitor_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 41,
+    "kind": "Command",
+    "target": "{Binding AddGroupCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 48,
+    "kind": "Command",
+    "target": "{Binding RemoveGroupCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 81,
+    "kind": "Command",
+    "target": "{Binding AddPositionCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 88,
+    "kind": "Command",
+    "target": "{Binding RemovePositionCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 95,
+    "kind": "Command",
+    "target": "{Binding MoveToStorageCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 103,
+    "kind": "Command",
+    "target": "{Binding MoveUpCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 109,
+    "kind": "Command",
+    "target": "{Binding MoveDownCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 146,
+    "kind": "Click",
+    "target": "DeletePosition_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 166,
+    "kind": "Command",
+    "target": "{Binding RestoreFromStorageCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 193,
+    "kind": "Command",
+    "target": "{Binding ResetToDefaultCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 197,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/PositionTemplateEditorDialog.xaml",
+    "line": 200,
+    "kind": "Command",
+    "target": "{Binding CancelCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/OptionsEditorWindow.xaml",
+    "line": 19,
+    "kind": "Command",
+    "target": "{Binding AddCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/OptionsEditorWindow.xaml",
+    "line": 30,
+    "kind": "Command",
+    "target": "{Binding RemoveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/OptionsEditorWindow.xaml",
+    "line": 38,
+    "kind": "Command",
+    "target": "{Binding MoveUpCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/OptionsEditorWindow.xaml",
+    "line": 41,
+    "kind": "Command",
+    "target": "{Binding MoveDownCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/OptionsEditorWindow.xaml",
+    "line": 44,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/OptionsEditorWindow.xaml",
+    "line": 45,
+    "kind": "Command",
+    "target": "{Binding CancelCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/CostCatalogEditorDialog.xaml",
+    "line": 89,
+    "kind": "Command",
+    "target": "{Binding AddDnCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/CostCatalogEditorDialog.xaml",
+    "line": 95,
+    "kind": "Command",
+    "target": "{Binding RemoveDnCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/CostCatalogEditorDialog.xaml",
+    "line": 113,
+    "kind": "Command",
+    "target": "{Binding AddCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/CostCatalogEditorDialog.xaml",
+    "line": 119,
+    "kind": "Command",
+    "target": "{Binding RemoveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/CostCatalogEditorDialog.xaml",
+    "line": 127,
+    "kind": "Command",
+    "target": "{Binding SaveCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Dialogs/CostCatalogEditorDialog.xaml",
+    "line": 129,
+    "kind": "Command",
+    "target": "{Binding CloseCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/ToastHost.xaml",
+    "line": 54,
+    "kind": "Click",
+    "target": "ToastAktion_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/SystemMonitorPanel.xaml",
+    "line": 112,
+    "kind": "Click",
+    "target": "Detach_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/PhotoGalleryPanel.xaml",
+    "line": 23,
+    "kind": "Click",
+    "target": "Detach_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 134,
+    "kind": "Checked",
+    "target": "ZkChip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 134,
+    "kind": "Unchecked",
+    "target": "ZkChip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 136,
+    "kind": "Checked",
+    "target": "ZkChip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 136,
+    "kind": "Unchecked",
+    "target": "ZkChip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 138,
+    "kind": "Checked",
+    "target": "ZkChip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 138,
+    "kind": "Unchecked",
+    "target": "ZkChip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 140,
+    "kind": "Checked",
+    "target": "ZkChip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 140,
+    "kind": "Unchecked",
+    "target": "ZkChip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 142,
+    "kind": "Checked",
+    "target": "ZkChip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 142,
+    "kind": "Unchecked",
+    "target": "ZkChip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 145,
+    "kind": "Checked",
+    "target": "Chip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 145,
+    "kind": "Unchecked",
+    "target": "Chip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 147,
+    "kind": "Checked",
+    "target": "Chip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 147,
+    "kind": "Unchecked",
+    "target": "Chip_Changed"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 150,
+    "kind": "Click",
+    "target": "StartFilterReset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/FilterChipBar.xaml",
+    "line": 156,
+    "kind": "Click",
+    "target": "Reset_Click"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/EmptyStateControl.xaml",
+    "line": 66,
+    "kind": "Command",
+    "target": "{Binding ActionCommand, ElementName=Root}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Controls/BusyOverlay.xaml",
+    "line": 35,
+    "kind": "Command",
+    "target": "{Binding CancelCommand, ElementName=Root}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Theme/Controls.xaml",
+    "line": 1300,
+    "kind": "Command",
+    "target": "Slider.DecreaseLarge"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Theme/Controls.xaml",
+    "line": 1307,
+    "kind": "Command",
+    "target": "Slider.IncreaseLarge"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Theme/Controls.xaml",
+    "line": 1467,
+    "kind": "Command",
+    "target": "{x:Static ScrollBar.PageUpCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Theme/Controls.xaml",
+    "line": 1473,
+    "kind": "Command",
+    "target": "{x:Static ScrollBar.PageDownCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Theme/Controls.xaml",
+    "line": 1487,
+    "kind": "Command",
+    "target": "{x:Static ScrollBar.PageLeftCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Theme/Controls.xaml",
+    "line": 1493,
+    "kind": "Command",
+    "target": "{x:Static ScrollBar.PageRightCommand}"
+  },
+  {
+    "file": "src/AuswertungPro.Next.UI/Theme/Controls.xaml",
+    "line": 1701,
+    "kind": "Command",
+    "target": "{TemplateBinding RetryCommand}"
+  }
+]

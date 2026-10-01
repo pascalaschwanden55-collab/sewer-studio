@@ -13,11 +13,31 @@ internal static class TrainingExportImageFormatValidator
     private const long MaximumPixels = 50_000_000;
 
     public static void Validate(byte[] bytes, string targetFileName)
+        => ValidateCore(bytes, targetFileName);
+
+    public static void Validate(
+        byte[] bytes,
+        string targetFileName,
+        int expectedWidth,
+        int expectedHeight)
+    {
+        var image = ValidateCore(bytes, targetFileName);
+        if (image.Width != expectedWidth || image.Height != expectedHeight)
+        {
+            throw Error(
+                $"Bildabmessungen {image.Width}x{image.Height} passen nicht zu " +
+                $"{expectedWidth}x{expectedHeight}.");
+        }
+    }
+
+    private static ImageInfo ValidateCore(
+        byte[] bytes,
+        string targetFileName)
     {
         ArgumentNullException.ThrowIfNull(bytes);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetFileName);
         var image = ReadImageInfo(bytes)
-                    ?? throw Error("Originalbild hat kein unterstuetztes oder vollstaendiges Bildformat.");
+                    ?? throw Error("Originalbild hat kein unterstütztes oder vollständiges Bildformat.");
         var extension = Path.GetExtension(targetFileName).ToLowerInvariant();
         var extensionMatches = image.Format switch
         {
@@ -33,8 +53,10 @@ internal static class TrainingExportImageFormatValidator
             || image.Height <= 0
             || (long)image.Width * image.Height > MaximumPixels)
         {
-            throw Error("Bildabmessungen sind ungueltig oder groesser als 50 Millionen Pixel.");
+            throw Error("Bildabmessungen sind ungültig oder grösser als 50 Millionen Pixel.");
         }
+
+        return image;
     }
 
     private static ImageInfo? ReadImageInfo(ReadOnlySpan<byte> bytes)

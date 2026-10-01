@@ -130,7 +130,7 @@ public sealed class CodingOverlayMeasurementFormatterTests
             ArcDegrees = 22.26
         });
 
-        Assert.Equal("Fuellung: 37.8%", level.ArcText);
+        Assert.Equal("Füllung: 37.8%", level.ArcText);
         Assert.Equal("Winkel: 22.3\u00B0", bend.ArcText);
     }
 }

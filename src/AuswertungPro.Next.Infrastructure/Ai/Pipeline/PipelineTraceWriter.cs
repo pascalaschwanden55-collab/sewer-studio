@@ -16,7 +16,7 @@ public static class PipelineTraceWriter
     public static void Use(IPipelineTraceWriter writer) =>
         throw new NotSupportedException(
             "Der globale Pipeline-Trace-Schreiber kann nicht mehr ausgetauscht werden. " +
-            "IPipelineTraceWriter bitte per Konstruktor uebergeben.");
+            "IPipelineTraceWriter bitte per Konstruktor übergeben.");
 
     public static async Task WriteAsync(PipelineFrameTrace entry)
     {
@@ -104,4 +104,10 @@ public sealed class PipelineFrameTrace
 
     /// <summary>Technischer Grund des eingeschraenkten Zustands.</summary>
     public string? DegradedReason { get; set; }
+
+    /// <summary>
+    /// Verworfener OSD-Meter mit Grund, wenn er nicht zum letzten belegten Meter passt
+    /// (hoechstens 5 m/s, Entscheid 01.10.2026); null = nichts verworfen.
+    /// </summary>
+    public string? OsdMeterRejected { get; set; }
 }

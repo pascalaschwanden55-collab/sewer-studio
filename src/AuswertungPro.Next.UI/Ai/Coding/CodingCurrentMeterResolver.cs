@@ -1,4 +1,4 @@
-using System.Globalization;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Ai.Coding;
 
@@ -40,13 +40,9 @@ public static class CodingCurrentMeterResolver
         if (string.IsNullOrWhiteSpace(text))
             return 0;
 
-        var normalized = text.Replace("m", "", StringComparison.Ordinal).Trim();
-        return double.TryParse(
-            normalized,
-            NumberStyles.Any,
-            CultureInfo.InvariantCulture,
-            out var meter)
-            ? meter
+        var normalized = text.Replace("m", "", StringComparison.OrdinalIgnoreCase).Trim();
+        return FachzahlParser.TryParseMeasurement(normalized, out var meter)
+            ? (double)meter
             : 0;
     }
 }

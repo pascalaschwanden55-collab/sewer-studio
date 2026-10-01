@@ -1,0 +1,177 @@
+Testlauf für "C:\Sewer-Studio_KI_4.5-nova\tests\ProjectModernizer.Tests\bin\Release\net10.0\ProjectModernizer.Tests.dll" (.NETCoreApp,Version=v10.0)
+Testlauf für "C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.Pipeline.Tests\bin\Release\net10.0\AuswertungPro.Next.Pipeline.Tests.dll" (.NETCoreApp,Version=v10.0)
+Testlauf für "C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.Infrastructure.Tests\bin\Release\net10.0\AuswertungPro.Next.Infrastructure.Tests.dll" (.NETCoreApp,Version=v10.0)
+Testlauf für "C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\bin\Release\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll" (.NETCoreApp,Version=v10.0)
+VSTest-Version 18.0.2 (x64)
+VSTest-Version 18.0.2 (x64)
+VSTest-Version 18.0.2 (x64)
+
+
+
+VSTest-Version 18.0.2 (x64)
+
+Die Testausführung wird gestartet, bitte warten...
+Die Testausführung wird gestartet, bitte warten...
+Die Testausführung wird gestartet, bitte warten...
+Die Testausführung wird gestartet, bitte warten...
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+Ergebnisdatei: C:\Sewer-Studio_KI_4.5-nova\.tmp\nova-abnahme-codex\gesamt\Besitzer_PCW11X01_2026-09-08_15_17_28.trx
+
+Bestanden!   : Fehler:     0, erfolgreich:    62, übersprungen:     0, gesamt:    62, Dauer: 433 ms - ProjectModernizer.Tests.dll (net10.0)
+[xUnit.net 00:00:01.04]     AuswertungPro.Next.Pipeline.Tests.BendSuggestionLiveAcceptanceTests.CSharp_Durchlauf_liefert_dieselben_Stellen_wie_der_Prototyp [SKIP]
+  Übersprungen AuswertungPro.Next.Pipeline.Tests.BendSuggestionLiveAcceptanceTests.CSharp_Durchlauf_liefert_dieselben_Stellen_wie_der_Prototyp [1 ms]
+[xUnit.net 00:00:01.40]     AuswertungPro.Next.Pipeline.Tests.PipeEndSuggestionLiveAcceptanceTests.CSharp_Durchlauf_liefert_dieselben_Stellen_wie_das_Abnahmeskript [SKIP]
+  Übersprungen AuswertungPro.Next.Pipeline.Tests.PipeEndSuggestionLiveAcceptanceTests.CSharp_Durchlauf_liefert_dieselben_Stellen_wie_das_Abnahmeskript [1 ms]
+[xUnit.net 00:00:01.41]     AuswertungPro.Next.Pipeline.Tests.SidecarRealVideoIntegrationTests.EchtesVideo_ErfuelltGoldenVertrag [SKIP]
+  Übersprungen AuswertungPro.Next.Pipeline.Tests.SidecarRealVideoIntegrationTests.EchtesVideo_ErfuelltGoldenVertrag [1 ms]
+Ergebnisdatei: C:\Sewer-Studio_KI_4.5-nova\.tmp\nova-abnahme-codex\gesamt\Besitzer_PCW11X01_2026-09-08_15_17_28[1].trx
+
+Bestanden!   : Fehler:     0, erfolgreich:  2644, übersprungen:     3, gesamt:  2647, Dauer: 12 s - AuswertungPro.Next.Pipeline.Tests.dll (net10.0)
+[xUnit.net 00:01:02.44]     AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_Auskunft_wird_wirklich_als_ISO_8859_1_gelesen [SKIP]
+[xUnit.net 00:01:02.44]     AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_Gemeindeliste_enthaelt_die_19_Urner_Gemeinden [SKIP]
+[xUnit.net 00:01:02.44]     AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Stockwerkeigentum_wird_an_der_echten_Seite_richtig_zerlegt [SKIP]
+[xUnit.net 00:01:02.44]     AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_echten_Dienste_liefern_die_gemessenen_Werte_fuer_Parzelle_439 [SKIP]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_Auskunft_wird_wirklich_als_ISO_8859_1_gelesen [1 ms]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_Gemeindeliste_enthaelt_die_19_Urner_Gemeinden [1 ms]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Stockwerkeigentum_wird_an_der_echten_Seite_richtig_zerlegt [1 ms]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.Dossiers.Lookup.GeoUrLiveAcceptanceTests.Die_echten_Dienste_liefern_die_gemessenen_Werte_fuer_Parzelle_439 [1 ms]
+dotnet : [xUnit.net 00:01:10.00]     AuswertungPro.Next.UI.Tests.DesignAuditNovaAufklappListeTests.Die_Kopfzeile_beschr
+iftet_ihre_Spalten_in_Grossbuchstaben [FAIL]
+In Zeile:2 Zeichen:1
++ dotnet test AuswertungPro.sln -c Release --no-build --no-restore --lo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([xUnit.net 00:0...chstaben [FAIL]:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+  Fehler AuswertungPro.Next.UI.Tests.DesignAuditNovaAufklappListeTests.Die_Kopfzeile_beschriftet_ihre_Spalten_in_Grossbuchstaben [< 1 ms]
+  Fehlermeldung:
+   Assert.Contains() Failure: Sub-string not found
+String:    "<UserControl x:Class="AuswertungPro.Next."···
+Not found: "Source=Protokoll,"
+  Stapelverfolgung:
+     at AuswertungPro.Next.UI.Tests.DesignAuditNovaAufklappListeTests.Die_Kopfzeile_beschriftet_ihre_Spalten_in_Grossbuchstaben() in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\DesignAuditNovaAufklappListeTests.cs:line 152
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:01:23.22]     AuswertungPro.Next.Infrastructure.Tests.VsaKekCatalogBuilderTests.BuildFromVsaKekArchive_ProducesExpectedManifestRules [SKIP]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.VsaKekCatalogBuilderTests.BuildFromVsaKekArchive_ProducesExpectedManifestRules [1 ms]
+[xUnit.net 00:01:39.06]     AuswertungPro.Next.UI.Tests.BeobachtungenWindowIsolatedSmokeTests.Kindprozess_oeffnet_Fenster_mit_echten_App_Ressourcen [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.BeobachtungenWindowIsolatedSmokeTests.Kindprozess_oeffnet_Fenster_mit_echten_App_Ressourcen [1 ms]
+[xUnit.net 00:01:42.12]     AuswertungPro.Next.UI.Tests.ComboBoxAnzeigeIsolatedSmokeTests.Kindprozess_ComboBox_zeigt_die_Beschriftung_statt_ToString [SKIP]
+[xUnit.net 00:01:42.12]     AuswertungPro.Next.UI.Tests.DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests.Kindprozess_Spaltenkopf_erscheint_gross_in_beiden_Themes [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.ComboBoxAnzeigeIsolatedSmokeTests.Kindprozess_ComboBox_zeigt_die_Beschriftung_statt_ToString [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests.Kindprozess_Spaltenkopf_erscheint_gross_in_beiden_Themes [1 ms]
+[xUnit.net 00:01:44.75]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Haltungsseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [SKIP]
+[xUnit.net 00:01:44.75]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz [SKIP]
+[xUnit.net 00:01:44.75]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Haltungsseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [1 ms]
+[xUnit.net 00:01:51.55]     AuswertungPro.Next.UI.Tests.HaltungAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_die_aufgeklappte_Haltung [SKIP]
+[xUnit.net 00:01:51.55]     AuswertungPro.Next.UI.Tests.HaltungsgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Haltungsgrafik [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.HaltungAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_die_aufgeklappte_Haltung [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.HaltungsgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Haltungsgrafik [1 ms]
+[xUnit.net 00:01:54.12]     AuswertungPro.Next.Infrastructure.Tests.Import.XtfVideoCounterLiveAcceptanceTests.Rohranfang_und_Rohrende_tragen_ihre_videozeit [SKIP]
+  Übersprungen AuswertungPro.Next.Infrastructure.Tests.Import.XtfVideoCounterLiveAcceptanceTests.Rohranfang_und_Rohrende_tragen_ihre_videozeit [1 ms]
+Ergebnisdatei: C:\Sewer-Studio_KI_4.5-nova\.tmp\nova-abnahme-codex\gesamt\Besitzer_PCW11X01_2026-09-08_15_17_28[2].trx
+
+Bestanden!   : Fehler:     0, erfolgreich:  6291, übersprungen:     6, gesamt:  6297, Dauer: 1 m 54 s - AuswertungPro.Next.Infrastructure.Tests.dll (net10.0)
+[xUnit.net 00:02:54.00]
+AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern [FAIL]
+  Fehler AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern [1 m 1 s]
+  Fehlermeldung:
+   Isolierter WPF-Test fehlgeschlagen (Exit-Code 1; Szenario-Bestaetigung fehlt).
+
+stdout:
+VSTest-Version 18.0.2 (x64)
+
+Die Testausf├╝hrung wird gestartet, bitte warten...
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster ├╝berein.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.11]   Discovering: AuswertungPro.Next.UI.Tests
+[xUnit.net 00:00:00.41]   Discovered:  AuswertungPro.Next.UI.Tests
+[xUnit.net 00:00:00.43]   Starting:    AuswertungPro.Next.UI.Tests
+[xUnit.net 00:01:00.47]       Der WPF-Test wurde nicht innerhalb von 60 Sekunden beendet. Er kann blockiert sein oder unter hoher Systemlast zu langsam laufen.
+[xUnit.net 00:01:00.47]       Stack Trace:
+[xUnit.net 00:01:00.47]         C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs(36,0): at AuswertungPro.Next.UI.Tests.StaTestRunner.Run(Action action, Nullable`1 timeout)
+[xUnit.net 00:01:00.47]         C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs(65,0): at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues()
+[xUnit.net 00:01:00.47]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:01:00.47]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:01:00.47]   Finished:    AuswertungPro.Next.UI.Tests
+  Fehler AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [1 m]
+  Fehlermeldung:
+   Der WPF-Test wurde nicht innerhalb von 60 Sekunden beendet. Er kann blockiert sein oder unter hoher Systemlast zu langsam laufen.
+  Stapelverfolgung:
+     at AuswertungPro.Next.UI.Tests.StaTestRunner.Run(Action action, Nullable`1 timeout) in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs:line 36
+   at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues() in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs:line 65
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Gesamtzahl Tests: 1
+     Nicht bestanden: 1
+ Gesamtzeit: 1.0141 Minuten
+
+
+stderr:
+[xUnit.net 00:01:00.47]     AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [FAIL]
+Fehler beim Testlauf.
+
+  Stapelverfolgung:
+     at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern() in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs:line 58
+--- End of stack trace from previous location ---
+[xUnit.net 00:02:54.00]     AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [SKIP]
+[xUnit.net 00:02:54.00]     AuswertungPro.Next.UI.Tests.NovaPageHeaderIsolatedSmokeTests.Kindprozess_SettingsPage_und_BuilderPage_zeigen_den_Seitenkopf_korrekt [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.NovaPageHeaderIsolatedSmokeTests.Kindprozess_SettingsPage_und_BuilderPage_zeigen_den_Seitenkopf_korrekt [1 ms]
+[xUnit.net 00:02:57.10]     AuswertungPro.Next.UI.Tests.OberflaechenBindungsRauchtestTests.Kindprozess_erzeugt_alle_Bedienelemente [SKIP]
+[xUnit.net 00:02:58.33]     AuswertungPro.Next.UI.Tests.SchachtgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Schachtgrafik_lesbar [SKIP]
+[xUnit.net 00:02:58.33]     AuswertungPro.Next.UI.Tests.SchaechteAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_den_aufgeklappten_Schacht [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.OberflaechenBindungsRauchtestTests.Kindprozess_erzeugt_alle_Bedienelemente [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchachtgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Schachtgrafik_lesbar [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_den_aufgeklappten_Schacht [1 ms]
+[xUnit.net 00:03:00.15]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [SKIP]
+[xUnit.net 00:03:00.15]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_Schachtuebersicht_folgt_Datensatzaenderungen_ohne_neue_Bindung [SKIP]
+[xUnit.net 00:03:01.46]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Schaechteseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_Schachtuebersicht_folgt_Datensatzaenderungen_ohne_neue_Bindung [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Schaechteseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [1 ms]
+[xUnit.net 00:03:06.73]     AuswertungPro.Next.UI.Tests.SettingsPageLayoutIsolatedSmokeTests.Kindprozess_Erste_Gruppe_beginnt_oben [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.SettingsPageLayoutIsolatedSmokeTests.Kindprozess_Erste_Gruppe_beginnt_oben [1 ms]
+[xUnit.net 00:03:34.62]     AuswertungPro.Next.UI.Tests.NovaListenWiederverbindenTests.Nach_Wiederverbinden_folgt_das_o
+ffene_Formular_wieder_dem_Datensatz(schacht: False) [FAIL]
+[xUnit.net 00:03:34.63]     AuswertungPro.Next.UI.Tests.NovaListenWiederverbindenTests.Nach_Wiederverbinden_folgt_das_o
+ffene_Formular_wieder_dem_Datensatz(schacht: True) [FAIL]
+  Fehler AuswertungPro.Next.UI.Tests.NovaListenWiederverbindenTests.Nach_Wiederverbinden_folgt_das_offene_Formular_wieder_dem_Datensatz(schacht: False) [8 ms]
+  Fehlermeldung:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "Nach Rueckkehr"
+Actual:   ""
+  Stapelverfolgung:
+     at AuswertungPro.Next.UI.Tests.NovaListenWiederverbindenTests.<>c__DisplayClass0_0.<Nach_Wiederverbinden_folgt_das_offene_Formular_wieder_dem_Datensatz>b__0() in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\NovaListenWiederverbindenTests.cs:line 31
+   at AuswertungPro.Next.UI.Tests.StaTestRunner.<>c__DisplayClass1_0.<Run>b__0() in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs:line 17
+--- End of stack trace from previous location ---
+   at AuswertungPro.Next.UI.Tests.StaTestRunner.Run(Action action, Nullable`1 timeout) in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs:line 36
+   at AuswertungPro.Next.UI.Tests.NovaListenWiederverbindenTests.Nach_Wiederverbinden_folgt_das_offene_Formular_wieder_dem_Datensatz(Boolean schacht) in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\NovaListenWiederverbindenTests.cs:line 16
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Fehler AuswertungPro.Next.UI.Tests.NovaListenWiederverbindenTests.Nach_Wiederverbinden_folgt_das_offene_Formular_wieder_dem_Datensatz(schacht: True) [8 ms]
+  Fehlermeldung:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "Nach Rueckkehr"
+Actual:   ""
+  Stapelverfolgung:
+     at AuswertungPro.Next.UI.Tests.NovaListenWiederverbindenTests.<>c__DisplayClass0_0.<Nach_Wiederverbinden_folgt_das_offene_Formular_wieder_dem_Datensatz>b__0() in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\NovaListenWiederverbindenTests.cs:line 31
+   at AuswertungPro.Next.UI.Tests.StaTestRunner.<>c__DisplayClass1_0.<Run>b__0() in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs:line 17
+--- End of stack trace from previous location ---
+   at AuswertungPro.Next.UI.Tests.StaTestRunner.Run(Action action, Nullable`1 timeout) in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs:line 36
+   at AuswertungPro.Next.UI.Tests.NovaListenWiederverbindenTests.Nach_Wiederverbinden_folgt_das_offene_Formular_wieder_dem_Datensatz(Boolean schacht) in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\NovaListenWiederverbindenTests.cs:line 16
+   at InvokeStub_NovaListenWiederverbindenTests.Nach_Wiederverbinden_folgt_das_offene_Formular_wieder_dem_Datensatz(Object, Span`1)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+Ergebnisdatei: C:\Sewer-Studio_KI_4.5-nova\.tmp\nova-abnahme-codex\gesamt\Besitzer_PCW11X01_2026-09-08_15_17_27.trx
+
+Fehler!      : Fehler:     4, erfolgreich:  6861, übersprungen:    17, gesamt:  6882, Dauer: 3 m 35 s - AuswertungPro.Next.UI.Tests.dll (net10.0)

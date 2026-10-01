@@ -62,7 +62,9 @@ public static class ConnectionCountEstimator
             if (!IsConnectionEntry(finding.KanalSchadencode, finding.Raw))
                 continue;
 
-            var distance = finding.SchadenlageAnfang ?? TryExtractDistance(finding.Raw);
+            var distance = finding.MeterStart
+                ?? finding.MeterEnd
+                ?? TryExtractDistance(finding.Raw);
             var clock = NormalizeClock(TryExtractClock(finding.Raw));
             var code = NormalizeCode(finding.KanalSchadencode);
             var role = GetConnectionCodeRole(code);

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -28,6 +28,9 @@ public sealed class Project
 
     public System.Collections.ObjectModel.ObservableCollection<HaltungRecord> Data { get; set; } = new();
     public System.Collections.ObjectModel.ObservableCollection<SchachtRecord> SchaechteData { get; set; } = new();
+
+    /// <summary>Ergaenzende Objektakten und wiederholte Bauteile; alte Felder bleiben an ihren Datensaetzen.</summary>
+    public List<ObjektAkte> Objektakten { get; set; } = new();
 
     /// <summary>
     /// Beliebige Import-Historie (wird 1:1 aus JSON übernommen).
@@ -88,9 +91,12 @@ public sealed class Project
             }
         }
 
-        // Validierung für Eigentuemer
-        var eigentuemerWerte = new[] { "AWU", "Privat", "Gemeinde", "Kanton", "Bund" };
-        if (!eigentuemerWerte.Contains(Metadata["Eigentuemer"]))
+        // Eigentuemer: nur ein leeres Feld wird vorbelegt. Frueher stand hier
+        // eine Whitelist der fuenf Kurzformen, die jeden anderen Wert durch
+        // "Privat" ersetzte — auch einen beim Kanton nachgeschlagenen wie
+        // "Abwasser Uri". Eine echte Angabe stillschweigend zu ersetzen ist
+        // schlimmer, als sie unbekannt stehen zu lassen.
+        if (string.IsNullOrWhiteSpace(Metadata["Eigentuemer"]))
             Metadata["Eigentuemer"] = "Privat";
 
         // Validierung für Sanieren

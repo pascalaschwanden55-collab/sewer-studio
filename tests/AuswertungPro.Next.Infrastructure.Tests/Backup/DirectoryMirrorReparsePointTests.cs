@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using AuswertungPro.Next.Application.Backup;
 using AuswertungPro.Next.Infrastructure.Backup;
 
@@ -69,7 +69,44 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
         Assert.False(Directory.Exists(Path.Combine(backupRoot, "Programm", "verknuepfung")));
         Assert.False(File.Exists(Path.Combine(backupRoot, "Programm", "verknuepfung", "geheim.txt")));
         Assert.Equal(1, stats.Copied);
-        Assert.Contains(stats.Errors, e => e.Contains("verknuepfung", StringComparison.OrdinalIgnoreCase));
+        // Eine Verknuepfung in der QUELLE ist uebersprungener Fremdinhalt und
+        // damit nur eine Warnung. Im ZIEL bleibt sie ein blockierender Fehler —
+        // das prueft RemoveOrphans_Junction_im_spiegel_loescht_keine_fremden_dateien.
+        Assert.Empty(stats.Errors);
+        Assert.Contains(stats.Warnings, e => e.Contains("Verknüpfung", StringComparison.Ordinal)); // 10c2: Meldungstext, nicht Ordnername
+    }
+
+    [JunctionFact]
+    public async Task Ordner_der_zur_verknuepfung_wird_behaelt_seine_bisherige_sicherung()
+    {
+        // Audit A01 (23.09.2026): Wird ein gesicherter Ordner in der Quelle durch eine Verknuepfung ersetzt
+        // (etwa beim Auslagern), ueberspringt die Sicherung ihn richtig — sie darf aber seine alte Kopie nicht
+        // loeschen. Mit nur einem behaltenen Stand waere die Kopie sonst endgueltig weg.
+        var source = Path.Combine(_root, "quelle");
+        var backupRoot = Path.Combine(_root, "backup");
+        var foreign = Path.Combine(_root, "ausgelagert");
+        Directory.CreateDirectory(Path.Combine(source, "unter"));
+        File.WriteAllText(Path.Combine(source, "eigen.txt"), "eigen");
+        File.WriteAllText(Path.Combine(source, "unter", "alt.txt"), "alt");
+        var mirror = new DirectoryMirror(null);
+
+        await mirror.MirrorSourceAsync(new BackupSource(source, "Programm"), backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase), new DirectoryMirror.MirrorStats());
+        Assert.True(File.Exists(Path.Combine(backupRoot, "Programm", "unter", "alt.txt")));
+
+        Directory.Move(Path.Combine(source, "unter"), foreign);
+        File.WriteAllText(Path.Combine(foreign, "neu.txt"), "neu");
+        CreateDirectoryLinkOrSkip(Path.Combine(source, "unter"), foreign);
+
+        var erwartet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var stats = new DirectoryMirror.MirrorStats();
+        await mirror.MirrorSourceAsync(new BackupSource(source, "Programm"), backupRoot, erwartet, stats);
+        mirror.RemoveOrphans(backupRoot, erwartet, stats);
+
+        Assert.True(File.Exists(Path.Combine(backupRoot, "Programm", "unter", "alt.txt")));  // alte Kopie bleibt
+        Assert.False(File.Exists(Path.Combine(backupRoot, "Programm", "unter", "neu.txt"))); // Verknuepfung nicht gelesen
+        Assert.Contains(stats.Warnings, w => w.Contains("unter", StringComparison.OrdinalIgnoreCase));
+        Assert.Empty(stats.Errors);
     }
 
     [JunctionFact]
@@ -95,7 +132,71 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
 
         Assert.True(File.Exists(foreignFile));   // fremder Inhalt unangetastet
         Assert.True(Directory.Exists(junction)); // Junction selbst bleibt ebenfalls stehen
-        Assert.Contains(stats.Errors, e => e.Contains("verknuepfung", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(stats.Errors, e => e.Contains("Verknüpfung", StringComparison.Ordinal)); // 10c2: Meldungstext, nicht Ordnername
+    }
+
+    [JunctionFact]
+    public async Task MirrorSourceAsync_Junction_auf_ausgeschlossenem_Ordner_meldet_nichts()
+    {
+        // Realer Fall (2026-09-04): Ein Node-Hilfsskript legte im Programmordner die
+        // Junction "node_modules" in den Codex-Zwischenspeicher. Der Name steht in
+        // BackupExclusionRules ohnehin auf der Ausschlussliste — es fehlt also nichts.
+        // Trotzdem meldete jeder Sicherungslauf eine Warnung, weil die Junction-Pruefung
+        // vor der Ausschlusspruefung lief.
+        var source = Path.Combine(_root, "quelle");
+        var backupRoot = Path.Combine(_root, "backup");
+        var foreign = Path.Combine(_root, "fremd");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(foreign);
+        File.WriteAllText(Path.Combine(source, "eigen.txt"), "eigen");
+        File.WriteAllText(Path.Combine(foreign, "paket.txt"), "fremd");
+
+        var junction = Path.Combine(source, "node_modules");
+        CreateDirectoryLinkOrSkip(junction, foreign);
+
+        var mirror = new DirectoryMirror(null);
+        var stats = new DirectoryMirror.MirrorStats();
+
+        await mirror.MirrorSourceAsync(
+            new BackupSource(source, "Programm", BackupExclusionRules.IsProgramDirExcluded),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            stats);
+
+        // Der fremde Inhalt bleibt draussen — wie bisher.
+        Assert.True(File.Exists(Path.Combine(backupRoot, "Programm", "eigen.txt")));
+        Assert.False(Directory.Exists(Path.Combine(backupRoot, "Programm", "node_modules")));
+        // Aber der Lauf bleibt still: ein ausgeschlossener Ordner ist kein Befund.
+        Assert.Empty(stats.Errors);
+        Assert.Empty(stats.Warnings);
+    }
+
+    [JunctionFact]
+    public async Task MirrorSourceAsync_Junction_ausserhalb_der_Ausschlussliste_wird_weiter_gemeldet()
+    {
+        // Gegenprobe: Die Ausschlussliste darf den Verknuepfungsschutz nicht global
+        // stummschalten. Ein nicht ausgeschlossener Name meldet weiterhin.
+        var source = Path.Combine(_root, "quelle");
+        var backupRoot = Path.Combine(_root, "backup");
+        var foreign = Path.Combine(_root, "fremd");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(foreign);
+        File.WriteAllText(Path.Combine(foreign, "geheim.txt"), "geheim");
+
+        var junction = Path.Combine(source, "kundendaten");
+        CreateDirectoryLinkOrSkip(junction, foreign);
+
+        var mirror = new DirectoryMirror(null);
+        var stats = new DirectoryMirror.MirrorStats();
+
+        await mirror.MirrorSourceAsync(
+            new BackupSource(source, "Programm", BackupExclusionRules.IsProgramDirExcluded),
+            backupRoot,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            stats);
+
+        Assert.False(File.Exists(Path.Combine(backupRoot, "Programm", "kundendaten", "geheim.txt")));
+        Assert.Contains(stats.Warnings, w => w.Contains("kundendaten", StringComparison.OrdinalIgnoreCase));
     }
 
     [JunctionFact]
@@ -120,7 +221,7 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
 
         Assert.False(File.Exists(Path.Combine(foreign, "kopie.txt")));
         Assert.Contains(stats.Errors, error =>
-            error.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+            error.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
     }
 
     [JunctionFact]
@@ -132,8 +233,12 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
         var foreign = Path.Combine(_root, "fremd");
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         Directory.CreateDirectory(foreign);
-        File.WriteAllText(source, "neu");
+        // Die Quelle muss sich vom Ziel wirklich unterscheiden — in Laenge UND Zeitstempel.
+        // Sonst haelt der Spiegel die Datei fuer unveraendert, ueberspringt sie, und der
+        // Versionierungs-Pfad, um den es hier geht, wird nie betreten.
         File.WriteAllText(target, "alt");
+        File.WriteAllText(source, "ein deutlich laengerer neuer Inhalt");
+        File.SetLastWriteTimeUtc(target, DateTime.UtcNow.AddDays(-1));
 
         var versionsLink = Path.Combine(backupRoot, BackupVersionRetention.VersionsFolderName);
         CreateDirectoryLinkOrSkip(versionsLink, foreign);
@@ -147,6 +252,6 @@ public sealed class DirectoryMirrorReparsePointTests : IDisposable
 
         Assert.Empty(Directory.EnumerateFiles(foreign, "*", SearchOption.AllDirectories));
         Assert.Contains(stats.Errors, error =>
-            error.Contains("Verknuepfung", StringComparison.OrdinalIgnoreCase));
+            error.Contains("Verknüpfung", StringComparison.OrdinalIgnoreCase));
     }
 }

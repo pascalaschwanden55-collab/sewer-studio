@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Training.ExportPlans;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
@@ -70,7 +71,7 @@ public static class TrainingYoloExportWorkflow
             request.SetBusy(true);
             request.SetProgressMax(0);
             request.SetProgressValue(0);
-            request.SetStatusText("YOLO-Export: Datenbestand wird geprueft...");
+            request.SetStatusText("YOLO-Export: Datenbestand wird geprüft...");
 
             var progress = new UiContextProgress<TrainingYoloExportProgress>(value =>
                 ApplyProgress(request, value));
@@ -84,7 +85,7 @@ public static class TrainingYoloExportWorkflow
             if (result.Status == TrainingYoloExportResultStatus.NoImages)
             {
                 const string emptyMessage =
-                    "YOLO-Export: Der gepruefte Plan enthaelt keine exportierbaren Bilder.";
+                    "YOLO-Export: Der geprüfte Plan enthält keine exportierbaren Bilder.";
                 request.Log(emptyMessage);
                 request.SetStatusText(emptyMessage);
                 return;
@@ -92,7 +93,7 @@ public static class TrainingYoloExportWorkflow
 
             var execution = result.Execution
                             ?? throw new InvalidOperationException(
-                                "Der Export wurde ohne Ausfuehrungsergebnis abgeschlossen.");
+                                "Der Export wurde ohne Ausführungsergebnis abgeschlossen.");
             request.SetProgressMax(result.Plan.Images.Count);
             request.SetProgressValue(result.Plan.Images.Count);
             var message =
@@ -106,7 +107,7 @@ public static class TrainingYoloExportWorkflow
             if (result.RegistryGateSkippedSampleIds is { Count: > 0 } registryGateSkipped)
             {
                 request.Log(
-                    $"  Hinweis: {registryGateSkipped.Count} vollstaendige Goldsamples nicht im " +
+                    $"  Hinweis: {registryGateSkipped.Count} vollständige Goldsamples nicht im " +
                     $"Freigaberegister - nicht exportiert: {string.Join(", ", registryGateSkipped)}");
                 statusMessage =
                     $"{message} | Hinweis: {registryGateSkipped.Count} Goldsamples nicht im Freigaberegister.";
@@ -122,7 +123,7 @@ public static class TrainingYoloExportWorkflow
         catch (Exception ex)
         {
             request.Log($"YOLO-Export FEHLER: {ex.Message}");
-            request.SetStatusText($"YOLO-Export fehlgeschlagen: {ex.Message}");
+            request.SetStatusText($"YOLO-Export fehlgeschlagen: {UserError.Describe(ex)}");
         }
         finally
         {
@@ -145,7 +146,7 @@ public static class TrainingYoloExportWorkflow
     {
         TrainingExportExecutionRoute.Sidecar => "Sidecar",
         TrainingExportExecutionRoute.LocalSidecarOffline => "lokal (Sidecar offline)",
-        TrainingExportExecutionRoute.LocalRequestTooLarge => "lokal (Plan zu gross fuer einen Request)",
+        TrainingExportExecutionRoute.LocalRequestTooLarge => "lokal (Plan zu gross für einen Request)",
         TrainingExportExecutionRoute.LocalAfterTransportFailure => "lokal (Verbindung abgebrochen)",
         _ => route.ToString()
     };

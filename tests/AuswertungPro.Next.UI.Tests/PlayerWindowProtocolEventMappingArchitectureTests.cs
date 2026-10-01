@@ -18,8 +18,8 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
         var snapshotStorePath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolTrainingSnapshotStore.cs");
         var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
-        Assert.True(File.Exists(resolverPath), "Gruene Protokoll-Trainingskandidaten muessen ausserhalb der PlayerWindow-Partials auf Import-Events gemappt werden.");
-        Assert.True(File.Exists(runnerPath), "Gruene Protokoll-Trainingskandidaten muessen ausserhalb der PlayerWindow-Partials abgearbeitet werden.");
+        Assert.True(File.Exists(resolverPath), "Gruene Protokoll-Trainingskandidaten müssen ausserhalb der PlayerWindow-Partials auf Import-Events gemappt werden.");
+        Assert.True(File.Exists(runnerPath), "Gruene Protokoll-Trainingskandidaten müssen ausserhalb der PlayerWindow-Partials abgearbeitet werden.");
         Assert.True(File.Exists(snapshotStorePath), "Gruene Protokoll-Trainingssnapshots sollen ausserhalb der PlayerWindow-Partials kopiert werden.");
         Assert.True(File.Exists(workflowFactoryPath), "Gruene Protokoll-Trainingsuebernahme soll ausserhalb der PlayerWindow-Partials verdrahtet werden.");
 
@@ -49,7 +49,7 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Protokolltraining soll Import-Event-Aufloesung und Snapshot-IO ueber Resolver/Runner kapseln:\n"
+            "PlayerWindow-Protokolltraining soll Import-Event-Aufloesung und Snapshot-IO über Resolver/Runner kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -86,7 +86,7 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Protokoll-Partial soll bestehende ProtocolEntry-Mappings ueber CodingProtocolEventMapper kapseln:\n"
+            "PlayerWindow-Protokoll-Partial soll bestehende ProtocolEntry-Mappings über CodingProtocolEventMapper kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -127,7 +127,7 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Protokoll-Import-Partial soll Import-Event-Mapping ueber Workflow/Mapper kapseln:\n"
+            "PlayerWindow-Protokoll-Import-Partial soll Import-Event-Mapping über Workflow/Mapper kapseln:\n"
             + string.Join("\n", offenders));
     }
 }

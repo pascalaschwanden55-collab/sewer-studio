@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Synthetische Referenzdatei fuer AP08 (keine Kundendaten). Deckt Kanal, Haltung,
+     Rohrprofil, Organisationen, fehlende und doppelte Bezuege, alle vier Bauwerksarten
+     und Zusatzangaben ab. Aenderungen an dieser Datei verlangen einen neuen Schnappschuss. -->
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION VERSION="2.3" SENDER="Referenzfall AP08">
+    <MODELS>
+      <MODEL NAME="SIA405_ABWASSER_2020_LV95" />
+      <MODEL NAME="SewerStudio_Zusatz_2026" />
+    </MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_Base_Abwasser_LV95.Administration BID="refB00000000ADM1">
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="refORGEIGENTUEM">
+        <Bezeichnung>Gemeinde Referenz</Bezeichnung>
+        <Organisationstyp>Gemeinde</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="refORGDATENHERR">
+        <Bezeichnung>Kanton Referenz</Bezeichnung>
+        <Organisationstyp>Kanton</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="refORGLIEFERANT">
+        <Bezeichnung>Inspektion Muster AG</Bezeichnung>
+        <Organisationstyp>Privat</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="refORGUNBEKANNT">
+        <Bezeichnung>unbekannt</Bezeichnung>
+        <Organisationstyp>Privat</Organisationstyp>
+        <Status>aktiv</Status>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+      <SIA405_Base_Abwasser_LV95.Administration.Organisation TID="refORGOHNENAME">
+        <Organisationstyp>Privat</Organisationstyp>
+      </SIA405_Base_Abwasser_LV95.Administration.Organisation>
+    </SIA405_Base_Abwasser_LV95.Administration>
+    <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser BID="refB00000000ABW1">
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil TID="refPROFILRECHT">
+        <Bezeichnung>Rechteckprofil 0.6</Bezeichnung>
+        <Profiltyp>Rechteckprofil</Profiltyp>
+        <HoehenBreitenverhaeltnis>0.6</HoehenBreitenverhaeltnis>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil TID="refPROFILKREIS">
+        <Bezeichnung>Kreisprofil</Bezeichnung>
+        <Profiltyp>Kreisprofil</Profiltyp>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil TID="refPROFILEI">
+        <Bezeichnung>Eiprofil</Bezeichnung>
+        <Profiltyp>Eiprofil</Profiltyp>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Rohrprofil>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="refKNOTEN100">
+        <Bezeichnung>100</Bezeichnung>
+        <AbwasserbauwerkRef REF="refSCHACHT100" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten TID="refKNOTEN300">
+        <Bezeichnung>300</Bezeichnung>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Abwasserknoten>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="refPUNKT1VON">
+        <Bezeichnung>100-101_von</Bezeichnung>
+        <AbwassernetzelementRef REF="refKNOTEN100" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="refPUNKT1NACH">
+        <Bezeichnung>100-101_nach</Bezeichnung>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="refPUNKT2VON">
+        <Bezeichnung>P-201</Bezeichnung>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="refPUNKT2NACH">
+        <AbwassernetzelementRef REF="refKNOTENFEHLT" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt TID="refPUNKT3VON">
+        <Bezeichnung>u-300_von</Bezeichnung>
+        <AbwassernetzelementRef REF="refKNOTEN300" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltungspunkt>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="refKANAL1">
+        <Bezeichnung>100-101</Bezeichnung>
+        <Standortname>Referenzstrasse 1</Standortname>
+        <Status>in_Betrieb</Status>
+        <Nutzungsart_Ist>Schmutzabwasser</Nutzungsart_Ist>
+        <Bemerkung>Kanal mit allen Feldern</Bemerkung>
+        <Zugaenglichkeit>zugaenglich</Zugaenglichkeit>
+        <BaulicherZustand>Z2</BaulicherZustand>
+        <EigentuemerRef REF="refORGEIGENTUEM" />
+        <DatenherrRef REF="refORGDATENHERR" />
+        <DatenlieferantRef REF="refORGLIEFERANT" />
+        <Baujahr>1975</Baujahr>
+        <Rohrlaenge>2.5</Rohrlaenge>
+        <FunktionHierarchisch>PAA.Sammelkanal</FunktionHierarchisch>
+        <FunktionHydraulisch>Freispiegelleitung</FunktionHydraulisch>
+        <Sanierungsbedarf>mittelfristig</Sanierungsbedarf>
+        <Verbindungsart>Muffe</Verbindungsart>
+        <Bettung_Umhuellung>Sand</Bettung_Umhuellung>
+        <Bruttokosten>12500</Bruttokosten>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="refKANAL2">
+        <Bezeichnung>101-102</Bezeichnung>
+        <Status>ausser_Betrieb</Status>
+        <Nutzungsart_Ist>Regenabwasser</Nutzungsart_Ist>
+        <Zugaenglichkeit>unbekannt</Zugaenglichkeit>
+        <BaulicherZustand>unbekannt</BaulicherZustand>
+        <Eigentuemer>Privat</Eigentuemer>
+        <EigentuemerRef REF="refORGEIGENTUEM" />
+        <DatenherrRef REF="refORGUNBEKANNT" />
+        <DatenlieferantRef REF="refORGFEHLT" />
+        <Baujahr>unbekannt</Baujahr>
+        <Funktionhierarchisch>Liegenschaftsentwässerung</Funktionhierarchisch>
+        <Sanierungsbedarf>unbekannt</Sanierungsbedarf>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="refKANAL3">
+        <Bezeichnung>103-104</Bezeichnung>
+        <Status>aktiv</Status>
+        <BaulicherZustand>Z5</BaulicherZustand>
+        <Funktion_hierarchisch>SAA.Liegenschaftsentwaesserung</Funktion_hierarchisch>
+        <EigentuemerRef REF="refORGOHNENAME" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal TID="refKANAL5">
+        <Bezeichnung>105-106</Bezeichnung>
+        <BaulicherZustand>z1</BaulicherZustand>
+        <Zugaenglichkeit>nur mit Schluessel</Zugaenglichkeit>
+        <Nutzungsart_Ist>Mischabwasser</Nutzungsart_Ist>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Kanal>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refHALTUNG1">
+        <Bezeichnung>100-101</Bezeichnung>
+        <LaengeEffektiv>45.30</LaengeEffektiv>
+        <Lichte_Hoehe>600</Lichte_Hoehe>
+        <Material>Beton_Normalbeton</Material>
+        <Letzte_Aenderung>20260903</Letzte_Aenderung>
+        <Lagebestimmung>genau</Lagebestimmung>
+        <AbwasserbauwerkRef REF="refKANAL1" />
+        <vonHaltungspunktRef REF="refPUNKT1VON" />
+        <nachHaltungspunktRef REF="refPUNKT1NACH" />
+        <RohrprofilRef REF="refPROFILRECHT" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refHALTUNG2">
+        <Bezeichnung>101-102</Bezeichnung>
+        <Lichte_Hoehe>300</Lichte_Hoehe>
+        <Material>Kunststoff_Polyvinilchlorid</Material>
+        <Letzte_Aenderung>2025-10-06</Letzte_Aenderung>
+        <Lagebestimmung>unbekannt</Lagebestimmung>
+        <AbwasserbauwerkRef REF="refKANAL2" />
+        <vonHaltungspunktRef REF="refPUNKT2VON" />
+        <nachHaltungspunktRef REF="refPUNKT2NACH" />
+        <RohrprofilRef REF="refPROFILKREIS" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refHALTUNG3">
+        <Bezeichnung>102-103</Bezeichnung>
+        <Lichte_Hoehe>400</Lichte_Hoehe>
+        <Lichte_Breite>500</Lichte_Breite>
+        <Material>unbekannt</Material>
+        <AbwasserbauwerkRef REF="refKANALFEHLT" />
+        <vonHaltungspunktRef REF="refPUNKTFEHLT" />
+        <RohrprofilRef REF="refPROFILFEHLT" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refHALTUNG4">
+        <Lichte_Breite>250</Lichte_Breite>
+        <AbwasserbauwerkRef REF="refKANAL3" />
+        <vonHaltungspunktRef REF="refPUNKT3VON" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refHALTUNG5">
+        <Lichte_Hoehe>200</Lichte_Hoehe>
+        <AbwasserbauwerkRef REF="refKANALFEHLT" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refHALTUNG6">
+        <Bezeichnung>105-106</Bezeichnung>
+        <Lichte_Hoehe>900</Lichte_Hoehe>
+        <Lichte_Breite>600</Lichte_Breite>
+        <RohrprofilRef REF="refPROFILEI" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung TID="refHALTUNG7">
+        <Bezeichnung>100-101</Bezeichnung>
+        <Lichte_Hoehe>700</Lichte_Hoehe>
+        <Material>Steinzeug</Material>
+        <AbwasserbauwerkRef REF="refKANAL2" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+        <Bezeichnung>ohne-tid</Bezeichnung>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Haltung>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="refSCHACHT100">
+        <Bezeichnung>100</Bezeichnung>
+        <Funktion>Kontrollschacht</Funktion>
+        <Material>Beton</Material>
+        <Dimension1>1000</Dimension1>
+        <Dimension2>1000</Dimension2>
+        <BaulicherZustand>Z3</BaulicherZustand>
+        <Bemerkung>Schacht mit allen Feldern</Bemerkung>
+        <Status>in_Betrieb</Status>
+        <Sanierungsbedarf>keiner</Sanierungsbedarf>
+        <Baujahr>1980</Baujahr>
+        <Standortname>Referenzstrasse 1</Standortname>
+        <Bruttokosten>4200</Bruttokosten>
+        <Zustandserhebung_Jahr>2024</Zustandserhebung_Jahr>
+        <EigentuemerRef REF="refORGEIGENTUEM" />
+        <DatenherrRef REF="refORGDATENHERR" />
+        <DatenlieferantRef REF="refORGLIEFERANT" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="refSCHACHT101">
+        <Bezeichnung>101</Bezeichnung>
+        <Funktion>unbekannt</Funktion>
+        <Material>Steinzeug</Material>
+        <Dimension1>1100</Dimension1>
+        <Dimension2>900</Dimension2>
+        <Eigentuemer></Eigentuemer>
+        <EigentuemerRef REF="refORGFEHLT" />
+        <DatenherrRef REF="refORGUNBEKANNT" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht TID="refSCHACHTOHNE">
+        <Funktion>Kontrollschacht</Funktion>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Normschacht>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Spezialbauwerk TID="refSPEZIAL1">
+        <Bezeichnung>SB-7</Bezeichnung>
+        <Funktion>Regenbecken_Durchlaufbecken</Funktion>
+        <Eigentuemer>Privat</Eigentuemer>
+        <BaulicherZustand>Z1</BaulicherZustand>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Spezialbauwerk>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Versickerungsanlage TID="refVERSICKER1">
+        <Bezeichnung>VA-1</Bezeichnung>
+        <Art>Versickerungsschacht</Art>
+        <EigentuemerRef REF="refORGEIGENTUEM" />
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Versickerungsanlage>
+      <SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Einleitstelle TID="refEINLEIT1">
+        <Bezeichnung>EL-1</Bezeichnung>
+        <Status>in_Betrieb</Status>
+      </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser.Einleitstelle>
+    </SIA405_ABWASSER_2020_LV95.SIA405_Abwasser>
+    <SewerStudio_Zusatz_2026.Zusatzdaten BID="refB00000000ZUS1">
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="refZUSATZ1">
+        <ObjektTid>refHALTUNG6</ObjektTid>
+        <Feld>Gefaelle_Promille</Feld>
+        <Wert>12.5</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="refZUSATZ2">
+        <ObjektTid>refSCHACHT100</ObjektTid>
+        <Feld>Schachtform</Feld>
+        <Wert>Rund</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="refZUSATZ3">
+        <ObjektTid>refHALTUNG1</ObjektTid>
+        <Feld>Rohrmaterial</Feld>
+        <Wert>PVC</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+      <SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe TID="refZUSATZ4">
+        <ObjektTid>refNICHTDA</ObjektTid>
+        <Feld>Tiefe</Feld>
+        <Wert>3.2</Wert>
+      </SewerStudio_Zusatz_2026.Zusatzdaten.Zusatzangabe>
+    </SewerStudio_Zusatz_2026.Zusatzdaten>
+  </DATASECTION>
+</TRANSFER>

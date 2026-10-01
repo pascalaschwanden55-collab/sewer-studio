@@ -65,7 +65,8 @@ public sealed class DataPageDropdownOptionSynchronizerTests
             PruefungsresultatOptions: new ObservableCollection<string> { "Keine" },
             ReferenzpruefungOptions: new ObservableCollection<string> { "Nein" },
             EmpfohleneSanierungsmassnahmenOptions:
-                new ObservableCollection<string> { "Vorhanden" });
+                new ObservableCollection<string> { "Vorhanden" },
+            RohrmaterialOptions: new ObservableCollection<string> { "Beton" });
 
     private static void Set(HaltungRecord record, string fieldName, string value)
         => record.SetFieldValue(fieldName, value, FieldSource.Manual, userEdited: false);

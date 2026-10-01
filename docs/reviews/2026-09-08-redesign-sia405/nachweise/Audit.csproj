@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows10.0.19041</TargetFramework><UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+  <ItemGroup>
+    <Reference Include="AuswertungPro.Next.Infrastructure"><HintPath>../../src/AuswertungPro.Next.UI/bin/Release/net10.0-windows10.0.19041/AuswertungPro.Next.Infrastructure.dll</HintPath></Reference>
+    <Reference Include="SewerStudio"><HintPath>../../src/AuswertungPro.Next.UI/bin/Release/net10.0-windows10.0.19041/SewerStudio.dll</HintPath></Reference>
+    <Reference Include="AuswertungPro.Next.Domain"><HintPath>../../src/AuswertungPro.Next.UI/bin/Release/net10.0-windows10.0.19041/AuswertungPro.Next.Domain.dll</HintPath></Reference>
+    <Reference Include="AuswertungPro.Next.Application"><HintPath>../../src/AuswertungPro.Next.UI/bin/Release/net10.0-windows10.0.19041/AuswertungPro.Next.Application.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

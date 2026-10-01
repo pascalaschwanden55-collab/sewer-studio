@@ -13,7 +13,7 @@ internal static class VsaYoloClassMapDocumentValidator
             if (document.Version != CurrentVersion)
             {
                 throw new InvalidDataException(
-                    $"Nicht unterstuetzte Klassenkarten-Version '{document.Version}'. Erwartet wird Version {CurrentVersion}.");
+                    $"Nicht unterstützte Klassenkarten-Version '{document.Version}'. Erwartet wird Version {CurrentVersion}.");
             }
 
             if (!IsSha256(document.VsaManifestHash))
@@ -33,13 +33,13 @@ internal static class VsaYoloClassMapDocumentValidator
     private static void ValidateClasses(IReadOnlyDictionary<string, int> classes)
     {
         if (classes.Count == 0)
-            throw new InvalidDataException("Die Klassenkarte enthaelt keine Klassen.");
+            throw new InvalidDataException("Die Klassenkarte enthält keine Klassen.");
 
         var ids = new HashSet<int>();
         foreach (var (key, id) in classes)
         {
             if (string.IsNullOrWhiteSpace(key) || !string.Equals(key, key.Trim(), StringComparison.Ordinal))
-                throw new InvalidDataException("Klassenschluessel duerfen nicht leer sein oder Leerzeichen am Rand enthalten.");
+                throw new InvalidDataException("Klassenschlüssel dürfen nicht leer sein oder Leerzeichen am Rand enthalten.");
 
             if (id < 0)
                 throw new InvalidDataException($"Klasse '{key}' hat eine negative ID ({id}).");
@@ -54,7 +54,7 @@ internal static class VsaYoloClassMapDocumentValidator
             if (orderedIds[expected] != expected)
             {
                 throw new InvalidDataException(
-                    $"Klassen-IDs muessen lueckenlos bei 0 beginnen. Erwartet wurde {expected}, gefunden wurde {orderedIds[expected]}.");
+                    $"Klassen-IDs müssen lückenlos bei 0 beginnen. Erwartet wurde {expected}, gefunden wurde {orderedIds[expected]}.");
             }
         }
     }

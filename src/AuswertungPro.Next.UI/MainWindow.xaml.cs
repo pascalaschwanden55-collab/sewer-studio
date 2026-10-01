@@ -2,9 +2,11 @@ using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.UseCases.Suche;
 using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
@@ -19,7 +21,6 @@ public partial class MainWindow : Window
     private readonly IDialogService _dialogs;
     private bool _isDataContextDisposed;
     private bool _startupEntrancePlayed;
-    private KarteWindow? _detachedKarteWindow;
 
     public MainWindow()
     {
@@ -28,17 +29,29 @@ public partial class MainWindow : Window
         var services = GetServiceProvider();
         _dialogs = services.Dialogs;
         // Toast-Senke mit dem sichtbaren Host verbinden (nicht-blockierende Erfolgsmeldungen).
-        services.Toasts.AttachSink((message, severity) => ToastHostControl.Enqueue(message, severity));
+        services.Toasts.AttachSink((message, severity, aktionText, aktion)
+            => ToastHostControl.Enqueue(message, severity, aktionText, aktion));
         // AP-06: Startwarnung zur Wissensdatenbank anzeigen, sobald der Host bereit ist
         // (anderer/leerer KB-Ordner, z.B. verlorene Umgebungsvariable SEWERSTUDIO_KNOWLEDGE_ROOT).
         if (!string.IsNullOrEmpty(services.KnowledgeRootStartupWarning))
             services.Toasts.Warning(services.KnowledgeRootStartupWarning);
+        // M3: Eine unlesbare settings.json sperrt jedes Speichern. Das darf der Anwender
+        // nicht erst merken, wenn nach dem Neustart alle Einstellungen wieder alt sind.
+        if (services.Settings.PersistenceBlocked)
+            services.Toasts.Warning(services.Settings.PersistenceBlockedWarning!);
         var backupReminder = Settings.FullBackupReminderPolicy.Evaluate(
             services.Settings.LastFullBackupUtc,
             DateTime.UtcNow);
         if (backupReminder.ShouldRemind && !string.IsNullOrWhiteSpace(backupReminder.Message))
             services.Toasts.Warning(backupReminder.Message);
-        DataContext = new ShellViewModel(services);
+        var shellViewModel = new ShellViewModel(services);
+        // Nova-Etappe 2: Strg+K fokussiert das globale Suchfeld (Inventar 8.5).
+        shellViewModel.GlobaleSucheFokusAngefordert += () =>
+        {
+            GlobaleSucheBox.Focus();
+            GlobaleSucheBox.SelectAll();
+        };
+        DataContext = shellViewModel;
     }
 
     public async Task PlayStartupEntranceAsync()
@@ -92,7 +105,7 @@ public partial class MainWindow : Window
 
     private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
-        if (DataContext is ShellViewModel closeVm && !ShellLeaveGuard.CanLeave(closeVm.CurrentPage))
+        if (DataContext is ShellViewModel closeVm && !closeVm.ConfirmLeaveCurrentContext())
         {
             e.Cancel = true;
             return;
@@ -150,7 +163,7 @@ public partial class MainWindow : Window
         {
             Owner = this
         };
-        window.DataContext = new CodeCatalogEditorViewModel(sp.CodeCatalog, window);
+        window.DataContext = new CodeCatalogEditorViewModel(sp.CodeCatalog, window, toasts: sp.Toasts);
         window.ShowDialog();
     }
 
@@ -195,107 +208,27 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OpenKarte_Click(object sender, RoutedEventArgs e)
+    private void GlobaleSucheBox_KeyDown(object sender, KeyEventArgs e)
     {
-        _ = sender;
-        _ = e;
-
-        if (_detachedKarteWindow is { IsVisible: true } existingWindow)
-        {
-            if (existingWindow.WindowState == WindowState.Minimized)
-                existingWindow.WindowState = WindowState.Normal;
-
-            existingWindow.Activate();
-            return;
-        }
-
-        if (DataContext is not ShellViewModel shell)
-            return;
-
-        if (shell.CurrentPage is KartePage currentPage)
-        {
-            OpenExistingKartePage(shell, currentPage);
-            return;
-        }
-
-        OpenNewKarteWindow(shell);
+        if (DataContext is not ShellViewModel vm) return;
+        if (e.Key == Key.Enter) { vm.GlobaleSuche.WaehleErstenOderMarkierten(); e.Handled = true; }
+        else if (e.Key == Key.Escape) { vm.GlobaleSuche.ListeOffen = false; e.Handled = true; }
+        else if (e.Key == Key.Down) { vm.GlobaleSuche.MarkiereNaechsten(); e.Handled = true; }
+        else if (e.Key == Key.Up) { vm.GlobaleSuche.MarkiereVorherigen(); e.Handled = true; }
     }
 
-    private void OpenExistingKartePage(ShellViewModel shell, KartePage page)
+    /// <summary>Mausklick auf einen Suchtreffer waehlt ihn, ohne den Fokus aus dem Textfeld zu nehmen
+    /// (die ListBox ist absichtlich Focusable="False", Inventar 3.5). Verwendet
+    /// ItemsControl.ContainerFromElement statt eigenem VisualTree-Aufstieg, weil e.OriginalSource
+    /// auch ein ContentElement (z.B. ein Text-Run) ohne Visual sein kann.</summary>
+    private void GlobaleSucheTreffer_Click(object sender, MouseButtonEventArgs e)
     {
-        var placeholder = CreateKarteDetachedPlaceholder();
+        if (DataContext is not ShellViewModel vm) return;
+        if (sender is not ItemsControl itemsControl) return;
+        if (e.OriginalSource is not UIElement element) return;
 
-        shell.CurrentPage = placeholder;
-        UpdateLayout();
-
-        var window = new KarteWindow(page)
-        {
-            Owner = this
-        };
-
-        TrackDetachedKarteWindow(window);
-        window.Closing += (_, _) =>
-        {
-            var content = window.TakeContent();
-            if (ReferenceEquals(shell.CurrentPage, placeholder) && content is KartePage dockedPage)
-                shell.CurrentPage = dockedPage;
-        };
-        window.Show();
-    }
-
-    private void OpenNewKarteWindow(ShellViewModel shell)
-    {
-        var page = new KartePage
-        {
-            DataContext = new ViewModels.Pages.KarteViewModel(shell, GetServiceProvider())
-        };
-
-        var window = new KarteWindow(page)
-        {
-            Owner = this
-        };
-
-        TrackDetachedKarteWindow(window);
-        window.Show();
-    }
-
-    private void TrackDetachedKarteWindow(KarteWindow window)
-    {
-        _detachedKarteWindow = window;
-        window.Closed += (_, _) =>
-        {
-            if (ReferenceEquals(_detachedKarteWindow, window))
-                _detachedKarteWindow = null;
-        };
-    }
-
-    private FrameworkElement CreateKarteDetachedPlaceholder()
-    {
-        var panel = new StackPanel
-        {
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            MaxWidth = 420
-        };
-
-        panel.Children.Add(new TextBlock
-        {
-            Text = "Karte ist abgekoppelt",
-            FontSize = 18,
-            FontWeight = FontWeights.SemiBold,
-            TextAlignment = TextAlignment.Center,
-            Foreground = TryFindResource("TextBrush") as Brush
-        });
-
-        panel.Children.Add(new TextBlock
-        {
-            Text = "Schliesse das Kartenfenster, um sie hier wieder anzudocken.",
-            Margin = new Thickness(0, 6, 0, 0),
-            TextAlignment = TextAlignment.Center,
-            Foreground = TryFindResource("MutedBrush") as Brush
-        });
-
-        return panel;
+        if (itemsControl.ContainerFromElement(element) is ListBoxItem { Content: GlobaleSucheTreffer treffer })
+            vm.GlobaleSuche.Waehle(treffer);
     }
 
     private void OpenSystemMonitor_Click(object sender, RoutedEventArgs e)

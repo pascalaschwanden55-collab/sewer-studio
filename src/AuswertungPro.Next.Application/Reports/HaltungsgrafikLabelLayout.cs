@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using static AuswertungPro.Next.Application.Reports.ProtocolPdfObservationText;
 using static AuswertungPro.Next.Application.Reports.ProtocolPdfValueFormatting;
@@ -24,6 +25,27 @@ public static class HaltungsgrafikLabelLayout
         double bottom,
         IReadOnlyDictionary<ProtocolEntry, string>? photoNumbers,
         string brand = "#006E9C")
+        => BuildHaltungsgrafikLabels(
+            entries,
+            length,
+            top,
+            bottom,
+            photoNumbers,
+            brand,
+            catalog: null);
+
+    /// <summary>
+    /// Erstellt Label-Objekte und verwendet den optionalen Katalog fuer den
+    /// gemeinsamen Klartext aus Katalogtitel, Beschreibung und Parametern.
+    /// </summary>
+    public static List<HaltungsgrafikLabel> BuildHaltungsgrafikLabels(
+        IReadOnlyList<ProtocolEntry> entries,
+        double length,
+        double top,
+        double bottom,
+        IReadOnlyDictionary<ProtocolEntry, string>? photoNumbers,
+        string brand,
+        ICodeCatalogProvider? catalog)
     {
         var list = new List<HaltungsgrafikLabel>();
 
@@ -40,7 +62,7 @@ public static class HaltungsgrafikLabelLayout
             var y = MapToLine(pos.Value, length, top, bottom);
             var meterText = BuildObservationMeterStartText(entry);
             var codeText = string.IsNullOrWhiteSpace(entry.Code) ? "-" : entry.Code.Trim();
-            var zustandText = ProtocolZustandText.BuildHaltungsgrafikZustandText(entry);
+            var zustandText = ProtocolZustandText.BuildHaltungsgrafikZustandText(entry, catalog);
             var mpegText = BuildObservationMpegText(entry);
             var fotoText = ResolvePhotoNumberText(entry, photoNumbers);
             var stufeText = BuildObservationStufeText(entry);

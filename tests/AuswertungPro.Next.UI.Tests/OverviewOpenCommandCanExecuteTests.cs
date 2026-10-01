@@ -56,7 +56,7 @@ public sealed class OverviewOpenCommandCanExecuteTests
         vm.SelectedProjectEntry = entry;
 
         Assert.True(canExecuteChangedGefeuert,
-            "OpenSelectedCommand.CanExecuteChanged muss nach Auswahl feuern, sonst bleibt der Oeffnen-Button deaktiviert");
+            "OpenSelectedCommand.CanExecuteChanged muss nach Auswahl feuern, sonst bleibt der Öffnen-Button deaktiviert");
         Assert.True(vm.OpenSelectedCommand.CanExecute(null));
     }
 

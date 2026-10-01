@@ -46,7 +46,7 @@ public static class CodingProtocolMatchDisplayPolicy
         => bucket switch
         {
             CodingProtocolMatchBucket.TrainingGreen => "Abgleich: sicherer Treffer, Trainingskandidat",
-            CodingProtocolMatchBucket.ReviewYellow => "Abgleich: wahrscheinlicher Treffer, kurz pruefen",
+            CodingProtocolMatchBucket.ReviewYellow => "Abgleich: wahrscheinlicher Treffer, kurz prüfen",
             CodingProtocolMatchBucket.WrongCode => "Abgleich: gleiche Stelle, falscher Code",
             CodingProtocolMatchBucket.Missed => "Abgleich: im Import vorhanden, von KI verpasst",
             CodingProtocolMatchBucket.FalseAlarm => "Abgleich: KI-Fehlalarm ohne Import-Partner",
@@ -58,7 +58,7 @@ public static class CodingProtocolMatchDisplayPolicy
         double meter,
         CodingProtocolVerificationResult? verification = null)
     {
-        var text = $"? {code} @ {meter:F1}m bestaetigt";
+        var text = $"? {code} @ {meter:F1}m bestätigt";
         if (!string.IsNullOrWhiteSpace(verification?.ConfirmationLevel))
             text += $" | Qwen: {verification.ConfirmationLevel}";
 
@@ -66,5 +66,5 @@ public static class CodingProtocolMatchDisplayPolicy
     }
 
     public static CodingProtocolMatchOverlayState BuildAcceptedGreenMatchesOverlay(int accepted)
-        => new($"{accepted} gruene Treffer als Training uebernommen", TimeSpan.FromSeconds(4));
+        => new($"{accepted} grüne Treffer als Training übernommen", TimeSpan.FromSeconds(4));
 }

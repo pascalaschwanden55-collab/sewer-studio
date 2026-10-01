@@ -76,7 +76,7 @@ public sealed class VideoFrameStream : IVideoFrameSource
         psi.ArgumentList.Add("pipe:1");
 
         var process = Process.Start(psi)
-            ?? throw new InvalidOperationException("Failed to start ffmpeg process.");
+            ?? throw new InvalidOperationException("ffmpeg-Prozess konnte nicht gestartet werden.");
 
         var stream = new VideoFrameStream(process, stepSeconds, duration);
 
@@ -183,7 +183,7 @@ public sealed class VideoFrameStream : IVideoFrameSource
         }
         else
         {
-            reason = $"fruehes EOF nach {framesRead} von {expectedFrames} Frames " +
+            reason = $"frühes EOF nach {framesRead} von {expectedFrames} Frames " +
                      $"(ffmpeg-Exit {(exitCode?.ToString() ?? "unbekannt")})";
         }
 
@@ -274,7 +274,7 @@ public sealed class VideoFrameStream : IVideoFrameSource
                     // ffmpeg haengt: als Fehler kennzeichnen, NICHT als normales Ende (U3).
                     throw new VideoFrameStreamTimeoutException(
                         $"ffmpeg lieferte {maxConsecutiveTimeouts}x keine Frame-Daten innerhalb von " +
-                        $"je {frameTimeout.TotalSeconds:F0}s — die Frame-Extraktion gilt als haengend.");
+                        $"je {frameTimeout.TotalSeconds:F0}s — die Frame-Extraktion gilt als hängend.");
 
                 // Einzelner Frame-Timeout — Rest verwerfen und weiterlesen.
                 if (accumulator.Length > 0)

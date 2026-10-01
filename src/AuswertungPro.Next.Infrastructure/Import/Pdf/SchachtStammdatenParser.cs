@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -49,7 +50,7 @@ internal static class SchachtStammdatenParser
 
         var schachtform = NormalizeSchachtform(GetFirst(
             @"\b(?:Schacht\s*form|Form(?:\s+des\s+Schachts?)?)\s*[:\-]?\s*" +
-            @"(?<v>rund(?:schacht)?|kreisf(?:ö|oe)rmig|oval|quadratisch|rechteckig)\b"))
+            @"(?<v>rund(?:schacht)?|kreisf(?:ö|oe)rmig|oval|quadratisch|rechteckig|vieleckig|polygonal|unbekannt)\b"))
             ?? InferSchachtformFromDimension(dimensionRaw);
 
         return new ParsedSchachtStammdaten(
@@ -63,17 +64,10 @@ internal static class SchachtStammdatenParser
         if (string.IsNullOrWhiteSpace(raw))
             return null;
 
-        var value = NormalizeForComparison(raw);
-        if (value.Contains("rund", StringComparison.Ordinal)
-            || value.Contains("kreis", StringComparison.Ordinal))
-            return "Rund";
-        if (value.Contains("oval", StringComparison.Ordinal))
-            return "Oval";
-        if (value.Contains("quadrat", StringComparison.Ordinal))
-            return "Quadratisch";
-        if (value.Contains("rechteck", StringComparison.Ordinal))
-            return "Rechteckig";
-        return null;
+        var value = SchachtformVokabular.Normalisieren(raw);
+        return SchachtformVokabular.Auswahl.Contains(value, StringComparer.Ordinal)
+            ? value
+            : null;
     }
 
     private static string? InferSchachtformFromDimension(string? raw)
@@ -169,10 +163,4 @@ internal static class SchachtStammdatenParser
     private static string FormatMeasurement(decimal value)
         => value.ToString("0.###", CultureInfo.InvariantCulture);
 
-    private static string NormalizeForComparison(string value)
-        => value.Trim().ToLowerInvariant()
-            .Replace("ä", "ae", StringComparison.Ordinal)
-            .Replace("ö", "oe", StringComparison.Ordinal)
-            .Replace("ü", "ue", StringComparison.Ordinal)
-            .Replace("ß", "ss", StringComparison.Ordinal);
 }

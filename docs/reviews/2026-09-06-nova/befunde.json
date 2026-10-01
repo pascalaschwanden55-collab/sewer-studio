@@ -1,0 +1,92 @@
+[
+  {
+    "id": "N01",
+    "p": 1,
+    "title": "Auswahl und Daten müssen zusammenpassen",
+    "observation": "Nach Auswahl von 07.6588-6587 wechseln nur die Überschriften. Die Felder zeigen weiterhin 78998-79002, Beton, DN 300 und 42.30 m. Die ausgewählte Tabellenzeile enthält PVC, DN 250 und 28.10 m.",
+    "improvement": "Eine gemeinsame Auswahl steuert Tabelle, Detailansicht, Eingabefelder und Medien. Ungespeicherte Änderungen sichtbar machen.",
+    "acceptance": "Zwischen zwei unterschiedlichen Haltungen wechseln: Alle Werte und Medien gehören jeweils zum gewählten Objekt. Änderungen lassen sich speichern, verwerfen oder weiterbearbeiten.",
+    "source": "Komplett: Zeilen 600–645 und 1399–1405; Browser: record und rowAfter."
+  },
+  {
+    "id": "N02",
+    "p": 1,
+    "title": "Jede Suche bleibt auf ihrer Seite",
+    "observation": "Die Feldsuche „Baujahr“ bei Haltungen blendet auch Schachtfelder aus: Nur eines von 29 Feldern bleibt sichtbar. Ein Ansichtswechsel bei Haltungen löscht ausserdem die Auswahlmarkierung der Schachtansicht.",
+    "improvement": "Suchen, Aufklappen und Ansichten auf die jeweilige Seite und Schaltflächengruppe begrenzen. Die eigene Schachtsuche anschliessen.",
+    "acceptance": "Bei Haltungen filtern und Ansichten wechseln: Schachtfelder und Schachtansicht bleiben unverändert. Zurücksetzen wirkt nur auf die aktive Suche.",
+    "source": "Komplett: Zeilen 1369–1388; Browser: shaftLabelsBefore/After und chipsBefore/After."
+  },
+  {
+    "id": "N03",
+    "p": 1,
+    "title": "Mehr Platz für Tabelle, Video und Prüfung",
+    "observation": "Bei 1366 × 768 bleibt mit geöffnetem Formular eine vollständige Tabellenzeile sichtbar. Im Training Studio liegen bei 1440 × 1000 rund 259 von 320 Pixeln der rechten Spalte ausserhalb des Sichtbereichs. Beim Player liegen Transporttasten unterhalb des ersten sichtbaren Ausschnitts.",
+    "improvement": "Verschiebbare Trennlinien, einklappbare Details und eine kompakte Werkzeugleiste vorsehen. Video an verfügbare Höhe anpassen. Wiedergabe und Freigabe sichtbar halten.",
+    "acceptance": "Vorgeschlagenes Ziel: mindestens sechs Datenzeilen im Standardzustand bei 1366 × 768. Player-Steuerung und Trainingsfreigabe bleiben ohne Seiten-Scrollen erreichbar.",
+    "source": "Komplett: .stack/.drawer, Player und Training Studio ab Zeile 1295; Zusatzprobe: rows und training; Bildschirmbilder."
+  },
+  {
+    "id": "N04",
+    "p": 1,
+    "title": "Die Übersicht muss richtig rechnen",
+    "observation": "„Dringend (Z0/Z1)“ nennt 12 Haltungen, die Legende nennt 8 + 15 = 23. 168 von 239 ergeben 70,29 %, auf ganze Prozent gerundet 70 %; angezeigt werden 71 %. Beide HTML-Dateien zeigen diese Widersprüche.",
+    "improvement": "Alle Zahlen aus denselben Beispieldaten berechnen. Klar benennen, ob „ausgewertet“ einen KI-Durchlauf oder eine fachliche Prüfung meint.",
+    "acceptance": "Zähler, Diagramm und gefilterte Liste stimmen überein. Fortschritt zeigt zusätzlich Zähler und Nenner. Fehlende Werte sind als unbekannt erkennbar.",
+    "source": "Komplett: Übersicht, insbesondere Zeilen 491 und 515–516; Vorschau: Übersicht. Eigene Nachrechnung."
+  },
+  {
+    "id": "N05",
+    "p": 1,
+    "title": "Arbeitsablauf vollständig anklickbar machen",
+    "observation": "„Nächste Haltung prüfen“ bleibt im Browser auf der Übersicht. Die globale Suche ist eine beschriftete Fläche. Player → Ereignis erfassen → Übernehmen schliesst alle Fenster; der Player kehrt nicht zurück.",
+    "improvement": "Einen vollständigen Weg mit Beispieldaten umsetzen: Objekt wählen, Video prüfen, Ereignis erfassen, übernehmen, nächste Haltung. Noch offene Aktionen ausdrücklich kennzeichnen.",
+    "acceptance": "Der Weg funktioniert mit Maus und Tastatur. Nach Codierung bleibt die gewählte Haltung samt Videoposition erhalten. Kein Knopf meldet einen nur vorgetäuschten Dateiimport oder Speichervorgang.",
+    "source": "Komplett: Hauptaktion und Suche; Zeilen 1396–1398; Browser: nextButtonPage und windowsAfterCoding."
+  },
+  {
+    "id": "N06",
+    "p": 2,
+    "title": "Lesen soll auch nach Stunden leicht bleiben",
+    "observation": "Tabellenköpfe und Navigationsgruppen verwenden 10,5 Pixel. Im sichtbaren Überblick wurde Text mit 9 Pixeln gefunden. Viele Beschriftungen sind sehr blass. Die Projektregel setzt für normale Programmtexte mindestens 11 voraus.",
+    "improvement": "Für Beschriftungen meist 12–13, für Daten gut lesbare 13–15 verwenden. Glasflächen bei Tabellen und Formularen beruhigen. Zustände zusätzlich durch Text oder Symbole erklären.",
+    "acceptance": "Normale Texte unterschreiten die Projektgrenze nicht. Textkontraste in Hell und Dunkel messen; mindestens 4,5:1 für normalen Text als Ziel. Die bestehenden WPF-Schriftgrössen und Farbvorgaben wiederverwenden.",
+    "source": "Komplett: Zeilen 65 und 321; Browser: minTextSize; CLAUDE.md ab Zeile 724. Kontrast ist hier kein vollständiger WCAG-Konformitätstest."
+  },
+  {
+    "id": "N07",
+    "p": 2,
+    "title": "Tastatur und Dialoge zuverlässig bedienen",
+    "observation": "Enter auf dem fokussierten Export-Navigationseintrag öffnet die Exportseite nicht. Die drei Fenster haben keine Dialogrolle. Nach dem Öffnen liegt der Tastaturfokus ausserhalb des Fensters.",
+    "improvement": "Echte Links oder Schaltflächen einsetzen. Dialoge benennen, Fokus hineinsetzen und dort halten. Beim Schliessen zum auslösenden Element zurückkehren.",
+    "acceptance": "Alle Hauptaktionen funktionieren per Tastatur. Ein sichtbarer Fokus zeigt die Position. Esc schliesst die oberste Dialogebene; die vorherige Aufgabe bleibt erhalten.",
+    "source": "Komplett: Navigation, .win und Zeilen 1396–1398; Browser: dialog und keyboardAfterExportEnter."
+  },
+  {
+    "id": "N08",
+    "p": 2,
+    "title": "„Ruhig“ muss wirklich ruhig sein",
+    "observation": "Der Hintergrund zeichnet auch nach Klick auf „ruhig“ weiter. Zwei Canvas-Aufnahmen im Abstand von 350 ms unterscheiden sich. Die Animationsschleife prüft die Einstellung nicht.",
+    "improvement": "Dekorative Bewegung wirklich anhalten, die Einstellung speichern und die Windows-Vorgabe für reduzierte Bewegung beachten. Verdeckte Ansichten sollen keine unnötige Dekoration berechnen.",
+    "acceptance": "Im ruhigen Modus bleibt das dekorative Bild unverändert. Nach Neustart gilt dieselbe Einstellung. Leistungsgewinn erst nach Messung beziffern.",
+    "source": "Komplett: setMotion ab Zeile 1357 und step in Zeile 1462; Browser: canvasStillChangesWhenQuiet."
+  },
+  {
+    "id": "N09",
+    "p": 2,
+    "title": "Die Vorschau sauber als Datei liefern",
+    "observation": "Beiden Dateien fehlen DOCTYPE, Zeichensatz, Sprache und viewport-Angabe. Beim lokalen Abruf ohne Zeichensatz-Angabe wurden Umlaute falsch dargestellt. Beide laufen im Browser im älteren BackCompat-Modus. Drei Schriftfamilien werden extern geladen.",
+    "improvement": "Vollständige HTML-Datei mit UTF-8, lang=\"de\" und viewport liefern. Lokale Schriften verwenden und den direkten Offline-Aufruf prüfen.",
+    "acceptance": "Doppelklick und lokaler Webserver zeigen korrekte Umlaute. document.compatMode ist CSS1Compat. Die Grundbedienung benötigt keine Internetverbindung.",
+    "source": "Beide Dateien ab Zeile 1; Browser: base und preview. Die Darstellung im Claude-Rahmen kann davon abweichen."
+  },
+  {
+    "id": "N10",
+    "p": 2,
+    "title": "Fachliche Arbeit vor technischen Einzelheiten",
+    "observation": "Modellnamen, GPU-Anzeige, interne Importbegriffe und KI-Prozentwerte nehmen dauerhaft Platz ein. Bezeichnungen wie „KI-Sicherheit“ und „Abnahme“ erklären ihre Bedeutung nicht ausreichend.",
+    "improvement": "Im Alltag „Analyse bereit“, „Prüfung nötig“ oder „Fehler beheben“ zeigen. Modell- und Diagnosewerte aufklappbar machen. KI-Vorschlag, menschliche Bestätigung und Trainingsfreigabe eindeutig unterscheiden.",
+    "acceptance": "Ein Anwender erkennt die nächste Aufgabe und ihren Status ohne Modellwissen. Exporttexte unterscheiden eine revidierte XTF-Datei von einem Rückabgleich mit GEONIS.",
+    "source": "Komplett: Statusleiste, Import, Export, Player und Training Studio. Dies ist eine Gestaltungsempfehlung, kein Nachweis fehlender Backend-Funktionen."
+  }
+]

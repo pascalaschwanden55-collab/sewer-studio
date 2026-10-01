@@ -9,7 +9,7 @@ Hinweis: workers=0 -> stabiles Dataloading unter Windows (vermeidet den
 shared-memory/pin_memory-Absturz, der das Training vorzeitig beendet hat).
 """
 from __future__ import annotations
-import argparse, os, sys, urllib.request
+import argparse, os, socket, sys, urllib.error, urllib.request
 
 SIDECAR = os.getenv("SEWER_SIDECAR_HEALTH_URL", "http://127.0.0.1:8100/health")
 
@@ -18,8 +18,15 @@ def sidecar_up(t=1.5):
     try:
         with urllib.request.urlopen(SIDECAR, timeout=t) as r:
             return 200 <= r.status < 300
+    except urllib.error.HTTPError:
+        # Auch 401/403 beweist, dass der Sidecar laeuft und VRAM belegen kann.
+        return True
     except Exception:
-        return False
+        try:
+            with socket.create_connection(("127.0.0.1", 8100), timeout=t):
+                return True
+        except OSError:
+            return False
 
 
 def train(data, out, model, epochs, imgsz, batch, force):

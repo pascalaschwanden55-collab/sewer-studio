@@ -151,7 +151,7 @@ public sealed class CodingAnalysisCommandWorkflowTests
                 "token",
                 "preflight",
                 "single-error",
-                "state:Fehler: boom|Modell: my-model.onnx",
+                "state:Fehler: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.|Modell: my-model.onnx",
                 "end"
             ],
             calls);

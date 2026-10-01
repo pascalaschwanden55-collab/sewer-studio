@@ -1,0 +1,53 @@
+{
+  "reports": 8,
+  "raw_ci_percent": 46.58,
+  "raw_ci_covered": 724756,
+  "raw_ci_total": 1555992,
+  "deduplicated_production": {
+    "src/AuswertungPro.Next.Domain/": {
+      "covered": 2319,
+      "measured": 2411,
+      "percent": 96.18,
+      "files": 48
+    },
+    "src/AuswertungPro.Next.Application/": {
+      "covered": 25501,
+      "measured": 28147,
+      "percent": 90.6,
+      "files": 531
+    },
+    "src/AuswertungPro.Next.Infrastructure/": {
+      "covered": 51533,
+      "measured": 65873,
+      "percent": 78.23,
+      "files": 651
+    },
+    "src/AuswertungPro.Next.UI/": {
+      "covered": 50762,
+      "measured": 77999,
+      "percent": 65.08,
+      "files": 1511
+    },
+    "src/": {
+      "covered": 130115,
+      "measured": 174430,
+      "percent": 74.59,
+      "files": 2741
+    },
+    "tools/": {
+      "covered": 2011,
+      "measured": 3284,
+      "percent": 61.24,
+      "files": 63
+    }
+  },
+  "src_declarations": 21772,
+  "declaration_line_overlap_status": {
+    "nicht ausgeführt": 4239,
+    "alle messbaren Zeilen ausgeführt": 13810,
+    "teilweise ausgeführt": 2880,
+    "ohne messbare Zeile": 843
+  },
+  "changed_since_inventory": [],
+  "caveat": "Zeilenabdeckung ist kein fachlicher Vollständigkeitsnachweis. Verschachtelte Deklarationen können dieselben Zeilen enthalten. Nicht geladene Module fehlen im Messnenner. Wiederholungsläufe nicht instrumentiert."
+}

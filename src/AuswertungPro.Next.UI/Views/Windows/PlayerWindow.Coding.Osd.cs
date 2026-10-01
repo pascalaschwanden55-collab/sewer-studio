@@ -1,4 +1,5 @@
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Player;
 
@@ -21,8 +22,11 @@ public partial class PlayerWindow
     }
 
     private double ResolveCodingMeterForFrame(double? frameTimestampSeconds, double? sameFrameOsdMeter = null)
+        => ResolveCodingMeterEvidenceForFrame(frameTimestampSeconds, sameFrameOsdMeter).Meter;
+
+    private CodingMeterResolution ResolveCodingMeterEvidenceForFrame(double? frameTimestampSeconds, double? sameFrameOsdMeter)
     {
-        return _codingOsdMeterController.ResolveMeter(new CodingOsdMeterResolveRequest(
+        return _codingOsdMeterController.ResolveMeterWithSource(new CodingOsdMeterResolveRequest(
             FrameTimestampSeconds: frameTimestampSeconds,
             SameFrameOsdMeter: sameFrameOsdMeter,
             CurrentPlayerSeconds: _playerTimelineHost.CurrentSeconds,

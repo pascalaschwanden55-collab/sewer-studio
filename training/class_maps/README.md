@@ -14,12 +14,13 @@ bleiben ausserhalb des Repositories unter `C:\KI_BRAIN\training\`.
 - `detect_class_migration_v2.candidate.json`: vollstaendige Kandidatentabelle aus
   74 Teacher-Codes, 35 alten Map-Schluesseln, 10 produktiven englischen Modellnamen
   und 5 auffaelligen Einzelannotation (Zielkarte v2, mit ihr eingefroren).
-- `detect_class_migration_v3.candidate.json`: dieselbe Kandidatentabelle, auf die
-  aktive Karte v3 ausgerichtet.
+- `detect_class_migration_v3.candidate.json`: aktive Kandidatentabelle auf Karte v3.
+  Sie enthaelt die exakt im freigegebenen Gold-Audit vom 2026-08-02 vorkommenden
+  VSA-Codes und bindet deren Freigabe an Audit- und Sample-SHA-256.
 - `detect_class_migration_v2_review.md`: kurze fachliche Pruefliste fuer die offenen
   Entscheidungen (Stand v2, eingefroren).
-- `detect_class_migration_v3_review.md`: Freigabedokument zum BCC-Pilot auf der
-  aktiven Karte v3.
+- `detect_class_migration_v3_review.md`: Freigabedokument fuer BCC und den
+  nicht aktivierten Mehrklassen-Goldkandidaten auf Karte v3.
 
 ## Sicherheitsregel
 
@@ -39,14 +40,45 @@ nur einen unveraenderlichen Snapshot.
 4. Die Kandidatendatei danach als freigegebene Migration aktivieren und die Tests
    erneut ausfuehren.
 
-Aktuell ist nur der persoenlich bestaetigte BCC-Pilot freigegeben. Er wird als
-`BCC_bogen` mit der festen ID 14 der aktiven Karte v3 exportiert. Das Pilotregister
-begrenzt den Export zusaetzlich auf die darin einzeln aufgefuehrten Goldsample-IDs.
-Alle anderen Migrationseintraege bleiben gesperrt.
+Der BCC-Pilot bleibt als `BCC_bogen` mit fester ID 14 erhalten. Fuer einen getrennten
+Mehrklassen-Lernkandidaten sind genau die 72 Codes des gebundenen persoenlichen
+Gold-Audits als `map` oder `discard` freigegeben. Nicht im Beleg
+genannte sowie weiterhin offene Migrationseintraege bleiben gesperrt. Das jeweils
+aktive Exportregister begrenzt den Export zusaetzlich auf einzeln aufgefuehrte
+Goldsample-IDs.
+
+Der aktuelle v3-Beleg umfasst 142 Zeilen: 92 Teacher-Codes, 35 alte
+Map-Schluessel, 10 produktive Modellnamen und 5 Einzelannotation. Insgesamt sind
+73 Zeilen freigegeben und 69 weiterhin offen. Die persoenliche Goldfreigabe bindet
+72 Teacher-Codes an folgende unveraenderliche Quellen. Neu ist insbesondere
+`BAFCZ -> BAF_oberflaeche`:
+
+- Gold-Audit SHA-256:
+  `bb7f01f6b3582029ad4393c7217e5c2bbbb4ed5770ab15c807a574972b4905ba`
+- `training_samples.json` SHA-256:
+  `bfcb3362762dc552861feb0680f1267e086e8d7d3fb71d70e5806841b82daa83`
+- Klassenkarte v3 SHA-256:
+  `58f1160f2411d5a583bd7a69d3b739be9d29ef7dce33052e61d583fa773a7468`
+- Migrationsdatei v3 SHA-256:
+  `99f9e00303480441ec8f988799aeea2883a7186060e3a82603c8892829d2e9bf`
+
+Der gebundene Stand umfasst 898 freigegebene Goldinstanzen (713/185) und den
+abgeleiteten Negativsatz `bcc_hn_c25fd2f9d33f` mit 9 Bildern (7/2). Der Plan
+`9eb020e303225109849cc3a4036cd33288ff0120efd1557a910484f4bd2a61f8`
+enthaelt nach Zusammenfuehrung bytegleicher Bilder 856 Bilder (689/167) und
+898 Boxen in 13 der 15 festen Klassen. `detect_gold_9eb020e30322` hat 40/40
+Epochen beendet und bleibt `not_deployed`. Die interne Validation ergibt
+P 0,3917, R 0,3129, mAP50 0,3026 und mAP50-95 0,1726; sie ist keine
+Release-Freigabe.
+
+`derive_negative_set_for_gold_audit.py` leitet einen neuen audit-sicheren
+Negativsatz ab, ohne den alten Satz oder seine Review zu veraendern.
+`repair_gold_holding_ids.py` repariert `foto_*`-Haltungen nur ueber eindeutige,
+bytegleiche Quelldateien; Standard ist jeweils ein schreibfreier Prueflauf.
 
 `BBD_boden` ist eine erlaubte Detektorklasse. Ein gespeicherter VSA-Befund darf aber
 nie nur `BBD` lauten. Die C#-Aufloesung verwendet fuer die allgemeine Klasse den
 gueltigen Untercode `BBDZ`.
 
-Der Sidecar besitzt bis AP 0.3 noch seine alte eigene Klassen- und Splitlogik. AP 0.3
-ersetzt diese durch denselben verbindlichen Exportplan wie beim lokalen Weg.
+Sidecar und lokaler Export fuehren denselben verbindlichen AP-0.3-Plan aus; sie
+treffen keine eigene Klassen- oder Splitentscheidung.

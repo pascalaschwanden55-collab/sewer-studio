@@ -56,20 +56,26 @@ public sealed class DataPageLearningReadinessPresenterTests
     {
         var (color, text) = LearningReadinessPresenter.Evaluate(samples);
         Assert.Equal("#2E7D32", color);
-        Assert.Equal("Gruen", text);
+        Assert.Equal("Grün", text);
     }
 
+    /// <summary>
+    /// Aufgabe 17 (Optikanalyse 28.09.2026): Ohne einen einzigen gelernten Fall ist das Band
+    /// nicht sichtbar — "Rot · Lernbasis: 0 Fälle" stand vorher dauerhaft über der Werkzeugleiste
+    /// jedes frischen Projekts, ohne etwas Handlungsleitendes zu sagen. Farbe/Text/Info bleiben
+    /// unveraendert (reine Darstellungsentscheidung, keine Aenderung der Ampel-Schwellenwerte).
+    /// </summary>
     [Fact]
-    public void Build_liefert_null_fall_text_und_rot()
+    public void Build_liefert_null_fall_text_und_rot_aber_unsichtbar()
     {
         var stats = new MeasureLearningStats(0, 0, 0, false, null, null, "");
 
         var presentation = LearningReadinessPresenter.Build(stats);
 
-        Assert.Equal("Lernbasis: 0 Faelle", presentation.Info);
+        Assert.Equal("Lernbasis: 0 Fälle", presentation.Info);
         Assert.Equal("#C62828", presentation.Color);
         Assert.Equal("Rot", presentation.Text);
-        Assert.True(presentation.IsVisible);
+        Assert.False(presentation.IsVisible);
     }
 
     [Fact]
@@ -80,7 +86,7 @@ public sealed class DataPageLearningReadinessPresenterTests
         var presentation = LearningReadinessPresenter.Build(stats, similarCases: 4, estimatedCost: 123.45m);
 
         Assert.Equal(
-            "Lernbasis: 42 Faelle / letzte Kostenschaetzung 123.45 aus 4 aehnlichen Haltungen / KI-Modell ab 25 Faellen",
+            "Lernbasis: 42 Fälle / letzte Kostenschätzung 123.45 aus 4 ähnlichen Haltungen / KI-Modell ab 25 Fällen",
             presentation.Info);
         Assert.Equal("#F9A825", presentation.Color);
         Assert.Equal("Gelb", presentation.Text);
@@ -95,10 +101,10 @@ public sealed class DataPageLearningReadinessPresenterTests
         var presentation = LearningReadinessPresenter.Build(stats, similarCases: 3, estimatedCost: null);
 
         Assert.Equal(
-            "Lernbasis: 120 Faelle / letzte Schaetzung aus 3 aehnlichen Haltungen / KI-Modell aktiv (98 Faelle)",
+            "Lernbasis: 120 Fälle / letzte Schätzung aus 3 ähnlichen Haltungen / KI-Modell aktiv (98 Fälle)",
             presentation.Info);
         Assert.Equal("#2E7D32", presentation.Color);
-        Assert.Equal("Gruen", presentation.Text);
+        Assert.Equal("Grün", presentation.Text);
         Assert.True(presentation.IsVisible);
     }
 }

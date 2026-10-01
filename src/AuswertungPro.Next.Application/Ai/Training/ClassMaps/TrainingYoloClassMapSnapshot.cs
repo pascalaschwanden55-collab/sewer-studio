@@ -46,16 +46,28 @@ public sealed class TrainingYoloClassMapSnapshot
         IReadOnlyDictionary<string, int> classes,
         IReadOnlyList<TrainingYoloClassMapping> mappings,
         IReadOnlyDictionary<string, string>? migrationSourceHashes = null,
-        IReadOnlyList<string>? resolutionOrder = null)
+        IReadOnlyList<string>? resolutionOrder = null,
+        string? classMapSha256 = null)
     {
         if (version <= 0)
             throw new ArgumentOutOfRangeException(nameof(version));
         ArgumentException.ThrowIfNullOrWhiteSpace(vsaManifestHash);
         ArgumentNullException.ThrowIfNull(classes);
         ArgumentNullException.ThrowIfNull(mappings);
+        if (!string.IsNullOrWhiteSpace(classMapSha256)
+            && (classMapSha256.Trim().Length != 64
+                || !classMapSha256.Trim().All(Uri.IsHexDigit)))
+        {
+            throw new ArgumentException(
+                "Der Klassenkarten-Hash ist kein gültiger SHA-256.",
+                nameof(classMapSha256));
+        }
 
         Version = version;
         VsaManifestHash = vsaManifestHash.Trim().ToLowerInvariant();
+        ClassMapSha256 = string.IsNullOrWhiteSpace(classMapSha256)
+            ? null
+            : classMapSha256.Trim().ToLowerInvariant();
         _classes = new ReadOnlyDictionary<string, int>(
             classes.ToDictionary(
                 item => item.Key,
@@ -67,7 +79,7 @@ public sealed class TrainingYoloClassMapSnapshot
             if (!_classes.ContainsKey(mapping.TargetKey!.Trim()))
             {
                 throw new TrainingYoloClassMapException(
-                    $"Migrationsziel '{mapping.TargetKey}' fuer '{mapping.SourceKey}' fehlt in der Klassenkarte.");
+                    $"Migrationsziel '{mapping.TargetKey}' für '{mapping.SourceKey}' fehlt in der Klassenkarte.");
             }
         }
 
@@ -85,7 +97,7 @@ public sealed class TrainingYoloClassMapSnapshot
             var sourceId = mapping.SourceId!.Trim();
             if (!sourceIds.TryAdd(sourceId, mapping))
                 throw new TrainingYoloClassMapException(
-                    $"Die Migrationskarte enthaelt die Quell-ID '{sourceId}' mehrfach.");
+                    $"Die Migrationskarte enthält die Quell-ID '{sourceId}' mehrfach.");
         }
 
         _bySourceId = new ReadOnlyDictionary<string, TrainingYoloClassMapping>(sourceIds);
@@ -102,13 +114,15 @@ public sealed class TrainingYoloClassMapSnapshot
             .Cast<string>()
             .ToArray();
         if (orderedKinds.Distinct(StringComparer.OrdinalIgnoreCase).Count() != orderedKinds.Length)
-            throw new TrainingYoloClassMapException("Die Quellenreihenfolge enthaelt Duplikate.");
+            throw new TrainingYoloClassMapException("Die Quellenreihenfolge enthält Duplikate.");
         ResolutionOrder = Array.AsReadOnly(orderedKinds);
     }
 
     public int Version { get; }
 
     public string VsaManifestHash { get; }
+
+    public string? ClassMapSha256 { get; }
 
     public IReadOnlyDictionary<string, int> Classes => _classes;
 
@@ -141,7 +155,7 @@ public sealed class TrainingYoloClassMapSnapshot
                     StringComparison.OrdinalIgnoreCase))
             {
                 throw new TrainingYoloClassMapException(
-                    $"Die Einzelpruefung '{sourceId.Trim()}' gehoert zu Klasse " +
+                    $"Die Einzelprüfung '{sourceId.Trim()}' gehört zu Klasse " +
                     $"'{overrideMapping.SourceKey}', nicht zu '{sourceKey.Trim()}'.");
             }
 
@@ -174,7 +188,7 @@ public sealed class TrainingYoloClassMapSnapshot
             if (matchingKind.Length == 0)
             {
                 throw new TrainingYoloClassMapException(
-                    $"Klasse '{sourceKey.Trim()}' ist fuer Quelle '{sourceKind.Trim()}' nicht freigegeben.");
+                    $"Klasse '{sourceKey.Trim()}' ist für Quelle '{sourceKind.Trim()}' nicht freigegeben.");
             }
 
             return ResolveMapping(normalizedSource, matchingKind);
@@ -220,7 +234,7 @@ public sealed class TrainingYoloClassMapSnapshot
         if (decisions.Length != 1)
         {
             throw new TrainingYoloClassMapException(
-                $"Klasse '{normalizedSource}' hat widerspruechliche freigegebene Zuordnungen.");
+                $"Klasse '{normalizedSource}' hat widersprüchliche freigegebene Zuordnungen.");
         }
 
         var decision = decisions[0];
@@ -237,13 +251,13 @@ public sealed class TrainingYoloClassMapSnapshot
             || string.IsNullOrWhiteSpace(decision.Target))
         {
             throw new TrainingYoloClassMapException(
-                $"Klasse '{normalizedSource}' hat keine gueltige Exportentscheidung.");
+                $"Klasse '{normalizedSource}' hat keine gültige Exportentscheidung.");
         }
 
         if (!_classes.TryGetValue(decision.Target, out var classId))
         {
             throw new TrainingYoloClassMapException(
-                $"Zielklasse '{decision.Target}' fuer '{normalizedSource}' fehlt in class_map v{Version}.");
+                $"Zielklasse '{decision.Target}' für '{normalizedSource}' fehlt in class_map v{Version}.");
         }
 
         var canonicalKey = _classes.First(item => item.Value == classId).Key;

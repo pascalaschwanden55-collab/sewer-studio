@@ -127,7 +127,7 @@ public sealed class PersonalGoldBrainSeparationServiceTests
 
         Assert.False(dryRun.Success);
         Assert.Contains("Commit-Journal", dryRun.Error, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Prueflauf", dryRun.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Prüflauf", dryRun.Error, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(fixture.CommitJournalPath));
         Assert.True(Directory.Exists(fixture.ExternalArchiveRoot));
         Assert.False(Directory.Exists(fixture.ExternalMirrorRoot));
@@ -154,7 +154,7 @@ public sealed class PersonalGoldBrainSeparationServiceTests
         var result = await new PersonalGoldBrainSeparationService().SeparateAsync(request);
 
         Assert.False(result.Success);
-        Assert.Contains("ueberlapp", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("überlapp", result.Error, StringComparison.OrdinalIgnoreCase);
         Assert.False(File.Exists(fixture.CommitJournalPath));
         Assert.False(Directory.Exists(fixture.StagingRoot));
         Assert.True(Directory.Exists(fixture.KnowledgeRoot));
@@ -328,7 +328,7 @@ public sealed class PersonalGoldBrainSeparationServiceTests
                     ? FileAttributes.Directory | FileAttributes.ReparsePoint
                     : null));
 
-        Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -554,7 +554,7 @@ public sealed class PersonalGoldBrainSeparationServiceTests
                 fixture.CreateRecoveryRequest(dryRun: false));
 
             Assert.False(restarted.Success);
-            Assert.Contains("Verknuepfung", restarted.Error, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Verknüpfung", restarted.Error, StringComparison.OrdinalIgnoreCase);
             Assert.True(File.Exists(sentinel));
             Assert.True(Directory.Exists(link));
             Assert.True(File.Exists(fixture.RecoveryJournalPath));

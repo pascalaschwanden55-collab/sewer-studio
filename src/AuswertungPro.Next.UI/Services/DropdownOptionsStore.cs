@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -12,6 +12,9 @@ public sealed class DropdownOptionsModel
     public List<string> PruefungsresultatOptions { get; set; } = new() { "" };
     public List<string> ReferenzpruefungOptions { get; set; } = new() { "" };
     public List<string> EmpfohleneSanierungsmassnahmenOptions { get; set; } = new() { "" };
+
+    /// <summary>Nur die selbst ergaenzten Rohrmaterialien; die festen Katalogwerte stehen im Feldkatalog.</summary>
+    public List<string> RohrmaterialOptions { get; set; } = new();
 }
 
 public interface IDropdownOptionsStore
@@ -29,13 +32,49 @@ public interface IDropdownOptionsStore
     void SaveReferenzpruefungOptions(IEnumerable<string> options);
     List<string> LoadEmpfohleneSanierungsmassnahmenOptions();
     void SaveEmpfohleneSanierungsmassnahmenOptions(IEnumerable<string> options);
+    List<string> LoadRohrmaterialOptions();
+    void SaveRohrmaterialOptions(IEnumerable<string> options);
 }
 
 /// <summary>Dateibasierter, atomar schreibender Speicher fuer die editierbaren Auswahllisten.</summary>
 public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
 {
+    /// <summary>
+    /// Die Eigentuemer des Abwassernetzes im Kanton Uri — der ganze Bestand, nicht
+    /// nur Sammelbegriffe.
+    ///
+    /// Der XTF-Export schreibt den Eigentuemer zeichengleich in die Datei. Stuende in
+    /// der Auswahl nur "Gemeinde", entstuende dort auch nur "Gemeinde" statt der
+    /// Gemeinde, der die Leitung gehoert.
+    ///
+    /// GEMESSEN am 2026-09-02 an `org_eigentuemer` in den lokalen QGIS-Kopien:
+    /// 110297 Leitungen und 68735 Schaechte fuehren exakt dieselben 27 Werte — kein
+    /// Wert kommt nur auf einer Seite vor. Genau drei Gemeinden tragen den
+    /// Kantonszusatz (Altdorf, Buerglen, Seedorf — die Namen gibt es auch in anderen
+    /// Kantonen), die uebrigen 16 stehen ohne. Eine frueher hier genannte Stichprobe
+    /// von 3000 Leitungen ist damit ueberholt.
+    ///
+    /// Die sechs Sammelbegriffe bleiben vorn stehen: Altprojekte fuehren sie, und
+    /// beide Excel-Vorlagen faerben genau sie. Die Kurzformen "AWU" und "Kanton"
+    /// stehen nicht zur Auswahl, bleiben dort aber gueltig und werden mitgezaehlt.
+    ///
+    /// Jeder Eintrag muss einen Organisationstyp haben — ohne ihn laesst der
+    /// XTF-Export den gewaehlten Wert still liegen. `DropdownOptionListTests` haelt
+    /// das fest.
+    /// </summary>
     private static readonly IReadOnlyList<string> FixedOwners =
-        new[] { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
+        new[]
+        {
+            "Privat", "Abwasser Uri", "Gemeinde", "Kanton Uri", "Bund", "unbekannt",
+            "ASTRA - Bundesamt für Strassen",
+            "Korporation Uri",
+            "Meliorationsgenossenschaft Reussebene Uri",
+            "Meliorationsgesellschaft Seedorf",
+            "Altdorf (UR)", "Andermatt", "Attinghausen", "Bürglen (UR)", "Erstfeld",
+            "Flüelen", "Göschenen", "Gurtnellen", "Hospental", "Isenthal", "Realp",
+            "Schattdorf", "Seedorf (UR)", "Seelisberg", "Silenen", "Sisikon",
+            "Spiringen", "Unterschächen", "Wassen"
+        };
 
     private readonly string _optionsDir;
     private readonly string _legacyOptionsDir;
@@ -67,7 +106,8 @@ public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
             EigentuemerOptions = LoadEigentuemerOptions(),
             PruefungsresultatOptions = LoadPruefungsresultatOptions(),
             ReferenzpruefungOptions = LoadReferenzpruefungOptions(),
-            EmpfohleneSanierungsmassnahmenOptions = LoadEmpfohleneSanierungsmassnahmenOptions()
+            EmpfohleneSanierungsmassnahmenOptions = LoadEmpfohleneSanierungsmassnahmenOptions(),
+            RohrmaterialOptions = LoadRohrmaterialOptions()
         };
 
     public void Save(DropdownOptionsModel model)
@@ -78,6 +118,7 @@ public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
         SavePruefungsresultatOptions(model.PruefungsresultatOptions);
         SaveReferenzpruefungOptions(model.ReferenzpruefungOptions);
         SaveEmpfohleneSanierungsmassnahmenOptions(model.EmpfohleneSanierungsmassnahmenOptions);
+        SaveRohrmaterialOptions(model.RohrmaterialOptions);
     }
 
     public List<string> LoadSanierenOptions()
@@ -109,6 +150,15 @@ public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
 
     public void SaveEmpfohleneSanierungsmassnahmenOptions(IEnumerable<string> options)
         => SaveList("sanierungsmassnahmen", options);
+
+    // Gespeichert werden bewusst nur die selbst ergaenzten Materialien. Die festen
+    // Katalogwerte kommen bei jedem Start aus dem Feldkatalog und koennen dadurch
+    // weder geloescht noch durch eine alte Datei ueberholt werden.
+    public List<string> LoadRohrmaterialOptions()
+        => LoadList("rohrmaterial", DefaultModel().RohrmaterialOptions);
+
+    public void SaveRohrmaterialOptions(IEnumerable<string> options)
+        => SaveList("rohrmaterial", options);
 
     private List<string> LoadList(string key, List<string> defaults)
     {
@@ -209,6 +259,8 @@ public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
                     SaveReferenzpruefungOptions(model.ReferenzpruefungOptions);
                 if (model.EmpfohleneSanierungsmassnahmenOptions.Count > 0)
                     SaveEmpfohleneSanierungsmassnahmenOptions(model.EmpfohleneSanierungsmassnahmenOptions);
+                if (model.RohrmaterialOptions.Count > 0)
+                    SaveRohrmaterialOptions(model.RohrmaterialOptions);
             }
             catch
             {
@@ -242,7 +294,8 @@ public sealed class FileDropdownOptionsStore : IDropdownOptionsStore
                 "Anschluss verpressen",
                 "Reinigung + TV-Inspektion",
                 "Erneuerung / Neubau"
-            }
+            },
+            RohrmaterialOptions = new List<string>()
         };
 
     private static string NormalizeRequiredPath(string path, string parameterName)
@@ -269,4 +322,6 @@ public static class DropdownOptionsStore
     public static void SaveReferenzpruefungOptions(IEnumerable<string> options) => Default.SaveReferenzpruefungOptions(options);
     public static List<string> LoadEmpfohleneSanierungsmassnahmenOptions() => Default.LoadEmpfohleneSanierungsmassnahmenOptions();
     public static void SaveEmpfohleneSanierungsmassnahmenOptions(IEnumerable<string> options) => Default.SaveEmpfohleneSanierungsmassnahmenOptions(options);
+    public static List<string> LoadRohrmaterialOptions() => Default.LoadRohrmaterialOptions();
+    public static void SaveRohrmaterialOptions(IEnumerable<string> options) => Default.SaveRohrmaterialOptions(options);
 }

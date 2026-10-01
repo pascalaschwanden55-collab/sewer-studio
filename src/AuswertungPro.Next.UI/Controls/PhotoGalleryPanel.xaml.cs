@@ -27,15 +27,17 @@ public partial class PhotoGalleryPanel : UserControl
             typeof(PhotoGalleryPanel),
             new FrameworkPropertyMetadata(124d, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnTileSizeChanged));
 
-    private readonly AppSettings _settings;
     private bool _isLoadedFromSettings;
 
     public PhotoGalleryPanel()
     {
-        _settings = AppSettings.Load();
+        // Keine eigene Einstellungskopie von der Platte: Save() schreibt immer das
+        // ganze Objekt — eine Momentaufnahme wuerde beim Reglerziehen alle seitdem
+        // geaenderten Einstellungen verwerfen. Die Live-Instanz liefert die Fassade
+        // (Audit 2026-08-10, AP-2).
         InitializeComponent();
         PhotoHoverPreviewBehavior.SetPhotoPathsSelector(FotoListe, PhotoHoverPreviewSelectors.GalerieFotoPhotos);
-        TileSize = ClampTileSize(_settings.PhotoGalleryTileSize);
+        TileSize = ClampTileSize(ViewCustomizationStore.GetPhotoGalleryTileSize());
         _isLoadedFromSettings = true;
     }
 
@@ -106,8 +108,7 @@ public partial class PhotoGalleryPanel : UserControl
         if (!panel._isLoadedFromSettings)
             return;
 
-        panel._settings.PhotoGalleryTileSize = clamped;
-        panel._settings.Save();
+        ViewCustomizationStore.SetPhotoGalleryTileSize(clamped);
     }
 
     private static double ClampTileSize(double value)

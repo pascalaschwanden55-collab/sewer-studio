@@ -1,4 +1,7 @@
+﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
 
@@ -14,18 +17,28 @@ namespace AuswertungPro.Next.Infrastructure.Import;
 public sealed class ImportTransactionRecoveryService : IImportTransactionRecoveryService
 {
     private readonly IImportTransactionJournal _journal;
+    private readonly Func<string, string, string?> _inspectStaging;
     private readonly Func<string, string, string?> _cleanupStaging;
 
     public ImportTransactionRecoveryService(IImportTransactionJournal journal)
-        : this(journal, CleanupStaging)
+        : this(journal, InspectStaging, CleanupStaging)
     {
     }
 
     internal ImportTransactionRecoveryService(
         IImportTransactionJournal journal,
         Func<string, string, string?> cleanupStaging)
+        : this(journal, InspectStaging, cleanupStaging)
+    {
+    }
+
+    internal ImportTransactionRecoveryService(
+        IImportTransactionJournal journal,
+        Func<string, string, string?> inspectStaging,
+        Func<string, string, string?> cleanupStaging)
     {
         _journal = journal ?? throw new ArgumentNullException(nameof(journal));
+        _inspectStaging = inspectStaging ?? throw new ArgumentNullException(nameof(inspectStaging));
         _cleanupStaging = cleanupStaging ?? throw new ArgumentNullException(nameof(cleanupStaging));
     }
 
@@ -51,106 +64,212 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         {
             // Der atomare projekt.json-Save ist durchgelaufen (Absturz erst danach) —
             // der neue Zustand ist konsistent, nur Arbeitsordner + Marker aufraeumen.
+            // Erst pruefen, dann anfassen - auch hier.
+            var committedStagingObstacle = _inspectStaging(marker.StagingRoot, projectRoot);
+            if (!string.IsNullOrWhiteSpace(committedStagingObstacle))
+            {
+                return new ImportRecoveryResult(
+                    ImportRecoveryOutcome.Blocked,
+                    "Der Import ist gespeichert, aber der Arbeitsordner kann nicht sicher " +
+                    $"entfernt werden. {committedStagingObstacle} Der Marker bleibt für " +
+                    "einen erneuten Lauf erhalten.",
+                    ProjectFolderModified: false);
+            }
+
             var committedCleanupWarning = _cleanupStaging(marker.StagingRoot, projectRoot);
             if (!string.IsNullOrWhiteSpace(committedCleanupWarning))
             {
+                // Das Aufraeumen ist bereits gelaufen und teilweise gescheitert: im
+                // Zweifel NICHT "unveraendert" melden.
                 return new ImportRecoveryResult(
                     ImportRecoveryOutcome.Blocked,
                     "Der Import ist gespeichert, aber die Wiederherstellung konnte den " +
-                    $"Arbeitsordner nicht vollstaendig aufraeumen. {committedCleanupWarning} " +
-                    "Der Marker bleibt fuer einen erneuten Lauf erhalten.");
+                    $"Arbeitsordner nicht vollständig aufräumen. {committedCleanupWarning} " +
+                    "Der Marker bleibt für einen erneuten Lauf erhalten.",
+                    ProjectFolderModified: true);
             }
 
-            var clearWarning = ClearJournalAndVerify(projectRoot);
+            var clearWarning = ClearJournalAndVerify(projectRoot, marker.TxId);
             if (!string.IsNullOrWhiteSpace(clearWarning))
             {
+                // Der Arbeitsordner IST weg - der Projektordner ist damit veraendert.
                 return new ImportRecoveryResult(
                     ImportRecoveryOutcome.Blocked,
-                    "Der Import ist gespeichert und der Arbeitsordner ist aufgeraeumt, " +
-                    $"aber der Wiederherstellungs-Marker konnte nicht entfernt werden. {clearWarning}");
+                    "Der Import ist gespeichert und der Arbeitsordner ist aufgeräumt, " +
+                    $"aber der Wiederherstellungs-Marker konnte nicht entfernt werden. {clearWarning}",
+                    ProjectFolderModified: true);
             }
 
             return new ImportRecoveryResult(
                 ImportRecoveryOutcome.CompletedCleanup,
-                $"Ein abgeschlossener Import vom {marker.StartedUtc.ToLocalTime():g} wurde aufgeraeumt.");
+                $"Ein abgeschlossener Import vom {marker.StartedUtc.ToLocalTime():g} wurde aufgeräumt.",
+                ProjectFolderModified: true);
         }
 
         // Commit ist NICHT durchgelaufen: die veroeffentlichten Dateien zuruecknehmen,
         // aber nur, wenn ihr Inhalt seit der Veroeffentlichung unveraendert ist.
-        var rolledBack = 0;
-        var skippedUnsafeTargets = 0;
-        var rollbackWarnings = new List<string>();
+        //
+        // ZUERST vollstaendig pruefen, DANN loeschen. Eine Ruecknahme ist alles oder
+        // nichts: Ein No-op laesst sich wiederholen, eine Loeschung nicht. Frueher lief
+        // die Loeschschleife sofort und erst danach fiel auf, dass der Rollback
+        // unvollstaendig bleibt - der Benutzer bekam eine Box, die zugleich
+        // "3 Datei(en) zurueckgenommen" und "nicht veraendert" behauptete.
+        // Pfad und Hash gemeinsam: Der Hash stammt aus genau dem Markereintrag, der
+        // geprueft wurde. Frueher wurde er beim Loeschen ueber den Pfad neu gesucht -
+        // je Datei einmal linear durch alle Eintraege, also quadratisch im Gesamtlauf.
+        var loeschbar = new List<(string Pfad, string Sha256)>();
+        var hindernisse = new List<string>();
+        var blockierendeDateien = new List<string>();
+
         foreach (var target in marker.PublishedTargets)
         {
             var path = Path.Combine(projectRoot, target.RelativePath);
+
             // Der Marker ist eine Datei im Projekt und damit manipulierbar: ohne
-            // Grenzpruefung koennte ein Eintrag wie "..\..\..." oder ein absoluter
+            // Grenzpruefung koennte ein Eintrag mit Aufwaertspfaden oder ein absoluter
             // Pfad bei passendem Hash eine Datei ausserhalb des Projekts loeschen.
             if (!IsSafeRollbackTarget(projectRoot, path))
             {
-                skippedUnsafeTargets++;
+                hindernisse.Add(
+                    $"Der Markereintrag \"{target.RelativePath}\" zeigt aus dem Projekt heraus " +
+                    "oder über eine Verknüpfung hinaus und wurde nicht angefasst.");
+                blockierendeDateien.Add(target.RelativePath);
                 continue;
             }
 
-            if (TryRollbackFile(path, target.Sha256, out var deleted, out var warning))
+            var pruefung = InspectRollbackTarget(path, target.Sha256);
+            switch (pruefung.Verdict)
             {
-                if (deleted)
-                    rolledBack++;
-            }
-            else if (!string.IsNullOrWhiteSpace(warning))
-            {
-                rollbackWarnings.Add(warning);
+                case RollbackVerdict.Deletable:
+                    loeschbar.Add((path, target.Sha256));
+                    break;
+                case RollbackVerdict.AlreadyGone:
+                    break;
+                default:
+                    hindernisse.Add(pruefung.Warning!);
+                    blockierendeDateien.Add(target.RelativePath);
+                    break;
             }
         }
 
-        if (skippedUnsafeTargets > 0)
+        // Der Arbeitsordner gehoert in denselben Preflight. Sonst waeren alle Ziele
+        // geloescht, bevor auffaellt, dass ".import-staging" eine Datei oder eine
+        // Junction ist - genau der Teilzustand, den der Preflight verhindern soll.
+        var stagingObstacle = _inspectStaging(marker.StagingRoot, projectRoot);
+        if (!string.IsNullOrWhiteSpace(stagingObstacle))
+            hindernisse.Add(stagingObstacle);
+
+        if (hindernisse.Count > 0)
         {
-            rollbackWarnings.Add(
-                $"{skippedUnsafeTargets} Markereintraege zeigen ausserhalb des Projekts " +
-                "oder ueber Verknuepfungen hinaus und wurden nicht angefasst.");
+            return new ImportRecoveryResult(
+                ImportRecoveryOutcome.Blocked,
+                BuildBlockedRollbackMessage(marker, hindernisse, blockierendeDateien, projectRoot),
+                ProjectFolderModified: false);
+        }
+
+        // Ab hier ist jedes Ziel geprueft; jetzt erst wird geloescht.
+        var rolledBack = 0;
+        var rollbackWarnings = new List<string>();
+        var projektOrdnerVeraendert = false;
+        foreach (var (path, sha256) in loeschbar)
+        {
+            if (TryRollbackFile(projectRoot, path, sha256, out var deleted, out var warning))
+            {
+                if (deleted)
+                {
+                    rolledBack++;
+                    projektOrdnerVeraendert = true;
+                }
+            }
+            else
+            {
+                // Zwischen Pruefung und Loeschen ist etwas passiert - echter Teilzustand.
+                projektOrdnerVeraendert = true;
+                if (!string.IsNullOrWhiteSpace(warning))
+                    rollbackWarnings.Add(warning);
+            }
         }
 
         var cleanupWarning = _cleanupStaging(marker.StagingRoot, projectRoot);
         if (!string.IsNullOrWhiteSpace(cleanupWarning))
+        {
+            // Rekursives Loeschen kann bereits Teile des Arbeitsordners entfernt
+            // haben, bevor der Fehler sichtbar wird. Ohne sicheren Nachweis wird
+            // deshalb konservativ eine Aenderung des Projektordners gemeldet.
+            projektOrdnerVeraendert = true;
             rollbackWarnings.Add(cleanupWarning);
+        }
 
         if (rollbackWarnings.Count > 0)
         {
             return new ImportRecoveryResult(
                 ImportRecoveryOutcome.Blocked,
-                $"Die Wiederherstellung des unvollstaendigen Imports vom " +
-                $"{marker.StartedUtc.ToLocalTime():g} ist unvollstaendig " +
-                $"({rolledBack} Datei(en) zurueckgenommen). " +
+                $"Die Rücknahme des unvollständigen Imports vom " +
+                $"{marker.StartedUtc.ToLocalTime():g} ist unvollständig " +
+                $"({rolledBack} Datei(en) zurückgenommen). " +
                 string.Join(" ", rollbackWarnings) +
-                " Der Marker bleibt fuer eine sichere Pruefung erhalten.");
+                " Der Marker bleibt für eine sichere Prüfung erhalten.",
+                ProjectFolderModified: projektOrdnerVeraendert);
         }
 
-        var rollbackClearWarning = ClearJournalAndVerify(projectRoot);
+        var rollbackClearWarning = ClearJournalAndVerify(projectRoot, marker.TxId);
         if (!string.IsNullOrWhiteSpace(rollbackClearWarning))
         {
             return new ImportRecoveryResult(
                 ImportRecoveryOutcome.Blocked,
-                $"Der unvollstaendige Import vom {marker.StartedUtc.ToLocalTime():g} wurde " +
-                $"zurueckgenommen ({rolledBack} Datei(en)), aber der Wiederherstellungs-Marker " +
-                $"konnte nicht entfernt werden. {rollbackClearWarning}");
+                $"Der unvollständige Import vom {marker.StartedUtc.ToLocalTime():g} wurde " +
+                $"zurückgenommen ({rolledBack} Datei(en)), aber der Wiederherstellungs-Marker " +
+                $"konnte nicht entfernt werden. {rollbackClearWarning}",
+                ProjectFolderModified: true);
         }
 
         return new ImportRecoveryResult(
             ImportRecoveryOutcome.RolledBack,
-            $"Ein unvollstaendiger Import vom {marker.StartedUtc.ToLocalTime():g} wurde zurueckgenommen " +
-            $"({rolledBack} Datei(en)).");
+            $"Ein unvollständiger Import vom {marker.StartedUtc.ToLocalTime():g} wurde zurückgenommen " +
+            $"({rolledBack} Datei(en)).",
+            ProjectFolderModified: true);
     }
 
-    private string? ClearJournalAndVerify(string projectRoot)
+    /// <summary>
+    /// Sperrmeldung mit Namen und Ausweg. Ohne beides steht der Benutzer vor einem
+    /// Projekt, das nicht mehr aufgeht: beide Oeffnen-Wege der Shell enden bei Blocked.
+    /// </summary>
+    private static string BuildBlockedRollbackMessage(
+        ImportTransactionMarker marker,
+        IReadOnlyList<string> hindernisse,
+        IReadOnlyList<string> blockierendeDateien,
+        string projectRoot)
+    {
+        var markerPfad = Path.Combine(projectRoot, FileImportTransactionJournal.MarkerFileName);
+        var blockierendeDateienHinweis = blockierendeDateien.Count == 0
+            ? string.Empty
+            : $"Im Weg: {string.Join(", ", blockierendeDateien)}. ";
+        return
+            $"Der unvollständige Import vom {marker.StartedUtc.ToLocalTime():g} wurde NICHT " +
+            "zurückgenommen. " +
+            blockierendeDateienHinweis +
+            string.Join(" ", hindernisse) +
+            $" Der Wiederherstellungs-Marker liegt unter {markerPfad}. " +
+            "Prüfen Sie die genannten Dateien und sichern Sie sie. Wird der Marker danach " +
+            "entfernt, lässt sich das Projekt wieder öffnen; die bereits kopierten " +
+            "Importdateien bleiben dann im Projekt.";
+    }
+
+    private string? ClearJournalAndVerify(string projectRoot, string expectedTxId)
     {
         try
         {
-            _journal.Clear(projectRoot);
+            if (!_journal.ClearIfOwned(projectRoot, expectedTxId))
+            {
+                return "Der Marker gehört inzwischen einer anderen Transaktion, ist " +
+                       "nicht sicher lesbar oder konnte nicht sicher entfernt werden.";
+            }
+
             var remaining = _journal.Read(projectRoot);
             return remaining.Outcome == ImportTransactionJournalReadOutcome.Missing
                 ? null
                 : remaining.ErrorMessage
-                  ?? "Der Marker ist nach dem Loeschversuch weiterhin vorhanden.";
+                  ?? "Der Marker ist nach dem Löschversuch weiterhin vorhanden.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
             or ArgumentException or NotSupportedException)
@@ -188,7 +307,118 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         }
     }
 
+    private enum RollbackVerdict
+    {
+        /// <summary>Datei liegt unveraendert vor und darf entfernt werden.</summary>
+        Deletable,
+        /// <summary>Datei ist bereits weg - nichts zu tun, kein Hindernis.</summary>
+        AlreadyGone,
+        /// <summary>Etwas steht im Weg; die Ruecknahme darf gar nicht erst beginnen.</summary>
+        Blocked
+    }
+
+    private readonly record struct RollbackInspection(RollbackVerdict Verdict, string? Warning);
+
+    /// <summary>
+    /// Reine Pruefung eines Rollback-Ziels - loescht NICHTS. Erst wenn jedes Ziel
+    /// geprueft ist, darf die Ruecknahme beginnen.
+    /// </summary>
+    private static RollbackInspection InspectRollbackTarget(string path, string expectedSha)
+    {
+        try
+        {
+            if (!TryGetPathAttributes(path, out var attributes, out var missing, out var accessError))
+            {
+                return new RollbackInspection(
+                    RollbackVerdict.Blocked,
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" konnte nicht sicher geprüft " +
+                    $"werden ({accessError}).");
+            }
+
+            if (missing)
+                return new RollbackInspection(RollbackVerdict.AlreadyGone, null);
+
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                return new RollbackInspection(
+                    RollbackVerdict.Blocked,
+                    $"Am erwarteten Importdateipfad \"{Path.GetFileName(path)}\" liegt eine " +
+                    "Verknüpfung; sie wurde nicht angefasst.");
+            }
+
+            if ((attributes & FileAttributes.Directory) != 0)
+            {
+                return new RollbackInspection(
+                    RollbackVerdict.Blocked,
+                    $"Am erwarteten Importdateipfad \"{Path.GetFileName(path)}\" liegt ein Ordner; " +
+                    "er wurde nicht angefasst.");
+            }
+
+            if ((attributes & FileAttributes.ReadOnly) != 0)
+            {
+                return new RollbackInspection(
+                    RollbackVerdict.Blocked,
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" ist schreibgeschützt und " +
+                    "wurde nicht angefasst.");
+            }
+
+            string currentSha;
+            try
+            {
+                // Ein rein lesender Exklusivzugriff erkennt bestehende Handles, die
+                // das spaetere Loeschen verhindern koennen. Das ist bewusst
+                // konservativ: Auch ein anderer harmloser Leser blockiert die
+                // automatische Ruecknahme, statt einen Teil-Rollback zu riskieren.
+                using var stream = new FileStream(
+                    path,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.None,
+                    bufferSize: 128 * 1024,
+                    FileOptions.SequentialScan);
+                currentSha = Convert.ToHexStringLower(SHA256.HashData(stream));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return new RollbackInspection(
+                    RollbackVerdict.Blocked,
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" wird verwendet oder konnte " +
+                    $"nicht exklusiv geprüft werden ({ex.Message}); sie wurde nicht angefasst.");
+            }
+
+            if (!currentSha.Equals(expectedSha, StringComparison.OrdinalIgnoreCase))
+            {
+                return new RollbackInspection(
+                    RollbackVerdict.Blocked,
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" wurde nach dem Import verändert " +
+                    "und deshalb nicht angefasst.");
+            }
+
+            return new RollbackInspection(RollbackVerdict.Deletable, null);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new RollbackInspection(
+                RollbackVerdict.Blocked,
+                $"Die Importdatei \"{Path.GetFileName(path)}\" konnte nicht geprüft werden " +
+                $"({ex.Message}).");
+        }
+    }
+
+    /// <summary>
+    /// Entfernt ein bereits geprueftes Ziel und bestaetigt die Entfernung. Ein Fehler
+    /// hier ist ein echter Teilzustand und wird als solcher gemeldet.
+    /// </summary>
+    /// <summary>
+    /// Entfernt ein bereits geprueftes Ziel - prueft Pfadgrenze und Hash unmittelbar
+    /// davor aber ERNEUT. Zwischen Preflight und Loeschung koennen Minuten liegen, und
+    /// im Projektordner arbeiten weitere Prozesse (Spiegelung, zweite Programminstanz).
+    /// Das schliesst das Zeitfenster nicht vollstaendig - dafuer braeuchte es ein
+    /// exklusives Handle -, macht es aber wieder so klein wie vor der Aufteilung in
+    /// Pruefen und Loeschen.
+    /// </summary>
     private static bool TryRollbackFile(
+        string projectRoot,
         string path,
         string expectedSha,
         out bool deleted,
@@ -198,39 +428,29 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         warning = null;
         try
         {
-            if (!TryGetPathAttributes(path, out var attributes, out var missing, out var accessError))
+            if (!IsSafeRollbackTarget(projectRoot, path))
             {
                 warning =
-                    $"Die Importdatei \"{Path.GetFileName(path)}\" konnte nicht sicher geprueft " +
-                    $"werden ({accessError}).";
+                    $"Die Importdatei \"{Path.GetFileName(path)}\" ist seit der Prüfung nicht " +
+                    "mehr sicher erreichbar und wurde nicht angefasst.";
                 return false;
             }
 
-            if (missing)
+            var erneut = InspectRollbackTarget(path, expectedSha);
+            if (erneut.Verdict == RollbackVerdict.AlreadyGone)
                 return true;
-            if ((attributes & FileAttributes.Directory) != 0)
+            if (erneut.Verdict != RollbackVerdict.Deletable)
             {
-                warning =
-                    $"Am erwarteten Importdateipfad \"{Path.GetFileName(path)}\" liegt ein Ordner; " +
-                    "er wurde nicht angefasst.";
-                return false;
-            }
-
-            var currentSha = VerifiedImportFileCopy.ComputeSha256(path);
-            if (!currentSha.Equals(expectedSha, StringComparison.OrdinalIgnoreCase))
-            {
-                warning =
-                    $"Die Importdatei \"{Path.GetFileName(path)}\" wurde inzwischen veraendert " +
-                    "und deshalb nicht angefasst.";
+                warning = erneut.Warning;
                 return false;
             }
 
             File.Delete(path);
-            if (!TryGetPathAttributes(path, out _, out missing, out accessError))
+            if (!TryGetPathAttributes(path, out _, out var missing, out var accessError))
             {
                 warning =
                     $"Die Entfernung der Importdatei \"{Path.GetFileName(path)}\" konnte nicht " +
-                    $"sicher bestaetigt werden ({accessError}).";
+                    $"sicher bestätigt werden ({accessError}).";
                 return false;
             }
 
@@ -254,10 +474,185 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
     }
 
     /// <summary>
-    /// Loescht den Arbeitsordner einer beendeten Transaktion. Der Marker ist eine
-    /// Datei im Projekt und damit manipulierbar: geloescht wird nur, wenn der Pfad
-    /// einem erwarteten Staging-Ordner neben der Projektdatei entspricht
-    /// (die Session arbeitet in GUID-Unterordnern davon) und keine Junction ist.
+    /// Prueft schreibfrei, ob der Arbeitsordner sicher entfernt werden koennte -
+    /// LOESCHT NICHTS. Gehoert in denselben Preflight wie die Zieldateien: sonst
+    /// waeren alle Ziele bereits geloescht, wenn hier ein Hindernis auffaellt.
+    /// </summary>
+    /// <returns><c>null</c>, wenn nichts im Weg steht, sonst den Hinderungsgrund.</returns>
+    private static string? InspectStaging(string stagingRoot, string projectRoot)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(stagingRoot))
+                return null;
+
+            // Die Lage muss auch dann zuerst geprueft werden, wenn der Pfad momentan
+            // fehlt. Sonst koennte ein manipulierter externer Pfad zwischen Preflight
+            // und Cleanup erscheinen und dort rekursiv geloescht werden.
+            var fullStaging = ResolveStagingPath(stagingRoot);
+            if (!IsExpectedStagingLocation(projectRoot, fullStaging))
+            {
+                return $"Der Arbeitsordner \"{fullStaging}\" liegt nicht an einem erlaubten " +
+                       "Projektort und wurde nicht gelöscht.";
+            }
+
+            if (!TryGetPathAttributes(
+                    fullStaging,
+                    out var stagingAttributes,
+                    out var stagingMissing,
+                    out var stagingAccessError))
+            {
+                return $"Arbeitsordner konnte nicht sicher geprüft werden ({stagingAccessError}).";
+            }
+
+            if (stagingMissing)
+                return null;
+            if ((stagingAttributes & FileAttributes.Directory) == 0)
+                return $"Am erwarteten Arbeitsordnerpfad liegt eine Datei: {fullStaging}";
+
+            // Eine Junction/ein Symlink im Arbeitsordner oder seiner Elternkette darf nie rekursiv
+            // geloescht werden - der Inhalt laege ausserhalb des Projekts.
+            try
+            {
+                new ImportFileStagingPathGuard(projectRoot).EnsureNoNestedReparsePoint(fullStaging);
+            }
+            catch (IOException ex)
+            {
+                return $"Arbeitsordner nicht gelöscht ({ex.Message}).";
+            }
+
+            return InspectStagingTree(fullStaging);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException
+            or PathTooLongException or IOException or UnauthorizedAccessException)
+        {
+            return $"Arbeitsordner nicht gelöscht ({ex.Message}).";
+        }
+    }
+
+    /// <summary>
+    /// Prueft jeden vorhandenen Eintrag schreibfrei. Verknuepfungen werden nie
+    /// betreten; eine verwendete oder schreibgeschuetzte Datei blockiert den gesamten
+    /// Rollback, bevor irgendein Ziel geloescht wird.
+    /// </summary>
+    private static string? InspectStagingTree(string fullStaging)
+    {
+        var pendingDirectories = new Stack<string>();
+        pendingDirectories.Push(fullStaging);
+
+        while (pendingDirectories.Count > 0)
+        {
+            var directory = pendingDirectories.Pop();
+            if (!TryGetPathAttributes(
+                    directory,
+                    out var directoryAttributes,
+                    out var directoryMissing,
+                    out var directoryAccessError))
+            {
+                return $"Arbeitsordner konnte nicht vollständig geprüft werden " +
+                       $"({directoryAccessError}).";
+            }
+
+            if (directoryMissing)
+            {
+                return "Der Arbeitsordner hat sich während der Sicherheitsprüfung " +
+                       "verändert und wurde nicht angefasst.";
+            }
+
+            if ((directoryAttributes & FileAttributes.ReparsePoint) != 0)
+            {
+                return $"Der Arbeitsordner enthält die Verknüpfung " +
+                       $"\"{Path.GetFileName(directory)}\" und wurde nicht angefasst.";
+            }
+
+            if ((directoryAttributes & FileAttributes.Directory) == 0)
+            {
+                return "Ein Eintrag im Arbeitsordner hat während der Sicherheitsprüfung " +
+                       "seinen Typ geändert; der Arbeitsordner wurde nicht angefasst.";
+            }
+
+            if ((directoryAttributes & FileAttributes.ReadOnly) != 0)
+            {
+                return $"Der Arbeitsordner enthält den schreibgeschützten Ordner " +
+                       $"\"{Path.GetFileName(directory)}\" und wurde nicht angefasst.";
+            }
+
+            string[] entries;
+            try
+            {
+                // Sofort materialisieren, damit auch spaete Enumerationsfehler sicher
+                // in den Preflight fallen.
+                entries = Directory.GetFileSystemEntries(directory);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return $"Der Arbeitsordner konnte nicht vollständig gelesen werden " +
+                       $"({ex.Message}) und wurde nicht angefasst.";
+            }
+
+            foreach (var entry in entries)
+            {
+                if (!TryGetPathAttributes(
+                        entry,
+                        out var attributes,
+                        out var missing,
+                        out var accessError))
+                {
+                    return $"Ein Eintrag im Arbeitsordner konnte nicht sicher geprüft " +
+                           $"werden ({accessError}); der Arbeitsordner wurde nicht angefasst.";
+                }
+
+                if (missing)
+                {
+                    return "Der Arbeitsordner hat sich während der Sicherheitsprüfung " +
+                           "verändert und wurde nicht angefasst.";
+                }
+
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    return $"Der Arbeitsordner enthält die Verknüpfung " +
+                           $"\"{Path.GetFileName(entry)}\" und wurde nicht angefasst.";
+                }
+
+                if ((attributes & FileAttributes.ReadOnly) != 0)
+                {
+                    return $"Der Arbeitsordner enthält den schreibgeschützten Eintrag " +
+                           $"\"{Path.GetFileName(entry)}\" und wurde nicht angefasst.";
+                }
+
+                if ((attributes & FileAttributes.Directory) != 0)
+                {
+                    pendingDirectories.Push(entry);
+                    continue;
+                }
+
+                try
+                {
+                    // Ein exklusiver Lesezugriff ist eine konservative, rein verwaltete
+                    // Naeherung fuer die unmittelbar folgende Loeschbarkeit. Er erkennt
+                    // insbesondere Handles ohne FileShare.Delete, ohne die Datei zu aendern.
+                    using var probe = new FileStream(
+                        entry,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.None);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    return $"Die Datei \"{Path.GetFileName(entry)}\" im Arbeitsordner wird " +
+                           $"verwendet oder konnte nicht exklusiv geprüft werden ({ex.Message}); " +
+                           "der Arbeitsordner wurde nicht angefasst.";
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Loescht den Arbeitsordner einer beendeten Transaktion. Prueft unmittelbar davor
+    /// erneut ueber <see cref="InspectStaging"/> - zwischen Preflight und Loeschung
+    /// koennen andere Prozesse den Ordner ausgetauscht haben.
     /// </summary>
     /// <returns><c>null</c> bei Erfolg/nichts zu tun, sonst einen Warnhinweis.</returns>
     private static string? CleanupStaging(string stagingRoot, string projectRoot)
@@ -266,78 +661,84 @@ public sealed class ImportTransactionRecoveryService : IImportTransactionRecover
         {
             if (string.IsNullOrWhiteSpace(stagingRoot))
                 return null;
-            if (!TryGetPathAttributes(
-                    stagingRoot,
-                    out var stagingAttributes,
-                    out var stagingMissing,
-                    out var stagingAccessError))
-            {
-                return $"Arbeitsordner konnte nicht sicher geprueft werden ({stagingAccessError}).";
-            }
 
-            if (stagingMissing)
-                return null;
-            if ((stagingAttributes & FileAttributes.Directory) == 0)
-                return $"Am erwarteten Arbeitsordnerpfad liegt eine Datei: {stagingRoot}";
-
-            // Alte Projekte speichern projekt.json direkt im Root. Neue Projekte
-            // speichern sie unter Projektdateien; beide festen Orte sind sicher.
-            var expectedRoots = new[]
-            {
-                Path.Combine(projectRoot, ".import-staging"),
-                Path.Combine(
-                    projectRoot,
-                    ProjectFileLocator.ProjektdateienDir,
-                    ".import-staging")
-            }
-            .Select(path => Path.GetFullPath(path)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-            .ToArray();
-            var fullStaging = Path.GetFullPath(stagingRoot)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-            var isExpected = expectedRoots.Any(expectedRoot =>
-                string.Equals(fullStaging, expectedRoot, StringComparison.OrdinalIgnoreCase)
-                || IsDirectGuidSessionDirectory(expectedRoot, fullStaging));
-            if (!isExpected)
+            var fullStaging = ResolveStagingPath(stagingRoot);
+            if (!IsExpectedStagingLocation(projectRoot, fullStaging))
             {
                 return $"Der Arbeitsordner \"{fullStaging}\" liegt nicht an einem erlaubten " +
-                       "Projektort und wurde nicht geloescht.";
+                       "Projektort und wurde nicht gelöscht.";
             }
 
-            // Eine Junction/ein Symlink im Arbeitsordner oder seiner Elternkette darf nie rekursiv
-            // geloescht werden — der Inhalt laege ausserhalb des Projekts.
-            try
+            if (!TryGetPathAttributes(
+                    fullStaging,
+                    out _,
+                    out var missingBefore,
+                    out var accessErrorBefore))
             {
-                var pathGuard = new ImportFileStagingPathGuard(projectRoot);
-                pathGuard.EnsureNoNestedReparsePoint(fullStaging);
+                return $"Arbeitsordner konnte vor dem Entfernen nicht sicher geprüft " +
+                       $"werden ({accessErrorBefore}).";
             }
-            catch (IOException ex)
-            {
-                return $"Arbeitsordner nicht geloescht ({ex.Message}).";
-            }
+
+            if (missingBefore)
+                return null;
+
+            // Vollstaendige Typ-, Verknuepfungs- und Inhaltspruefung direkt vor dem
+            // rekursiven Delete wiederholen. Das schliesst die Zeit zwischen dem ersten
+            // Recovery-Preflight und dem Cleanup. Eine Aenderung in den wenigen
+            // Maschinenbefehlen zwischen dieser Momentaufnahme und Directory.Delete
+            // kann reines Managed-I/O ohne dauerhaft gehaltene Handles nicht ausschliessen.
+            var obstacle = InspectStaging(fullStaging, projectRoot);
+            if (!string.IsNullOrWhiteSpace(obstacle))
+                return obstacle;
 
             Directory.Delete(fullStaging, recursive: true);
             if (!TryGetPathAttributes(
                     fullStaging,
                     out _,
-                    out stagingMissing,
-                    out stagingAccessError))
+                    out var stagingMissing,
+                    out var stagingAccessError))
             {
-                return $"Die Entfernung des Arbeitsordners konnte nicht sicher bestaetigt " +
+                return $"Die Entfernung des Arbeitsordners konnte nicht sicher bestätigt " +
                        $"werden ({stagingAccessError}).";
             }
 
             if (!stagingMissing)
-                return "Arbeitsordner konnte nicht vollstaendig entfernt werden.";
+                return "Arbeitsordner konnte nicht vollständig entfernt werden.";
 
             return null;
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException
             or PathTooLongException or IOException or UnauthorizedAccessException)
         {
-            return $"Arbeitsordner nicht geloescht ({ex.Message}).";
+            return $"Arbeitsordner nicht gelöscht ({ex.Message}).";
         }
+    }
+
+    private static string ResolveStagingPath(string stagingRoot)
+        => Path.GetFullPath(stagingRoot)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+    /// <summary>
+    /// Alte Projekte speichern projekt.json direkt im Root, neue unter Projektdateien;
+    /// beide festen Orte sind sicher. Die Session arbeitet in GUID-Unterordnern davon.
+    /// </summary>
+    private static bool IsExpectedStagingLocation(string projectRoot, string fullStaging)
+    {
+        var expectedRoots = new[]
+        {
+            Path.Combine(projectRoot, ".import-staging"),
+            Path.Combine(
+                projectRoot,
+                ProjectFileLocator.ProjektdateienDir,
+                ".import-staging")
+        }
+        .Select(path => Path.GetFullPath(path)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        .ToArray();
+
+        return expectedRoots.Any(expectedRoot =>
+            string.Equals(fullStaging, expectedRoot, StringComparison.OrdinalIgnoreCase)
+            || IsDirectGuidSessionDirectory(expectedRoot, fullStaging));
     }
 
     private static bool IsDirectGuidSessionDirectory(string expectedRoot, string candidate)

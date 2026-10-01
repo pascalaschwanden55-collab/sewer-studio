@@ -27,8 +27,9 @@ internal sealed class TemporalDedupOptions
     /// derselbe Schaden gelten und verschmolzen werden (F12). Liegt die Ueberlappung
     /// darunter, bleiben beide eigenstaendig — zwei reale getrennte Schaeden gleichen
     /// Codes/Uhrlage im selben Bild verschmelzen dann nicht mehr. Konservativer
-    /// Default 0.3. Befunde ohne BBox verschmelzen weiterhin wie bisher
-    /// (Bestandsschutz); 0 deaktiviert die raeumliche Trennung komplett.
+    /// Default 0.3. Dieselbe Schwelle ordnet Treffer zwischen Frames anhand der
+    /// letzten brauchbaren Box zu. Ohne BBox bleibt die eindeutige Einzelzuordnung
+    /// erhalten; 0 deaktiviert die raeumliche Trennung komplett.
     /// </summary>
     public double SameFrameMergeMinIoU { get; init; } = 0.3;
 }
@@ -71,8 +72,8 @@ internal sealed class TemporalFindingDeduplicator
 
                 // F12: Raeumlich getrennte Befunde gleichen Schluessels (beide mit BBox,
                 // IoU unter Schwelle) werden NICHT verschmolzen — sie sind getrennte
-                // Schaeden im selben Bild und bekommen einen eigenen Schluessel. Die
-                // zeitliche Fortschreibung laeuft ueber diesen Schluessel unveraendert mit.
+                // Schaeden im selben Bild und bekommen vorlaeufig eigene Schluessel.
+                // Die zeitliche Zuordnung erfolgt danach anhand der letzten Box.
                 if (AreSpatiallySeparate(existing, finding))
                 {
                     candidateKey = $"{key}#{++disambiguation}";
@@ -87,6 +88,8 @@ internal sealed class TemporalFindingDeduplicator
                 break;
             }
         }
+
+        currentMap = MatchToActiveFindings(currentMap.Values);
 
         foreach (var key in _active.Keys.ToList())
         {
@@ -114,6 +117,8 @@ internal sealed class TemporalFindingDeduplicator
                     meterSource,
                     isMeterEstimated,
                     evidence);
+                if (TryGetBBox(finding, out var box))
+                    active.LastBox = box;
             }
             else
             {
@@ -148,10 +153,72 @@ internal sealed class TemporalFindingDeduplicator
                 isMeterEstimated,
                 _options.NormalizeOutputClock,
                 _options.MinStretchLengthMeters,
-                evidence);
+                evidence)
+            {
+                FindingKey = BuildFindingKey(finding),
+                LastBox = TryGetBBox(finding, out var box) ? box : null
+            };
         }
 
         return completed;
+    }
+
+    private Dictionary<string, EnhancedFinding> MatchToActiveFindings(IEnumerable<EnhancedFinding> current)
+    {
+        var result = new Dictionary<string, EnhancedFinding>(StringComparer.OrdinalIgnoreCase);
+        var occupiedKeys = new HashSet<string>(_active.Keys, StringComparer.OrdinalIgnoreCase);
+        foreach (var group in current.GroupBy(BuildFindingKey, StringComparer.OrdinalIgnoreCase))
+        {
+            var findings = group.ToArray();
+            var active = _active.Where(pair => string.Equals(
+                pair.Value.FindingKey, group.Key, StringComparison.OrdinalIgnoreCase)).ToArray();
+            var assigned = new HashSet<int>();
+            var matches = new List<(string Key, int Index, double IoU)>();
+
+            for (var index = 0; index < findings.Length; index++)
+            {
+                var hasBox = TryGetBBox(findings[index], out var box);
+                foreach (var previous in active)
+                {
+                    if (_options.SameFrameMergeMinIoU > 0 && hasBox && previous.Value.LastBox is { } lastBox)
+                    {
+                        var iou = ComputeIoU(box, lastBox);
+                        if (iou >= _options.SameFrameMergeMinIoU)
+                            matches.Add((previous.Key, index, iou));
+                    }
+                    else if (findings.Length == 1 && active.Length == 1)
+                    {
+                        // Ohne Geometrie nur den eindeutigen Bestandsfall fortsetzen.
+                        // Mehrere aktive Schaeden duerfen nicht nach Listenplatz zugeordnet werden.
+                        matches.Add((previous.Key, index, 0));
+                    }
+                }
+            }
+
+            // Erst alle Zuordnungen bestimmen, dann Zustandswerte fortschreiben.
+            // So kann ein frueher Treffer keine Box fuer den naechsten ueberschreiben.
+            foreach (var match in matches.OrderByDescending(match => match.IoU)
+                         .ThenBy(match => match.Key, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(match => match.Index))
+            {
+                if (result.ContainsKey(match.Key) || !assigned.Add(match.Index))
+                    continue;
+                result.Add(match.Key, findings[match.Index]);
+            }
+
+            for (var index = 0; index < findings.Length; index++)
+            {
+                if (assigned.Contains(index))
+                    continue;
+
+                var key = group.Key;
+                var suffix = 0;
+                while (!occupiedKeys.Add(key))
+                    key = $"{group.Key}#{++suffix}";
+                result.Add(key, findings[index]);
+            }
+        }
+        return result;
     }
 
     public IReadOnlyList<RawVideoDetection> AdvanceAll()
@@ -239,7 +306,9 @@ internal sealed class TemporalFindingDeduplicator
         if (finding.BboxX1 is not { } x1 || finding.BboxY1 is not { } y1
             || finding.BboxX2 is not { } x2 || finding.BboxY2 is not { } y2)
             return false;
-        if (x2 <= x1 || y2 <= y1)
+        if (!double.IsFinite(x1) || !double.IsFinite(y1)
+            || !double.IsFinite(x2) || !double.IsFinite(y2)
+            || x2 <= x1 || y2 <= y1)
             return false; // degenerierte Box — keine brauchbare Geometrie
         bbox = (x1, y1, x2, y2);
         return true;
@@ -297,6 +366,8 @@ internal sealed class TemporalFindingDeduplicator
         private readonly bool _normalizeOutputClock;
         private readonly double _minStretchLengthMeters;
 
+        public required string FindingKey { get; init; }
+        public (double X1, double Y1, double X2, double Y2)? LastBox { get; set; }
         public string Name { get; }
         public double MeterStart { get; }
         public double MeterEnd { get; private set; }
@@ -416,7 +487,8 @@ internal sealed class TemporalFindingDeduplicator
                 ExtentPercent, HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
                 Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null,
                 MeterSource: MeterSource,
-                IsMeterEstimated: IsMeterEstimated);
+                IsMeterEstimated: IsMeterEstimated,
+                SeverityLevel: MaxSeverity);
         }
 
         private string? NormalizeStoredClock(string? clock) =>

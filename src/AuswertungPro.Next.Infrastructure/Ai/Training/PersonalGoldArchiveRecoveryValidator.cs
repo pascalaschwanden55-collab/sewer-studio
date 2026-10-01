@@ -14,7 +14,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
             throw new InvalidDataException("Recovery-Journal besitzt eine unbekannte Version.");
         if (!Guid.TryParseExact(transaction.TransactionId, "N", out _))
             throw new InvalidDataException(
-                "Recovery-Journal besitzt keine gueltige Transaktions-ID.");
+                "Recovery-Journal besitzt keine gültige Transaktions-ID.");
         if (transaction.StartedUtc == default)
             throw new InvalidDataException("Recovery-Journal besitzt keinen Startzeitpunkt.");
         if (transaction.Stage is not ArchiveRecoveryTransactionStage.Preparing
@@ -24,7 +24,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
                 "Recovery-Journal besitzt einen unbekannten Zustand.");
         }
         if (string.IsNullOrWhiteSpace(transaction.ConfirmedByUser))
-            throw new InvalidDataException("Recovery-Journal besitzt keinen Bestaetiger.");
+            throw new InvalidDataException("Recovery-Journal besitzt keinen Bestätiger.");
 
         EnsureCanonicalPath(transaction.ActiveRoot, paths.ActiveRoot, "ActiveRoot");
         EnsureCanonicalPath(transaction.LegacyRoot, paths.LegacyRoot, "LegacyRoot");
@@ -75,7 +75,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
             ValidateSha256(transaction.DatabaseSnapshotSha256, "Datenbank-Snapshot");
         else if (transaction.DatabaseSnapshotSha256 is not null)
             throw new InvalidDataException(
-                "Vorbereitendes Recovery-Journal enthaelt unerwartet einen Datenbank-Hash.");
+                "Vorbereitendes Recovery-Journal enthält unerwartet einen Datenbank-Hash.");
 
         var goldFramesRoot = Path.Combine(paths.ActiveRoot, "gold_frames");
         var sampleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -88,7 +88,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
                 || !sampleIds.Add(frame.SampleId))
             {
                 throw new InvalidDataException(
-                    "Recovery-Journal enthaelt leere oder doppelte Frame-Sample-IDs.");
+                    "Recovery-Journal enthält leere oder doppelte Frame-Sample-IDs.");
             }
             EnsureCanonicalSelfPath(frame.SourcePath, "FrameSourcePath");
             EnsureCanonicalSelfPath(frame.TargetPath, "FrameTargetPath");
@@ -96,7 +96,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
                 || !targetPaths.Add(frame.TargetPath))
             {
                 throw new InvalidDataException(
-                    "Recovery-Journal enthaelt einen unsicheren oder doppelten Frame-Zielpfad.");
+                    "Recovery-Journal enthält einen unsicheren oder doppelten Frame-Zielpfad.");
             }
             ValidateSha256(frame.Sha256, $"Frame {frame.SampleId}");
         }
@@ -110,7 +110,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
     {
         if (transaction.Stage != ArchiveRecoveryTransactionStage.Prepared)
             throw new InvalidDataException(
-                "Recovery-Transaktion ist noch nicht vollstaendig vorbereitet.");
+                "Recovery-Transaktion ist noch nicht vollständig vorbereitet.");
         ValidateOwnedAuditDirectory(transaction, requirePreparedBackups: true);
         await ValidateFileHashAsync(
                 PersonalGoldArchiveRecoveryArtifacts.GetDatabaseBackupPath(transaction),
@@ -154,11 +154,11 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
     {
         if (File.Exists(transaction.AuditDirectory))
             throw new InvalidDataException(
-                "Recovery-Pruefpfad ist unerwartet eine Datei.");
+                "Recovery-Prüfpfad ist unerwartet eine Datei.");
         if (!Directory.Exists(transaction.AuditDirectory))
         {
             if (requirePreparedBackups)
-                throw new InvalidDataException("Recovery-Pruefpfad fehlt.");
+                throw new InvalidDataException("Recovery-Prüfpfad fehlt.");
             return;
         }
         PersonalGoldBrainFileService.EnsureMutationTreeIsSafe(
@@ -169,7 +169,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
         if (!File.Exists(ownerPath) || Directory.Exists(ownerPath))
         {
             throw new InvalidDataException(
-                "Recovery-Pruefpfad besitzt keinen gueltigen Besitzmarker.");
+                "Recovery-Prüfpfad besitzt keinen gültigen Besitzmarker.");
         }
         if (!string.Equals(
                 File.ReadAllText(ownerPath),
@@ -177,7 +177,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
                 StringComparison.Ordinal))
         {
             throw new InvalidDataException(
-                "Recovery-Pruefpfad besitzt einen fremden Besitzmarker.");
+                "Recovery-Prüfpfad besitzt einen fremden Besitzmarker.");
         }
 
         var allowed =
@@ -189,7 +189,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
         if (unknown is not null)
         {
             throw new InvalidDataException(
-                $"Recovery-Pruefpfad enthaelt ein fremdes Artefakt: " +
+                $"Recovery-Prüfpfad enthält ein fremdes Artefakt: " +
                 Path.GetFileName(unknown));
         }
     }
@@ -209,7 +209,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
                 if (frame.TargetWasPresent)
                 {
                     throw new InvalidDataException(
-                        $"Vorhandenes Goldbild fehlt waehrend der Recovery: {frame.SampleId}");
+                        $"Vorhandenes Goldbild fehlt während der Recovery: {frame.SampleId}");
                 }
                 continue;
             }
@@ -220,7 +220,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
             if (!currentHash.Equals(frame.Sha256, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException(
-                    $"Goldbild wurde ausserhalb der Recovery veraendert: {frame.SampleId}");
+                    $"Goldbild wurde ausserhalb der Recovery verändert: {frame.SampleId}");
             }
         }
     }
@@ -249,12 +249,12 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
         CancellationToken cancellationToken)
     {
         if (Directory.Exists(path) || !File.Exists(path))
-            throw new InvalidDataException($"{name} fehlt oder ist kein regulaeres File.");
+            throw new InvalidDataException($"{name} fehlt oder ist kein reguläres File.");
         var actual = await PersonalGoldBrainFileService
             .HashAsync(path, cancellationToken)
             .ConfigureAwait(false);
         if (!actual.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException($"{name} besitzt eine falsche Pruefsumme.");
+            throw new InvalidDataException($"{name} besitzt eine falsche Prüfsumme.");
     }
 
     private static void EnsureMutationPathsAreSafe(
@@ -295,7 +295,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                $"Recovery-Journal enthaelt einen nicht kanonischen Pfad: {name}.");
+                $"Recovery-Journal enthält einen nicht kanonischen Pfad: {name}.");
         }
     }
 
@@ -308,7 +308,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                $"Recovery-Journal enthaelt einen nicht kanonischen Pfad: {name}.");
+                $"Recovery-Journal enthält einen nicht kanonischen Pfad: {name}.");
         }
     }
 
@@ -321,7 +321,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
             ValidateSha256(sha256, name);
         else if (sha256 is not null)
             throw new InvalidDataException(
-                $"Recovery-Journal enthaelt einen unerwarteten {name}-Hash.");
+                $"Recovery-Journal enthält einen unerwarteten {name}-Hash.");
     }
 
     private static void ValidateSha256(string? value, string name)
@@ -330,7 +330,7 @@ internal sealed class PersonalGoldArchiveRecoveryValidator
             || value.Any(character => !Uri.IsHexDigit(character)))
         {
             throw new InvalidDataException(
-                $"Recovery-Journal besitzt keinen gueltigen {name}-Hash.");
+                $"Recovery-Journal besitzt keinen gültigen {name}-Hash.");
         }
     }
 }

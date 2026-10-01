@@ -96,5 +96,13 @@ public sealed class TrainingAnnotationResult
     public string CroppedRegionPath { get; set; } = "";
     public string YoloAnnotationPath { get; set; } = "";
     public bool Success { get; set; }
+
+    /// <summary>
+    /// Verstaendliche deutsche Ursache fuer die Anzeige (seit Aufgabe 10c2 nie der rohe
+    /// Ausnahmetext); die Ausnahme selbst steht in <see cref="Failure"/> und im Programmlog.
+    /// </summary>
     public string? Error { get; set; }
+
+    /// <summary>Aufgefangene Ausnahme des Exports (nur fuer Protokoll und Diagnose).</summary>
+    public Exception? Failure { get; set; }
 }

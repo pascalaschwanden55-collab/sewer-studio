@@ -21,11 +21,11 @@ public static class TrainingExportPlanValidator
             RequireSha256(item.Value, $"Quellen-Hash '{item.Key}'");
         }
         if (plan.Classes.Count == 0)
-            throw new TrainingExportPlanException("Der Exportplan enthaelt keine Klassen.");
+            throw new TrainingExportPlanException("Der Exportplan enthält keine Klassen.");
         if (plan.Classes.Distinct(StringComparer.OrdinalIgnoreCase).Count() != plan.Classes.Count)
-            throw new TrainingExportPlanException("Die Klassenliste enthaelt Duplikate.");
+            throw new TrainingExportPlanException("Die Klassenliste enthält Duplikate.");
         if (plan.ProtectedSets.Count == 0)
-            throw new TrainingExportPlanException("Der Exportplan enthaelt keine Schutz-Set-Referenz.");
+            throw new TrainingExportPlanException("Der Exportplan enthält keine Schutz-Set-Referenz.");
         foreach (var protectedSet in plan.ProtectedSets)
         {
             if (string.IsNullOrWhiteSpace(protectedSet.SetId))
@@ -37,10 +37,20 @@ public static class TrainingExportPlanValidator
         var validationHoldings = new HashSet<string>(plan.ValidationHoldingKeys, StringComparer.OrdinalIgnoreCase);
         if (trainHoldings.Overlaps(validationHoldings))
             throw new TrainingExportPlanException("Eine Haltung liegt gleichzeitig in Train und Dev-Val.");
+        var trainPhysicalHoldings = trainHoldings
+            .Select(TrainingExportHoldingIdentity.PhysicalKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var validationPhysicalHoldings = validationHoldings
+            .Select(TrainingExportHoldingIdentity.PhysicalKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (trainPhysicalHoldings.Overlaps(validationPhysicalHoldings))
+            throw new TrainingExportPlanException("Eine Haltung oder ihre Gegenrichtung liegt gleichzeitig in Train und Dev-Val.");
 
         var imageHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var fileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var sourceKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var imageTargetsByPhysicalHolding =
+            new Dictionary<string, TrainingExportTarget>(StringComparer.OrdinalIgnoreCase);
         foreach (var image in plan.Images)
         {
             RequireSha256(image.ImageSha256, "Bild-Hash");
@@ -58,21 +68,38 @@ public static class TrainingExportPlanValidator
             var expectedHoldings = image.Target == TrainingExportTarget.Train
                 ? trainHoldings
                 : validationHoldings;
-            if (image.IsNegative)
+            var isLegacyNegativePool = image.IsNegative
+                                       && string.Equals(
+                                           image.HoldingKey,
+                                           TrainingExportNegativePool.HoldingKey,
+                                           StringComparison.Ordinal);
+            if (!isLegacyNegativePool)
             {
-                // Negativ-/Hintergrundbilder: fester Pool-Schluessel statt realer Haltung,
-                // bewusst LEERE Labelliste (YOLO-Negativ). Split- und Label-Pruefung der
-                // Positivbilder gilt fuer sie nicht.
-                if (!string.Equals(
-                        image.HoldingKey,
-                        TrainingExportNegativePool.HoldingKey,
-                        StringComparison.Ordinal))
+                var physicalKey = TrainingExportHoldingIdentity.PhysicalKey(image.HoldingKey);
+                if (imageTargetsByPhysicalHolding.TryGetValue(physicalKey, out var previousTarget)
+                    && previousTarget != image.Target)
                 {
                     throw new TrainingExportPlanException(
-                        $"Negativbild {image.ImageSha256} traegt nicht den Negativ-Pool-Schluessel.");
+                        $"Haltung '{image.HoldingKey}' liegt zugleich in Train und Dev-Val.");
                 }
+                imageTargetsByPhysicalHolding.TryAdd(physicalKey, image.Target);
+            }
+            if (image.IsNegative)
+            {
                 if (image.Labels.Count != 0)
                     throw new TrainingExportPlanException($"Negativbild {image.ImageSha256} darf keine Labels tragen.");
+                if (isLegacyNegativePool)
+                    continue;
+                if (!TrainingExportHoldingIdentity.IsCompleteNumericPair(image.HoldingKey))
+                {
+                    throw new TrainingExportPlanException(
+                        $"Negativbild-Haltung '{image.HoldingKey}' ist kein vollständiges numerisches Schachtpaar.");
+                }
+                if (!expectedHoldings.Contains(image.HoldingKey))
+                {
+                    throw new TrainingExportPlanException(
+                        $"Split von Negativbild {image.ImageSha256} passt nicht zur Haltung.");
+                }
                 continue;
             }
             if (!expectedHoldings.Contains(image.HoldingKey))
@@ -91,7 +118,7 @@ public static class TrainingExportPlanValidator
                         $"Klassen-ID auf Bild {image.ImageSha256} passt nicht zur Klassenliste.");
                 }
                 if (!label.BoundingBox.IsValid)
-                    throw new TrainingExportPlanException($"Ungueltige Box auf Bild {image.ImageSha256}.");
+                    throw new TrainingExportPlanException($"Ungültige Box auf Bild {image.ImageSha256}.");
                 var labelKey = $"{label.ClassId}|{label.BoundingBox}";
                 if (!labelKeys.Add(labelKey))
                     throw new TrainingExportPlanException($"Doppeltes Label auf Bild {image.ImageSha256}.");
@@ -124,13 +151,13 @@ public static class TrainingExportPlanValidator
                 !plan.InstancesPerClass.TryGetValue(item.Key, out var declared)
                 || declared != item.Value))
         {
-            throw new TrainingExportPlanException("Die Klassenzaehlung passt nicht zu den Plan-Labels.");
+            throw new TrainingExportPlanException("Die Klassenzählung passt nicht zu den Plan-Labels.");
         }
     }
 
     private static void RequireSha256(string? value, string label)
     {
         if (value is not { Length: 64 } || !value.All(Uri.IsHexDigit))
-            throw new TrainingExportPlanException($"{label} ist kein gueltiger SHA-256.");
+            throw new TrainingExportPlanException($"{label} ist kein gültiger SHA-256.");
     }
 }

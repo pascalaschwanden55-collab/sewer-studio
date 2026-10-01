@@ -150,15 +150,15 @@ public static class NpkOfferPdfModelFactory
 
     private static List<string> DefaultIntroBlocks() =>
     [
-        "Wir danken fuer Ihre Anfrage und unterbreiten Ihnen gerne unsere Offerte fuer die aufgefuehrten Kanalsanierungsarbeiten.",
+        "Wir danken für Ihre Anfrage und unterbreiten Ihnen gerne unsere Offerte für die aufgeführten Kanalsanierungsarbeiten.",
         "Die Mengen basieren auf den im Projekt gespeicherten Sanierungskosten. Die Detailpositionen werden nach NPK-135-Kapiteln gegliedert und verstehen sich netto exkl. MwSt."
     ];
 
     private static List<NpkOfferConditionLineModel> DefaultConditionLines() =>
     [
         new() { Label = "Zahlungskonditionen", ValueText = "30 Tage netto" },
-        new() { Label = "Gueltigkeit", ValueText = "30 Tage ab Ausstelldatum" },
-        new() { Label = "Ausfuehrung", ValueText = "Nach Terminabsprache und technischer Freigabe" }
+        new() { Label = "Gültigkeit", ValueText = "30 Tage ab Ausstelldatum" },
+        new() { Label = "Ausführung", ValueText = "Nach Terminabsprache und technischer Freigabe" }
     ];
 
     private sealed record PositionWithRoundedTotal(AggregatedPosition Position, decimal RoundedTotal);

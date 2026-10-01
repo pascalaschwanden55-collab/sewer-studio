@@ -59,9 +59,9 @@ public sealed class PipelineHealthUiStateFactoryTests
         Assert.False(state.AnalysisEnabled);
         Assert.Equal("Sidecar: offline", state.Details.Sidecar);
         Assert.Equal("Token: -", state.Details.Token);
-        Assert.Equal("YOLO: laedt bei Bedarf", state.Details.Yolo);
-        Assert.Equal("DINO: laedt bei Bedarf", state.Details.Dino);
-        Assert.Equal("SAM: laedt bei Bedarf", state.Details.Sam);
+        Assert.Equal("YOLO: lädt bei Bedarf", state.Details.Yolo);
+        Assert.Equal("DINO: lädt bei Bedarf", state.Details.Dino);
+        Assert.Equal("SAM: lädt bei Bedarf", state.Details.Sam);
         Assert.Equal("Modus: KI aus", state.Details.Mode);
     }
 
@@ -79,7 +79,7 @@ public sealed class PipelineHealthUiStateFactoryTests
             DinoLoaded: true,
             SamLoaded: true,
             Summary: "KI eingeschraenkt (DINO + SAM)",
-            Detail: "BBox-Kollaps. Ergebnisse pruefen.",
+            Detail: "BBox-Kollaps. Ergebnisse prüfen.",
             DetectorQualified: false,
             DetectorQualificationReason: "BBox-Kollaps");
 
@@ -107,7 +107,7 @@ public sealed class PipelineHealthUiStateFactoryTests
             DinoLoaded: true,
             SamLoaded: true,
             Summary: "KI eingeschraenkt (DINO + SAM)",
-            Detail: "Qualifikationsstatus fehlt. Ergebnis pruefen.",
+            Detail: "Qualifikationsstatus fehlt. Ergebnis prüfen.",
             DetectorQualified: null,
             DetectorQualificationReason: "Qualifikationsstatus fehlt");
 

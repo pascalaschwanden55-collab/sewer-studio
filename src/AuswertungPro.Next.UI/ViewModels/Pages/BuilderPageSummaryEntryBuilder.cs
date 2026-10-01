@@ -20,7 +20,12 @@ public static class BuilderPageSummaryEntryBuilder
                     Holding = row.Holding,
                     Owner = row.Owner,
                     ExecutedBy = row.ExecutedBy,
-                    Cost = row.StoredCost
+                    GroupLabel = GroupLabel(row),
+                    Street = row.Street,
+                    // Der Schacht-Massnahmen-Dialog hat die MWST-Felder nie gefuellt.
+                    // Fehlt sie an einer gespeicherten Kostenquelle, wird sie hier aus
+                    // dem Projektsatz ergaenzt — die Kundendatei bleibt unveraendert.
+                    Cost = HoldingCostVatCompleter.Complete(row.StoredCost, vatRate)!
                 });
                 continue;
             }
@@ -35,10 +40,16 @@ public static class BuilderPageSummaryEntryBuilder
                 Holding = row.Holding,
                 Owner = row.Owner,
                 ExecutedBy = row.ExecutedBy,
+                GroupLabel = GroupLabel(row),
+                Street = row.Street,
                 Cost = TablePauschaleCostHelper.BuildFallbackHoldingCost(row.Holding, row.NetCost, vatRate)
             });
         }
 
         return entries;
     }
+
+    /// <summary>Bauteilart fuer die Gruppierung der Detailliste im PDF.</summary>
+    private static string GroupLabel(DruckcenterRowVm row)
+        => row.Kind == DruckcenterRowKind.Schacht ? "Schächte" : "Haltungen";
 }

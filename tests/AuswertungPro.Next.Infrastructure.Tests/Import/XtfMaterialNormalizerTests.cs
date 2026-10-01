@@ -26,9 +26,9 @@ public sealed class XtfMaterialNormalizerTests
     [InlineData("Kunststoff_Polypropylen", "Polypropylen")]
     [InlineData("Polypropylen", "Polypropylen")]
     [InlineData("Kunststoff_Epoxydharz", "Epoxydharz")]
-    [InlineData("Beton_Normalbeton", "Beton")]
+    [InlineData("Beton_Normalbeton", "Normalbeton")] // ab 2026-08-29 nicht mehr mit den anderen Betonarten zusammengelegt
     [InlineData("Beton", "Beton")]
-    [InlineData("Guss_Grauguss", "Guss")]
+    [InlineData("Guss_Grauguss", "Grauguss")]        // ab 2026-08-29 nicht mehr mit Guss_duktil zusammengelegt
     [InlineData("Steinzeug", "Steinzeug")]
     [InlineData("Zement", "Zement")]
     [InlineData("Faserzement", "Faserzement")]
@@ -60,7 +60,26 @@ public sealed class XtfMaterialNormalizerTests
     public void An_unknown_material_is_passed_through_readably()
     {
         // Unbekanntes lieber lesbar durchreichen als verwerfen: Der Wert ist dann zwar nicht
-        // waehlbar, aber die Information geht nicht verloren.
+        // waehlbar, aber die Information geht nicht verloren. Das leistet weiterhin die
+        // tolerante Rueckfallregel hinter dem MaterialVokabular.
         Assert.Equal("Irgendwas Neues", XtfValueNormalizer.NormalizeSiaMaterial("Irgendwas_Neues"));
+    }
+
+    [Fact]
+    public void Asbestzement_wird_nicht_zu_Zement()
+    {
+        // Gemessen am AWU-Kantonsexport: 247 Haltungen tragen Asbestzement.
+        // Die Zement-Regel schluckte sie, weil "Asbestzement" das Wort enthaelt.
+        // Asbestzement ist ein eigener Werkstoff - andere Sanierung, anderer
+        // Arbeitsschutz. Ein falsches Material ist schlimmer als ein grobes.
+        Assert.Equal("Asbestzement", XtfValueNormalizer.NormalizeSiaMaterial("Asbestzement"));
+    }
+
+    [Fact]
+    public void Faserzement_und_Zement_bleiben_unveraendert()
+    {
+        // Gegenprobe: die neue Regel darf die zwei bestehenden nicht verdraengen.
+        Assert.Equal("Faserzement", XtfValueNormalizer.NormalizeSiaMaterial("Faserzement"));
+        Assert.Equal("Zement", XtfValueNormalizer.NormalizeSiaMaterial("Zement"));
     }
 }

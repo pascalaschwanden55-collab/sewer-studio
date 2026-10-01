@@ -25,11 +25,16 @@ public sealed class OverviewPreviewPdfCommandTests
             loggerFactory);
         var dialogs = new DialogFake(output);
         services.Dialogs = dialogs;
+        string? toastMeldung = null;
+        services.Toasts.AttachSink((message, _, _, _) => toastMeldung = message);
         using var shell = new ShellViewModel(services, new SystemMonitorService(enableHardwareSensorInit: false));
 
         shell.Project.Name = "Projekt A";
         shell.Project.Data.Add(Holding("H1"));
         shell.MarkProjectReady();
+        // F3: über den Bedienweg statt per Direktaufruf — Menü "Ansicht → Klassische
+        // Übersicht" einschalten, danach in der Leiste auf "Uebersicht" wechseln.
+        shell.KlassischeUebersicht = true;
         shell.EnterWorkspaceOn("Uebersicht");
         var vm = Assert.IsType<OverviewPageViewModel>(shell.CurrentPage);
 
@@ -44,8 +49,9 @@ public sealed class OverviewPreviewPdfCommandTests
             && call.DefaultExt == "pdf"
             && call.DefaultFileName is not null
             && call.DefaultFileName.StartsWith("Projektvorschau_Projekt A_", StringComparison.Ordinal));
-        Assert.NotNull(dialogs.LastInfo);
-        Assert.Equal("Projektvorschau", dialogs.LastInfo.Value.Title);
+        // Der blockierende Dialog ist einem Toast gewichen (Aufgabe 2, Erfolgsmeldung ohne Entscheidung).
+        Assert.Null(dialogs.LastInfo);
+        Assert.Contains("erstellt", toastMeldung, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -57,12 +63,15 @@ public sealed class OverviewPreviewPdfCommandTests
         Assert.EndsWith(".pdf", name, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void Beschaedigte_kostendatei_zeigt_fehler_und_sperrt_preview_pdf()
+    [Theory]
+    [InlineData("costs.json")]
+    [InlineData("schacht_costs.json")]
+    [InlineData("schacht_empfehlungen.json")]
+    public void Beschaedigte_kostendatei_zeigt_fehler_und_sperrt_preview_pdf(string fileName)
     {
         using var temp = new TempDir();
         var projectPath = Path.Combine(temp.Path, "Projektdateien", "projekt.json");
-        var costsPath = Path.Combine(temp.Path, "Projektdateien", "costs", "costs.json");
+        var costsPath = Path.Combine(temp.Path, "Projektdateien", "costs", fileName);
         Directory.CreateDirectory(Path.GetDirectoryName(costsPath)!);
         File.WriteAllText(costsPath, "{ kaputte kostendaten");
 
@@ -85,6 +94,7 @@ public sealed class OverviewPreviewPdfCommandTests
         shell.Project.Name = "Projekt mit kaputten Kosten";
         shell.Project.Data.Add(Holding("H1"));
         shell.MarkProjectReady();
+        shell.KlassischeUebersicht = true;
         shell.EnterWorkspaceOn("Uebersicht");
         var vm = Assert.IsType<OverviewPageViewModel>(shell.CurrentPage);
 
@@ -92,6 +102,35 @@ public sealed class OverviewPreviewPdfCommandTests
         Assert.False(vm.PrintPreviewPdfCommand.CanExecute(null));
         Assert.Empty(dialogs.SaveFileCalls);
         Assert.False(File.Exists(output));
+    }
+
+    /// <summary>
+    /// F3: Ohne den Umschalter zeigt "Uebersicht" bei offenem Projekt die neue Seite; erst
+    /// "Ansicht → Klassische Übersicht" liefert die alte Seite mit der Vorschau-PDF.
+    /// </summary>
+    [Fact]
+    public void Der_Umschalter_entscheidet_welche_Uebersicht_die_Leiste_oeffnet()
+    {
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+        using var shell = new ShellViewModel(services, new SystemMonitorService(enableHardwareSensorInit: false));
+        shell.Project.Data.Add(Holding("H1"));
+        shell.MarkProjectReady();
+
+        shell.EnterWorkspaceOn("Uebersicht");
+        Assert.IsType<ProjektUebersichtPageViewModel>(shell.CurrentPage);
+        Assert.False(shell.KlassischeUebersicht);
+
+        shell.KlassischeUebersicht = true;
+        Assert.IsType<OverviewPageViewModel>(shell.CurrentPage);
+        Assert.False(services.Settings.ShowUebersichtNovaLayout);
+
+        shell.KlassischeUebersicht = false;
+        Assert.IsType<ProjektUebersichtPageViewModel>(shell.CurrentPage);
     }
 
     private static HaltungRecord Holding(string name)
@@ -122,9 +161,9 @@ public sealed class OverviewPreviewPdfCommandTests
         public void Info(string message, string title = "Hinweis") => LastInfo = (message, title);
         public void Warn(string message, string title = "Warnung") { }
         public void Error(string message, string title = "Fehler") => LastError = (message, title);
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.No;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.No;
     }
 
     private sealed class TempDir : IDisposable

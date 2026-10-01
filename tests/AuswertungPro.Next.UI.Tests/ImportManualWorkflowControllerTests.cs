@@ -6,7 +6,7 @@ using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Tests;
 
-public sealed class ImportManualWorkflowControllerTests
+public sealed partial class ImportManualWorkflowControllerTests
 {
     [Fact]
     public async Task Empty_selections_do_not_start_an_import_run()
@@ -29,6 +29,7 @@ public sealed class ImportManualWorkflowControllerTests
         await controller.ImportWinCanAsync(context);
         await controller.ImportIbakAsync(context);
         await controller.ImportKinsAsync(context);
+        await controller.ImportSchachtProQrAsync(context);
 
         Assert.Empty(pdf.Calls);
         Assert.Empty(xtf.Calls);
@@ -109,7 +110,7 @@ public sealed class ImportManualWorkflowControllerTests
         await controller.ImportPdfAsync(CreateContext(state, new Project()));
 
         Assert.Single(pdf.Calls);
-        Assert.Contains("PDF Import fehlgeschlagen - Projektdaten wurden nicht uebernommen", state.Summary);
+        Assert.Contains("PDF Import fehlgeschlagen - Projektdaten wurden nicht übernommen", state.Summary);
         Assert.Empty(storedFiles.Calls);
         Assert.Equal(0, state.SaveCount);
         Assert.Null(state.ReplacedProject);
@@ -163,9 +164,9 @@ public sealed class ImportManualWorkflowControllerTests
     }
 
     [Theory]
-    [InlineData("WinCan", "WinCan-Projektordner waehlen")]
-    [InlineData("IBAK", "IBAK-Projektordner waehlen")]
-    [InlineData("KINS", "KINS-Projektordner waehlen")]
+    [InlineData("WinCan", "WinCan-Projektordner wählen")]
+    [InlineData("IBAK", "IBAK-Projektordner wählen")]
+    [InlineData("KINS", "KINS-Projektordner wählen")]
     public async Task Folder_imports_share_the_same_post_processing(
         string importKind,
         string expectedDialogTitle)
@@ -230,7 +231,8 @@ public sealed class ImportManualWorkflowControllerTests
         IXtfImportService xtfImport,
         FolderImportFake folderImports,
         IStoredImportFileService storedImportFiles,
-        string? pdfToTextPath = null)
+        string? pdfToTextPath = null,
+        ISchachtProQrImportService? qr = null)
         => new(
             dialogs,
             pdfImport,
@@ -238,10 +240,11 @@ public sealed class ImportManualWorkflowControllerTests
             folderImports,
             folderImports,
             folderImports,
+            new SchachtProImportFake(),
             storedImportFiles,
             new FileStagingServiceFake(),
             new MediaDistributionServiceFake(),
-            pdfToTextPath);
+            pdfToTextPath, qr);
 
     private static ImportManualWorkflowContext CreateContext(
         WorkflowState state,
@@ -283,7 +286,7 @@ public sealed class ImportManualWorkflowControllerTests
                 return state.PreviewDecision;
             },
             ValidatePlausibility: _ => [],
-            DeduplicateAllPrimaryDamages: _ => { },
+            DeduplicateAllPrimaryDamages: _ => null,
             RunAfterImportAsync: (_, _) => Task.CompletedTask,
             SaveProject: () =>
             {
@@ -341,9 +344,9 @@ public sealed class ImportManualWorkflowControllerTests
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") { }
         public void Error(string message, string title = "Fehler") { }
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Cancel;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Cancel;
     }
 
     private sealed class PdfImportFake(
@@ -426,6 +429,12 @@ public sealed class ImportManualWorkflowControllerTests
             Calls.Add(new StoredFileCall(projectPath, importKind, paths.ToArray()));
             return ResultToReturn;
         }
+    }
+
+    private sealed class SchachtProImportFake : ISchachtProImportService
+    {
+        public Result<ImportStats> ImportSchachtProArchive(string sproPath, Project project, ImportRunContext? ctx = null)
+            => SuccessStats();
     }
 
     private sealed class FileStagingServiceFake : IImportFileStagingService

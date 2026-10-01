@@ -31,7 +31,7 @@ public sealed class KinsDvdTextEnrichmentService : IKinsDvdTextEnricher
 
         if (project is null || string.IsNullOrWhiteSpace(kiDvDatenPath) || !File.Exists(kiDvDatenPath))
         {
-            messages.Add("kiDVDaten.txt nicht gefunden — Anreicherung uebersprungen.");
+            messages.Add("kiDVDaten.txt nicht gefunden — Anreicherung übersprungen.");
             return new KinsDvdTextEnrichmentResult(0, 0, 0, messages);
         }
 
@@ -48,7 +48,7 @@ public sealed class KinsDvdTextEnrichmentService : IKinsDvdTextEnricher
             var record = FindeHaltung(project, header);
             if (record is null)
             {
-                messages.Add($"kiDVDaten: Haltung {header.From}-{header.To} nicht im Projekt — uebersprungen.");
+                messages.Add($"kiDVDaten: Haltung {header.From}-{header.To} nicht im Projekt — übersprungen.");
                 continue;
             }
 

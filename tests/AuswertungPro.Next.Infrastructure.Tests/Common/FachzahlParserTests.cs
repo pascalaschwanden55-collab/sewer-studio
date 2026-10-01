@@ -38,6 +38,9 @@ public sealed class FachzahlParserTests
         Assert.Equal((true, 1300.50m), ParseMitKultur(kultur, "1’300.50"));   // typografisch
         Assert.Equal((true, 1300.50m), ParseMitKultur(kultur, "1'300,50"));
         Assert.Equal((true, 1300m), ParseMitKultur(kultur, "1'300"));
+        Assert.Equal((true, 1300.50m), ParseMitKultur(kultur, "1 300.50"));
+        Assert.Equal((true, 1300.50m), ParseMitKultur(kultur, "1\u00A0300,50"));
+        Assert.Equal((true, 123456m), ParseMitKultur(kultur, "123'456"));
     }
 
     [Theory]
@@ -49,6 +52,8 @@ public sealed class FachzahlParserTests
         Assert.Equal((true, 1300.50m), ParseMitKultur(kultur, "1.300,500"));  // Bruch mit 3 Stellen ist hier eindeutig
         Assert.Equal((true, 1300500m), ParseMitKultur(kultur, "1.300.500"));  // nur Tausenderpunkte
         Assert.Equal((true, 1300500m), ParseMitKultur(kultur, "1,300,500"));
+        Assert.Equal((true, 1234567.89m), ParseMitKultur(kultur, "1,234,567.89"));
+        Assert.Equal((true, 1234567.89m), ParseMitKultur(kultur, "1.234.567,89"));
     }
 
     [Theory]
@@ -62,6 +67,7 @@ public sealed class FachzahlParserTests
         Assert.Equal((true, 0.155m), ParseMitKultur(kultur, "0,155"));
         Assert.Equal((true, 0.155m), ParseMitKultur(kultur, "0.155"));
         Assert.Equal((true, 12345.6m), ParseMitKultur(kultur, "12'345.6"));
+        Assert.Equal((true, 9.25m), ParseMitKultur(kultur, "9.25"));
     }
 
     [Theory]
@@ -72,6 +78,7 @@ public sealed class FachzahlParserTests
         Assert.Equal((false, 0m), ParseMitKultur(kultur, "1.300"));
         Assert.Equal((false, 0m), ParseMitKultur(kultur, "1,300"));
         Assert.Equal((false, 0m), ParseMitKultur(kultur, "45.300"));
+        Assert.Equal((false, 0m), ParseMitKultur(kultur, "100.123"));
     }
 
     [Theory]
@@ -109,6 +116,7 @@ public sealed class FachzahlParserTests
         Assert.Equal((false, 0m), ParseMitKultur(kultur, "45,30,10"));     // Gruppierung ungueltig
         Assert.Equal((false, 0m), ParseMitKultur(kultur, "45,30.10"));     // Tausender nach Dezimalpunkt
         Assert.Equal((false, 0m), ParseMitKultur(kultur, "1.2.3,4.5"));    // mehrere beider Arten
+        Assert.Equal((false, 0m), ParseMitKultur(kultur, "1.2,3.4,5"));    // je mehrere Punkt und Komma
         Assert.Equal((false, 0m), ParseMitKultur(kultur, "45,30,10.5"));   // Gruppierung ungueltig
     }
 
@@ -122,6 +130,7 @@ public sealed class FachzahlParserTests
         Assert.Equal((false, 0m), ParseMitKultur(kultur, "1 2"));
         Assert.Equal((false, 0m), ParseMitKultur(kultur, "12 34"));
         Assert.Equal((false, 0m), ParseMitKultur(kultur, "1 300 50"));
+        Assert.Equal((false, 0m), ParseMitKultur(kultur, "1234'567"));
     }
 
     [Fact]

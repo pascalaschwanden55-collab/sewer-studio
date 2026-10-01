@@ -9,6 +9,24 @@ internal sealed class ImportFileStagingPathGuard
 
     public string ProjectRoot { get; }
 
+    /// <summary>
+    /// Gemeinsame Pfadgrenze fuer Staging, direkte Projektschreibwege und Journal.
+    /// Sie prueft neben der lexikalischen Projektgrenze auch den Projektroot selbst,
+    /// alle vorhandenen Elternordner und ein bereits vorhandenes Endziel.
+    /// </summary>
+    public string EnsureSafeProjectPath(string path, string parameterName)
+    {
+        var fullPath = Path.GetFullPath(path);
+        EnsureWithinProject(fullPath, parameterName);
+        EnsureProjectRootIsSafe();
+        EnsureNoNestedReparsePoint(fullPath);
+        EnsureExistingTargetIsNotReparsePoint(fullPath);
+        return fullPath;
+    }
+
+    public void EnsureProjectRootIsSafe()
+        => EnsureExistingTargetIsNotReparsePoint(ProjectRoot);
+
     public void EnsureWithinProject(string path, string parameterName)
     {
         if (!IsWithinProject(path))
@@ -46,7 +64,7 @@ internal sealed class ImportFileStagingPathGuard
     public static void EnsureNotReparsePoint(string path)
     {
         if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new IOException($"Importpfad enthaelt eine Verknuepfung oder Junction: {path}");
+            throw new IOException($"Importpfad enthält eine Verknüpfung oder Junction: {path}");
     }
 
     public static void EnsureDirectChild(string child, string parent)
@@ -55,6 +73,22 @@ internal sealed class ImportFileStagingPathGuard
         var fullParent = Path.GetFullPath(parent)
             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (!string.Equals(childParent, fullParent, StringComparison.OrdinalIgnoreCase))
-            throw new IOException("Unsicherer Import-Arbeitsordner wird nicht geloescht.");
+            throw new IOException("Unsicherer Import-Arbeitsordner wird nicht gelöscht.");
+    }
+
+    private static void EnsureExistingTargetIsNotReparsePoint(string path)
+    {
+        try
+        {
+            EnsureNotReparsePoint(path);
+        }
+        catch (FileNotFoundException)
+        {
+            // Das Ziel darf vor dem Schreiben noch fehlen.
+        }
+        catch (DirectoryNotFoundException)
+        {
+            // Fehlende Unterordner werden erst nach der Elternpruefung angelegt.
+        }
     }
 }

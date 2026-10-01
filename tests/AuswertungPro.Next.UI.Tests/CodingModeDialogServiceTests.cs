@@ -25,9 +25,9 @@ public sealed class CodingModeDialogServiceTests
         var calls = new List<(string Kind, string Message, string Title)>();
         var service = Service(calls);
 
-        service.ShowSessionStartFailed("Laenge fehlt");
+        service.ShowSessionStartFailed("Länge fehlt");
 
-        Assert.Equal(("warn", "Laenge fehlt", "Codier-Modus"), calls.Single());
+        Assert.Equal(("warn", "Länge fehlt", "Codier-Modus"), calls.Single());
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public sealed class CodingModeDialogServiceTests
         var call = calls.Single();
         Assert.Equal("warn", call.Kind);
         Assert.Contains("Frame konnte nicht aufgenommen werden.", call.Message);
-        Assert.Equal("Import bestaetigen", call.Title);
+        Assert.Equal("Import bestätigen", call.Title);
     }
 
     [Fact]

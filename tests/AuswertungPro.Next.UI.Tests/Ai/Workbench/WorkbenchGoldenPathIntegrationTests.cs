@@ -63,7 +63,8 @@ public sealed class WorkbenchGoldenPathIntegrationTests : IDisposable
             File.ReadAllBytes,
             resolveEvalSetRoot: () => null,
             exportServiceFactory: () => exportService,
-            isCodeKnown: _ => true);
+            isCodeKnown: _ => true,
+            readImageDimensions: _ => (640, 480));
 
         var item = new WorkbenchItem(framePath, "287425-81162", 12.5, 12.5, "287425-81162", @"C:\vid.mpg", 300);
         var box = new BoundingBox(0.5, 0.5, 0.3, 0.3);
@@ -88,7 +89,7 @@ public sealed class WorkbenchGoldenPathIntegrationTests : IDisposable
         Assert.False(sample.Corrected);
         Assert.StartsWith(Path.Combine(_root, "gold_frames"), sample.FramePath);
         Assert.True(File.Exists(sample.FramePath), "Gesicherte Goldbildkopie fehlt.");
-        Assert.True(File.Exists(framePath), "Das Originalfoto wurde veraendert oder entfernt.");
+        Assert.True(File.Exists(framePath), "Das Originalfoto wurde verändert oder entfernt.");
         Assert.Equal(
             TrainingSample.BuildCanonicalSignature("287425-81162", "BAB", 12.5, 12.5, 0.5, 0.5, 0.3, 0.3),
             sample.Signature);

@@ -125,6 +125,31 @@ public sealed class HaltungsgrafikSvgBuilderTests
     }
 
     [Fact]
+    public void BuildHaltungsgrafikSvg_mit_katalog_enthaelt_primaertitel_und_bemerkung()
+    {
+        var entry = new ProtocolEntry
+        {
+            Code = "BCE",
+            MeterStart = 2.9,
+            Beschreibung = "Anschluss von 12 Uhr in Schmutzleitung"
+        };
+
+        var svg = HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(
+            2.9,
+            new[] { entry },
+            photoNumbers: null,
+            startNode: null,
+            endNode: null,
+            flowDown: null,
+            brand: "#006E9C",
+            overrideHeight: null,
+            unknownGaps: null,
+            catalog: VsaResolverTestCatalog.CreateDefault());
+
+        Assert.Contains("Rohrende, Anschluss von 12 Uhr in Schmutzleitung", svg);
+    }
+
+    [Fact]
     public void BuildHaltungsgrafikSvg_streckenschaden_erzeugt_schraffierung()
     {
         var entry = new ProtocolEntry

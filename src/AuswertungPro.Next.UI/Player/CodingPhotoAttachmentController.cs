@@ -15,6 +15,9 @@ public interface ICodingPhotoAttachmentController
 
     string? AttachBoundaryAnalyzedFramePhoto(ProtocolEntry entry, byte[]? analyzedFrameBytes);
 
+    string? AttachExactAnalyzedFramePhoto(ProtocolEntry entry, byte[]? analyzedFrameBytes)
+        => AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes);
+
     CodingTakePhotoCommandWorkflowResult TakePhotoForSelectedEvent(object? selectedItem);
 }
 
@@ -73,7 +76,13 @@ public sealed class CodingPhotoAttachmentController : ICodingPhotoAttachmentCont
     public string? AttachBoundaryAnalyzedFramePhoto(
         ProtocolEntry entry,
         byte[]? analyzedFrameBytes)
-        => _bindings.AttachAnalyzedFramePhoto(entry, analyzedFrameBytes);
+        => AttachExactAnalyzedFramePhoto(entry, analyzedFrameBytes);
+
+    /// <summary>Speichert synchron genau das Analysebild; kein spaeterer Playerframe als Ersatz.</summary>
+    public string? AttachExactAnalyzedFramePhoto(ProtocolEntry entry, byte[]? analyzedFrameBytes)
+        => analyzedFrameBytes is { Length: > 0 }
+            ? _bindings.AttachAnalyzedFramePhoto(entry, analyzedFrameBytes)
+            : null;
 
     public CodingTakePhotoCommandWorkflowResult TakePhotoForSelectedEvent(object? selectedItem)
     {

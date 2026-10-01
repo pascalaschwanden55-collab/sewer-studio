@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -9,10 +10,15 @@ using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Ai.Workbench;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.UseCases.PdfTrainingReview;
+using AuswertungPro.Next.Application.UseCases.TrainingStudioSegmentation;
 using AuswertungPro.Next.Domain.Protocol;            // ProtocolEntry (Codierfenster-Ergebnis)
 using AuswertungPro.Next.UI.Ai.Pipeline;
+using AuswertungPro.Next.UI.Controls;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
+using AuswertungPro.Next.UI.ViewModels.BendSuggestions;  // BendSuggestionListViewModel
 using AuswertungPro.Next.UI.ViewModels.Windows;      // VsaCodeExplorerViewModel
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -25,7 +31,10 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class TrainingStudioWindow : Window
 {
     private readonly TrainingStudioViewModel _vm;
+    private readonly BendSuggestionListViewModel _bendVm;
     private readonly WorkbenchQueueService _queueService;
+    private readonly ITrainingPdfReviewImportService _pdfReviewImport;
+    private readonly ITrainingPdfReviewBatchImportUseCase _pdfReviewBatchImport;
     private readonly IPersonalGoldAlbumService _goldAlbumService;
     private readonly IPersonalGoldInboxService _goldInboxService;
     private readonly IFolderOpenService? _folderOpen;
@@ -34,6 +43,10 @@ public partial class TrainingStudioWindow : Window
     private Point _dragStart;
     private bool _dragging;
     private Rectangle? _dragRect;
+    private bool _pdfImportInProgress;
+    private bool _syncingThumbnailSelection;
+    private CancellationTokenSource? _pdfImportCts;
+    private bool _isClosed;
 
     /// <summary>Parameterloser Ctor fuer den WPF-/Designer-Rueckfall.</summary>
     public TrainingStudioWindow() : this(services: null) { }
@@ -44,11 +57,19 @@ public partial class TrainingStudioWindow : Window
         WindowStateManager.Track(this);
 
         _services = services;   // fuer das VSA-Codierfenster (CodeSelectionCatalog)
-        var dependencies = TrainingStudioWindowDependencyFactory.CreateDependencies(services);
+        // Der Bogen-Vorschlags-Workflow meldet von Threadpool-Threads — alles Gebundene
+        // laeuft ueber den Dispatcher zurueck auf den UI-Thread.
+        var dependencies = TrainingStudioWindowDependencyFactory.CreateDependencies(
+            services,
+            aktion => Dispatcher.Invoke(aktion));
         _queueService = dependencies.QueueService;
+        _pdfReviewImport = dependencies.PdfReviewImport;
+        _pdfReviewBatchImport = dependencies.PdfReviewBatchImport;
         _goldAlbumService = dependencies.GoldAlbum;
         _goldInboxService = dependencies.GoldInbox;
         _folderOpen = dependencies.FolderOpen;
+        _bendVm = dependencies.BendSuggestions;
+        BendSuggestionSection.DataContext = _bendVm;
         // Die Review-Warteschlange wird ueber "Warteschlange laden" asynchron geladen (LoadReviewQueue_Click);
         // der synchrone loadQueue-Delegate bleibt leer.
         _vm = new TrainingStudioViewModel(
@@ -57,7 +78,8 @@ public partial class TrainingStudioWindow : Window
             Environment.UserName,
             ensureAiReady: dependencies.EnsureAiReady,
             loadGoldProgress: dependencies.LoadGoldProgress,
-            previewDetection: dependencies.PreviewDetection);
+            previewDetection: dependencies.PreviewDetection,
+            goldQualityReview: dependencies.GoldQualityReview);
         DataContext = _vm;
 
         _vm.PropertyChanged += Vm_PropertyChanged;
@@ -65,10 +87,56 @@ public partial class TrainingStudioWindow : Window
         Loaded += TrainingStudioWindow_Loaded;
         Closed += (_, _) =>
         {
+            _isClosed = true;
+            _pdfImportCts?.Cancel();
             _vm.PropertyChanged -= Vm_PropertyChanged;
+            // Bricht Scan- und Vorschaularbeit des Bogen-Bereichs ab.
+            _bendVm.Dispose();
             // Gibt Workbench-SAM-Service + Vision-Client (eigener HttpClient) frei.
             _vm.Dispose();
         };
+    }
+
+    // ── Bogen-Vorschläge: nur die Dateiwahl, die Fachlogik liegt im ViewModel ──
+
+    private void ChooseBendSuggestionVideo_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Video einer Haltung für den Vorabdurchlauf wählen (Rohranfang, Rohrende, Bögen)",
+            Filter = "Videos (*.mpg;*.mpeg;*.mp4;*.avi;*.mov;*.mkv)|*.mpg;*.mpeg;*.mp4;*.avi;*.mov;*.mkv|Alle Dateien (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false,
+        };
+        const string suggestedRoot = @"D:\Haltungen";
+        if (Directory.Exists(suggestedRoot))
+            dlg.InitialDirectory = suggestedRoot;
+        if (dlg.ShowDialog(this) != true)
+            return;
+
+        _bendVm.SetVideo(dlg.FileName);
+    }
+
+    private void OpenBendSuggestionPreview_Click(object sender, RoutedEventArgs e)
+        => OpenBendSuggestionPreview();
+
+    private void BendSuggestionGrid_MouseDoubleClick(
+        object sender, System.Windows.Input.MouseButtonEventArgs e)
+        => OpenBendSuggestionPreview();
+
+    /// <summary>
+    /// Grossansicht des gewaehlten Vorschlags: Der Daumen im Bereich taugt nicht
+    /// zur Beurteilung (Sichtpruefung 2026-08-09). Reine Anzeige, kein Player-Sprung.
+    /// </summary>
+    private void OpenBendSuggestionPreview()
+    {
+        var auswahl = _bendVm.SelectedSuggestion;
+        if (auswahl is null || _bendVm.PeakImage is null)
+            return;
+
+        var fenster = new BendSuggestionPreviewWindow { Owner = this };
+        fenster.SetContent(auswahl.OrtText, _bendVm.PeakImage, _bendVm.ClipPath);
+        fenster.Show();
     }
 
     private async void TrainingStudioWindow_Loaded(object sender, RoutedEventArgs e)
@@ -84,7 +152,7 @@ public partial class TrainingStudioWindow : Window
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Fotos fuer den Pruefplatz waehlen",
+            Title = "Fotos für den Prüfplatz wählen",
             Filter = "Bilder (*.jpg;*.jpeg;*.png)|*.jpg;*.jpeg;*.png",
             Multiselect = true,
         };
@@ -93,6 +161,213 @@ public partial class TrainingStudioWindow : Window
 
         var items = WorkbenchQueueService.BuildPhotoItems(dlg.FileNames, DateTime.Now, _vm.PipeDiameterMm);
         _vm.LoadItems(items);
+    }
+
+    private async void LoadPdfProtocol_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pdfImportInProgress)
+        {
+            _vm.StatusText = "Das PDF-Protokoll wird bereits gelesen.";
+            return;
+        }
+
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "PDF-Protokoll einer Haltung für den Prüfplatz wählen",
+            Filter = "PDF-Protokolle (*.pdf)|*.pdf",
+            CheckFileExists = true,
+            Multiselect = false,
+        };
+        const string suggestedRoot = @"D:\Haltungen";
+        if (Directory.Exists(suggestedRoot))
+            dlg.InitialDirectory = suggestedRoot;
+        if (dlg.ShowDialog(this) != true)
+            return;
+
+        var importCts = new CancellationTokenSource();
+        BeginPdfImport(
+            importCts,
+            "PDF-Fotos und Operateurbefunde werden sicher zugeordnet …");
+        try
+        {
+            var result = await _pdfReviewImport.ImportAsync(
+                new TrainingPdfReviewImportRequest(
+                    dlg.FileName,
+                    _vm.PipeDiameterMm),
+                importCts.Token);
+            if (!_vm.LoadItems(result.Items))
+                return;
+            _vm.StatusText = TrainingStudioPdfImportPresentation.FormatSingle(result);
+        }
+        catch (OperationCanceledException) when (importCts.IsCancellationRequested)
+        {
+            if (!_isClosed)
+                _vm.StatusText = "PDF-Import abgebrochen.";
+        }
+        catch (Exception ex)
+        {
+            _vm.StatusText = "PDF-Protokoll konnte nicht für den Prüfplatz geladen werden: "
+                + UserError.DescribeAndReport(
+                    ex,
+                    $"Training-Studio PDF-Protokoll laden ({System.IO.Path.GetFileName(dlg.FileName)})");
+        }
+        finally
+        {
+            EndPdfImport(importCts);
+        }
+    }
+
+    private async void LoadPdfFolders_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pdfImportInProgress)
+        {
+            _vm.StatusText = "PDF-Protokolle werden bereits gelesen.";
+            return;
+        }
+
+        var dlg = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Ordner mit PDF-Protokollen wählen (Mehrfachauswahl möglich)",
+            Multiselect = true,
+        };
+        const string suggestedRoot = @"D:\Haltungen";
+        if (Directory.Exists(suggestedRoot))
+            dlg.InitialDirectory = suggestedRoot;
+        if (dlg.ShowDialog(this) != true)
+            return;
+
+        var folders = dlg.FolderNames
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToArray();
+        if (folders.Length == 0)
+            return;
+
+        var importCts = new CancellationTokenSource();
+        BeginPdfImport(
+            importCts,
+            "Die gewählten Ordner werden nach PDF-Protokollen durchsucht …");
+        var progress = new Progress<TrainingPdfReviewBatchProgress>(value =>
+        {
+            if (!_isClosed)
+            {
+                _vm.StatusText =
+                    $"PDF {value.CurrentPdfNumber} von {value.DiscoveredPdfCount} wird gelesen: " +
+                    value.SourceDocumentName;
+            }
+        });
+
+        try
+        {
+            var result = await _pdfReviewBatchImport.ImportFoldersAsync(
+                new TrainingPdfReviewBatchImportRequest(
+                    folders,
+                    _vm.PipeDiameterMm),
+                progress,
+                importCts.Token);
+            if (!_vm.LoadItems(result.Items))
+                return;
+            _vm.StatusText = TrainingStudioPdfImportPresentation.FormatBatch(result);
+        }
+        catch (OperationCanceledException) when (importCts.IsCancellationRequested)
+        {
+            if (!_isClosed)
+                _vm.StatusText = "PDF-Ordnerimport abgebrochen.";
+        }
+        catch (Exception ex)
+        {
+            _vm.StatusText = "PDF-Ordner konnten nicht für den Prüfplatz geladen werden: "
+                + UserError.DescribeAndReport(
+                    ex,
+                    "Training-Studio PDF-Ordner laden");
+        }
+        finally
+        {
+            EndPdfImport(importCts);
+        }
+    }
+
+    private void BeginPdfImport(
+        CancellationTokenSource importCts,
+        string statusText)
+    {
+        _pdfImportCts = importCts;
+        _pdfImportInProgress = true;
+        SetPdfImportUiBusy(true);
+        _vm.StatusText = statusText;
+    }
+
+    private void EndPdfImport(CancellationTokenSource importCts)
+    {
+        if (ReferenceEquals(_pdfImportCts, importCts))
+        {
+            _pdfImportCts = null;
+            _pdfImportInProgress = false;
+            if (!_isClosed)
+                SetPdfImportUiBusy(false);
+        }
+
+        importCts.Dispose();
+    }
+
+    private void SetPdfImportUiBusy(bool isBusy)
+    {
+        PdfSourceToolbar.IsEnabled = !isBusy;
+        PdfReviewArea.IsEnabled = !isBusy;
+        PdfThumbnailQueue.IsEnabled = !isBusy;
+        PdfImportProgressPanel.Visibility = isBusy
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        PdfImportCancelButton.IsEnabled = isBusy;
+    }
+
+    private void CancelPdfImport_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pdfImportCts is null || _pdfImportCts.IsCancellationRequested)
+            return;
+
+        _pdfImportCts.Cancel();
+        PdfImportCancelButton.IsEnabled = false;
+        _vm.StatusText = "PDF-Import wird abgebrochen …";
+    }
+
+    private void PreviewModelBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!TrainingStudioModelSelectionFocusPolicy.ShouldReleaseFocus(
+                hasSelection: PreviewModelBox.SelectedItem is not null,
+                listHasFocus: PreviewModelBox.IsKeyboardFocusWithin))
+            return;
+
+        // Fokus ans Fenster zurueck, damit A/K/V und die Pfeiltasten sofort wieder
+        // greifen. Nicht auf das Bild: ein Image ist in WPF nicht fokussierbar,
+        // der Fokus bliebe still auf der Auswahlliste stehen.
+        Keyboard.Focus(this);
+    }
+
+    private void TrainingStudioWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        var decision = TrainingStudioKeyboardShortcutPolicy.Resolve(
+            e.Key,
+            Keyboard.Modifiers,
+            KeyboardTextInputFocusGuard.IsTextInputFocused(),
+            _pdfImportInProgress);
+
+        if (!decision.ShouldHandle)
+            return;
+
+        e.Handled = true;
+
+        ICommand? command = decision.Action switch
+        {
+            TrainingStudioKeyboardShortcutAction.Accept => _vm.AcceptCommand,
+            TrainingStudioKeyboardShortcutAction.Correct => _vm.CorrectCommand,
+            TrainingStudioKeyboardShortcutAction.Discard => _vm.DiscardCommand,
+            TrainingStudioKeyboardShortcutAction.NextItem => _vm.NextItemCommand,
+            TrainingStudioKeyboardShortcutAction.PreviousItem => _vm.PreviousItemCommand,
+            _ => null
+        };
+
+        if (command?.CanExecute(null) == true)
+            command.Execute(null);
     }
 
     private void OpenGoldInbox_Click(object sender, RoutedEventArgs e)
@@ -126,7 +401,8 @@ public partial class TrainingStudioWindow : Window
             var items = WorkbenchQueueService.BuildGoldInboxItems(
                 snapshot.Images,
                 _vm.PipeDiameterMm);
-            _vm.LoadItems(items);
+            if (!_vm.LoadItems(items))
+                return;
             var issueText = snapshot.Issues.Count == 0
                 ? string.Empty
                 : $" · {snapshot.Issues.Count} Hinweise";
@@ -146,9 +422,10 @@ public partial class TrainingStudioWindow : Window
         try
         {
             var items = await _queueService.LoadReviewQueueAsync();
-            _vm.LoadItems(items);
+            if (!_vm.LoadItems(items))
+                return;
             if (items.Count == 0)
-                _vm.StatusText = "Keine offenen Review-Faelle (Yellow/Red, noch nicht beurteilt).";
+                _vm.StatusText = "Keine offenen Review-Fälle (Yellow/Red, noch nicht beurteilt).";
         }
         catch (Exception ex)
         {
@@ -157,21 +434,66 @@ public partial class TrainingStudioWindow : Window
         }
     }
 
+    private async void PdfThumbnailQueue_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_syncingThumbnailSelection || _vm is null)
+            return;
+
+        var requestedIndex = PdfThumbnailQueue.SelectedIndex;
+        if (requestedIndex < 0 || requestedIndex == _vm.CurrentIndex)
+            return;
+
+        var selected = await _vm.SelectQueueItemAsync(requestedIndex);
+        if (selected || _isClosed)
+            return;
+
+        _syncingThumbnailSelection = true;
+        try
+        {
+            PdfThumbnailQueue.SelectedIndex = _vm.CurrentIndex;
+        }
+        finally
+        {
+            _syncingThumbnailSelection = false;
+        }
+    }
+
     private async void LoadIncompleteGoldQueue_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            var items = await _queueService.LoadIncompletePersonalGoldQueueAsync(Environment.UserName);
-            _vm.LoadItems(items);
+            _vm.StatusText = "Bilder ohne gültige Segmentierung werden geprüft …";
+            var items = await _queueService.LoadSegmentationRepairQueueAsync(Environment.UserName);
+            if (!await _vm.LoadSegmentationRepairItemsAsync(items))
+                return;
             if (items.Count == 0)
-                _vm.StatusText = "Keine unvollständigen persönlichen Goldframes gefunden.";
-            else
-                _vm.StatusText = $"{items.Count} unvollständige Goldframes geladen.";
+                _vm.StatusText = "Keine lesbaren persönlichen Bilder ohne gültige Segmentierung gefunden.";
         }
         catch (Exception ex)
         {
-            _vm.StatusText = "Unvollständige Goldframes konnten nicht geladen werden: "
-                + UserError.DescribeAndReport(ex, "Training-Studio Gold-Warteschlange");
+            _vm.StatusText = "Segmentierungs-Warteschlange konnte nicht geladen werden: "
+                + UserError.DescribeAndReport(ex, "Training-Studio Segmentierungs-Warteschlange");
+        }
+    }
+
+    private async void LoadAllIncompleteGoldQueue_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var items = await _queueService
+                .LoadIncompletePersonalGoldQueueAsync(Environment.UserName);
+            if (!_vm.LoadItems(items))
+                return;
+            _vm.StatusText = items.Count == 0
+                ? "Keine persönlichen Gold-Reparaturfälle gefunden."
+                : $"{items.Count} Gold-Reparaturfälle geladen. Nicht lesbare Bilder dienen nur der Diagnose.";
+        }
+        catch (Exception ex)
+        {
+            _vm.StatusText = "Gold-Reparaturfälle konnten nicht geladen werden: "
+                + UserError.DescribeAndReport(ex, "Training-Studio alle Gold-Reparaturfälle");
         }
     }
 
@@ -186,6 +508,33 @@ public partial class TrainingStudioWindow : Window
         window.Show();
     }
 
+    // ── Titelzeile / linke Spalte: Fenstersteuerung und "Weitere"-Popup ──────
+
+    private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    // StaysOpen="False" schliesst den Aufklapper schon beim Klick auf diesen Knopf; ohne die
+    // Zeitregel oeffnete ihn derselbe Klick sofort wieder (PopupToggle).
+    private PopupToggle? _weitereToggle;
+
+    private void StudioWeitereButton_Click(object sender, RoutedEventArgs e)
+        => (_weitereToggle ??= new PopupToggle(StudioWeiterePopup)).Umschalten();
+
+    /// <summary>
+    /// Schritt 3 "Freigabe fuer Training" oeffnet dasselbe Training Center wie
+    /// MainWindow.OpenTrainingCenter_Click — keine eigene Oeffnungslogik.
+    /// </summary>
+    private void OpenTrainingCenter_Click(object sender, RoutedEventArgs e)
+    {
+        if (_services is null)
+        {
+            _vm.StatusText = "Training Center ist nur im laufenden SewerStudio verfügbar.";
+            return;
+        }
+
+        var window = new TrainingCenterWindow(_services) { Owner = this };
+        window.Show();
+    }
+
     // ── VSA-Codierfenster (dasselbe wie im Codiermodus) ──────────────────────
 
     private void OpenCodeExplorer_Click(object sender, RoutedEventArgs e)
@@ -193,7 +542,7 @@ public partial class TrainingStudioWindow : Window
         var catalog = _services?.CodeSelectionCatalog;
         if (catalog is null)
         {
-            _vm.StatusText = "VSA-Katalog nicht verfuegbar (kein Codier-Kontext).";
+            _vm.StatusText = "VSA-Katalog nicht verfügbar (kein Codier-Kontext).";
             return;
         }
 
@@ -327,15 +676,38 @@ public partial class TrainingStudioWindow : Window
         if (area.Width <= 0 || area.Height <= 0)
             return;
 
+        // Box-Geometrie einmal berechnen — beide Beschriftungen (Hand-Box oben,
+        // Maske unten) haengen an derselben Box.
+        Rect? boxBounds = _vm.CurrentBox is { } currentBox
+            ? TrainingStudioImageGeometryMapper.ToCanvasRect(area, currentBox)
+            : null;
+
         // SAM-Maske zuerst zeichnen, damit die rote Auswahl immer oben sichtbar bleibt.
         if (_vm.Segmentation is not null)
         {
+            var maskValidation = TrainingStudioBoxAnalysisUseCase.ValidateSegmentation(
+                _vm.CurrentBox,
+                _vm.Segmentation);
             var result = TrainingStudioMaskOverlayRenderer.Render(
                 OverlayCanvas,
                 _vm.Segmentation,
-                area);
+                area,
+                maskValidation.IsValid);
             if (!result.Rendered && !string.IsNullOrWhiteSpace(result.ErrorMessage))
+            {
                 _vm.StatusText = result.ErrorMessage;
+            }
+            else if (result.Rendered && boxBounds is { } maskLabelBounds)
+            {
+                AddOverlayBadge(_vm.Segmentation.StatusText, maskLabelBounds.X, maskLabelBounds.Bottom, "SuccessBrush", "SuccessBadgeTextBrush");
+            }
+            else if (!result.Rendered && boxBounds is { } notRenderedBounds)
+            {
+                // Keine gerenderte Maske und kein Fehlertext (z. B. leere Maske ohne RLE):
+                // Segmentierung ist vorhanden, aber nicht darstellbar — orange statt gruen,
+                // "formal sichtbar, aber nicht goldfaehig" (CLAUDE.md, Trainings-Studio-Regeln).
+                AddOverlayBadge(_vm.Segmentation.StatusText, notRenderedBounds.X, notRenderedBounds.Bottom, "WarningBrush", "WarningBadgeTextBrush");
+            }
         }
 
         // Automatische Modelltreffer bleiben blau und getrennt von der roten Hand-Box.
@@ -343,9 +715,8 @@ public partial class TrainingStudioWindow : Window
             DrawPreviewDetections(area, source);
 
         // Gezogene Box immer als oberste Ebene.
-        if (_vm.CurrentBox is { } b)
+        if (boxBounds is { } bounds)
         {
-            var bounds = TrainingStudioImageGeometryMapper.ToCanvasRect(area, b);
             var rect = new Rectangle
             {
                 Stroke = Brushes.OrangeRed,
@@ -358,7 +729,37 @@ public partial class TrainingStudioWindow : Window
             Canvas.SetLeft(rect, bounds.X);
             Canvas.SetTop(rect, bounds.Y);
             OverlayCanvas.Children.Add(rect);
+
+            AddOverlayBadge("Hand-Box", bounds.X, Math.Max(0, bounds.Y - 18), "DangerBrush", "DangerBadgeTextBrush");
         }
+    }
+
+    /// <summary>
+    /// Kleines Beschriftungs-Badge (Hintergrundfarbe + passender Kontrasttext) an einer
+    /// Canvas-Position. <c>StatusBadgeTextBrush</c> ist nur fuer die theme-gleichen
+    /// Zustandsklassen-Abzeichen Z0-Z4 gedacht (CLAUDE.md, Aufgabe 12 Fix-Runde 1) — auf
+    /// Success-/Warning-/Danger-Brush braucht jede Flaeche ihre eigene, dafuer gemessene
+    /// *BadgeTextBrush.
+    /// </summary>
+    private void AddOverlayBadge(string text, double left, double top, string backgroundResourceKey, string foregroundResourceKey)
+    {
+        var badge = new Border
+        {
+            Background = (Brush)FindResource(backgroundResourceKey),
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(4, 1, 4, 1),
+            IsHitTestVisible = false,
+            Child = new TextBlock
+            {
+                Text = text,
+                Foreground = (Brush)FindResource(foregroundResourceKey),
+                FontSize = (double)FindResource("TextXS"),
+                FontWeight = FontWeights.SemiBold,
+            },
+        };
+        Canvas.SetLeft(badge, left);
+        Canvas.SetTop(badge, top);
+        OverlayCanvas.Children.Add(badge);
     }
 
     private void DrawPreviewDetections(Rect area, BitmapSource source)

@@ -2,13 +2,24 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
         ui:WindowFx.Entrance="True"
-        Title="Text"
+        Title="SewerStudio — Textvorschau"
         Height="650"
+        MinWidth="690" MinHeight="450"
         Width="980"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <controls:NovaDialogHeader Grid.Row="0" x:Name="Kopf"/>
+
         <TextBox x:Name="ContentBox"
+                 Grid.Row="1"
                  IsReadOnly="True"
                  TextWrapping="Wrap"
                  AcceptsReturn="True"
@@ -19,5 +30,14 @@
                  BorderBrush="{DynamicResource BorderBrush}"
                  BorderThickness="1"
                  Padding="8"/>
+
+        <!-- DynamicResource statt StaticResource: WindowOpenCloseSmokeTests instanziiert dieses
+             Fenster ohne laufende Application (siehe FloatingGridWindow, Aufgabe 4a) - eine
+             StaticResource-Aufloesung wuerde dort beim Laden werfen. -->
+        <Border Grid.Row="2" Style="{DynamicResource DialogButtonBar}" Margin="0,10,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Schliessen" Style="{DynamicResource SecondaryButton}" IsCancel="True"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

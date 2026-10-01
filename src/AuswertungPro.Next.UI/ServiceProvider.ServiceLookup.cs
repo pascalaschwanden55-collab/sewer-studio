@@ -14,6 +14,6 @@ public sealed partial class ServiceProvider
             return service;
 
         throw new InvalidOperationException(
-            $"Kein Dienst fuer den Typ '{serviceType.FullName}' registriert.");
+            $"Kein Dienst für den Typ '{serviceType.FullName}' registriert.");
     }
 }

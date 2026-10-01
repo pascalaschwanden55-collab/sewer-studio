@@ -44,7 +44,7 @@ def pick_frames():
 def ff(vf, src, dst, cuda=False):
     pre = ["-init_hw_device", "cuda=cu", "-filter_hw_device", "cu"] if cuda else []
     cmd = ["ffmpeg", "-y", "-loglevel", "error", *pre, "-i", src, "-vf", vf, dst]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=10 * 60)
     ok = r.returncode == 0 and os.path.exists(dst) and os.path.getsize(dst) > 0
     return ok, r.stderr.strip()
 

@@ -72,9 +72,9 @@ public partial class ClockPickerControl : UserControl
             var text = new TextBlock
             {
                 Text = hour.ToString(CultureInfo.InvariantCulture),
-                Foreground = Brushes.Black,
                 FontWeight = FontWeights.SemiBold
             };
+            text.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
 
             var button = new Button
             {
@@ -179,7 +179,7 @@ public partial class ClockPickerControl : UserControl
         {
             if (_selectedHour.HasValue && item.Hour == _selectedHour.Value)
             {
-                item.Button.BorderBrush = new SolidColorBrush(Color.FromRgb(255, 180, 0));
+                item.Button.SetResourceReference(Border.BorderBrushProperty, "WarningBrush");
                 item.Button.BorderThickness = new Thickness(1);
             }
             else

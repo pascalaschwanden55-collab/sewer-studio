@@ -10,6 +10,66 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class XtfImportTests
 {
     [Fact]
+    public void VsaKekImport_VerwendetUhrlagenWederAlsLaengeNochAlsMeterOderDedupePosition()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"vsakek-clock-{Guid.NewGuid():N}.xtf");
+        File.WriteAllText(tempPath, """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="VSA_KEK_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <VSA_KEK_2020_LV95.KEK BID="B1">
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="U1">
+        <Bezeichnung>UHRLAGE-TEST</Bezeichnung>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="S1">
+        <UntersuchungRef REF="U1" />
+        <KanalSchadencode>BAB</KanalSchadencode>
+        <Streckenschaden>true</Streckenschaden>
+        <SchadenlageAnfang>4</SchadenlageAnfang>
+        <SchadenlageEnde>8</SchadenlageEnde>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="S2">
+        <UntersuchungRef REF="U1" />
+        <KanalSchadencode>BCA</KanalSchadencode>
+        <SchadenlageAnfang>9</SchadenlageAnfang>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="S3">
+        <UntersuchungRef REF="U1" />
+        <KanalSchadencode>BCA</KanalSchadencode>
+        <SchadenlageAnfang>3</SchadenlageAnfang>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+    </VSA_KEK_2020_LV95.KEK>
+  </DATASECTION>
+</TRANSFER>
+""");
+
+        try
+        {
+            var project = new Project();
+            var stats = new LegacyXtfImportService().ImportXtfFiles([tempPath], project);
+            var debug = string.Join("\n", stats.Messages.Select(m => $"{m.Level}: {m.Message} ({m.Context})"));
+
+            Assert.True(stats.Errors == 0, debug);
+            var record = Assert.Single(project.Data);
+            var stretchFinding = Assert.Single(record.VsaFindings.Where(f => f.KanalSchadencode == "BAB"));
+            Assert.Equal(0, stretchFinding.LL);
+
+            var primaryDamage = record.GetFieldValue("Primaere_Schaeden");
+            Assert.DoesNotContain("4.00m", primaryDamage, StringComparison.Ordinal);
+            Assert.DoesNotContain("9.00m", primaryDamage, StringComparison.Ordinal);
+            Assert.DoesNotContain("3.00m", primaryDamage, StringComparison.Ordinal);
+            Assert.Equal(2, primaryDamage.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
+        }
+        finally
+        {
+            try { File.Delete(tempPath); } catch { }
+        }
+    }
+
+    [Fact]
     public void Import_ArchiviertAusserhalbDesProgrammordners_UndMigriertAltbestand()
     {
         var root = Path.Combine(Path.GetTempPath(), $"xtf-archive-{Guid.NewGuid():N}");
@@ -168,6 +228,114 @@ public sealed class XtfImportTests
             Assert.True(File.Exists(baa.FotoPath!), $"FotoPath sollte existieren (Eltern-Ebene): {baa.FotoPath}\n{debug}");
         }
         finally { try { Directory.Delete(dir, recursive: true); } catch { } }
+    }
+
+    // ── Herkunft fuer die spaetere revidierte XTF (Etappe 1) ────────────────
+    // Die Bindung an Datei, Modell und Element wird beim Import festgehalten. Nur damit
+    // laesst sich spaeter genau das urspruengliche Element wiederfinden, statt es ueber
+    // Code und Meter erraten zu muessen.
+
+    private const string KekHerkunftXtf = """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="VSA_KEK_2020_LV95" VERSION="03.05.2021" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <VSA_KEK_2020_LV95.KEK BID="B1">
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="ch100000004EB182">
+        <Bezeichnung>59220-10.1036545</Bezeichnung>
+        <vonPunktBezeichnung>10.1036545</vonPunktBezeichnung>
+        <bisPunktBezeichnung>59220</bisPunktBezeichnung>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="ch100000004EB1AB">
+        <UntersuchungRef REF="ch100000004EB182" />
+        <KanalSchadencode>BCD</KanalSchadencode>
+        <Distanz>0.00</Distanz>
+        <Videozaehlerstand>00:00:15:00</Videozaehlerstand>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+    </VSA_KEK_2020_LV95.KEK>
+  </DATASECTION>
+</TRANSFER>
+""";
+
+    [Fact]
+    public void VsaKekImport_haelt_Datei_Modell_und_Untersuchung_als_Anker_fest()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"vsakek-herkunft-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var xtf = Path.Combine(dir, "Buerglen_1225.xtf");
+        File.WriteAllText(xtf, KekHerkunftXtf);
+
+        try
+        {
+            var project = new Project();
+            new LegacyXtfImportService().ImportXtfFiles(new[] { xtf }, project);
+
+            var rec = Assert.Single(project.Data);
+            Assert.NotNull(rec.XtfHerkunft);
+            Assert.Equal("Buerglen_1225.xtf", rec.XtfHerkunft!.Datei);
+            Assert.Equal("VSA_KEK_2020_LV95", rec.XtfHerkunft.Modell);
+            Assert.Equal("ch100000004EB182", rec.XtfHerkunft.UntersuchungTid);
+        }
+        finally { try { Directory.Delete(dir, recursive: true); } catch { } }
+    }
+
+    [Fact]
+    public void VsaKekImport_haelt_die_Element_Kennungen_am_Befund_fest()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"vsakek-tid-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var xtf = Path.Combine(dir, "test.xtf");
+        File.WriteAllText(xtf, KekHerkunftXtf);
+
+        try
+        {
+            var project = new Project();
+            new LegacyXtfImportService().ImportXtfFiles(new[] { xtf }, project);
+
+            var finding = Assert.Single(Assert.Single(project.Data).VsaFindings);
+            Assert.Equal("BCD", finding.KanalSchadencode);
+            Assert.Equal("ch100000004EB1AB", finding.KanalschadenTid);
+            Assert.Equal("ch100000004EB182", finding.UntersuchungTid);
+        }
+        finally { try { Directory.Delete(dir, recursive: true); } catch { } }
+    }
+
+    // Beim Zusammenfuehren mit einem bereits vorhandenen Datensatz darf der Anker
+    // nicht verloren gehen — sonst waere er nach dem zweiten Import weg.
+    [Fact]
+    public void VsaKekImport_behaelt_den_Anker_beim_zweiten_Import()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"vsakek-merge-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var xtf = Path.Combine(dir, "zweitlauf.xtf");
+        File.WriteAllText(xtf, KekHerkunftXtf);
+
+        try
+        {
+            var project = new Project();
+            var service = new LegacyXtfImportService();
+            service.ImportXtfFiles(new[] { xtf }, project);
+            service.ImportXtfFiles(new[] { xtf }, project);
+
+            var rec = Assert.Single(project.Data);
+            Assert.NotNull(rec.XtfHerkunft);
+            Assert.Equal("zweitlauf.xtf", rec.XtfHerkunft!.Datei);
+            Assert.Equal("ch100000004EB182", rec.XtfHerkunft.UntersuchungTid);
+            Assert.Equal(
+                "ch100000004EB1AB",
+                Assert.Single(rec.VsaFindings).KanalschadenTid);
+        }
+        finally { try { Directory.Delete(dir, recursive: true); } catch { } }
+    }
+
+    [Fact]
+    public void Ein_neuer_Datensatz_ohne_XTF_Herkunft_erfindet_keinen_Anker()
+    {
+        Assert.Null(new HaltungRecord().XtfHerkunft);
+        Assert.Null(new VsaFinding().KanalschadenTid);
+        Assert.Null(new VsaFinding().UntersuchungTid);
     }
 
     [Fact]
@@ -509,16 +677,17 @@ public sealed class XtfImportTests
         }
     }
 
-    [Fact]
-    public void VsaKekImport_SetztVideoLink_AusUntersuchungsDatei()
+    [Theory]
+    [InlineData("wmv")]
+    [InlineData("mp2")]
+    public void VsaKekImport_SetztVideoLink_AusZentralBekanntemVideoformat(string extension)
     {
-        // VSA_KEK-XTF: KEK.Datei mit Klasse=Untersuchung, Objekt=Untersuchungs-TID, Bezeichnung=H_06-001.mpg, Relativpfad=Film.
-        // Erwartet: nach Import ist rec.GetFieldValue("Link") der aufgeloeste Videopfad (enthaelt H_06-001.mpg).
         var dir = Path.Combine(Path.GetTempPath(), $"vsakek-video-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(Path.Combine(dir, "Film"));
+        Directory.CreateDirectory(Path.Combine(dir, "Medien"));
         var xtf = Path.Combine(dir, "test.xtf");
-        File.WriteAllText(Path.Combine(dir, "Film", "H_06-001.mpg"), "dummy-video");
-        File.WriteAllText(xtf, """
+        var fileName = $"H_06-001.{extension}";
+        File.WriteAllText(Path.Combine(dir, "Medien", fileName), "dummy-video");
+        File.WriteAllText(xtf, $$"""
 <?xml version="1.0" encoding="UTF-8"?>
 <TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
   <HEADERSECTION SENDER="Test" VERSION="2.3">
@@ -534,8 +703,8 @@ public sealed class XtfImportTests
         <Art>Film</Art>
         <Klasse>Untersuchung</Klasse>
         <Objekt>U1</Objekt>
-        <Bezeichnung>H_06-001.mpg</Bezeichnung>
-        <Relativpfad>Film</Relativpfad>
+        <Bezeichnung>{{fileName}}</Bezeichnung>
+        <Relativpfad>Medien</Relativpfad>
       </VSA_KEK_2020_LV95.KEK.Datei>
     </VSA_KEK_2020_LV95.KEK>
   </DATASECTION>
@@ -556,7 +725,7 @@ public sealed class XtfImportTests
             var link = rec!.GetFieldValue("Link");
             Assert.False(string.IsNullOrWhiteSpace(link),
                 $"Link-Feld muss den Videopfad enthalten.\n{debug}");
-            Assert.Contains("H_06-001.mpg", link!, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(fileName, link!, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

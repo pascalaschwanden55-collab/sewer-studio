@@ -46,7 +46,7 @@ internal static class VsaYoloClassMapDocumentWriter
             catch (Exception restoreError)
             {
                 throw new IOException(
-                    "YOLO-Klassenkarte konnte nicht geschrieben und classes.txt nicht zurueckgesetzt werden.",
+                    "YOLO-Klassenkarte konnte nicht geschrieben und classes.txt nicht zurückgesetzt werden.",
                     new AggregateException(mapWriteError, restoreError));
             }
 

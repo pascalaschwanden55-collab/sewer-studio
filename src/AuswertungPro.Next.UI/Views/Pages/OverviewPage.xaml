@@ -1,4 +1,4 @@
-<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.OverviewPage"
+﻿<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.OverviewPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
@@ -23,18 +23,19 @@
         </Grid.RowDefinitions>
 
         <DockPanel Margin="0,0,0,14">
-            <StackPanel DockPanel.Dock="Left">
-                <TextBlock Text="Projektübersicht" Style="{StaticResource PageTitle}"/>
-                <TextBlock Text="{Binding ProjectStatus}" Margin="0,4,0,0" Style="{StaticResource Caption}"/>
-            </StackPanel>
+            <TextBlock DockPanel.Dock="Left"
+                       Text="Projektübersicht"
+                       Style="{StaticResource PageTitle}"
+                       VerticalAlignment="Center"/>
             <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <Button Command="{Binding ToggleProjectListCommand}"
                         Style="{StaticResource ToolbarButton}"
                         Width="34"
                         Padding="0"
                         Margin="0,0,6,0"
-                        ToolTip="Projektliste ein- oder ausklappen">
-                    <TextBlock Text="&#xE76B;" FontFamily="{DynamicResource FontIcon}" FontSize="14"/>
+                        ToolTip="Projektliste ein- oder ausklappen"
+                        AutomationProperties.Name="Projektliste ein- oder ausklappen">
+                    <ui:FluentIcon Glyph="&#xE76B;" FontSize="{DynamicResource TextL}"/>
                 </Button>
                 <Button Content="Neues Projekt"
                         Command="{Binding NewCommand}"
@@ -68,32 +69,32 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel>
                             <TextBlock Text="Projekte"
-                                       FontSize="15"
+                                       FontSize="{DynamicResource TextL}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
                             <TextBlock Text="Projektvorschauen"
                                        Margin="0,3,0,0"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource TextXS}"
                                        Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Border Grid.Column="1"
                                 MinWidth="34"
                                 Height="24"
                                 Background="{DynamicResource AccentSubtleBrush}"
-                                CornerRadius="6"
+                                CornerRadius="{DynamicResource RadiusM}"
                                 Padding="8,2"
                                 VerticalAlignment="Top">
                             <TextBlock Text="{Binding ProjectEntries.Count}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource TextXS}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource AccentBrush}"/>
                         </Border>
                     </Grid>
 
                     <Border Grid.Row="1"
-                            CornerRadius="6"
+                            CornerRadius="{DynamicResource RadiusM}"
                             BorderThickness="1"
                             BorderBrush="{DynamicResource BorderLightBrush}"
                             Background="{DynamicResource BgLightBrush}"
@@ -105,16 +106,15 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="28"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="&#xE721;"
-                                       FontFamily="{DynamicResource FontIcon}"
-                                       FontSize="12"
+                            <ui:FluentIcon Glyph="&#xE721;"
+                                       FontSize="{DynamicResource TextS}"
                                        Foreground="{DynamicResource MutedBrush}"
                                        VerticalAlignment="Center"
                                        HorizontalAlignment="Center"
                                        IsHitTestVisible="False"/>
                             <TextBlock Grid.Column="1"
                                        Text="Suchen"
-                                       FontSize="12"
+                                       FontSize="{DynamicResource TextS}"
                                        Foreground="{DynamicResource MutedBrush}"
                                        VerticalAlignment="Center"
                                        Margin="0"
@@ -124,7 +124,7 @@
                                      Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
                                      Background="Transparent"
                                      BorderThickness="0"
-                                     FontSize="12"
+                                     FontSize="{DynamicResource TextS}"
                                      Padding="0,6"
                                      Foreground="{DynamicResource TextBrush}"/>
                             <Button Grid.Column="2"
@@ -133,10 +133,10 @@
                                     Background="Transparent"
                                     BorderThickness="0"
                                     Padding="0"
-                                    ToolTip="Suche löschen">
-                                <TextBlock Text="&#xE711;"
-                                           FontFamily="{DynamicResource FontIcon}"
-                                           FontSize="10"
+                                    ToolTip="Suche löschen"
+                                    AutomationProperties.Name="Suche löschen">
+                                <ui:FluentIcon Glyph="&#xE711;"
+                                           FontSize="{DynamicResource TextXS}"
                                            Foreground="{DynamicResource MutedBrush}"/>
                             </Button>
                         </Grid>
@@ -160,7 +160,7 @@
                                             <!-- Projektkarte: Doppelklick oeffnet das Projekt — hier ist der
                                                  Lift beim Zeigen ein Versprechen, das eingeloest wird. -->
                                             <Border x:Name="ItemBorder"
-                                                    CornerRadius="6"
+                                                    CornerRadius="{DynamicResource RadiusM}"
                                                     BorderThickness="1"
                                                     BorderBrush="{DynamicResource BorderLightBrush}"
                                                     Background="{DynamicResource CardBrush}"
@@ -216,7 +216,7 @@
                                         </Grid.RowDefinitions>
 
                                         <TextBlock Text="{Binding Name}"
-                                                   FontSize="13"
+                                                   FontSize="{DynamicResource TextM}"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextBrush}"
                                                    TextTrimming="CharacterEllipsis"/>
@@ -229,10 +229,10 @@
                                             <Border HorizontalAlignment="Left"
                                                     MaxWidth="178"
                                                     Background="{DynamicResource AccentSubtleBrush}"
-                                                    CornerRadius="5"
+                                                    CornerRadius="{DynamicResource RadiusM}"
                                                     Padding="6,2">
                                                 <TextBlock Text="{Binding StatsText}"
-                                                           FontSize="10"
+                                                           FontSize="{DynamicResource TextXS}"
                                                            FontWeight="SemiBold"
                                                            Foreground="{DynamicResource AccentBrush}"
                                                            TextTrimming="CharacterEllipsis"/>
@@ -241,13 +241,13 @@
                                                        Text="{Binding ModifiedAtDisplay, Mode=OneWay}"
                                                        Margin="8,0,0,0"
                                                        VerticalAlignment="Center"
-                                                       FontSize="10"
+                                                       FontSize="{DynamicResource TextXS}"
                                                        Foreground="{DynamicResource MutedBrush}"/>
                                         </Grid>
 
                                         <TextBlock Grid.Row="2"
                                                    Text="{Binding FolderName, Mode=OneWay}"
-                                                   FontSize="10.5"
+                                                   FontSize="{DynamicResource TextXS}"
                                                    Foreground="{DynamicResource MutedBrush}"
                                                    Margin="0,5,0,0"
                                                    TextTrimming="CharacterEllipsis"/>
@@ -263,10 +263,10 @@
                                 Style="{StaticResource PrimaryButton}"
                                 Margin="0,0,8,0"
                                 Padding="0,6"/>
-                        <Button Content="Ausblenden"
+                        <Button Content="Entfernen"
                                 Command="{Binding DeleteSelectedCommand}"
                                 Margin="0,0,8,0"
-                                ToolTip="Projekt aus der Übersicht ausblenden - Daten bleiben erhalten"
+                                ToolTip="Projekt nur aus der Übersicht entfernen – Daten bleiben erhalten"
                                 Style="{StaticResource SecondaryButton}"
                                 Padding="0,6"/>
                     </UniformGrid>
@@ -284,7 +284,7 @@
                             <ctrl:PipeFlightControl Opacity="0.9"/>
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" TextBlock.TextAlignment="Center">
                             <TextBlock Text="Projekt wählen"
-                                       FontSize="18"
+                                       FontSize="{DynamicResource TextXL}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
                             <TextBlock Text="Projekt links wählen - oder Projektordner hierher ziehen."
@@ -298,11 +298,10 @@
                             Visibility="{Binding IsPreviewLoading, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
                             <TextBlock Text="Vorschau wird geladen..."
-                                       FontSize="18"
+                                       FontSize="{DynamicResource TextXL}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
-                            <ProgressBar IsIndeterminate="True"
-                                         Height="4"
+                            <ProgressBar Style="{StaticResource ProgressBarThin}" IsIndeterminate="True"
                                          Margin="0,12,0,0"
                                          Background="{DynamicResource BorderLightBrush}"
                                          Foreground="{DynamicResource AccentBrush}"/>
@@ -312,13 +311,12 @@
                     <Border Style="{StaticResource Card}"
                             Visibility="{Binding ShowDataEmptyState, Converter={StaticResource BoolToVis}}">
                         <StackPanel HorizontalAlignment="Center" TextBlock.TextAlignment="Center">
-                            <TextBlock Text="&#xE9D9;"
-                                       FontFamily="{DynamicResource FontIcon}"
-                                       FontSize="32"
+                            <ui:FluentIcon Glyph="&#xE9D9;"
+                                       FontSize="{DynamicResource IconHero}"
                                        Foreground="{DynamicResource MutedBrush}"
                                        Margin="0,0,0,8"/>
                             <TextBlock Text="Noch keine Daten"
-                                       FontSize="18"
+                                       FontSize="{DynamicResource TextXL}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}"/>
                             <TextBlock Text="{Binding DashboardProjectName}"
@@ -334,12 +332,12 @@
                         <DockPanel Margin="0,0,0,10" LastChildFill="False">
                             <StackPanel DockPanel.Dock="Left">
                                 <TextBlock Text="{Binding DashboardTitle}"
-                                           FontSize="20"
+                                           FontSize="{DynamicResource TextXL}"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"/>
                                 <TextBlock Text="{Binding DashboardProjectName}"
                                            Margin="0,3,0,0"
-                                           FontSize="12"
+                                           FontSize="{DynamicResource TextS}"
                                            Foreground="{DynamicResource MutedBrush}"
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
@@ -352,9 +350,8 @@
                                         Margin="0,0,6,0"
                                         ToolTip="Projektvorschau als PDF speichern">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE749;"
-                                                   FontFamily="{DynamicResource FontIcon}"
-                                                   FontSize="13"
+                                        <ui:FluentIcon Glyph="&#xE749;"
+                                                   FontSize="{DynamicResource TextM}"
                                                    Margin="0,0,6,0"/>
                                         <TextBlock Text="PDF"/>
                                     </StackPanel>
@@ -372,7 +369,7 @@
                                 Visibility="{Binding ShowPreviewMetadata, Converter={StaticResource BoolToVis}}">
                             <StackPanel>
                                 <TextBlock Text="Stammdaten"
-                                           FontSize="15"
+                                           FontSize="{DynamicResource TextL}"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"
                                            Margin="0,0,0,10"/>
@@ -390,11 +387,11 @@
                                                     <RowDefinition Height="Auto"/>
                                                 </Grid.RowDefinitions>
                                                 <TextBlock Text="{Binding Label}"
-                                                           FontSize="11"
+                                                           FontSize="{DynamicResource TextXS}"
                                                            Foreground="{DynamicResource MutedBrush}"/>
                                                 <TextBlock Grid.Row="1"
                                                            Text="{Binding Value}"
-                                                           FontSize="13"
+                                                           FontSize="{DynamicResource TextM}"
                                                            FontWeight="SemiBold"
                                                            Foreground="{DynamicResource TextBrush}"
                                                            TextTrimming="CharacterEllipsis"/>
@@ -411,7 +408,7 @@
                                 <StackPanel>
                                     <anim:AnimatedCounter Value="{Binding ActiveDashboard.HoldingCount, Mode=OneWay}"
                                                           StringFormat="N0"
-                                                          FontSize="24"
+                                                          FontSize="{DynamicResource TextTitle}"
                                                           FontWeight="Bold"
                                                           Foreground="{DynamicResource AccentBrush}"/>
                                     <TextBlock Text="Haltungen" Foreground="{DynamicResource MutedBrush}"/>
@@ -421,7 +418,7 @@
                                 <StackPanel>
                                     <anim:AnimatedCounter Value="{Binding ActiveDashboard.SchachtCount, Mode=OneWay}"
                                                           StringFormat="N0"
-                                                          FontSize="24"
+                                                          FontSize="{DynamicResource TextTitle}"
                                                           FontWeight="Bold"
                                                           Foreground="{DynamicResource TextBrush}"/>
                                     <TextBlock Text="Schächte" Foreground="{DynamicResource MutedBrush}"/>
@@ -431,7 +428,7 @@
                                 <StackPanel>
                                     <anim:AnimatedCounter Value="{Binding ActiveDashboard.TotalLengthMeters, Mode=OneWay}"
                                                           StringFormat="{}{0:N0} m"
-                                                          FontSize="24"
+                                                          FontSize="{DynamicResource TextTitle}"
                                                           FontWeight="Bold"
                                                           Foreground="{DynamicResource TextBrush}"/>
                                     <TextBlock Text="Gesamtlänge" Foreground="{DynamicResource MutedBrush}"/>
@@ -440,10 +437,10 @@
                             <Border Style="{StaticResource Card}" Margin="0,0,8,0" anim:HoverLift.IsEnabled="True">
                                 <StackPanel>
                                     <TextBlock Text="{Binding DashboardCostText}"
-                                               FontSize="24"
+                                               FontSize="{DynamicResource TextTitle}"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource TextBrush}"/>
-                                    <TextBlock Text="Sanierungskosten (CHF)" Foreground="{DynamicResource MutedBrush}"/>
+                                    <TextBlock Text="Sanierungskosten gesamt (CHF, ohne MWST)" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
                                 </StackPanel>
                             </Border>
                         </UniformGrid>
@@ -463,7 +460,7 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.ColumnSpan="2">
                                         <TextBlock Text="Zustand Haltungen"
-                                                   FontSize="15"
+                                                   FontSize="{DynamicResource TextL}"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextBrush}"/>
                                     </StackPanel>
@@ -489,16 +486,16 @@
                                                     </Grid.ColumnDefinitions>
                                                     <Border Width="10"
                                                             Height="10"
-                                                            CornerRadius="5"
+                                                            CornerRadius="{DynamicResource RadiusM}"
                                                             Background="{Binding Key, Converter={StaticResource ZustandsklasseBrush}}"
                                                             VerticalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="12" Foreground="{DynamicResource TextBrush}"/>
-                                                    <ProgressBar Grid.Column="2" Height="6" Maximum="100" Value="{Binding Percent}"
+                                                    <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/>
+                                                    <ProgressBar Grid.Column="2" Style="{StaticResource ProgressBarThin}" Maximum="100" Value="{Binding Percent}"
                                                                  BorderThickness="0" Background="{DynamicResource BorderBrush}"
                                                                  Foreground="{Binding Key, Converter={StaticResource ZustandsklasseBrush}}" VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="3"
                                                                Text="{Binding Count}"
-                                                               FontSize="12"
+                                                               FontSize="{DynamicResource TextS}"
                                                                Foreground="{DynamicResource MutedBrush}"
                                                                HorizontalAlignment="Right"/>
                                                 </Grid>
@@ -516,7 +513,7 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.ColumnSpan="2">
                                         <TextBlock Text="Zustand Schächte"
-                                                   FontSize="15"
+                                                   FontSize="{DynamicResource TextL}"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextBrush}"/>
                                     </StackPanel>
@@ -542,16 +539,16 @@
                                                     </Grid.ColumnDefinitions>
                                                     <Border Width="10"
                                                             Height="10"
-                                                            CornerRadius="5"
+                                                            CornerRadius="{DynamicResource RadiusM}"
                                                             Background="{Binding Key, Converter={StaticResource ZustandsklasseBrush}}"
                                                             VerticalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="12" Foreground="{DynamicResource TextBrush}"/>
-                                                    <ProgressBar Grid.Column="2" Height="6" Maximum="100" Value="{Binding Percent}"
+                                                    <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/>
+                                                    <ProgressBar Grid.Column="2" Style="{StaticResource ProgressBarThin}" Maximum="100" Value="{Binding Percent}"
                                                                  BorderThickness="0" Background="{DynamicResource BorderBrush}"
                                                                  Foreground="{Binding Key, Converter={StaticResource ZustandsklasseBrush}}" VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="3"
                                                                Text="{Binding Count}"
-                                                               FontSize="12"
+                                                               FontSize="{DynamicResource TextS}"
                                                                Foreground="{DynamicResource MutedBrush}"
                                                                HorizontalAlignment="Right"/>
                                                 </Grid>
@@ -572,7 +569,7 @@
                             <Border Grid.Column="0" Style="{StaticResource Card}">
                                 <StackPanel>
                                     <TextBlock Text="Häufigste Schäden"
-                                               FontSize="15"
+                                               FontSize="{DynamicResource TextL}"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextBrush}"
                                                Margin="0,0,0,8"/>
@@ -585,8 +582,8 @@
 
                             <Border Grid.Column="2" Style="{StaticResource Card}">
                                 <StackPanel>
-                                    <TextBlock Text="Haltungskosten nach DN"
-                                               FontSize="15"
+                                    <TextBlock Text="Haltungskosten nach DN (ohne MWST)"
+                                               FontSize="{DynamicResource TextL}"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextBrush}"
                                                Margin="0,0,0,8"/>
@@ -599,45 +596,111 @@
                             </Border>
                         </Grid>
 
-                        <UniformGrid Columns="4" Margin="0,0,-8,0">
-                            <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                        <UniformGrid Columns="3" Margin="0,0,-8,0">
+                            <!-- Zeile 1: Haltungen -->
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,8">
                                 <StackPanel>
-                                    <TextBlock FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextBrush}">
-                                        <Run Text="{Binding ActiveDashboard.SanierenHaltungen}"/>
+                                    <TextBlock FontSize="{DynamicResource TextTitle}" FontWeight="Bold" Foreground="{DynamicResource TextBrush}">
+                                        <Run Text="{Binding ActiveDashboard.SanierenHaltungen, Mode=OneWay}"/>
                                         <Run Text=" / "/>
-                                        <Run Text="{Binding ActiveDashboard.HaltungenGesamt}"/>
+                                        <Run Text="{Binding ActiveDashboard.HaltungenGesamt, Mode=OneWay}"/>
                                     </TextBlock>
                                     <TextBlock Text="Haltungen sanieren" Foreground="{DynamicResource MutedBrush}"/>
                                 </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,8">
                                 <StackPanel>
-                                    <TextBlock Text="{Binding ActiveDashboard.SchaechteMitMassnahmen}"
-                                               FontSize="22"
+                                    <TextBlock Text="{Binding ActiveDashboard.HaltungSanierungsKostenText}"
+                                               FontSize="{DynamicResource TextTitle}"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource TextBrush}"/>
-                                    <TextBlock Text="Schächte mit Massnahmen" Foreground="{DynamicResource MutedBrush}"/>
+                                    <TextBlock Text="Kosten Haltungssanierung (CHF, ohne MWST)" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
                                 </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,8">
                                 <StackPanel>
                                     <TextBlock Text="{Binding ActiveDashboard.DringendCount}"
-                                               FontSize="22"
+                                               FontSize="{DynamicResource TextTitle}"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource DangerBrush}"/>
                                     <TextBlock Text="Dringend (Z0/Z1)" Foreground="{DynamicResource MutedBrush}"/>
                                 </StackPanel>
                             </Border>
+
+                            <!-- Zeile 2: Schächte -->
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock FontSize="{DynamicResource TextTitle}" FontWeight="Bold" Foreground="{DynamicResource TextBrush}">
+                                        <Run Text="{Binding ActiveDashboard.SchaechteSanierenJa, Mode=OneWay}"/>
+                                        <Run Text=" / "/>
+                                        <Run Text="{Binding ActiveDashboard.SchaechteGesamt, Mode=OneWay}"/>
+                                    </TextBlock>
+                                    <TextBlock Text="Schächte sanieren" Foreground="{DynamicResource MutedBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding ActiveDashboard.SchachtSanierungsKostenText}"
+                                               FontSize="{DynamicResource TextTitle}"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock Text="Kosten Schachtsanierung (CHF, ohne MWST)" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"/>
+                                </StackPanel>
+                            </Border>
                             <Border Style="{StaticResource Card}" Margin="0,0,8,0">
                                 <StackPanel>
                                     <TextBlock Text="{Binding ActiveDashboard.OhneZustandCount}"
-                                               FontSize="22"
+                                               FontSize="{DynamicResource TextTitle}"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource MutedBrush}"/>
                                     <TextBlock Text="Zustand unbekannt (ZU)" Foreground="{DynamicResource MutedBrush}"/>
                                 </StackPanel>
                             </Border>
                         </UniformGrid>
+
+                        <!-- Mengen der Sanierungsverfahren (nur Haltungen) -->
+                        <Border Style="{StaticResource Card}"
+                                Margin="0,12,0,0"
+                                Visibility="{Binding ActiveDashboard.HasVerfahren, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <TextBlock Text="Sanierungsverfahren"
+                                           FontSize="{DynamicResource TextL}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}"
+                                           Margin="0,0,0,8"/>
+                                <ItemsControl ItemsSource="{Binding ActiveDashboard.Sanierungsverfahren}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,0,0,6">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{Binding Label}"
+                                                           Foreground="{DynamicResource TextBrush}"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding QtyText}"
+                                                           MinWidth="90"
+                                                           TextAlignment="Right"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextBrush}"/>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding NetText}"
+                                                           MinWidth="90"
+                                                           TextAlignment="Right"
+                                                           Foreground="{DynamicResource MutedBrush}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Text="Mengen aus den ausgewählten Kostenzeilen der Haltungen (CHF ohne MWST)."
+                                           FontSize="{DynamicResource TextXS}"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>

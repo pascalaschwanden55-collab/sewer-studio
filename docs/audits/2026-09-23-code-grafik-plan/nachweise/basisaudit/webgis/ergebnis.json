@@ -1,0 +1,57 @@
+﻿[
+  {
+    "name": "Fremdaenderung_im_letzten_Client_Lesen",
+    "safetyHolds": false,
+    "evidence": {
+      "Reads": 4,
+      "Saves": 1,
+      "StatusBeforeSave": "5",
+      "StatusAfterSave": "1",
+      "Geschrieben": true,
+      "SchreibFehler": null
+    }
+  },
+  {
+    "name": "Massnahme_trotz_Konfliktsperre_des_Elternobjekts",
+    "safetyHolds": false,
+    "evidence": {
+      "Writes": 0,
+      "Measures": 1,
+      "ParentError": "Objekt wurde im WebGIS seit der Pr\u00FCfung ge\u00E4ndert (Feld aenderun) \u2014 nicht geschrieben, bitte neu pr\u00FCfen.",
+      "MeasureWritten": true
+    }
+  },
+  {
+    "name": "Dublette_nach_Vorschau_uebernimmt_trotzdem_Werte",
+    "safetyHolds": false,
+    "evidence": {
+      "Uebernommen": 1,
+      "Gestoppt": 0,
+      "FirstId": null,
+      "FirstStatus": "Ausser Betrieb",
+      "SecondId": "G1",
+      "Sperren": []
+    }
+  },
+  {
+    "name": "Kanalfirmen_Material_nicht_vorgeschlagen",
+    "safetyHolds": false,
+    "evidence": {
+      "VendorCatalogReads": 0,
+      "VendorSuggestions": 0,
+      "VendorWarnings": [],
+      "ManualCatalogReads": 1,
+      "ManualChanges": 2
+    }
+  },
+  {
+    "name": "Bestaetigtes_Schreiben_bei_Sitzungsfehler_falsch_gemeldet",
+    "safetyHolds": false,
+    "evidence": {
+      "ServerConfirmedWrites": 1,
+      "SessionException": true,
+      "Geschrieben": false,
+      "SchreibFehler": "WebGIS-Sitzung abgelaufen \u2014 nicht geschrieben (Nachkontrolle: Sitzung abgelaufen)."
+    }
+  }
+]

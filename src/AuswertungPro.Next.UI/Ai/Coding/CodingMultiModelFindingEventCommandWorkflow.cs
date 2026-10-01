@@ -1,6 +1,7 @@
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 
@@ -26,8 +27,21 @@ public sealed record CodingMultiModelFindingEventCommandRequest(
     bool MeterFromOsd,
     PipeCalibration? Calibration,
     IVsaCodeSelectionCatalog? CodeSelectionCatalog,
-    TimeSpan? CurrentVideoTime,
-    TimeSpan FallbackVideoTime);
+    TimeSpan? CurrentVideoTime = null,
+    TimeSpan FallbackVideoTime = default)
+{
+    public bool? SameFrameMeterEvidence { get; init; }
+}
+
+public sealed record CodingMultiModelAnalyzedFrameEventActions(
+    Func<double?, double?, double> ResolveMeterForFrame,
+    Func<IReadOnlyList<SegmentedFinding>, double, TimeSpan, IReadOnlyCollection<SegmentedFinding>> ApplyStretchTracking,
+    Func<LiveFrameFinding, double, string?> ResolveFindingCode,
+    Func<string, string?> LookupVsaLabel,
+    Action<ProtocolEntry, byte[]> AttachExactFramePhoto,
+    Action<string> Trace,
+    Action RefreshEvents,
+    Action UpdateToolBadge);
 
 public sealed record CodingMultiModelFindingEventCommandActions(
     Func<double?, double?, double> ResolveMeterForFrame,
@@ -42,6 +56,41 @@ public sealed record CodingMultiModelFindingEventCommandResult(
 
 public static class CodingMultiModelFindingEventCommandWorkflow
 {
+    /// <summary>Bindet Zeit, OSD und synchrone Fotoablage an denselben Analyseaufruf.</summary>
+    public static CodingMultiModelFindingEventCommandResult ExecuteAnalyzedFrame(
+        CodingMultiModelFindingEventCommandRequest request,
+        byte[] analyzedFrameBytes,
+        CodingMultiModelAnalyzedFrameEventActions actions)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(analyzedFrameBytes);
+        ArgumentNullException.ThrowIfNull(actions);
+        var frame = new CodingAnalyzedFrameEvidence(analyzedFrameBytes,
+            TimeSpan.FromSeconds(request.CaptureTimestampSeconds),
+            actions.ResolveMeterForFrame(request.CaptureTimestampSeconds, request.FrameOsdMeter),
+            request.FrameOsdMeter is >= 0 and <= 500);
+        return ExecuteAnalyzedFrame(request, frame, actions);
+    }
+
+    public static CodingMultiModelFindingEventCommandResult ExecuteAnalyzedFrame(
+        CodingMultiModelFindingEventCommandRequest request, CodingAnalyzedFrameEvidence frame,
+        CodingMultiModelAnalyzedFrameEventActions actions)
+    {
+        return Execute(request with
+        {
+            CurrentVideoTime = frame.CaptureTime,
+            MeterFromOsd = frame.MeterFromOsd,
+            SameFrameMeterEvidence = frame.HasSameFrameOsd
+        }, new CodingMultiModelFindingEventCommandActions(
+            (_, _) => frame.Meter,
+            actions.ApplyStretchTracking,
+            findingRequest => CodingMultiModelFindingEventWorkflow.Execute(findingRequest,
+                new CodingMultiModelFindingEventWorkflowActions(actions.ResolveFindingCode,
+                    actions.LookupVsaLabel,
+                    entry => actions.AttachExactFramePhoto(entry, frame.ImageBytes),
+                    actions.Trace, actions.RefreshEvents, actions.UpdateToolBadge))));
+    }
+
     public static CodingMultiModelFindingEventCommandResult Execute(
         CodingMultiModelFindingEventCommandRequest request,
         CodingMultiModelFindingEventCommandActions actions)
@@ -59,6 +108,7 @@ public static class CodingMultiModelFindingEventCommandWorkflow
             request.CaptureTimestampSeconds,
             request.FrameOsdMeter);
         var videoTime = request.CurrentVideoTime ?? request.FallbackVideoTime;
+        var existingIds = request.CodingSessionService.Events.Select(e => e.EventId).ToHashSet();
         var stretchConsumed = actions.ApplyStretchTracking(
             request.Segmented,
             meter,
@@ -78,7 +128,9 @@ public static class CodingMultiModelFindingEventCommandWorkflow
                 request.QualityGate,
                 request.MeterFromOsd,
                 request.Calibration,
-                request.CodeSelectionCatalog));
+                request.CodeSelectionCatalog,
+                request.CodingSessionService.Events.Where(e => !existingIds.Contains(e.EventId))
+                    .Select(e => e.EventId).ToHashSet()) { SameFrameMeterEvidence = request.SameFrameMeterEvidence });
 
         return Result(CodingMultiModelFindingEventCommandOutcome.Executed, eventResult, meter, videoTime);
     }

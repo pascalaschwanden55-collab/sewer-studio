@@ -9,7 +9,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
-public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationService
+public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationService, IDisposable
 {
     private readonly AiRuntimeSettings _cfg;
     private readonly OllamaClient _client;
@@ -187,6 +187,8 @@ public sealed class AiSanierungOptimizationService : IAiSanierungOptimizationSer
             IsFallback         = isFallback
         };
     }
+
+    public void Dispose() => _client.Dispose();
 
     private string BuildSystemPrompt()
     {

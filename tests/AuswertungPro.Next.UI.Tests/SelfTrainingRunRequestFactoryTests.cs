@@ -106,7 +106,7 @@ public sealed class SelfTrainingRunRequestFactoryTests
         request.Ui.SetBusy(true);
         request.Ui.SetSelfTrainingRunning(true);
         request.Ui.SetLogText("");
-        request.Ui.SetStatusText("laeuft");
+        request.Ui.SetStatusText("läuft");
         request.Ui.Log("meldung");
         using (request.BeginActivity())
         {
@@ -128,7 +128,7 @@ public sealed class SelfTrainingRunRequestFactoryTests
         Assert.Contains("busy:True", calls);
         Assert.Contains("running:True", calls);
         Assert.Contains("log-text:", calls);
-        Assert.Contains("status:laeuft", calls);
+        Assert.Contains("status:läuft", calls);
         Assert.Contains("log:meldung", calls);
         Assert.Contains("activity-start", calls);
         Assert.Contains("activity-dispose", calls);

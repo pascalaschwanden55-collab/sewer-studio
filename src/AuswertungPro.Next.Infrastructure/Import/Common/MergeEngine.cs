@@ -20,7 +20,7 @@ public sealed class MergeResult
 /// - user-edited Werte werden niemals überschrieben
 /// - leere Zielwerte werden immer gesetzt
 /// - nicht user-edited "Manual" darf von Importen überschrieben werden
-/// - Import-Priorität: Xtf/Xtf405 > Ili > Pdf > Legacy > Unknown
+/// - Import-Priorität: Kataster > Xtf/Xtf405 > Ili > Pdf > Legacy > Protocol > Unknown
 /// </summary>
 public static class MergeEngine
 {
@@ -157,13 +157,18 @@ public static class MergeEngine
             target.SetFieldValue(field, value, source, userEdited: false);
     }
 
+    // Kataster (GeoShop, QGIS, WebGIS) steht UNTER jedem Import der Kanalfirma: deren Daten sind der
+    // Ist-Zustand (Entscheid Pascal 23.09.2026 abends, ersetzt «Katasterprioritaet» vom 14.09.2026).
     private static int GetPriority(FieldSource source) => source switch
     {
+        FieldSource.Kataster => 10,
         FieldSource.Xtf => 80,
         FieldSource.Xtf405 => 80,
         FieldSource.Ili => 70,
         FieldSource.Pdf => 60,
+        FieldSource.Spro => 60,
         FieldSource.Legacy => 50,
+        FieldSource.Protocol => 40,
         FieldSource.Unknown => 0,
         _ => 0
     };

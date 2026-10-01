@@ -1,10 +1,14 @@
 <Window x:Class="AuswertungPro.Next.UI.Views.ProtocolEntryEditorDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
-        Title="Protokolleintrag bearbeiten"
+        xmlns:nova="clr-namespace:AuswertungPro.Next.UI.Controls"
+        Title="SewerStudio — Protokolleintrag bearbeiten"
         Width="720"
         Height="560"
+        MinWidth="500" MinHeight="390"
         WindowStartupLocation="CenterOwner">
         <Window.Resources>
             <x:Array x:Key="ClockPositions" Type="{x:Type sys:String}"
@@ -35,6 +39,14 @@
 
         <Grid Margin="14">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <nova:NovaDialogHeader Grid.Row="0" Title="Protokolleintrag bearbeiten"/>
+
+        <Grid Grid.Row="1">
+        <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -60,7 +72,7 @@
             <!-- Klartext des eingegebenen Codes, aktualisiert live beim Tippen/Auswaehlen -->
             <TextBlock Text="{Binding ElementName=CodeTextBox, Path=Text, Converter={StaticResource VsaCodeToLabel}}"
                        Foreground="{DynamicResource MutedBrush}"
-                       FontSize="11"
+                       FontSize="{DynamicResource TextXS}"
                        Margin="2,3,0,0"
                        TextWrapping="Wrap" />
         </StackPanel>
@@ -79,7 +91,7 @@
                    Grid.Column="1"
                    Grid.ColumnSpan="2"
                    Margin="0,0,0,8"
-                   Foreground="DarkCyan"
+                   Foreground="{DynamicResource AccentTextBrush}"
                    TextWrapping="Wrap" />
 
         <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="MeterStart" />
@@ -125,7 +137,8 @@
                                       Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                       IsEditable="True">
                                 <ComboBox.Style>
-                                    <Style TargetType="ComboBox">
+                                    <Style TargetType="ComboBox"
+                                           BasedOn="{StaticResource {x:Type ComboBox}}">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding HasAllowedValues}" Value="True">
@@ -143,7 +156,8 @@
                             <TextBox Grid.Column="1"
                                      Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}">
                                 <TextBox.Style>
-                                    <Style TargetType="TextBox">
+                                    <Style TargetType="TextBox"
+                                           BasedOn="{StaticResource {x:Type TextBox}}">
                                         <Setter Property="Visibility" Value="Visible"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding HasAllowedValues}" Value="True">
@@ -162,7 +176,7 @@
                                        Text="{Binding UnitSuffix}"
                                        Margin="8,0,0,0"
                                        VerticalAlignment="Center"
-                                       Foreground="{StaticResource MutedBrush}" />
+                                       Foreground="{DynamicResource MutedBrush}" />
                         </Grid>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -295,10 +309,13 @@
 
         <StackPanel Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Vertical" Margin="0,10,0,0">
             <TextBlock x:Name="ValidationStatus" Margin="0,0,0,8" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" />
+            <Border Style="{StaticResource DialogButtonBar}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="OkButton" Content="Übernehmen" Width="120" Margin="0,0,8,0" />
-                <Button x:Name="CancelButton" Content="Abbrechen" Width="120" IsCancel="True" />
+                <Button x:Name="CancelButton" Content="Abbrechen" Width="120" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" IsCancel="True" />
+                <Button x:Name="OkButton" Content="Übernehmen" Width="120" Style="{StaticResource PrimaryButton}" IsDefault="True" />
             </StackPanel>
+            </Border>
         </StackPanel>
+        </Grid>
     </Grid>
 </Window>

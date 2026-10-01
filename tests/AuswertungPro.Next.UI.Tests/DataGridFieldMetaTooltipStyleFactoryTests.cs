@@ -39,6 +39,37 @@ public sealed class DataGridFieldMetaTooltipStyleFactoryTests
         });
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (F4, Entscheid): Eine gekuerzte Zelle zeigt den Volltext OBEN und die
+    /// gewohnte Herkunftszeile DARUNTER — das eine ersetzt das andere nicht.
+    /// </summary>
+    [Fact]
+    public void Mit_Volltext_steht_der_Volltext_ueber_der_Herkunftszeile()
+    {
+        RunOnSta(() =>
+        {
+            var style = DataGridFieldMetaTooltipStyleFactory.Create(
+                "Empfohlene_Sanierungsmassnahmen", baseStyle: null, mitVolltext: true);
+
+            var setter = style.Setters
+                .OfType<Setter>()
+                .Single(x => x.Property == FrameworkElement.ToolTipProperty);
+
+            var inhalt = Assert.IsType<StackPanel>(setter.Value);
+            Assert.Equal(2, inhalt.Children.Count);
+
+            var volltext = Assert.IsType<TextBlock>(inhalt.Children[0]);
+            var volltextBindung = Assert.IsType<Binding>(
+                BindingOperations.GetBindingBase(volltext, TextBlock.TextProperty));
+            Assert.Equal("Fields[Empfohlene_Sanierungsmassnahmen]", volltextBindung.Path.Path);
+
+            var herkunft = Assert.IsType<TextBlock>(inhalt.Children[1]);
+            var herkunftBindung = Assert.IsType<MultiBinding>(
+                BindingOperations.GetBindingBase(herkunft, TextBlock.TextProperty));
+            Assert.Equal("Quelle: {0} | UserEdited: {1} | Konflikt: {2}", herkunftBindung.StringFormat);
+        });
+    }
+
     private static void RunOnSta(Action action)
     {
         Exception? exception = null;

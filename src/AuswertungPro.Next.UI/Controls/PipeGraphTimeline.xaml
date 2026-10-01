@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              MinHeight="68">
 
-    <Border Background="#1E293B" CornerRadius="10" Padding="12,8"
+    <Border Background="#1E293B" CornerRadius="{DynamicResource RadiusXL}" Padding="12,8"
             BorderBrush="#334155" BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
@@ -15,17 +15,17 @@
             <!-- Titel-Zeile -->
             <Grid Grid.Row="0" Margin="0,0,0,4">
                 <TextBlock Text="Pipe Graph Timeline"
-                           FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                           FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"/>
                 <TextBlock x:Name="TxtTotalLength"
                            HorizontalAlignment="Right"
-                           FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                           FontFamily="Consolas"/>
+                           FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
+                           FontFamily="{DynamicResource FontMono}"/>
             </Grid>
 
             <!-- Timeline-Balken mit Markern + Playhead -->
-            <Border Grid.Row="1" Background="#334155" CornerRadius="6"
+            <Border Grid.Row="1" Background="#334155" CornerRadius="{DynamicResource RadiusM}"
                     Height="36" x:Name="TimelineBar"
                     MouseLeftButtonDown="TimelineBar_MouseLeftButtonDown"
                     MouseMove="TimelineBar_MouseMove"
@@ -34,7 +34,7 @@
                 <Grid ClipToBounds="True">
                     <!-- Fortschritts-Fuellbalken -->
                     <Border x:Name="ProgressFill"
-                            Background="#333B82F6" CornerRadius="6"
+                            Background="#333B82F6" CornerRadius="{DynamicResource RadiusM}"
                             HorizontalAlignment="Left" Width="0"/>
 
                     <!-- Marker-Canvas (Defekt-Punkte) -->

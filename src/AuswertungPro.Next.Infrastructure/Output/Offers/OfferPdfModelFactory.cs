@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Models.Costs;
+using AuswertungPro.Next.Application.Costs;
 
 namespace AuswertungPro.Next.Infrastructure.Output.Offers;
 
@@ -75,6 +76,125 @@ public static class OfferPdfModelFactory
     }
 
     // ---------- Cost summary: multi-holding, owner filter + global positions ----------
+    /// <summary>
+    /// Baut die Detailliste: je Bauteilart eine Gruppe, darin je Bauteil eine Kopfzeile
+    /// mit seinen Massnahmen. Die Reihenfolge der Gruppen folgt dem ersten Auftreten,
+    /// damit Haltungen vor Schaechten stehen.
+    /// </summary>
+    private static List<OfferPdfDetailGroupModel> BuildDetailGroups(
+        IReadOnlyList<CostSummaryEntry> entries,
+        Func<decimal, string> money,
+        Func<decimal, string> qty)
+    {
+        var groups = new List<OfferPdfDetailGroupModel>();
+        var byLabel = new Dictionary<string, OfferPdfDetailGroupModel>(StringComparer.OrdinalIgnoreCase);
+        var subtotals = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var entry in entries)
+        {
+            var label = string.IsNullOrWhiteSpace(entry.GroupLabel) ? "" : entry.GroupLabel.Trim();
+            if (!byLabel.TryGetValue(label, out var group))
+            {
+                group = new OfferPdfDetailGroupModel { Title = label };
+                byLabel[label] = group;
+                subtotals[label] = 0m;
+                groups.Add(group);
+            }
+
+            var measures = new List<OfferPdfDetailMeasureModel>();
+            var entryNet = 0m;
+
+            foreach (var measure in entry.Cost.Measures)
+            {
+                var selected = measure.Lines.Where(l => l.Selected).ToList();
+                if (selected.Count == 0)
+                    continue;
+
+                var net = selected.Sum(l => l.Qty * l.UnitPrice);
+                entryNet += net;
+
+                // Frei eingegebene Massnahmen (kein Katalog-ItemKey, z.B. aus dem
+                // Schacht-Massnahmen-Dialog) tragen ihren Sinn im Zeilentext; ihr
+                // Sammelname ist immer derselbe und sagt nichts. Sie werden darum
+                // einzeln aufgeschluesselt. Katalogpositionen bleiben zusammengefasst,
+                // sonst waere die Detailliste wieder die volle Positionsliste.
+                if (selected.All(l => string.IsNullOrWhiteSpace(l.ItemKey)))
+                {
+                    foreach (var line in selected)
+                    {
+                        var lineName = (line.Text ?? "").Trim();
+                        if (lineName.Length == 0)
+                            lineName = "Ohne Bezeichnung";
+
+                        measures.Add(new OfferPdfDetailMeasureModel
+                        {
+                            Name = lineName,
+                            QtyText = BuildQtyText([line], qty),
+                            TotalText = money(line.Qty * line.UnitPrice)
+                        });
+                    }
+
+                    continue;
+                }
+
+                var name = string.IsNullOrWhiteSpace(measure.MeasureName)
+                    ? measure.MeasureId
+                    : measure.MeasureName;
+                if (string.IsNullOrWhiteSpace(name))
+                    name = "Unbekannte Massnahme";
+
+                measures.Add(new OfferPdfDetailMeasureModel
+                {
+                    Name = name.Trim(),
+                    QtyText = BuildQtyText(selected, qty),
+                    TotalText = money(net)
+                });
+            }
+
+            subtotals[label] += entryNet;
+            group.Entries.Add(new OfferPdfDetailEntryModel
+            {
+                Name = entry.Holding,
+                Owner = entry.Owner,
+                Street = entry.Street,
+                TotalText = money(entryNet),
+                Measures = measures
+            });
+        }
+
+        foreach (var group in groups)
+        {
+            group.EntryCountText = group.Entries.Count.ToString(CultureInfo.InvariantCulture);
+            group.SubtotalText = money(subtotals[group.Title]);
+        }
+
+        return groups;
+    }
+
+    /// <summary>
+    /// Menge einer Massnahme. Nur wenn alle gewaehlten Zeilen dieselbe Einheit tragen,
+    /// laesst sich sinnvoll addieren — sonst bleibt die Spalte leer statt eine
+    /// zusammengewuerfelte Zahl auszuweisen.
+    /// </summary>
+    private static string BuildQtyText(IReadOnlyList<CostLine> lines, Func<decimal, string> qty)
+    {
+        var units = lines
+            .Select(l => (l.Unit ?? "").Trim())
+            .Where(u => u.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (units.Count != 1)
+            return "";
+
+        var total = lines.Sum(l => l.Qty);
+        return $"{qty(total)} {units[0]}";
+    }
+
+    /// <summary>
+    /// Kompatibilitaetsweg fuer Aufrufer, die nur die beiden alten Schalter kennen.
+    /// Die Vollaufstellung bleibt hier eingeschaltet, damit sich fuer sie nichts aendert.
+    /// </summary>
     public static OfferPdfModel CreateCostSummary(
         IReadOnlyList<CostSummaryEntry> entries,
         OfferPdfContext ctx,
@@ -82,7 +202,32 @@ public static class OfferPdfModelFactory
         bool includeOwnerSummary = true,
         bool includePositionSummary = true,
         IReadOnlyList<OfferPdfHoldingDataLineModel>? holdingDataLines = null)
+        => CreateCostSummary(
+            entries,
+            ctx,
+            now,
+            CostSummaryPdfSections.Alles with
+            {
+                OwnerSummary = includeOwnerSummary,
+                PositionSummary = includePositionSummary,
+                DataOverview = holdingDataLines is { Count: > 0 }
+            },
+            holdingDataLines);
+
+    /// <param name="sections">
+    /// Welche Abschnitte in den Ausdruck gehoeren. Die Totale sind bewusst nicht
+    /// schaltbar und aendern sich durch kein Haekchen.
+    /// </param>
+    public static OfferPdfModel CreateCostSummary(
+        IReadOnlyList<CostSummaryEntry> entries,
+        OfferPdfContext ctx,
+        DateTimeOffset now,
+        CostSummaryPdfSections sections,
+        IReadOnlyList<OfferPdfHoldingDataLineModel>? holdingDataLines = null)
     {
+        ArgumentNullException.ThrowIfNull(sections);
+        var includeOwnerSummary = sections.OwnerSummary;
+        var includePositionSummary = sections.PositionSummary;
         var currency = string.IsNullOrWhiteSpace(ctx.Currency) ? "CHF" : ctx.Currency;
         string Money(decimal v) => ChfFormat.Money(v, currency);
         string Qty(decimal v) => v.ToString("0.###", Ch);
@@ -97,6 +242,8 @@ public static class OfferPdfModelFactory
                     Holding = (holding ?? "").Trim(),
                     Owner = (e.Owner ?? "").Trim(),
                     ExecutedBy = (e.ExecutedBy ?? "").Trim(),
+                    GroupLabel = (e.GroupLabel ?? "").Trim(),
+                    Street = (e.Street ?? "").Trim(),
                     Cost = e.Cost
                 };
             })
@@ -121,7 +268,10 @@ public static class OfferPdfModelFactory
             FilterSummaryText = ctx.FilterSummaryText ?? "",
 
             Totals = new OfferPdfTotalsModel(),
-            HoldingDataLines = holdingDataLines?.ToList() ?? new List<OfferPdfHoldingDataLineModel>(),
+            // Abgeschalteter Abschnitt: uebergebene Zeilen werden verworfen, nicht gerendert.
+            HoldingDataLines = sections.DataOverview
+                ? holdingDataLines?.ToList() ?? new List<OfferPdfHoldingDataLineModel>()
+                : new List<OfferPdfHoldingDataLineModel>(),
             TextBlocks = (ctx.TextBlocks is { Count: > 0 } ? ctx.TextBlocks : DefaultSummaryTextBlocks()).ToList(),
         };
 
@@ -136,6 +286,8 @@ public static class OfferPdfModelFactory
         var overallNet = 0m;
         var overallVat = 0m;
         var overallGross = 0m;
+        // Summe aller Positionszeilen - zum Abgleich gegen die gespeicherten Totale.
+        var detailNetSum = 0m;
 
         var measureBuckets = new Dictionary<string, MeasureSummaryBucket>(StringComparer.OrdinalIgnoreCase);
         var ownerBuckets = new Dictionary<string, OwnerSummaryBucket>(StringComparer.OrdinalIgnoreCase);
@@ -185,6 +337,7 @@ public static class OfferPdfModelFactory
                     measureName = "Unbekannte Massnahme";
 
                 var measureNet = selectedLines.Sum(l => l.Qty * l.UnitPrice);
+                detailNetSum += measureNet;
                 if (!measureBuckets.TryGetValue(measureName, out var measureBucket))
                 {
                     measureBucket = new MeasureSummaryBucket();
@@ -199,16 +352,22 @@ public static class OfferPdfModelFactory
                     var lineTotal = line.Qty * line.UnitPrice;
                     var missingPrice = IsMissingPrice(line);
 
-                    model.Lines.Add(new OfferPdfLineModel
+                    // Der groesste Abschnitt: nur befuellen, wenn er auch gedruckt wird.
+                    // Die Buckets unten laufen weiter — Totale und Zusammenfassungen
+                    // duerfen sich durch dieses Haekchen NICHT veraendern.
+                    if (sections.FullPositionList)
                     {
-                        GroupLabel = $"{holding} ({owner})",
-                        Text = line.Text ?? "",
-                        Note = measureName,
-                        QtyText = Qty(line.Qty),
-                        Unit = line.Unit ?? "",
-                        UnitPriceText = missingPrice ? MissingPriceText : Money(line.UnitPrice),
-                        TotalText = missingPrice ? MissingPriceText : Money(lineTotal),
-                    });
+                        model.Lines.Add(new OfferPdfLineModel
+                        {
+                            GroupLabel = $"{holding} ({owner})",
+                            Text = line.Text ?? "",
+                            Note = measureName,
+                            QtyText = Qty(line.Qty),
+                            Unit = line.Unit ?? "",
+                            UnitPriceText = missingPrice ? MissingPriceText : Money(line.UnitPrice),
+                            TotalText = missingPrice ? MissingPriceText : Money(lineTotal),
+                        });
+                    }
 
                     var group = string.IsNullOrWhiteSpace(line.Group) ? "Sonstiges" : line.Group.Trim();
                     var text = string.IsNullOrWhiteSpace(line.Text) ? (line.ItemKey ?? "") : line.Text.Trim();
@@ -254,8 +413,26 @@ public static class OfferPdfModelFactory
         model.Totals.NetText = Money(overallNet);
         model.Totals.VatText = $"MwSt. {vatRate:0.0}%: {Money(overallVat)}";
         model.Totals.GrossText = Money(overallGross);
+        model.Totals.EntryCount = list.Count;
 
-        foreach (var pair in measureBuckets.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
+        // Konsistenz-Waechter: Der Kopf nutzt die gespeicherten Totale, die
+        // Detailliste rechnet die Positionszeilen neu. Laufen beide auseinander
+        // (handeditierte costs.json, uebersprungenes 'Aktualisieren'), stand der
+        // Widerspruch bisher stumm auf demselben Blatt. Jetzt sagt es das PDF.
+        if (Math.Abs(overallNet - detailNetSum) > 0.05m)
+        {
+            model.TextBlocks.Insert(
+                0,
+                $"Achtung: Positionsdetails ({Money(detailNetSum)}) und gespeicherte Totale ({Money(overallNet)}) "
+                + "stimmen nicht überein. Im Druckcenter 'Aktualisieren' ausführen und neu exportieren.");
+        }
+
+        if (sections.DetailList)
+            model.DetailGroups.AddRange(BuildDetailGroups(list, Money, Qty));
+
+        foreach (var pair in measureBuckets
+                     .Where(_ => sections.MeasureSummary)
+                     .OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase))
         {
             model.MeasureSummaryLines.Add(new OfferPdfMeasureSummaryLineModel
             {
@@ -265,7 +442,7 @@ public static class OfferPdfModelFactory
             });
         }
 
-        foreach (var cfg in SpecialStatsClassifier.SpecialStatsConfigs)
+        foreach (var cfg in SpecialStatsClassifier.SpecialStatsConfigs.Where(_ => sections.SpecialStats))
         {
             specialStats.TryGetValue(cfg.Category, out var bucket);
             bucket ??= new SpecialStatsBucket { DefaultUnit = cfg.DefaultUnit };
@@ -298,7 +475,7 @@ public static class OfferPdfModelFactory
             }
         }
 
-        if (overallNet > 0m)
+        if (overallNet > 0m && sections.ExecutorStats)
         {
             foreach (var pair in executorBuckets
                          .Where(p => p.Value.Net > 0m)
@@ -359,7 +536,7 @@ public static class OfferPdfModelFactory
         if (dn.HasValue)
             parts.Add($"DN: {dn.Value} mm");
         if (lengthM.HasValue)
-            parts.Add($"Laenge: {lengthM.Value:0.00} m");
+            parts.Add($"Länge: {lengthM.Value:0.00} m");
         if (date.HasValue)
             parts.Add($"Inspektionsdatum: {date.Value:dd.MM.yyyy}");
         return string.Join("\n", parts);
@@ -376,7 +553,7 @@ public static class OfferPdfModelFactory
     private static List<string> DefaultTextBlocks() =>
     [
         "Grundlage: Auswertung / Datentransfer. Mengen (m/h/stk) werden manuell erfasst.",
-        "Gueltigkeit: 30 Tage. Ausfuehrung nach Terminabsprache.",
+        "Gültigkeit: 30 Tage. Ausführung nach Terminabsprache.",
         "Zahlungsbedingungen: 30 Tage netto."
     ];
 
@@ -384,7 +561,7 @@ public static class OfferPdfModelFactory
     [
         "Grundlage: gespeicherte Kosten/Massnahmen aus dem Projekt.",
         "Betrag je Position = Menge x Einzelpreis (Netto).",
-        "Diese Zusammenstellung dient als Kostenuebersicht, nicht als Offerte."
+        "Diese Zusammenstellung dient als Kostenübersicht, nicht als Offerte."
     ];
 
     private static (decimal Net, decimal Vat, decimal Gross) ResolveTotals(HoldingCost cost)

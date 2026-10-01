@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -35,19 +35,36 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
+    private readonly IToastService? _toasts;
     private readonly IProtocolPdfExporter _protocolPdfExporter;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
     private readonly IDossierPhotoAvailabilityService _dossierPhotoAvailability;
     private readonly IInspectionProtocolFileLocator _inspectionProtocolFiles;
+    private readonly IProtocolPdfLayoutSettings? _protocolPdfLayoutSettings;
+    // Gemeinsame Quelle fuer das Logo in Berichten (Optikanalyse 28.09.2026, Aufgabe 15).
+    private readonly IBerichtsMarke? _berichtsMarke;
     private readonly IPdfMergeService _pdfMerge;
     // Nur auf dem produktiven ServiceProvider-Weg gesetzt; die Alt-/Test-Konstruktoren
     // ohne ServiceProvider lassen ihn null (der PDF-Export wacht dann mit klarer Meldung).
     private readonly AuswertungPro.Next.Application.Output.IOfferPdfExportService? _pdfExport;
+    private readonly AuswertungPro.Next.Application.Output.INpkOfferPdfExportService? _npkPdfExport;
+    private readonly AuswertungPro.Next.Application.Output.IPdfPrintService? _pdfPrint;
     private readonly ISafeShellOpenService _shellOpen;
     private readonly INpkLeistungsverzeichnisExcelExporter _npkExcelExporter;
     private readonly IProjectCostStoreRepository _costRepo;
+    // Zweite Kostendatei: Die Schacht-Matrix speichert getrennt in schacht_costs.json.
+    private readonly IProjectCostStoreRepository _schachtCostRepo;
+    // Dritte Kostendatei: Der Massnahmen-Dialog der Schaechte-Seite schreibt hierhin.
+    private readonly IProjectCostStoreRepository _schachtEmpfehlungRepo;
+    private ProjectCostStore _schachtEmpfehlungStore = new();
     private readonly ICostCatalogStore _catalogStore;
     private readonly DispatcherTimer _refreshDebounceTimer;
+
+    /// <summary>Kostendatei der Schacht-Matrix — dieselbe Quelle wie im NPK-Kapitel 700.</summary>
+    internal const string SchachtCostFileName = "schacht_costs.json";
+
+    /// <summary>Kostendatei des Schacht-Massnahmen-Dialogs auf der Schaechte-Seite.</summary>
+    internal const string SchachtEmpfehlungFileName = "schacht_empfehlungen.json";
 
     private List<DruckcenterRowVm> _allRows = new();
     private ProjectCostStore _costStore = new();
@@ -85,12 +102,47 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private DruckcenterRowVm? _selectedRow;
 
+    /// <summary>
+    /// Umschalter Haltungen/Schaechte. Wechselt Datenquelle UND Kostendatei gemeinsam:
+    /// Haltungen lesen costs.json, Schaechte schacht_costs.json (Schacht-Matrix).
+    /// </summary>
+    [ObservableProperty] private DruckcenterRowKind _bereich = DruckcenterRowKind.Haltung;
+
+    /// <summary>Bauteilname fuer Spaltenkopf und Meldungen — folgt dem Bereich.</summary>
+    public string BauteilLabel
+        => Bereich == DruckcenterRowKind.Schacht ? "Schacht" : "Haltung";
+
+    public string BauteilLabelPlural
+        => Bereich == DruckcenterRowKind.Schacht ? "Schächte" : "Haltungen";
+
     [ObservableProperty] private bool _onlyWithCost;
     [ObservableProperty] private bool _onlyWithMeasures;
 
-    [ObservableProperty] private bool _includeDataSection = true;
+    // Abschnitte des Ausdrucks. Standard ist bewusst schlank: Der Ausdruck heisst
+    // "Kostenzusammenstellung" und war faktisch eine 25-seitige Volldokumentation.
+    // Grosse Abschnitte sind zuschaltbar, aber nicht mehr Standard.
+    [ObservableProperty] private bool _includeDataSection;
     [ObservableProperty] private bool _includeOwnerSummarySection = true;
-    [ObservableProperty] private bool _includePositionSummarySection = true;
+    [ObservableProperty] private bool _includeMeasureSummarySection = true;
+    [ObservableProperty] private bool _includeDetailListSection = true;
+    [ObservableProperty] private bool _includePositionSummarySection;
+    [ObservableProperty] private bool _includeSpecialStatsSection;
+    [ObservableProperty] private bool _includeExecutorStatsSection;
+    [ObservableProperty] private bool _includeFullPositionListSection;
+
+    /// <summary>Die angehakten Abschnitte als Auswahl fuer die PDF-Fabrik.</summary>
+    public CostSummaryPdfSections BuildPdfSections()
+        => new()
+        {
+            OwnerSummary = IncludeOwnerSummarySection,
+            MeasureSummary = IncludeMeasureSummarySection,
+            DetailList = IncludeDetailListSection,
+            DataOverview = IncludeDataSection,
+            SpecialStats = IncludeSpecialStatsSection,
+            ExecutorStats = IncludeExecutorStatsSection,
+            PositionSummary = IncludePositionSummarySection,
+            FullPositionList = IncludeFullPositionListSection
+        };
 
     [ObservableProperty] private int _totalRows;
     [ObservableProperty] private int _filteredRowsCount;
@@ -149,11 +201,30 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             shellOpen: services.ShellOpen,
             dossierPhotoAvailability: services.DossierPhotoAvailability,
             inspectionProtocolFiles: services.InspectionProtocolFiles,
-            npkExcelExporter: services.NpkExcelExport)
+            npkExcelExporter: services.NpkExcelExport,
+            schachtCostRepo: services.CostStores.CreateProjectCostStore(SchachtCostFileName),
+            schachtEmpfehlungRepo: services.CostStores.CreateProjectCostStore(SchachtEmpfehlungFileName))
     {
+        _protocolPdfLayoutSettings = services.ProtocolPdfLayoutSettings;
+        _berichtsMarke = services.BerichtsMarke;
         _pdfMerge = services.PdfMerge;
         _pdfExport = services.OfferPdfExport;
+        _npkPdfExport = services.NpkOfferPdfExport;
+        _pdfPrint = services.PdfPrint;
+        _toasts = services.Toasts;
     }
+
+    /// <summary>
+    /// Einzige Beruehrung der Kompatibilitaetsfassade in dieser Datei.
+    ///
+    /// Die Fassade ist per Waechter gedeckelt und darf nur schrumpfen. Vorher
+    /// stand ihr Name viermal hier: zweimal im Uebergangskonstruktor und zweimal
+    /// als Rueckfall fuer die neuen Schacht-Speicher. Der DI-Weg ueber den
+    /// ServiceProvider reicht diese Speicher laengst korrekt durch; die
+    /// Rueckfaelle greifen nur noch fuer die veralteten oeffentlichen
+    /// Konstruktoren (Gesamtaudit 2026-08-18, A-01).
+    /// </summary>
+    private static ICostStoreFactory UebergangsKostenfabrik => CostStoreCompatibility.Factory;
 
     [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
     public BuilderPageViewModel(
@@ -171,8 +242,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             dialogs,
             protocolPdfExporter,
             costFieldSync,
-            CostStoreCompatibility.Factory.CreateProjectCostStore(),
-            CostStoreCompatibility.Factory.CreateCostCatalogStore(),
+            UebergangsKostenfabrik.CreateProjectCostStore(),
+            UebergangsKostenfabrik.CreateCostCatalogStore(),
             SafeShellOpen.CompatibilityService,
             dossierPhotoAvailability,
             inspectionProtocolFiles,
@@ -218,7 +289,9 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         ISafeShellOpenService shellOpen,
         IDossierPhotoAvailabilityService? dossierPhotoAvailability = null,
         IInspectionProtocolFileLocator? inspectionProtocolFiles = null,
-        INpkLeistungsverzeichnisExcelExporter? npkExcelExporter = null)
+        INpkLeistungsverzeichnisExcelExporter? npkExcelExporter = null,
+        IProjectCostStoreRepository? schachtCostRepo = null,
+        IProjectCostStoreRepository? schachtEmpfehlungRepo = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -226,6 +299,10 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         _protocolPdfExporter = protocolPdfExporter ?? throw new ArgumentNullException(nameof(protocolPdfExporter));
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         _costRepo = costRepo ?? throw new ArgumentNullException(nameof(costRepo));
+        _schachtCostRepo = schachtCostRepo
+            ?? UebergangsKostenfabrik.CreateProjectCostStore(SchachtCostFileName);
+        _schachtEmpfehlungRepo = schachtEmpfehlungRepo
+            ?? UebergangsKostenfabrik.CreateProjectCostStore(SchachtEmpfehlungFileName);
         _catalogStore = catalogStore ?? throw new ArgumentNullException(nameof(catalogStore));
         _shellOpen = shellOpen ?? throw new ArgumentNullException(nameof(shellOpen));
         _dossierPhotoAvailability = dossierPhotoAvailability
@@ -253,26 +330,10 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ResetFilters()
     {
-        _suspendFilterRefresh = true;
-        try
-        {
-            SelectedOwnerFilter = AllFilterLabel;
-            SelectedExecutedByFilter = AllFilterLabel;
-            SelectedSanierenFilter = AllFilterLabel;
-            SelectedMaterialFilter = AllFilterLabel;
-            SelectedStatusFilter = AllFilterLabel;
-            SelectedYearFilter = AllFilterLabel;
-            SearchText = "";
-            OnlyWithCost = false;
-            OnlyWithMeasures = false;
-        }
-        finally
-        {
-            _suspendFilterRefresh = false;
-        }
-
+        ResetFilterSelections();
         ApplyFilters();
     }
+
     partial void OnSelectedOwnerFilterChanged(string value) => ApplyFiltersIfReady();
     partial void OnSelectedExecutedByFilterChanged(string value) => ApplyFiltersIfReady();
     partial void OnSelectedSanierenFilterChanged(string value) => ApplyFiltersIfReady();
@@ -404,22 +465,6 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         RefreshData();
     }
 
-    private void InitializeOptionCollections()
-    {
-        OwnerFilterOptions.Clear();
-        ExecutedByFilterOptions.Clear();
-        SanierenFilterOptions.Clear();
-        MaterialFilterOptions.Clear();
-        StatusFilterOptions.Clear();
-        YearFilterOptions.Clear();
-
-        OwnerFilterOptions.Add(AllFilterLabel);
-        ExecutedByFilterOptions.Add(AllFilterLabel);
-        SanierenFilterOptions.Add(AllFilterLabel);
-        MaterialFilterOptions.Add(AllFilterLabel);
-        StatusFilterOptions.Add(AllFilterLabel);
-        YearFilterOptions.Add(AllFilterLabel);
-    }
 
     private void RefreshData()
     {
@@ -427,13 +472,33 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         if (!string.Equals(_lastExportProjectPath, projectPath, StringComparison.OrdinalIgnoreCase))
             ClearLastExport();
 
-        _costStore = _costRepo.Load(projectPath, out var costLoadError);
+        // Der Bereich entscheidet ueber die Kostendatei: costs.json bzw. schacht_costs.json.
+        var costRepo = Bereich == DruckcenterRowKind.Schacht ? _schachtCostRepo : _costRepo;
+        _costStore = costRepo.Load(projectPath, out var costLoadError);
         ReportCostStoreLoadError(costLoadError);
+
+        // Zweite Schachtquelle: Massnahmen-Dialog. Ein Lesefehler darf die Liste nicht
+        // sperren, aber auch nicht still Kosten verschlucken — er wird sichtbar gemeldet.
+        if (Bereich == DruckcenterRowKind.Schacht)
+        {
+            _schachtEmpfehlungStore = _schachtEmpfehlungRepo.Load(projectPath, out var empfehlungError);
+            if (!string.IsNullOrWhiteSpace(empfehlungError))
+            {
+                LastResult = $"Schacht-Massnahmen konnten nicht geladen werden: {empfehlungError}";
+                _shell.SetStatus("Schacht-Massnahmen unlesbar — Kosten können fehlen.");
+            }
+        }
+        else
+        {
+            _schachtEmpfehlungStore = new ProjectCostStore();
+        }
 
         var catalog = _catalogStore.LoadMerged(projectPath, out var catalogLoadError);
         ReportCatalogLoadError(catalogLoadError);
         _vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
-        ReportTableCostParseError(FindTableCostParseError());
+        // Tabellenkosten gibt es nur an Haltungen; Schaechte rechnen ausschliesslich ueber die Matrix.
+        ReportTableCostParseError(
+            Bereich == DruckcenterRowKind.Schacht ? null : FindTableCostParseError());
 
         _suspendFilterRefresh = true;
         try
@@ -464,7 +529,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         }
 
         LastResult = $"Kostendaten konnten nicht geladen werden: {loadError}";
-        _shell.SetStatus("Kostendaten beschaedigt/unlesbar — Druckcenter-Exporte gesperrt.");
+        _shell.SetStatus("Kostendaten beschädigt/unlesbar — Druckcenter-Exporte gesperrt.");
 
         if (!string.Equals(_costStoreLoadError, loadError, StringComparison.Ordinal))
         {
@@ -472,7 +537,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
                 $"Kostendaten konnten nicht geladen werden:\n{loadError}\n\n" +
                 "Die Liste wird ohne Kosten angezeigt und Exporte sind gesperrt, damit keine " +
                 "plausibel aussehenden Berichte ohne Kostendaten entstehen.\n" +
-                "Bitte costs.json pruefen (costs\\costs.json bzw. .bak) und danach 'Aktualisieren'.",
+                "Bitte costs.json prüfen (costs\\costs.json bzw. .bak) und danach 'Aktualisieren'.",
                 "Druckcenter");
         }
 
@@ -492,14 +557,14 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         }
 
         LastResult = $"Kostenkatalog konnte nicht geladen werden: {loadError}";
-        _shell.SetStatus("Kostenkatalog beschaedigt/unlesbar — Druckcenter-Exporte gesperrt.");
+        _shell.SetStatus("Kostenkatalog beschädigt/unlesbar — Druckcenter-Exporte gesperrt.");
 
         if (!string.Equals(_catalogLoadError, loadError, StringComparison.Ordinal))
         {
             _dialogs.Error(
                 $"Der Kostenkatalog konnte nicht geladen werden:\n{loadError}\n\n" +
                 "Exporte und Neuberechnungen sind gesperrt, damit keine falschen " +
-                "MwSt-/NPK-Angaben entstehen. Bitte die Katalogdatei pruefen und danach 'Aktualisieren'.",
+                "MwSt-/NPK-Angaben entstehen. Bitte die Katalogdatei prüfen und danach 'Aktualisieren'.",
                 "Druckcenter");
         }
 
@@ -538,13 +603,13 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         }
 
         LastResult = parseError;
-        _shell.SetStatus("Tabellenkosten ungueltig - Druckcenter-Exporte gesperrt.");
+        _shell.SetStatus("Tabellenkosten ungültig - Druckcenter-Exporte gesperrt.");
 
         if (!string.Equals(_tableCostParseError, parseError, StringComparison.Ordinal))
         {
             _dialogs.Error(
                 $"{parseError}\n\n" +
-                "Nichtleere ungueltige Kosten werden nicht als CHF 0 behandelt. " +
+                "Nichtleere ungültige Kosten werden nicht als CHF 0 behandelt. " +
                 "Bitte die Kostenfelder korrigieren und danach 'Aktualisieren'.",
                 "Druckcenter");
         }
@@ -562,7 +627,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         {
             _dialogs.Error(
                 $"Export abgebrochen - die gespeicherten Kostendaten sind nicht lesbar:\n{_costStoreLoadError}\n\n" +
-                "Bitte costs.json pruefen (costs\\costs.json bzw. .bak) und danach 'Aktualisieren'.",
+                "Bitte costs.json prüfen (costs\\costs.json bzw. .bak) und danach 'Aktualisieren'.",
                 "Druckcenter");
             return false;
         }
@@ -571,7 +636,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         {
             _dialogs.Error(
                 $"Export abgebrochen - der Kostenkatalog ist nicht lesbar:\n{_catalogLoadError}\n\n" +
-                "Bitte cost_catalog.json bzw. die User-Overrides pruefen und danach 'Aktualisieren'.",
+                "Bitte cost_catalog.json bzw. die User-Overrides prüfen und danach 'Aktualisieren'.",
                 "Druckcenter");
             return false;
         }
@@ -672,97 +737,38 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
     private List<DruckcenterRowVm> BuildRows()
-        => BuilderPageRowBuilder.Build(
-            _shell.Project.Data,
-            _shell.Project.Metadata,
-            _costStore);
+        => Bereich == DruckcenterRowKind.Schacht
+            ? BuilderPageSchachtRowBuilder.Build(
+                _shell.Project.SchaechteData,
+                _shell.Project.Metadata,
+                _costStore,
+                _schachtEmpfehlungStore)
+            : BuilderPageRowBuilder.Build(
+                _shell.Project.Data,
+                _shell.Project.Metadata,
+                _costStore);
 
-    private void RebuildFilterOptions()
+    /// <summary>
+    /// Bereichswechsel: Kostendatei, Zeilen und Filteroptionen gehoeren zusammen und werden
+    /// gemeinsam neu aufgebaut. Ein alter Filterwert darf die neue Liste nicht leerfiltern.
+    /// </summary>
+    partial void OnBereichChanged(DruckcenterRowKind value)
     {
-        RebuildOptionCollection(
-            OwnerFilterOptions,
-            _allRows.Select(r => r.Owner).Where(v => v.Length > 0),
-            SelectedOwnerFilter,
-            value => SelectedOwnerFilter = value);
-
-        var executedByValues = _allRows
-            .Select(r => r.ExecutedBy)
-            .Where(v => v.Length > 0)
-            .Concat(DefaultExecutedByValues);
-
-        if (!string.IsNullOrWhiteSpace(SelectedExecutedByFilter) &&
-            !SelectedExecutedByFilter.Equals(AllFilterLabel, StringComparison.OrdinalIgnoreCase))
-        {
-            executedByValues = executedByValues.Concat(new[] { SelectedExecutedByFilter.Trim() });
-        }
-
-        RebuildOptionCollection(
-            ExecutedByFilterOptions,
-            executedByValues,
-            SelectedExecutedByFilter,
-            value => SelectedExecutedByFilter = value);
-
-        RebuildOptionCollection(
-            SanierenFilterOptions,
-            _allRows.Select(r => r.Sanieren).Where(v => v.Length > 0),
-            SelectedSanierenFilter,
-            value => SelectedSanierenFilter = value);
-
-        RebuildOptionCollection(
-            MaterialFilterOptions,
-            _allRows.Select(r => r.Material).Where(v => v.Length > 0),
-            SelectedMaterialFilter,
-            value => SelectedMaterialFilter = value);
-
-        RebuildOptionCollection(
-            StatusFilterOptions,
-            _allRows.Select(r => r.Status).Where(v => v.Length > 0),
-            SelectedStatusFilter,
-            value => SelectedStatusFilter = value);
-
-        RebuildOptionCollection(
-            YearFilterOptions,
-            _allRows.Select(r => r.Year).Where(v => v.Length > 0),
-            SelectedYearFilter,
-            value => SelectedYearFilter = value);
+        _ = value;
+        OnPropertyChanged(nameof(BauteilLabel));
+        OnPropertyChanged(nameof(BauteilLabelPlural));
+        ResetFilterSelections();
+        SelectedRow = null;
+        ClearLastExport();
+        RefreshData();
     }
 
-    private static void RebuildOptionCollection(
-        ObservableCollection<string> target,
-        IEnumerable<string> values,
-        string selected,
-        Action<string> setSelected)
-    {
-        var allValues = values
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
-            .ToList();
 
-        target.Clear();
-        target.Add(AllFilterLabel);
-        foreach (var value in allValues)
-            target.Add(value);
 
-        if (target.Contains(selected))
-            setSelected(selected);
-        else
-            setSelected(AllFilterLabel);
-    }
 
     private void ApplyFilters()
     {
-        var filtered = BuilderPageRowFilter.Apply(
-            _allRows,
-            new BuilderPageFilterCriteria(
-                SelectedOwnerFilter,
-                SelectedExecutedByFilter,
-                SelectedSanierenFilter,
-                SelectedMaterialFilter,
-                SelectedStatusFilter,
-                SelectedYearFilter,
-                SearchText,
-                OnlyWithCost,
-                OnlyWithMeasures));
+        var filtered = BuilderPageRowFilter.Apply(_allRows, CurrentFilterCriteria());
 
         Rows.Clear();
         foreach (var row in filtered)
@@ -799,7 +805,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         StatsLem = specialStats.Linerendmanschetten;
         var positionStats = specialStats.PositionStats;
         SpecialPositionStatsHint = positionStats.Count == 0
-            ? "Keine spezialrelevanten Positionen in den gewaehlten Massnahmen gefunden."
+            ? "Keine spezialrelevanten Positionen in den gewählten Massnahmen gefunden."
             : $"Einzelpositionen aus Massnahmen: {positionStats.Count}";
 
         SpecialPositionStats.Clear();
@@ -822,7 +828,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         var openCount = Math.Max(0, total - yesCount - noCount);
 
         RehabilitationShareChart.Clear();
-        RehabilitationShareChart.Add(new ChartBarVm("Sanierung noetig", yesCount, total));
+        RehabilitationShareChart.Add(new ChartBarVm("Sanierung nötig", yesCount, total));
         RehabilitationShareChart.Add(new ChartBarVm("Keine Sanierung", noCount, total));
         RehabilitationShareChart.Add(new ChartBarVm("Nicht bewertet", openCount, total));
 
@@ -851,7 +857,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         CostByExecutorHint = totalCost <= 0m
             ? "Keine Kosten in der aktuellen Filterauswahl."
-            : $"Kostenverteilung nach 'Ausgefuehrt durch' (Basis: {filtered.Count} gefilterte Haltungen).";
+            : $"Kostenverteilung nach 'Ausgeführt durch' (Basis: {filtered.Count} gefilterte Haltungen).";
     }
 
     private string BuildFilterSummaryText()

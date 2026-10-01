@@ -184,7 +184,7 @@ public sealed class WinCanFindingFactoryTests
     }
 
     [Fact]
-    public void BuildFindings_SchadenlageUebertragenAusMeterStart()
+    public void BuildFindings_Meterwerte_werden_nicht_als_Uhrlage_gespeichert()
     {
         var entries = new List<ProtocolEntry>
         {
@@ -193,8 +193,69 @@ public sealed class WinCanFindingFactoryTests
 
         var result = WinCanFindingFactory.BuildFindings(entries);
 
-        Assert.Equal(12.5, result[0].SchadenlageAnfang);
-        Assert.Equal(15.0, result[0].SchadenlageEnde);
+        Assert.Equal(12.5, result[0].MeterStart);
+        Assert.Equal(15.0, result[0].MeterEnd);
+        Assert.Null(result[0].SchadenlageAnfang);
+        Assert.Null(result[0].SchadenlageEnde);
+    }
+
+    [Fact]
+    public void BuildFindings_Uebertraegt_WinCan_Uhrlage_getrennt_vom_Meterwert()
+    {
+        var entries = new List<ProtocolEntry>
+        {
+            new()
+            {
+                Code = "BCAAA",
+                Beschreibung = "Anschluss mit Formstueck, offen, bei 9 Uhr",
+                MeterStart = 2.62136,
+                CodeMeta = new ProtocolEntryCodeMeta
+                {
+                    Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["ClockPos1"] = "9"
+                    }
+                }
+            }
+        };
+
+        var finding = Assert.Single(WinCanFindingFactory.BuildFindings(entries));
+
+        Assert.Equal(2.62136, finding.MeterStart);
+        Assert.Equal(9, finding.SchadenlageAnfang);
+        Assert.Null(finding.SchadenlageEnde);
+    }
+
+    [Fact]
+    public void BuildFindings_Rohrende_Bemerkung_erzeugt_keine_Anschluss_Uhrlage()
+    {
+        var entry = new ProtocolEntry
+        {
+            Code = "BCE",
+            Beschreibung = "Anschluss von 12 Uhr in Schmutzleitung",
+            MeterStart = 2.9
+        };
+
+        var finding = Assert.Single(WinCanFindingFactory.BuildFindings([entry]));
+
+        Assert.Null(finding.SchadenlageAnfang);
+        Assert.Null(finding.SchadenlageEnde);
+    }
+
+    [Fact]
+    public void BuildFindings_Anschlussbereich_aus_Text_uebernimmt_von_und_bis()
+    {
+        var entry = new ProtocolEntry
+        {
+            Code = "BCAAA",
+            Beschreibung = "Anschluss offen, von 4 Uhr bis 8 Uhr",
+            MeterStart = 2.9
+        };
+
+        var finding = Assert.Single(WinCanFindingFactory.BuildFindings([entry]));
+
+        Assert.Equal(4, finding.SchadenlageAnfang);
+        Assert.Equal(8, finding.SchadenlageEnde);
     }
 
     // ── Meter-Dedup ohne MeterStart (nur MeterEnd) ───────────────────────────

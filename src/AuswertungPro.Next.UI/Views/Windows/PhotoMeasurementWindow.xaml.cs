@@ -10,6 +10,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.UseCases.PhotoAnnotations;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.PhotoMeasurement;
@@ -72,11 +73,30 @@ public partial class PhotoMeasurementWindow : Window
     // Kamera-Hoehe in % (50 = mittig)
     private double CameraHeightPercent => SliderCamera.Value;
 
-    public PhotoMeasurementWindow(string photoPath, PipeCalibration? calibration,
-                                   OverlayToolService? overlayService = null)
+    public PhotoMeasurementWindow(
+        string photoPath,
+        PipeCalibration? calibration,
+        OverlayToolService? overlayService = null)
+        : this(
+            photoPath,
+            calibration,
+            overlayService,
+            photoAnnotationUseCase: null,
+            photoAnnotationContext: null)
+    {
+    }
+
+    public PhotoMeasurementWindow(
+        string photoPath,
+        PipeCalibration? calibration,
+        OverlayToolService? overlayService,
+        IPhotoAnnotationUseCase? photoAnnotationUseCase,
+        PhotoAnnotationCaptureContext? photoAnnotationContext)
     {
         InitializeComponent();
         _overlayExporter = new PhotoMeasurementOverlayExporter();
+        _photoAnnotationUseCase = photoAnnotationUseCase;
+        _photoAnnotationContext = photoAnnotationContext;
 
         _photoPath = photoPath;
         _calibration = calibration ?? new PipeCalibration
@@ -100,6 +120,8 @@ public partial class PhotoMeasurementWindow : Window
             btn.Checked += ToolButton_Checked;
             btn.Unchecked += ToolButton_Unchecked;
         }
+
+        Closed += (_, _) => CancelPhotoAnnotationWork();
     }
 
     // ═══════════════════════════════════════════════
@@ -195,6 +217,7 @@ public partial class PhotoMeasurementWindow : Window
             if (btn != sender) btn.IsChecked = false;
 
         // Zustand zuruecksetzen
+        ResetPhotoAnnotation();
         ClearOverlay();
         _clickPoints.Clear();
         _clickMarkers.Clear();
@@ -266,6 +289,7 @@ public partial class PhotoMeasurementWindow : Window
             BtnUndo.Visibility = Visibility.Collapsed;
             BtnDelete.Visibility = Visibility.Collapsed;
             OverlayCanvas.Cursor = Cursors.Arrow;
+            ResetPhotoAnnotation();
             ClearOverlay();
             UpdateStatus();
         }
@@ -310,6 +334,12 @@ public partial class PhotoMeasurementWindow : Window
             case PhotoTool.MarkRect:
             case PhotoTool.Ruler:
             case PhotoTool.Connection:
+                if (_activeTool == PhotoTool.MarkRect)
+                {
+                    // Eine neue Hand-Box entwertet die vorherige Maske sofort.
+                    ResetPhotoAnnotation();
+                    ClearByTag(TagOverlay);
+                }
                 _isDragging = true;
                 _dragStart = pos;
                 _dragStartNorm = norm;
@@ -522,28 +552,10 @@ public partial class PhotoMeasurementWindow : Window
 
         _currentGeometry = geometry;
 
-        // Overlay zeichnen
-        ClearByTag(TagOverlay);
-        double minX = geometry.Points[0].X, minY = geometry.Points[0].Y;
-        double maxX = geometry.Points[2].X, maxY = geometry.Points[2].Y;
-        var p1 = NormToCanvas(minX, minY);
-        var p2 = NormToCanvas(maxX, maxY);
-
-        var rect = new System.Windows.Shapes.Rectangle
-        {
-            Width = p2.X - p1.X,
-            Height = p2.Y - p1.Y,
-            Stroke = Brushes.LimeGreen,
-            StrokeThickness = 2,
-            Fill = new SolidColorBrush(Color.FromArgb(30, 0, 255, 0)),
-            Tag = TagOverlay
-        };
-        Canvas.SetLeft(rect, p1.X);
-        Canvas.SetTop(rect, p1.Y);
-        OverlayCanvas.Children.Add(rect);
-
+        RenderPhotoMarkRectangle(geometry);
         TxtMeasureInfo.Text = "Markiert";
         TxtStatus.Text = "Bereich markiert. OK = übernehmen.";
+        _ = SegmentPhotoMarkAsync(geometry);
     }
 
     // ═══════════════════════════════════════════════
@@ -593,6 +605,9 @@ public partial class PhotoMeasurementWindow : Window
 
     private void BtnOk_Click(object sender, RoutedEventArgs e)
     {
+        if (!CanCompletePhotoAnnotation())
+            return;
+
         Result = PhotoMeasurementCompletionWorkflow.Execute(
             new PhotoMeasurementCompletionRequest(_currentGeometry, _calibration),
             new PhotoMeasurementCompletionActions(
@@ -611,6 +626,7 @@ public partial class PhotoMeasurementWindow : Window
 
     private void BtnCancel_Click(object sender, RoutedEventArgs e)
     {
+        ResetPhotoAnnotation();
         DialogResult = false;
         Close();
     }
@@ -619,6 +635,7 @@ public partial class PhotoMeasurementWindow : Window
 
     private void BtnDelete_Click(object sender, RoutedEventArgs e)
     {
+        ResetPhotoAnnotation();
         ClearOverlay();
         _clickPoints.Clear();
         _clickMarkers.Clear();
@@ -686,6 +703,8 @@ public partial class PhotoMeasurementWindow : Window
         // Klick-Punkte (Deformation/Polygon) neu positionieren
         if (_clickPoints.Count > 0 && _activeTool is PhotoTool.Deformation or PhotoTool.CrossSection)
             RedrawClickPointOverlays();
+
+        RenderPhotoAnnotationAfterResize();
     }
 
     /// <summary>Zeichnet Klick-Punkt-Marker und -Linien nach Resize neu.</summary>

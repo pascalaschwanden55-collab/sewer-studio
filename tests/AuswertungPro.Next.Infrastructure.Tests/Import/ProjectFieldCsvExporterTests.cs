@@ -1,5 +1,6 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
@@ -88,6 +89,31 @@ public class ProjectFieldCsvExporterTests : IDisposable
         Assert.True(File.Exists(path));
     }
 
+    [JunctionFact]
+    public void ImportSummaryExporter_SchreibtNichtDurchVerknuepftenBerichtsordner()
+    {
+        var projectRoot = Path.Combine(_tmpDir, "Projekt");
+        var external = Path.Combine(_tmpDir, "Fremdziel");
+        var reportLink = Path.Combine(projectRoot, ProjectStructure.ImportReports);
+        Directory.CreateDirectory(projectRoot);
+        Directory.CreateDirectory(external);
+        JunctionTestSupport.CreateDirectoryLink(reportLink, external);
+
+        try
+        {
+            var exporter = new ImportSummaryExporter();
+
+            Assert.Throws<IOException>(() =>
+                exporter.Export(Path.Combine(projectRoot, "projekt.json"), new Project()));
+            Assert.Empty(Directory.EnumerateFiles(external));
+        }
+        finally
+        {
+            if (Directory.Exists(reportLink))
+                Directory.Delete(reportLink);
+        }
+    }
+
     [Fact]
     public void Escape_NormaleWerte_UnveraendertZurueck()
     {
@@ -116,5 +142,27 @@ public class ProjectFieldCsvExporterTests : IDisposable
         var result = ProjectFieldCsvExporter.Escape("Zeile1\nZeile2");
         Assert.StartsWith("\"", result);
         Assert.EndsWith("\"", result);
+    }
+
+    // Codeaudit 2026-08-17: Diese Escape-Kette (ProjectFieldCsvExporter ->
+    // ImportSummaryExporter) setzte nur Anfuehrungszeichen. Formelanfaenge
+    // blieben stehen, obwohl CsvCell sie zentral entschaerft und die
+    // Projektregel jeden halben Exportweg verbietet. Der Importbericht enthaelt
+    // Feldwerte aus Kundendaten - also fremden Text.
+    [Theory]
+    [InlineData("=1+1")]
+    [InlineData("+42")]
+    [InlineData("@SUM(A1)")]
+    public void Escape_EntschaerftFormelanfaenge(string eingabe)
+    {
+        var ergebnis = ProjectFieldCsvExporter.Escape(eingabe);
+
+        Assert.StartsWith("'", ergebnis.TrimStart('"'));
+    }
+
+    [Fact]
+    public void Escape_LaesstNegativeZahlZahlBleiben()
+    {
+        Assert.Equal("-12.5", ProjectFieldCsvExporter.Escape("-12.5"));
     }
 }

@@ -8,14 +8,32 @@
         ui:Fluent.Backdrop="Mica"
         WindowStartupLocation="CenterScreen"
         Closing="MainWindow_Closing">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
     <Window.InputBindings>
         <KeyBinding Key="F11" Command="{Binding ToggleFocusModeCommand}"/>
         <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}"/>
         <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenProjectCommand}"/>
         <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewProjectCommand}"/>
+        <KeyBinding Key="K" Modifiers="Control" Command="{Binding GlobaleSucheFokusCommand}"/>
+        <!-- Aufgabe 6 (Hilfe-Menue, F1, Tastenkuerzel, Handbuch): F1 oeffnet das Handbuch beim
+             Abschnitt der aktuell gewaehlten Seite; Strg+F1 die Tastenkuerzel-Uebersicht. Das
+             PlayerWindow ist ein eigenes Fenster mit eigenem F1-Overlay (PlayerShortcutOverlayController)
+             und dadurch nicht betroffen. -->
+        <KeyBinding Key="F1" Command="{Binding OpenHandbuchCommand}" CommandParameter="{Binding SelectedNavItem.Title}"/>
+        <KeyBinding Key="F1" Modifiers="Control" Command="{Binding OpenTastenkuerzelCommand}"/>
+        <!-- Optik Aufgabe 16: Rueckgaengig/Wiederholen der Haltungs-/Schachtdaten. Hat ein Textfeld den
+             Fokus, gilt dessen eigenes Rueckgaengig (der Befehl ist dann nicht ausfuehrbar). -->
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding RueckgaengigTasteCommand}"/>
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding WiederholenTasteCommand}"/>
+        <KeyBinding Key="Z" Modifiers="Control+Shift" Command="{Binding WiederholenTasteCommand}"/>
     </Window.InputBindings>
-    <Grid>
-    <DockPanel>
+    <Grid Background="{DynamicResource BgBrush}">
+    <!-- Eigene deckende Grundflaeche: Mica setzt Window.Background auf Transparent.
+         Das Leitungsnetz bleibt darueber sichtbar, die Fensterraender bleiben lesbar. -->
+    <ctrl:NetzHintergrund IsEngineEnabled="{Binding HintergrundEngine}"/>
+    <DockPanel Background="Transparent">
         <!-- Kopfzeile: Menue + Knopf "Projekt wechseln"; nur im Workspace sichtbar -->
         <DockPanel DockPanel.Dock="Top">
             <DockPanel.Style>
@@ -44,11 +62,140 @@
                     </ToolTip>
                 </Button.ToolTip>
             </Button>
-            <Menu>
+            <!-- Nova-Etappe 2: Aufgaben-Chip (Inventar 3.4) -->
+            <Button DockPanel.Dock="Right" Margin="0,2,8,2" Padding="12,4" MinHeight="0"
+                    Command="{Binding NaechsteAufgabePruefenCommand}"
+                    Style="{StaticResource ToolbarButton}"
+                    Background="{DynamicResource KiSubtleBrush}" BorderBrush="{DynamicResource KiSubtleBrush}"
+                    ToolTip="Nächste fachliche Aufgabe: Haltung öffnen und Video prüfen"
+                    AutomationProperties.Name="Nächste fachliche Aufgabe">
+                <Button.Visibility>
+                    <Binding Path="IsProjectReady" Converter="{StaticResource BoolToVis}"/>
+                </Button.Visibility>
+                <StackPanel Orientation="Horizontal">
+                    <ui:FluentIcon Glyph="&#xE768;" Foreground="{DynamicResource KiTextBrush}" Margin="0,0,6,0"/>
+                    <TextBlock Text="{Binding NaechsteAufgabeText}" FontSize="{DynamicResource TextS}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource KiTextBrush}"/>
+                </StackPanel>
+            </Button>
+            <!-- Nova-Etappe 2: globale Suche Strg+K (Inventar 8.5); nach dem Aufgaben-Chip
+                 deklariert, damit sie optisch naeher an der Brotkrume (links vom Chip) steht. -->
+            <!-- B1/B2: Feste Hoehe 30 wie die Werkzeugknoepfe, damit RadiusPill (15) eine echte
+                 Kapsel ergibt. Die Tastenmarke sitzt vertikal zentriert INNERHALB der Kapsel
+                 (Hoehe Auto statt volle Feldhoehe), und das leere Feld zeigt seinen Platzhalter. -->
+            <Grid DockPanel.Dock="Right" Margin="0,2,8,2" MinWidth="300" VerticalAlignment="Center">
+                <Border Height="30" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource InputBorderBrush}" BorderThickness="1"
+                        CornerRadius="{DynamicResource RadiusPill}" Padding="10,0">
+                    <DockPanel>
+                        <ui:FluentIcon DockPanel.Dock="Left" Glyph="&#xE721;" Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <Border DockPanel.Dock="Right" Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="{DynamicResource RadiusS}"
+                                Padding="6,1" Margin="6,0,0,0" Height="Auto" VerticalAlignment="Center">
+                            <TextBlock Text="Strg K" FontSize="{DynamicResource TextXS}" FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource MutedBrush}"/>
+                        </Border>
+                        <Grid>
+                            <TextBox x:Name="GlobaleSucheBox" BorderThickness="0" Background="Transparent" MinWidth="200"
+                                     MinHeight="0" Padding="0" VerticalContentAlignment="Center"
+                                     Text="{Binding GlobaleSuche.Text, UpdateSourceTrigger=PropertyChanged}"
+                                     KeyDown="GlobaleSucheBox_KeyDown"
+                                     ToolTip="Haltung, Schacht, Strasse oder Befehl suchen" AutomationProperties.Name="Haltung, Schacht, Strasse oder Befehl suchen"/>
+                            <!-- Aufgabe 14 (Befehle in der Strg+K-Suche): Platzhalter nennt jetzt auch Befehle. -->
+                            <TextBlock Text="Suchen oder Befehl eingeben…" IsHitTestVisible="False"
+                                       VerticalAlignment="Center" Margin="2,0,0,0"
+                                       FontSize="{DynamicResource TextS}" Foreground="{DynamicResource MutedBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=GlobaleSucheBox}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+                <Popup IsOpen="{Binding GlobaleSuche.ListeOffen, Mode=TwoWay}" StaysOpen="False" PlacementTarget="{Binding ElementName=GlobaleSucheBox}"
+                       Placement="Bottom" AllowsTransparency="True">
+                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="{DynamicResource RadiusM}" MinWidth="320" MaxHeight="320" Padding="4">
+                        <StackPanel>
+                            <!-- Fokus bleibt im Textfeld: Markierung laeuft ueber MarkiertIndex/Pfeiltasten,
+                                 nicht ueber SelectedItem (sonst wuerden Pfeiltasten die Liste nie erreichen). -->
+                            <!-- Aufgabe 14 (Befehle in der Strg+K-Suche): Befehle zeigen ein Symbol
+                                 (GlobaleSucheTreffer.Glyph), davor steht ein nicht auswaehlbarer
+                                 Gruppenkopf «Befehle» (Art=Gruppenkopf, von der ViewModel eingefuegt). -->
+                            <ListBox ItemsSource="{Binding GlobaleSuche.Treffer}" SelectedIndex="{Binding GlobaleSuche.MarkiertIndex, Mode=TwoWay}"
+                                     BorderThickness="0" Focusable="False"
+                                     PreviewMouseLeftButtonUp="GlobaleSucheTreffer_Click"
+                                     AutomationProperties.Name="Suchtreffer">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Art}" Value="Gruppenkopf">
+                                                <Setter Property="IsHitTestVisible" Value="False"/>
+                                                <Setter Property="Focusable" Value="False"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:FluentIcon Glyph="{Binding Glyph}" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource MutedBrush}">
+                                                <ui:FluentIcon.Style>
+                                                    <Style TargetType="ui:FluentIcon">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Art}" Value="Befehl">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ui:FluentIcon.Style>
+                                            </ui:FluentIcon>
+                                            <TextBlock Text="{Binding Text}" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Art}" Value="Gruppenkopf">
+                                                                <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
+                                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                                                <Setter Property="Margin" Value="0,4,0,2"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Text="{Binding GlobaleSuche.LeerText}" Margin="8,4" Foreground="{DynamicResource MutedBrush}"
+                                       FontSize="{DynamicResource TextS}"/>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+            </Grid>
+            <!-- Gemeinsame Kante mit der Seitenleiste, ohne versetzte Querlinie. -->
+            <Menu x:Name="ShellMenu" DockPanel.Dock="Left"
+                  Width="{Binding ActualWidth, ElementName=SidebarPanel}"
+                  Background="{DynamicResource NavPanelBrush}"
+                  BorderThickness="0,0,1,0" BorderBrush="{DynamicResource BorderBrush}">
                 <Menu.Style>
                     <Style TargetType="Menu" BasedOn="{StaticResource {x:Type Menu}}"/>
                 </Menu.Style>
-                <MenuItem Header="_Datei">
+                <Menu.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </Menu.ItemsPanel>
+                <MenuItem Header="_Datei" Padding="8,6">
                     <MenuItem Header="Neues Projekt" Command="{Binding NewProjectCommand}" InputGestureText="Strg+N"
                               ToolTip="Neues Projekt anlegen.">
                         <MenuItem.Icon>
@@ -56,7 +203,7 @@
                         </MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="Projekt öffnen..." Command="{Binding OpenProjectCommand}" InputGestureText="Strg+O"
-                              ToolTip="Bestehendes SewerStudio-Projekt auswaehlen und laden.">
+                              ToolTip="Bestehendes SewerStudio-Projekt auswählen und laden.">
                         <MenuItem.Icon>
                             <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
                         </MenuItem.Icon>
@@ -81,57 +228,106 @@
                         </MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
-                <MenuItem Header="_Werkzeuge">
+                <!-- Optik Aufgabe 16: Rueckgaengig/Wiederholen fuer Haltungs- und Schachtdaten. Der Text nennt
+                     den Schritt («Rückgängig: Material 10001-10002»); ausfuehrbar nur auf diesen zwei Seiten. -->
+                <MenuItem Header="_Bearbeiten" Padding="8,6">
+                    <MenuItem Header="{Binding RueckgaengigMenuText}" Command="{Binding RueckgaengigCommand}" InputGestureText="Strg+Z"
+                              ToolTip="Letzte Änderung an Haltungs- oder Schachtdaten der offenen Seite zurücknehmen.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE7A7;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{Binding WiederholenMenuText}" Command="{Binding WiederholenCommand}" InputGestureText="Strg+Y"
+                              ToolTip="Zuletzt zurückgenommene Änderung wieder anwenden.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE7A6;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+                <MenuItem Header="_Werkzeuge" Padding="8,6">
                     <MenuItem Header="Code-Katalog..." Click="OpenCodeCatalog_Click"
-                              ToolTip="VSA-Code-Katalog durchsuchen und pruefen.">
+                              ToolTip="VSA-Code-Katalog durchsuchen und prüfen.">
                         <MenuItem.Icon>
                             <ui:FluentIcon Glyph="&#xE8F1;" Foreground="{DynamicResource MutedBrush}"/>
                         </MenuItem.Icon>
                     </MenuItem>
+                    <MenuItem Header="Preis_katalog..." Command="{Binding OpenPriceCatalogCommand}"
+                              ToolTip="Preise und Einheiten für Sanierungsmassnahmen bearbeiten.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE8C7;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <!-- Optikanalyse 28.09.2026, Aufgabe 7: "Messvorlagen…" war unklar (was wird
+                         gemessen?) - das Fenster heisst "Massnahmen bearbeiten" und misst nichts. -->
+                    <MenuItem Header="Massnahmen_vorlagen..." Command="{Binding OpenTemplateEditorCommand}"
+                              ToolTip="Vorlagen für Sanierungsmassnahmen bearbeiten.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE8EF;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
                     <MenuItem Header="KI starten" Click="StartAi_Click"
-                              ToolTip="Lokale KI-Dienste fuer Analyse und Codierung starten.">
+                              ToolTip="Lokale KI-Dienste für Analyse und Codierung starten.">
                         <MenuItem.Icon>
                             <ui:FluentIcon Glyph="&#xE945;" Foreground="{DynamicResource AccentBrush}"/>
                         </MenuItem.Icon>
                     </MenuItem>
                     <Separator/>
                     <MenuItem Header="KI Videoanalyse – Training Center..." Click="OpenTrainingCenter_Click"
-                              ToolTip="Training Center fuer KI-Review und Selbsttraining oeffnen.">
+                              ToolTip="Training Center für KI-Review und Selbsttraining öffnen.">
                         <MenuItem.Icon>
                             <ui:FluentIcon Glyph="&#xEA80;" Foreground="{DynamicResource AccentBrush}"/>
                         </MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="KI Videoanalyse – Training Studio (Vorschau)..." Click="OpenTrainingStudio_Click"
-                              ToolTip="Neuer Pruefplatz (Etappe 1): Foto laden, Box ziehen, Maske, KI-Vorschlag, codieren.">
+                              ToolTip="Neuer Prüfplatz (Etappe 1): Foto laden, Box ziehen, Maske, KI-Vorschlag, codieren.">
                         <MenuItem.Icon>
                             <ui:FluentIcon Glyph="&#xE890;" Foreground="{DynamicResource AccentBrush}"/>
                         </MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="Karte..." Click="OpenKarte_Click"
-                              ToolTip="Kartenansicht in einem eigenen Fenster oeffnen.">
-                        <MenuItem.Icon>
-                            <ui:FluentIcon Glyph="&#xE707;" Foreground="{DynamicResource MutedBrush}"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
                 </MenuItem>
-                <MenuItem Header="_Ansicht">
+                <!-- Optikanalyse 28.09.2026, Aufgabe 8: "Klassische Übersicht" ist aus diesem Menü
+                     entfernt und steht jetzt in Einstellungen -> Allgemein -> Frühere Ansichten
+                     ("Klassische Projektübersicht verwenden"). ShellViewModel.KlassischeUebersicht
+                     bleibt als Testhilfe/kompatible Fassade auf AppSettings.ShowUebersichtNovaLayout
+                     bestehen; hier bindet nichts mehr daran. -->
+                <MenuItem Header="_Ansicht" Padding="8,6">
                     <MenuItem Header="Fokusmodus" InputGestureText="F11" IsCheckable="True" IsChecked="{Binding IsFocusMode, Mode=TwoWay}"
-                              ToolTip="Sidebar und Menue ausblenden, um mehr Arbeitsflaeche zu erhalten."/>
+                              ToolTip="Sidebar und Menü ausblenden, um mehr Arbeitsfläche zu erhalten."/>
                     <Separator/>
-                    <MenuItem Header="Karte abkoppeln" Click="OpenKarte_Click"
-                              ToolTip="Kartenansicht in einem eigenen Fenster oeffnen.">
-                        <MenuItem.Icon>
-                            <ui:FluentIcon Glyph="&#xE8A7;" Foreground="{DynamicResource MutedBrush}"/>
-                        </MenuItem.Icon>
-                    </MenuItem>
-                    <MenuItem Header="System-Monitor oeffnen" Click="OpenSystemMonitor_Click"
-                              ToolTip="System-Monitor in einem eigenen Fenster oeffnen.">
+                    <MenuItem Header="System-Monitor öffnen" Click="OpenSystemMonitor_Click"
+                              ToolTip="System-Monitor in einem eigenen Fenster öffnen.">
                         <MenuItem.Icon>
                             <ui:FluentIcon Glyph="&#xE9D9;" Foreground="{DynamicResource MutedBrush}"/>
                         </MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
+                <MenuItem Header="_Hilfe" Padding="8,6">
+                    <MenuItem Header="Handbuch" Command="{Binding OpenHandbuchCommand}"
+                              CommandParameter="{Binding SelectedNavItem.Title}" InputGestureText="F1"
+                              ToolTip="Kurze Anleitung zur aktuellen Seite und zum ganzen Programm.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE736;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Tastenkürzel" Command="{Binding OpenTastenkuerzelCommand}" InputGestureText="Strg+F1"
+                              ToolTip="Alle globalen Tastenkürzel und die Kürzel des Videoplayers.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE765;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="Über SewerStudio..." Command="{Binding ShowAboutCommand}"
+                              ToolTip="Programmversion, Systeminfo und Datenordner.">
+                        <MenuItem.Icon>
+                            <ui:FluentIcon Glyph="&#xE946;" Foreground="{DynamicResource MutedBrush}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
             </Menu>
+            <!-- Brotkrume: Projekt / Seite -->
+            <TextBlock DockPanel.Dock="Left" Text="{Binding Brotkrume}" Margin="12,0,8,0" VerticalAlignment="Center"
+                       FontSize="{DynamicResource TextM}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
+                       TextTrimming="CharacterEllipsis"/>
         </DockPanel>
         <!-- Statusleiste: links Status, rechts Projektname + Haltungszahl (bleibt auch in F11 sichtbar) -->
         <Border DockPanel.Dock="Bottom"
@@ -147,7 +343,7 @@
                             MinWidth="0"
                             Padding="8,3"
                             Margin="0,0,10,0"
-                            ToolTip="System-Monitor oeffnen">
+                            ToolTip="System-Monitor öffnen">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
                                 <Setter Property="Visibility" Value="Visible"/>
@@ -188,7 +384,7 @@
                                 </Ellipse.Style>
                             </Ellipse>
                             <TextBlock Text="{Binding AiIndicatorTitle}"
-                                       FontSize="10"
+                                       FontSize="{DynamicResource TextXS}"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        VerticalAlignment="Center"/>
@@ -196,41 +392,31 @@
                     </Button>
                     <TextBlock Text="{Binding Project.Name}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
+                               FontSize="{DynamicResource TextXS}" FontWeight="SemiBold" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" MaxWidth="260"/>
                     <Border Width="1"
                             Height="14"
                             Margin="10,0"
                             Background="{DynamicResource BorderBrush}"/>
-                    <TextBlock Text="&#xE8FD;"
-                               FontFamily="{DynamicResource FontIcon}"
-                               FontSize="12"
+                    <ui:FluentIcon Glyph="&#xE8FD;"
+                               FontSize="{DynamicResource TextS}"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,4,0"/>
                     <TextBlock Text="{Binding Project.Data.Count, StringFormat={}{0} Haltungen}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11"
+                               FontSize="{DynamicResource TextXS}"
                                VerticalAlignment="Center"/>
-                    <TextBlock Text="&#xE7F4;"
-                               FontFamily="{DynamicResource FontIcon}"
-                               FontSize="12"
+                    <ui:FluentIcon Glyph="&#xE7F4;"
+                               FontSize="{DynamicResource TextS}"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"
                                Margin="12,0,4,0"/>
-                    <TextBlock Text="{Binding Project.SchaechteData.Count, StringFormat={}{0} Schaechte}"
+                    <TextBlock Text="{Binding Project.SchaechteData.Count, StringFormat={}{0} Schächte}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11"
+                               FontSize="{DynamicResource TextXS}"
                                VerticalAlignment="Center"
                                Margin="0,0,4,0"/>
-                    <StackPanel Orientation="Horizontal" Visibility="Collapsed">
-                    <TextBlock Text="{Binding Project.Data.Count, StringFormat='  ·  {0} Haltungen'}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding Project.SchaechteData.Count, StringFormat='  ·  {0} Schächte'}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    </StackPanel>
                 </StackPanel>
                 <Grid VerticalAlignment="Center" ClipToBounds="True">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -244,15 +430,14 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock Text="&#xE946;"
-                                   FontFamily="{DynamicResource FontIcon}"
-                                   FontSize="12"
+                        <ui:FluentIcon Glyph="&#xE946;"
+                                   FontSize="{DynamicResource TextS}"
                                    Foreground="{DynamicResource MutedBrush}"
                                    VerticalAlignment="Center"
                                    Margin="0,0,6,0"/>
                         <TextBlock Text="{Binding Subtitle}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource TextXS}"
                                    VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
@@ -275,37 +460,35 @@
                             <ColumnDefinition Width="48"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0"
-                                   Text="&#xE74E;"
-                                   FontFamily="{DynamicResource FontIcon}"
-                                   FontSize="12"
+                        <ui:FluentIcon Grid.Column="0"
+                                   Glyph="&#xE74E;"
+                                   FontSize="{DynamicResource TextS}"
                                    Foreground="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Center"
                                    Margin="0,0,6,0"/>
                         <TextBlock Grid.Column="1"
                                    Text="PC-Ausfallschutz"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource TextXS}"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
                                    Margin="0,0,10,0"/>
-                        <ProgressBar Grid.Column="2"
+                        <ProgressBar Grid.Column="2" Style="{StaticResource ProgressBarStandard}"
                                      Minimum="0"
                                      Maximum="100"
-                                     Height="9"
                                      VerticalAlignment="Center"
                                      Value="{Binding FullBackupOperation.Percent}"/>
                         <TextBlock Grid.Column="3"
                                    Text="{Binding FullBackupOperation.Percent, StringFormat={}{0:0}%}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource TextXS}"
                                    VerticalAlignment="Center"
                                    Margin="7,0,0,0"/>
                         <TextBlock Grid.Column="4"
                                    Text="{Binding FullBackupOperation.StatusText}"
                                    ToolTip="{Binding FullBackupOperation.CurrentFile}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource TextXS}"
                                    VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"/>
                     </Grid>
@@ -377,43 +560,95 @@
              Sichtbarkeit ergibt sich allein aus der Spaltenbreite — ein zusaetzlicher
              Visibility-Trigger wuerde die Animation sofort verdecken. ClipToBounds am
              umgebenden Grid schneidet den Ueberstand waehrend der Animation ab. -->
-        <Border Grid.Column="0" Width="220" HorizontalAlignment="Left"
+        <Border x:Name="SidebarPanel" Grid.Column="0" Width="220" HorizontalAlignment="Left"
                 Background="{DynamicResource NavPanelBrush}" BorderThickness="0,0,1,0"
                 BorderBrush="{DynamicResource BorderBrush}">
             <DockPanel>
+                <DockPanel.Resources>
+                    <!-- Nova-Etappe 1: Leiste in vier Gruppen. Keine Sortierung, die NavItems stehen bereits gruppenweise. -->
+                    <CollectionViewSource x:Key="GroupedNavItems" Source="{Binding NavItems}">
+                        <CollectionViewSource.GroupDescriptions>
+                            <PropertyGroupDescription PropertyName="Group"/>
+                        </CollectionViewSource.GroupDescriptions>
+                    </CollectionViewSource>
+                </DockPanel.Resources>
                 <StackPanel DockPanel.Dock="Top" Margin="16,16,16,8">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="4" Height="20" CornerRadius="2" Margin="0,0,10,0"
+                        <Border Width="4" Height="20" CornerRadius="{DynamicResource RadiusS}" Margin="0,0,10,0"
                                 Background="{DynamicResource AccentBrush}"/>
-                        <TextBlock Text="SEWER STUDIO" FontSize="15" FontWeight="Bold"
+                        <TextBlock Text="SewerStudio" FontSize="{DynamicResource TextL}" FontWeight="Bold"
                                    Foreground="{DynamicResource TextBrush}"
                                    FontFamily="{DynamicResource FontMono}"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding Subtitle}" Margin="14,3,0,0"
-                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
-                    <Border Height="2" Margin="0,12,0,0" CornerRadius="1">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="{DynamicResource ColorAccent}" Offset="0"/>
-                                <GradientStop Color="{DynamicResource ColorAccentLight}" Offset="0.4"/>
-                                <GradientStop Color="Transparent" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                    </Border>
+                    <TextBlock Text="{Binding SpeicherstandText}" Margin="14,6,0,0"
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{DynamicResource TextS}"
+                               TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="48"
+                               ToolTip="{Binding ProjektPfad}"/>
+                    <Border Height="1" Margin="0,16,0,0" Background="{DynamicResource BorderBrush}"/>
                 </StackPanel>
 
-                <!-- System Monitor -->
-                <ctrl:SystemMonitorPanel DockPanel.Dock="Bottom"
-                                         DataContext="{Binding Monitor}"
-                                         Margin="12,4,12,12"/>
-
+                <!-- Systemmonitor: Nova-Etappe 1 als Aufklapper, Kopf seit Etappe 2 Task 7 die KI-Bereitschaft
+                     (KiBereitschaftRegel, BEWERTUNG N10: "Analyse bereit"/"Pruefung noetig" statt Modellnamen).
+                     Modell-/Detailtext (AiDisplayStatusLabel) und Rechner-/Sensordaten stehen erst im
+                     aufgeklappten Inhalt. Gesperrte Sensoren (Speicherintegritaet) werden weiterhin getrennt
+                     im Kopf gemeldet ("Sensoren gesperrt", Nachpruefung W02). -->
+                <Expander DockPanel.Dock="Bottom" Margin="12,4,12,12" IsExpanded="False"
+                          Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                          ToolTip="KI-Bereitschaft; aufgeklappt: Rechnerauslastung und Sensoren"
+                          AutomationProperties.Name="KI-Bereitschaft und Systemleistung">
+                    <Expander.Header>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <ctrl:NeuralPulseDot Width="10" Height="10" Margin="0,0,8,0" ToolTip="Bereitschaft der lokalen KI; aufgeklappt stehen Rechnerauslastung und Sensoren">
+                                <ctrl:NeuralPulseDot.Style>
+                                    <Style TargetType="ctrl:NeuralPulseDot">
+                                        <Setter Property="IsActive" Value="{Binding IstKiBereit}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Monitor.IsSensorBlocked}" Value="True">
+                                                <Setter Property="IsActive" Value="False"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ctrl:NeuralPulseDot.Style>
+                            </ctrl:NeuralPulseDot>
+                            <TextBlock FontSize="{DynamicResource TextS}" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
+                                       Text="{Binding KiBereitschaftText}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Monitor.IsSensorBlocked}" Value="True">
+                                                <Setter Property="Text" Value="Sensoren gesperrt"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Expander.Header>
+                    <StackPanel Margin="0,6,0,0">
+                        <TextBlock Text="{Binding AiDisplayStatusLabel}" FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,4,0,4"/>
+                        <ctrl:SystemMonitorPanel DataContext="{Binding Monitor}"/>
+                    </StackPanel>
+                </Expander>
 
                 <ListBox x:Name="SidebarNavList"
-                         ItemsSource="{Binding NavItems}" SelectedItem="{Binding SelectedNavItem}"
-                         BorderThickness="0" Background="Transparent" Margin="8,4,8,8">
+                         ItemsSource="{Binding Source={StaticResource GroupedNavItems}}" SelectedItem="{Binding SelectedNavItem}"
+                         BorderThickness="0" Background="Transparent" Margin="10,4,10,8"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" Margin="10,14,10,6"
+                                               FontSize="{DynamicResource TextXS}" FontWeight="Bold"
+                                               Foreground="{DynamicResource MutedBrush}"
+                                               Typography.Capitals="AllSmallCaps"/>
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListBox.GroupStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,4">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,6">
                                 <StackPanel.ToolTip>
                                     <ToolTip>
                                         <ui:RichToolTipContent Icon="{Binding Icon}"
@@ -422,11 +657,14 @@
                                                                Shortcut="{Binding ToolTipShortcut}"/>
                                     </ToolTip>
                                 </StackPanel.ToolTip>
-                                <Grid Width="24" Height="18" VerticalAlignment="Center">
-                                    <TextBlock x:Name="DefaultNavIcon"
-                                               Text="{Binding Icon}"
-                                               FontFamily="{DynamicResource FontIcon}"
-                                               FontSize="16"
+                                <Grid Width="24" Height="18" VerticalAlignment="Center"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Grid.RenderTransform>
+                                        <ScaleTransform x:Name="NavIconScale"/>
+                                    </Grid.RenderTransform>
+                                    <ui:FluentIcon x:Name="DefaultNavIcon"
+                                               Glyph="{Binding Icon}"
+                                               FontSize="{DynamicResource TextL}"
                                                Width="24"
                                                Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                                                HorizontalAlignment="Center"
@@ -487,8 +725,9 @@
                                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                     </Canvas>
                                 </Grid>
-                                <TextBlock Text="{Binding Title}" Margin="10,0,0,0" FontSize="13.5"
-                                           FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding DisplayTitle}" Margin="10,0,0,0" FontSize="{DynamicResource TextM}"
+                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                           FontWeight="{Binding FontWeight, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                             </StackPanel>
                             <DataTemplate.Triggers>
                                 <DataTrigger Binding="{Binding Title}" Value="Haltungen">
@@ -503,14 +742,42 @@
                                     <Setter TargetName="DefaultNavIcon" Property="Visibility" Value="Collapsed"/>
                                     <Setter TargetName="VsaNavIcon" Property="Visibility" Value="Visible"/>
                                 </DataTrigger>
+                                <!-- Symbol-Hover (Nova-Etappe 2): kurze Ereignis-Rueckmeldung, laeuft wie
+                                     der HoverOverlay-Hover des Eintrags immer (kein ReduceMotion-Schalter
+                                     im Bestand fuer diese Kategorie, siehe Klassenkommentar MotionSettings). -->
+                                <EventTrigger RoutedEvent="MouseEnter">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1.12" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1.12" Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <EventTrigger RoutedEvent="MouseLeave">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1" Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="NavIconScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1" Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
-                            <Setter Property="Margin" Value="0,1"/>
+                            <Setter Property="Margin" Value="0,2"/>
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                            <Setter Property="FontWeight" Value="Normal"/>
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="IsEnabled" Value="True"/>
                             <Setter Property="IsHitTestVisible" Value="True"/>
@@ -528,8 +795,8 @@
                                                  Eigener Transform je Eintrag (im Template erzeugt), damit
                                                  nicht alle Eintraege denselben teilen. -->
                                             <Border x:Name="AccentStrip" Grid.Column="0"
-                                                    Background="{DynamicResource AccentBarBrush}"
-                                                    CornerRadius="1.5" Margin="0,6" Opacity="0"
+                                                    Background="{DynamicResource AccentBrush}"
+                                                    CornerRadius="{DynamicResource RadiusS}" Margin="0,6" Opacity="0"
                                                     RenderTransformOrigin="0.5,0.5">
                                                 <Border.RenderTransform>
                                                     <ScaleTransform x:Name="AccentStripScale" ScaleY="0.4"/>
@@ -539,19 +806,20 @@
                                                  per MouseEnter/MouseLeave animiert (weicher Uebergang). -->
                                             <Border x:Name="HoverOverlay" Grid.Column="1"
                                                     Background="{DynamicResource HoverBrush}"
-                                                    CornerRadius="6" Margin="4,0,0,0"
+                                                    CornerRadius="{DynamicResource RadiusM}" Margin="4,0,0,0"
                                                     Opacity="0"/>
                                             <Border x:Name="bd" Grid.Column="1" Background="Transparent"
-                                                    CornerRadius="6" Padding="2"
+                                                    CornerRadius="{DynamicResource RadiusM}" Padding="2"
                                                     Margin="4,0,0,0">
                                                 <ContentPresenter/>
                                             </Border>
                                         </Grid>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
                                                 <Setter TargetName="AccentStrip" Property="Opacity" Value="1"/>
-                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource NavSelectedTextBrush}"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
                                                 <Trigger.EnterActions>
                                                     <BeginStoryboard>
                                                         <Storyboard>
@@ -637,7 +905,7 @@
             <Border Style="{StaticResource Card}">
                 <Grid>
                     <ctrl:AnimatedContentControl Content="{Binding CurrentPage}"/>
-                    <Border Background="{DynamicResource OverlayBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8">
+                    <Border Background="{DynamicResource OverlayBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusL}">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -649,7 +917,7 @@
                             </Style>
                         </Border.Style>
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420">
-                            <TextBlock Text="Bitte zuerst ein Projekt speichern (Datei anlegen)." FontSize="16"
+                            <TextBlock Text="Bitte zuerst ein Projekt speichern (Datei anlegen)." FontSize="{DynamicResource TextL}"
                                        FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" TextAlignment="Center"/>
                             <TextBlock Text="Danach sind alle Funktionen freigeschaltet." Margin="0,6,0,0"
                                        Foreground="{DynamicResource MutedBrush}" TextAlignment="Center"/>

@@ -1,0 +1,60 @@
+using System.Windows;
+using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.ViewModels.Pages;
+
+namespace AuswertungPro.Next.UI.Views.Pages;
+
+/// <summary>
+/// Nova-Etappe 2: duenne Anbindung der Arbeitsflaeche (Liste, Schachtansicht rechts,
+/// Eingabefelder unten). Die Logik liegt in <see cref="SchaechteNovaWorkspaceController"/>; hier
+/// werden nur die benannten XAML-Elemente uebergeben und der Umschalter zur alten Schachtansicht
+/// verdrahtet.
+/// </summary>
+public partial class SchaechtePage
+{
+    private SchaechteNovaWorkspaceController? _novaWorkspace;
+
+    /// <summary>Einmalige Verdrahtung im Konstruktor, unabhaengig vom ViewModel.</summary>
+    private void VerdrahteNovaWorkspace()
+    {
+        _novaWorkspace = new SchaechteNovaWorkspaceController(
+            new SchaechteNovaWorkspaceController.Elemente(
+                GridHost, DrawerSplitterRow, DrawerRow, SideSplitterCol, SideCol,
+                SideSplitter, DrawerSplitter, Uebersicht, FelderDrawer),
+            () => DataContext as SchaechtePageViewModel,
+            BuildRecordDetailsForAnsicht,
+            record => RouteSchachtansichtAction("openpdf", record));
+        _novaWorkspace.Verdrahte();
+    }
+
+    /// <summary>Verbindet Uebersicht und Eingabefelder mit dem ViewModel und waehlt die Standardansicht.</summary>
+    private void InitNovaWorkspace(SchaechtePageViewModel vm)
+    {
+        _novaWorkspace?.VerbindeKatalog();
+        AktualisiereFelderDrawer();
+        // Standardansicht: Nova-Arbeitsflaeche; die alte Schachtansicht bleibt ueber den Toggle
+        // erreichbar und wird Standard, wenn die Einstellung aus ist.
+        SchachtansichtToggle.IsChecked = !vm.Settings.ShowSchaechteNovaLayout;
+        WendeSchachtAnsichtAn();
+    }
+
+    /// <summary>
+    /// Die Eingabefelder unten gehoeren zur Tabelle. Zeigt die Seite die Aufklapp-Liste, wird
+    /// die Schublade geleert und ihr Live-Abgleich entsorgt: ein Formular je Datensatz
+    /// (Fix-Runde 1 zu Task 6, dasselbe Muster wie <c>DataPage.AktualisiereFelderDrawer</c>).
+    /// Ohne das lief in der Liste ein zweiter <see cref="DataPageDetailLiveSync"/> auf demselben
+    /// Schacht mit, den niemand sah und niemand entsorgte.
+    /// </summary>
+    private void AktualisiereFelderDrawer()
+    {
+        // Die Schachtansicht rechts folgt der Auswahl in beiden Ansichten; Koten und Lage
+        // (Stammkarte) gehoeren zum gewaehlten Schacht, nicht zur Schublade.
+        _novaWorkspace?.LadeSchachtansichtZusatz();
+        if (_ansichtSchacht?.ListeSichtbar == true)
+            _novaWorkspace?.LeereFelderDrawer();
+        else
+            _novaWorkspace?.AktualisiereFelderDrawer();
+    }
+
+    private void ApplyDrawerHeight() => _novaWorkspace?.ApplyDrawerHeight();
+}

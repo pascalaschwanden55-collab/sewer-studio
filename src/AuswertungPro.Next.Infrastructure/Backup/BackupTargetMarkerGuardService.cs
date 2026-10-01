@@ -26,14 +26,14 @@ public sealed class BackupTargetMarkerGuardService : IBackupTargetMarkerGuard
                 var content = File.ReadAllText(markerPath);
                 return string.Equals(content, MarkerContent, StringComparison.Ordinal)
                     ? null
-                    : "Die Sicherungs-Marker-Datei ist ungueltig. Aus Sicherheitsgruenden wurde nichts veraendert.";
+                    : "Die Sicherungs-Marker-Datei ist ungültig. Aus Sicherheitsgründen wurde nichts verändert.";
             }
 
             if (Directory.EnumerateFileSystemEntries(root).Any())
             {
-                return $"Der Ordner \"{root}\" enthaelt bereits Daten, ist aber keine " +
+                return $"Der Ordner \"{root}\" enthält bereits Daten, ist aber keine " +
                        "SewerStudio-Datensicherung (Marker-Datei fehlt). " +
-                       "Bitte einen leeren Ordner oder eine bestehende Sicherung waehlen.";
+                       "Bitte einen leeren Ordner oder eine bestehende Sicherung wählen.";
             }
         }
 

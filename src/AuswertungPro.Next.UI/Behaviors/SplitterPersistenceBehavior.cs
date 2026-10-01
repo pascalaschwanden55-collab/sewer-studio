@@ -74,6 +74,11 @@ public static class SplitterPersistenceBehavior
         if (sender is not GridSplitter splitter || splitter.Parent is not Grid grid)
             return;
 
+        // Loaded kommt auch fuer ausgeblendete Splitter. Deren Bereich hat der
+        // Ansichtswechsel bewusst auf 0 gesetzt; eine alte Hoehe erzeugt sonst Leerraum.
+        if (splitter.Visibility != Visibility.Visible)
+            return;
+
         var viewKey = ViewPersonalization.GetViewKey(splitter);
         if (string.IsNullOrWhiteSpace(viewKey))
             return;

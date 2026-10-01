@@ -7,7 +7,7 @@ public sealed class FullBackupStatusBindingTests
     [Fact]
     public void Main_status_bar_shows_shared_backup_progress()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var xaml = File.ReadAllText(Path.Combine(
             root,
             "src",
@@ -23,7 +23,7 @@ public sealed class FullBackupStatusBindingTests
     [Fact]
     public void Settings_page_uses_the_same_shared_backup_progress()
     {
-        var root = TestRepoPaths.FindRepoRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var xaml = File.ReadAllText(Path.Combine(
             root,
             "src",

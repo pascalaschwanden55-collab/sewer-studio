@@ -48,7 +48,13 @@ public partial class ProtocolEntryEditorDialog : Window
         _videoPath = videoPath;
         _mediaPathResolver = new ProtocolEntryEditorMediaPathResolver(
             projectFolder,
-            () => _sp?.Settings.LastProjectPath);
+            () => _sp?.Settings.LastProjectPath,
+            fileExists: null,
+            // Externe Kundenmedien liegen ausserhalb des Projektordners. Erlaubt sind
+            // deshalb zusaetzlich die Projektwurzel und die zuletzt genutzten
+            // Projektordner — aber keine beliebigen Systempfade
+            // (Gesamtaudit 2026-08-14, Prio 2).
+            additionalAllowedRoots: ProtocolEntryEditorMediaRoots.From(sp?.Settings));
 
         _paramVm = _sp?.CodeCatalog is null ? null : new ProtocolEntryEditorViewModel(_sp.CodeCatalog);
         _kiVm = _paramVm is null || _sp is null
@@ -292,7 +298,7 @@ public partial class ProtocolEntryEditorDialog : Window
         SetControlValidationState(MeterStartTextBox, result.MeterStartOk, "Numerischer Wert erwartet.");
         SetControlValidationState(MeterEndTextBox, result.MeterEndOk, "Numerischer Wert erwartet.");
         SetControlValidationState(ZeitTextBox, result.ZeitOk, "Erlaubt: mm:ss oder hh:mm:ss.");
-        SetControlValidationState(StreckenschadenCheckBox, result.StreckenschadenOk, "Streckenschaden benötigt gueltige Meter von/bis.");
+        SetControlValidationState(StreckenschadenCheckBox, result.StreckenschadenOk, "Streckenschaden benötigt gültige Meter von/bis.");
         SetControlValidationState(VsaDistanzTextBox, result.Vsa.DistanzOk, "Numerischer Wert erwartet.");
         SetControlValidationState(VsaVideoTextBox, result.Vsa.VideoOk, "Erlaubt: mm:ss oder hh:mm:ss.");
         SetControlValidationState(VsaUhrVonComboBox, result.Vsa.UhrVonOk, "Erlaubt: 00 bis 12.");
@@ -609,7 +615,7 @@ public partial class ProtocolEntryEditorDialog : Window
             }
             if (_entryVm.MeterEnd < _entryVm.MeterStart)
             {
-                ValidationStatus.Text = "Streckenschaden: MeterEnde muss größer/gleich MeterStart sein.";
+                ValidationStatus.Text = "Streckenschaden: MeterEnde muss grösser/gleich MeterStart sein.";
                 return;
             }
         }
@@ -733,4 +739,5 @@ public partial class ProtocolEntryEditorDialog : Window
         else
             ValidationStatus.Text = "Video zu Zeitposition gesetzt.";
     }
+
 }

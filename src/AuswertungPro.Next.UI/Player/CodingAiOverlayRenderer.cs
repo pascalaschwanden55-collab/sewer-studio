@@ -79,12 +79,13 @@ public static class CodingAiOverlayRenderer
         return geo.ToolType switch
         {
             OverlayToolType.Line or OverlayToolType.Stretch or OverlayToolType.Point
-                => CodingAiPrimitiveOverlayRenderer.Render(canvas, geo, canvasWidth, canvasHeight, primitiveStyle),
+                => CodingAiPrimitiveOverlayRenderer.Render(canvas, geo, toPixel, primitiveStyle),
 
             OverlayToolType.Rectangle
                 => CodingAiRectangleOverlayRenderer.Render(
                     canvas,
                     geo,
+                    toPixel,
                     canvasWidth,
                     canvasHeight,
                     ev.Entry.Code,

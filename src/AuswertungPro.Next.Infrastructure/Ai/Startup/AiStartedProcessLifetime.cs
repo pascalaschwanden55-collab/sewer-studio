@@ -17,7 +17,7 @@ public static class AiStartedProcessLifetime
     public static void Use(IAiStartedProcessLifetime lifetime)
         => throw new NotSupportedException(
             "Die globale KI-Prozessverwaltung kann nicht mehr ausgetauscht werden. " +
-            "IAiStartedProcessLifetime bitte per Konstruktor uebergeben.");
+            "IAiStartedProcessLifetime bitte per Konstruktor übergeben.");
 
     internal static bool TryTrack(Process process, out string? error)
         => Current.TryTrack(process, out error);

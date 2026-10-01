@@ -1,6 +1,7 @@
-using System.Linq;
+﻿using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
+using AuswertungPro.Next.Application.Costs;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 

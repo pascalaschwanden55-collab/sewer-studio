@@ -7,25 +7,29 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowCodingMultiModelArchitectureTests
 {
     [Fact]
-    public void PlayerWindow_multi_model_analysis_sequence_lives_in_command_workflow()
+    public void PlayerWindow_multi_model_analysis_sequence_lives_in_application_use_case()
     {
         var multiModelPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
-        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelAnalysisCommandWorkflow.cs");
+        var useCasePath = RepoFile(
+            "src", "AuswertungPro.Next.Application", "UseCases", "CodingEinzelbild", "CodingEinzelbildAnalyseUseCase.cs");
 
-        Assert.True(File.Exists(commandWorkflowPath), "Multi-Model-Analyse-Sequenz muss ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(useCasePath), "Multi-Model-Analyse-Sequenz muss ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var multiModel = File.ReadAllText(multiModelPath);
-        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
+        var useCase = File.Exists(useCasePath) ? File.ReadAllText(useCasePath) : "";
 
-        Assert.Contains("CodingMultiModelAnalysisCommandWorkflow.ExecuteAsync", multiModel);
-        Assert.Contains("CodingMultiModelRuntimeGateWorkflow.Execute", commandWorkflow);
-        Assert.Contains("start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready", commandWorkflow);
-        Assert.Contains("actions.RunInferenceAsync", commandWorkflow);
+        // Verhalten: CodingEinzelbildAnalyseUseCaseTests und CodingEinzelbildAblaufTests.
+        Assert.Contains("CodingEinzelbildAnalyseUseCase.ExecuteAsync", multiModel);
+        Assert.Contains("CodingEinzelbildStatusAnzeige.Zeigen", multiModel);
+        Assert.DoesNotContain("System.Windows", useCase);
+        Assert.DoesNotContain("Color", useCase);
 
         var offenders = FindFileTokenOffenders(
                 multiModelPath,
                 "if (!runtimeGate.Ready)",
-                "if (start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready)")
+                "if (start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready)",
+                "CodingAnalyzedFrameEvidence.FromResolution",
+                "CodingMultiModelClassifierInputPolicy.Build")
             .Concat(FindFileTokenOffenders(
                 RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs"),
                 "private void AddMultiModelFindingsAsEvents"))
@@ -37,7 +41,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-MultiModel-Partials sollen Command-Sequenz, Session-Guards und Meter-Aufloesung an Workflows delegieren:\n"
+            "PlayerWindow-MultiModel-Partials sollen Ablauf, Session-Guards, Beleg und Meter-Aufloesung an den Anwendungsfall delegieren:\n"
             + string.Join("\n", offenders));
     }
 
@@ -63,8 +67,8 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
 
         Assert.Contains("_codingSessionHost", aiEvents);
         Assert.Contains("private void AddMultiModelFindingsAsEvents", multiModel);
-        Assert.Contains("CodingMultiModelFindingEventCommandWorkflow.Execute", multiModel);
-        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", multiModel);
+        Assert.Contains("CodingMultiModelFindingEventCommandWorkflow.ExecuteAnalyzedFrame", multiModel);
+        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute(", commandWorkflow);
         Assert.Contains("actions.ResolveMeterForFrame", commandWorkflow);
         Assert.Contains("actions.ApplyStretchTracking", commandWorkflow);
         Assert.Contains("actions.ExecuteFindingWorkflow", commandWorkflow);
@@ -109,7 +113,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
         var workflow = File.ReadAllText(workflowPath);
         var mapper = File.ReadAllText(mapperPath);
 
-        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", events);
+        AssertFindingWorkflowReachedThroughCommand(events);
         Assert.Contains("CodingSegmentedFindingFrameMapper.Build", workflow);
         Assert.Contains("public static LiveFrameFinding Build", mapper);
         Assert.Contains("VsaCodeResolver.NormalizeClock", mapper);
@@ -126,7 +130,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
         var workflow = File.ReadAllText(workflowPath);
         var decision = File.ReadAllText(decisionPath);
 
-        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", events);
+        AssertFindingWorkflowReachedThroughCommand(events);
         Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", workflow);
         Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", decision);
     }
@@ -144,7 +148,7 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
         var workflow = File.ReadAllText(workflowPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", events);
+        AssertFindingWorkflowReachedThroughCommand(events);
         Assert.Contains("CodingMultiModelQualityGatePolicy.Evaluate", workflow);
         Assert.Contains("public static QualityGateResult Evaluate", policy);
         Assert.Contains("YoloConf: yoloMaxConfidence", policy);
@@ -223,7 +227,16 @@ public sealed class PlayerWindowCodingMultiModelArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-MultiModel-Rendering soll Masken-Sichtbarkeit, Render-State und SAM-Details ueber Workflows/Controller kapseln:\n"
+            "PlayerWindow-MultiModel-Rendering soll Masken-Sichtbarkeit, Render-State und SAM-Details über Workflows/Controller kapseln:\n"
             + string.Join("\n", offenders));
+    }
+
+    // Das Fenster ruft den Befehl mit dem gebundenen Analysebeleg; der Befehl ruft den Befund-Workflow.
+    private static void AssertFindingWorkflowReachedThroughCommand(string events)
+    {
+        var commandWorkflow = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelFindingEventCommandWorkflow.cs"));
+        Assert.Contains("CodingMultiModelFindingEventCommandWorkflow.ExecuteAnalyzedFrame", events);
+        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute(", commandWorkflow);
     }
 }

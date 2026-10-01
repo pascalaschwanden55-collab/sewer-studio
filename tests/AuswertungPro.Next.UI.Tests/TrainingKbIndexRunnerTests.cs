@@ -13,13 +13,13 @@ public sealed class TrainingKbIndexRunnerTests
             _ => Task.FromResult(false),
             () => throw new InvalidOperationException("Session darf nicht erstellt werden."),
             logs.Add,
-            "KB-Update uebersprungen: Ollama nicht erreichbar auf http://localhost:11434/");
+            "KB-Update übersprungen: Ollama nicht erreichbar auf http://localhost:11434/");
 
         var outcome = await runner.RunAsync(new[] { Sample("s1") }, CancellationToken.None);
 
         Assert.Empty(outcome.IndexedIds);
         Assert.Empty(outcome.SkippedIds);
-        Assert.Equal(new[] { "KB-Update uebersprungen: Ollama nicht erreichbar auf http://localhost:11434/" }, logs);
+        Assert.Equal(new[] { "KB-Update übersprungen: Ollama nicht erreichbar auf http://localhost:11434/" }, logs);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public sealed class TrainingKbIndexRunnerTests
         => new()
         {
             SampleId = sampleId,
-            Beschreibung = "Beschreibung fuer KB"
+            Beschreibung = "Beschreibung für KB"
         };
 
     private sealed class FakeKbIndexSession : ITrainingKbIndexSession

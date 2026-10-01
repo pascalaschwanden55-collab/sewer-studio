@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using AuswertungPro.Next.Application.Backup;
@@ -30,8 +30,8 @@ public static class SettingsFullBackupPresentationBuilder
         sb.AppendLine($"Gesamt: {ByteSizeFormatter.Format(report.TotalBytes)} / {report.TotalFiles} Dateien");
         sb.AppendLine($"Ziel: {targetRoot}");
         sb.AppendLine();
-        sb.AppendLine("Hinweis: Ersetzte und entfallene Dateien wandern in den Unterordner");
-        sb.AppendLine($"{BackupVersionRetention.VersionsFolderName} (die letzten {BackupVersionRetention.MaxStaende} Staende bleiben erhalten).");
+        sb.AppendLine("Hinweis: Gesichert wird nur der aktuelle Stand. Ersetzte und entfallene");
+        sb.AppendLine("Dateien werden nach einem erfolgreichen Lauf nicht aufbewahrt.");
         var projects = report.Components.FirstOrDefault(c => c.Name == "Projekte");
         if (projects is not null)
             sb.AppendLine($"Projekte enthalten: ja. {projects.Beschreibung}");
@@ -49,10 +49,17 @@ public static class SettingsFullBackupPresentationBuilder
             ? string.Empty
             : Path.GetFileName(progress.CurrentFile);
 
+        // Die Abschlussphasen (Zielordner pruefen, Aufraeumen, Zaehlen) kennen ihre
+        // Gesamtzahl nicht im Voraus und melden FilesTotal = 0. "45000 von 0 Dateien"
+        // haette den Bearbeiter verunsichert statt ihm zu zeigen, dass es laeuft.
+        var statusText = progress.FilesTotal > 0
+            ? $"{progress.Component}: {progress.FilesDone} von {progress.FilesTotal} Dateien"
+            : $"{progress.Component}: {progress.FilesDone:N0} Einträge";
+
         return new SettingsFullBackupProgressPresentation(
             percent,
             currentFileName,
-            $"{progress.Component}: {progress.FilesDone} von {progress.FilesTotal} Dateien");
+            statusText);
     }
 
     public static string BuildLastBackupInfo(DateTime? lastBackupUtc, string? lastBackupPath, long? sizeBytes)
@@ -63,7 +70,7 @@ public static class SettingsFullBackupPresentationBuilder
         var localTime = DateTime.SpecifyKind(lastBackupUtc.Value, DateTimeKind.Utc).ToLocalTime();
         var size = sizeBytes is long bytes
             ? ByteSizeFormatter.Format(bytes)
-            : "Groesse unbekannt";
+            : "Grösse unbekannt";
 
         return $"Letzte Datensicherung: {localTime:dd.MM.yyyy HH:mm} - {size} - {lastBackupPath}";
     }

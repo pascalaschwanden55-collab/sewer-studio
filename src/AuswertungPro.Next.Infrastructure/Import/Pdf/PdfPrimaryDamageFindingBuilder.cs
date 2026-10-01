@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -18,6 +19,52 @@ internal static class PdfPrimaryDamageFindingBuilder
     private static readonly Regex RangeSuffixRegex = new(
         @"(?:,\s*)?(?:Start|Beginn|Ende)(?:\s+\d+)?\s*$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Wie <see cref="Build(string?)"/>, traegt zusaetzlich den Videozaehlerstand
+    /// nach.
+    ///
+    /// Die Bereichslogik (A-/B-Marker) bleibt bewusst unberuehrt: Die Befunde
+    /// entstehen weiter aus dem Textfeld, die Zeiten werden danach ueber Code und
+    /// Meter zugeordnet. Ohne eindeutige Zuordnung bleibt die Zeit leer statt
+    /// geraten.
+    /// </summary>
+    internal static List<VsaFinding> Build(
+        string? primaryDamages,
+        IReadOnlyList<PrimaryDamageRowParser.PrimaryDamageRow>? rows)
+    {
+        var findings = Build(primaryDamages);
+        if (rows is not { Count: > 0 })
+            return findings;
+
+        foreach (var finding in findings)
+        {
+            var treffer = rows
+                .Where(r => r.VideoTime.HasValue && PasstZu(r, finding))
+                .ToList();
+            // Nur bei genau einer passenden Zeile. Zwei gleiche Codes am selben
+            // Meter waeren nicht unterscheidbar.
+            if (treffer.Count == 1)
+                finding.MPEG = treffer[0].VideoTime!.Value.ToString(@"hh\:mm\:ss");
+        }
+
+        return findings;
+    }
+
+    private static bool PasstZu(PrimaryDamageRowParser.PrimaryDamageRow row, VsaFinding finding)
+    {
+        if (finding.MeterStart is not { } meter)
+            return false;
+        var zeilenMeter = PrimaryDamageLineParser.TryParseMeterValue(row.Meter ?? "");
+        if (Math.Abs(zeilenMeter - meter) > 0.0005)
+            return false;
+
+        // Der Rohcode kann einen Bereichsmarker tragen ("A01 BAB"); verglichen
+        // wird das letzte Wort.
+        var teile = (row.Code ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var reinerCode = teile.Length == 0 ? "" : teile[^1];
+        return string.Equals(reinerCode, finding.KanalSchadencode, StringComparison.OrdinalIgnoreCase);
+    }
 
     internal static List<VsaFinding> Build(string? primaryDamages)
     {

@@ -206,7 +206,7 @@ public sealed class KnowledgeBaseManager(
 
         if (eligibleIndices.Count == 0)
             throw new InvalidOperationException(
-                "KB-Rebuild abgebrochen: Kein menschlich bestaetigtes Gold-Sample vorhanden. Bestehende KB bleibt erhalten.");
+                "KB-Rebuild abgebrochen: Kein menschlich bestätigtes Gold-Sample vorhanden. Bestehende KB bleibt erhalten.");
 
         // Embeddings parallel erzeugen (VOR dem Loeschen)
         var embeddings = new ConcurrentDictionary<int, float[]>();
@@ -245,7 +245,7 @@ public sealed class KnowledgeBaseManager(
                 $"[KnowledgeBaseManager] ABBRUCH: Nur {embeddings.Count}/{samples.Count} Embeddings ({successRate:P0})");
             throw new InvalidOperationException(
                 $"KB-Rebuild abgebrochen: Nur {embeddings.Count} von {eligibleIndices.Count} Gold-Embeddings erzeugt ({successRate:P0}). " +
-                "Bestehende KB bleibt erhalten. Pruefe Ollama-Verbindung.");
+                "Bestehende KB bleibt erhalten. Prüfe Ollama-Verbindung.");
         }
 
         if (errors > 0)
@@ -449,9 +449,7 @@ public sealed class KnowledgeBaseManager(
         // Die Retrieval-KB lernt dagegen den Text selbst und muss sie deshalb sperren.
         if (!GoldDescriptionPolicy.IsKnowledgeTextReady(sample.Beschreibung))
             return false;
-        if (string.IsNullOrWhiteSpace(sample.Code))
-            return false;
-        if (VsaCodeResolver.LookupLabel(sample.Code) is null)
+        if (!VsaCodeResolver.IsExactSelectableCode(sample.Code))
             return false;
         // Bewusste Entkopplung Retrieval <-> Training (Entscheid 2026-06-20):
         // Die Trainings-Recency-Schranke (InspectionDate >= 2022 + TrainingEligible) gilt NUR fuer

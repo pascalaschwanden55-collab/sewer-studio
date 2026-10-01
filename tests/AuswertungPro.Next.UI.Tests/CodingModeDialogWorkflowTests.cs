@@ -55,7 +55,7 @@ public sealed class CodingModeDialogWorkflowTests
         var service = Service(calls);
 
         CodingModeDialogWorkflow.ShowSessionStartFailed(
-            "Laenge fehlt",
+            "Länge fehlt",
             new CodingModeDialogWorkflowActions(
                 CreateDialogService: () =>
                 {
@@ -63,7 +63,7 @@ public sealed class CodingModeDialogWorkflowTests
                     return service;
                 }));
 
-        Assert.Equal(["service", "failed:Laenge fehlt"], calls);
+        Assert.Equal(["service", "failed:Länge fehlt"], calls);
     }
 
     private static CodingModeDialogService Service(List<string> calls)

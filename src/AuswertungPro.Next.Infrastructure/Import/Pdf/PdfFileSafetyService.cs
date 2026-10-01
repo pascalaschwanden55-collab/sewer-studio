@@ -19,7 +19,7 @@ public sealed class PdfFileSafetyService : IPdfFileSafetyChecker
         {
             throw new ArgumentOutOfRangeException(
                 nameof(maxBytes),
-                "Maximale PDF-Groesse muss positiv sein.");
+                "Maximale PDF-Grösse muss positiv sein.");
         }
 
         var file = new FileInfo(pdfPath);

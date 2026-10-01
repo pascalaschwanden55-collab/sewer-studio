@@ -39,7 +39,7 @@ public static class SelfTrainingReviewQueueController
             ? new SelfTrainingReviewQueueUpdate(
                 reviewCandidates.Count,
                 ShouldReloadQueue: true,
-                $"{reviewCandidates.Count} Samples in Review Queue eingereiht (Partial/Mismatch + zurueckgehaltene ExactMatches)")
+                $"{reviewCandidates.Count} Samples in Review Queue eingereiht (Partial/Mismatch + zurückgehaltene ExactMatches)")
             : Empty();
     }
 

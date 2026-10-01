@@ -17,8 +17,8 @@ public static class TeacherAnnotationStore
     [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(ITeacherAnnotationStore store) =>
         throw new NotSupportedException(
-            "Die globale Ablage fuer Lehrer-Annotationen kann nicht mehr ausgetauscht werden. " +
-            "ITeacherAnnotationStore bitte per Konstruktor uebergeben.");
+            "Die globale Ablage für Lehrer-Annotationen kann nicht mehr ausgetauscht werden. " +
+            "ITeacherAnnotationStore bitte per Konstruktor übergeben.");
 
     public static string GetImagesDir() => Current.GetImagesDir();
 

@@ -1,0 +1,6 @@
+29 Objekte und Beziehungen geprüft.
+0 Objekte mit offenen Angaben.
+Objekt-, Feld- und Beziehungsprüfung bestanden.
+0 externe Organisationskennungen fehlen als Stammdaten in dieser Datei. Sie müssen im Ziel vorhanden sein.
+Diese Prüfung ersetzt nicht die vollständige INTERLIS-Modellprüfung und die GEONIS-Abnahme.
+

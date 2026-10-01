@@ -136,6 +136,17 @@ public sealed class GroundTruthFieldParserTests
         Assert.Null(GroundTruthFieldParser.TryParseQuantification("Riss ohne Massangabe", null));
     }
 
+    [Fact]
+    public void TryParseQuantification_AkzeptiertKommaAlsDezimaltrennzeichen()
+    {
+        var result = GroundTruthFieldParser.TryParseQuantification("Spaltbreite 3,5mm", null);
+
+        Assert.NotNull(result);
+        Assert.Equal(3.5, result!.Value, precision: 2);
+        Assert.Equal("mm", result.Unit);
+        Assert.Equal("Spaltbreite", result.Type);
+    }
+
     // ── NormalizeKnownVsaCode ───────────────────────────────────────────────
 
     [Fact]

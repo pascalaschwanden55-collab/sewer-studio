@@ -22,12 +22,12 @@ from sidecar.gpu_manager import (
 GIB = 1024**3
 
 
-def _fake_torch_const(monkeypatch, free_gb):
+def _fake_torch_const(monkeypatch, free_gb, total_gb=32):
     fake_cuda = SimpleNamespace(
         is_available=lambda: True,
-        mem_get_info=lambda _device: (int(free_gb * GIB), 32 * GIB),
+        mem_get_info=lambda _device: (int(free_gb * GIB), int(total_gb * GIB)),
         memory_allocated=lambda _device: 0,
-        get_device_properties=lambda _device: SimpleNamespace(total_memory=32 * GIB),
+        get_device_properties=lambda _device: SimpleNamespace(total_memory=int(total_gb * GIB)),
         empty_cache=lambda: None,
     )
     monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(cuda=fake_cuda))
@@ -93,11 +93,26 @@ def test_gleichzeitige_gpu_ladungen_sehen_nicht_denselben_freien_vram(monkeypatc
     assert 32.0 - winner_estimate < loser_estimate + VRAM_RESERVE_GB
 
 
+def test_laufende_ladung_zaehlt_auch_fuer_29gb_budget(monkeypatch):
+    # 48 GB gesamt, 25 GB frei: 23 GB bereits belegt. YOLO (+3) passt,
+    # DINO (+4) allein auch; zusammen waeren es 30 GB.
+    _fake_torch_const(monkeypatch, free_gb=25.0, total_gb=48)
+    m = GpuModelManager()
+
+    m._admit_vram_or_raise(ModelSlot.YOLO, "cuda:0")
+    with pytest.raises(InsufficientVramError) as excinfo:
+        m._admit_vram_or_raise(ModelSlot.DINO, "cuda:0")
+
+    assert excinfo.value.reason == "budget"
+    assert excinfo.value.used_gb == pytest.approx(30.0)
+    assert m._inflight_loads == {ModelSlot.YOLO: MODEL_VRAM_ESTIMATE_GB[ModelSlot.YOLO]}
+
+
 def test_reservierung_wird_nach_dem_laden_freigegeben(monkeypatch):
     # Nach dem Ende des Ladevorgangs steht die Reservierung nicht mehr im Weg:
     # ein zweites Modell darf anschliessend laden (kein verklemmter Zustand).
     _estimates(monkeypatch, {ModelSlot.DINO: 10.0, ModelSlot.SAM: 10.0})
-    _fake_torch_const(monkeypatch, free_gb=33.0)
+    _fake_torch_const(monkeypatch, free_gb=33.0, total_gb=48)
     m = GpuModelManager()
 
     m.ensure_loaded(ModelSlot.DINO, "cuda:0", lambda: ("dino", None))
@@ -149,3 +164,81 @@ def test_watchdog_snapshot_bleibt_waehrend_eviction_bereinigung_erreichbar(monke
     assert not snapshot_thread.is_alive()
     assert len(load_errors) == 1
     assert isinstance(load_errors[0], InsufficientVramError)
+
+
+def test_messung_vor_dem_ende_einer_fremden_ladung_wird_wiederholt(monkeypatch):
+    # Audit A11 (23.09.2026): B misst 20 GB frei, WAEHREND A noch laedt. A belegt danach 4 GB
+    # und gibt seine Reservierung frei. B verrechnete die alte Messung mit dem neuen
+    # Reservierungsstand (0) und wurde zugelassen — nach beiden Ladungen blieben 10 GB,
+    # weniger als die 12 GB Reserve. Richtig: B misst nach A neu (16 GB) und laedt nicht.
+    _estimates(monkeypatch, {ModelSlot.DINO: 4.0, ModelSlot.SAM: 6.0})
+    monkeypatch.setattr("sidecar.gpu_manager.VRAM_RESERVE_GB", 12.0)
+    m = GpuModelManager()
+    m._warn_if_over_budget = lambda: None
+
+    speicher = {"frei": 20.0}
+    a_laedt = threading.Event()
+    b_hat_gemessen = threading.Event()
+    a_fertig = threading.Event()
+    geladen: list[str] = []
+    fehler: dict[str, BaseException] = {}
+
+    def messung():
+        stand = speicher["frei"]
+        if threading.current_thread().name == "B" and not b_hat_gemessen.is_set():
+            b_hat_gemessen.set()
+            assert a_fertig.wait(5.0), "A wurde nicht fertig."
+        return stand
+
+    m._device_vram_gb = lambda: (messung(), 32.0)
+
+    def a_laden():
+        a_laedt.set()
+        assert b_hat_gemessen.wait(5.0), "B hat nicht gemessen."
+        speicher["frei"] -= 4.0
+        return object(), None
+
+    def b_laden():
+        speicher["frei"] -= 6.0
+        return object(), None
+
+    def a():
+        try:
+            m.ensure_loaded(ModelSlot.DINO, "cuda:0", a_laden)
+            geladen.append("DINO")
+        except BaseException as exc:
+            fehler["A"] = exc
+        finally:
+            a_fertig.set()
+
+    def b():
+        try:
+            assert a_laedt.wait(5.0), "A laedt nicht."
+            m.ensure_loaded(ModelSlot.SAM, "cuda:0", b_laden)
+            geladen.append("SAM")
+        except BaseException as exc:
+            fehler["B"] = exc
+
+    threads = [threading.Thread(target=a, name="A"), threading.Thread(target=b, name="B")]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=15.0)
+    assert all(not t.is_alive() for t in threads), "Deadlock: Threads laufen noch."
+
+    assert geladen == ["DINO"]
+    assert isinstance(fehler.get("B"), InsufficientVramError)
+    assert speicher["frei"] >= 12.0
+
+
+def test_ohne_fremde_ladung_genuegt_eine_messung(monkeypatch):
+    # Gegenprobe: Aendert sich zwischen Messung und Sperre nichts, wird nicht erneut gemessen.
+    _estimates(monkeypatch, {ModelSlot.SAM: 6.0})
+    monkeypatch.setattr("sidecar.gpu_manager.VRAM_RESERVE_GB", 12.0)
+    m = GpuModelManager()
+    messungen = []
+    m._device_vram_gb = lambda: (messungen.append(1) or 20.0, 32.0)
+
+    m._admit_vram_or_raise(ModelSlot.SAM, "cuda:0")
+
+    assert len(messungen) == 1

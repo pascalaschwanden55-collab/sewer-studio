@@ -34,10 +34,10 @@ public sealed class VsaCodeExplorerValidationPresenterTests
     {
         var presentation = VsaCodeExplorerValidationPresenter.Build(
             canConfirm: false,
-            validationMessage: "Bitte einen Code auswaehlen.");
+            validationMessage: "Bitte einen Code auswählen.");
 
         Assert.False(presentation.CanApply);
-        Assert.Equal("Bitte einen Code auswaehlen.", presentation.ValidationText);
+        Assert.Equal("Bitte einen Code auswählen.", presentation.ValidationText);
         Assert.True(presentation.ShowValidation);
     }
 }

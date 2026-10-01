@@ -4,6 +4,9 @@ import tempfile
 from pathlib import Path
 
 from .bridge_http import fetch_bridge_bytes, fetch_bridge_json
+from .zoom_ziel import ZOOM_MASSSTAB, zoom_ziel
+# Live-Videoposition: eigenstaendiges Modul, eigener schneller Takt.
+from .video_position import VideoPositionAnzeige, baue_bedienfeld
 
 try:
     from qgis.PyQt.QtGui import QAction
@@ -35,6 +38,7 @@ from qgis.core import (
     QgsMarkerSymbol,
     QgsMessageLog,
     QgsPalLayerSettings,
+    QgsPointXY,
     QgsProject,
     QgsRectangle,
     QgsRendererCategory,
@@ -375,6 +379,20 @@ class SewerStudioBridgeDock(QDockWidget):
         self.status_label = QLabel("Nicht verbunden.")
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
+
+        # --- Live-Videoposition -------------------------------------------
+        # Laeuft unabhaengig vom Poll-Takt der uebrigen Ebenen (dort 1-60 s,
+        # hier 250 ms), zeichnet ohne Layer direkt auf den Kartenleinwand.
+        self.video_anzeige = VideoPositionAnzeige(
+            self.iface,
+            lambda: self.url_edit.text().strip() or DEFAULT_BRIDGE_URL,
+            self._log_warning,
+        )
+        layout.addWidget(baue_bedienfeld(root, self.video_anzeige,
+                                         lambda: self.url_edit.text().strip() or DEFAULT_BRIDGE_URL,
+                                         self._set_status,
+                                         self.settings, SETTINGS_PREFIX))
+        # ------------------------------------------------------------------
         layout.addStretch(1)
         self.setWidget(root)
 
@@ -488,6 +506,10 @@ class SewerStudioBridgeDock(QDockWidget):
     def stop(self):
         if self.timer.isActive():
             self.timer.stop()
+        anzeige = getattr(self, "video_anzeige", None)
+        if anzeige is not None:
+            anzeige.simulation_stoppen()
+            anzeige.stoppen()
 
     def refresh_remote_layers(self):
         self._save_settings()
@@ -615,12 +637,17 @@ class SewerStudioBridgeDock(QDockWidget):
 
         # Zuerst die Ebene suchen, die auf DIESELBE Datei zeigt (auch eine vom Nutzer
         # gestylte) — dann bleibt beim Neuladen ihr Stil erhalten. Sonst per Name.
-        existing = self._find_layer_by_source(file_path) or self._find_layer_named(layer_name)
+        gleiche_quelle = self._find_layers_by_source(file_path)
+        existing = gleiche_quelle[0] if gleiche_quelle else self._find_layer_named(layer_name)
         if existing is not None:
             if self._same_source(existing, file_path):
-                existing.reload()
-                existing.updateExtents()
-                existing.triggerRepaint()
+                # ALLE Ebenen auf dieser Datei neu laden, nicht nur die erste:
+                # "Schaeden" und "Nicht-Schaeden" teilen sich eine Datei und
+                # unterscheiden sich nur durch ihre Abfrage.
+                for ebene in (gleiche_quelle or [existing]):
+                    ebene.reload()
+                    ebene.updateExtents()
+                    ebene.triggerRepaint()
                 return existing
 
             if self._switch_layer_source(existing, file_path, layer_name):
@@ -817,15 +844,29 @@ class SewerStudioBridgeDock(QDockWidget):
         return None
 
     @staticmethod
-    def _find_layer_by_source(file_path):
-        # Findet eine geladene Ebene, deren Datenquelle auf DIESELBE Datei zeigt —
-        # unabhaengig vom Ebenennamen. So wird die vom Nutzer gestylte Ebene getroffen.
+    def _find_layers_by_source(file_path):
+        # ALLE geladenen Ebenen, deren Datenquelle auf DIESELBE Datei zeigt —
+        # unabhaengig vom Ebenennamen. So werden die vom Nutzer gestylten Ebenen
+        # getroffen.
+        #
+        # Bewusst eine Liste, kein einzelner Treffer: Auf eine Datei zeigen oft
+        # mehrere Ebenen, die sich nur durch ihre Abfrage unterscheiden — etwa
+        # "Schaeden" (code LIKE 'BA%' ...) und "Nicht-Schaeden" (NOT LIKE ...) auf
+        # derselben damages.geojson. Wer hier beim ersten Treffer aufhoert, laedt
+        # genau eine davon neu; die uebrigen zeigen weiter den Stand des vorherigen
+        # Projekts, ohne dass irgendetwas nach einem Fehler aussieht.
         target = os.path.normcase(os.path.normpath(str(file_path)))
+        treffer = []
         for layer in QgsProject.instance().mapLayers().values():
             source = (layer.source() or "").split("|")[0]
             if os.path.normcase(os.path.normpath(source)) == target:
-                return layer
-        return None
+                treffer.append(layer)
+        return treffer
+
+    @classmethod
+    def _find_layer_by_source(cls, file_path):
+        treffer = cls._find_layers_by_source(file_path)
+        return treffer[0] if treffer else None
 
     @staticmethod
     def _same_source(layer, file_path):
@@ -888,8 +929,25 @@ class SewerStudioBridgeDock(QDockWidget):
             self._log_warning(f"Zoom-Transformation fehlgeschlagen: {ex}")
             return
 
-        extent.scale(1.3)
-        canvas.setExtent(extent)
+        # Fester Massstab 1:100 statt "Ausdehnung plus Rand": Vorher hing der
+        # Massstab an der Laenge der Haltung — kurze Haltung nah, lange weit weg.
+        # Jetzt erscheint jedes Bauteil gleich gross.
+        ziel = zoom_ziel(
+            extent.xMinimum(), extent.yMinimum(), extent.xMaximum(), extent.yMaximum())
+        gezoomt = False
+        if ziel is not None:
+            try:
+                canvas.setCenter(QgsPointXY(ziel.mitte_x, ziel.mitte_y))
+                canvas.zoomScale(ziel.massstab)
+                gezoomt = True
+            except Exception as ex:  # Zoom ist Komfort — nie den Poll abbrechen
+                self._log_warning(
+                    f"Zoom auf Massstab 1:{ZOOM_MASSSTAB:.0f} fehlgeschlagen: {ex}")
+
+        # Rueckfall auf den bisherigen Weg: lieber ungenau gezoomt als gar nicht.
+        if not gezoomt:
+            extent.scale(1.3)
+            canvas.setExtent(extent)
         canvas.refresh()
         # Aufblinken wie beim QGIS-"Objekte hervorheben": macht die gezoomte
         # Haltung bzw. den Schacht sofort sichtbar (mehrfaches Blinken).

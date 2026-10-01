@@ -1,0 +1,1922 @@
+{
+  "Fields": [
+    {
+      "Field": "NR",
+      "Label": "NR.",
+      "Type": "Int",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Haltungsname",
+      "Label": "Haltungsname (ID)",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Strasse",
+      "Label": "Strasse",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Rohrmaterial",
+      "Label": "Rohrmaterial",
+      "Type": "Combo",
+      "ExportTarget": "Material",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "andere",
+          "Export": "andere"
+        },
+        {
+          "Display": "Asbestzement",
+          "Export": "Asbestzement"
+        },
+        {
+          "Display": "Beton",
+          "Export": "Beton_unbekannt"
+        },
+        {
+          "Display": "Epoxydharz",
+          "Export": "Kunststoff_Epoxydharz"
+        },
+        {
+          "Display": "Faserzement",
+          "Export": "Faserzement"
+        },
+        {
+          "Display": "Gebrannte Steine",
+          "Export": "Gebrannte_Steine"
+        },
+        {
+          "Display": "GFK",
+          "Export": null
+        },
+        {
+          "Display": "Grauguss",
+          "Export": "Guss_Grauguss"
+        },
+        {
+          "Display": "Guss",
+          "Export": null
+        },
+        {
+          "Display": "Guss duktil",
+          "Export": "Guss_duktil"
+        },
+        {
+          "Display": "Hartpolyethylen",
+          "Export": "Kunststoff_Hartpolyethylen"
+        },
+        {
+          "Display": "Kunststoff unbekannt",
+          "Export": "Kunststoff_unbekannt"
+        },
+        {
+          "Display": "Normalbeton",
+          "Export": "Beton_Normalbeton"
+        },
+        {
+          "Display": "Ortsbeton",
+          "Export": "Beton_Ortsbeton"
+        },
+        {
+          "Display": "Polyester GUP",
+          "Export": "Kunststoff_Polyester_GUP"
+        },
+        {
+          "Display": "Polyethylen",
+          "Export": "Kunststoff_Polyethylen"
+        },
+        {
+          "Display": "Polypropylen",
+          "Export": "Kunststoff_Polypropylen"
+        },
+        {
+          "Display": "Polyvinylchlorid",
+          "Export": "Kunststoff_Polyvinilchlorid"
+        },
+        {
+          "Display": "Pressrohrbeton",
+          "Export": "Beton_Pressrohrbeton"
+        },
+        {
+          "Display": "Spezialbeton",
+          "Export": "Beton_Spezialbeton"
+        },
+        {
+          "Display": "Stahl",
+          "Export": "Stahl"
+        },
+        {
+          "Display": "Stahl rostfrei",
+          "Export": "Stahl_rostfrei"
+        },
+        {
+          "Display": "Steinzeug",
+          "Export": "Steinzeug"
+        },
+        {
+          "Display": "Ton",
+          "Export": "Ton"
+        },
+        {
+          "Display": "unbekannt",
+          "Export": "unbekannt"
+        },
+        {
+          "Display": "Zement",
+          "Export": "Zement"
+        }
+      ]
+    },
+    {
+      "Field": "DN_mm",
+      "Label": "Lichte H\u00F6he / DN mm",
+      "Type": "Int",
+      "ExportTarget": "Lichte_Hoehe",
+      "Values": []
+    },
+    {
+      "Field": "Profiltyp",
+      "Label": "Profilform",
+      "Type": "Combo",
+      "ExportTarget": "Profiltyp",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "Unbekannt",
+          "Export": "unbekannt"
+        },
+        {
+          "Display": "Kreisprofil",
+          "Export": "Kreisprofil"
+        },
+        {
+          "Display": "Eiprofil",
+          "Export": "Eiprofil"
+        },
+        {
+          "Display": "Maulprofil",
+          "Export": "Maulprofil"
+        },
+        {
+          "Display": "Offenes Profil",
+          "Export": "offenes_Profil"
+        },
+        {
+          "Display": "Rechteckprofil",
+          "Export": "Rechteckprofil"
+        },
+        {
+          "Display": "Spezialprofil",
+          "Export": "Spezialprofil"
+        }
+      ]
+    },
+    {
+      "Field": "Lichte_Breite_mm",
+      "Label": "Lichte Breite mm",
+      "Type": "Int",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Nutzungsart",
+      "Label": "Nutzungsart",
+      "Type": "Combo",
+      "ExportTarget": "Nutzungsart_Ist",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "andere",
+          "Export": "andere"
+        },
+        {
+          "Display": "Bachwasser",
+          "Export": "Bachwasser"
+        },
+        {
+          "Display": "entlastetes Mischabwasser",
+          "Export": "entlastetes_Mischabwasser"
+        },
+        {
+          "Display": "Industrieabwasser",
+          "Export": "Industrieabwasser"
+        },
+        {
+          "Display": "Mischabwasser",
+          "Export": "Mischabwasser"
+        },
+        {
+          "Display": "Niederschlagsabwasser",
+          "Export": "Niederschlagsabwasser"
+        },
+        {
+          "Display": "Reinabwasser",
+          "Export": "Reinabwasser"
+        },
+        {
+          "Display": "Schmutzabwasser",
+          "Export": "Schmutzabwasser"
+        },
+        {
+          "Display": "unbekannt",
+          "Export": "unbekannt"
+        }
+      ]
+    },
+    {
+      "Field": "Haltungslaenge_m",
+      "Label": "Haltungsl\u00E4nge m",
+      "Type": "Decimal",
+      "ExportTarget": "LaengeEffektiv",
+      "Values": []
+    },
+    {
+      "Field": "Inspektionsrichtung",
+      "Label": "Inspektionsrichtung",
+      "Type": "Combo",
+      "ExportTarget": null,
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "In Fliessrichtung",
+          "Export": null
+        },
+        {
+          "Display": "Gegen Fliessrichtung",
+          "Export": null
+        }
+      ]
+    },
+    {
+      "Field": "Primaere_Schaeden",
+      "Label": "Prim\u00E4re Sch\u00E4den",
+      "Type": "Multiline",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Zustandsklasse",
+      "Label": "Zustandsklasse",
+      "Type": "Combo",
+      "ExportTarget": "BaulicherZustand",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "0",
+          "Export": "Z0"
+        },
+        {
+          "Display": "1",
+          "Export": "Z1"
+        },
+        {
+          "Display": "2",
+          "Export": "Z2"
+        },
+        {
+          "Display": "3",
+          "Export": "Z3"
+        },
+        {
+          "Display": "4",
+          "Export": "Z4"
+        }
+      ]
+    },
+    {
+      "Field": "VSA_Zustandsnote_D",
+      "Label": "VSA-Zustandsnote D",
+      "Type": "Decimal",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Pruefungsresultat",
+      "Label": "Pr\u00FCfungsresultat",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Referenzpruefung",
+      "Label": "Referenzpruefung",
+      "Type": "Combo",
+      "ExportTarget": null,
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "Ja",
+          "Export": null
+        },
+        {
+          "Display": "Nein",
+          "Export": null
+        }
+      ]
+    },
+    {
+      "Field": "Sanieren_JaNein",
+      "Label": "Sanieren Ja/Nein",
+      "Type": "Combo",
+      "ExportTarget": null,
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "Ja",
+          "Export": null
+        },
+        {
+          "Display": "Nein",
+          "Export": null
+        }
+      ]
+    },
+    {
+      "Field": "Empfohlene_Sanierungsmassnahmen",
+      "Label": "Empfohlene Sanierungsmassnahmen",
+      "Type": "Multiline",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Kosten",
+      "Label": "Kosten",
+      "Type": "Decimal",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Eigentuemer",
+      "Label": "Eigent\u00FCmer",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Ausgefuehrt_durch",
+      "Label": "Ausgefuehrt durch",
+      "Type": "Combo",
+      "ExportTarget": null,
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "Kanalsanierer",
+          "Export": null
+        },
+        {
+          "Display": "Baumeister",
+          "Export": null
+        },
+        {
+          "Display": "Gartenbauer",
+          "Export": null
+        }
+      ]
+    },
+    {
+      "Field": "Bemerkungen",
+      "Label": "Bemerkungen",
+      "Type": "Multiline",
+      "ExportTarget": "Bemerkung",
+      "Values": []
+    },
+    {
+      "Field": "Link",
+      "Label": "Link",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Renovierung_Inliner_Stk",
+      "Label": "Renovierung Inliner Stk.",
+      "Type": "Int",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Renovierung_Inliner_m",
+      "Label": "Renovierung Inliner m",
+      "Type": "Decimal",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Anschluesse_verpressen",
+      "Label": "Anschl\u00FCsse verpressen",
+      "Type": "Int",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Reparatur_Manschette",
+      "Label": "Reparatur Manschette",
+      "Type": "Int",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Linerendmanschette_LEM",
+      "Label": "Linerendmanschette LEM",
+      "Type": "Int",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Reparatur_Kurzliner",
+      "Label": "Reparatur Kurzliner",
+      "Type": "Int",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Erneuerung_Neubau_m",
+      "Label": "Erneuerung Neubau m",
+      "Type": "Decimal",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Offen_abgeschlossen",
+      "Label": "offen/abgeschlossen",
+      "Type": "Combo",
+      "ExportTarget": null,
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "offen",
+          "Export": null
+        },
+        {
+          "Display": "abgeschlossen",
+          "Export": null
+        }
+      ]
+    },
+    {
+      "Field": "Datum_Jahr",
+      "Label": "Datum/Jahr",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "VSA_Zustandsnote_S",
+      "Label": "VSA-Zustandsnote S",
+      "Type": "Decimal",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "VSA_Zustandsnote_B",
+      "Label": "VSA-Zustandsnote B",
+      "Type": "Decimal",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "VSA_Geschaetzt",
+      "Label": "Note gesch\u00E4tzt",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Gewaesserschutz",
+      "Label": "Gew\u00E4sserschutz",
+      "Type": "Combo",
+      "ExportTarget": null,
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "S",
+          "Export": null
+        },
+        {
+          "Display": "Au",
+          "Export": null
+        },
+        {
+          "Display": "Zu",
+          "Export": null
+        },
+        {
+          "Display": "Ao",
+          "Export": null
+        }
+      ]
+    },
+    {
+      "Field": "Grundwasserspiegel",
+      "Label": "Grundwasserspiegel",
+      "Type": "Combo",
+      "ExportTarget": null,
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "unterhalb",
+          "Export": null
+        },
+        {
+          "Display": "oberhalb",
+          "Export": null
+        },
+        {
+          "Display": "unbekannt",
+          "Export": null
+        }
+      ]
+    },
+    {
+      "Field": "FunktionHierarchisch",
+      "Label": "Funktionale Hierarchie",
+      "Type": "Combo",
+      "ExportTarget": "FunktionHierarchisch",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "PAA.andere",
+          "Export": "PAA.andere"
+        },
+        {
+          "Display": "PAA.Gewaesser",
+          "Export": "PAA.Gewaesser"
+        },
+        {
+          "Display": "PAA.Hauptsammelkanal",
+          "Export": "PAA.Hauptsammelkanal"
+        },
+        {
+          "Display": "PAA.Hauptsammelkanal_regional",
+          "Export": "PAA.Hauptsammelkanal_regional"
+        },
+        {
+          "Display": "PAA.Liegenschaftsentwaesserung",
+          "Export": "PAA.Liegenschaftsentwaesserung"
+        },
+        {
+          "Display": "PAA.Sammelkanal",
+          "Export": "PAA.Sammelkanal"
+        },
+        {
+          "Display": "PAA.Sanierungsleitung",
+          "Export": "PAA.Sanierungsleitung"
+        },
+        {
+          "Display": "PAA.Strassenentwaesserung",
+          "Export": "PAA.Strassenentwaesserung"
+        },
+        {
+          "Display": "PAA.unbekannt",
+          "Export": "PAA.unbekannt"
+        },
+        {
+          "Display": "SAA.andere",
+          "Export": "SAA.andere"
+        },
+        {
+          "Display": "SAA.Liegenschaftsentwaesserung",
+          "Export": "SAA.Liegenschaftsentwaesserung"
+        },
+        {
+          "Display": "SAA.Sanierungsleitung",
+          "Export": "SAA.Sanierungsleitung"
+        },
+        {
+          "Display": "SAA.Strassenentwaesserung",
+          "Export": "SAA.Strassenentwaesserung"
+        },
+        {
+          "Display": "SAA.unbekannt",
+          "Export": "SAA.unbekannt"
+        }
+      ]
+    },
+    {
+      "Field": "Verbindungsart",
+      "Label": "Verbindungsart",
+      "Type": "Combo",
+      "ExportTarget": "Verbindungsart",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "andere",
+          "Export": "andere"
+        },
+        {
+          "Display": "Elektroschweissmuffen",
+          "Export": "Elektroschweissmuffen"
+        },
+        {
+          "Display": "Flachmuffen",
+          "Export": "Flachmuffen"
+        },
+        {
+          "Display": "Flansch",
+          "Export": "Flansch"
+        },
+        {
+          "Display": "Glockenmuffen",
+          "Export": "Glockenmuffen"
+        },
+        {
+          "Display": "Kupplung",
+          "Export": "Kupplung"
+        },
+        {
+          "Display": "Schraubmuffen",
+          "Export": "Schraubmuffen"
+        },
+        {
+          "Display": "spiegelgeschweisst",
+          "Export": "spiegelgeschweisst"
+        },
+        {
+          "Display": "Spitzmuffen",
+          "Export": "Spitzmuffen"
+        },
+        {
+          "Display": "Steckmuffen",
+          "Export": "Steckmuffen"
+        },
+        {
+          "Display": "Ueberschiebmuffen",
+          "Export": "Ueberschiebmuffen"
+        },
+        {
+          "Display": "unbekannt",
+          "Export": "unbekannt"
+        },
+        {
+          "Display": "Vortriebsrohrkupplung",
+          "Export": "Vortriebsrohrkupplung"
+        }
+      ]
+    },
+    {
+      "Field": "Bettung_Umhuellung",
+      "Label": "Bettung/Umh\u00FCllung",
+      "Type": "Combo",
+      "ExportTarget": "Bettung_Umhuellung",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "andere",
+          "Export": "andere"
+        },
+        {
+          "Display": "erdverlegt",
+          "Export": "erdverlegt"
+        },
+        {
+          "Display": "in_Kanal_aufgehaengt",
+          "Export": "in_Kanal_aufgehaengt"
+        },
+        {
+          "Display": "in_Kanal_einbetoniert",
+          "Export": "in_Kanal_einbetoniert"
+        },
+        {
+          "Display": "in_Leitungsgang",
+          "Export": "in_Leitungsgang"
+        },
+        {
+          "Display": "in_Vortriebsrohr_Beton",
+          "Export": "in_Vortriebsrohr_Beton"
+        },
+        {
+          "Display": "in_Vortriebsrohr_Stahl",
+          "Export": "in_Vortriebsrohr_Stahl"
+        },
+        {
+          "Display": "Sand",
+          "Export": "Sand"
+        },
+        {
+          "Display": "SIA_Typ1",
+          "Export": "SIA_Typ1"
+        },
+        {
+          "Display": "SIA_Typ2",
+          "Export": "SIA_Typ2"
+        },
+        {
+          "Display": "SIA_Typ3",
+          "Export": "SIA_Typ3"
+        },
+        {
+          "Display": "SIA_Typ4",
+          "Export": "SIA_Typ4"
+        },
+        {
+          "Display": "Sohlbrett",
+          "Export": "Sohlbrett"
+        },
+        {
+          "Display": "unbekannt",
+          "Export": "unbekannt"
+        }
+      ]
+    },
+    {
+      "Field": "Status",
+      "Label": "Status",
+      "Type": "Combo",
+      "ExportTarget": "Status",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "ausser_Betrieb",
+          "Export": "ausser_Betrieb"
+        },
+        {
+          "Display": "in_Betrieb",
+          "Export": "in_Betrieb"
+        },
+        {
+          "Display": "tot",
+          "Export": "tot"
+        },
+        {
+          "Display": "unbekannt",
+          "Export": "unbekannt"
+        },
+        {
+          "Display": "weitere",
+          "Export": "weitere"
+        }
+      ]
+    },
+    {
+      "Field": "Sanierungsbedarf",
+      "Label": "Sanierungsbedarf",
+      "Type": "Combo",
+      "ExportTarget": "Sanierungsbedarf",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "dringend",
+          "Export": "dringend"
+        },
+        {
+          "Display": "keiner",
+          "Export": "keiner"
+        },
+        {
+          "Display": "kurzfristig",
+          "Export": "kurzfristig"
+        },
+        {
+          "Display": "langfristig",
+          "Export": "langfristig"
+        },
+        {
+          "Display": "mittelfristig",
+          "Export": "mittelfristig"
+        },
+        {
+          "Display": "unbekannt",
+          "Export": "unbekannt"
+        }
+      ]
+    },
+    {
+      "Field": "FunktionHydraulisch",
+      "Label": "Funktion hydraulisch",
+      "Type": "Combo",
+      "ExportTarget": "FunktionHydraulisch",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "andere",
+          "Export": "andere"
+        },
+        {
+          "Display": "Drainagetransportleitung",
+          "Export": "Drainagetransportleitung"
+        },
+        {
+          "Display": "Drosselleitung",
+          "Export": "Drosselleitung"
+        },
+        {
+          "Display": "Duekerleitung",
+          "Export": "Duekerleitung"
+        },
+        {
+          "Display": "Freispiegelleitung",
+          "Export": "Freispiegelleitung"
+        },
+        {
+          "Display": "Pumpendruckleitung",
+          "Export": "Pumpendruckleitung"
+        },
+        {
+          "Display": "Sickerleitung",
+          "Export": "Sickerleitung"
+        },
+        {
+          "Display": "Speicherleitung",
+          "Export": "Speicherleitung"
+        },
+        {
+          "Display": "Spuelleitung",
+          "Export": "Spuelleitung"
+        },
+        {
+          "Display": "unbekannt",
+          "Export": "unbekannt"
+        },
+        {
+          "Display": "Vakuumleitung",
+          "Export": "Vakuumleitung"
+        },
+        {
+          "Display": "Versickerungsleitung",
+          "Export": "Versickerungsleitung"
+        }
+      ]
+    },
+    {
+      "Field": "Lagebestimmung",
+      "Label": "Lagebestimmung",
+      "Type": "Combo",
+      "ExportTarget": "Lagebestimmung",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "genau",
+          "Export": "genau"
+        },
+        {
+          "Display": "unbekannt",
+          "Export": "unbekannt"
+        },
+        {
+          "Display": "ungenau",
+          "Export": "ungenau"
+        }
+      ]
+    },
+    {
+      "Field": "Baujahr",
+      "Label": "Baujahr",
+      "Type": "Int",
+      "ExportTarget": "Baujahr",
+      "Values": []
+    },
+    {
+      "Field": "Bruttokosten",
+      "Label": "Bruttokosten (Kataster)",
+      "Type": "Decimal",
+      "ExportTarget": "Bruttokosten",
+      "Values": []
+    },
+    {
+      "Field": "Objekt_ID",
+      "Label": "Objekt-ID (Lisag)",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "GEONIS_Kennung",
+      "Label": "GEONIS-Kennung",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Datenherr",
+      "Label": "Datenherr",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Datenlieferant",
+      "Label": "Datenlieferant",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Organisation",
+      "Label": "Organisation",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Letzte_Aenderung",
+      "Label": "Letzte \u00C4nderung",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Aktualisierungsdatum",
+      "Label": "Aktualisierungsdatum",
+      "Type": "Text",
+      "ExportTarget": null,
+      "Values": []
+    },
+    {
+      "Field": "Gefaelle_Promille",
+      "Label": "Gef\u00E4lle \u2030",
+      "Type": "Decimal",
+      "ExportTarget": null,
+      "Values": []
+    }
+  ],
+  "ShaftFields": [
+    {
+      "Field": "Funktion",
+      "OptionField": "Funktion",
+      "Group": "Stammdaten"
+    },
+    {
+      "Field": "Material",
+      "OptionField": "Material",
+      "Group": "Stammdaten"
+    },
+    {
+      "Field": "Status",
+      "OptionField": "Status",
+      "Group": "Stammdaten"
+    },
+    {
+      "Field": "Sanierungsbedarf",
+      "OptionField": "Sanierungsbedarf",
+      "Group": "Zustand und Inspektion"
+    },
+    {
+      "Field": "Baujahr",
+      "OptionField": null,
+      "Group": "Stammdaten"
+    },
+    {
+      "Field": "Nutzungsart",
+      "OptionField": null,
+      "Group": "Weitere Angaben"
+    },
+    {
+      "Field": "Bauwerksart",
+      "OptionField": "Bauwerksart",
+      "Group": "Stammdaten"
+    },
+    {
+      "Field": "Versickerungsart",
+      "OptionField": "Versickerungsart",
+      "Group": "Stammdaten"
+    },
+    {
+      "Field": "Schachtform",
+      "OptionField": "Schachtform",
+      "Group": "Stammdaten"
+    },
+    {
+      "Field": "Belastungsklasse",
+      "OptionField": "Belastungsklasse",
+      "Group": "Stammdaten"
+    },
+    {
+      "Field": "Eigent\u00FCmer",
+      "OptionField": "Eigentuemer",
+      "Group": "Stammdaten"
+    },
+    {
+      "Field": "Bemerkungen",
+      "OptionField": null,
+      "Group": "Zustand und Inspektion"
+    },
+    {
+      "Field": "Inspektionsdatum",
+      "OptionField": null,
+      "Group": "Zustand und Inspektion"
+    },
+    {
+      "Field": "Prim\u00E4re Sch\u00E4den",
+      "OptionField": null,
+      "Group": "Zustand und Inspektion"
+    },
+    {
+      "Field": "Fotos",
+      "OptionField": null,
+      "Group": "Dokumente und Medien"
+    },
+    {
+      "Field": "Ausgef\u00FChrt durch",
+      "OptionField": "Ausgefuehrt_durch",
+      "Group": "Sanierung und Kosten"
+    }
+  ],
+  "ShaftEnums": [
+    {
+      "Field": "Funktion",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "Absturzbauwerk",
+          "Export": "Absturzbauwerk"
+        },
+        {
+          "Display": "andere",
+          "Export": "andere"
+        },
+        {
+          "Display": "Be-/Entl\u00FCftung",
+          "Export": "Be_Entlueftung"
+        },
+        {
+          "Display": "Behandlungsanlage",
+          "Export": "Behandlungsanlage"
+        },
+        {
+          "Display": "Bodenablauf",
+          "Export": "Bodenablauf"
+        },
+        {
+          "Display": "Dachwasserschacht",
+          "Export": "Dachwasserschacht"
+        },
+        {
+          "Display": "Einlaufschacht",
+          "Export": "Einlaufschacht"
+        },
+        {
+          "Display": "Entw\u00E4sserungsrinne",
+          "Export": "Entwaesserungsrinne"
+        },
+        {
+          "Display": "Entw\u00E4sserungsrinne mit Schlammsack",
+          "Export": "Entwaesserungsrinne_mit_Schlammsack"
+        },
+        {
+          "Display": "Fettabscheider",
+          "Export": "Fettabscheider"
+        },
+        {
+          "Display": "Geleiseschacht",
+          "Export": "Geleiseschacht"
+        },
+        {
+          "Display": "Kombischacht",
+          "Export": "Kombischacht"
+        },
+        {
+          "Display": "Kontrollschacht",
+          "Export": "Kontroll_Einsteigschacht"
+        },
+        {
+          "Display": "Pumpwerk",
+          "Export": "Pumpwerk"
+        },
+        {
+          "Display": "Regen\u00FCberlauf",
+          "Export": "Regenueberlauf"
+        },
+        {
+          "Display": "Schlammsammler",
+          "Export": "Schlammsammler"
+        },
+        {
+          "Display": "Schwimmstoffabscheider",
+          "Export": "Schwimmstoffabscheider"
+        },
+        {
+          "Display": "Sickerschacht",
+          "Export": "andere"
+        },
+        {
+          "Display": "Spezialbauwerk",
+          "Export": "andere"
+        },
+        {
+          "Display": "Sp\u00FClschacht",
+          "Export": "Spuelschacht"
+        },
+        {
+          "Display": "Trennbauwerk",
+          "Export": "Trennbauwerk"
+        },
+        {
+          "Display": "unbekannt",
+          "Export": null
+        },
+        {
+          "Display": "Vorbehandlungsanlage",
+          "Export": "Vorbehandlungsanlage"
+        },
+        {
+          "Display": "\u00D6labscheider",
+          "Export": "Oelabscheider"
+        }
+      ]
+    },
+    {
+      "Field": "Material",
+      "Values": [
+        {
+          "Display": "",
+          "Export": null
+        },
+        {
+          "Display": "andere",
+          "Export": "andere"
+        },
+        {
+          "Display": "Beton",
+          "Export": "Beton"
+        },
+        {
+          "Display": "Fertigbetonelement",
+          "Export": "Beton"
+        },
+        {
+          "Display": "Gemauert",
+          "Export": "andere"
+        },
+        {
+          "Display": "GFK",
+          "Export": "Kunststoff"
+        },
+        {
+          "Display": "Kunststoff",
+          "Export": "Kunststoff"
+        },
+        {
+          "Display": "Ortsbeton",
+          "Export": "Beton"
+        },
+        {
+          "Display": "Polyethylen",
+          "Export": "Kunststoff"
+        },
+        {
+          "Display": "Polypropylen",
+          "Export": "Kunststoff"
+        },
+        {
+          "Display": "unbekannt",
+          "Export": null
+        }
+      ]
+    }
+  ],
+  "ZusatzFields": [
+    "Schachtform",
+    "Versickerungsart",
+    "Tiefe",
+    "Schachttiefe",
+    "Dimension",
+    "Material",
+    "Funktion",
+    "Dimension 1 mm",
+    "Dimension 2 mm",
+    "Belastungsklasse",
+    "Datum_Jahr",
+    "Primaere_Schaeden",
+    "Sanieren_JaNein",
+    "Empfohlene_Sanierungsmassnahmen",
+    "Kosten",
+    "Ausgefuehrt_durch",
+    "Renovierung_Inliner_Stk",
+    "Renovierung_Inliner_m",
+    "Anschluesse_verpressen",
+    "Reparatur_Manschette",
+    "Linerendmanschette_LEM",
+    "Reparatur_Kurzliner",
+    "Erneuerung_Neubau_m",
+    "Gefaelle_Promille",
+    "Inspektionsrichtung",
+    "Pruefungsresultat",
+    "Referenzpruefung",
+    "Gewaesserschutz",
+    "Grundwasserspiegel",
+    "VSA_Zustandsnote_D",
+    "VSA_Zustandsnote_S",
+    "VSA_Zustandsnote_B",
+    "VSA_Geschaetzt",
+    "Abdeckung Stk.",
+    "Bemerkungen",
+    "Strasse",
+    "Bruttokosten",
+    "Profiltyp",
+    "Lichte_Breite_mm",
+    "Nutzungsart",
+    "Zustandsklasse",
+    "Status",
+    "Sanierungsbedarf",
+    "Baujahr",
+    "Rohrmaterial",
+    "DN_mm",
+    "Haltungslaenge_m",
+    "FunktionHierarchisch",
+    "Verbindungsart",
+    "Bettung_Umhuellung",
+    "FunktionHydraulisch",
+    "Lagebestimmung"
+  ],
+  "OtherEnums": {
+    "Spezialbauwerk.Funktion": [
+      "abflussloseGrube",
+      "Absturzbauwerk",
+      "Abwasserfaulraum",
+      "andere",
+      "Be_Entlueftung",
+      "Behandlungsanlage",
+      "Duekerkammer",
+      "Duekeroberhaupt",
+      "Faulgrube",
+      "Fettabscheider",
+      "Gelaendemulde",
+      "Geschiebefang",
+      "Guellegrube",
+      "Havariebecken",
+      "Klaergrube",
+      "Kombischacht",
+      "Kontroll_Einsteigschacht",
+      "Oelabscheider",
+      "Pumpwerk",
+      "Regenbecken_Durchlaufbecken",
+      "Regenbecken_Fangbecken",
+      "Regenbecken_Fangkanal",
+      "Regenbecken_Regenklaerbecken",
+      "Regenbecken_Regenrueckhaltebecken",
+      "Regenbecken_Regenrueckhaltekanal",
+      "Regenbecken_Stauraumkanal",
+      "Regenbecken_Verbundbecken",
+      "Regenueberlauf",
+      "Schwimmstoffabscheider",
+      "seitlicherZugang",
+      "Spuelschacht",
+      "Trennbauwerk",
+      "unbekannt",
+      "Vorbehandlungsanlage",
+      "Wirbelfallschacht"
+    ],
+    "Versickerungsanlage.Art": [
+      "",
+      "andere_mit_Bodenpassage",
+      "andere_ohne_Bodenpassage",
+      "Flaechenfoermige_Versickerung",
+      "Kieskoerper",
+      "Kombination_Schacht_Strang",
+      "MuldenRigolenversickerung",
+      "unbekannt",
+      "Versickerung_ueber_die_Schulter",
+      "Versickerungsbecken",
+      "Versickerungsschacht",
+      "Versickerungsstrang_Galerie"
+    ]
+  },
+  "ActualShaftForm": [
+    {
+      "FieldName": "Funktion",
+      "IsCombo": true,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Material",
+      "IsCombo": true,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Status",
+      "IsCombo": true,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Baujahr",
+      "IsCombo": false,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Bauwerksart",
+      "IsCombo": true,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Versickerungsart",
+      "IsCombo": true,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Schachtform",
+      "IsCombo": true,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Belastungsklasse",
+      "IsCombo": true,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Eigent\u00FCmer",
+      "IsCombo": true,
+      "DigitsOnly": false,
+      "AllowFreeText": true
+    },
+    {
+      "FieldName": "Sanierungsbedarf",
+      "IsCombo": true,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Bemerkungen",
+      "IsCombo": false,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Inspektionsdatum",
+      "IsCombo": false,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Prim\u00E4re Sch\u00E4den",
+      "IsCombo": false,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Ausgef\u00FChrt durch",
+      "IsCombo": true,
+      "DigitsOnly": false,
+      "AllowFreeText": true
+    },
+    {
+      "FieldName": "Fotos",
+      "IsCombo": false,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    },
+    {
+      "FieldName": "Nutzungsart",
+      "IsCombo": false,
+      "DigitsOnly": false,
+      "AllowFreeText": false
+    }
+  ],
+  "Shaft4500": {
+    "Objekte": [
+      {
+        "Klasse": "Organisation",
+        "Tid": "chSST3CB4093CC35",
+        "Felder": [
+          {
+            "Key": "Bezeichnung",
+            "Value": "Privat"
+          },
+          {
+            "Key": "Organisationstyp",
+            "Value": "Privat"
+          },
+          {
+            "Key": "Status",
+            "Value": "aktiv"
+          }
+        ],
+        "Verweise": [],
+        "Geometrie": null,
+        "ImTopicAdministration": true,
+        "ImTopicZusatz": false
+      },
+      {
+        "Klasse": "Normschacht",
+        "Tid": "chSSTB0EBEC0F011",
+        "Felder": [
+          {
+            "Key": "Bezeichnung",
+            "Value": "AUDIT-1"
+          },
+          {
+            "Key": "Funktion",
+            "Value": "Fettabscheider"
+          }
+        ],
+        "Verweise": [
+          {
+            "Name": "DatenherrRef",
+            "ZielTid": "chSST3CB4093CC35"
+          },
+          {
+            "Name": "DatenlieferantRef",
+            "ZielTid": "chSST3CB4093CC35"
+          },
+          {
+            "Name": "EigentuemerRef",
+            "ZielTid": "chSST3CB4093CC35"
+          }
+        ],
+        "Geometrie": null,
+        "ImTopicAdministration": false,
+        "ImTopicZusatz": false
+      },
+      {
+        "Klasse": "Abwasserknoten",
+        "Tid": "chSSTD3E30676583",
+        "Felder": [
+          {
+            "Key": "Bezeichnung",
+            "Value": "AUDIT-1"
+          }
+        ],
+        "Verweise": [
+          {
+            "Name": "AbwasserbauwerkRef",
+            "ZielTid": "chSSTB0EBEC0F011"
+          },
+          {
+            "Name": "DatenherrRef",
+            "ZielTid": "chSST3CB4093CC35"
+          },
+          {
+            "Name": "DatenlieferantRef",
+            "ZielTid": "chSST3CB4093CC35"
+          }
+        ],
+        "Geometrie": null,
+        "ImTopicAdministration": false,
+        "ImTopicZusatz": false
+      }
+    ],
+    "Hinweise": [
+      "Schacht AUDIT-1: Innenmasse sind ungueltig. SIA405 erlaubt hoechstens 4000 mm; beide Masse werden nicht geschrieben. Bitte die Eingabe pruefen."
+    ],
+    "Haltungen": 0,
+    "Schaechte": 1,
+    "NurAenderungen": false,
+    "Leer": false
+  },
+  "SmallMillimeterInput": {
+    "Input": "10 mm",
+    "Export": 10
+  },
+  "Written4500": {
+    "Ok": true,
+    "Fehler": null,
+    "Datei": "C:\\Sewer-Studio_KI_4.5\\.tmp\\redesign-sia405-audit\\bin\\Debug\\net10.0-windows10.0.19041\\../../../massprobe-5afe443b5d3a4095aef4ca436ca77b54.xtf"
+  },
+  "KombiPlan": {
+    "Objekte": [
+      {
+        "Klasse": "Organisation",
+        "Tid": "chSST3CB4093CC35",
+        "Felder": [
+          {
+            "Key": "Bezeichnung",
+            "Value": "Privat"
+          },
+          {
+            "Key": "Organisationstyp",
+            "Value": "Privat"
+          },
+          {
+            "Key": "Status",
+            "Value": "aktiv"
+          }
+        ],
+        "Verweise": [],
+        "Geometrie": null,
+        "ImTopicAdministration": true,
+        "ImTopicZusatz": false
+      },
+      {
+        "Klasse": "Spezialbauwerk",
+        "Tid": "chSST37F40F63271",
+        "Felder": [
+          {
+            "Key": "Bezeichnung",
+            "Value": "AUDIT-KOMBI"
+          },
+          {
+            "Key": "Funktion",
+            "Value": "Kombischacht"
+          }
+        ],
+        "Verweise": [
+          {
+            "Name": "DatenherrRef",
+            "ZielTid": "chSST3CB4093CC35"
+          },
+          {
+            "Name": "DatenlieferantRef",
+            "ZielTid": "chSST3CB4093CC35"
+          },
+          {
+            "Name": "EigentuemerRef",
+            "ZielTid": "chSST3CB4093CC35"
+          }
+        ],
+        "Geometrie": null,
+        "ImTopicAdministration": false,
+        "ImTopicZusatz": false
+      },
+      {
+        "Klasse": "Abwasserknoten",
+        "Tid": "chSSTDCCD3F4B4EB",
+        "Felder": [
+          {
+            "Key": "Bezeichnung",
+            "Value": "AUDIT-KOMBI"
+          }
+        ],
+        "Verweise": [
+          {
+            "Name": "AbwasserbauwerkRef",
+            "ZielTid": "chSST37F40F63271"
+          },
+          {
+            "Name": "DatenherrRef",
+            "ZielTid": "chSST3CB4093CC35"
+          },
+          {
+            "Name": "DatenlieferantRef",
+            "ZielTid": "chSST3CB4093CC35"
+          }
+        ],
+        "Geometrie": null,
+        "ImTopicAdministration": false,
+        "ImTopicZusatz": false
+      }
+    ],
+    "Hinweise": [],
+    "Haltungen": 0,
+    "Schaechte": 1,
+    "NurAenderungen": false,
+    "Leer": false
+  },
+  "KombiWritten": {
+    "Ok": true,
+    "Fehler": null,
+    "Datei": "C:\\Sewer-Studio_KI_4.5\\.tmp\\redesign-sia405-audit\\bin\\Debug\\net10.0-windows10.0.19041\\../../../kombiprobe-b30215d04489422b985e71e7ce2ffea8.xtf"
+  },
+  "AliasCondition": {
+    "Resolved": "Zustandsklasse",
+    "Positions": 0
+  },
+  "AllShaftFunctions": [
+    {
+      "Display": "",
+      "ExportNormschacht": null,
+      "ExportSpezial": null
+    },
+    {
+      "Display": "Absturzbauwerk",
+      "ExportNormschacht": "Absturzbauwerk",
+      "ExportSpezial": "Absturzbauwerk"
+    },
+    {
+      "Display": "andere",
+      "ExportNormschacht": "andere",
+      "ExportSpezial": "andere"
+    },
+    {
+      "Display": "Be-/Entl\u00FCftung",
+      "ExportNormschacht": "Be_Entlueftung",
+      "ExportSpezial": "Be_Entlueftung"
+    },
+    {
+      "Display": "Behandlungsanlage",
+      "ExportNormschacht": "Behandlungsanlage",
+      "ExportSpezial": "Behandlungsanlage"
+    },
+    {
+      "Display": "Bodenablauf",
+      "ExportNormschacht": "Bodenablauf",
+      "ExportSpezial": null
+    },
+    {
+      "Display": "Dachwasserschacht",
+      "ExportNormschacht": "Dachwasserschacht",
+      "ExportSpezial": null
+    },
+    {
+      "Display": "Einlaufschacht",
+      "ExportNormschacht": "Einlaufschacht",
+      "ExportSpezial": null
+    },
+    {
+      "Display": "Entw\u00E4sserungsrinne",
+      "ExportNormschacht": "Entwaesserungsrinne",
+      "ExportSpezial": null
+    },
+    {
+      "Display": "Entw\u00E4sserungsrinne mit Schlammsack",
+      "ExportNormschacht": "Entwaesserungsrinne_mit_Schlammsack",
+      "ExportSpezial": null
+    },
+    {
+      "Display": "Fettabscheider",
+      "ExportNormschacht": "Fettabscheider",
+      "ExportSpezial": "Fettabscheider"
+    },
+    {
+      "Display": "Geleiseschacht",
+      "ExportNormschacht": "Geleiseschacht",
+      "ExportSpezial": null
+    },
+    {
+      "Display": "Kombischacht",
+      "ExportNormschacht": "Kombischacht",
+      "ExportSpezial": "Kombischacht"
+    },
+    {
+      "Display": "Kontrollschacht",
+      "ExportNormschacht": "Kontroll_Einsteigschacht",
+      "ExportSpezial": "Kontroll_Einsteigschacht"
+    },
+    {
+      "Display": "Pumpwerk",
+      "ExportNormschacht": "Pumpwerk",
+      "ExportSpezial": "Pumpwerk"
+    },
+    {
+      "Display": "Regen\u00FCberlauf",
+      "ExportNormschacht": "Regenueberlauf",
+      "ExportSpezial": "Regenueberlauf"
+    },
+    {
+      "Display": "Schlammsammler",
+      "ExportNormschacht": "Schlammsammler",
+      "ExportSpezial": null
+    },
+    {
+      "Display": "Schwimmstoffabscheider",
+      "ExportNormschacht": "Schwimmstoffabscheider",
+      "ExportSpezial": "Schwimmstoffabscheider"
+    },
+    {
+      "Display": "Sickerschacht",
+      "ExportNormschacht": "andere",
+      "ExportSpezial": "andere"
+    },
+    {
+      "Display": "Spezialbauwerk",
+      "ExportNormschacht": "andere",
+      "ExportSpezial": "andere"
+    },
+    {
+      "Display": "Sp\u00FClschacht",
+      "ExportNormschacht": "Spuelschacht",
+      "ExportSpezial": "Spuelschacht"
+    },
+    {
+      "Display": "Trennbauwerk",
+      "ExportNormschacht": "Trennbauwerk",
+      "ExportSpezial": "Trennbauwerk"
+    },
+    {
+      "Display": "unbekannt",
+      "ExportNormschacht": null,
+      "ExportSpezial": "unbekannt"
+    },
+    {
+      "Display": "Vorbehandlungsanlage",
+      "ExportNormschacht": "Vorbehandlungsanlage",
+      "ExportSpezial": "Vorbehandlungsanlage"
+    },
+    {
+      "Display": "\u00D6labscheider",
+      "ExportNormschacht": "Oelabscheider",
+      "ExportSpezial": "Oelabscheider"
+    },
+    {
+      "Display": "abflussloseGrube",
+      "ExportNormschacht": null,
+      "ExportSpezial": "abflussloseGrube"
+    },
+    {
+      "Display": "Abwasserfaulraum",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Abwasserfaulraum"
+    },
+    {
+      "Display": "Duekerkammer",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Duekerkammer"
+    },
+    {
+      "Display": "Duekeroberhaupt",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Duekeroberhaupt"
+    },
+    {
+      "Display": "Faulgrube",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Faulgrube"
+    },
+    {
+      "Display": "Gelaendemulde",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Gelaendemulde"
+    },
+    {
+      "Display": "Geschiebefang",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Geschiebefang"
+    },
+    {
+      "Display": "Guellegrube",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Guellegrube"
+    },
+    {
+      "Display": "Havariebecken",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Havariebecken"
+    },
+    {
+      "Display": "Klaergrube",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Klaergrube"
+    },
+    {
+      "Display": "Regenbecken_Durchlaufbecken",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Regenbecken_Durchlaufbecken"
+    },
+    {
+      "Display": "Regenbecken_Fangbecken",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Regenbecken_Fangbecken"
+    },
+    {
+      "Display": "Regenbecken_Fangkanal",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Regenbecken_Fangkanal"
+    },
+    {
+      "Display": "Regenbecken_Regenklaerbecken",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Regenbecken_Regenklaerbecken"
+    },
+    {
+      "Display": "Regenbecken_Regenrueckhaltebecken",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Regenbecken_Regenrueckhaltebecken"
+    },
+    {
+      "Display": "Regenbecken_Regenrueckhaltekanal",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Regenbecken_Regenrueckhaltekanal"
+    },
+    {
+      "Display": "Regenbecken_Stauraumkanal",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Regenbecken_Stauraumkanal"
+    },
+    {
+      "Display": "Regenbecken_Verbundbecken",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Regenbecken_Verbundbecken"
+    },
+    {
+      "Display": "seitlicherZugang",
+      "ExportNormschacht": null,
+      "ExportSpezial": "seitlicherZugang"
+    },
+    {
+      "Display": "Wirbelfallschacht",
+      "ExportNormschacht": null,
+      "ExportSpezial": "Wirbelfallschacht"
+    }
+  ],
+  "ClearRemark": {
+    "Positions": 0,
+    "Warnings": []
+  },
+  "BlankHoldingForm": [
+    "Haltungsname",
+    "Strasse",
+    "Schacht_oben",
+    "Schacht_unten",
+    "Rohrmaterial",
+    "DN_mm",
+    "Profiltyp",
+    "Lichte_Breite_mm",
+    "Nutzungsart",
+    "Haltungslaenge_m",
+    "Gefaelle_Promille",
+    "Inspektionsrichtung",
+    "Datum_Jahr",
+    "Baujahr",
+    "Eigentuemer",
+    "GEONIS_Kennung",
+    "Objekt_ID",
+    "FunktionHierarchisch",
+    "FunktionHydraulisch",
+    "Verbindungsart",
+    "Bettung_Umhuellung",
+    "Status",
+    "Lagebestimmung",
+    "Zustandsklasse",
+    "VSA_Zustandsnote_D",
+    "VSA_Zustandsnote_S",
+    "VSA_Zustandsnote_B",
+    "VSA_Geschaetzt",
+    "Pruefungsresultat",
+    "Referenzpruefung",
+    "Gewaesserschutz",
+    "Grundwasserspiegel",
+    "Sanierungsbedarf",
+    "Primaere_Schaeden",
+    "Sanieren_JaNein",
+    "Empfohlene_Sanierungsmassnahmen",
+    "Renovierung_Inliner_m",
+    "Renovierung_Inliner_Stk",
+    "Anschluesse_verpressen",
+    "Reparatur_Manschette",
+    "Linerendmanschette_LEM",
+    "Reparatur_Kurzliner",
+    "Erneuerung_Neubau_m",
+    "Ausgefuehrt_durch",
+    "Offen_abgeschlossen",
+    "Kosten",
+    "Bruttokosten",
+    "Link",
+    "Bemerkungen",
+    "NR",
+    "Datenherr",
+    "Datenlieferant",
+    "Organisation",
+    "Letzte_Aenderung",
+    "Aktualisierungsdatum"
+  ]
+}

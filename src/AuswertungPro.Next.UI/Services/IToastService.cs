@@ -12,4 +12,13 @@ public interface IToastService
     void Info(string message);
     void Warning(string message);
     void Error(string message);
+
+    /// <summary>
+    /// Erfolg mit anklickbarem Link, z. B. "Ordner oeffnen". Umsetzungen ohne Link zeigen nur
+    /// die Meldung; deshalb bleibt diese Erweiterung fuer bestehende Umsetzungen kompatibel.
+    /// </summary>
+    void Success(string message, string aktionText, Action aktion) => Success(message);
+
+    /// <summary>Warnung mit anklickbarem Link, z. B. "Bericht öffnen" nach einem Lauf mit Fehlern.</summary>
+    void Warning(string message, string aktionText, Action aktion) => Warning(message);
 }

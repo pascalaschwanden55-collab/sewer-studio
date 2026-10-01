@@ -4,9 +4,27 @@ using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
+/// <summary>Welches Bauteil eine Druckcenter-Zeile beschreibt.</summary>
+public enum DruckcenterRowKind
+{
+    Haltung,
+    Schacht
+}
+
 public sealed class DruckcenterRowVm
 {
-    public HaltungRecord Record { get; init; } = new();
+    /// <summary>
+    /// Nur bei Haltungszeilen gesetzt. Schaechte tragen bewusst keine Haltung, damit der
+    /// Dossier-Druck nicht versehentlich eine leere Haltung ausgibt.
+    /// </summary>
+    public HaltungRecord? Record { get; init; }
+
+    public DruckcenterRowKind Kind { get; init; } = DruckcenterRowKind.Haltung;
+
+    /// <summary>Ein volles Dossier gibt es nur fuer Haltungen — Schaechte haben keines.</summary>
+    public bool CanPrintDossier => Kind == DruckcenterRowKind.Haltung && Record is not null;
+
+    /// <summary>Anzeigename der Zeile: Haltungsname bzw. Schachtnummer.</summary>
     public string Holding { get; init; } = "";
     public string Street { get; init; } = "";
     public string Owner { get; init; } = "";

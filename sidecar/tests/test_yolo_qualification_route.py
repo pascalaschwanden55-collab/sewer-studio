@@ -2,6 +2,7 @@
 
 from sidecar.routes import yolo
 from sidecar.schemas.detection import (
+    BccTestYoloRequest,
     BccTestYoloResponse,
     YoloDetection,
     YoloRequest,
@@ -108,7 +109,7 @@ def test_bcc_test_endpoint_does_not_use_standard_qualification(monkeypatch):
     )
     monkeypatch.setattr(yolo, "write_event", lambda *args, **kwargs: None)
 
-    response = yolo.detect_yolo_bcc_test(YoloRequest(image_base64="valid"))
+    response = yolo.detect_yolo_bcc_test(BccTestYoloRequest(image_base64="valid"))
 
     assert response.available is True
     assert response.candidate_id == "bcc-candidate"

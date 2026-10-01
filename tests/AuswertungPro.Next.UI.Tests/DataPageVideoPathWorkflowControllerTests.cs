@@ -140,11 +140,11 @@ public sealed class DataPageVideoPathWorkflowControllerTests
         Assert.Equal(
             new[]
             {
-                "select:Video-Ordner auswaehlen:C:\\Initial",
+                "select:Video-Ordner auswählen:C:\\Initial",
                 "persist:C:\\Selected",
                 "resolve:C:\\Selected",
                 "info:Video:Kein eindeutiges Video gefunden.",
-                "open:Video auswaehlen:C:\\Selected",
+                "open:Video auswählen:C:\\Selected",
                 "save:C:\\Selected\\manual.mp4:True"
             },
             events);
@@ -207,7 +207,7 @@ public sealed class DataPageVideoPathWorkflowControllerTests
             (_, _) => throw new InvalidOperationException("video search should not run"),
             (title, initialFolder) =>
             {
-                Assert.Equal("Video-Ordner auswaehlen", title);
+                Assert.Equal("Video-Ordner auswählen", title);
                 Assert.Equal("C:\\Initial", initialFolder);
                 return "";
             },

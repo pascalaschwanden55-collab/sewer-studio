@@ -1,4 +1,4 @@
-<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.ExportPage"
+﻿<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.ExportPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ctrl="clr-namespace:AuswertungPro.Next.UI.Controls"
@@ -8,7 +8,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <pages:DistributionVariantToBoolConverter x:Key="VariantToBool"/>
         <DataTemplate x:Key="PatternPartTemplate">
-            <Border Padding="7,3" Margin="0,0,4,3" CornerRadius="9" BorderThickness="1">
+            <Border Padding="7,3" Margin="0,0,4,3" CornerRadius="{DynamicResource RadiusL}" BorderThickness="1">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
@@ -21,373 +21,552 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <TextBlock Text="{Binding Text}" FontSize="10"
+                <TextBlock Text="{Binding Text}" FontSize="{DynamicResource TextXS}"
                            Foreground="{DynamicResource TextBrush}"
                            ToolTip="{Binding RawValue}"/>
             </Border>
         </DataTemplate>
     </UserControl.Resources>
 
+    <!-- Aufbau (28.09.2026, Aufgabe 9): vier klar betitelte Abschnitte in fester Reihenfolge -
+         Excel-Listen, Dateien verteilen, Kataster (XTF), WebGIS. Jeder Abschnitt traegt einen
+         x:Name mit dem Praefix "Abschnitt" (Konvention fuer den Waechter "hoechstens ein
+         ToolbarButtonAccent je Abschnitt", siehe ExportImportAbschnittsKnopfTests). Die
+         Ueberschrift "Zielordner & Verzeichnisbaum" steht nur noch direkt ueber dem echten
+         Verzeichnisbaum-Bereich (Abschnitt "Dateien verteilen"). Fachbegriffe (FME, .ili, DSS,
+         SIA405, Zusatzmodell) stehen nur noch in ToolTips oder im aufklappbaren
+         "Technische Details"-Bereich, nie mehr als eigener sichtbarer Fliesstext. Alle
+         Bindungen/Befehle bleiben unveraendert (WebGis.* siehe ExportWebGisBereichTests). -->
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Export Toolbar Card -->
-        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                Padding="6,4" CornerRadius="8" Margin="0,0,0,8">
-            <StackPanel Orientation="Horizontal">
-                <Button Command="{Binding ExportCommand}"
-                        Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0"
-                        ToolTip="Haltungsdaten in die Excel-Vorlage Haltungen.xlsx exportieren.">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE78C;" FontFamily="{DynamicResource FontIcon}" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="Export Haltungen.xlsx" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-                <Button Command="{Binding ExportSchaechteCommand}"
-                        Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
-                        ToolTip="Schachtdaten in die Excel-Vorlage Schaechte.xlsx exportieren.">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE78C;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="Export Schächte.xlsx" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </Border>
+        <ctrl:NovaPageHeader Grid.Row="0" Title="Export" Subtitle="Excel-Listen, Dateien verteilen, Kataster (XTF), WebGIS">
+            <Button Content="SIA405-Lieferung bearbeiten …" Command="{Binding LieferungBearbeitenCommand}"
+                    Style="{DynamicResource ToolbarButton}"
+                    ToolTip="Öffnet einen freien Editor für eine einzelne Katasterdatei (SIA405-Lieferung) — für Sonderfälle, die die beiden Wege oben nicht abdecken."/>
+        </ctrl:NovaPageHeader>
 
-        <!-- Verteilungs-Card -->
-        <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                Padding="6,4" CornerRadius="8" Margin="0,0,0,8">
-            <StackPanel Orientation="Horizontal">
-                <Button Click="DropdownButton_Click"
-                        Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                        ToolTip="Haltungen und Schächte in Ordner verteilen">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE72D;" FontFamily="{DynamicResource FontIcon}" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Text="Verteilen" VerticalAlignment="Center"/>
-                        <TextBlock Text="&#xE70D;" FontFamily="{DynamicResource FontIcon}" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
-                    </StackPanel>
-                    <Button.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="Haltungen – Normal" Command="{Binding DistributeHoldingsNormalCommand}">
-                                <MenuItem.Icon>
-                                    <ui:FluentIcon Glyph="&#xE8B7;" Foreground="{DynamicResource MutedBrush}"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Haltungen – Sanierung" Command="{Binding DistributeHoldingsSanierungCommand}">
-                                <MenuItem.Icon>
-                                    <ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource AccentBrush}"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <Separator/>
-                            <MenuItem Header="Schächte – Normal" Command="{Binding DistributeShaftsNormalCommand}">
-                                <MenuItem.Icon>
-                                    <ui:FluentIcon Glyph="&#xE8B7;" Foreground="{DynamicResource MutedBrush}"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Schächte – Sanierung" Command="{Binding DistributeShaftsSanierungCommand}">
-                                <MenuItem.Icon>
-                                    <ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource AccentBrush}"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <Separator/>
-                            <MenuItem Header="Dichtheitsprüfung verteilen" Command="{Binding DistributeDichtheitCommand}">
-                                <MenuItem.Icon>
-                                    <ui:FluentIcon Glyph="&#xE9CE;" Foreground="{DynamicResource MutedBrush}"/>
-                                </MenuItem.Icon>
-                            </MenuItem>
-                        </ContextMenu>
-                    </Button.ContextMenu>
-                </Button>
-            </StackPanel>
-        </Border>
-
-        <!-- Fortschrittsanzeige -->
-        <Border Grid.Row="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                Padding="10" Margin="0,0,0,8" CornerRadius="8"
-                Visibility="{Binding IsDistributionInProgress, Converter={StaticResource BoolToVis}}">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
             <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="&#xE895;" FontFamily="{DynamicResource FontIcon}" FontSize="14" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="{Binding DistributionProgress}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
-                </StackPanel>
-                <TextBlock Text="{Binding DistributionPercent, StringFormat=Fortschritt: {0:0}%}"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           Margin="0,0,0,4"/>
-                <ProgressBar Height="6" Margin="0,2,0,0"
-                             Minimum="0" Maximum="100"
-                             Value="{Binding DistributionPercent}"
-                             IsIndeterminate="{Binding IsDistributionIndeterminate}"/>
-            </StackPanel>
-        </Border>
 
-        <!-- Ziel-/Namensvorlagen-Konfiguration + Ergebnis der letzten Verteilung -->
-        <Grid Grid.Row="3">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+                <!-- Abschnitt 1: Excel-Listen -->
+                <Border x:Name="AbschnittExcelListen" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="Excel-Listen" Style="{DynamicResource SectionTitle}"/>
+                        <TextBlock Text="Haltungs- und Schachtdaten in die festen Excel-Vorlagen exportieren."
+                                   FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
+                                   TextWrapping="Wrap" Margin="0,2,0,10"/>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
-                <StackPanel>
-                    <TextBlock Text="Zielordner &amp; Verzeichnisbaum"
-                               FontWeight="SemiBold" FontSize="13"
-                               Foreground="{DynamicResource TextBrush}" Margin="2,0,0,2"/>
-                    <TextBlock Text="Excel nutzt nur einen gemeinsamen Zielordner. Den Verzeichnisbaum stellst du getrennt für Haltungen, Schächte und DP zusammen."
-                               FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                               TextWrapping="Wrap" Margin="2,0,0,8"/>
-
-                    <!-- Excel: bewusst nur ein gemeinsamer Zielordner, keine Namens- oder Baum-Muster -->
-                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Padding="12" CornerRadius="8" Margin="0,0,0,8">
-                        <StackPanel>
-                            <TextBlock Text="Excel-Export" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextBrush}"/>
-                            <TextBlock Text="Ein gemeinsamer Zielordner für Haltungen.xlsx und Schaechte.xlsx"
-                                       FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
-                            <TextBlock Text="Zielordner" FontSize="11"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                            <Grid Margin="0,2,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Text="{Binding ExcelExportRoot, UpdateSourceTrigger=PropertyChanged}"
-                                         ToolTip="Dieser Ordner gilt für beide Excel-Dateien."/>
-                                <Button Grid.Column="1" Command="{Binding BrowseExcelExportRootCommand}"
-                                        Margin="4,0,0,0" Padding="10,0"
-                                        ToolTip="Gemeinsamen Excel-Zielordner wählen">
-                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
-                                </Button>
-                            </Grid>
-                            <TextBlock Text="Feste Dateien: Haltungen.xlsx · Schaechte.xlsx"
-                                       FontSize="10" Foreground="{DynamicResource MutedBrush}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button Command="{Binding ExportCommand}"
+                                    Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0"
+                                    ToolTip="Haltungsdaten in die Excel-Vorlage Haltungen.xlsx exportieren.">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE78C;" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Export Haltungen.xlsx" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding ExportSchaechteCommand}"
+                                    Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
+                                    ToolTip="Schachtdaten in die Excel-Vorlage Schächte.xlsx exportieren.">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE78C;" FontSize="{DynamicResource TextM}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Export Schächte.xlsx" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
-                    </Border>
 
-                    <TextBlock Text="Verzeichnisbaum für die Verteilung"
-                               FontWeight="SemiBold" FontSize="12"
-                               Foreground="{DynamicResource TextBrush}" Margin="2,2,0,6"/>
+                        <TextBlock Text="Gemeinsamer Zielordner" FontSize="{DynamicResource TextXS}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <Grid Margin="0,2,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding ExcelExportRoot, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="Dieser Ordner gilt für beide Excel-Dateien."/>
+                            <Button Grid.Column="1" Command="{Binding BrowseExcelExportRootCommand}"
+                                    Margin="4,0,0,0" Padding="10,0"
+                                    ToolTip="Gemeinsamen Excel-Zielordner wählen"
+                                    AutomationProperties.Name="Gemeinsamen Excel-Zielordner wählen">
+                                <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                            </Button>
+                        </Grid>
+                        <TextBlock Text="Feste Dateien: Haltungen.xlsx · Schächte.xlsx"
+                                   FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"/>
+                    </StackPanel>
+                </Border>
 
-                    <ItemsControl ItemsSource="{Binding DistributionTargets}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                        BorderThickness="1" Padding="12" CornerRadius="8" Margin="0,0,0,8">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Titel}" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextBrush}"/>
-                                        <TextBlock Text="{Binding Untertitel}" FontSize="11"
-                                                   Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                <!-- Abschnitt 2: Dateien verteilen -->
+                <Border x:Name="AbschnittDateienVerteilen" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="Dateien verteilen" Style="{DynamicResource SectionTitle}"/>
+                        <TextBlock Text="Protokolle, Fotos und Filme nach Haltung, Schacht oder Prüfstatus in Ordner sortieren."
+                                   FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
+                                   TextWrapping="Wrap" Margin="0,2,0,10"/>
 
-                                        <!-- Eigene Ziel-Wurzel nur fuer die drei Verteilungen -->
-                                        <StackPanel Visibility="{Binding ShowRootEditor, Converter={StaticResource BoolToVis}}">
-                                            <TextBlock Text="Ziel-Wurzel" FontSize="11"
-                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                            <Grid Margin="0,2,0,6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBox Text="{Binding Root, UpdateSourceTrigger=PropertyChanged}"
-                                                         ToolTip="Basis-Ordner. Leer = beim Verteilen per Dialog fragen."/>
-                                                <Button Grid.Column="1" Command="{Binding BrowseRootCommand}"
-                                                        Margin="4,0,0,0" Padding="10,0"
-                                                        ToolTip="Ziel-Wurzel waehlen">
-                                                    <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
-                                                </Button>
-                                            </Grid>
-                                        </StackPanel>
+                        <Button Click="DropdownButton_Click"
+                                Style="{StaticResource ToolbarButtonAccent}" HorizontalAlignment="Left" Margin="0,0,0,10"
+                                ToolTip="Haltungen und Schächte in Ordner verteilen">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:FluentIcon Glyph="&#xE72D;" FontSize="{DynamicResource TextM}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="Verteilen" VerticalAlignment="Center"/>
+                                <ui:FluentIcon Glyph="&#xE70D;" FontSize="{DynamicResource TextXS}" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                            </StackPanel>
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Haltungen – Normal" Command="{Binding DistributeHoldingsNormalCommand}">
+                                        <MenuItem.Icon>
+                                            <ui:FluentIcon Glyph="&#xE8B7;" Foreground="{DynamicResource MutedBrush}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Haltungen – Sanierung" Command="{Binding DistributeHoldingsSanierungCommand}">
+                                        <MenuItem.Icon>
+                                            <ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource AccentBrush}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Schächte – Normal" Command="{Binding DistributeShaftsNormalCommand}">
+                                        <MenuItem.Icon>
+                                            <ui:FluentIcon Glyph="&#xE8B7;" Foreground="{DynamicResource MutedBrush}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Schächte – Sanierung" Command="{Binding DistributeShaftsSanierungCommand}">
+                                        <MenuItem.Icon>
+                                            <ui:FluentIcon Glyph="&#xE90F;" Foreground="{DynamicResource AccentBrush}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Dichtheitsprüfung verteilen" Command="{Binding DistributeDichtheitCommand}">
+                                        <MenuItem.Icon>
+                                            <ui:FluentIcon Glyph="&#xE9CE;" Foreground="{DynamicResource MutedBrush}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Abgleichen"
+                                              ToolTip="Verschiebt aus den Verteilordnern alles in den Papierkorb, wozu es im Projekt keine Haltung und keinen Schacht gibt. Zeigt vorher, was betroffen ist."
+                                              Command="{Binding AbgleichenCommand}">
+                                        <MenuItem.Icon>
+                                            <ui:FluentIcon Glyph="&#xE895;" Foreground="{DynamicResource MutedBrush}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
 
-                                        <!-- Normal/Sanierung-Umschalter (nur Haltung/Schacht) + grafische Ordnerbaum-Vorschau; Bausteine in "Erweitert" -->
-                                        <StackPanel Visibility="{Binding ShowDirectoryTree, Converter={StaticResource BoolToVis}}">
-                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,8"
-                                                        Visibility="{Binding SupportsSanierung, Converter={StaticResource BoolToVis}}">
-                                                <RadioButton Content="Normal" GroupName="Variant" Margin="0,0,6,0" Padding="14,4"
-                                                             IsChecked="{Binding PreviewVariant, Converter={StaticResource VariantToBool}, ConverterParameter=Normal, Mode=TwoWay}"/>
-                                                <RadioButton Content="Sanierung" GroupName="Variant" Padding="14,4"
-                                                             IsChecked="{Binding PreviewVariant, Converter={StaticResource VariantToBool}, ConverterParameter=Sanierung, Mode=TwoWay}"/>
-                                            </StackPanel>
-                                            <ctrl:DistributionTreePreviewControl Nodes="{Binding TreeNodes}" Margin="0,0,0,8"/>
-                                            <Expander Header="Erweitert (Ordner-Bausteine)" IsExpanded="{Binding IsAdvancedExpanded}">
-                                                <StackPanel Margin="0,6,0,0">
-                                                    <TextBlock Text="Verzeichnisbaum" FontSize="11" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                    <TextBlock Text="Bausteine anklicken. Leere Ebenen werden weggelassen."
-                                                               FontSize="10" Foreground="{DynamicResource MutedBrush}"
-                                                               TextWrapping="Wrap" Margin="0,1,0,5"/>
+                        <!-- Fortschrittsanzeige -->
+                        <Border Background="{DynamicResource SurfaceSubtleBrush}" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                                Padding="10" Margin="0,0,0,10" CornerRadius="{DynamicResource RadiusL}"
+                                Visibility="{Binding IsDistributionInProgress, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <ui:FluentIcon Glyph="&#xE895;" FontSize="{DynamicResource TextL}" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding DistributionProgress}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding DistributionPercent, StringFormat=Fortschritt: {0:0}%}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Margin="0,0,0,4"/>
+                                <ProgressBar Style="{StaticResource ProgressBarStandard}" Margin="0,2,0,0"
+                                             Minimum="0" Maximum="100"
+                                             Value="{Binding DistributionPercent}"
+                                             IsIndeterminate="{Binding IsDistributionIndeterminate}"/>
+                            </StackPanel>
+                        </Border>
 
-                                            <!-- Erste freie Ebene -->
-                                            <StackPanel Margin="0,0,0,8">
-                                                <TextBlock FontSize="10" Foreground="{DynamicResource MutedBrush}">
-                                                    <Run Text="&#x251C;&#x2500; "/><Run Text="1. Ordner (optional)"/>
-                                                </TextBlock>
-                                                <Border Background="{DynamicResource SurfaceSubtleBrush}"
-                                                        BorderBrush="{DynamicResource BorderLightBrush}"
-                                                        BorderThickness="1" CornerRadius="4"
-                                                        Padding="6,5" MinHeight="34" Margin="14,2,0,5">
-                                                    <ItemsControl ItemsSource="{Binding OrdnerPatternParts}"
-                                                                  ItemTemplate="{StaticResource PatternPartTemplate}">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                    </ItemsControl>
-                                                </Border>
-                                                <ItemsControl ItemsSource="{Binding AvailableDirectoryBlocks}" Margin="14,0,0,0">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Button Content="{Binding Label}"
-                                                                    Command="{Binding DataContext.AddOrdnerPatternBlockCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                                    CommandParameter="{Binding}" ToolTip="{Binding Description}"
-                                                                    Padding="9,3" Margin="0,0,5,5" MinWidth="34"/>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                                <StackPanel Orientation="Horizontal" Margin="14,0,0,4">
-                                                    <Button Content="Zurück" Command="{Binding RemoveLastOrdnerPatternBlockCommand}"
-                                                            Padding="8,3" Margin="0,0,5,0"/>
-                                                    <Button Content="Leeren" Command="{Binding ClearOrdnerPatternCommand}" Padding="8,3"/>
-                                                </StackPanel>
-                                                <TextBox Text="{Binding OrdnerPattern, UpdateSourceTrigger=PropertyChanged}"
-                                                         Margin="14,0,0,0" ToolTip="Optionale Feinbearbeitung des ersten Ordners"/>
-                                            </StackPanel>
+                        <!-- Verzeichnisbaum: die Ueberschrift steht bewusst NUR hier, direkt ueber
+                             dem echten Baum, nicht mehr ueber der ganzen Seite. -->
+                        <TextBlock x:Name="VerzeichnisbaumTitel" Text="Zielordner &amp; Verzeichnisbaum"
+                                   FontWeight="SemiBold" FontSize="{DynamicResource TextM}"
+                                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
+                        <TextBlock Text="Excel (oben) nutzt nur einen gemeinsamen Zielordner. Den Verzeichnisbaum hier stellst du getrennt für Haltungen, Schächte und DP zusammen."
+                                   FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
+                                   TextWrapping="Wrap" Margin="0,0,0,8"/>
 
-                                            <!-- Zweite freie Ebene -->
-                                            <StackPanel Margin="14,0,0,8">
-                                                <TextBlock FontSize="10" Foreground="{DynamicResource MutedBrush}">
-                                                    <Run Text="&#x251C;&#x2500; "/><Run Text="2. Unterordner (optional)"/>
-                                                </TextBlock>
-                                                <Border Background="{DynamicResource SurfaceSubtleBrush}"
-                                                        BorderBrush="{DynamicResource BorderLightBrush}"
-                                                        BorderThickness="1" CornerRadius="4"
-                                                        Padding="6,5" MinHeight="34" Margin="14,2,0,5">
-                                                    <ItemsControl ItemsSource="{Binding UnterordnerPatternParts}"
-                                                                  ItemTemplate="{StaticResource PatternPartTemplate}">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                    </ItemsControl>
-                                                </Border>
-                                                <ItemsControl ItemsSource="{Binding AvailableDirectoryBlocks}" Margin="14,0,0,0">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Button Content="{Binding Label}"
-                                                                    Command="{Binding DataContext.AddUnterordnerPatternBlockCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                                    CommandParameter="{Binding}" ToolTip="{Binding Description}"
-                                                                    Padding="9,3" Margin="0,0,5,5" MinWidth="34"/>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                                <StackPanel Orientation="Horizontal" Margin="14,0,0,4">
-                                                    <Button Content="Zurück" Command="{Binding RemoveLastUnterordnerPatternBlockCommand}"
-                                                            Padding="8,3" Margin="0,0,5,0"/>
-                                                    <Button Content="Leeren" Command="{Binding ClearUnterordnerPatternCommand}" Padding="8,3"/>
-                                                </StackPanel>
-                                                <TextBox Text="{Binding UnterordnerPattern, UpdateSourceTrigger=PropertyChanged}"
-                                                         Margin="14,0,0,0" ToolTip="Optionale Feinbearbeitung des zweiten Ordners"/>
-                                            </StackPanel>
+                        <ItemsControl ItemsSource="{Binding DistributionTargets}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Titel}" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}"/>
+                                            <TextBlock Text="{Binding Untertitel}" FontSize="{DynamicResource TextXS}"
+                                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
 
-                                            <!-- Letzte Objekt-Ebene bleibt absichtlich fest -->
-                                            <StackPanel Margin="28,0,0,8">
-                                                <TextBlock FontSize="10" Foreground="{DynamicResource MutedBrush}">
-                                                    <Run Text="&#x2514;&#x2500; "/><Run Text="Objektordner (fest)"/>
-                                                </TextBlock>
-                                                <Border Background="{DynamicResource SurfaceSubtleBrush}"
-                                                        BorderBrush="{DynamicResource BorderLightBrush}"
-                                                        BorderThickness="1" CornerRadius="4"
-                                                        Padding="6,5" MinHeight="34" Margin="14,2,0,0">
-                                                    <ItemsControl ItemsSource="{Binding ObjectFolderPatternParts}"
-                                                                  ItemTemplate="{StaticResource PatternPartTemplate}">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                    </ItemsControl>
-                                                </Border>
-                                            </StackPanel>
-                                                </StackPanel>
-                                            </Expander>
-                                        </StackPanel>
-
-                                        <!-- Sichtbare Reihenfolge: editierbar bei Excel, fest bei der Verteilung -->
-                                        <TextBlock Text="Dateiname" FontSize="11"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        <Border Background="{DynamicResource SurfaceSubtleBrush}"
-                                                BorderBrush="{DynamicResource BorderLightBrush}"
-                                                BorderThickness="1" CornerRadius="4"
-                                                Padding="6,5" MinHeight="34" Margin="0,2,0,6">
-                                            <ItemsControl ItemsSource="{Binding DateiPatternParts}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <WrapPanel/>
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border Padding="7,3" Margin="0,0,4,3"
-                                                                CornerRadius="9" BorderThickness="1">
-                                                            <Border.Style>
-                                                                <Style TargetType="Border">
-                                                                    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-                                                                    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsPlaceholder}" Value="True">
-                                                                            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-                                                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Border.Style>
-                                                            <TextBlock Text="{Binding Text}" FontSize="10"
-                                                                       Foreground="{DynamicResource TextBrush}"
-                                                                       ToolTip="{Binding RawValue}"/>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Border>
-
-                                        <TextBlock Text="{Binding Hinweis}" FontSize="10"
-                                                   Foreground="{DynamicResource MutedBrush}"
-                                                   TextWrapping="Wrap" Margin="0,0,0,6"/>
-
-                                        <!-- Live-Vorschau des vollstaendigen Zielpfads -->
-                                        <Border Background="{DynamicResource SurfaceSubtleBrush}"
-                                                BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
-                                                CornerRadius="4" Padding="8,6">
-                                            <StackPanel>
-                                                <TextBlock Text="Vorschau" FontSize="10"
+                                            <!-- Eigene Ziel-Wurzel nur fuer die drei Verteilungen -->
+                                            <StackPanel Visibility="{Binding ShowRootEditor, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="Hauptordner" FontSize="{DynamicResource TextXS}"
                                                            Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                <TextBlock Text="{Binding Vorschau}" FontFamily="Consolas" FontSize="11"
-                                                           Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
+                                                <Grid Margin="0,2,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Text="{Binding Root, UpdateSourceTrigger=PropertyChanged}"
+                                                             ToolTip="Ordner, in den verteilt wird. Leer = der Projektordner (Haltungen_Verteilt, Schächte_Verteilt)."/>
+                                                    <Button Grid.Column="1" Command="{Binding BrowseRootCommand}"
+                                                            Margin="4,0,0,0" Padding="10,0"
+                                                            ToolTip="Hauptordner wählen"
+                                                            AutomationProperties.Name="Hauptordner wählen">
+                                                        <ui:FluentIcon Glyph="&#xE838;" Foreground="{DynamicResource MutedBrush}"/>
+                                                    </Button>
+                                                </Grid>
                                             </StackPanel>
-                                        </Border>
+
+                                            <!-- Normal/Sanierung-Umschalter (nur Haltung/Schacht) + grafische Ordnerbaum-Vorschau; Bausteine in "Erweitert" -->
+                                            <StackPanel Visibility="{Binding ShowDirectoryTree, Converter={StaticResource BoolToVis}}">
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,8"
+                                                            Visibility="{Binding SupportsSanierung, Converter={StaticResource BoolToVis}}">
+                                                    <RadioButton Content="Normal" GroupName="Variant" Margin="0,0,6,0" Padding="14,4"
+                                                                 IsChecked="{Binding PreviewVariant, Converter={StaticResource VariantToBool}, ConverterParameter=Normal, Mode=TwoWay}"/>
+                                                    <RadioButton Content="Sanierung" GroupName="Variant" Padding="14,4"
+                                                                 IsChecked="{Binding PreviewVariant, Converter={StaticResource VariantToBool}, ConverterParameter=Sanierung, Mode=TwoWay}"/>
+                                                </StackPanel>
+                                                <ctrl:DistributionTreePreviewControl Nodes="{Binding TreeNodes}" Margin="0,0,0,8"/>
+                                                <Expander Header="Erweitert (Ordner-Bausteine)" IsExpanded="{Binding IsAdvancedExpanded}">
+                                                    <StackPanel Margin="0,6,0,0">
+                                                        <TextBlock Text="Verzeichnisbaum" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                        <TextBlock Text="Bausteine anklicken. Leere Ebenen werden weggelassen."
+                                                                   FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
+                                                                   TextWrapping="Wrap" Margin="0,1,0,5"/>
+
+                                                    <!-- Erste freie Ebene -->
+                                                    <StackPanel Margin="0,0,0,8">
+                                                        <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}">
+                                                            <Run Text="&#x251C;&#x2500; "/><Run Text="1. Ordner (optional)"/>
+                                                        </TextBlock>
+                                                        <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                                                BorderBrush="{DynamicResource BorderLightBrush}"
+                                                                BorderThickness="1" CornerRadius="{DynamicResource RadiusS}"
+                                                                Padding="6,5" MinHeight="34" Margin="14,2,0,5">
+                                                            <ItemsControl ItemsSource="{Binding OrdnerPatternParts}"
+                                                                          ItemTemplate="{StaticResource PatternPartTemplate}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                            </ItemsControl>
+                                                        </Border>
+                                                        <ItemsControl ItemsSource="{Binding AvailableDirectoryBlocks}" Margin="14,0,0,0">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Button Content="{Binding Label}"
+                                                                            Command="{Binding DataContext.AddOrdnerPatternBlockCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                            CommandParameter="{Binding}" ToolTip="{Binding Description}"
+                                                                            Padding="9,3" Margin="0,0,5,5" MinWidth="34"/>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                        <StackPanel Orientation="Horizontal" Margin="14,0,0,4">
+                                                            <Button Content="Zurück" Command="{Binding RemoveLastOrdnerPatternBlockCommand}"
+                                                                    Padding="8,3" Margin="0,0,5,0"/>
+                                                            <Button Content="Leeren" Command="{Binding ClearOrdnerPatternCommand}" Padding="8,3"/>
+                                                        </StackPanel>
+                                                        <TextBox Text="{Binding OrdnerPattern, UpdateSourceTrigger=PropertyChanged}"
+                                                                 Margin="14,0,0,0" ToolTip="Optionale Feinbearbeitung des ersten Ordners"/>
+                                                    </StackPanel>
+
+                                                    <!-- Zweite freie Ebene -->
+                                                    <StackPanel Margin="14,0,0,8">
+                                                        <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}">
+                                                            <Run Text="&#x251C;&#x2500; "/><Run Text="2. Unterordner (optional)"/>
+                                                        </TextBlock>
+                                                        <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                                                BorderBrush="{DynamicResource BorderLightBrush}"
+                                                                BorderThickness="1" CornerRadius="{DynamicResource RadiusS}"
+                                                                Padding="6,5" MinHeight="34" Margin="14,2,0,5">
+                                                            <ItemsControl ItemsSource="{Binding UnterordnerPatternParts}"
+                                                                          ItemTemplate="{StaticResource PatternPartTemplate}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                            </ItemsControl>
+                                                        </Border>
+                                                        <ItemsControl ItemsSource="{Binding AvailableDirectoryBlocks}" Margin="14,0,0,0">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Button Content="{Binding Label}"
+                                                                            Command="{Binding DataContext.AddUnterordnerPatternBlockCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                            CommandParameter="{Binding}" ToolTip="{Binding Description}"
+                                                                            Padding="9,3" Margin="0,0,5,5" MinWidth="34"/>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                        <StackPanel Orientation="Horizontal" Margin="14,0,0,4">
+                                                            <Button Content="Zurück" Command="{Binding RemoveLastUnterordnerPatternBlockCommand}"
+                                                                    Padding="8,3" Margin="0,0,5,0"/>
+                                                            <Button Content="Leeren" Command="{Binding ClearUnterordnerPatternCommand}" Padding="8,3"/>
+                                                        </StackPanel>
+                                                        <TextBox Text="{Binding UnterordnerPattern, UpdateSourceTrigger=PropertyChanged}"
+                                                                 Margin="14,0,0,0" ToolTip="Optionale Feinbearbeitung des zweiten Ordners"/>
+                                                    </StackPanel>
+
+                                                    <!-- Letzte Objekt-Ebene bleibt absichtlich fest -->
+                                                    <StackPanel Margin="28,0,0,8">
+                                                        <TextBlock FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}">
+                                                            <Run Text="&#x2514;&#x2500; "/><Run Text="Objektordner (fest)"/>
+                                                        </TextBlock>
+                                                        <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                                                BorderBrush="{DynamicResource BorderLightBrush}"
+                                                                BorderThickness="1" CornerRadius="{DynamicResource RadiusS}"
+                                                                Padding="6,5" MinHeight="34" Margin="14,2,0,0">
+                                                            <ItemsControl ItemsSource="{Binding ObjectFolderPatternParts}"
+                                                                          ItemTemplate="{StaticResource PatternPartTemplate}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                            </ItemsControl>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    </StackPanel>
+                                                </Expander>
+                                            </StackPanel>
+
+                                            <!-- Sichtbare Reihenfolge: editierbar bei Excel, fest bei der Verteilung -->
+                                            <TextBlock Text="Dateiname" FontSize="{DynamicResource TextXS}"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                                    BorderBrush="{DynamicResource BorderLightBrush}"
+                                                    BorderThickness="1" CornerRadius="{DynamicResource RadiusS}"
+                                                    Padding="6,5" MinHeight="34" Margin="0,2,0,6">
+                                                <ItemsControl ItemsSource="{Binding DateiPatternParts}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Padding="7,3" Margin="0,0,4,3"
+                                                                    CornerRadius="{DynamicResource RadiusL}" BorderThickness="1">
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                                                                        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsPlaceholder}" Value="True">
+                                                                                <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <TextBlock Text="{Binding Text}" FontSize="{DynamicResource TextXS}"
+                                                                           Foreground="{DynamicResource TextBrush}"
+                                                                           ToolTip="{Binding RawValue}"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Border>
+
+                                            <TextBlock Text="{Binding Hinweis}" FontSize="{DynamicResource TextXS}"
+                                                       Foreground="{DynamicResource MutedBrush}"
+                                                       TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+                                            <!-- Live-Vorschau des vollstaendigen Zielpfads -->
+                                            <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                                    BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                                                    CornerRadius="{DynamicResource RadiusS}" Padding="8,6">
+                                                <StackPanel>
+                                                    <TextBlock Text="Vorschau" FontSize="{DynamicResource TextXS}"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                    <TextBlock Text="{Binding Vorschau}" FontFamily="{DynamicResource FontMono}" FontSize="{DynamicResource TextXS}"
+                                                               Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="Ergebnis der letzten Verteilung" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,8,0,2"/>
+                        <TextBox Text="{Binding LastResult}" AcceptsReturn="True" TextWrapping="Wrap"
+                                 IsReadOnly="True" VerticalScrollBarVisibility="Auto" MaxHeight="140"
+                                 Foreground="{DynamicResource MutedBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Abschnitt 3: Kataster (XTF) -->
+                <Border x:Name="AbschnittKatasterXtf" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="Kataster (XTF)" Style="{DynamicResource SectionTitle}"/>
+                        <TextBlock Text="{Binding XtfOriginalZeile}" FontSize="{DynamicResource TextXS}"
+                                   Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,2,0,10"/>
+
+                        <!-- Weg 1: Bestehende Katasterdaten aktualisieren (Revision an den Original-Kennungen). -->
+                        <Border Background="{DynamicResource SurfaceSubtleBrush}" BorderBrush="{DynamicResource BorderLightBrush}"
+                                BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Bestehende Katasterdaten aktualisieren" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                    <Border Background="{DynamicResource SuccessSubtleBrush}" CornerRadius="{DynamicResource RadiusChip}"
+                                            Padding="8,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                            Visibility="{Binding XtfAktualisierenEmpfohlen, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="empfohlen" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SuccessTextBrush}"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="Nimm diesen Weg, wenn oben schon eine Importkopie genannt ist: Deine Änderungen gehen in eine neue Datei mit den bisherigen Kataster-Kennungen — der Kataster erkennt seine Objekte wieder. Die Originale werden nur gelesen."
+                                           FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
+                                           TextWrapping="Wrap" Margin="0,2,0,8"/>
+                                <Button Command="{Binding ErzeugeXtfRevisionCommand}"
+                                        Style="{StaticResource ToolbarButton}"
+                                        HorizontalAlignment="Left" Padding="14,6"
+                                        ToolTip="Prüft zuerst, zeigt die Änderungen und schreibt erst nach deiner Bestätigung (technisch: Revision).">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:FluentIcon Glyph="&#xE7C3;" Margin="0,0,8,0"
+                                                       Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock Text="Änderungen prüfen und schreiben" VerticalAlignment="Center"/>
                                     </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </ScrollViewer>
+                                </Button>
+                            </StackPanel>
+                        </Border>
 
-            <!-- Ergebnis der letzten Verteilung -->
-            <TextBox Grid.Row="1" Text="{Binding LastResult}" AcceptsReturn="True" TextWrapping="Wrap"
-                     IsReadOnly="True" VerticalScrollBarVisibility="Auto" MaxHeight="140" Margin="0,8,0,0"
-                     Foreground="{DynamicResource MutedBrush}"/>
-        </Grid>
+                        <!-- Weg 2: Neue eigenstaendige XTF (Erstexport mit eigenen Kennungen). -->
+                        <Border Background="{DynamicResource SurfaceSubtleBrush}" BorderBrush="{DynamicResource BorderLightBrush}"
+                                BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,8">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="XTF erstellen" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                                    <Border Background="{DynamicResource SuccessSubtleBrush}" CornerRadius="{DynamicResource RadiusChip}"
+                                            Padding="8,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                            Visibility="{Binding XtfNeuEmpfohlen, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="empfohlen" FontSize="{DynamicResource TextXS}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SuccessTextBrush}"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="{Binding XtfNeuHinweis}"
+                                           FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource WarningTextBrush}"
+                                           TextWrapping="Wrap" Margin="0,2,0,8"/>
+                                <CheckBox Content="Neue XTF aus dem Projektstand – Exportumfang prüfen"
+                                          IsChecked="{Binding XtfVollstaendig}" Margin="0,0,0,8"
+                                          ToolTip="GeoShop-Objektakten werden im umfassenderen DSS-Modell geliefert, sonst SIA405. Vorhandene Kennungen bleiben erhalten. Die Vorschau nennt fehlende Angaben. Nicht als Änderungsauftrag verwenden."/>
+                                <TextBlock Text="Enthält angebundene Normobjekte einschliesslich Deckel und Unterhalt. Fehlende Objektarten sperren den Export; nicht übertragbare Angaben werden namentlich angezeigt. Bitte den Exportumfang prüfen. Diese Datei ist kein Änderungsauftrag."
+                                           Visibility="{Binding XtfVollstaendig, Converter={StaticResource BoolToVis}}"
+                                           TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <Button Command="{Binding ErzeugeXtfNeuCommand}"
+                                        Style="{StaticResource ToolbarButton}"
+                                        HorizontalAlignment="Left" Padding="14,6"
+                                        ToolTip="Zeigt zuerst den Bericht zur gewählten Lieferart. Erst nach der Prüfung wird die neue Datei geschrieben.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:FluentIcon Glyph="&#xE8A5;" Margin="0,0,8,0"
+                                                       Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock Text="XTF erstellen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
 
-        <!-- Lade-Overlay fuer den xlsx-Export (deckt alle Zeilen ab) -->
-        <ctrl:BusyOverlay Grid.RowSpan="4"
+                                <!-- Fachbegriffe stehen nur hier, eingeklappt - nicht als sichtbarer Fliesstext. -->
+                                <Expander Header="Technische Details" IsExpanded="False" Margin="0,10,0,0">
+                                    <StackPanel Margin="0,6,0,0">
+                                        <TextBlock Text="Standardfall «Abgleich»: FME übernimmt nur die ausdrücklich bezeichneten Änderungen (nur bearbeitete Felder). «Exportumfang prüfen» oben erzeugt stattdessen eine vollständige Datei aus dem Projektstand."
+                                                   TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                        <TextBlock Text="Die geschriebene Datei enthält immer die mitgelieferte .ili-Zusatzmodelldatei; ohne sie kann der Empfänger die Datei nicht öffnen."
+                                                   TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                        <TextBlock Text="Objektakten aus dem GeoShop-Abgleich werden im umfassenderen DSS-Modell geliefert, alle anderen Angaben im schlankeren SIA405-Modell."
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Expander>
+
+                                <Separator Margin="0,12,0,10"/>
+                                <TextBlock Text="Alles für den Empfänger in einem Paket: die Änderungslieferung mit den Feldaufträgen und zusätzlich eine Datei nur mit den Normangaben, die jedes Kataster-Programm ohne Zusatzdateien öffnen kann. Dazu die Modelldateien, die Berichte und eine Liesmich-Datei. Das Paket wird als ZIP zum Versenden gepackt."
+                                           TextWrapping="Wrap" Margin="0,0,0,8"
+                                           ToolTip="Fachbegriffe: Die Änderungslieferung braucht weiterhin die mitgelieferte .ili-Zusatzmodelldatei; die reine Normdatei kommt ohne sie aus."/>
+                                <Button Command="{Binding ErzeugeXtfPaketCommand}"
+                                        Style="{StaticResource ToolbarButton}"
+                                        HorizontalAlignment="Left" Padding="14,6"
+                                        ToolTip="Prüft zuerst beide Fassungen und zeigt die Änderungen. Erst nach der Bestätigung wird das Paket geschrieben. Scheitert eine Fassung, entsteht gar nichts.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:FluentIcon Glyph="&#xE7B8;" Margin="0,0,8,0"
+                                                       Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock Text="Paket für GEONIS erstellen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Nach dem Schreiben: direkt zum Ergebnis. -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,0"
+                                    Visibility="{Binding HatXtfOrdner, Converter={StaticResource BoolToVis}}">
+                            <Button Command="{Binding OeffneXtfOrdnerCommand}" Style="{StaticResource ToolbarButton}" Padding="12,5"
+                                    ToolTip="Zeigt den Ausgabeordner der zuletzt erzeugten XTF im Explorer.">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE838;" Margin="0,0,8,0" Foreground="{DynamicResource MutedBrush}"/>
+                                    <TextBlock Text="Ordner öffnen" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Text="{Binding LetzterXtfOrdner}" FontSize="{DynamicResource TextXS}"
+                                       Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Abschnitt 4: WebGIS (direkt ins GEONIS-WebOffice, ohne XTF/FME). -->
+                <Border x:Name="AbschnittWebGis" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1" Padding="12" CornerRadius="{DynamicResource RadiusL}" Margin="0,0,0,4">
+                    <StackPanel>
+                        <TextBlock Text="WebGIS" Style="{DynamicResource SectionTitle}"/>
+                        <TextBlock Text="Direkt ins WebGIS übertragen, ohne den Umweg über eine XTF-Datei."
+                                   FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
+                                   TextWrapping="Wrap" Margin="0,2,0,8"/>
+                        <TextBlock Text="Schreibt Zustand, Sanierungsbedarf «Saniert» (nur mit ausgeführter Sanierungs-Akte), Bemerkung und Baujahr (nur wenn dort leer) an Haltungen und Schächten und legt je ausgeführter Sanierungs-Akte eine Sanierungsmassnahme an. Längen werden nie geschrieben. Jedes Objekt wird vorher frisch gelesen; die Vorschau zeigt Alt/Neu, geschrieben wird erst nach deiner Bestätigung."
+                                   FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
+                                   TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding WebGis.Status}" FontSize="{DynamicResource TextXS}"
+                                   Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Command="{Binding WebGis.AnmeldenCommand}" Style="{StaticResource ToolbarButton}" Padding="14,6" Margin="0,0,8,0"
+                                    ToolTip="Öffnet das WebGIS in einem eigenen Browserfenster. Du meldest dich dort an; SewerStudio sieht kein Passwort und übernimmt nur die Sitzung.">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE77B;" Margin="0,0,8,0" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Am WebGIS anmelden" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding WebGis.UebertragenCommand}" Style="{StaticResource ToolbarButtonAccent}" Padding="14,6" Margin="0,0,8,0"
+                                    ToolTip="Liest jedes Objekt frisch aus dem WebGIS, zeigt die Änderungen und schreibt erst nach deiner Bestätigung. Bericht landet unter __WebGIS_Export im Projektordner.">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE898;" Margin="0,0,8,0" Foreground="{DynamicResource OnAccentBrush}"/>
+                                    <TextBlock Text="Prüfen und ins WebGIS schreiben" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding WebGis.HolenCommand}" Style="{StaticResource ToolbarButton}" Padding="14,6" Margin="0,0,8,0"
+                                    ToolTip="Holt aus dem WebGIS in SewerStudio: GlobalID, Baujahr (wenn leer) und passende Stammdaten. WebGIS-Werte ersetzen Katasterwerte; Handwerte bleiben. Die Haltungslänge bleibt beim Wert des Operateurs. Vorschau zuerst; ins WebGIS wird nichts geschrieben.">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:FluentIcon Glyph="&#xE896;" Margin="0,0,8,0" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Vom WebGIS holen" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding WebGis.AbmeldenCommand}" Style="{StaticResource ToolbarButton}" Padding="12,5"
+                                    ToolTip="Schliesst das Browserfenster und verwirft die Sitzung.">
+                                <TextBlock Text="Abmelden" VerticalAlignment="Center"/>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Lade-Overlay fuer den xlsx-Export (deckt die ganze scrollbare Flaeche ab) -->
+        <ctrl:BusyOverlay Grid.Row="1"
                           IsActive="{Binding Busy.IsActive}"
-                          Message="{Binding Busy.Message}"/>
+                          Message="{Binding Busy.Message}"
+                          CancelCommand="{Binding CancelExcelExportCommand}"/>
     </Grid>
 </UserControl>

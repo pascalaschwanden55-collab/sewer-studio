@@ -35,7 +35,7 @@ public sealed class TrainingCenterScanWorkflowTests
         await TrainingCenterScanWorkflow.RunAsync(
             CreateRequest(state: state, rootFolders: []));
 
-        Assert.Equal("Bitte zuerst einen oder mehrere Ordner waehlen.", state.StatusText);
+        Assert.Equal("Bitte zuerst einen oder mehrere Ordner wählen.", state.StatusText);
         Assert.False(state.IsBusy);
         Assert.Empty(state.ReplaceCalls);
         Assert.Equal(0, state.SaveCalls);

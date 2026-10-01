@@ -32,7 +32,9 @@ public sealed class ExternalProcessRunnerTests
         var result = await ExternalProcessRunner.RunAsync(
             "powershell.exe",
             ["-NoProfile", "-Command", "[Console]::Out.WriteLine('stdout-ok'); [Console]::Error.WriteLine('stderr-ok'); exit 7"],
-            TimeSpan.FromSeconds(5),
+            // Grosszuegig: geprueft wird das Mitlesen von stdout/stderr, nicht die Startzeit.
+            // Auf dem CI-Runner brauchte powershell.exe am 01.10.2026 mehr als 5 s.
+            TimeSpan.FromSeconds(60),
             Encoding.UTF8,
             Encoding.UTF8);
 

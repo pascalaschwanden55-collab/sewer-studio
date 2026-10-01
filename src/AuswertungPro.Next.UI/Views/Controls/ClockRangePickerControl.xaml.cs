@@ -79,11 +79,11 @@ public partial class ClockRangePickerControl : UserControl
             var text = new TextBlock
             {
                 Text = hour.ToString(CultureInfo.InvariantCulture),
-                Foreground = Brushes.Black,
                 FontWeight = FontWeights.SemiBold,
                 FontSize = 13,
                 IsHitTestVisible = false
             };
+            text.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
 
             // Unsichtbarer aber klickbarer Bereich um jede Stundenzahl.
             // Opacity=1 + transparenter Background = zuverlaessiges HitTest.
@@ -259,25 +259,25 @@ public partial class ClockRangePickerControl : UserControl
 
             if (isVon)
             {
-                item.Text.Foreground = new SolidColorBrush(Color.FromRgb(255, 140, 0));
+                item.Text.SetResourceReference(TextBlock.ForegroundProperty, "WarningBrush");
                 item.Text.FontWeight = FontWeights.ExtraBold;
                 item.Text.FontSize = 15;
             }
             else if (isBis)
             {
-                item.Text.Foreground = new SolidColorBrush(Color.FromRgb(31, 78, 158));
+                item.Text.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
                 item.Text.FontWeight = FontWeights.ExtraBold;
                 item.Text.FontSize = 15;
             }
             else if (inRange)
             {
-                item.Text.Foreground = new SolidColorBrush(Color.FromRgb(180, 100, 0));
+                item.Text.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
                 item.Text.FontWeight = FontWeights.Bold;
                 item.Text.FontSize = 13;
             }
             else
             {
-                item.Text.Foreground = Brushes.Black;
+                item.Text.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
                 item.Text.FontWeight = FontWeights.SemiBold;
                 item.Text.FontSize = 13;
             }

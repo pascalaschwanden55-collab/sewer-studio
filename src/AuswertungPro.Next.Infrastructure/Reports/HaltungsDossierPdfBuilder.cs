@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -43,7 +43,29 @@ public static class HaltungsDossierPdfBuilder
             FooterLine = options.FooterLine,
             IncludePhotos = false, // fotos separately
             IncludeHaltungsgrafik = true,
+            PhotosPerPage = ProtocolPdfPhotoLayout.Normalize(options.PhotosPerPage),
         };
+
+        // Fotos, Nummerierung und Seitenaufteilung stammen aus derselben Quelle wie im
+        // Haltungsprotokoll (ProtocolPdfPhotoSection). Das Dossier hatte dafuer eine eigene
+        // Fassung, die jedes Foto als normalen Listeneintrag ohne Umbruchschutz setzte -
+        // das dritte Foto jeder Seite wurde dadurch an der Blattkante zerschnitten.
+        var protocolDoc = record.Protocol ?? new ProtocolDocument();
+        var protocolEntries = (protocolDoc.Current?.Entries ?? new List<ProtocolEntry>())
+            .Where(e => !e.IsDeleted)
+            .OrderBy(e => e.MeterStart ?? e.MeterEnd ?? double.MaxValue)
+            .ToList();
+        var inspectionDate = ProtocolPdfExporter.ResolveInspectionDate(project, record, protocolDoc);
+        var photoAssets = ProtocolPdfAssetResolver.CompatibilityService;
+        var photoItems = options.IncludeFotos
+            ? ProtocolPdfPhotoSection.BuildItems(
+                photoAssets,
+                protocolEntries,
+                projectRootAbs,
+                haltungsprotokollOpts.MaxPhotosPerEntry,
+                ResolveHoldingPhotoFolder(holdingLabel, projectRootAbs))
+            : new List<ProtocolPdfPhotoSection.PhotoItem>();
+        var photoNumbers = ProtocolPdfPhotoSection.BuildNumberMap(photoItems);
 
         var pdfBytes = Document.Create(container =>
         {
@@ -75,11 +97,11 @@ public static class HaltungsDossierPdfBuilder
             // ── Haltungsprotokoll ──
             if (options.IncludeHaltungsprotokoll)
             {
-                var doc = record.Protocol ?? new ProtocolDocument();
-                var exporter = new ProtocolPdfExporter();
-                var protocolBytes = exporter.BuildHaltungsprotokollPdf(project, record, doc, projectRootAbs, haltungsprotokollOpts);
-
-                // Embed as pre-built pages
+                // Frueher wurde hier zusaetzlich ein vollstaendiges
+                // Haltungsprotokoll-PDF erzeugt und danach weggeworfen: die
+                // Seiten entstehen unten ohnehin frisch ueber
+                // ComposeHaltungsprotokollContent. Das kostete je Haltung
+                // einen kompletten PDF-Aufbau ohne jede Wirkung.
                 container.Page(page =>
                 {
                     page.Margin(25);
@@ -95,7 +117,7 @@ public static class HaltungsDossierPdfBuilder
                             ProtocolPdfExporter.ComposeTitleBar(c, $"Haltungsprotokoll – {holdingLabel}", "SN EN 13508-2", brand));
 
                         col.Item().PaddingTop(6).Element(c =>
-                            ComposeHaltungsprotokollContent(c, project, record, doc, projectRootAbs, brand));
+                            ComposeHaltungsprotokollContent(c, record, protocolEntries, photoNumbers, brand));
                     });
 
                     page.Footer().Element(c => ComposeFooter(c, options.FooterLine));
@@ -103,33 +125,33 @@ public static class HaltungsDossierPdfBuilder
             }
 
             // ── Fotos ──
-            if (options.IncludeFotos)
+            if (options.IncludeFotos && photoItems.Count > 0)
             {
-                var doc = record.Protocol ?? new ProtocolDocument();
-                var photoEntries = ResolvePhotoEntries(record, doc, projectRootAbs);
-                if (photoEntries.Count > 0)
+                container.Page(page =>
                 {
-                    container.Page(page =>
-                    {
-                        page.Margin(25);
-                        page.Size(PageSizes.A4);
-                        page.DefaultTextStyle(x => x.FontSize(10));
+                    page.Margin(25);
+                    page.Size(PageSizes.A4);
+                    page.DefaultTextStyle(x => x.FontSize(10));
 
-                        page.Header().Element(c =>
-                            ProtocolPdfExporter.ComposeTopHeader(c, logoBytes, haltungsprotokollOpts));
+                    page.Header().Element(c =>
+                        ProtocolPdfExporter.ComposeTopHeader(c, logoBytes, haltungsprotokollOpts));
 
-                        page.Content().Column(col =>
-                        {
-                            col.Item().PaddingTop(4).Element(c =>
-                                ProtocolPdfExporter.ComposeTitleBar(c, $"Fotos – {holdingLabel}", null, brand));
+                    page.Content().Column(col =>
+                        ProtocolPdfPhotoSection.Compose(
+                            col,
+                            photoItems,
+                            project,
+                            record,
+                            inspectionDate,
+                            holdingLabel,
+                            haltungsprotokollOpts,
+                            photoAssets,
+                            brand,
+                            $"Fotos – {holdingLabel}",
+                            startOnCurrentPage: true));
 
-                            col.Item().PaddingTop(6).Element(c =>
-                                ComposePhotos(c, photoEntries));
-                        });
-
-                        page.Footer().Element(c => ComposeFooter(c, options.FooterLine));
-                    });
-                }
+                    page.Footer().Element(c => ComposeFooter(c, options.FooterLine));
+                });
             }
 
             // ── Schacht Von ──
@@ -319,17 +341,11 @@ public static class HaltungsDossierPdfBuilder
 
     private static void ComposeHaltungsprotokollContent(
         IContainer container,
-        Project project,
         HaltungRecord record,
-        ProtocolDocument doc,
-        string projectRootAbs,
+        IReadOnlyList<ProtocolEntry> entries,
+        IReadOnlyDictionary<ProtocolEntry, string> photoNumbers,
         string brand)
     {
-        var entries = (doc.Current?.Entries ?? new List<ProtocolEntry>())
-            .Where(e => !e.IsDeleted)
-            .OrderBy(e => e.MeterStart ?? e.MeterEnd ?? double.MaxValue)
-            .ToList();
-
         var headerItems = new List<(string Label, string? Value)>
         {
             ("Haltung", record.GetFieldValue("Haltungsname")),
@@ -361,12 +377,14 @@ public static class HaltungsDossierPdfBuilder
                     columns.ConstantColumn(55); // Meter
                     columns.ConstantColumn(70); // Code
                     columns.RelativeColumn();   // Beschreibung
+                    columns.ConstantColumn(45); // Foto
                 });
 
                 // Header
                 table.Cell().Background("#F3F4F6").Padding(3).Text("Meter").FontSize(8).Bold();
                 table.Cell().Background("#F3F4F6").Padding(3).Text("Code").FontSize(8).Bold();
                 table.Cell().Background("#F3F4F6").Padding(3).Text("Beschreibung").FontSize(8).Bold();
+                table.Cell().Background("#F3F4F6").Padding(3).Text("Foto").FontSize(8).Bold();
 
                 foreach (var entry in entries)
                 {
@@ -374,6 +392,9 @@ public static class HaltungsDossierPdfBuilder
                     table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).Text(meterText).FontSize(8);
                     table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).Text(entry.Code ?? "–").FontSize(8).Bold();
                     table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).Text(entry.Beschreibung ?? "").FontSize(8);
+                    // Dieselbe laufende Nummer steht unter dem Foto - sonst zeigt sie auf nichts.
+                    table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2)
+                        .Text(ProtocolPdfPhotoSection.ResolveNumberText(entry, photoNumbers)).FontSize(8);
                 }
             });
         });
@@ -381,88 +402,17 @@ public static class HaltungsDossierPdfBuilder
 
     // ── Fotos ────────────────────────────────────────────────
 
-    private static List<(string Label, string AbsPath)> ResolvePhotoEntries(
-        HaltungRecord record,
-        ProtocolDocument doc,
-        string projectRootAbs)
+    /// <summary>
+    /// Verteil-Fotoordner der Haltung (Fotos\Haltungen\&lt;H&gt;) als bevorzugter Suchort -
+    /// dort liegen die Fotos nach der Medienverteilung, auch wenn der gespeicherte Pfad
+    /// noch auf einen alten Importort zeigt.
+    /// </summary>
+    private static string? ResolveHoldingPhotoFolder(string holdingLabel, string projectRootAbs)
     {
-        var result = new List<(string, string)>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var resolveCache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        var holding = record.GetFieldValue(FieldKeys.HoldingName) ?? string.Empty;
-        var holdingSan = ProjectPathResolver.SanitizePathSegment(holding);
-        var preferredFolder = string.IsNullOrWhiteSpace(holdingSan)
+        var holdingSan = ProjectPathResolver.SanitizePathSegment(holdingLabel);
+        return string.IsNullOrWhiteSpace(holdingSan)
             ? null
             : Path.Combine(projectRootAbs, "Fotos", "Haltungen", holdingSan);
-        var entries = (doc.Current?.Entries ?? new List<ProtocolEntry>())
-            .Where(e => !e.IsDeleted)
-            .ToList();
-
-        foreach (var entry in entries)
-        {
-            if (entry.FotoPaths is null || entry.FotoPaths.Count == 0)
-                continue;
-
-            foreach (var raw in entry.FotoPaths)
-            {
-                var resolved = ProtocolPdfAssetResolver.ResolvePhotoPath(
-                    projectRootAbs,
-                    raw,
-                    resolveCache,
-                    preferredFolder);
-                if (resolved != null && File.Exists(resolved))
-                {
-                    var key = NormalizeResolvedPhotoKey(resolved);
-                    if (!seen.Add(key))
-                        continue;
-
-                    var label = $"{entry.Code ?? "–"} @ {FormatMeterRange(entry.MeterStart, entry.MeterEnd)}";
-                    result.Add((label, resolved));
-                }
-            }
-        }
-
-        return result;
-    }
-
-    private static string NormalizeResolvedPhotoKey(string path)
-    {
-        try
-        {
-            return Path.GetFullPath(path);
-        }
-        catch
-        {
-            return path.Replace('/', Path.DirectorySeparatorChar);
-        }
-    }
-
-    private static void ComposePhotos(IContainer container, List<(string Label, string AbsPath)> photos)
-    {
-        container.Column(col =>
-        {
-            foreach (var (label, path) in photos)
-            {
-                col.Item().PaddingTop(6).Column(photoCol =>
-                {
-                    photoCol.Item().Text(label).FontSize(9).Bold().FontColor("#374151");
-
-                    try
-                    {
-                        var bytes = File.ReadAllBytes(path);
-                        photoCol.Item().PaddingTop(2)
-                            .Border(0.5f).BorderColor("#D1D5DB")
-                            .MaxHeight(280)
-                            .Image(bytes).FitArea();
-                    }
-                    catch
-                    {
-                        photoCol.Item().PaddingTop(2).Text($"Foto nicht lesbar: {Path.GetFileName(path)}")
-                            .FontSize(8).FontColor("#DC2626");
-                    }
-                });
-            }
-        });
     }
 
     // ── Schacht-Sektion ──────────────────────────────────────
@@ -638,8 +588,10 @@ public static class HaltungsDossierPdfBuilder
             candidates.Add(Path.Combine(projectRootAbs, "logo.png"));
         }
 
-        var appLogo = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-        candidates.Add(appLogo);
+        // Gemeinsame Quelle des Standardpfads (Optikanalyse 28.09.2026, Aufgabe 15). Der
+        // eigentliche, einstellungsbewusste Wert kommt bereits als logoPath vom Aufrufer
+        // (DataPagePrintController); dies bleibt nur der letzte Rueckfall ohne Aufrufer-Logo.
+        candidates.Add(BerichtsLogoResolver.DefaultLogoPath(AppContext.BaseDirectory));
 
         foreach (var p in candidates)
         {
@@ -711,12 +663,14 @@ public static class HaltungsDossierPdfBuilder
                                 columns.ConstantColumn(70); // Total
                             });
 
-                            // Header
-                            table.Cell().Background("#F3F4F6").Padding(3).Text("Position").FontSize(8).Bold();
-                            table.Cell().Background("#F3F4F6").Padding(3).Text("Einh.").FontSize(8).Bold();
-                            table.Cell().Background("#F3F4F6").Padding(3).AlignRight().Text("Menge").FontSize(8).Bold();
-                            table.Cell().Background("#F3F4F6").Padding(3).AlignRight().Text("EP").FontSize(8).Bold();
-                            table.Cell().Background("#F3F4F6").Padding(3).AlignRight().Text("Total").FontSize(8).Bold();
+                            // Kopfzeile im hellen Markenton der Nutzungsart -
+                            // wie die uebrigen Tabellen des Dossiers, statt neutralgrau.
+                            var kopf = ProtocolPdfExporter.ResolveNutzungsartBrandLight(brand);
+                            table.Cell().Background(kopf).Padding(3).Text("Position").FontSize(8).Bold();
+                            table.Cell().Background(kopf).Padding(3).Text("Einh.").FontSize(8).Bold();
+                            table.Cell().Background(kopf).Padding(3).AlignRight().Text("Menge").FontSize(8).Bold();
+                            table.Cell().Background(kopf).Padding(3).AlignRight().Text("EP").FontSize(8).Bold();
+                            table.Cell().Background(kopf).Padding(3).AlignRight().Text("Total").FontSize(8).Bold();
 
                             foreach (var line in measure.Lines.Where(l => l.Selected))
                             {
@@ -761,7 +715,22 @@ public static class HaltungsDossierPdfBuilder
         });
     }
 
-    private static string FmtDec(decimal v) =>
-        v.ToString("N2", CultureInfo.InvariantCulture);
+    private static readonly CultureInfo ChZahl = BaueChZahlenformat();
+
+    private static CultureInfo BaueChZahlenformat()
+    {
+        var kultur = (CultureInfo)CultureInfo.InvariantCulture.Clone();
+        kultur.NumberFormat.NumberGroupSeparator = "'";
+        kultur.NumberFormat.NumberDecimalSeparator = ".";
+        return kultur;
+    }
+
+    /// <summary>
+    /// Mengenformat der Kostentabelle. Bewusst dasselbe Tausenderzeichen wie
+    /// <see cref="ChfFormat"/> - vorher stand "1,234.56" (Invariant) neben
+    /// "1'234.56 CHF" in derselben Tabelle.
+    /// </summary>
+    internal static string FmtDec(decimal v) =>
+        v.ToString("N2", ChZahl);
 
 }

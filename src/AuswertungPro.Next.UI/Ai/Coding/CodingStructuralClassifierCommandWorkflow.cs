@@ -35,6 +35,13 @@ public sealed record CodingStructuralClassifierCommandResult(
 
 public static class CodingStructuralClassifierCommandWorkflow
 {
+    public static CodingStructuralClassifierCommandResult ExecuteAnalyzedFrame(
+        CodingStructuralClassifierCommandRequest request, CodingAnalyzedFrameEvidence frame,
+        CodingStructuralClassifierCommandActions actions)
+        => Execute(request with { CaptureTimestampSeconds = frame.CaptureTime.TotalSeconds,
+                CurrentVideoTime = frame.CaptureTime, MeterFromOsd = frame.MeterFromOsd },
+            actions with { ResolveMeterForFrame = (_, _) => frame.Meter });
+
     public static CodingStructuralClassifierCommandResult Execute(
         CodingStructuralClassifierCommandRequest request,
         CodingStructuralClassifierCommandActions actions)

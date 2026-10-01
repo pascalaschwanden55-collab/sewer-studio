@@ -1,0 +1,1347 @@
+{
+  "projekt": {
+    "AppVersion": "<laufabhaengig>",
+    "Conflicts": [],
+    "CreatedAtUtc": "<laufabhaengig>",
+    "Data": [
+      {
+        "CreatedAtUtc": "<laufabhaengig>",
+        "FieldMeta": {
+          "Aktualisierungsdatum": {
+            "Conflict": null,
+            "FieldName": "Aktualisierungsdatum",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Anschluesse_verpressen": {
+            "Conflict": null,
+            "FieldName": "Anschluesse_verpressen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Ausgefuehrt_durch": {
+            "Conflict": null,
+            "FieldName": "Ausgefuehrt_durch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Baujahr": {
+            "Conflict": null,
+            "FieldName": "Baujahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bemerkungen": {
+            "Conflict": null,
+            "FieldName": "Bemerkungen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bettung_Umhuellung": {
+            "Conflict": null,
+            "FieldName": "Bettung_Umhuellung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bruttokosten": {
+            "Conflict": null,
+            "FieldName": "Bruttokosten",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "DN_mm": {
+            "Conflict": null,
+            "FieldName": "DN_mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Datenherr": {
+            "Conflict": null,
+            "FieldName": "Datenherr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Datenlieferant": {
+            "Conflict": null,
+            "FieldName": "Datenlieferant",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Datum_Jahr": {
+            "Conflict": null,
+            "FieldName": "Datum_Jahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Eigentuemer": {
+            "Conflict": null,
+            "FieldName": "Eigentuemer",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Empfohlene_Sanierungsmassnahmen": {
+            "Conflict": null,
+            "FieldName": "Empfohlene_Sanierungsmassnahmen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Erneuerung_Neubau_m": {
+            "Conflict": null,
+            "FieldName": "Erneuerung_Neubau_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "FunktionHierarchisch": {
+            "Conflict": null,
+            "FieldName": "FunktionHierarchisch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "FunktionHydraulisch": {
+            "Conflict": null,
+            "FieldName": "FunktionHydraulisch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "GEONIS_Kennung": {
+            "Conflict": null,
+            "FieldName": "GEONIS_Kennung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Gewaesserschutz": {
+            "Conflict": null,
+            "FieldName": "Gewaesserschutz",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Grundwasserspiegel": {
+            "Conflict": null,
+            "FieldName": "Grundwasserspiegel",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Haltungslaenge_m": {
+            "Conflict": null,
+            "FieldName": "Haltungslaenge_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Haltungsname": {
+            "Conflict": null,
+            "FieldName": "Haltungsname",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Inspektionsrichtung": {
+            "Conflict": null,
+            "FieldName": "Inspektionsrichtung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Kosten": {
+            "Conflict": null,
+            "FieldName": "Kosten",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Lagebestimmung": {
+            "Conflict": null,
+            "FieldName": "Lagebestimmung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Letzte_Aenderung": {
+            "Conflict": null,
+            "FieldName": "Letzte_Aenderung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Lichte_Breite_mm": {
+            "Conflict": null,
+            "FieldName": "Lichte_Breite_mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Linerendmanschette_LEM": {
+            "Conflict": null,
+            "FieldName": "Linerendmanschette_LEM",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Link": {
+            "Conflict": null,
+            "FieldName": "Link",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "NR": {
+            "Conflict": null,
+            "FieldName": "NR",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Nutzungsart": {
+            "Conflict": null,
+            "FieldName": "Nutzungsart",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Objekt_ID": {
+            "Conflict": null,
+            "FieldName": "Objekt_ID",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Offen_abgeschlossen": {
+            "Conflict": null,
+            "FieldName": "Offen_abgeschlossen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Organisation": {
+            "Conflict": null,
+            "FieldName": "Organisation",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Primaere_Schaeden": {
+            "Conflict": null,
+            "FieldName": "Primaere_Schaeden",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Profiltyp": {
+            "Conflict": null,
+            "FieldName": "Profiltyp",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Pruefungsresultat": {
+            "Conflict": null,
+            "FieldName": "Pruefungsresultat",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Referenzpruefung": {
+            "Conflict": null,
+            "FieldName": "Referenzpruefung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Renovierung_Inliner_Stk": {
+            "Conflict": null,
+            "FieldName": "Renovierung_Inliner_Stk",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Renovierung_Inliner_m": {
+            "Conflict": null,
+            "FieldName": "Renovierung_Inliner_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Reparatur_Kurzliner": {
+            "Conflict": null,
+            "FieldName": "Reparatur_Kurzliner",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Reparatur_Manschette": {
+            "Conflict": null,
+            "FieldName": "Reparatur_Manschette",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Rohrmaterial": {
+            "Conflict": null,
+            "FieldName": "Rohrmaterial",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Sanieren_JaNein": {
+            "Conflict": null,
+            "FieldName": "Sanieren_JaNein",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Sanierungsbedarf": {
+            "Conflict": null,
+            "FieldName": "Sanierungsbedarf",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Status": {
+            "Conflict": null,
+            "FieldName": "Status",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Strasse": {
+            "Conflict": null,
+            "FieldName": "Strasse",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Geschaetzt": {
+            "Conflict": null,
+            "FieldName": "VSA_Geschaetzt",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_B": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_B",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_D": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_D",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_S": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_S",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Verbindungsart": {
+            "Conflict": null,
+            "FieldName": "Verbindungsart",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Zustandsklasse": {
+            "Conflict": null,
+            "FieldName": "Zustandsklasse",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          }
+        },
+        "Fields": {
+          "Aktualisierungsdatum": "",
+          "Anschluesse_verpressen": "",
+          "Ausgefuehrt_durch": "",
+          "Baujahr": "",
+          "Bemerkungen": "",
+          "Bettung_Umhuellung": "",
+          "Bruttokosten": "",
+          "DN_mm": "900",
+          "Datenherr": "Kanton Referenz",
+          "Datenlieferant": "Ingenieurbuero Beispiel",
+          "Datum_Jahr": "",
+          "Eigentuemer": "Gemeinde Referenz",
+          "Empfohlene_Sanierungsmassnahmen": "",
+          "Erneuerung_Neubau_m": "",
+          "FunktionHierarchisch": "",
+          "FunktionHydraulisch": "",
+          "GEONIS_Kennung": "",
+          "Gewaesserschutz": "",
+          "Grundwasserspiegel": "",
+          "Haltungslaenge_m": "",
+          "Haltungsname": "10-11",
+          "Inspektionsrichtung": "",
+          "Kosten": "",
+          "Lagebestimmung": "",
+          "Letzte_Aenderung": "01.01.2025",
+          "Lichte_Breite_mm": "1200",
+          "Linerendmanschette_LEM": "",
+          "Link": "",
+          "NR": "",
+          "Nutzungsart": "",
+          "Objekt_ID": "refHALTUNGA",
+          "Offen_abgeschlossen": "offen",
+          "Organisation": "",
+          "Primaere_Schaeden": "",
+          "Profiltyp": "Maulprofil (E)",
+          "Pruefungsresultat": "",
+          "Referenzpruefung": "",
+          "Renovierung_Inliner_Stk": "",
+          "Renovierung_Inliner_m": "",
+          "Reparatur_Kurzliner": "",
+          "Reparatur_Manschette": "",
+          "Rohrmaterial": "",
+          "Sanieren_JaNein": "",
+          "Sanierungsbedarf": "",
+          "Status": "stillgelegt",
+          "Strasse": "",
+          "VSA_Geschaetzt": "",
+          "VSA_Zustandsnote_B": "",
+          "VSA_Zustandsnote_D": "",
+          "VSA_Zustandsnote_S": "",
+          "Verbindungsart": "",
+          "Zustandsklasse": ""
+        },
+        "Geonis": null,
+        "Id": "<laufabhaengig>",
+        "ModifiedAtUtc": "<laufabhaengig>",
+        "Protocol": null,
+        "ProtocolEntry": null,
+        "VsaFindings": [],
+        "XtfHerkunft": null
+      },
+      {
+        "CreatedAtUtc": "<laufabhaengig>",
+        "FieldMeta": {
+          "Aktualisierungsdatum": {
+            "Conflict": null,
+            "FieldName": "Aktualisierungsdatum",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Anschluesse_verpressen": {
+            "Conflict": null,
+            "FieldName": "Anschluesse_verpressen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Ausgefuehrt_durch": {
+            "Conflict": null,
+            "FieldName": "Ausgefuehrt_durch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Baujahr": {
+            "Conflict": null,
+            "FieldName": "Baujahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bemerkungen": {
+            "Conflict": null,
+            "FieldName": "Bemerkungen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bettung_Umhuellung": {
+            "Conflict": null,
+            "FieldName": "Bettung_Umhuellung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bruttokosten": {
+            "Conflict": null,
+            "FieldName": "Bruttokosten",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "DN_mm": {
+            "Conflict": null,
+            "FieldName": "DN_mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Datenherr": {
+            "Conflict": null,
+            "FieldName": "Datenherr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Datenlieferant": {
+            "Conflict": null,
+            "FieldName": "Datenlieferant",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Datum_Jahr": {
+            "Conflict": null,
+            "FieldName": "Datum_Jahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Eigentuemer": {
+            "Conflict": null,
+            "FieldName": "Eigentuemer",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Empfohlene_Sanierungsmassnahmen": {
+            "Conflict": null,
+            "FieldName": "Empfohlene_Sanierungsmassnahmen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Erneuerung_Neubau_m": {
+            "Conflict": null,
+            "FieldName": "Erneuerung_Neubau_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "FunktionHierarchisch": {
+            "Conflict": null,
+            "FieldName": "FunktionHierarchisch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "FunktionHydraulisch": {
+            "Conflict": null,
+            "FieldName": "FunktionHydraulisch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "GEONIS_Kennung": {
+            "Conflict": null,
+            "FieldName": "GEONIS_Kennung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Gewaesserschutz": {
+            "Conflict": null,
+            "FieldName": "Gewaesserschutz",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Grundwasserspiegel": {
+            "Conflict": null,
+            "FieldName": "Grundwasserspiegel",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Haltungslaenge_m": {
+            "Conflict": null,
+            "FieldName": "Haltungslaenge_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Haltungsname": {
+            "Conflict": null,
+            "FieldName": "Haltungsname",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Inspektionsrichtung": {
+            "Conflict": null,
+            "FieldName": "Inspektionsrichtung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Kosten": {
+            "Conflict": null,
+            "FieldName": "Kosten",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Lagebestimmung": {
+            "Conflict": null,
+            "FieldName": "Lagebestimmung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Letzte_Aenderung": {
+            "Conflict": null,
+            "FieldName": "Letzte_Aenderung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Lichte_Breite_mm": {
+            "Conflict": null,
+            "FieldName": "Lichte_Breite_mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Linerendmanschette_LEM": {
+            "Conflict": null,
+            "FieldName": "Linerendmanschette_LEM",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Link": {
+            "Conflict": null,
+            "FieldName": "Link",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "NR": {
+            "Conflict": null,
+            "FieldName": "NR",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Nutzungsart": {
+            "Conflict": null,
+            "FieldName": "Nutzungsart",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Objekt_ID": {
+            "Conflict": null,
+            "FieldName": "Objekt_ID",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Offen_abgeschlossen": {
+            "Conflict": null,
+            "FieldName": "Offen_abgeschlossen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Organisation": {
+            "Conflict": null,
+            "FieldName": "Organisation",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Primaere_Schaeden": {
+            "Conflict": null,
+            "FieldName": "Primaere_Schaeden",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Profiltyp": {
+            "Conflict": null,
+            "FieldName": "Profiltyp",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Pruefungsresultat": {
+            "Conflict": null,
+            "FieldName": "Pruefungsresultat",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Referenzpruefung": {
+            "Conflict": null,
+            "FieldName": "Referenzpruefung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Renovierung_Inliner_Stk": {
+            "Conflict": null,
+            "FieldName": "Renovierung_Inliner_Stk",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Renovierung_Inliner_m": {
+            "Conflict": null,
+            "FieldName": "Renovierung_Inliner_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Reparatur_Kurzliner": {
+            "Conflict": null,
+            "FieldName": "Reparatur_Kurzliner",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Reparatur_Manschette": {
+            "Conflict": null,
+            "FieldName": "Reparatur_Manschette",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Rohrmaterial": {
+            "Conflict": null,
+            "FieldName": "Rohrmaterial",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Sanieren_JaNein": {
+            "Conflict": null,
+            "FieldName": "Sanieren_JaNein",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Sanierungsbedarf": {
+            "Conflict": null,
+            "FieldName": "Sanierungsbedarf",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Status": {
+            "Conflict": null,
+            "FieldName": "Status",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Strasse": {
+            "Conflict": null,
+            "FieldName": "Strasse",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Geschaetzt": {
+            "Conflict": null,
+            "FieldName": "VSA_Geschaetzt",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_B": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_B",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_D": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_D",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_S": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_S",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Verbindungsart": {
+            "Conflict": null,
+            "FieldName": "Verbindungsart",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Zustandsklasse": {
+            "Conflict": null,
+            "FieldName": "Zustandsklasse",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          }
+        },
+        "Fields": {
+          "Aktualisierungsdatum": "",
+          "Anschluesse_verpressen": "",
+          "Ausgefuehrt_durch": "",
+          "Baujahr": "",
+          "Bemerkungen": "",
+          "Bettung_Umhuellung": "",
+          "Bruttokosten": "",
+          "DN_mm": "",
+          "Datenherr": "Gemeinde Referenz",
+          "Datenlieferant": "",
+          "Datum_Jahr": "",
+          "Eigentuemer": "Kanton Referenz",
+          "Empfohlene_Sanierungsmassnahmen": "",
+          "Erneuerung_Neubau_m": "",
+          "FunktionHierarchisch": "",
+          "FunktionHydraulisch": "",
+          "GEONIS_Kennung": "",
+          "Gewaesserschutz": "",
+          "Grundwasserspiegel": "",
+          "Haltungslaenge_m": "",
+          "Haltungsname": "11-12",
+          "Inspektionsrichtung": "",
+          "Kosten": "",
+          "Lagebestimmung": "",
+          "Letzte_Aenderung": "",
+          "Lichte_Breite_mm": "",
+          "Linerendmanschette_LEM": "",
+          "Link": "",
+          "NR": "",
+          "Nutzungsart": "",
+          "Objekt_ID": "refHALTUNGB",
+          "Offen_abgeschlossen": "",
+          "Organisation": "",
+          "Primaere_Schaeden": "",
+          "Profiltyp": "",
+          "Pruefungsresultat": "",
+          "Referenzpruefung": "",
+          "Renovierung_Inliner_Stk": "",
+          "Renovierung_Inliner_m": "",
+          "Reparatur_Kurzliner": "",
+          "Reparatur_Manschette": "",
+          "Rohrmaterial": "",
+          "Sanieren_JaNein": "",
+          "Sanierungsbedarf": "",
+          "Status": "",
+          "Strasse": "",
+          "VSA_Geschaetzt": "",
+          "VSA_Zustandsnote_B": "",
+          "VSA_Zustandsnote_D": "",
+          "VSA_Zustandsnote_S": "",
+          "Verbindungsart": "",
+          "Zustandsklasse": ""
+        },
+        "Geonis": null,
+        "Id": "<laufabhaengig>",
+        "ModifiedAtUtc": "<laufabhaengig>",
+        "Protocol": null,
+        "ProtocolEntry": null,
+        "VsaFindings": [],
+        "XtfHerkunft": null
+      },
+      {
+        "CreatedAtUtc": "<laufabhaengig>",
+        "FieldMeta": {
+          "Aktualisierungsdatum": {
+            "Conflict": null,
+            "FieldName": "Aktualisierungsdatum",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Anschluesse_verpressen": {
+            "Conflict": null,
+            "FieldName": "Anschluesse_verpressen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Ausgefuehrt_durch": {
+            "Conflict": null,
+            "FieldName": "Ausgefuehrt_durch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Baujahr": {
+            "Conflict": null,
+            "FieldName": "Baujahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bemerkungen": {
+            "Conflict": null,
+            "FieldName": "Bemerkungen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bettung_Umhuellung": {
+            "Conflict": null,
+            "FieldName": "Bettung_Umhuellung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bruttokosten": {
+            "Conflict": null,
+            "FieldName": "Bruttokosten",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "DN_mm": {
+            "Conflict": null,
+            "FieldName": "DN_mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Datenherr": {
+            "Conflict": null,
+            "FieldName": "Datenherr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Datenlieferant": {
+            "Conflict": null,
+            "FieldName": "Datenlieferant",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Datum_Jahr": {
+            "Conflict": null,
+            "FieldName": "Datum_Jahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Eigentuemer": {
+            "Conflict": null,
+            "FieldName": "Eigentuemer",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Empfohlene_Sanierungsmassnahmen": {
+            "Conflict": null,
+            "FieldName": "Empfohlene_Sanierungsmassnahmen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Erneuerung_Neubau_m": {
+            "Conflict": null,
+            "FieldName": "Erneuerung_Neubau_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "FunktionHierarchisch": {
+            "Conflict": null,
+            "FieldName": "FunktionHierarchisch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "FunktionHydraulisch": {
+            "Conflict": null,
+            "FieldName": "FunktionHydraulisch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "GEONIS_Kennung": {
+            "Conflict": null,
+            "FieldName": "GEONIS_Kennung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Gewaesserschutz": {
+            "Conflict": null,
+            "FieldName": "Gewaesserschutz",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Grundwasserspiegel": {
+            "Conflict": null,
+            "FieldName": "Grundwasserspiegel",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Haltungslaenge_m": {
+            "Conflict": null,
+            "FieldName": "Haltungslaenge_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Haltungsname": {
+            "Conflict": null,
+            "FieldName": "Haltungsname",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Inspektionsrichtung": {
+            "Conflict": null,
+            "FieldName": "Inspektionsrichtung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Kosten": {
+            "Conflict": null,
+            "FieldName": "Kosten",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Lagebestimmung": {
+            "Conflict": null,
+            "FieldName": "Lagebestimmung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Letzte_Aenderung": {
+            "Conflict": null,
+            "FieldName": "Letzte_Aenderung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Lichte_Breite_mm": {
+            "Conflict": null,
+            "FieldName": "Lichte_Breite_mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Linerendmanschette_LEM": {
+            "Conflict": null,
+            "FieldName": "Linerendmanschette_LEM",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Link": {
+            "Conflict": null,
+            "FieldName": "Link",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "NR": {
+            "Conflict": null,
+            "FieldName": "NR",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Nutzungsart": {
+            "Conflict": null,
+            "FieldName": "Nutzungsart",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Objekt_ID": {
+            "Conflict": null,
+            "FieldName": "Objekt_ID",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Offen_abgeschlossen": {
+            "Conflict": null,
+            "FieldName": "Offen_abgeschlossen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Organisation": {
+            "Conflict": null,
+            "FieldName": "Organisation",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Primaere_Schaeden": {
+            "Conflict": null,
+            "FieldName": "Primaere_Schaeden",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Profiltyp": {
+            "Conflict": null,
+            "FieldName": "Profiltyp",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Pruefungsresultat": {
+            "Conflict": null,
+            "FieldName": "Pruefungsresultat",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Referenzpruefung": {
+            "Conflict": null,
+            "FieldName": "Referenzpruefung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Renovierung_Inliner_Stk": {
+            "Conflict": null,
+            "FieldName": "Renovierung_Inliner_Stk",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Renovierung_Inliner_m": {
+            "Conflict": null,
+            "FieldName": "Renovierung_Inliner_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Reparatur_Kurzliner": {
+            "Conflict": null,
+            "FieldName": "Reparatur_Kurzliner",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Reparatur_Manschette": {
+            "Conflict": null,
+            "FieldName": "Reparatur_Manschette",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Rohrmaterial": {
+            "Conflict": null,
+            "FieldName": "Rohrmaterial",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Sanieren_JaNein": {
+            "Conflict": null,
+            "FieldName": "Sanieren_JaNein",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Sanierungsbedarf": {
+            "Conflict": null,
+            "FieldName": "Sanierungsbedarf",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Status": {
+            "Conflict": null,
+            "FieldName": "Status",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Strasse": {
+            "Conflict": null,
+            "FieldName": "Strasse",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Geschaetzt": {
+            "Conflict": null,
+            "FieldName": "VSA_Geschaetzt",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_B": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_B",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_D": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_D",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_S": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_S",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Verbindungsart": {
+            "Conflict": null,
+            "FieldName": "Verbindungsart",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Zustandsklasse": {
+            "Conflict": null,
+            "FieldName": "Zustandsklasse",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          }
+        },
+        "Fields": {
+          "Aktualisierungsdatum": "",
+          "Anschluesse_verpressen": "",
+          "Ausgefuehrt_durch": "",
+          "Baujahr": "",
+          "Bemerkungen": "",
+          "Bettung_Umhuellung": "",
+          "Bruttokosten": "",
+          "DN_mm": "",
+          "Datenherr": "",
+          "Datenlieferant": "unbekannt",
+          "Datum_Jahr": "",
+          "Eigentuemer": "Privat",
+          "Empfohlene_Sanierungsmassnahmen": "",
+          "Erneuerung_Neubau_m": "",
+          "FunktionHierarchisch": "",
+          "FunktionHydraulisch": "",
+          "GEONIS_Kennung": "",
+          "Gewaesserschutz": "",
+          "Grundwasserspiegel": "",
+          "Haltungslaenge_m": "",
+          "Haltungsname": "12-13",
+          "Inspektionsrichtung": "",
+          "Kosten": "",
+          "Lagebestimmung": "",
+          "Letzte_Aenderung": "",
+          "Lichte_Breite_mm": "",
+          "Linerendmanschette_LEM": "",
+          "Link": "",
+          "NR": "",
+          "Nutzungsart": "",
+          "Objekt_ID": "refHALTUNGC",
+          "Offen_abgeschlossen": "",
+          "Organisation": "",
+          "Primaere_Schaeden": "",
+          "Profiltyp": "",
+          "Pruefungsresultat": "",
+          "Referenzpruefung": "",
+          "Renovierung_Inliner_Stk": "",
+          "Renovierung_Inliner_m": "",
+          "Reparatur_Kurzliner": "",
+          "Reparatur_Manschette": "",
+          "Rohrmaterial": "",
+          "Sanieren_JaNein": "",
+          "Sanierungsbedarf": "",
+          "Status": "",
+          "Strasse": "",
+          "VSA_Geschaetzt": "",
+          "VSA_Zustandsnote_B": "",
+          "VSA_Zustandsnote_D": "",
+          "VSA_Zustandsnote_S": "",
+          "Verbindungsart": "",
+          "Zustandsklasse": ""
+        },
+        "Geonis": null,
+        "Id": "<laufabhaengig>",
+        "ModifiedAtUtc": "<laufabhaengig>",
+        "Protocol": null,
+        "ProtocolEntry": null,
+        "VsaFindings": [],
+        "XtfHerkunft": null
+      }
+    ],
+    "Description": "",
+    "Id": "<laufabhaengig>",
+    "ImportHistory": [
+      {
+        "count": 3,
+        "file": "sia405-bezuege.xtf",
+        "timestampUtc": "<laufabhaengig>",
+        "type": "xtf405"
+      }
+    ],
+    "LastCommittedImportTxId": null,
+    "Metadata": {
+      "AuftragNr": "",
+      "Auftraggeber": "",
+      "Bearbeiter": "",
+      "Eigentuemer": "Privat",
+      "FirmaAdresse": "",
+      "FirmaEmail": "",
+      "FirmaName": "",
+      "FirmaTelefon": "",
+      "Gemeinde": "",
+      "InspektionsDatum": "",
+      "Sanieren": "Nein",
+      "Strasse": "",
+      "Zone": ""
+    },
+    "ModifiedAtUtc": "<laufabhaengig>",
+    "Name": "Neues Projekt",
+    "Objektakten": [],
+    "SchaechteData": [],
+    "Version": 2
+  },
+  "statistik": {
+    "ConflictDetails": [],
+    "Conflicts": 0,
+    "CreatedRecords": 3,
+    "Errors": 0,
+    "Found": 3,
+    "Messages": [
+      {
+        "Context": "XTF405",
+        "Level": "Info",
+        "Message": "Importiert 3 Haltungen aus sia405-bezuege.xtf"
+      }
+    ],
+    "Uncertain": 0,
+    "UpdatedFields": 16,
+    "UpdatedRecords": 0
+  }
+}

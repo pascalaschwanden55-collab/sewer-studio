@@ -46,7 +46,7 @@ internal sealed class ImportProjectPhotoAssignmentController
         }
 
         var sourceFolder = _dialogs.SelectFolder(
-            "Quellordner mit den Fotos waehlen (z.B. der Foto-/Picture-Ordner des Exports)",
+            "Quellordner mit den Fotos wählen (z.B. der Foto-/Picture-Ordner des Exports)",
             null);
         if (string.IsNullOrWhiteSpace(sourceFolder))
             return;
@@ -63,12 +63,12 @@ internal sealed class ImportProjectPhotoAssignmentController
 
         var summary = "Fotos zugeordnet:"
             + $"\n  {result.HoldingsMatched} Haltungen mit Fotos"
-            + $"\n  {result.PhotosAssigned} Fotos an Beobachtungen gehaengt"
+            + $"\n  {result.PhotosAssigned} Fotos an Beobachtungen gehängt"
             + $"\n  {result.PhotosCopied} ins Projekt kopiert"
             + $"\n  {result.UnmatchedFiles} nicht zuordenbar (z.B. GUID-benannt -> braucht DB-Import)";
         if (!saved)
         {
-            summary += "\n\nAenderungen uebernommen, aber nicht gespeichert. Bitte erneut speichern."
+            summary += "\n\nÄnderungen übernommen, aber nicht gespeichert. Bitte erneut speichern."
                 + ProjectSaveAttempt.ErrorDetails(saveError);
         }
 

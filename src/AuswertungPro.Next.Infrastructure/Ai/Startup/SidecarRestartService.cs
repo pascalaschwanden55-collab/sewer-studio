@@ -81,7 +81,7 @@ public sealed class SidecarRestartService : ISidecarRestartService
         lock (_sync)
         {
             if (_restartInFlight)
-                return new SidecarRestartResult(false, false, "Ein Sidecar-Neustart laeuft bereits.");
+                return new SidecarRestartResult(false, false, "Ein Sidecar-Neustart läuft bereits.");
             _restartInFlight = true;
         }
 

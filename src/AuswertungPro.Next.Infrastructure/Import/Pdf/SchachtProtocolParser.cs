@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Reports;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -10,22 +11,11 @@ namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 internal static class SchachtProtocolParser
 {
     /// <summary>
-    /// Reihenfolge der Bauteile fuer die Schadens-Sortierung (Anzeigereihenfolge).
+    /// Reihenfolge der Bauteile fuer die Schadens-Sortierung (Anzeigereihenfolge). Uebernimmt
+    /// <see cref="SchachtBauteilNamen.Kanonisch"/> (Application) als die eine Wahrheit — die
+    /// Schachtgrafik prueft dort, ob ein Code ueberhaupt einer dieser Bauteilnamen ist.
     /// </summary>
-    internal static readonly string[] SchachtComponentOrder =
-    {
-        "Schacht",
-        "Schachtdeckel",
-        "Deckelrahmen",
-        "Schachthals",
-        "Konus",
-        "Schachtrohr",
-        "Bankett",
-        "Durchlaufrinne",
-        "Anschluss",
-        "Leiter/Steigeisen",
-        "Tauchbogen"
-    };
+    internal static readonly string[] SchachtComponentOrder = SchachtBauteilNamen.Kanonisch.ToArray();
 
     /// <summary>
     /// Parst alle relevanten Felder aus dem Volltext eines Schachtprotokolls.
@@ -54,8 +44,9 @@ internal static class SchachtProtocolParser
                       ?? GetFirst(@"(?<v>" + SewerTextPatterns.GermanDateCore + @")[ \t]*\n[^\n\r]{0,80}\bDatum\b");
         var datum = NormalizeDate(dateRaw);
 
-        var funktion = GetFirst(@"\bSchachttyp\s+(?<v>[^\n\r]+)")?.Trim()
-                       ?? GetFirst(@"\bSchachtfunktion\s+(?<v>[^\n\r]+)")?.Trim();
+        var funktion = SchneideNachbarspalteAb(
+            GetFirst(@"\bSchachttyp\s+(?<v>[^\n\r]+)")?.Trim()
+            ?? GetFirst(@"\bSchachtfunktion\s+(?<v>[^\n\r]+)")?.Trim());
 
         var stammdaten = SchachtStammdatenParser.Parse(normalized);
 
@@ -80,6 +71,53 @@ internal static class SchachtProtocolParser
             Status: status,
             Link: null);
     }
+
+    /// <summary>
+    /// In den Protokollen steht die Schachtfunktion in derselben Textzeile wie
+    /// die naechsten Tabellenspalten ("Dachwasserschacht   Deckeltyp   -   12").
+    /// Eine Regex bis zum Zeilenende nimmt sie mit — deshalb hier abschneiden.
+    ///
+    /// Zwei Regeln, weil eine nicht reicht: Der Spaltenabstand ist meist gross,
+    /// aber bei einer mehrwortigen Funktion ("Einlaufschacht mit
+    /// Schlammsammler Deckeltyp") trennt nur ein einzelnes Leerzeichen. Dann
+    /// hilft allein der bekannte Name der Folgespalte.
+    /// </summary>
+    internal static string? SchneideNachbarspalteAb(string? wert)
+    {
+        if (string.IsNullOrWhiteSpace(wert))
+            return wert;
+
+        var text = wert;
+
+        // 1. Bekannte Folgespalten der Schachtprotokolle.
+        foreach (var spalte in NachbarspaltenNamen)
+        {
+            var i = text.IndexOf(spalte, StringComparison.OrdinalIgnoreCase);
+            if (i > 0)
+                text = text[..i];
+        }
+
+        // 2. Zwei oder mehr Leerzeichen trennen im PDF-Layout die Spalten.
+        var abstand = Regex.Match(text, @"\s{2,}");
+        if (abstand.Success && abstand.Index > 0)
+            text = text[..abstand.Index];
+
+        var sauber = text.Trim();
+        return sauber.Length == 0 ? null : sauber;
+    }
+
+    /// <summary>
+    /// Spaltenueberschriften, die in den Protokollen direkt auf die
+    /// Schachtfunktion folgen. Die Liste darf wachsen, wenn ein weiteres
+    /// Protokolllayout auftaucht.
+    /// </summary>
+    private static readonly string[] NachbarspaltenNamen =
+    [
+        "Deckeltyp",
+        "Belastungsklasse",
+        "Deckeldurchmesser",
+        "Schachtform",
+    ];
 
     /// <summary>
     /// Leitet den Schacht-Status (offen/abgeschlossen) aus Schaeden und explizitem Status-Text ab.
@@ -137,6 +175,7 @@ internal static class SchachtProtocolParser
 
         var normalized = NormalizeCheckboxGlyphs(NormalizePdfText(text));
         var lines = normalized.Split('\n');
+        var kaestchenformular = SchachtProtocolKaestchenformular.IstKaestchenformular(normalized);
         var entries = new List<(string Component, string Damage, int EncounterIndex)>();
         var encounterIndex = 0;
         var inConditionSection = false;
@@ -163,6 +202,31 @@ internal static class SchachtProtocolParser
 
             if (inConditionSection && IsConditionSectionEnd(line!))
                 inConditionSection = false;
+
+            if (kaestchenformular && inConditionSection)
+            {
+                // Kaestchenformular (Uri): Jede Zeile nennt den ganzen Wortvorrat, nur eine Marke
+                // VOR dem Wort zaehlt — kein Freitext, siehe SchachtProtocolKaestchenformular.
+                if (SchachtProtocolKaestchenformular.TryLiesBauteilzeile(line!, out var bauteilzeile))
+                {
+                    foreach (var (bauteil, schaden) in bauteilzeile)
+                        entries.Add((bauteil, schaden, encounterIndex++));
+                    continue;
+                }
+
+                if (TryExtractComponentTail(line!, out var kComponent, out var kTail))
+                {
+                    continuationComponent = kComponent;
+                    AddDamages(kComponent, SchachtProtocolKaestchenformular.MarkierteSchaeden(kComponent, kTail));
+                }
+                else if (continuationComponent is not null && ContainsDamageMarker(line!))
+                {
+                    // Marke und Wort auf einer Folgezeile (ITS-Schrift): dieselbe Bindung nach vorn.
+                    AddDamages(continuationComponent, SchachtProtocolKaestchenformular.MarkierteSchaeden(continuationComponent, line!));
+                }
+
+                continue;
+            }
 
             if (!TryExtractComponentTail(line!, out var component, out var tail))
             {
@@ -440,13 +504,19 @@ internal static class SchachtProtocolParser
             ("Tauchbogen", "Tauchbogen")
         };
 
-    private static bool IsConditionSectionStart(string line)
+    internal static bool IsConditionSectionStart(string line)
         => line.Contains("ZUSTAND DER SCHACHTBAUTEILE", StringComparison.OrdinalIgnoreCase)
            || line.Contains("Zustand der Schachtbauteile", StringComparison.OrdinalIgnoreCase)
            || line.Contains("Zustand der Bauteile", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Der Zustandsabschnitt endet an der Tabelle «Anschluesse» (Plural), an «Fotos», «Lage» oder
+    /// einer Seitenzahl. Die Bauteilzeile «Anschluss» im Kaestchenformular ist KEIN Ende: Bis
+    /// 19.09.2026 galt <c>^ANSCHL</c>, und damit fielen Verkalkung, Fremdwasser, Steigeisen und
+    /// Tauchbogen jedes Uri-Protokolls unter den Tisch.
+    /// </summary>
     private static bool IsConditionSectionEnd(string line)
-        => Regex.IsMatch(line, @"^\s*ANSCHL", RegexOptions.IgnoreCase)
+        => Regex.IsMatch(line, @"^\s*Anschl\S{0,2}sse\b", RegexOptions.IgnoreCase)
            || Regex.IsMatch(line, @"^\s*FOTOS\b", RegexOptions.IgnoreCase)
            || Regex.IsMatch(line, @"^\s*LAGE\b", RegexOptions.IgnoreCase)
            || Regex.IsMatch(line, @"^\s*Seite\s+\d+\b", RegexOptions.IgnoreCase);

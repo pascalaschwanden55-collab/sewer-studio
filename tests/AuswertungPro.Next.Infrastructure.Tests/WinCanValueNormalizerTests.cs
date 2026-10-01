@@ -53,14 +53,14 @@ public sealed class WinCanValueNormalizerTests
     // ── NormalizeUsage ───────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("S", "Schmutzwasser")]
-    [InlineData("sw", "Schmutzwasser")]
-    [InlineData("R", "Regenwasser")]
-    [InlineData("rw", "Regenwasser")]
+    [InlineData("S", "Schmutzabwasser")]
+    [InlineData("sw", "Schmutzabwasser")]
+    [InlineData("R", "Niederschlagsabwasser")]
+    [InlineData("rw", "Niederschlagsabwasser")]
     [InlineData("M", "Mischabwasser")]
     [InlineData("mw", "Mischabwasser")]
-    [InlineData("Schmutzabwasser", "Schmutzwasser")]
-    [InlineData("Regenwasserkanal", "Regenwasser")]
+    [InlineData("Schmutzabwasser", "Schmutzabwasser")]
+    [InlineData("Regenwasserkanal", "Niederschlagsabwasser")]
     [InlineData("Mischwasser", "Mischabwasser")]
     public void NormalizeUsage_BekannteKurzformenUndTexte_KehrtKanonischesLabel(string raw, string expected)
         => Assert.Equal(expected, WinCanValueNormalizer.NormalizeUsage(raw));
@@ -168,6 +168,18 @@ public sealed class WinCanValueNormalizerTests
     [Fact]
     public void ExtractQuantValue_KeinWert_GibtNull()
         => Assert.Null(WinCanValueNormalizer.ExtractQuantValue("Keine Angabe"));
+
+    [Fact]
+    public void ExtractQuantValue_MehrereEinheiten_ProzentGewinntVorGradUndMillimeter()
+        => Assert.Equal("25", WinCanValueNormalizer.ExtractQuantValue("Riss 2mm, Knick 45°, Verformung 25%"));
+
+    [Fact]
+    public void ExtractQuantValue_GradUndMillimeter_GradGewinnt()
+        => Assert.Equal("45", WinCanValueNormalizer.ExtractQuantValue("Riss 2mm, Knick 45°"));
+
+    [Fact]
+    public void ExtractQuantValue_MehrereTrefferDesselbenMusters_ErsterTrefferGewinnt()
+        => Assert.Equal("10", WinCanValueNormalizer.ExtractQuantValue("10% und danach 20%"));
 
     // ── ParseTimeSpan ────────────────────────────────────────────────────────
 

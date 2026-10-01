@@ -30,20 +30,20 @@ internal sealed class CodexArtifactCandidateInspector
         catch (Exception ex)
         {
             return CodexArtifactCandidateInspection.Reject(
-                $"Ungueltiger Artefakt-Pfad wurde uebersprungen: {ex.Message}");
+                $"Ungültiger Artefakt-Pfad wurde übersprungen: {ex.Message}");
         }
 
         var displayName = Path.GetFileName(fullPath);
         if (!IsDirectChild(fullPath, artifactRoot))
         {
             return CodexArtifactCandidateInspection.Reject(
-                $"Artefakt ausserhalb des Schutzordners wurde uebersprungen: {fullPath}");
+                $"Artefakt ausserhalb des Schutzordners wurde übersprungen: {fullPath}");
         }
 
         if (IsReparsePoint(fullPath))
         {
             return CodexArtifactCandidateInspection.Reject(
-                $"Verknuepfter Artefakt-Ordner wurde uebersprungen: {displayName}");
+                $"Verknüpfter Artefakt-Ordner wurde übersprungen: {displayName}");
         }
 
         try
@@ -61,7 +61,7 @@ internal sealed class CodexArtifactCandidateInspector
                     || !AllowedContentDirectoryNames.Contains(name))
                 {
                     return CodexArtifactCandidateInspection.Reject(
-                        $"Artefakt mit unbekanntem Inhalt bleibt geschuetzt: {displayName}");
+                        $"Artefakt mit unbekanntem Inhalt bleibt geschützt: {displayName}");
                 }
             }
 
@@ -69,25 +69,25 @@ internal sealed class CodexArtifactCandidateInspector
             if (!measured.Complete)
             {
                 return CodexArtifactCandidateInspection.Reject(
-                    $"Nicht vollstaendig pruefbares Artefakt bleibt geschuetzt: {displayName}");
+                    $"Nicht vollständig prüfbares Artefakt bleibt geschützt: {displayName}");
             }
 
             if (measured.ContainsReparsePoint)
             {
                 return CodexArtifactCandidateInspection.Reject(
-                    $"Artefakt mit Verknuepfung bleibt geschuetzt: {displayName}");
+                    $"Artefakt mit Verknüpfung bleibt geschützt: {displayName}");
             }
 
             if (measured.ContainsProjectMarker)
             {
                 return CodexArtifactCandidateInspection.Reject(
-                    $"Artefakt mit Projektdateien bleibt geschuetzt: {displayName}");
+                    $"Artefakt mit Projektdateien bleibt geschützt: {displayName}");
             }
 
             if (measured.LatestWriteUtc >= activityCutoffUtc)
             {
                 return CodexArtifactCandidateInspection.Reject(
-                    $"Kuerzlich verwendetes Artefakt bleibt geschuetzt: {displayName}");
+                    $"Kürzlich verwendetes Artefakt bleibt geschützt: {displayName}");
             }
 
             return CodexArtifactCandidateInspection.Accept(
@@ -98,7 +98,7 @@ internal sealed class CodexArtifactCandidateInspector
         catch (Exception ex)
         {
             return CodexArtifactCandidateInspection.Reject(
-                $"Artefakt konnte nicht sicher geprueft werden und bleibt erhalten: {displayName} ({ex.Message})");
+                $"Artefakt konnte nicht sicher geprüft werden und bleibt erhalten: {displayName} ({ex.Message})");
         }
     }
 

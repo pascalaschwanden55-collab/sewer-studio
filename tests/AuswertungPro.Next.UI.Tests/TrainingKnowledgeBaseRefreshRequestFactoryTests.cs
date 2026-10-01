@@ -48,7 +48,8 @@ public sealed class TrainingKnowledgeBaseRefreshRequestFactoryTests
             CodesCovered: 0,
             LastUpdateText: "-",
             ReadinessLabel: "ok",
-            ReadinessBrush: Brushes.Green,
+            ReadinessBrushKey: "SuccessBrush",
+            ReadinessFallbackColor: Colors.Green,
             TopCodesText: "-")));
         await request.RefreshQualityAsync();
 

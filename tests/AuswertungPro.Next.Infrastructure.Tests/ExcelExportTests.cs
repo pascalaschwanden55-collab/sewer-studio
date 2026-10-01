@@ -14,7 +14,7 @@ public sealed class ExcelExportTests
     [Fact]
     public void Export_WritesDataIntoTemplateCopy()
     {
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var templatePath = Path.Combine(root, "Export_Vorlage", "Haltungen.xlsx");
         Assert.True(File.Exists(templatePath), $"Template not found: {templatePath}");
 
@@ -88,7 +88,7 @@ public sealed class ExcelExportTests
         Assert.Equal("Testweg", outWs.Cell(startRow, strCol).GetString());
         Assert.Equal("Beton", outWs.Cell(startRow, matCol).GetString());
         Assert.Equal(300d, outWs.Cell(startRow, dnCol).GetDouble(), 3);
-        Assert.Equal("Schmutzwasser", outWs.Cell(startRow, nuCol).GetString());
+        Assert.Equal("Schmutzabwasser", outWs.Cell(startRow, nuCol).GetString()); // WebGIS-Begriff (Schritt A, 23.09.2026)
         Assert.Equal(12.5d, outWs.Cell(startRow, lenCol).GetDouble(), 3);
         Assert.Equal("In Fliessrichtung", outWs.Cell(startRow, flCol).GetString());
     }
@@ -117,7 +117,7 @@ public sealed class ExcelExportTests
     {
         // Regressionsschutz: Ohne den Header "Renovierung Inliner m" (Vorlage hatte nur "m")
         // matcht der Export das Feld Renovierung_Inliner_m nie -> der Wert wird nie exportiert.
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var templatePath = Path.Combine(root, "Export_Vorlage", "Haltungen.xlsx");
         Assert.True(File.Exists(templatePath), $"Template not found: {templatePath}");
 

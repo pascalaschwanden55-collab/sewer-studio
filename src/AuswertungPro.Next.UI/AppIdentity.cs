@@ -1,4 +1,4 @@
-namespace AuswertungPro.Next.UI;
+﻿namespace AuswertungPro.Next.UI;
 
 public static class AppIdentity
 {
@@ -6,7 +6,7 @@ public static class AppIdentity
 
     // Zentrale Versionsnummer der Anwendung — einzige Quelle der Wahrheit.
     // Wird in der Startanimation und in den Einstellungen angezeigt.
-    public const string Version = "4.5";
+    public const string Version = "5.0";
 
     // Anzeige-Variante mit "v"-Praefix (z.B. fuer Splash und Einstellungen).
     public const string DisplayVersion = "v" + Version;

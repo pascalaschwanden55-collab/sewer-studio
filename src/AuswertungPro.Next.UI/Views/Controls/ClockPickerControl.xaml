@@ -5,18 +5,18 @@
     <Grid>
         <Canvas x:Name="FaceCanvas" Background="Transparent">
             <Ellipse x:Name="Face"
-                     Stroke="#333"
+                     Stroke="{DynamicResource BorderLightBrush}"
                      StrokeThickness="1"
-                     Fill="White"/>
+                     Fill="{DynamicResource CardBrush}"/>
             <Line x:Name="Hand"
-                  Stroke="#D98200"
+                  Stroke="{DynamicResource WarningBrush}"
                   StrokeThickness="3"
                   StrokeStartLineCap="Round"
                   StrokeEndLineCap="Round"/>
             <Ellipse x:Name="CenterDot"
                      Width="6"
                      Height="6"
-                     Fill="#333"/>
+                     Fill="{DynamicResource TextSecondaryBrush}"/>
         </Canvas>
     </Grid>
 </UserControl>

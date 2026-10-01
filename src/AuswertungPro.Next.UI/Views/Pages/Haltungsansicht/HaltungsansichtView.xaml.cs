@@ -5,6 +5,8 @@ using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.Views.Controls;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
@@ -21,6 +23,9 @@ public partial class HaltungsansichtView : UserControl
         InitializeComponent();
         RestoreSchadenHeight();
         IsVisibleChanged += (_, _) => RefreshDetail();
+        Detail.CanCustomize = true;
+        Detail.LayoutChanged += Detail_LayoutChanged;
+        Detail.LayoutResetRequested += Detail_LayoutResetRequested;
 
         // Hover-Foto-Vorschau: Projekt-ROOT fuer relative FotoPaths. _settings wird erst nach dem
         // Konstruktor via Settings-Property gesetzt -> Closure liest den aktuellen Wert bei jedem Hover.
@@ -188,6 +193,16 @@ public partial class HaltungsansichtView : UserControl
     private void CtxCosts_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("costs"); }
     private void CtxDelete_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("delete"); }
 
+    /// <summary>
+    /// Baut das Formular der gewaehlten Haltung neu auf. Noetig nach Sammellaeufen wie
+    /// "Katasterkennungen ergaenzen" oder "Leere Felder aus QGIS": Das Formular ist eine
+    /// Momentaufnahme der Feldwerte beim Auswaehlen und hoert nicht auf spaetere
+    /// Aenderungen am Datensatz — die Tabelle schon. Ohne Neuaufbau stand die frisch
+    /// geschriebene GEONIS-Kennung im Datensatz, aber das offene Formular blieb leer
+    /// (gemessen 2026-09-04 an der Seilergasse).
+    /// </summary>
+    public void AktualisiereDetail() => RefreshDetail();
+
     private void RefreshDetail()
     {
         if (!IsVisible)
@@ -225,14 +240,42 @@ public partial class HaltungsansichtView : UserControl
         if (HaltungList.SelectedItem is not HaltungRecord record || DetailBuilder is null)
         {
             Detail.Header = "Keine Haltung gewählt";
-            Detail.SubHeader = "Links eine Haltung waehlen.";
+            Detail.SubHeader = "Links eine Haltung wählen.";
             Detail.Groups = Array.Empty<RecordDetailGroup>();
             return;
         }
 
         var name = record.GetFieldValue("Haltungsname");
         Detail.Header = string.IsNullOrWhiteSpace(name) ? "Haltungsdetails" : $"Haltung {name}";
-        Detail.SubHeader = "Alle Felder editierbar - Aenderungen erscheinen sofort in der Tabelle.";
-        Detail.Groups = DetailBuilder(record);
+        Detail.SubHeader = "Alle Felder editierbar - Änderungen erscheinen sofort in der Tabelle.";
+        Detail.Groups = RecordDetailLayoutApplier.Apply(
+            DetailBuilder(record),
+            RecordDetailLayoutSettingsMapper.ToLayout(_settings?.DataPageLayout?.DetailLayout));
+    }
+
+    // Anpassen-Modus: der Benutzer hat Spalten oder Karten veraendert.
+    // Haltungen haben ihr eigenes Layout, unabhaengig von den Schaechten.
+    private void Detail_LayoutChanged(object? sender, RecordDetailLayoutChangedEventArgs e)
+    {
+        _ = sender;
+        var layout = _settings?.DataPageLayout;
+        if (layout is null)
+            return;
+
+        layout.DetailLayout = RecordDetailLayoutSettingsMapper.ToSettings(e.Layout);
+        _settings!.Save();
+    }
+
+    private void Detail_LayoutResetRequested(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        var layout = _settings?.DataPageLayout;
+        if (layout is null)
+            return;
+
+        layout.DetailLayout = new DetailLayoutSettings();
+        _settings!.Save();
+        RefreshDetail();
     }
 }

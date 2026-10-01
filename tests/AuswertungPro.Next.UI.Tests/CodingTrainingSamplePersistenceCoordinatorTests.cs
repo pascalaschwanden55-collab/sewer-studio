@@ -122,6 +122,48 @@ public sealed class CodingTrainingSamplePersistenceCoordinatorTests
     }
 
     [Fact]
+    public async Task PersistSingleEventAsync_skips_photo_annotation_that_was_already_saved_separately()
+    {
+        using var temp = new TempDir();
+        var saved = false;
+        var captureCalled = false;
+        var coordinator = new CodingTrainingSamplePersistenceCoordinator(
+            new CodingTrainingFrameStore(() => temp.Path),
+            new CodingTrainingSamplePersister(_ =>
+            {
+                saved = true;
+                return Task.CompletedTask;
+            }),
+            CleanProtector());
+        var codingEvent = MakeEvent();
+        codingEvent.Entry.Training = new ProtocolEntryTrainingMeta
+        {
+            SkipAutomaticPersistence = true,
+            SkipReason = "Fotoannotation bereits separat gespeichert",
+            PhotoAnnotationSampleIds = ["photo-sample-1"]
+        };
+
+        var result = await coordinator.PersistSingleEventAsync(
+            codingEvent,
+            new CodingTrainingSamplePersistenceRequest(
+                CaseId: "H-101",
+                InspectionDate: null,
+                ConfirmedByUser: "tester",
+                ConfirmedAtUtc: DateTime.UtcNow,
+                PreferredFrameBytes: null,
+                CaptureFrameAsync: () =>
+                {
+                    captureCalled = true;
+                    return Task.FromResult<byte[]?>([1, 2, 3]);
+                }));
+
+        Assert.True(result.Success);
+        Assert.False(saved);
+        Assert.False(captureCalled);
+        Assert.False(Directory.Exists(Path.Combine(temp.Path, "gold_frames")));
+    }
+
+    [Fact]
     public async Task PersistEventsAsync_copies_personally_accepted_photos_into_gold_store()
     {
         using var temp = new TempDir();
@@ -158,6 +200,43 @@ public sealed class CodingTrainingSamplePersistenceCoordinatorTests
     }
 
     [Fact]
+    public async Task PersistEventsWithResultAsync_skips_marked_entry_but_keeps_false_flag_normal()
+    {
+        using var temp = new TempDir();
+        var savedBatches = new List<List<TrainingSample>>();
+        var coordinator = new CodingTrainingSamplePersistenceCoordinator(
+            new CodingTrainingFrameStore(() => temp.Path),
+            new CodingTrainingSamplePersister(samples =>
+            {
+                savedBatches.Add(samples);
+                return Task.CompletedTask;
+            }),
+            CleanProtector());
+        var skipped = MakeEvent();
+        skipped.Entry.Code = "BAB";
+        skipped.Entry.Training = new ProtocolEntryTrainingMeta
+        {
+            SkipAutomaticPersistence = true,
+            SkipReason = "Fotoannotation bereits separat gespeichert",
+            PhotoAnnotationSampleIds = ["photo-sample-2"]
+        };
+        var normal = MakeEvent();
+        normal.Entry.Code = "BBA";
+        normal.Entry.Training = new ProtocolEntryTrainingMeta
+        {
+            SkipAutomaticPersistence = false
+        };
+
+        var result = await coordinator.PersistEventsWithResultAsync(
+            [skipped, normal],
+            Request(caseId: "H-201"));
+
+        Assert.True(result.Success);
+        var sample = Assert.Single(Assert.Single(savedBatches));
+        Assert.Equal("BBA", sample.Code);
+    }
+
+    [Fact]
     public async Task PersistEventsWithResultAsync_gibt_Speicherfehler_zurueck()
     {
         using var temp = new TempDir();
@@ -172,7 +251,7 @@ public sealed class CodingTrainingSamplePersistenceCoordinatorTests
             Request(caseId: "H-500"));
 
         Assert.False(result.Success);
-        Assert.Contains("JSON gesperrt", result.Error);
+        Assert.Contains("Eine Datei oder ein Ordner ist momentan nicht verfügbar", result.Error);
     }
 
     [Fact]
@@ -195,7 +274,7 @@ public sealed class CodingTrainingSamplePersistenceCoordinatorTests
 
         Assert.NotNull(saved);
         Assert.Empty(saved.FramePath);
-        Assert.Equal("kein Frame verfuegbar", saved.SnapshotError);
+        Assert.Equal("kein Frame verfügbar", saved.SnapshotError);
         Assert.Equal(
             ManualGoldTrainingPolicy.GoldFrameRequiredReason,
             ManualGoldTrainingPolicy.EvaluateForExport(saved, "tester").Reason);

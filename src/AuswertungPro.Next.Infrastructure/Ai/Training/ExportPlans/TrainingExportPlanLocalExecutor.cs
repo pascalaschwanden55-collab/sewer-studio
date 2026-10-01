@@ -30,7 +30,7 @@ public sealed class TrainingExportPlanLocalExecutor : ITrainingExportPlanLocalEx
         ArgumentException.ThrowIfNullOrWhiteSpace(datasetRoot);
         TrainingExportPlanValidator.Validate(bundle.Plan);
         if (bundle.Plan.Images.Count == 0)
-            throw new TrainingExportPlanException("Der Exportplan enthaelt keine auszugebenden Bilder.");
+            throw new TrainingExportPlanException("Der Exportplan enthält keine auszugebenden Bilder.");
 
         var root = EnsureSafeDirectory(Path.GetFullPath(datasetRoot), create: true);
         var target = Path.Combine(root, bundle.Plan.PlanId);
@@ -78,7 +78,7 @@ public sealed class TrainingExportPlanLocalExecutor : ITrainingExportPlanLocalEx
         foreach (var image in bundle.Plan.Images)
         {
             if (!bundle.SourcePathsByImageSha256.TryGetValue(image.ImageSha256, out var sourcePath))
-                throw new TrainingExportPlanException($"Originalpfad fuer Bild {image.ImageSha256} fehlt.");
+                throw new TrainingExportPlanException($"Originalpfad für Bild {image.ImageSha256} fehlt.");
             var imageBytes = await TrainingExportSidecarRequestBuilder.ReadStableVerifiedImageAsync(
                     sourcePath,
                     image.ImageSha256,
@@ -162,7 +162,7 @@ public sealed class TrainingExportPlanLocalExecutor : ITrainingExportPlanLocalEx
             .Select(Path.GetFileName)
             .ToHashSet(StringComparer.Ordinal);
         if (!actualRootEntries.SetEquals(allowedRootEntries))
-            throw Conflict("Bestehender Datensatz enthaelt unerwartete oder fehlende Haupteintraege.");
+            throw Conflict("Bestehender Datensatz enthält unerwartete oder fehlende Haupteinträge.");
 
         ValidateCategoryFiles(fullDataset, "images", files.Images.Select(file => file.RelativePath));
         ValidateCategoryFiles(fullDataset, "labels", files.Labels.Select(file => file.RelativePath));
@@ -171,7 +171,7 @@ public sealed class TrainingExportPlanLocalExecutor : ITrainingExportPlanLocalEx
             var path = ResolveRelativeFile(fullDataset, file.RelativePath);
             EnsureSafeFile(path, fullDataset);
             if (!HashFile(path).Equals(file.Sha256, StringComparison.OrdinalIgnoreCase))
-                throw Conflict($"Datei stimmt nicht mit dem Plan ueberein: {file.RelativePath}");
+                throw Conflict($"Datei stimmt nicht mit dem Plan überein: {file.RelativePath}");
         }
 
         var receiptPath = ResolveRelativeFile(fullDataset, ReceiptFileName);
@@ -182,11 +182,11 @@ public sealed class TrainingExportPlanLocalExecutor : ITrainingExportPlanLocalEx
             using var expected = JsonDocument.Parse(
                 JsonSerializer.SerializeToUtf8Bytes(files.Receipt, ReceiptJsonOptions));
             if (!JsonElement.DeepEquals(actual.RootElement, expected.RootElement))
-                throw Conflict("Exportbeleg stimmt nicht mit dem Plan ueberein.");
+                throw Conflict("Exportbeleg stimmt nicht mit dem Plan überein.");
         }
         catch (JsonException ex)
         {
-            throw Conflict($"Exportbeleg ist ungueltig: {ex.Message}");
+            throw Conflict($"Exportbeleg ist ungültig: {ex.Message}");
         }
     }
 
@@ -200,7 +200,7 @@ public sealed class TrainingExportPlanLocalExecutor : ITrainingExportPlanLocalEx
             .Select(Path.GetFileName)
             .ToHashSet(StringComparer.Ordinal);
         if (!rootEntries.SetEquals(["train", "val"]))
-            throw Conflict($"Datensatzordner {category} hat unvollstaendige Splits.");
+            throw Conflict($"Datensatzordner {category} hat unvollständige Splits.");
 
         var actual = new HashSet<string>(StringComparer.Ordinal);
         foreach (var split in new[] { "train", "val" })
@@ -213,7 +213,7 @@ public sealed class TrainingExportPlanLocalExecutor : ITrainingExportPlanLocalEx
             }
         }
         if (!actual.SetEquals(expectedRelativePaths))
-            throw Conflict($"Datensatzdateien unter {category} stimmen nicht mit dem Plan ueberein.");
+            throw Conflict($"Datensatzdateien unter {category} stimmen nicht mit dem Plan überein.");
     }
 
     private static byte[] BuildLabelBytes(IReadOnlyList<TrainingExportPlannedLabel> labels)
@@ -267,7 +267,7 @@ public sealed class TrainingExportPlanLocalExecutor : ITrainingExportPlanLocalEx
             throw Conflict($"Ordner fehlt: {fullPath}");
         var reparsePoint = TrainingInventoryPaths.FindReparsePoint(fullPath);
         if (reparsePoint is not null)
-            throw Conflict($"Ordnerpfad enthaelt eine Verknuepfung oder Junction: {reparsePoint}");
+            throw Conflict($"Ordnerpfad enthält eine Verknüpfung oder Junction: {reparsePoint}");
         return fullPath;
     }
 
@@ -311,7 +311,7 @@ public sealed class TrainingExportPlanLocalExecutor : ITrainingExportPlanLocalEx
             return;
         EnsureDirectChild(stage, stagingRoot, "Arbeitsordner");
         if (TrainingInventoryPaths.FindReparsePoint(stage) is not null)
-            throw Conflict("Unsicherer Arbeitsordner wird nicht rekursiv geloescht.");
+            throw Conflict("Unsicherer Arbeitsordner wird nicht rekursiv gelöscht.");
         Directory.Delete(stage, recursive: true);
     }
 

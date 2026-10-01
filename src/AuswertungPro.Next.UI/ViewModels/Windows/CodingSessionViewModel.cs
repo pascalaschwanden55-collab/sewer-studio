@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Media;
@@ -126,7 +127,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     public string StatusText => SessionState switch
     {
         CodingSessionState.NotStarted => "Bereit",
-        CodingSessionState.Running => "Codierung laeuft",
+        CodingSessionState.Running => "Codierung läuft",
         CodingSessionState.Paused => "Pausiert",
         CodingSessionState.WaitingForUserInput => "KI-Vorschlag – bitte bestätigen",
         CodingSessionState.Completed => "Abgeschlossen",
@@ -338,30 +339,12 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
                 Code = SelectedCode
             };
 
-            if (CurrentOverlay.Q1Mm.HasValue)
-                entry.CodeMeta.Parameters["vsa.q1"] = CurrentOverlay.Q1Mm.Value.ToString("F1");
-            if (CurrentOverlay.Q2Mm.HasValue)
-                entry.CodeMeta.Parameters["vsa.q2"] = CurrentOverlay.Q2Mm.Value.ToString("F1");
-            if (CurrentOverlay.ClockFrom.HasValue)
-                entry.CodeMeta.Parameters["vsa.uhr.von"] = CurrentOverlay.ClockFrom.Value.ToString("F1");
-            if (CurrentOverlay.ClockTo.HasValue)
-                entry.CodeMeta.Parameters["vsa.uhr.bis"] = CurrentOverlay.ClockTo.Value.ToString("F1");
-
-            // Winkelmesser: Bogenwinkel uebertragen
-            if (CurrentOverlay.ArcDegrees.HasValue && CurrentOverlay.ToolType == OverlayToolType.PipeBend)
-                entry.CodeMeta.Parameters["vsa.winkel"] = CurrentOverlay.ArcDegrees.Value.ToString("F1");
+            CodingOverlayQuantificationWriter.ApplyToEntry(entry, CurrentOverlay);
 
             // DN-Kreis: Verhaeltnis zum Haupt-DN uebertragen
             if (CurrentOverlay.DnRatioPercent.HasValue)
-                entry.CodeMeta.Parameters["vsa.dn.ratio"] = CurrentOverlay.DnRatioPercent.Value.ToString("F1");
-            if (CurrentOverlay.FillPercent.HasValue)
-            {
-                var key = CurrentOverlay.ToolType == OverlayToolType.Level
-                          && CurrentOverlay.Points.Count >= 3
-                    ? "vsa.querschnitt.prozent"
-                    : "vsa.fuellgrad.prozent";
-                entry.CodeMeta.Parameters[key] = CurrentOverlay.FillPercent.Value.ToString("F1");
-            }
+                entry.CodeMeta.Parameters["vsa.dn.ratio"] =
+                    CurrentOverlay.DnRatioPercent.Value.ToString("F1", CultureInfo.InvariantCulture);
 
             // Streckenschaden?
             if (CurrentOverlay.ToolType == OverlayToolType.Stretch)
@@ -402,9 +385,9 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
 
     public string ScanModeDescription => ScanMode switch
     {
-        CodingScanMode.Assist => "KI schlaegt vor, Sie bestätigen",
+        CodingScanMode.Assist => "KI schlägt vor, Sie bestätigen",
         CodingScanMode.Fast   => "Green-Zone wird automatisch akzeptiert",
-        CodingScanMode.Full   => "Alle Detektionen werden geprueft",
+        CodingScanMode.Full   => "Alle Detektionen werden geprüft",
         _ => ""
     };
 
@@ -504,7 +487,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         CodingEventDecisionPolicy.ApplyManualReviewDecision(
             SelectedDefect,
             CodingUserDecision.Accepted,
-            "Manuell bestaetigt");
+            "Manuell bestätigt");
         OnSelectedDefectChanged(SelectedDefect);
         RefreshStatistics();
         RecordFeedbackIfAiEvent(SelectedDefect, wasAiEvent);
@@ -602,23 +585,35 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     public static bool CanActOnDefect(CodingEvent? ev)
         => DefectStatusPolicy.CanAct(ev);
 
+    // Nur fuer Text verwendet (Foreground der Konfidenz-/Zonen-Prozentanzeige, siehe
+    // CodingEventListItemControls/CodingInlineDefectDetailControls) — deshalb die *TextBrush-
+    // Varianten statt der Fuellfarben: SuccessBrush/WarningBrush/DangerBrush sind auf CardBrush
+    // teils zu kontrastarm (Fix-Runde 1, Review 29.09.2026).
     public static Brush GetConfidenceBrush(double confidence) => confidence switch
     {
-        >= 0.85 => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen
-        >= 0.60 => new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B)), // Gelb
-        _       => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44))  // Rot
+        >= 0.85 => ResolveThemeBrush("SuccessTextBrush", Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen
+        >= 0.60 => ResolveThemeBrush("WarningTextBrush", Color.FromRgb(0xF5, 0x9E, 0x0B)), // Gelb
+        _       => ResolveThemeBrush("DangerTextBrush", Color.FromRgb(0xEF, 0x44, 0x44))   // Rot
     };
 
     public static Brush GetZoneBrush(double confidence) => GetConfidenceBrush(confidence);
 
     public static Brush GetStatusBrush(DefectStatus status) => status switch
     {
-        DefectStatus.AutoAccepted     => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)),
-        DefectStatus.Accepted         => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)),
-        DefectStatus.AcceptedWithEdit => new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B)),
-        DefectStatus.Pending          => new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B)),
-        DefectStatus.ReviewRequired   => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)),
-        DefectStatus.Rejected         => new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8)),
-        _ => Brushes.Gray
+        DefectStatus.AutoAccepted     => ResolveThemeBrush("SuccessBrush", Color.FromRgb(0x22, 0xC5, 0x5E)),
+        DefectStatus.Accepted         => ResolveThemeBrush("SuccessBrush", Color.FromRgb(0x22, 0xC5, 0x5E)),
+        DefectStatus.AcceptedWithEdit => ResolveThemeBrush("WarningBrush", Color.FromRgb(0xF5, 0x9E, 0x0B)),
+        DefectStatus.Pending          => ResolveThemeBrush("WarningBrush", Color.FromRgb(0xF5, 0x9E, 0x0B)),
+        DefectStatus.ReviewRequired   => ResolveThemeBrush("DangerBrush", Color.FromRgb(0xEF, 0x44, 0x44)),
+        DefectStatus.Rejected         => ResolveThemeBrush("MutedBrush", Color.FromRgb(0x94, 0xA3, 0xB8)),
+        _ => ResolveThemeBrush("MutedBrush", Color.FromRgb(0x94, 0xA3, 0xB8))
     };
+
+    /// <summary>
+    /// Loest einen Theme-Token als Pinsel auf – statt eines hartkodierten Hex-Werts, damit Zonen-/
+    /// Status-/Konfidenzfarben im Dunkelmodus stimmen. Ohne laufende Anwendung (z. B. im Unit-Test)
+    /// gilt der Rueckfallwert.
+    /// </summary>
+    private static Brush ResolveThemeBrush(string key, Color fallback)
+        => System.Windows.Application.Current?.TryFindResource(key) as Brush ?? new SolidColorBrush(fallback);
 }

@@ -89,7 +89,12 @@ public sealed class LiveDetectionConfirmationCorrectCommandWorkflowTests
 
         Assert.Equal(LiveDetectionConfirmationCorrectCommandOutcome.Failed, result.Outcome);
         Assert.False(result.Handled);
-        Assert.Equal(["status:\u2717 Fehler: kaputt:False", "resume"], calls);
+        Assert.Equal(
+            [
+                "status:\u2717 Fehler: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.:False",
+                "resume"
+            ],
+            calls);
     }
 
     private static LiveDetectionConfirmationCorrectCommandActions Actions(

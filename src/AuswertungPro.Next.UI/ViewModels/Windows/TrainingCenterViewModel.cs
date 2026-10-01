@@ -83,7 +83,8 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private int _kbCodesCovered;
     [ObservableProperty] private string _kbReadinessLabel = "Unbekannt";
     [ObservableProperty] private System.Windows.Media.Brush _kbReadinessBrush
-        = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x94, 0xA3, 0xB8));
+        = System.Windows.Application.Current?.TryFindResource("MutedBrush") as System.Windows.Media.Brush
+          ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x94, 0xA3, 0xB8));
     [ObservableProperty] private string _kbLastUpdate = "\u2014";
     [ObservableProperty] private string _kbTopCodesText = "";
 
@@ -363,16 +364,6 @@ public partial class TrainingCenterViewModel : ObservableObject
     private void AppendScannedCases(IReadOnlyList<TrainingCase> items)
         => ObservableCollectionContentController.Append(Cases, items);
 
-    /// <summary>Speichert Faelle + Root-Ordner automatisch (ohne UI-Feedback).</summary>
-    private async Task AutoSaveStateAsync()
-    {
-        try
-        {
-            await _store.SaveAsync(TrainingCenterSaveRequestFactory.BuildStateWithDefaults(Cases, _rootFolders));
-        }
-        catch { /* stilles Speichern */ }
-    }
-
     [RelayCommand]
     private async Task SaveAsync()
     {
@@ -520,14 +511,23 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     /// <summary>
     /// Entfernt ein Sample aus der Wissensdatenbank (Deindex), ohne Ollama zu benoetigen.
-    /// Fehler werden still geschluckt — die Status-Aenderung bleibt persistiert.
+    /// Die Status-Aenderung bleibt auch bei einem Fehler gespeichert — der Fehler wird
+    /// aber sichtbar gemeldet. Ein nicht entfernter Eintrag kann sonst weiter als
+    /// Vergleichswissen dienen, waehrend die Oberflaeche Vollzug meldet (Auditbefund 16).
     /// </summary>
     private void TryDeindexSample(string sampleId)
     {
-        TrainingKnowledgeBaseSampleDeindexer.TryDeindexWithDefaults(
+        var ergebnis = TrainingKnowledgeBaseSampleDeindexer.TryDeindexWithDefaults(
             sampleId,
             () => _kbHttpClient,
             value => _kbHttpClient = value);
+
+        if (!ergebnis.Removed)
+        {
+            StatusText = "Entscheidung gespeichert, aber der Eintrag konnte NICHT aus der "
+                + $"Wissensdatenbank entfernt werden ({ergebnis.Error}). Er kann weiterhin "
+                + "als Vergleichsfall dienen — bitte später erneut entfernen.";
+        }
     }
 
     [RelayCommand]

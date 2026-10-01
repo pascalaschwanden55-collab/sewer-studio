@@ -14,6 +14,20 @@ public interface IConfirmLeave
     bool ConfirmLeave();
 }
 
+/// <summary>
+/// Meldet der Shell, ob ein laufender Projektvorgang Navigation und manuelles
+/// Speichern gerade erlaubt. Interne Speicherungen des Vorgangs bleiben getrennt.
+/// </summary>
+internal interface IShellOperationGuard
+{
+    bool CanSaveProjectFromShell { get; }
+    string ProjectSaveBlockedMessage { get; }
+    bool AllowsInternalProjectSave { get; }
+    bool CanLeaveShellContext { get; }
+    string LeaveBlockedMessage { get; }
+    event EventHandler? OperationAvailabilityChanged;
+}
+
 public static class ShellLeaveGuard
 {
     public static bool CanLeave(object? currentPage)

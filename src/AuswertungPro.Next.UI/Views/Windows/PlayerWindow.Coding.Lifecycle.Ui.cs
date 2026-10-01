@@ -38,13 +38,17 @@ public partial class PlayerWindow
     {
         CodingModeShowUiWorkflow.Execute(
             new CodingModeShowUiWorkflowActions(
-                ShowCodingSurface: () => CodingModeChromeControls.ShowCodingSurface(
-                    CodingOverlayPopup,
-                    CodingOverlayCanvas,
-                    CodingSidePanel,
-                    CodingSidePanelColumn,
-                    CodingToolbar,
-                    GetCodingSidePanelWidth()),
+                ShowCodingSurface: () =>
+                {
+                    CodingModeChromeControls.ShowCodingSurface(
+                        CodingOverlayPopup,
+                        CodingOverlayCanvas,
+                        CodingSidePanel,
+                        CodingSidePanelColumn,
+                        CodingToolbar,
+                        GetCodingSidePanelWidth());
+                    CodierModusChip.Visibility = Visibility.Visible;
+                },
                 UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
                 UpdateCodingOverlayCursor: UpdateCodingOverlayCursor,
                 ScheduleLoadedViewportUpdate: () => PlayerDispatcherScheduler.ScheduleLoaded(
@@ -58,6 +62,7 @@ public partial class PlayerWindow
             new CodingModeBackgroundServicesWorkflowActions(
                 StartCodingAiInitialization: () => _codingPipelineHealthController.InitializeAsync().SafeFireAndForget("InitCodingAi"),
                 StartCodingOsdTimer: StartCodingOsdTimer,
-                ShowInitialOsdMeterBadge: () => CodingOsdBadgeControls.ShowInitial(OsdMeterBadge, TxtOsdMeter)));
+                ShowInitialOsdMeterBadge: () => CodingOsdBadgeControls.ShowInitial(OsdMeterBadge, TxtOsdMeter),
+                StartSuggestionScan: StartSuggestionScan));
     }
 }

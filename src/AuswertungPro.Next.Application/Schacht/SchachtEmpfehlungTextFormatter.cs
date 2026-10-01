@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
@@ -14,12 +15,8 @@ public static class SchachtEmpfehlungTextFormatter
     /// <summary>Namen der selektierten, nicht-leeren Zeilen mit "; " verbunden.</summary>
     public static string BuildMassnahmenText(HoldingCost? cost)
     {
-        if (cost is null)
-            return "";
-
-        var namen = cost.Measures
-            .SelectMany(m => m.Lines)
-            .Where(l => l.Selected && !string.IsNullOrWhiteSpace(l.Text))
+        var namen = SelectedLines(cost)
+            .Where(l => !string.IsNullOrWhiteSpace(l.Text))
             .Select(l => l.Text.Trim());
 
         return string.Join("; ", namen);
@@ -27,14 +24,17 @@ public static class SchachtEmpfehlungTextFormatter
 
     /// <summary>Nettosumme = Summe (Menge * Preis) ueber alle selektierten Zeilen.</summary>
     public static decimal ResolveTotal(HoldingCost? cost)
+        => SelectedLines(cost).Sum(l => l.Qty * l.UnitPrice);
+
+    /// <summary>Alle selektierten Zeilen ueber alle Massnahmen, unabhaengig von ihrem Text.</summary>
+    private static IEnumerable<CostLine> SelectedLines(HoldingCost? cost)
     {
         if (cost is null)
-            return 0m;
+            return Enumerable.Empty<CostLine>();
 
         return cost.Measures
             .SelectMany(m => m.Lines)
-            .Where(l => l.Selected)
-            .Sum(l => l.Qty * l.UnitPrice);
+            .Where(l => l.Selected);
     }
 
     /// <summary>Betrag mit zwei Nachkommastellen, kultur-invariant (wie Tabellenfeld "Kosten").</summary>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,9 +28,30 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
 
         ctx?.Log.AddEntry("WinCan", "Start", ImportLogStatus.Info, sourceFile: exportRoot);
 
+        // Ein gewaehlter Sammelordner kann mehrere vollstaendige WinCan-Projekte enthalten
+        // (je Projekt ein eigener Ordner "DB"). Dann wird jedes Projekt einzeln eingelesen,
+        // damit keines still liegen bleibt und die Medien-/PDF-Suche je Projekt getrennt
+        // bleibt. Nur ein einzelnes Projekt behaelt den bisherigen Ablauf unveraendert.
+        var projektWurzeln = FindWinCanProjektWurzeln(exportRoot);
+        if (projektWurzeln.Count > 1)
+            return ImportMehrereProjekte(projektWurzeln, project, ctx);
+
+        return ImportEinzelnesProjekt(exportRoot, project, ctx, zonenName: null);
+    }
+
+    private Result<ImportStats> ImportEinzelnesProjekt(
+        string exportRoot,
+        Project project,
+        ImportRunContext? ctx,
+        string? zonenName)
+    {
         // WinCan VX speichert in .sdf (SQL Server Compact) — dafuer gibt es keinen .NET 8 Treiber.
         // Wenn .sdf vorhanden aber kein .db3, versuche XTF aus Misc/Exchange als Fallback.
-        var dbPath = FindDb3(exportRoot);
+        //
+        // Die Quellenwahl schaut in JEDE Kandidatendatei hinein und protokolliert das
+        // Ergebnis. Das Protokoll wandert bis ins Plausibilitaetstor und in den Bericht.
+        var quellen = WaehleDatenbank(exportRoot);
+        var dbPath = quellen.Gewinner?.Pfad;
         if (string.IsNullOrWhiteSpace(dbPath))
         {
             var sdfPath = FindSdf(exportRoot);
@@ -38,7 +59,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             {
                 ctx?.Log.AddEntry("WinCan", "SDF_Detected", ImportLogStatus.Info,
                     sourceFile: sdfPath,
-                    detail: "WinCan VX SDF erkannt — kein .NET 8 Treiber verfuegbar. Suche XTF-Export als Fallback.");
+                    detail: "WinCan VX SDF erkannt — kein .NET 8 Treiber verfügbar. Suche XTF-Export als Fallback.");
 
                 try
                 {
@@ -69,11 +90,59 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                     }));
             }
 
+            // Kandidaten vorhanden, aber keiner brauchbar: ehrlich melden statt
+            // "nicht gefunden". Eine defekte oder gesperrte Datenbank IST gefunden
+            // worden — sie liess sich nur nicht lesen. Das Protokoll geht mit,
+            // damit das Plausibilitaetstor hart abbrechen kann.
+            var unbrauchbare = quellen.AlleVersuche
+                .Where(v => v.Befund.ErkanntAlsQuelle)
+                .ToList();
+
+            if (unbrauchbare.Count > 0)
+            {
+                var meldungen = new List<string>();
+                foreach (var versuch in unbrauchbare)
+                {
+                    var text = $"Fehler beim WinCan-DB Import: "
+                               + versuch.Berichtszeile(Path.GetFileName);
+                    meldungen.Add(text);
+                    ctx?.Log.AddEntry("WinCan", "DB3", ImportLogStatus.Error,
+                        sourceFile: versuch.Pfad, detail: versuch.Befund.Grund);
+                }
+
+                var rueckfall = ImportWithoutDb3(
+                    exportRoot, project,
+                    "Keine lesbare WinCan-Datenbank. Versuche MDB-Fallback.",
+                    failWhenNoMdb: false, ctx: ctx);
+
+                var rueckfallWerte = rueckfall.Ok ? rueckfall.Value : null;
+                if (rueckfallWerte is not null)
+                    meldungen.AddRange(rueckfallWerte.Messages);
+                else if (!string.IsNullOrWhiteSpace(rueckfall.ErrorMessage))
+                    meldungen.Add($"MDB-Fallback fehlgeschlagen: {rueckfall.ErrorMessage}");
+
+                return Result<ImportStats>.Success(new ImportStats(
+                    rueckfallWerte?.Found ?? 0,
+                    rueckfallWerte?.Created ?? 0,
+                    rueckfallWerte?.Updated ?? 0,
+                    unbrauchbare.Count + (rueckfallWerte?.Errors ?? 0),
+                    rueckfallWerte?.Uncertain ?? 0,
+                    meldungen)
+                {
+                    ErwarteteHaltungen = quellen.ErwarteteMenge,
+                    BearbeiteteHaltungen = rueckfallWerte?.BearbeiteteHaltungen ?? 0,
+                    Quellenprotokoll = quellen
+                });
+            }
+
             return ImportWithoutDb3(exportRoot, project, "WinCan DB3 nicht gefunden. Fallback auf MDB.", ctx: ctx);
         }
 
         var messages = new List<string>();
         messages.Add($"Importquelle: WinCan DB3 ({Path.GetFileName(dbPath)})");
+        // Getrennte Zaehlung: found/updated enthalten auch Schaechte und taugen nicht
+        // als Pruefgroesse fuer das Plausibilitaetstor.
+        var bearbeiteteHaltungen = 0;
         var found = 0;
         var updated = 0;
         var errors = 0;
@@ -126,22 +195,46 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                 // weder die restlichen blockieren noch den MDB-Fallback ausloesen.
                 try
                 {
-                    var record = FindRecord(project, section.Key);
+                    // Haltungsnamen sind nur INNERHALB eines WinCan-Projekts eindeutig. Werden
+                    // mehrere Projekte in dasselbe Programmprojekt eingelesen, muss eine
+                    // gleichnamige, aber andere Haltung einen eigenen Datensatz bekommen.
+                    var datensatzName = BestimmeHaltungsname(
+                        project, section, nodeKeyByPk, zonenName, messages);
+
+                    var record = FindRecord(project, datensatzName);
                     if (record is null)
                     {
                         record = project.CreateNewRecord();
-                        record.SetFieldValue("Haltungsname", section.Key, FieldSource.Legacy, userEdited: false);
+                        record.SetFieldValue("Haltungsname", datensatzName, FieldSource.Legacy, userEdited: false);
                         AddRecord(project, record, ctx);
                         created++;
-                        messages.Add($"Haltung neu angelegt: {section.Key}");
+                        messages.Add($"Haltung neu angelegt: {datensatzName}");
                     }
+
+                    // Herkunftsbeleg fuer die Begleitprotokolle der Sanierung: Dichtheits-
+                    // pruefung und Aushaerteprotokoll nennen ihre Haltung nur so ("H66").
+                    // Kein Feld, keine Tabellenspalte, kein Export.
+                    record.ImportBezeichnung = section.Key.Trim();
 
                     found++;
 
-                    var inspection = inspections
-                        .Where(i => i.SectionFk == section.Pk)
-                        .OrderByDescending(i => i.SortKey)
-                        .FirstOrDefault();
+                    // Neueste glaubwuerdige zuerst; dieselbe Regel gilt fuer den VSA-KEK-XTF-Import.
+                    var kandidaten = AuswertungPro.Next.Application.UseCases.Import.Quellen.UntersuchungsAuswahl.Ordne(
+                        inspections.Where(i => i.SectionFk == section.Pk),
+                        i => i.SortKey);
+                    var inspection = kandidaten.FirstOrDefault();
+
+                    // Mehr als eine Untersuchung je Haltung: Nur die neueste kommt ins
+                    // Protokoll. Das darf nicht still passieren; in Seilergasse gingen so
+                    // 12 Befunde, 9 Fotos und 1 Video verloren, bei "0 Fehler" im Bericht.
+                    foreach (var uebersprungen in kandidaten.Skip(1))
+                    {
+                        var befunde = obsByInspection.TryGetValue(uebersprungen.Pk, out var liste) ? liste.Count : 0;
+                        messages.Add(
+                            $"Haltung {section.Key}: WinCan führt {kandidaten.Count} Untersuchungen. " +
+                            $"Übernommen: {Datumstext(inspection!)}; übersprungen: {Datumstext(uebersprungen)} " +
+                            $"mit {befunde} Befunden.");
+                    }
 
                     // Stammdaten + Schaechte ueber die zentrale MergeEngine (Leer-Schutz, Import-
                     // Prioritaet Legacy < Pdf < Xtf, Konfliktprotokoll) statt bedingungsloser
@@ -154,9 +247,21 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                     // ist das FromNode, ToNode = unten. Bei GEGENBEFAHRUNG (INS_InspectionDir U/UP/
                     // UPSTREAM/2) faehrt die Kamera von ToNode nach FromNode -> oben/unten tauschen
                     // (konsistent mit M150ValueExtractor.ShouldReverseWinCanDirection und VSA_KEK von=oben).
-                    var reverseDir = Xtf.M150ValueExtractor.ShouldReverseWinCanDirection(inspection?.InspectionDir);
-                    var obenRef  = reverseDir ? section.ToNodeFk   : section.FromNodeFk;
-                    var untenRef = reverseDir ? section.FromNodeFk : section.ToNodeFk;
+                    // Schacht oben/unten sind HYDRAULISCH und werden NICHT nach der
+                    // Fahrtrichtung gedreht.
+                    //
+                    // Gemessen am Bestand Andermatt (2026-08-21): OBJ_FromNode_REF /
+                    // OBJ_ToNode_REF stimmen in 16 von 16 Faellen mit "Schacht oben" /
+                    // "Schacht unten" im Kundenprotokoll ueberein — einschliesslich aller
+                    // drei Gegenbefahrungen. Die frueher hier eingebaute Umkehrung
+                    // vertauschte genau diese drei Haltungen und erzeugte damit auch
+                    // falsche Haltungsnummern.
+                    //
+                    // Die Fahrtrichtung geht nicht verloren: sie steht getrennt im Feld
+                    // "Inspektionsrichtung"; die WinCan-XTF fuehrt sie zusaetzlich als
+                    // vonPunktBezeichnung / bisPunktBezeichnung.
+                    var obenRef  = section.FromNodeFk;
+                    var untenRef = section.ToNodeFk;
                     if (!string.IsNullOrWhiteSpace(obenRef)
                         && nodeKeyByPk.TryGetValue(obenRef!, out var schachtOben))
                         ApplyField(source, "Schacht_oben", schachtOben);
@@ -166,83 +271,52 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
 
                     Common.LegacyStammdatenMerger.MergeLegacy(project, record, source, ctx);
 
+                    // Ab hier ist die Haltung mit ihren Stammdaten im Projekt angekommen.
+                    // Bewusst SCHON HIER zaehlen, nicht erst nach dem Protokoll: Eine
+                    // Haltung ohne Befunde (sauberes Rohr) ist vollstaendig importiert
+                    // und darf keinen Fehlalarm im Plausibilitaetstor ausloesen.
+                    bearbeiteteHaltungen++;
+
                     if (inspection is null)
                     {
                         uncertain++;
-                        messages.Add($"Keine Inspektion in DB fuer Haltung {section.Key}");
+                        messages.Add($"Keine Inspektion in DB für Haltung {section.Key}");
                         continue;
                     }
 
                     if (!obsByInspection.TryGetValue(inspection.Pk, out var obsList) || obsList.Count == 0)
                     {
                         uncertain++;
-                        messages.Add($"Keine Beobachtungen in DB fuer Haltung {section.Key}");
+                        messages.Add($"Keine Beobachtungen in DB für Haltung {section.Key}");
                         continue;
                     }
 
-                    var entries = new List<ProtocolEntry>();
-                    foreach (var obs in obsList.OrderBy(o => o.SortOrder))
+                    var entries = BaueBefahrungsEintraege(
+                        obsList, mediaByObs, fileIndex, section.Key, messages, out var videoPfade, out var medienfehler);
+                    errors += medienfehler;
+
+                    var fingerprint = BefahrungsFingerabdruck(section.Key, inspection, obsList, mediaByObs);
+                    var erstanlage = record.Protocol is null;
+                    // Derselbe Quellstand darf zwischenzeitliche Protokollkorrekturen
+                    // beim Wiederholungsimport nicht ersetzen.
+                    if (record.Protocol?.Current.ImportFingerprint != fingerprint)
                     {
-                        // Wurzel-Fix: rohen WinCan-OpCode normalisieren (Punkt-Trenner und Meter-Suffixe
-                        // entfernen, Hauptcode + Laenge gegen Katalog pruefen), damit typischer Parsing-Muell
-                        // nicht ins Protokoll und spaeter ins Training gelangt. CodeMeta.Code erbt entry.Code.
-                        var rawCode = obs.OpCode ?? "";
-                        var normalizedCode = VsaCodeValidator.TryNormalizeKnownCode(rawCode) ?? "";
-                        if (normalizedCode.Length == 0 && !string.IsNullOrWhiteSpace(rawCode))
-                            messages.Add($"WinCan: Code '{rawCode}' unbekannt/ungueltig - leer uebernommen (Haltung {section.Key}).");
-
-                        var entry = new ProtocolEntry
-                        {
-                            Code = normalizedCode,
-                            Beschreibung = obs.Observation ?? "",
-                            MeterStart = obs.Distance,
-                            MeterEnd = obs.Distance.HasValue && obs.ContDefectLength.HasValue && obs.ContDefectLength.Value > 0
-                                ? obs.Distance.Value + obs.ContDefectLength.Value
-                                : obs.Distance,
-                            IsStreckenschaden = obs.ContDefectLength.HasValue && obs.ContDefectLength.Value > 0,
-                            Mpeg = obs.TimeCtr,
-                            Zeit = ParseTimeSpan(obs.TimeCtr),
-                            Source = ProtocolEntrySource.Imported
-                        };
-
-                        var parameters = BuildObsParameters(obs);
-                        if (parameters.Count > 0)
-                        {
-                            entry.CodeMeta = new ProtocolEntryCodeMeta
-                            {
-                                Code = entry.Code,
-                                Parameters = parameters,
-                                UpdatedAt = DateTimeOffset.UtcNow
-                            };
-                        }
-
-                        if (mediaByObs.TryGetValue(obs.Pk, out var mediaList))
-                        {
-                            foreach (var media in mediaList)
-                            {
-                                if (string.IsNullOrWhiteSpace(media.FileName))
-                                    continue;
-
-                                if (IsVideo(media.FileType))
-                                {
-                                    var videoPath = ResolveFile(fileIndex, media.FileName);
-                                    if (!string.IsNullOrWhiteSpace(videoPath))
-                                        record.SetFieldValue("Link", videoPath, FieldSource.Legacy, userEdited: false);
-                                }
-                                else if (IsImage(media.FileType))
-                                {
-                                    var photoPath = ResolveFile(fileIndex, media.FileName);
-                                    if (!string.IsNullOrWhiteSpace(photoPath))
-                                        entry.FotoPaths.Add(photoPath);
-                                }
-                            }
-                        }
-
-                        entries.Add(entry);
+                        ApplyProtocol(record, entries, protocolService);
+                        UpdateFindings(record, entries);
+                    }
+                    if (erstanlage && record.Protocol is { } angelegt)
+                    {
+                        angelegt.Original.ImportFingerprint = fingerprint;
+                        angelegt.Original.ImportVideoPaths = videoPfade.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                     }
 
-                    ApplyProtocol(record, entries, protocolService);
-                    UpdateFindings(record, entries);
+                    // ERST nach ApplyProtocol: Der Aufruf baut das Protokolldokument neu
+                    // auf und wuerde eine vorher angehaengte Revision wieder verwerfen.
+                    var weitere = UebernehmeWeitereBefahrungen(
+                        record, datensatzName, inspection, kandidaten,
+                        obsByInspection, mediaByObs, fileIndex, section.Key, videoPfade, messages, out var weitereMedienfehler);
+                    errors += weitereMedienfehler;
+                    uncertain += weitere;
                     LinkSectionPdf(record, section.Key, fileIndex);
 
                     // Primaere_Schaeden (abgeleiteter Zusammenfassungstext) ebenfalls ueber die
@@ -263,7 +337,14 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                 }
             }
 
-            ImportNodes(project, nodes, fileIndex, messages, ref found, ref created, ref updated, ref uncertain, ctx);
+            var haltungsnamen = sections
+                .Select(x => x.Key)
+                .Where(k => !string.IsNullOrWhiteSpace(k))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            ImportNodes(project, nodes, fileIndex, haltungsnamen, _pdfReferenzen,
+                messages, ref found, ref created, ref updated, ref uncertain, ctx);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -304,7 +385,12 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
         project.ModifiedAtUtc = DateTime.UtcNow;
         project.Dirty = true;
 
-        var stats = new ImportStats(found, created, updated, errors, uncertain, messages);
+        var stats = new ImportStats(found, created, updated, errors, uncertain, messages)
+        {
+            ErwarteteHaltungen = quellen.ErwarteteMenge,
+            BearbeiteteHaltungen = bearbeiteteHaltungen,
+            Quellenprotokoll = quellen
+        };
         return Result<ImportStats>.Success(stats);
     }
 
@@ -321,12 +407,12 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             if (failWhenNoMdb)
                 return Result<ImportStats>.Fail("WINCAN_DB_MISSING", "Keine WinCan DB3- oder MDB-Datei im Export gefunden.");
 
-            return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 0, 0, new[] { "Keine MDB-Datei fuer Fallback gefunden." }));
+            return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 0, 0, new[] { "Keine MDB-Datei für Fallback gefunden." }));
         }
 
         var messages = new List<string>
         {
-            $"Importquelle: WinCan MDB-Fallback ({mdbPaths.Count} Datei(en) geprueft)",
+            $"Importquelle: WinCan MDB-Fallback ({mdbPaths.Count} Datei(en) geprüft)",
             reasonMessage
         };
 
@@ -449,33 +535,11 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
 
     private static Dictionary<string, List<string>> BuildFileIndex(string root)
     {
-        // IO und GetMediaRoots bleiben callerseitig; Kern-Logik liegt in MediaFileIndex.Build.
-        // WinCan scannt mehrere Sub-Roots (Video/, Picture/, …) statt root rekursiv.
-        var files = GetMediaRoots(root)
-            .SelectMany(dir => AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(dir, "*.*", recursive: true));
+        // Genau die vom Benutzer gewaehlte Wurzel ist vertrauenswuerdig. Bekannte
+        // Medien-Unterordner duerfen nicht als neue Wurzeln behandelt werden, weil
+        // eine dort liegende Junction sonst den Schutz der rekursiven Suche umgeht.
+        var files = SafeFileEnumeration.EnumerateFilesSafe(root, "*", recursive: true);
         return Common.MediaFileIndex.Build(files, MediaExtensions);
-    }
-
-    private static IEnumerable<string> GetMediaRoots(string root)
-    {
-        var candidates = new[]
-        {
-            root,
-            Path.Combine(root, "Video"),
-            Path.Combine(root, "Picture"),
-            Path.Combine(root, "Pictures"),
-            Path.Combine(root, "Foto"),
-            Path.Combine(root, "Fotos"),
-            Path.Combine(root, "Film"),
-            Path.Combine(root, "Report"),
-            Path.Combine(root, "Reports"),
-            Path.Combine(root, "PDF"),
-            Path.Combine(root, "Dokumente")
-        };
-
-        foreach (var dir in candidates)
-            if (Directory.Exists(dir))
-                yield return dir;
     }
 
     private static string? ResolveFile(Dictionary<string, List<string>> index, string fileName)
@@ -488,149 +552,6 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     {
         // DB3 gilt als Quelle der Wahrheit: vorhandene VsaFindings durch den aktuellen Importstand ersetzen.
         record.VsaFindings = WinCanFindingFactory.BuildFindings(entries);
-    }
-
-    private static void LinkSectionPdf(HaltungRecord record, string sectionKey, Dictionary<string, List<string>> index)
-    {
-        // Gemeinsame PDF-Treffer-Suche via Common-Helfer
-        var matches = Common.PdfFileIndexHelper.ResolvePdfMatches(index, sectionKey);
-
-        if (matches.Count == 0)
-            return;
-
-        var first = matches[0];
-        record.SetFieldValue("PDF_Path", first, FieldSource.Legacy, userEdited: false);
-        if (matches.Count > 1)
-            record.SetFieldValue("PDF_All", string.Join(";", matches), FieldSource.Legacy, userEdited: false);
-    }
-
-    private static void ApplySectionFields(HaltungRecord record, WinCanDbSection section, WinCanDbInspection? inspection)
-    {
-        ApplyField(record, "Strasse", section.Street);
-        ApplyField(record, "Rohrmaterial", NormalizeMaterial(section.Material));
-        ApplyField(record, "DN_mm", NormalizeNumber(section.Size1) ?? NormalizeNumber(section.PipeHeightOrDia));
-        ApplyField(record, "Haltungslaenge_m", NormalizeNumber(section.Length) ?? NormalizeNumber(section.RealLength) ?? NormalizeNumber(section.PipeLength));
-        ApplyField(record, "Nutzungsart", NormalizeUsage(section.Usage));
-        ApplyField(record, "Eigentuemer", section.Ownership);
-        ApplyField(record, "Bemerkungen", section.Memo);
-        // Datum_Jahr = INSPEKTIONSdatum (INS_StartDate), konsistent mit VSA_KEK (Untersuchungs-Zeitpunkt)
-        // und dem PDF-Import. Das Bau-/Konstruktionsjahr (OBJ_ConstructionDate) wird bewusst NICHT als
-        // Fallback verwendet, sonst mischt sich wieder ein Baujahr ein. Ohne Inspektionsdatum bleibt leer.
-        ApplyField(record, "Datum_Jahr", NormalizeDate(null, inspection?.StartDate));
-        ApplyField(record, "Inspektionsrichtung", NormalizeInspectionDir(inspection?.InspectionDir));
-    }
-
-    private static void ImportNodes(
-        Project project,
-        List<WinCanDbNode> nodes,
-        Dictionary<string, List<string>> index,
-        List<string> messages,
-        ref int found,
-        ref int created,
-        ref int updated,
-        ref int uncertain,
-        ImportRunContext? ctx)
-    {
-        if (nodes.Count == 0)
-            return;
-
-        foreach (var node in nodes)
-        {
-            var rawKey = node.Key ?? node.Number ?? string.Empty;
-            var key = NormalizeHoldingKey(rawKey);
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                uncertain++;
-                messages.Add("Schacht ohne Nummer in DB gefunden (ignoriert).");
-                continue;
-            }
-
-            var record = FindSchachtRecord(project.SchaechteData, key);
-            if (record is null)
-            {
-                record = new SchachtRecord();
-                if (ctx is null)
-                    project.SchaechteData.Add(record);
-                else
-                    ctx.WithCollectionLock(() => project.SchaechteData.Add(record));
-                created++;
-                messages.Add($"Schacht neu angelegt: {rawKey}");
-            }
-
-            found++;
-            ApplyNodeFields(record, node);
-            LinkNodePdf(record, rawKey, index);
-            updated++;
-        }
-    }
-
-    private static void AddRecord(Project project, HaltungRecord record, ImportRunContext? ctx)
-    {
-        if (ctx is null)
-            project.AddRecord(record);
-        else
-            ctx.WithCollectionLock(() => project.AddRecord(record));
-    }
-
-    private static SchachtRecord? FindSchachtRecord(IEnumerable<SchachtRecord> records, string key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-            return null;
-
-        foreach (var record in records)
-        {
-            foreach (var field in SchachtKeyFields)
-            {
-                var value = record.GetFieldValue(field);
-                if (string.IsNullOrWhiteSpace(value))
-                    continue;
-                if (string.Equals(NormalizeHoldingKey(value), key, StringComparison.OrdinalIgnoreCase))
-                    return record;
-            }
-        }
-
-        return null;
-    }
-
-    private static void ApplyNodeFields(SchachtRecord record, WinCanDbNode node)
-    {
-        SetSchachtField(record, "Schachtnummer", node.Key ?? node.Number);
-        SetSchachtField(record, "Funktion", node.Type ?? node.NodeType ?? node.Usage);
-        SetSchachtField(record, "Strasse", node.Street ?? node.Locality);
-        SetSchachtField(record, "Eigentümer", node.Ownership ?? node.LandOwner);
-        SetSchachtField(record, "Bemerkungen", node.Memo);
-        SetSchachtField(record, "Zustandsklasse", NormalizeNumber(node.Condition));
-        SetSchachtField(record, "Abdeckung Stk.", NormalizeNumber(node.CoversCount));
-        SetSchachtField(record, "Status", node.State);
-        SetSchachtField(record, "offen/abgeschlossen", NormalizeAccessible(node.Accessible));
-        SetSchachtField(record, "Ausführung", node.ConstructionStyle);
-        SetSchachtField(record, "Datum/Jahr", NormalizeDate(node.ConstructionYearText, node.ConstructionDate));
-
-        // Zusaetzliche Schacht-Stammdaten aus der NODE-Tabelle (bisher gelesen, aber nie gesetzt).
-        // Additiv/empty-only ueber SetSchachtField — schliesst dokumentierte Schacht-Datenluecken.
-        SetSchachtField(record, "Schachtform", node.Shape);
-        var d1 = NormalizeNumber(node.Size1);
-        var d2 = NormalizeNumber(node.Size2);
-        var durchmesser = (!string.IsNullOrWhiteSpace(d1) && !string.IsNullOrWhiteSpace(d2))
-            ? $"{d1} x {d2}"      // rechteckiger Schacht: beide Kanten
-            : (d1 ?? d2);          // rund: nur Durchmesser
-        SetSchachtField(record, "Durchmesser", durchmesser);
-        SetSchachtField(record, "Schachttiefe", NormalizeNumber(node.RimToInvert) ?? NormalizeNumber(node.DepthToInvert));
-        SetSchachtField(record, "Material", NormalizeMaterial(node.Material));
-    }
-
-    private static void LinkNodePdf(SchachtRecord record, string nodeKey, Dictionary<string, List<string>> index)
-    {
-        if (string.IsNullOrWhiteSpace(nodeKey))
-            return;
-
-        // Gemeinsame PDF-Treffer-Suche via Common-Helfer
-        var matches = Common.PdfFileIndexHelper.ResolvePdfMatches(index, nodeKey);
-
-        if (matches.Count == 0)
-            return;
-
-        SetSchachtField(record, "Link", matches[0]);
     }
 
     private static Dictionary<string, string> BuildObsParameters(WinCanDbObservation obs)
@@ -677,8 +598,12 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     private static string NormalizeHoldingKey(string? value)
         => Common.HoldingKeyNormalizer.Normalize(value);
 
-    // Haltungs-Matching einheitlich zu IBAK/KINS: exakt ODER Grenz-Praefix
-    // (100-200 == 100-200-1, aber NICHT 100-2000). Frueher matchte WinCan nur exakt
+    // Die MATCHING-Regel entspricht IBAK/KINS: exakt ODER Grenz-Praefix
+    // (100-200 == 100-200-1, aber NICHT 100-2000). Die NORMALISIERUNG des Schluessels
+    // ist dagegen nicht einheitlich: WinCan nutzt HoldingKeyNormalizer.Normalize, IBAK
+    // NormalizeIbak (mit Dateinamen-Praefixen), KINS nur Trim + Leerzeichen entfernen +
+    // Grossschreibung (Schraegstrich und Gedankenstrich bleiben dort unveraendert).
+    // Frueher matchte WinCan nur exakt
     // und legte bei Segment-Suffix-Unterschieden ein Duplikat statt Zusammenfuehrung an.
     private static HaltungRecord? FindRecord(Project project, string? holdingName)
     {
@@ -691,38 +616,28 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
         if (exact is not null)
             return exact;
 
-        foreach (var record in project.Data)
-        {
-            var candidate = NormalizeHoldingKey(record.GetFieldValue("Haltungsname"));
-            if (string.IsNullOrWhiteSpace(candidate))
-                continue;
-            if (Common.HoldingKeyMatch.IsBoundaryPrefixMatch(candidate, key))
-                return record;
-        }
-
-        return null;
-    }
-
-    private static string? FindDb3(string exportRoot)
-    {
-        var enumOpts = new EnumerationOptions
-        {
-            RecurseSubdirectories = true,
-            IgnoreInaccessible = true,
-            MatchCasing = MatchCasing.CaseInsensitive
-        };
-        var candidates = Directory.EnumerateFiles(exportRoot, "*.db3", enumOpts)
-            .Where(p => p.IndexOf(Path.DirectorySeparatorChar + "DB" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) >= 0)
+        var boundaryMatches = project.Data
+            .Where(record =>
+            {
+                var candidate = NormalizeHoldingKey(record.GetFieldValue("Haltungsname"));
+                return !string.IsNullOrWhiteSpace(candidate)
+                       && Common.HoldingKeyMatch.IsBoundaryPrefixMatch(candidate, key);
+            })
+            .Take(2)
             .ToList();
 
-        if (candidates.Count == 0)
-            return null;
-
-        return candidates
-            .Select(p => new FileInfo(p))
-            .OrderByDescending(fi => fi.Length)
-            .FirstOrDefault()?.FullName;
+        return boundaryMatches.Count == 1
+            ? boundaryMatches[0]
+            : null;
     }
+
+    /// <summary>
+    /// Waehlt die fachliche Datenbank ueber die gemeinsame Quellenwahl.
+    /// Frueher entschied hier die Dateigroesse — und traf damit immer die groessere,
+    /// aber leere "*_Meta.db3".
+    /// </summary>
+    private static string? FindDb3(string exportRoot)
+        => WaehleDatenbank(exportRoot).Gewinner?.Pfad;
 
     /// <summary>
     /// Sucht nach WinCan VX .sdf (SQL Server Compact) Datenbanken.
@@ -730,34 +645,34 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     /// </summary>
     private static string? FindSdf(string exportRoot)
     {
-        try
+        var candidates = new List<(string Path, long Length)>();
+        foreach (var path in SafeFileEnumeration.EnumerateFilesSafe(exportRoot, "*", recursive: true))
         {
-            var enumOpts = new EnumerationOptions
+            if (!Path.GetExtension(path).Equals(".sdf", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var directory = Path.GetDirectoryName(path) ?? "";
+            if (!Path.GetFileName(directory).Equals("DB", StringComparison.OrdinalIgnoreCase)
+                || Path.GetFileName(path).Contains("_Meta", StringComparison.OrdinalIgnoreCase))
             {
-                RecurseSubdirectories = true,
-                IgnoreInaccessible = true,
-                MatchCasing = MatchCasing.CaseInsensitive
-            };
+                continue;
+            }
 
-            var candidates = Directory.EnumerateFiles(exportRoot, "*.sdf", enumOpts)
-                .Where(p =>
-                {
-                    var dir = Path.GetDirectoryName(p) ?? "";
-                    var dirName = Path.GetFileName(dir);
-                    return string.Equals(dirName, "DB", StringComparison.OrdinalIgnoreCase);
-                })
-                .Where(p => !Path.GetFileName(p).Contains("_Meta", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            try
+            {
+                candidates.Add((path, new FileInfo(path).Length));
+            }
+            catch
+            {
+                // Eine unlesbare Datei verhindert den Import der restlichen Quellen nicht.
+            }
+        }
 
-            return candidates
-                .Select(p => new FileInfo(p))
-                .OrderByDescending(fi => fi.Length)
-                .FirstOrDefault()?.FullName;
-        }
-        catch
-        {
-            return null;
-        }
+        return candidates
+            .OrderByDescending(candidate => candidate.Length)
+            .ThenBy(candidate => candidate.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(candidate => candidate.Path)
+            .FirstOrDefault();
     }
 
     /// <summary>
@@ -767,25 +682,12 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     private Result<ImportStats>? TryImportViaXtfFallback(
         string exportRoot, Project project, string sdfPath, ImportRunContext? ctx)
     {
-        // Suche XTF-Dateien im gesamten Projektordner (robust, ignoriert gesperrte Ordner)
-        var xtfFiles = new List<string>();
-        var enumOpts = new EnumerationOptions
-        {
-            RecurseSubdirectories = true,
-            IgnoreInaccessible = true,
-            MatchCasing = MatchCasing.CaseInsensitive
-        };
-
-        try
-        {
-            xtfFiles.AddRange(Directory.EnumerateFiles(exportRoot, "*.xtf", enumOpts));
-        }
-        catch (Exception ex)
-        {
-            ctx?.Log.AddEntry("WinCan", "XTF_Search_Error", ImportLogStatus.Info,
-                sourceFile: exportRoot,
-                detail: $"Fehler bei XTF-Suche: {ex.Message}");
-        }
+        // Unterordner werden einzeln gelesen. Verknuepfungen innerhalb der gewaehlten
+        // Wurzel werden nicht betreten; die explizit gewaehlte Wurzel selbst bleibt lesbar.
+        var xtfFiles = SafeFileEnumeration
+            .EnumerateFilesSafe(exportRoot, "*", recursive: true)
+            .Where(path => Path.GetExtension(path).Equals(".xtf", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
         if (xtfFiles.Count == 0)
         {
@@ -794,6 +696,23 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                 detail: $"Keine *.xtf Dateien im Projektordner gefunden (Suche in: {exportRoot})");
             return null;
         }
+
+        // WinCan legt unter Misc\Exchange oft mehrere Exporte derselben Zone ab. Bis
+        // 2026-09-05 wurden alle gelesen: Andermatt Zone 2.11 meldete dadurch "144
+        // gefunden" fuer dreimal dieselben 48 Untersuchungen. Die Auswahl nimmt den
+        // inhaltsreichsten Export je Untersuchungsmenge und begruendet jede Ablehnung.
+        var auswahl = Application.UseCases.Import.Quellen.XtfExportAuswahl.Waehle(
+            xtfFiles
+                .Select(pfad => new Application.UseCases.Import.Quellen.XtfExportKandidat(
+                    pfad, _xtfQuellenPruefer.Pruefe(pfad)))
+                .ToList());
+
+        var xtfEntscheide = auswahl.Entscheide
+            .Select(e => $"{(e.Uebernommen ? "verwendet" : "uebersprungen")}: {Path.GetFileName(e.Pfad)} — {e.Grund}")
+            .ToList();
+
+        if (auswahl.Uebernommen.Count > 0)
+            xtfFiles = auswahl.Uebernommen.ToList();
 
         ctx?.Log.AddEntry("WinCan", "XTF_Fallback", ImportLogStatus.Info,
             detail: $"SDF nicht lesbar, verwende {xtfFiles.Count} XTF-Datei(en) als Fallback: {string.Join(", ", xtfFiles.Select(Path.GetFileName))}");
@@ -812,6 +731,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                 $"SDF-Datenbank erkannt, aber nicht direkt lesbar (SQL Server Compact, kein .NET 8 Treiber).",
                 $"{xtfFiles.Count} XTF-Datei(en) gefunden, aber Import fehlgeschlagen: {xtfResult.ErrorMessage ?? "unbekannter Fehler"}"
             };
+            errMessages.AddRange(xtfEntscheide);
             return Result<ImportStats>.Success(new ImportStats(0, 0, 0, 1, 0, errMessages));
         }
 
@@ -822,6 +742,7 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
             $"SDF-Datenbank erkannt, aber nicht direkt lesbar (SQL Server Compact, kein .NET 8 Treiber).",
             $"Stattdessen {xtfFiles.Count} XTF-Export(e) aus Misc/Exchange importiert."
         };
+        messages.AddRange(xtfEntscheide);
         messages.AddRange(xtfResult.Value.Messages);
 
         // Medien aus dem WinCan VX Projektordner verknuepfen
@@ -840,21 +761,37 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     /// <summary>
     /// Verknuepft Video- und Foto-Dateien aus dem WinCan VX Projektordner mit importierten Haltungen.
     /// </summary>
-    private static void LinkMediaFromFileIndex(
+    // internal statt private: Der Weg ist ohne SDF-Datenbank direkt pruefbar
+    // (WinCanMedienVerknuepfungTests).
+    internal void LinkMediaFromFileIndex(
         Project project, Dictionary<string, List<string>> fileIndex, List<string> messages)
     {
         var linked = 0;
+        var erneuert = 0;
         foreach (var record in project.Data)
         {
             var haltungsname = record.GetFieldValue("Haltungsname");
             if (string.IsNullOrWhiteSpace(haltungsname)) continue;
 
-            // Bereits ein Video verlinkt?
-            var existingLink = record.GetFieldValue("Link");
-            if (!string.IsNullOrWhiteSpace(existingLink)) continue;
+            // Ein vorhandener Link zaehlt nur, wenn die Datei auch wirklich da ist.
+            // Bis 2026-09-05 verhinderte JEDER nicht leere Link die Ersatzsuche — auch
+            // ein toter. Projektinterne relative Links bleiben unangetastet: Sie zeigen
+            // ins Zielprojekt und duerfen hier nie durch einen Quellpfad ersetzt werden.
+            var existingLink = (record.GetFieldValue("Link") ?? "").Trim();
+            var linkIstTot = false;
+            if (existingLink.Length > 0)
+            {
+                if (!Path.IsPathFullyQualified(existingLink))
+                    continue;
+
+                if (File.Exists(existingLink))
+                    continue;
+
+                linkIstTot = true;
+            }
 
             var candidates = fileIndex
-                .Where(kv => kv.Key.Contains(haltungsname, StringComparison.OrdinalIgnoreCase))
+                .Where(kv => HoldingTextNormalizer.ContainsKeyAtBoundary(kv.Key, haltungsname))
                 .SelectMany(kv => kv.Value)
                 .Where(filePath =>
                 {
@@ -863,22 +800,53 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
                            && MediaFileTypes.VideoExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
                 })
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Take(2)
                 .ToList();
 
-            if (candidates.Count == 1)
+            if (candidates.Count == 0)
             {
-                record.SetFieldValue("Link", candidates[0], Domain.Models.FieldSource.Legacy, userEdited: false);
+                if (linkIstTot)
+                {
+                    messages.Add(
+                        $"Video {haltungsname}: der gespeicherte Pfad existiert nicht mehr "
+                        + $"({Path.GetFileName(existingLink)}) und es wurde kein Ersatz gefunden.");
+                }
+
+                continue;
+            }
+
+            // Zwei bytegleiche Kopien sind EINE Aufnahme, nicht zwei Kandidaten.
+            var wahl = MedienKandidatenAuswahl.Waehle(_medienInhalt.Pruefe(candidates));
+            if (wahl.Pfad is null)
+            {
+                messages.Add($"Video {haltungsname} nicht verknüpft: {wahl.Grund}");
+                continue;
+            }
+
+            record.SetFieldValue("Link", wahl.Pfad, Domain.Models.FieldSource.Legacy, userEdited: false);
+            if (linkIstTot)
+            {
+                erneuert++;
+                messages.Add(
+                    $"Video {haltungsname}: gespeicherter Pfad war tot, neu aufgelöst auf "
+                    + Path.GetFileName(wahl.Pfad));
+            }
+            else
+            {
                 linked++;
             }
-            else if (candidates.Count > 1)
+
+            if (wahl.Herkunftspfade.Count > 1)
             {
-                messages.Add($"Medien nicht verknuepft: mehrere Video-Kandidaten fuer {haltungsname}.");
+                messages.Add(
+                    $"Video {haltungsname}: {wahl.Herkunftspfade.Count} bytegleiche Kopien im Ordner "
+                    + $"({string.Join(", ", wahl.Herkunftspfade.Select(Path.GetFileName).Distinct(StringComparer.OrdinalIgnoreCase))}).");
             }
         }
 
         if (linked > 0)
-            messages.Add($"Medien verknuepft: {linked} Videos aus dem WinCan VX Projektordner zugeordnet.");
+            messages.Add($"Medien verknüpft: {linked} Videos aus dem WinCan VX Projektordner zugeordnet.");
+        if (erneuert > 0)
+            messages.Add($"Medien erneuert: {erneuert} tote Videoverweise neu aufgelöst.");
     }
 
     private static IReadOnlyList<string> FindMdbCandidates(string exportRoot)
@@ -942,7 +910,9 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
         if (record.Fields.TryGetValue(field, out var existing) && !string.IsNullOrWhiteSpace(existing))
             return;
 
-        record.SetFieldValue(field, value.Trim());
+        // Importwert: nie als Handeingabe kennzeichnen. Ein bereits von Hand gesetztes
+        // Feld bleibt zusaetzlich unangetastet, auch wenn es leer geleert wurde.
+        record.SetFieldValue(field, value.Trim(), FieldSource.Legacy, userEdited: false);
     }
 
     // Delegation: Logik liegt jetzt in WinCanValueNormalizer
@@ -964,6 +934,22 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
     // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeInspectionDir(string? raw)
         => WinCanValueNormalizer.NormalizeInspectionDir(raw);
+
+    /// <summary>
+    /// Die Untersuchung im Bericht. Nur ein glaubwuerdiges Startdatum ist ein Aufnahmetag.
+    /// Der technische Sortierschluessel darf die richtige Untersuchung waehlen, wird aber
+    /// nie als Untersuchungsdatum ausgegeben.
+    /// </summary>
+    private static string Datumstext(WinCanDbInspection inspection)
+    {
+        if (inspection.HatWinCanVorgabedatum)
+            return "WinCan-Platzhalterdatum (kein glaubwürdiges Untersuchungsdatum)";
+
+        var startdatum = WinCanValueNormalizer.ParseSqliteDate(inspection.StartDate);
+        return startdatum is null
+            ? "ohne glaubwürdiges Untersuchungsdatum"
+            : startdatum.Value.ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    }
 
     // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeAccessible(string? raw)

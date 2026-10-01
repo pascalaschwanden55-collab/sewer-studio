@@ -1,6 +1,8 @@
 using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.UseCases.Import;
+using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Services;
@@ -12,7 +14,10 @@ public sealed record ImportRunWorkflowRequest<TSource>(
     bool DryRun = false,
     Func<TSource, Project, ImportRunContext, Task>? PostImportAsync = null,
     bool SaveProjectAfterCommit = false,
-    Func<string?, IImportFileStagingSession?>? BeginFileStaging = null);
+    Func<string?, IImportFileStagingSession?>? BeginFileStaging = null,
+    // Zustimmung aus der Vorschau. Gilt im Echtlauf nur, wenn das neu berechnete
+    // Pruefergebnis denselben Fingerabdruck hat — sonst wird erneut gefragt.
+    string? ZugestimmterFingerabdruck = null);
 
 public sealed record ImportRunWorkflowActions(
     Func<Project> GetProject,
@@ -24,7 +29,7 @@ public sealed record ImportRunWorkflowActions(
     Func<ImportRunLog, string, string> ExportReport,
     Func<ImportPreviewResult, string, bool> ShowPreview,
     Func<Project, IReadOnlyList<string>> ValidatePlausibility,
-    Action<Project> DeduplicateAllPrimaryDamages,
+    Func<Project, string?> DeduplicateAllPrimaryDamages,
     Func<Project, string, Task> RunAfterImportAsync,
     Func<bool> SaveProject,
     Action<string> SetStatus,
@@ -44,7 +49,10 @@ public sealed record ImportRunWorkflowActions(
     Func<Project, string>? ComputeSignature = null,
     // Transaktions-Journal fuer die Absturz-Atomaritaet. Null = kein Marker (z.B. Tests ohne
     // Datei-Staging). Wird nur zusammen mit einer File-Staging-Session genutzt.
-    IImportTransactionJournal? Journal = null);
+    IImportTransactionJournal? Journal = null,
+    // Rueckfrage bei unstimmigem Ergebnis. Null = keine Rueckfrage moeglich; dann wird
+    // fail-closed abgebrochen, statt stillschweigend zu uebernehmen.
+    Func<PlausibilitaetsUrteil, string, bool>? ConfirmImplausible = null);
 
 public static class ImportRunWorkflowController
 {
@@ -82,7 +90,7 @@ public static class ImportRunWorkflowController
         actions.SetProgressPercent(0);
         actions.SetPhase(request.DryRun
             ? $"{request.Label}: Vorschau wird berechnet..."
-            : $"{request.Label}: Import laeuft...");
+            : $"{request.Label}: Import läuft...");
         actions.SetProgressText("");
         actions.SetSummaryText($"{request.Label}: gestartet{(request.DryRun ? " (Vorschau)" : "")}");
         actions.SetDetailsText("");
@@ -105,7 +113,7 @@ public static class ImportRunWorkflowController
         });
 
         IImportFileStagingSession? fileStaging = null;
-        var importTxId = Guid.NewGuid().ToString("N");
+        ImportFileTransaction? fileTransaction = null;
         var projectCommitted = false;
         var projectSaved = false;
         var followUpRunStarted = false;
@@ -124,6 +132,10 @@ public static class ImportRunWorkflowController
             fileStaging = request.DryRun
                 ? null
                 : request.BeginFileStaging?.Invoke(projectSnapshot.ProjectPath);
+            fileTransaction = new ImportFileTransaction(
+                request.Label,
+                fileStaging,
+                actions.Journal);
             var ctx = new ImportRunContext(
                 cancellationToken,
                 progress,
@@ -131,22 +143,6 @@ public static class ImportRunWorkflowController
                 request.DryRun,
                 actions.CollectionLock,
                 fileStaging);
-
-            // Transaktions-Marker schreiben (nur mit Datei-Staging + Journal). Der Marker existiert
-            // ab der Veroeffentlichung bis zum sauberen Abschluss im finally; bleibt er liegen,
-            // starb der Prozess mitten in der Transaktion und das Recovery rollt zurueck.
-            void WriteTransactionMarker(IReadOnlyList<PublishedFileInfo> published)
-            {
-                if (fileStaging is null || actions.Journal is null)
-                    return;
-                actions.Journal.Begin(fileStaging.ProjectRoot, new ImportTransactionMarker(
-                    TxId: importTxId,
-                    StartedUtc: DateTime.UtcNow,
-                    Label: request.Label,
-                    StagingRoot: fileStaging.StagingRoot,
-                    PublishedTargets: published,
-                    RestorePointPath: null));
-            }
 
             // Vorschau UND echter Import arbeiten auf einer unabhaengigen Kopie.
             // Erst nach einem vollstaendig erfolgreichen Lauf wird die Live-Referenz getauscht.
@@ -161,28 +157,46 @@ public static class ImportRunWorkflowController
             if (!result.Ok || result.Value is null)
             {
                 actions.SetSummaryText(
-                    $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen: " +
+                    $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen: " +
                     result.ErrorMessage);
                 actions.SetStatus(
-                    $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen");
+                    $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen");
                 return;
             }
 
             var stats = result.Value;
             actions.SetSummaryText($"{request.Label} Import{(request.DryRun ? " (Vorschau)" : "")}:\n" +
-                                   $"  Haltungen: {stats.Found} gefunden, {stats.Created} neu, {stats.Updated} aktualisiert\n" +
+                                   $"  {(request.Label.StartsWith("SchachtPro", StringComparison.Ordinal) ? "Schächte" : "Haltungen")}: {stats.Found} gefunden, {stats.Created} neu, {stats.Updated} aktualisiert\n" +
                                    $"  Fehler: {stats.Errors}, Unklar: {stats.Uncertain}");
             actions.SetDetailsText(string.Join("\n", stats.Messages.Take(80)));
 
+            var urteil = ImportPlausibilitaetsTor.Beurteile(stats.Quellenprotokoll, stats.BearbeiteteHaltungen);
+            if (urteil.Stufe != PlausibilitaetsStufe.Gruen)
+            {
+                actions.SetSummaryText(actions.GetSummaryText() + "\n  " + urteil.Begruendung);
+                actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), urteil.VollerText()));
+                runLog.AddEntry(request.Label, "Plausibilität", ImportLogStatus.Error,
+                    detail: urteil.VollerText());
+            }
+
             if (request.DryRun)
             {
+                // Ein harter Abbruch wird gar nicht erst zur Uebernahme angeboten.
+                if (urteil.Stufe == PlausibilitaetsStufe.HartAbbruch)
+                {
+                    actions.SetStatus($"{request.Label}: {PlausibilitaetsUrteil.AbbruchHinweis}");
+                    return;
+                }
+
                 var preview = ImportPreviewResult.FromLog(runLog);
                 var doImport = actions.ShowPreview(preview, request.Label);
                 if (doImport)
                 {
                     followUpRunStarted = true;
                     await RunCoreAsync(
-                        request with { DryRun = false },
+                        // Die Zustimmung aus der Vorschau wird an den Echtlauf gebunden,
+                        // damit nicht zweimal gefragt wird — aber nur fuer genau diese Lage.
+                        request with { DryRun = false, ZugestimmterFingerabdruck = urteil.Fingerabdruck },
                         actions,
                         cancellationToken,
                         projectSnapshot,
@@ -205,14 +219,14 @@ public static class ImportRunWorkflowController
                 catch (Exception ex)
                 {
                     postImportIncomplete = true;
-                    var detail = $"Nacharbeiten unvollstaendig: {ex.Message}";
+                    var detail = $"Nacharbeiten unvollständig: {UserError.DescribeAndReport(ex, "Import-Nacharbeiten")}";
                     runLog.AddEntry(
                         request.Label,
                         "PostImport",
                         ImportLogStatus.Error,
                         detail: detail);
                     actions.SetSummaryText(actions.GetSummaryText()
-                        + "\n  Hinweis: Nacharbeiten unvollstaendig - Importbericht pruefen.");
+                        + "\n  Hinweis: Nacharbeiten unvollständig - Importbericht prüfen.");
                     actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), detail));
                 }
             }
@@ -222,16 +236,32 @@ public static class ImportRunWorkflowController
             if (!EnsureProjectIsStillCurrent(request.Label, actions, runLog, projectSnapshot))
                 return;
 
+            // Stopptor VOR der Veroeffentlichung. Die bestehende ValidatePlausibility
+            // laeuft erst nach Publish und taugt deshalb nicht zum Anhalten.
+            if (!DarfUebernehmen(request, actions, runLog, urteil))
+                return;
+
             // Erst jetzt werden vorbereitete Kopien an ihren endgueltigen Orten sichtbar.
             // Bis zur Live-Projektuebernahme kann Dispose sie noch sicher zuruecknehmen.
             // Marker vor der Veroeffentlichung (Transaktion laeuft), danach mit den tatsaechlich
             // veroeffentlichten Zielen (fuer das Recovery-Rollback).
-            WriteTransactionMarker(
-                fileStaging?.PreparedFiles ?? Array.Empty<PublishedFileInfo>());
-            fileStaging?.Publish();
-            WriteTransactionMarker(fileStaging?.PublishedFiles ?? Array.Empty<PublishedFileInfo>());
+            fileTransaction.Publish();
 
-            actions.DeduplicateAllPrimaryDamages(targetProject);
+            var deduplicationWarning = actions.DeduplicateAllPrimaryDamages(targetProject);
+            if (!string.IsNullOrWhiteSpace(deduplicationWarning))
+            {
+                actions.SetSummaryText(AppendParagraph(
+                    actions.GetSummaryText(),
+                    "WARNUNG: Die importierten Primärschäden konnten nicht vollständig bereinigt werden."));
+                actions.SetDetailsText(AppendParagraph(
+                    actions.GetDetailsText(),
+                    deduplicationWarning));
+                runLog.AddEntry(
+                    request.Label,
+                    "Primärschäden bereinigen",
+                    ImportLogStatus.Error,
+                    detail: deduplicationWarning);
+            }
             await actions.RunAfterImportAsync(targetProject, request.Label);
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -242,15 +272,15 @@ public static class ImportRunWorkflowController
             if (plausibilityWarnings.Count > 0)
             {
                 actions.SetSummaryText(actions.GetSummaryText()
-                    + $"\n  Plausibilitaet: {plausibilityWarnings.Count} Warnung(en) - bitte pruefen.");
+                    + $"\n  Plausibilität: {plausibilityWarnings.Count} Warnung(en) - bitte prüfen.");
                 actions.SetDetailsText(actions.GetDetailsText()
-                    + "\n\n--- Plausibilitaets-Warnungen ---\n"
+                    + "\n\n--- Plausibilitäts-Warnungen ---\n"
                     + string.Join("\n", plausibilityWarnings.Take(80)));
                 foreach (var warning in plausibilityWarnings.Take(200))
                 {
                     runLog.AddEntry(
                         request.Label,
-                        "Plausibilitaet",
+                        "Plausibilität",
                         ImportLogStatus.Info,
                         detail: warning);
                 }
@@ -267,11 +297,10 @@ public static class ImportRunWorkflowController
             targetProject.Dirty = true;
             // Commit-Beweis im projekt.json: gleicht die Marker-TxId, sobald der atomare Save
             // durchgelaufen ist. Das Recovery unterscheidet daran „committed" von „abgebrochen".
-            if (fileStaging is not null && actions.Journal is not null)
-                targetProject.LastCommittedImportTxId = importTxId;
+            fileTransaction.StampProject(targetProject);
             actions.ReplaceProject(targetProject);
             projectCommitted = true;
-            fileStaging?.Accept();
+            fileTransaction.MarkProjectCommitted();
 
             if (request.SaveProjectAfterCommit)
             {
@@ -282,6 +311,7 @@ public static class ImportRunWorkflowController
                 }
 
                 projectSaved = true;
+                fileTransaction.MarkProjectSaved();
             }
 
             actions.SetStatus(postImportIncomplete
@@ -293,61 +323,42 @@ public static class ImportRunWorkflowController
         {
             runLog.WasCancelled = true;
             actions.SetSummaryText(
-                $"{request.Label} Import abgebrochen - Projektdaten wurden nicht uebernommen.");
+                $"{request.Label} Import abgebrochen - Projektdaten wurden nicht übernommen.");
             actions.SetStatus(
-                $"{request.Label} Import abgebrochen - Projektdaten wurden nicht uebernommen");
+                $"{request.Label} Import abgebrochen - Projektdaten wurden nicht übernommen");
         }
         catch (Exception ex)
         {
+            // Aufgabe 9 (28.09.2026): Sichtbar bleibt eine verstaendliche Meldung
+            // (UserError.DescribeAndReport uebersetzt UND loggt die volle Ausnahme ueber
+            // BestEffort). Der technische Volltext (ex.ToString()) geht weiterhin in
+            // DetailsText - dort steht er nur im zugeklappten "Technische Details"-Bereich
+            // der Importseite, nie in der sichtbaren Zusammenfassung.
+            var verstaendlich = UserError.DescribeAndReport(ex, $"Import {request.Label}");
             actions.SetSummaryText(projectCommitted
                 ? actions.GetSummaryText()
-                    + "\n  Hinweis: Import wurde uebernommen, aber der Abschluss ist fehlgeschlagen."
-                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen: {ex.Message}");
+                    + "\n  Hinweis: Import wurde übernommen, aber der Abschluss ist fehlgeschlagen."
+                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen: {verstaendlich}");
             actions.SetDetailsText(ex.ToString());
             actions.SetStatus(projectCommitted
                 ? $"{request.Label} importiert mit Abschlussfehler"
-                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht uebernommen");
+                : $"{request.Label} Import fehlgeschlagen - Projektdaten wurden nicht übernommen");
         }
         finally
         {
-            var stagingCleanupSucceeded = true;
-            try
+            var cleanup = fileTransaction?.Cleanup()
+                          ?? new ImportFileTransactionCleanupResult(true, null);
+            if (!cleanup.StagingCleanupSucceeded && cleanup.StagingCleanupError is { } ex)
             {
-                fileStaging?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                stagingCleanupSucceeded = false;
                 var detail = projectCommitted
-                    ? $"Datei-Arbeitsordner konnte nicht vollstaendig aufgeraeumt werden: {ex.Message}"
-                    : $"Vorbereitete Importdateien konnten nicht vollstaendig zurueckgenommen werden: {ex.Message}";
+                    ? $"Datei-Arbeitsordner konnte nicht vollständig aufgeräumt werden: {UserError.DescribeAndReport(ex, "Import-Arbeitsordner aufräumen")}"
+                    : $"Vorbereitete Importdateien konnten nicht vollständig zurückgenommen werden: {UserError.DescribeAndReport(ex, "Importdateien zurücknehmen")}";
                 runLog.AddEntry(
                     request.Label,
                     "Datei-Staging",
                     ImportLogStatus.Error,
                     detail: detail);
                 actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), detail));
-            }
-
-            // Den Marker erst nach erfolgreichem Datei-Aufraeumen entfernen. Bei einem
-            // Speicherfehler bleibt er absichtlich liegen: Das Live-Projekt darf noch
-            // manuell gespeichert werden; nach einem Neustart beweist die TxId im
-            // projekt.json, ob die Dateien behalten oder zurueckgerollt werden muessen.
-            var transactionIsDurable = !projectCommitted || projectSaved;
-            if (fileStaging is not null
-                && actions.Journal is not null
-                && stagingCleanupSucceeded
-                && transactionIsDurable)
-            {
-                try
-                {
-                    actions.Journal.Clear(fileStaging.ProjectRoot);
-                }
-                catch
-                {
-                    // Ein Marker-Rest ist sicher: Recovery ist idempotent und prueft
-                    // die gespeicherte TxId, bevor Dateien angefasst werden.
-                }
             }
 
             runLog.Complete();
@@ -388,7 +399,7 @@ public static class ImportRunWorkflowController
                 label,
                 "Speichern",
                 ImportLogStatus.Error,
-                detail: "Import wurde uebernommen, konnte aber nicht gespeichert werden.");
+                detail: "Import wurde übernommen, konnte aber nicht gespeichert werden.");
         }
         catch (Exception ex)
         {
@@ -396,7 +407,7 @@ public static class ImportRunWorkflowController
                 label,
                 "Speichern",
                 ImportLogStatus.Error,
-                detail: $"Import wurde uebernommen, Speichern schlug fehl: {ex.Message}");
+                detail: $"Import wurde übernommen, Speichern schlug fehl: {UserError.DescribeAndReport(ex, "Import speichern")}");
         }
 
         return false;
@@ -407,7 +418,7 @@ public static class ImportRunWorkflowController
         ImportRunWorkflowActions actions)
     {
         actions.SetSummaryText(actions.GetSummaryText()
-            + "\n  Hinweis: Import wurde uebernommen, aber nicht gespeichert.");
+            + "\n  Hinweis: Import wurde übernommen, aber nicht gespeichert.");
         actions.SetStatus($"{label} importiert, aber nicht gespeichert");
         actions.SetProgressPercent(99);
     }
@@ -435,13 +446,13 @@ public static class ImportRunWorkflowController
                 if (!string.Equals(currentSignature, projectSnapshot.StartSignature, StringComparison.Ordinal))
                 {
                     const string editDetail =
-                        "Waehrend des Imports wurde das Projekt bearbeitet. Das Importergebnis wurde " +
-                        "nicht uebernommen, damit die manuellen Aenderungen erhalten bleiben — " +
+                        "Während des Imports wurde das Projekt bearbeitet. Das Importergebnis wurde " +
+                        "nicht übernommen, damit die manuellen Änderungen erhalten bleiben — " +
                         "bitte erneut importieren.";
                     runLog.AddEntry(label, "Projektinhalt", ImportLogStatus.Error, detail: editDetail);
                     actions.SetSummaryText(
-                        $"{label} Import gestoppt: Projekt wurde waehrend des Imports bearbeitet. " +
-                        "Das Importergebnis wurde nicht uebernommen.");
+                        $"{label} Import gestoppt: Projekt wurde während des Imports bearbeitet. " +
+                        "Das Importergebnis wurde nicht übernommen.");
                     actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), editDetail));
                     actions.SetStatus($"{label} Import gestoppt - Projekt wurde bearbeitet");
                     return false;
@@ -451,8 +462,8 @@ public static class ImportRunWorkflowController
         }
 
         const string detail =
-            "Waehrend des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
-            "Das Importergebnis wurde aus Sicherheitsgruenden nicht uebernommen.";
+            "Während des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
+            "Das Importergebnis wurde aus Sicherheitsgründen nicht übernommen.";
         runLog.AddEntry(
             label,
             "Projektidentitaet",
@@ -460,10 +471,69 @@ public static class ImportRunWorkflowController
             detail: detail);
         actions.SetSummaryText(
             $"{label} Import gestoppt: Projekt wurde gewechselt. " +
-            "Das Importergebnis wurde nicht uebernommen.");
+            "Das Importergebnis wurde nicht übernommen.");
         actions.SetDetailsText(AppendParagraph(actions.GetDetailsText(), detail));
         actions.SetStatus($"{label} Import gestoppt - Projekt wurde gewechselt");
         return false;
+    }
+
+    /// <summary>
+    /// Entscheidet unmittelbar vor der Veroeffentlichung, ob uebernommen werden darf.
+    ///
+    /// Drei Faelle:
+    /// - Gruen: weiter ohne Rueckfrage.
+    /// - HartAbbruch: keine einzige lesbare Quelle. Kein Uebersteuern.
+    /// - Rueckfrage: Mengenabweichung. Gilt die Zustimmung aus der Vorschau noch
+    ///   (gleicher Fingerabdruck), wird nicht erneut gefragt. Sonst entscheidet der
+    ///   Benutzer; ohne Rueckfragemoeglichkeit wird fail-closed abgebrochen.
+    /// </summary>
+    private static bool DarfUebernehmen<TSource>(
+        ImportRunWorkflowRequest<TSource> request,
+        ImportRunWorkflowActions actions,
+        ImportRunLog runLog,
+        PlausibilitaetsUrteil urteil)
+    {
+        if (urteil.Stufe == PlausibilitaetsStufe.Gruen)
+            return true;
+
+        if (urteil.Stufe == PlausibilitaetsStufe.HartAbbruch)
+        {
+            Abbrechen(request.Label, actions, runLog, "harter Abbruch: keine lesbare Quelle");
+            return false;
+        }
+
+        if (ImportPlausibilitaetsTor.ZustimmungGiltNoch(request.ZugestimmterFingerabdruck, urteil))
+        {
+            runLog.AddEntry(request.Label, "Plausibilität", ImportLogStatus.Conflict,
+                detail: "Mengenabweichung in der Vorschau bestätigt — unverändert übernommen.");
+            return true;
+        }
+
+        var bestaetigt = actions.ConfirmImplausible?.Invoke(urteil, request.Label) ?? false;
+        if (!bestaetigt)
+        {
+            Abbrechen(request.Label, actions, runLog, "Mengenabweichung nicht bestätigt");
+            return false;
+        }
+
+        runLog.AddEntry(request.Label, "Plausibilität", ImportLogStatus.Conflict,
+            detail: "Mengenabweichung ausdrücklich bestätigt — trotzdem übernommen.");
+        return true;
+    }
+
+    private static void Abbrechen(
+        string label,
+        ImportRunWorkflowActions actions,
+        ImportRunLog runLog,
+        string grund)
+    {
+        // Bewusst NICHT "nichts veraendert": Wiederherstellungspunkt, Arbeitsdateien und
+        // Bericht koennen bereits entstanden sein. Zurueckgenommen wird das Staging durch
+        // Dispose, weil Publish nie lief.
+        var text = $"{label} abgebrochen ({grund}). {PlausibilitaetsUrteil.AbbruchHinweis}";
+        runLog.AddEntry(label, "Plausibilität", ImportLogStatus.Error, detail: text);
+        actions.SetSummaryText(actions.GetSummaryText() + "\n  " + text);
+        actions.SetStatus(text);
     }
 
     private static string AppendParagraph(string currentText, string text)
@@ -502,7 +572,7 @@ public static class ImportRunWorkflowController
         }
         catch (Exception ex)
         {
-            return Result<ImportStats>.Fail($"{request.Label}_EXCEPTION", ex.Message);
+            return Result<ImportStats>.Fail($"{request.Label}_EXCEPTION", UserError.DescribeAndReport(ex, $"Import {request.Label}"));
         }
     }
 

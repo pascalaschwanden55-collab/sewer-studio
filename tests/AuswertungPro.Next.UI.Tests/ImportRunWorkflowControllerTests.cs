@@ -91,7 +91,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.False(state.CanCancel);
         Assert.Equal("", state.Phase);
         Assert.Contains("PDF Import:", state.Summary);
-        Assert.Contains("Plausibilitaet: 1 Warnung", state.Summary);
+        Assert.Contains("Plausibilität: 1 Warnung", state.Summary);
         Assert.Contains("m1", state.Details);
         Assert.Contains("Warnung 1", state.Details);
         Assert.Equal("PDF importiert", state.Statuses[^1]);
@@ -124,8 +124,8 @@ public sealed class ImportRunWorkflowControllerTests
             CancellationToken.None);
 
         Assert.Equal(["restore:XTF", "report:XTF:False"], calls);
-        Assert.Equal("XTF Import fehlgeschlagen - Projektdaten wurden nicht uebernommen: kaputt", state.Summary);
-        Assert.Equal("XTF Import fehlgeschlagen - Projektdaten wurden nicht uebernommen", state.Statuses[^1]);
+        Assert.Equal("XTF Import fehlgeschlagen - Projektdaten wurden nicht übernommen: kaputt", state.Summary);
+        Assert.Equal("XTF Import fehlgeschlagen - Projektdaten wurden nicht übernommen", state.Statuses[^1]);
         Assert.Null(state.ReplacedProject);
         Assert.False(state.IsImportInProgress);
         Assert.False(state.CanCancel);
@@ -219,7 +219,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Empty(project.Data);
         Assert.Null(state.ReplacedProject);
         Assert.DoesNotContain("replace", calls);
-        Assert.Contains("Projektdaten wurden nicht uebernommen", state.Summary);
+        Assert.Contains("Projektdaten wurden nicht übernommen", state.Summary);
     }
 
     [Fact]
@@ -245,7 +245,59 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Empty(project.Data);
         Assert.Null(state.ReplacedProject);
         Assert.DoesNotContain("replace", calls);
-        Assert.Contains("Projektdaten wurden nicht uebernommen", state.Summary);
+        Assert.Contains("Projektdaten wurden nicht übernommen", state.Summary);
+    }
+
+    /// <summary>
+    /// Aufgabe 9 (28.09.2026, Optikanalyse): Ein unerwarteter Fehler ausserhalb des
+    /// Import-Delegates (hier: <c>DeepCopyProject</c> schlaegt fehl) darf keinen Stacktrace mehr
+    /// in der sichtbaren Zusammenfassung zeigen. Die Uebersetzung kommt aus
+    /// <see cref="UserError"/>; der volle technische Text bleibt in <c>DetailsText</c>
+    /// erhalten (dort steht er nur im zugeklappten "Technische Details"-Bereich der Seite) UND
+    /// wird zusaetzlich ueber <see cref="BestEffort"/> geloggt, damit nichts verloren geht.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_unerwarteter_fehler_zeigt_verstaendliche_meldung_und_loggt_die_ganze_ausnahme()
+    {
+        var geloggt = new List<string>();
+        BestEffort.ConfigureDefaultErrorSink(geloggt.Add);
+        try
+        {
+            var project = new Project { Name = "Live" };
+            var calls = new List<string>();
+            var state = new UiState();
+            var request = new ImportRunWorkflowRequest<string>(
+                "XTF",
+                "source.xtf",
+                (_, _, _) => Result<ImportStats>.Success(
+                    new ImportStats(0, 0, 0, 0, 0, Array.Empty<string>())));
+
+            await ImportRunWorkflowController.RunAsync(
+                request,
+                Actions(project, state, calls,
+                    deepCopyProject: _ => throw new IOException("Testplatte offline")),
+                CancellationToken.None);
+
+            // Sichtbar: verstaendliche deutsche Meldung statt Ausnahmetyp/-text.
+            Assert.Contains(
+                "Eine Datei oder ein Ordner ist momentan nicht verfügbar",
+                state.Summary,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain("IOException", state.Summary, StringComparison.Ordinal);
+            Assert.DoesNotContain("Testplatte offline", state.Summary, StringComparison.Ordinal);
+
+            // Technisch: der volle Text bleibt fuer "Technische Details" erhalten...
+            Assert.Contains("IOException", state.Details, StringComparison.Ordinal);
+            Assert.Contains("Testplatte offline", state.Details, StringComparison.Ordinal);
+
+            // ...und geht zusaetzlich ins Programmlog, statt nur in der Oberflaeche zu stehen.
+            Assert.Contains(geloggt, m => m.Contains("Testplatte offline", StringComparison.Ordinal)
+                && m.Contains("Import XTF", StringComparison.Ordinal));
+        }
+        finally
+        {
+            BestEffort.ConfigureDefaultErrorSink(null);
+        }
     }
 
     [Fact]
@@ -291,7 +343,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.Null(state.ReplacedProject);
         Assert.Same(openedProject, activeProject);
         Assert.Contains("Projekt wurde gewechselt", state.Summary);
-        Assert.Contains("nicht uebernommen", state.Summary);
+        Assert.Contains("nicht übernommen", state.Summary);
     }
 
     [Fact]
@@ -540,7 +592,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.NotNull(state.ReplacedProject);
         Assert.True(state.ReplacedProject!.Dirty);
         Assert.Contains("nicht gespeichert", state.Summary);
-        Assert.DoesNotContain("Projekt unveraendert", state.Summary);
+        Assert.DoesNotContain("Projekt unverändert", state.Summary);
         Assert.Equal("IBAK importiert, aber nicht gespeichert", state.Statuses[^1]);
         Assert.Equal(1, state.LastExportLog?.TotalErrors);
     }
@@ -565,8 +617,8 @@ public sealed class ImportRunWorkflowControllerTests
 
         Assert.Contains("replace", calls);
         Assert.Contains("save", calls);
-        Assert.Contains("Nacharbeiten unvollstaendig", state.Summary);
-        Assert.Contains("Foto konnte nicht kopiert werden", state.Details);
+        Assert.Contains("Nacharbeiten unvollständig", state.Summary);
+        Assert.Contains("Nacharbeiten unvollständig: Eine Datei oder ein Ordner ist momentan nicht verfügbar", state.Details);
         Assert.Equal("WinCan importiert mit Hinweisen", state.Statuses[^1]);
         Assert.Equal(1, state.LastExportLog?.TotalErrors);
     }
@@ -715,6 +767,36 @@ public sealed class ImportRunWorkflowControllerTests
     }
 
     [Fact]
+    public async Task RunAsync_meldet_fehlerhafte_Schadensbereinigung_sichtbar_und_im_Protokoll()
+    {
+        var project = new Project();
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            "XTF",
+            "quelle.xtf",
+            (_, _, _) => Result<ImportStats>.Success(
+                new ImportStats(1, 1, 0, 0, 0, [])));
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                project,
+                state,
+                calls,
+                deduplicate: _ => "Bereinigung fehlgeschlagen: Testfehler"),
+            CancellationToken.None);
+
+        Assert.Contains("WARNUNG", state.Summary, StringComparison.Ordinal);
+        Assert.Contains("Bereinigung fehlgeschlagen", state.Details, StringComparison.Ordinal);
+        Assert.Contains(
+            state.LastExportLog!.Entries,
+            entry => entry.Operation == "Primärschäden bereinigen"
+                     && entry.Status == ImportLogStatus.Error);
+        Assert.NotNull(state.ReplacedProject);
+    }
+
+    [Fact]
     public async Task RunAsync_Speicherfehler_mit_Dateistaging_behaelt_Marker_fuer_Recovery()
     {
         var project = new Project();
@@ -770,7 +852,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.NotNull(journal.TryRead(staging.ProjectRoot));
         Assert.Equal(0, journal.ClearCalls);
         Assert.Contains(
-            "nicht vollstaendig aufgeraeumt",
+            "nicht vollständig aufgeräumt",
             state.Details,
             StringComparison.OrdinalIgnoreCase);
     }
@@ -808,7 +890,7 @@ public sealed class ImportRunWorkflowControllerTests
         Assert.DoesNotContain("replace", calls);
         Assert.DoesNotContain("save", calls);
         Assert.Null(state.ReplacedProject);
-        Assert.Contains("waehrend des Imports bearbeitet", state.Summary);
+        Assert.Contains("während des Imports bearbeitet", state.Summary);
     }
 
     private static ImportRunWorkflowActions Actions(
@@ -823,7 +905,8 @@ public sealed class ImportRunWorkflowControllerTests
         Func<bool>? saveProject = null,
         Func<string?>? getReportDir = null,
         Func<Project, string>? computeSignature = null,
-        IImportTransactionJournal? journal = null)
+        IImportTransactionJournal? journal = null,
+        Func<Project, string?>? deduplicate = null)
         => new(
             GetProject: getProject ?? (() => project),
             GetProjectPath: getProjectPath ?? (() => @"C:\Projekte\Test\projekt.json"),
@@ -844,7 +927,11 @@ public sealed class ImportRunWorkflowControllerTests
             },
             ShowPreview: showPreview ?? ((_, _) => false),
             ValidatePlausibility: validatePlausibility ?? (_ => Array.Empty<string>()),
-            DeduplicateAllPrimaryDamages: _ => calls.Add("dedup"),
+            DeduplicateAllPrimaryDamages: p =>
+            {
+                calls.Add("dedup");
+                return deduplicate?.Invoke(p);
+            },
             RunAfterImportAsync: (_, label) =>
             {
                 calls.Add($"after:{label}");

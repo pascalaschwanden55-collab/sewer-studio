@@ -1,4 +1,4 @@
-using AuswertungPro.Next.UI.DataPage;
+﻿using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -6,7 +6,12 @@ public sealed class GridDropdownFieldPolicyTests
 {
     [Theory]
     [InlineData("Sanieren_JaNein", "SanierenOptions", true, true, "EditSanierenOptionsCommand")]
-    [InlineData("Eigentuemer", "EigentuemerOptions", false, true, "EditEigentuemerOptionsCommand")]
+    // Eigentuemer traegt seit 2026-08-31 Freitext: Der Kanton fuehrt mehr
+    // Werte als die fuenf Kurzformen ("Abwasser Uri", die Gemeinden,
+    // "unbekannt"). Als festes Auswahlfeld war ein nachgeschlagener Wert
+    // nicht darstellbar und die erste Bedienung ersetzte ihn durch den
+    // ersten Listeneintrag.
+    [InlineData("Eigentuemer", "EigentuemerOptions", true, true, "EditEigentuemerOptionsCommand")]
     [InlineData("Pruefungsresultat", "PruefungsresultatOptions", true, true, "EditPruefungsresultatOptionsCommand")]
     [InlineData("Referenzpruefung", "ReferenzpruefungOptions", true, true, "EditReferenzpruefungOptionsCommand")]
     public void TryResolve_returns_managed_combo_specs(

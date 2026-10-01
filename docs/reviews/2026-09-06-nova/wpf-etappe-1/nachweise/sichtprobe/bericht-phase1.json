@@ -1,0 +1,99 @@
+﻿{
+    "phase":  1,
+    "start":  "2026-09-06T18:08:47",
+    "schritte":  [
+                     {
+                         "schritt":  "fenster",
+                         "wert":  "1366x768 Titel=SewerStudio"
+                     },
+                     {
+                         "schritt":  "knopf_oeffnen_gefunden",
+                         "wert":  true
+                     },
+                     {
+                         "schritt":  "projekt_offen",
+                         "wert":  "Nova-Sichtprobe – SewerStudio"
+                     },
+                     {
+                         "schritt":  "sichtbare_zeilen",
+                         "wert":  7
+                     },
+                     {
+                         "schritt":  "tabelle_hoehe",
+                         "wert":  325
+                     },
+                     {
+                         "schritt":  "eingabefelder_hoehe",
+                         "wert":  50
+                     },
+                     {
+                         "schritt":  "eingabefelder_offen",
+                         "wert":  0
+                     },
+                     {
+                         "schritt":  "uebersicht_breite",
+                         "wert":  312
+                     },
+                     {
+                         "schritt":  "chip_kompakt_aktiv",
+                         "wert":  0
+                     },
+                     {
+                         "schritt":  "uebersicht_texte",
+                         "wert":  "Z2 | Übersicht | 10003-10004 | Material | Steinzeug | DN mm | 350 | Länge m | 35.9 | Inspektion | 2026 | Primäre Schäden | BCD | Rohranfang"
+                     },
+                     {
+                         "schritt":  "eingabefelder_hoehe_zu",
+                         "wert":  50
+                     },
+                     {
+                         "schritt":  "sichtbare_zeilen_zu",
+                         "wert":  7
+                     },
+                     {
+                         "schritt":  "eingabefelder_hoehe_auf",
+                         "wert":  116
+                     },
+                     {
+                         "schritt":  "sichtbare_zeilen_auf",
+                         "wert":  5
+                     },
+                     {
+                         "schritt":  "feldsuche_baujahr_editfelder",
+                         "wert":  1
+                     },
+                     {
+                         "schritt":  "weitere_aktionen_punkte",
+                         "wert":  "Medien suchen | Leere Felder aus QGIS | Katasterkennungen | Strassen | Sanierungsmaßnahme bearbeiten | Direkt zur KI-Optimierung | Vorschlag für diese Haltung erstellen | Hydraulik berechnen | Hydraulik PDF | Dossier | Abdocken | Nach oben | Nach unten | Spalten anordnen | Spalte leeren | Fokusmodus (F11) | Datei | Werkzeuge | Ansicht"
+                     },
+                     {
+                         "schritt":  "kompakt_spalten",
+                         "wert":  "Haltungsname (ID) | Strasse | Rohrmaterial | Lichte Höhe / DN mm | Haltungslänge m | Zustandsklasse |  |  |  |  |  | "
+                     },
+                     {
+                         "schritt":  "eingabefelder_hoehe_nach_ziehen",
+                         "wert":  186
+                     },
+                     {
+                         "schritt":  "uebersicht_breite_nach_ziehen",
+                         "wert":  372
+                     },
+                     {
+                         "schritt":  "sichtbare_zeilen_nach_ziehen",
+                         "wert":  3
+                     },
+                     {
+                         "schritt":  "haltungsansicht_eingabefelder_sichtbar",
+                         "wert":  "nicht im Baum"
+                     },
+                     {
+                         "schritt":  "sichtbare_zeilen_zurueck",
+                         "wert":  5
+                     },
+                     {
+                         "schritt":  "beendet",
+                         "wert":  "sauber beendet"
+                     }
+                 ],
+    "ende":  "2026-09-06T18:09:45"
+}

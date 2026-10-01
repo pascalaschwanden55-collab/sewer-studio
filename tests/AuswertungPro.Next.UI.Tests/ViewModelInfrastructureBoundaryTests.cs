@@ -26,7 +26,7 @@ public sealed class ViewModelInfrastructureBoundaryTests
     private static readonly HashSet<string> ErlaubteKompatibilitaetsFassaden = new(StringComparer.Ordinal)
     {
         "DataPage/DataPagePrintController.cs :: CostStoreCompatibility :: 1",
-        "ViewModels/Pages/BuilderPageViewModel.cs :: CostStoreCompatibility :: 2",
+        "ViewModels/Pages/BuilderPageViewModel.cs :: CostStoreCompatibility :: 1",
         "ViewModels/Pages/ExportPageViewModel.cs :: CostStoreCompatibility :: 1",
         "ViewModels/Pages/OverviewPageViewModel.cs :: CostStoreCompatibility :: 2",
         "ViewModels/Pages/ProjectPageViewModel.cs :: DropdownOptionsCompatibility.Default :: 1",
@@ -84,13 +84,13 @@ public sealed class ViewModelInfrastructureBoundaryTests
 
         Assert.True(
             neueVerstoesse.Length == 0,
-            "Neue direkte Store-Instanziierung im geschuetzten UI-Ablauf gefunden. Bitte per Interface " +
+            "Neue direkte Store-Instanziierung im geschützten UI-Ablauf gefunden. Bitte per Interface " +
             "injizieren (Application-Vertrag + ServiceProvider), nicht per new:\n  " +
             string.Join("\n  ", neueVerstoesse));
 
         Assert.True(
             aufgeloesteAberNochGelistet.Length == 0,
-            "Diese Alt-Stellen wurden aufgeloest — bitte aus der Allowlist entfernen, damit die " +
+            "Diese Alt-Stellen wurden aufgelöst — bitte aus der Allowlist entfernen, damit die " +
             "Schuld messbar sinkt:\n  " + string.Join("\n  ", aufgeloesteAberNochGelistet));
     }
 
@@ -126,7 +126,7 @@ public sealed class ViewModelInfrastructureBoundaryTests
 
         Assert.True(
             neueVerstoesse.Length == 0,
-            "Neue Kompatibilitaets-Fassade im geschuetzten UI-Ablauf gefunden. Neue Aufrufer muessen " +
+            "Neue Kompatibilitaets-Fassade im geschützten UI-Ablauf gefunden. Neue Aufrufer müssen " +
             "die Application-Vertraege injiziert bekommen:\n  " + string.Join("\n  ", neueVerstoesse));
         Assert.True(
             aufgeloesteAberNochGelistet.Length == 0,

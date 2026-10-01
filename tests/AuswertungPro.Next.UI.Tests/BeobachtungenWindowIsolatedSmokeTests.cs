@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Windows;
-using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
@@ -9,6 +8,8 @@ using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;
 
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
+[Collection("IsolatedWpf")]
 public sealed class BeobachtungenWindowIsolatedSmokeTests
 {
     private static readonly string ChildTestName =
@@ -80,13 +81,10 @@ public sealed class BeobachtungenWindowIsolatedSmokeTests
         try
         {
             window.Show();
-            // Die Startanimation erzeugt fortlaufend Render-Arbeit. Loaded prueft das
-            // echte Fenster, ohne auf ein dadurch unerreichbares ApplicationIdle zu warten.
-            window.Dispatcher.Invoke(
-                DispatcherPriority.Loaded,
-                new Action(() => { }));
-            window.UpdateLayout();
-            Assert.True(window.IsLoaded);
+            // Show erzeugt und laedt das echte Fenster synchron. Ein danach
+            // eingeplanter Dispatcher-Aufruf kann durch die fortlaufende
+            // Startanimation verhungern und beweist nichts Zusaetzliches.
+            WpfTestHilfe.WarteAufLayout(window);
             Assert.True(window.IsVisible);
         }
         finally

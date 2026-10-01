@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 
@@ -47,7 +48,32 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
         string sourceVideoDir,
         bool splitPdf = true,
         string? primaryProtocolPdf = null)
+        => Distribute(
+            project,
+            projectFolder,
+            archivedPdfDir,
+            sourceVideoDir,
+            splitPdf,
+            primaryProtocolPdf,
+            fileStaging: null);
+
+    public KanalImportDistributor.Result Distribute(
+        Project project,
+        string projectFolder,
+        string archivedPdfDir,
+        string sourceVideoDir,
+        bool splitPdf,
+        string? primaryProtocolPdf,
+        IImportFileStagingSession? fileStaging)
     {
+        if (fileStaging is not null
+            && !Path.GetFullPath(fileStaging.ProjectRoot)
+                .Equals(Path.GetFullPath(projectFolder), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Datei-Staging und Kanal-Verteilung gehören nicht zum selben Projekt.");
+        }
+
         var messages = new List<string>();
         int videos = 0, origs = 0, errors = 0;
         var destRoot = Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt);
@@ -55,27 +81,33 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
         // 1) Original-Protokoll pro Haltung splitten + Video matchen (die echte „Haltung Verteilen"-Logik).
         //    HoldingFolderDistributor liefert bei leerem PDF-Ordner ein Fehlerergebnis (Success=false) und
         //    fasst dann kein Video an — die Videos übernimmt in diesem Fall der Fallback in Schritt 3.
-        if (splitPdf && (primaryProtocolPdf is not null || Directory.Exists(archivedPdfDir)))
+        if (splitPdf)
         {
             try
             {
                 // NUR das maßgebliche Inspektionsprotokoll splitten (nicht alle PDFs im Ordner) —
                 // sonst entstehen aus mehreren Gesamt-PDFs Duplikate (<H>.pdf + <H>_01.pdf).
-                var primaryPdf = primaryProtocolPdf is not null && File.Exists(primaryProtocolPdf)
-                    ? primaryProtocolPdf
-                    : SelectPrimaryProtocolPdf(archivedPdfDir);
-                var results = string.IsNullOrWhiteSpace(primaryPdf)
-                    ? (IReadOnlyList<HoldingFolderDistributor.DistributionResult>)System.Array.Empty<HoldingFolderDistributor.DistributionResult>()
-                    : HoldingFolderDistributor.DistributeFiles(
-                        pdfFiles: new[] { primaryPdf! },
-                        videoSourceFolder: sourceVideoDir,
-                        destGemeindeFolder: destRoot,
-                        project: project);
+                var results = DistributeOriginalProtocol(
+                    project,
+                    projectFolder,
+                    archivedPdfDir,
+                    sourceVideoDir,
+                    destRoot,
+                    primaryProtocolPdf,
+                    fileStaging);
+
+                // Ein Protokoll, das nicht in seinen Haltungsordner kam, MUSS im Bericht stehen.
+                // Bis 2026-09-04 wurde jedes Fehlerergebnis hier still uebersprungen: In Goeschenen
+                // meldete der Lauf "0 Original-Protokolle, 0 Fehler", obwohl alle 239 fehlten.
+                var nichtVerteilt = new List<string>();
 
                 foreach (var r in results)
                 {
                     if (!r.Success)
+                    {
+                        nichtVerteilt.Add(r.Message);
                         continue;
+                    }
                     if (!string.IsNullOrWhiteSpace(r.DestVideoPath))
                         videos++;
                     if (string.IsNullOrWhiteSpace(r.DestPdfPath) || string.IsNullOrWhiteSpace(r.HoldingFolder))
@@ -92,8 +124,37 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
                     }
 
                     // PDF_Path = verteiltes ORIGINAL-Protokoll (Menü „Haltungsprotokoll Original öffnen").
+                    //
+                    // Ein bereits gesetzter Verweis wird NICHT ersetzt: Er stammt aus der
+                    // name-basierten Verteilung, also aus einem eindeutig benannten
+                    // Einzelprotokoll. Eine Seite aus einem Sammelprotokoll darf ihn nicht
+                    // ueberholen — sonst entschiede die Reihenfolge, welche Datei gilt.
+                    var vorhanden = record.GetFieldValue(FieldKeys.PdfPath)?.Trim();
+                    if (!string.IsNullOrWhiteSpace(vorhanden)
+                        && !string.Equals(vorhanden, r.DestPdfPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        messages.Add(
+                            $"Protokoll {folderName}: bereits aus einem Einzelprotokoll versorgt; "
+                            + $"die Seite aus dem Sammelprotokoll liegt zusätzlich im Ordner "
+                            + $"({Path.GetFileName(r.DestPdfPath)}).");
+                        continue;
+                    }
+
                     record.SetFieldValue(FieldKeys.PdfPath, r.DestPdfPath!, FieldSource.Legacy, userEdited: false);
                     origs++;
+                }
+
+                if (nichtVerteilt.Count > 0)
+                {
+                    // Die ersten Gruende ausschreiben, den Rest zaehlen — ein Sammelprotokoll kann
+                    // hunderte Haltungen enthalten, und der Bericht soll lesbar bleiben.
+                    const int SichtbareGruende = 10;
+                    errors += nichtVerteilt.Count;
+                    messages.Add($"Haltungsprotokolle nicht verteilt: {nichtVerteilt.Count}");
+                    foreach (var grund in nichtVerteilt.Take(SichtbareGruende))
+                        messages.Add($"  nicht verteilt: {grund}");
+                    if (nichtVerteilt.Count > SichtbareGruende)
+                        messages.Add($"  ... und {nichtVerteilt.Count - SichtbareGruende} weitere");
                 }
             }
             catch (Exception ex)
@@ -111,78 +172,430 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
             RelativizeIfInProject(record, FieldKeys.PdfPath, projectFolder);
         }
 
-        // 3) Fallback-Video: Haltungen, deren Link noch auf die absolute QUELLE zeigt (nicht verteilt),
-        //    bekommen ihr Video flach + datumsbenannt in den Haltungsordner + relativen Link.
+        // 3) Fallback-Video: Haltungen, deren Videoverweis noch auf die absolute QUELLE
+        //    zeigt (nicht verteilt), bekommen ihr Video flach + datumsbenannt in den
+        //    Haltungsordner und einen relativen Link.
+        //
+        //    Bis 2026-09-05 lief nur das Feld "Link" durch diesen Weg. Das
+        //    Gegeninspektionsvideo blieb als absoluter Pfad auf die Kundenquelle stehen —
+        //    der Bericht meldete trotzdem "1 Video, 0 Fehler". In einer Kopie des fertigen
+        //    Projekts war es damit nicht mehr abspielbar.
         foreach (var record in project.Data.ToList())
         {
             var haltung = record.GetFieldValue(FieldKeys.HoldingName)?.Trim();
             if (string.IsNullOrWhiteSpace(haltung))
                 continue;
 
-            var link = record.GetFieldValue(FieldKeys.Link)?.Trim();
-            if (string.IsNullOrWhiteSpace(link) || ProjectPathResolver.IsRelative(link))
-                continue;
-
-            // UNC vor File.Exists ablehnen (S2-3: SMB-Authentifizierung an fremde Hosts).
-            if (MediaFileAllowlist.IsUnc(link))
+            var verteiltePfade = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (feld, namenszusatz) in VideoFelder)
             {
-                messages.Add($"Video {haltung}: UNC-Pfad wird nicht uebernommen: {link}");
-                continue;
+                var quelle = record.GetFieldValue(feld);
+                switch (VerteileQuellvideo(
+                    record, haltung!, feld, namenszusatz, projectFolder, fileStaging, messages))
+                {
+                    case VideoVerteilung.Verteilt: videos++; break;
+                    case VideoVerteilung.Fehler: errors++; break;
+                }
+                if (!string.IsNullOrWhiteSpace(quelle))
+                    verteiltePfade[quelle] = record.GetFieldValue(feld) ?? quelle;
             }
 
-            if (!File.Exists(link))
-                continue;
-
-            // S2-1: Nur bekannte Medientypen/Protokoll-PDFs ins Projekt kopieren.
-            if (!MediaFileAllowlist.IsImportableMediaOrPdf(link))
+            // Weitere Untersuchungen dürfen nicht verschwinden, nur weil ihre
+            // Gegenrolle offen ist. Die Verweise bleiben an ihrer Protokollrevision.
+            if (record.Protocol is { } protokoll)
             {
-                messages.Add($"Video {haltung}: Dateityp nicht erlaubt, wird nicht kopiert: {link}");
-                continue;
-            }
-
-            try
-            {
-                var san = ProjectPathResolver.SanitizePathSegment(haltung);
-                var dir = ProjectStructure.HaltungVerteiltDir(projectFolder, san);
-                Directory.CreateDirectory(dir);
-                var stamp = ResolveDateStamp(record);
-                var ext = Path.GetExtension(link);
-                var dest = UniquePath(Path.Combine(dir, $"{stamp}_{san}{ext}"));
-                File.Copy(link, dest, overwrite: false);
-                record.SetFieldValue(FieldKeys.Link, ProjectPathResolver.MakeRelative(dest, projectFolder), FieldSource.Legacy, userEdited: false);
-                videos++;
-            }
-            catch (Exception ex)
-            {
-                errors++;
-                messages.Add($"Video {haltung}: {ex.Message}");
+                var revisionen = new[] { protokoll.Original, protokoll.Current }.Concat(protokoll.History);
+                foreach (var revision in revisionen)
+                {
+                    if (revision.ImportVideoPaths is null) continue;
+                    for (var i = 0; i < revision.ImportVideoPaths.Count; i++)
+                    {
+                        var quelle = revision.ImportVideoPaths[i];
+                        if (verteiltePfade.TryGetValue(quelle, out var bekannt))
+                        {
+                            revision.ImportVideoPaths[i] = bekannt;
+                            continue;
+                        }
+                        // Derselbe Kopierweg wie Link/Link_G, ohne die aktive
+                        // Untersuchung oder ihre Felder dafür auszutauschen.
+                        var datei = new HaltungRecord();
+                        datei.SetFieldValue(FieldKeys.Link, quelle, FieldSource.Legacy, false);
+                        var zusatz = "-aufnahme-" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                            System.Text.Encoding.UTF8.GetBytes(Path.GetFileName(quelle))))[..12];
+                        switch (VerteileQuellvideo(datei, haltung!, FieldKeys.Link, zusatz, projectFolder, fileStaging, messages))
+                        {
+                            case VideoVerteilung.Verteilt: videos++; break;
+                            case VideoVerteilung.Fehler: errors++; break;
+                        }
+                        var ziel = datei.GetFieldValue(FieldKeys.Link) ?? quelle;
+                        revision.ImportVideoPaths[i] = ziel;
+                        verteiltePfade[quelle] = ziel;
+                    }
+                }
             }
         }
 
         return new KanalImportDistributor.Result(videos, origs, errors, messages);
     }
 
+    /// <summary>
+    /// Die Videofelder einer Haltung samt Zusatz im Zieldateinamen. Beide laufen ueber
+    /// denselben abgesicherten Kopierweg; der Zusatz "-g" ist die bestehende
+    /// Namenskonvention der Verteilung und bleibt unveraendert.
+    /// </summary>
+    /// <summary>Ergebnis je Videofeld — ein Fehler beim einen darf das andere nicht mitreissen.</summary>
+    private enum VideoVerteilung { NichtsZuTun, Verteilt, Fehler }
+
+    private static readonly (string Feld, string Namenszusatz)[] VideoFelder =
+    [
+        (FieldKeys.Link, ""),
+        ("Link_G", "-g")
+    ];
+
+    /// <summary>
+    /// Kopiert ein noch auf die Quelle zeigendes Video ins Projekt und macht den Link
+    /// relativ. Liefert <c>true</c>, wenn dabei wirklich ein Video verteilt wurde.
+    ///
+    /// Ein Fehler bei EINEM Feld darf das andere nicht mitreissen: Wenn das Hauptvideo
+    /// ankommt und die Gegenkopie scheitert, bleibt das Hauptvideo verteilt und der
+    /// Fehler steht im Bericht.
+    /// </summary>
+    private VideoVerteilung VerteileQuellvideo(
+        HaltungRecord record,
+        string haltung,
+        string feld,
+        string namenszusatz,
+        string projectFolder,
+        IImportFileStagingSession? fileStaging,
+        List<string> messages)
+    {
+        var link = record.GetFieldValue(feld)?.Trim();
+        if (string.IsNullOrWhiteSpace(link))
+            return VideoVerteilung.NichtsZuTun;
+
+        if (ProjectPathResolver.IsRelative(link))
+        {
+            if (ImportProjektdateiPruefer.IstLesbar(link, projectFolder, fileStaging, out var grund))
+                return VideoVerteilung.NichtsZuTun;
+            messages.Add($"Video {haltung}{namenszusatz}: Projektdatei nicht lesbar: {link} — {grund}");
+            return VideoVerteilung.Fehler;
+        }
+
+        if (!TryInspectExistingSourceFile(link, out var safeLink, out var sourceError))
+        {
+            // Eine schlicht fehlende Quelldatei liefert keinen Fehlertext. Sie darf
+            // trotzdem nicht still verschwinden: Der Verweis stand im Projekt, die Datei
+            // ist nicht da — das muss im Bericht stehen (Audit 2026-09-05).
+            messages.Add(string.IsNullOrWhiteSpace(sourceError)
+                ? $"Video {haltung}{namenszusatz}: Quelldatei nicht vorhanden: {link}"
+                : $"Video {haltung}{namenszusatz}: {sourceError}");
+            return VideoVerteilung.Fehler;
+        }
+
+        // S2-1: Nur bekannte Medientypen/Protokoll-PDFs ins Projekt kopieren.
+        if (!MediaFileAllowlist.IsImportableMediaOrPdf(safeLink))
+        {
+            messages.Add($"Video {haltung}{namenszusatz}: Dateityp nicht erlaubt, wird nicht kopiert: {link}");
+            return VideoVerteilung.Fehler;
+        }
+
+        try
+        {
+            if (!TryInspectExistingSourceFile(safeLink, out safeLink, out sourceError))
+                throw new IOException(sourceError ?? "Quelldatei fehlt.");
+
+            var san = ProjectPathResolver.SanitizePathSegment(haltung);
+            var dir = ProjectStructure.HaltungVerteiltDir(projectFolder, san);
+            var stamp = ResolveDateStamp(record);
+            var ext = Path.GetExtension(safeLink);
+            var zielname = $"{stamp}_{san}{namenszusatz}{ext}";
+            string dest;
+            var wiederverwendet = false;
+
+            // Liegt im Zielordner schon dieselbe Datei, wird sie wiederverwendet statt ein
+            // zweites Mal kopiert. Gesucht wird im GANZEN Ordner, nicht nur unter dem
+            // Wunschnamen: Dieselbe Aufnahme kommt ueber zwei Wege mit zwei Namen an —
+            // der Haltungs-Verteiler benennt sie nach dem Aufnahmedatum, dieser Rueckfall
+            // nach Datum und Aufnahmezusatz. In Buerglen (2026-09-09) lag deshalb jedes
+            // der 19 Videos doppelt im Projekt, 3397 von 6803 MB waren reine Dopplung.
+            // Ein abweichender Bestand bekommt weiterhin einen freien Namen.
+            var vorhanden = FindeGleicheDatei(dir, safeLink, ext, fileStaging);
+            if (vorhanden is not null)
+            {
+                dest = vorhanden;
+                wiederverwendet = true;
+            }
+            else if (fileStaging is null)
+            {
+                var writePathGuard = new ProjectWritePathGuard(projectFolder);
+                dir = writePathGuard.EnsureSafeDirectoryTarget(dir);
+                Directory.CreateDirectory(dir);
+
+                var wunsch = writePathGuard.EnsureSafeFileTarget(Path.Combine(dir, zielname));
+                dest = writePathGuard.EnsureSafeFileTarget(UniquePath(wunsch));
+                writePathGuard.EnsureSafeFileTarget(dest);
+                File.Copy(safeLink, dest, overwrite: false);
+            }
+            else
+            {
+                dest = fileStaging.StageCopyAs(safeLink, dir, zielname);
+            }
+
+            // Der Link wird erst nach erfolgreicher Kopie gesetzt: Ein Verweis auf eine
+            // Datei, die nie ankam, waere schlimmer als der alte Quellpfad.
+            record.SetFieldValue(
+                feld,
+                ProjectPathResolver.MakeRelative(dest, projectFolder),
+                FieldSource.Legacy,
+                userEdited: false);
+
+            // Nur eine wirklich angelegte Kopie zaehlt als verteiltes Video. Der Link wurde
+            // auch im Wiederverwendungsfall wieder auf den Projektpfad gesetzt — das ist
+            // eine Reparatur, keine Verteilung.
+            return wiederverwendet ? VideoVerteilung.NichtsZuTun : VideoVerteilung.Verteilt;
+        }
+        catch (Exception ex)
+        {
+            messages.Add($"Video {haltung}{namenszusatz}: {ex.Message}");
+            return VideoVerteilung.Fehler;
+        }
+    }
+
+    /// <summary>
+    /// Sucht im Zielordner eine inhaltsgleiche Datei derselben Endung und liefert deren
+    /// logischen Projektpfad. Der Vergleich ist byteweise
+    /// (<see cref="FileContentComparer"/>) — Name, Groesse oder Zeitstempel allein sind
+    /// im Projekt nie ein Beleg fuer Gleichheit.
+    ///
+    /// Waehrend eines Importlaufs zaehlt die gemeinsame Lesesicht aus bereits
+    /// veroeffentlichten und erst vorbereiteten Dateien: Sonst saehe der Rueckfall die
+    /// Kopie des Haltungs-Verteilers nicht, die noch im Arbeitsordner liegt.
+    ///
+    /// Jeder Lesefehler ergibt <c>null</c> — dann wird kopiert. Eine zusaetzliche Kopie
+    /// ist der harmlosere Ausgang als ein Verweis auf eine ungepruefte Datei.
+    /// </summary>
+    private static string? FindeGleicheDatei(
+        string zielOrdner,
+        string quelle,
+        string endung,
+        IImportFileStagingSession? fileStaging)
+    {
+        try
+        {
+            IEnumerable<(string Ziel, string Lesepfad)> kandidaten =
+                fileStaging is null
+                    ? (Directory.Exists(zielOrdner)
+                        ? Directory.EnumerateFiles(zielOrdner).Select(p => (p, p))
+                        : Array.Empty<(string, string)>())
+                    : fileStaging
+                        .EnumerateReadableFiles(zielOrdner, "*", SearchOption.TopDirectoryOnly)
+                        .Select(f => (f.TargetPath, f.ReadPath));
+
+            foreach (var (ziel, lesepfad) in kandidaten
+                         .Where(k => Path.GetExtension(k.Ziel).Equals(endung, StringComparison.OrdinalIgnoreCase))
+                         .OrderBy(k => k.Ziel, StringComparer.OrdinalIgnoreCase))
+            {
+                if (File.Exists(lesepfad) && FileContentComparer.FilesEqual(lesepfad, quelle))
+                    return ziel;
+            }
+        }
+        catch (Exception ex)
+        {
+            AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
+                $"[KanalImport] Dublettenpruefung im Zielordner uebersprungen: {zielOrdner}: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    private IReadOnlyList<HoldingFolderDistributor.DistributionResult> DistributeOriginalProtocol(
+        Project project,
+        string projectFolder,
+        string archivedPdfDir,
+        string sourceVideoDir,
+        string logicalDestinationRoot,
+        string? primaryProtocolPdf,
+        IImportFileStagingSession? fileStaging)
+    {
+        // Alle Inspektionsprotokolle des Archivs, nicht nur eines. Ein Ordner kann ein
+        // Einzelprotokoll fuer Haltung A und ein Sammelprotokoll fuer B und C enthalten —
+        // bis 2026-09-05 wurde genau eines davon gesplittet und der Rest blieb liegen.
+        // Plaene, Deckblaetter und Dichtheitsprotokolle sind ueber die Bewertung in
+        // ScoreProtocolCandidate weiterhin ausgeschlossen.
+        var protokolle = ResolveProtocolPdfs(primaryProtocolPdf, archivedPdfDir, fileStaging);
+        if (protokolle.Count == 0)
+            return Array.Empty<HoldingFolderDistributor.DistributionResult>();
+
+        if (fileStaging is null)
+        {
+            new ProjectWritePathGuard(projectFolder)
+                .EnsureSafeDirectoryTarget(logicalDestinationRoot);
+            return HoldingFolderDistributor.DistributeFiles(
+                pdfFiles: protokolle.Select(p => p.ReadPath).ToList(),
+                videoSourceFolder: sourceVideoDir,
+                destGemeindeFolder: logicalDestinationRoot,
+                project: project);
+        }
+
+        using var output = new StagedDistributionOutput();
+        var readablePdfs = protokolle
+            .Select(p => output.CreateReadableCopy(p.ReadPath, Path.GetFileName(p.TargetPath)))
+            .ToList();
+        var temporaryResults = HoldingFolderDistributor.DistributeFiles(
+            pdfFiles: readablePdfs,
+            videoSourceFolder: sourceVideoDir,
+            destGemeindeFolder: output.OutputRoot,
+            project: project);
+        output.StageAll(fileStaging, logicalDestinationRoot);
+        RemapTemporaryProjectPaths(project, projectFolder, output, logicalDestinationRoot);
+
+        return temporaryResults
+            .Select(result => result with
+            {
+                DestPdfPath = output.MapPath(result.DestPdfPath, logicalDestinationRoot),
+                DestVideoPath = output.MapPath(result.DestVideoPath, logicalDestinationRoot),
+                InfoPath = output.MapPath(result.InfoPath, logicalDestinationRoot),
+                HoldingFolder = output.MapPath(result.HoldingFolder, logicalDestinationRoot)
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Alle Inspektionsprotokolle, die gesplittet werden sollen — in begruendeter
+    /// Reihenfolge (bestbewertetes zuerst). Ist ein Protokoll ausdruecklich vorgegeben
+    /// (KINS-Gesamtprotokoll), gilt nur dieses.
+    /// </summary>
+    private IReadOnlyList<ImportReadableFile> ResolveProtocolPdfs(
+        string? primaryProtocolPdf,
+        string archivedPdfDir,
+        IImportFileStagingSession? fileStaging)
+    {
+        var vorgegeben = ResolvePrimaryProtocol(
+            primaryProtocolPdf, archivedPdfDir, fileStaging, nurVorgabe: true);
+        if (vorgegeben is not null)
+            return [vorgegeben];
+
+        return SelectProtocolPdfsReadable(archivedPdfDir, fileStaging);
+    }
+
+    private ImportReadableFile? ResolvePrimaryProtocol(
+        string? primaryProtocolPdf,
+        string archivedPdfDir,
+        IImportFileStagingSession? fileStaging,
+        bool nurVorgabe = false)
+    {
+        if (!string.IsNullOrWhiteSpace(primaryProtocolPdf))
+        {
+            var direct = new ImportReadableFile(primaryProtocolPdf, primaryProtocolPdf);
+            if (TryInspectReadableFile(direct, out direct))
+                return direct;
+
+            if (fileStaging is not null)
+            {
+                try
+                {
+                    var readable = fileStaging.ResolveReadPath(primaryProtocolPdf);
+                    var staged = new ImportReadableFile(primaryProtocolPdf, readable);
+                    if (TryInspectReadableFile(staged, out staged))
+                        return staged;
+                }
+                catch (ArgumentException)
+                {
+                    // Explizite KINS-Quellen duerfen ausserhalb des Projekts liegen.
+                }
+            }
+        }
+
+        return nurVorgabe
+            ? null
+            : SelectProtocolPdfsReadable(archivedPdfDir, fileStaging).FirstOrDefault();
+    }
+
+    private static void RemapTemporaryProjectPaths(
+        Project project,
+        string projectFolder,
+        StagedDistributionOutput output,
+        string logicalDestinationRoot)
+    {
+        foreach (var record in project.Data)
+        {
+            foreach (var field in new[] { FieldKeys.Link, "Link_G", FieldKeys.PdfPath })
+            {
+                var current = record.GetFieldValue(field)?.Trim();
+                if (string.IsNullOrWhiteSpace(current) || ProjectPathResolver.IsRelative(current))
+                    continue;
+
+                var mapped = output.MapPath(current, logicalDestinationRoot);
+                if (string.IsNullOrWhiteSpace(mapped)
+                    || string.Equals(mapped, current, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                record.SetFieldValue(
+                    field,
+                    ProjectPathResolver.MakeRelative(mapped, projectFolder),
+                    FieldSource.Legacy,
+                    userEdited: false);
+            }
+        }
+    }
+
     // Wählt aus dem Archiv-PDF-Ordner das MASSGEBLICHE Inspektionsprotokoll: das größte PDF, das kein
     // Duplikat-Suffix (<basis>_&lt;n&gt;.pdf, wenn <basis>.pdf existiert) ist. So gewinnt das Basis-Protokoll
     // gegen Zweit-Export (_1) und den kleineren Plan. Liefert null, wenn keine PDFs vorhanden.
     internal string? SelectPrimaryProtocolPdf(string archivedPdfDir)
-    {
-        if (!Directory.Exists(archivedPdfDir))
-            return null;
+        => SelectProtocolPdfsReadable(archivedPdfDir, fileStaging: null).FirstOrDefault()?.ReadPath;
 
-        var pdfs = Directory.EnumerateFiles(archivedPdfDir, "*.pdf", SearchOption.TopDirectoryOnly)
-            .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
+    private IReadOnlyList<ImportReadableFile> SelectProtocolPdfsReadable(
+        string archivedPdfDir,
+        IImportFileStagingSession? fileStaging)
+    {
+        if (!ImportSourcePathGuard.TryInspectDirectory(
+                archivedPdfDir,
+                out var safeArchivedPdfDir,
+                out var archiveExists,
+                out _))
+        {
+            return [];
+        }
+
+        IReadOnlyList<ImportReadableFile> candidates;
+        if (fileStaging is null)
+        {
+            candidates = archiveExists
+                ? Directory.EnumerateFiles(
+                        safeArchivedPdfDir,
+                        "*.pdf",
+                        SearchOption.TopDirectoryOnly)
+                    .Select(path => new ImportReadableFile(path, path))
+                    .ToList()
+                : [];
+        }
+        else
+        {
+            candidates = fileStaging.EnumerateReadableFiles(
+                safeArchivedPdfDir,
+                "*.pdf",
+                SearchOption.TopDirectoryOnly);
+        }
+
+        var pdfs = candidates
+            .Select(file => TryInspectReadableFile(file, out var safeFile) ? safeFile : null)
+            .Where(file => file is not null)
+            .Select(file => file!)
+            .Where(p => !Path.GetFileName(p.TargetPath).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
             .ToList();
         if (pdfs.Count == 0)
-            return null;
+            return [];
 
         var stems = new HashSet<string>(
-            pdfs.Select(p => Path.GetFileNameWithoutExtension(p)), StringComparer.OrdinalIgnoreCase);
+            pdfs.Select(p => Path.GetFileNameWithoutExtension(p.TargetPath)), StringComparer.OrdinalIgnoreCase);
 
         // Ein PDF ist ein Duplikat-Variant, wenn sein Stamm = <basis>_<ziffern> und <basis>.pdf existiert.
-        bool IsDuplicateVariant(string path)
+        bool IsDuplicateVariant(ImportReadableFile file)
         {
-            var stem = Path.GetFileNameWithoutExtension(path);
+            var stem = Path.GetFileNameWithoutExtension(file.TargetPath);
             var us = stem.LastIndexOf('_');
             if (us <= 0 || us == stem.Length - 1)
                 return false;
@@ -196,20 +609,23 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
         return pdfs
             .Select(p =>
             {
-                var text = PdfDokumentTypErkennung.ReadPdfTextPrefix(p, maxPages: 6);
-                var typ = PdfDokumentTypErkennung.ErkenneText(text, Path.GetFileName(p));
+                var text = PdfDokumentTypErkennung.ReadPdfTextPrefix(p.ReadPath, maxPages: 6);
+                var typ = PdfDokumentTypErkennung.ErkenneText(text, Path.GetFileName(p.TargetPath));
                 return new
                 {
-                    Path = p,
+                    File = p,
                     Score = ScoreProtocolCandidate(typ, IsDuplicateVariant(p)),
-                    Length = SafeLength(p)
+                    Length = SafeLength(p.ReadPath)
                 };
             })
+            // Plaene, Deckblaetter und Dichtheitsprotokolle tragen eine negative Bewertung
+            // und sind damit ausgeschlossen — sie sind keine TV-Originale.
+            .Where(p => p.Score >= 0)
             .OrderByDescending(p => p.Score)
             .ThenByDescending(p => p.Length)
-            .ThenBy(p => Path.GetFileName(p.Path), StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault()
-            ?.Path;
+            .ThenBy(p => Path.GetFileName(p.File.TargetPath), StringComparer.OrdinalIgnoreCase)
+            .Select(p => p.File)
+            .ToList();
     }
 
     private static int ScoreProtocolCandidate(PdfDokumentTyp typ, bool isDuplicateVariant)
@@ -219,7 +635,9 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
             PdfDokumentTyp.TvProtokoll => 100,
             PdfDokumentTyp.PlanSituation => -1000,
             PdfDokumentTyp.Dichtheitspruefung => -900,
+            PdfDokumentTyp.Aushaerteprotokoll => -900,
             PdfDokumentTyp.Deckblatt => -800,
+            PdfDokumentTyp.Schachtprotokoll => -1000,
             _ => 0
         };
         if (isDuplicateVariant)
@@ -231,6 +649,49 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
     {
         try { return new FileInfo(path).Length; }
         catch { return 0L; }
+    }
+
+    private static bool TryInspectReadableFile(
+        ImportReadableFile file,
+        out ImportReadableFile safeFile)
+    {
+        safeFile = file;
+        if (!string.Equals(
+                Path.GetExtension(file.TargetPath),
+                ".pdf",
+                StringComparison.OrdinalIgnoreCase)
+            || !TryInspectExistingSourceFile(
+                file.ReadPath,
+                out var safeReadPath,
+                out _))
+        {
+            return false;
+        }
+
+        safeFile = file with { ReadPath = safeReadPath };
+        return true;
+    }
+
+    private static bool TryInspectExistingSourceFile(
+        string path,
+        out string safePath,
+        out string? error)
+    {
+        if (!ImportSourcePathGuard.TryInspectFile(
+                path,
+                out safePath,
+                out var exists,
+                out error))
+        {
+            return false;
+        }
+
+        if (exists)
+            return true;
+
+        safePath = string.Empty;
+        error = null;
+        return false;
     }
 
     // Record über den sanitisierten Haltungsnamen (== Ordnername) finden.
@@ -280,77 +741,34 @@ public sealed class KanalImportDistributionService : IKanalImportDistributor
             return;
         }
 
-        if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+        if (!IsUnderDirectory(full, root))
             return;
 
         record.SetFieldValue(field, ProjectPathResolver.MakeRelative(full, projectFolder), FieldSource.Legacy, userEdited: false);
     }
 
+    private static bool IsUnderDirectory(string path, string directory)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var fullDirectory = Path.GetFullPath(directory)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (string.Equals(fullPath, fullDirectory, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return fullPath.StartsWith(
+            fullDirectory + Path.DirectorySeparatorChar,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
     // JJJJMMTT aus Datum_Jahr (verschiedene Formate), sonst aus verteilten Medienpfaden.
+    // Die Regel selbst liegt in ImportDateStampResolver, damit der Protokoll-Verteiler
+    // denselben Stempel bildet wie der Videoweg.
     internal string ResolveDateStamp(HaltungRecord record)
-    {
-        var raw = record.GetFieldValue("Datum_Jahr")?.Trim();
-        if (TryResolveDateStamp(raw, out var stamp))
-            return stamp;
-
-        foreach (var field in new[] { FieldKeys.PdfPath, FieldKeys.PdfEigen, FieldKeys.Link })
-        {
-            if (TryExtractDateStampFromPath(record.GetFieldValue(field), out stamp))
-                return stamp;
-        }
-
-        return "00000000";
-    }
-
-    private static bool TryResolveDateStamp(string? raw, out string stamp)
-    {
-        stamp = "00000000";
-        if (string.IsNullOrWhiteSpace(raw))
-            return false;
-
-        if (DateTime.TryParse(raw, CultureInfo.GetCultureInfo("de-CH"), DateTimeStyles.None, out var d)
-            || DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out d))
-        {
-            stamp = d.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
-            return true;
-        }
-
-        var digits = new string(raw.Where(char.IsDigit).ToArray());
-        if (digits.Length == 4)          // reines Jahr
-        {
-            stamp = digits + "0101";
-            return true;
-        }
-
-        if (digits.Length >= 8)          // bereits JJJJMMTT o.ae.
-        {
-            var candidate = digits.Substring(0, 8);
-            if (DateTime.TryParseExact(candidate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
-            {
-                stamp = candidate;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool TryExtractDateStampFromPath(string? path, out string stamp)
-    {
-        stamp = "00000000";
-        if (string.IsNullOrWhiteSpace(path))
-            return false;
-
-        var match = Regex.Match(path, @"(?<!\d)(?:19|20)\d{6}(?!\d)");
-        if (!match.Success)
-            return false;
-
-        if (!DateTime.TryParseExact(match.Value, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
-            return false;
-
-        stamp = match.Value;
-        return true;
-    }
+        => Common.ImportDateStampResolver.Resolve(
+            record.GetFieldValue("Datum_Jahr"),
+            record.GetFieldValue(FieldKeys.PdfPath),
+            record.GetFieldValue(FieldKeys.PdfEigen),
+            record.GetFieldValue(FieldKeys.Link));
 
     internal string UniquePath(string path)
     {

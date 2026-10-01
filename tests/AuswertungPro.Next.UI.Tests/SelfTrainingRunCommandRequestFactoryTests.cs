@@ -71,7 +71,7 @@ public sealed class SelfTrainingRunCommandRequestFactoryTests
         runRequest.Ui.SetBusy(true);
         runRequest.Ui.SetSelfTrainingRunning(true);
         runRequest.Ui.SetLogText("");
-        runRequest.Ui.SetStatusText("laeuft");
+        runRequest.Ui.SetStatusText("läuft");
         runRequest.Ui.Log("meldung");
         runRequest.ReloadReviewQueue(reviewQueue);
         await runRequest.LoadSamplesInternalAsync();
@@ -81,7 +81,7 @@ public sealed class SelfTrainingRunCommandRequestFactoryTests
         Assert.Contains("busy:True", calls);
         Assert.Contains("running:True", calls);
         Assert.Contains("log-text:", calls);
-        Assert.Contains("status:laeuft", calls);
+        Assert.Contains("status:läuft", calls);
         Assert.Contains("log:meldung", calls);
         Assert.Contains("reload:True", calls);
         Assert.Contains("load-internal", calls);

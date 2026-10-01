@@ -46,9 +46,27 @@ public sealed class VsaMediaPathFileResolver : IVsaMediaPathResolver
             return string.Empty;
         }
 
-        // Rooted/absolute Pfade bleiben erlaubt (z. B. Videos auf externem Laufwerk E:\).
-        if (Path.IsPathRooted(normalizedFileName))
-            return normalizedFileName;
+        // Nur vollqualifizierte absolute Pfade bleiben erlaubt (z. B. Videos auf E:\).
+        // Laufwerk-relative Formen wie "C:foto.jpg" haengen vom Prozess-Arbeitsordner ab
+        // und sind deshalb kein stabiler, sicher pruefbarer Importpfad.
+        if (Path.IsPathFullyQualified(normalizedFileName))
+        {
+            return ImportSourcePathGuard.TryInspectFile(
+                normalizedFileName,
+                out var safeAbsolutePath,
+                out _,
+                out _)
+                ? safeAbsolutePath
+                : string.Empty;
+        }
+
+        if (Path.IsPathRooted(normalizedFileName)
+            || ContainsParentTraversal(normalizedFileName))
+        {
+            Trace.WriteLine(
+                $"[VsaMediaPathFileResolver] Relativer Dateiname mit Verzeichnisbruch verworfen: {normalizedFileName}");
+            return string.Empty;
+        }
 
         var relative = (relativeFolder ?? string.Empty).Trim()
             .Replace('/', Path.DirectorySeparatorChar)
@@ -76,8 +94,26 @@ public sealed class VsaMediaPathFileResolver : IVsaMediaPathResolver
             directory = Path.GetDirectoryName(directory) ?? string.Empty;
         }
 
-        return candidates.FirstOrDefault(File.Exists)
-               ?? (candidates.Count > 0 ? candidates[0] : normalizedFileName);
+        string? safeFallback = null;
+        foreach (var candidate in candidates)
+        {
+            if (!ImportSourcePathGuard.TryInspectFile(
+                    candidate,
+                    out var safeCandidate,
+                    out var exists,
+                    out var error))
+            {
+                Trace.WriteLine(
+                    $"[VsaMediaPathFileResolver] Unsicherer Medienkandidat verworfen: {error}");
+                continue;
+            }
+
+            safeFallback ??= safeCandidate;
+            if (exists)
+                return safeCandidate;
+        }
+
+        return safeFallback ?? string.Empty;
     }
 
     private static bool IsContainedIn(string fullPath, string rootDirectory)
@@ -90,4 +126,10 @@ public sealed class VsaMediaPathFileResolver : IVsaMediaPathResolver
             + Path.DirectorySeparatorChar;
         return fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static bool ContainsParentTraversal(string path)
+        => path
+            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+            .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
+            .Any(segment => string.Equals(segment, "..", StringComparison.Ordinal));
 }

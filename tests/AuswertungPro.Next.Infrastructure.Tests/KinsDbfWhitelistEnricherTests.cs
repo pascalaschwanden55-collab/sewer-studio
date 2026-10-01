@@ -84,6 +84,37 @@ public sealed class KinsDbfWhitelistEnricherTests : IDisposable
     }
 
     [Fact]
+    public void Schachtwerte_aus_der_dbf_tragen_die_herkunft_der_kanalfirma()
+    {
+        // Audit A16 (23.09.2026): Mit dem einfachen Setter hiessen sie «Manual» ohne Handmarke — weder Handwert
+        // noch Kanalfirma, also auch kein Vorschlag beim Senden ins WebGIS.
+        SchreibeSchachtDbf();
+        var project = new Project();
+
+        KinsDbfWhitelistEnricher.Apply(project, _dir);
+
+        var s1 = project.SchaechteData.Single(s => s.GetFieldValue("Schachtnummer") == "58951");
+        Assert.Equal(FieldSource.Legacy, s1.FieldMeta["Material"].Source);
+        Assert.False(s1.FieldMeta["Material"].UserEdited);
+        Assert.True(FieldSourceRegeln.IstKanalfirma(s1.FieldMeta["Material"].Source));
+    }
+
+    [Fact]
+    public void Ein_bewusst_geleertes_schachtfeld_fuellt_die_dbf_nicht()
+    {
+        SchreibeSchachtDbf();
+        var project = new Project();
+        var s = new SchachtRecord();
+        s.SetFieldValue("Schachtnummer", "58951", FieldSource.Manual, false);
+        s.SetFieldValue("Material", "", FieldSource.Manual, userEdited: true);
+        project.SchaechteData.Add(s);
+
+        KinsDbfWhitelistEnricher.Apply(project, _dir);
+
+        Assert.Equal("", s.GetFieldValue("Material"));
+    }
+
+    [Fact]
     public void InstanceService_LegtSchachtlisteWieDieFassadeAn()
     {
         SchreibeSchachtDbf();
@@ -199,7 +230,7 @@ public sealed class KinsDbfWhitelistEnricherTests : IDisposable
         Assert.Equal(0, result.SchaechteNeu);
         Assert.Equal(0, result.SchaechteAktualisiert);
         Assert.Equal(
-            ["KINS-DBF: Quellordner nicht gefunden \u2014 Anreicherung uebersprungen."],
+            ["KINS-DBF: Quellordner nicht gefunden \u2014 Anreicherung übersprungen."],
             result.Messages);
         Assert.Empty(project.Data);
         Assert.Empty(project.SchaechteData);

@@ -107,6 +107,7 @@ public sealed class CodingEventListActionWorkflowTests
 
         var result = method.Invoke(null, [
             ev,
+            new[] { ev },
             service,
             5.0,
             TimeSpan.FromSeconds(20)
@@ -134,6 +135,7 @@ public sealed class CodingEventListActionWorkflowTests
 
         var result = method.Invoke(null, [
             ev,
+            new[] { ev },
             service,
             3.5,
             TimeSpan.FromSeconds(33)
@@ -150,6 +152,68 @@ public sealed class CodingEventListActionWorkflowTests
     }
 
     [Fact]
+    public void CloseStretch_weist_einen_Punktschaden_ab()
+    {
+        // Regression: Schliessen setzte IsStreckenschaden und MeterEnd auf JEDER
+        // ausgewaehlten Zeile - ein Punktschaden wurde dadurch still zum Streckenschaden.
+        var service = new RecordingCodingSessionService();
+        var punkt = Event("BABBB");
+        punkt.MeterAtCapture = 4.82;
+        punkt.Entry.MeterStart = 4.82;
+        var method = FindCloseStretchMethod();
+        Assert.NotNull(method);
+
+        var result = method.Invoke(null, [
+            punkt,
+            new[] { punkt },
+            service,
+            9.0,
+            TimeSpan.FromSeconds(40)
+        ]);
+
+        Assert.NotNull(result);
+        var type = result.GetType();
+        Assert.Equal(true, type.GetProperty("NotAnOpenStretchDamage")?.GetValue(result));
+        Assert.Empty(service.AddedEvents);
+        Assert.False(punkt.Entry.IsStreckenschaden);
+        Assert.Null(punkt.Entry.MeterEnd);
+    }
+
+    [Fact]
+    public void CloseStretch_weist_eine_Endmarke_ab()
+    {
+        var service = new RecordingCodingSessionService();
+        var anfang = Event("BBAC");
+        anfang.MeterAtCapture = 5.83;
+        anfang.Entry.MeterStart = 5.83;
+        anfang.Entry.MeterEnd = 8.20;
+        anfang.Entry.IsStreckenschaden = true;
+        anfang.Entry.Beschreibung = "Komplexes Wurzelwerk";
+
+        var ende = Event("BBAC");
+        ende.MeterAtCapture = 8.20;
+        ende.Entry.MeterStart = 8.20;
+        ende.Entry.IsStreckenschaden = true;
+        ende.Entry.Beschreibung = "Komplexes Wurzelwerk (Ende)";
+
+        var method = FindCloseStretchMethod();
+        Assert.NotNull(method);
+
+        var result = method.Invoke(null, [
+            ende,
+            new[] { anfang, ende },
+            service,
+            12.0,
+            TimeSpan.FromSeconds(50)
+        ]);
+
+        Assert.NotNull(result);
+        Assert.Equal(true, result.GetType().GetProperty("NotAnOpenStretchDamage")?.GetValue(result));
+        Assert.Empty(service.AddedEvents);
+        Assert.Null(ende.Entry.MeterEnd);
+    }
+
+    [Fact]
     public void CloseStretch_returns_unapplied_without_event_or_session()
     {
         var method = FindCloseStretchMethod();
@@ -157,12 +221,14 @@ public sealed class CodingEventListActionWorkflowTests
 
         var withoutEvent = method.Invoke(null, [
             null,
+            Array.Empty<CodingEvent>(),
             new RecordingCodingSessionService(),
             3.5,
             TimeSpan.FromSeconds(33)
         ]);
         var withoutSession = method.Invoke(null, [
             Event("BAJ"),
+            Array.Empty<CodingEvent>(),
             null,
             3.5,
             TimeSpan.FromSeconds(33)
@@ -204,7 +270,14 @@ public sealed class CodingEventListActionWorkflowTests
             "CloseStretch",
             BindingFlags.Public | BindingFlags.Static,
             binder: null,
-            types: [typeof(CodingEvent), typeof(ICodingSessionService), typeof(double), typeof(TimeSpan)],
+            types:
+            [
+                typeof(CodingEvent),
+                typeof(IEnumerable<CodingEvent>),
+                typeof(ICodingSessionService),
+                typeof(double),
+                typeof(TimeSpan)
+            ],
             modifiers: null);
 
     private static void AssertDeleteResult(object? result, bool expectedDeleted, bool expectedClear)

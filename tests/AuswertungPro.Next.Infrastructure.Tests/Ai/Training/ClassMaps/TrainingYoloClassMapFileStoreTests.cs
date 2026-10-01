@@ -185,6 +185,39 @@ public sealed class TrainingYoloClassMapFileStoreTests : IDisposable
     }
 
     [Fact]
+    public void ReadSnapshot_persoenlicher_Goldbeleg_bindet_Audit_und_Samples()
+    {
+        var paths = CreateFiles(
+            Entry(
+                TrainingYoloClassSourceKinds.TeacherVsaCode,
+                "BAB",
+                "map",
+                "BAB_riss",
+                "approved"));
+        RewriteMigration(paths.MigrationPath, root =>
+            root["personal_gold_approval"] = new JsonObject
+            {
+                ["schema_version"] = "1.0",
+                ["gold_audit_sha256"] = new string('d', 64),
+                ["training_samples_sha256"] = new string('e', 64),
+                ["approved_by"] = "Besitzer",
+                ["approved_utc"] = "2026-07-30T17:16:47Z",
+                ["source_codes"] = new JsonArray("BAB")
+            });
+
+        var snapshot = CreateStore(paths).ReadSnapshot();
+
+        Assert.Equal(new string('d', 64), snapshot.MigrationSourceHashes["personal_gold_audit"]);
+        Assert.Equal(new string('e', 64), snapshot.MigrationSourceHashes["personal_gold_samples"]);
+
+        RewriteMigration(paths.MigrationPath, root =>
+            root["personal_gold_approval"]!["gold_audit_sha256"] = "kein-hash");
+        var error = Assert.Throws<TrainingYoloClassMapException>(
+            () => CreateStore(paths).ReadSnapshot());
+        Assert.Contains("Goldbeleg", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ReadSnapshot_vertauschte_Quellenreihenfolge_wirft_hart()
     {
         var paths = CreateFiles(

@@ -53,6 +53,47 @@ public sealed class VsaCodeExplorerColumnTileRendererTests
         });
     }
 
+    /// <summary>
+    /// Fix-Runde 1 (Review 29.09.2026): ResolveBadgeColor unterscheidet echte Fachfarben
+    /// (Klartext-Hex, z. B. eine VSA-Gruppenfarbe) von Theme-Token-Namen (Ersatzfarbe ohne
+    /// Fachwert). Ein echtes Hex wird immer woertlich uebernommen; ein Token-Name wird ohne
+    /// laufende Application (dieser Testthread hat keine) auf den festen Rueckfallwert Akzentblau
+    /// abgebildet.
+    /// </summary>
+    [Theory]
+    [InlineData("#123456", 0x12, 0x34, 0x56)]
+    [InlineData("AccentBrush", 0x25, 0x63, 0xEB)]
+    [InlineData("SuccessBrush", 0x25, 0x63, 0xEB)]
+    public void CreateButton_loest_Badge_Farbe_je_nach_Hex_oder_Token_auf(
+        string badgeColorHexOrToken, byte expectedRed, byte expectedGreen, byte expectedBlue)
+    {
+        RunSta(() =>
+        {
+            var button = VsaCodeExplorerColumnTileRenderer.CreateButton(
+                new VsaCodeExplorerColumnTilePresentation(
+                    LabelText: "BA",
+                    DescriptionText: "",
+                    ShowDescription: false,
+                    GroupColorHex: null,
+                    MarkerBrushRole: VsaCodeExplorerColumnTileBrushRole.Group,
+                    CodeBrushRole: VsaCodeExplorerColumnTileBrushRole.Group,
+                    DescriptionBrushRole: VsaCodeExplorerColumnTileBrushRole.TextSecondary,
+                    Badges: [new VsaCodeExplorerColumnTileBadge("ICM", badgeColorHexOrToken)],
+                    ShowSelectedChrome: false,
+                    ShowInvalidChrome: false,
+                    InvalidTooltip: null),
+                new TileItem { Label = "BA" },
+                new Style(typeof(Button)),
+                CreateResources(),
+                () => { });
+
+            var content = Assert.IsType<DockPanel>(button.Content);
+            var badgeText = FindText(content, "ICM");
+            var foreground = Assert.IsType<SolidColorBrush>(badgeText.Foreground);
+            Assert.Equal(Color.FromRgb(expectedRed, expectedGreen, expectedBlue), foreground.Color);
+        });
+    }
+
     [Fact]
     public void CreateButton_setzt_selected_chrome_aus_presentation()
     {
@@ -103,14 +144,14 @@ public sealed class VsaCodeExplorerColumnTileRendererTests
                     Badges: [],
                     ShowSelectedChrome: false,
                     ShowInvalidChrome: true,
-                    InvalidTooltip: "ungueltig"),
+                    InvalidTooltip: "ungültig"),
                 new TileItem { Label = "BC" },
                 new Style(typeof(Button)),
                 CreateResources(),
                 () => { });
 
             Assert.Equal(0.7, button.Opacity, precision: 2);
-            Assert.Equal("ungueltig", button.ToolTip);
+            Assert.Equal("ungültig", button.ToolTip);
             var content = Assert.IsType<DockPanel>(button.Content);
             Assert.Contains(
                 FindText(content, "BC").TextDecorations,

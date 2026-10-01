@@ -60,7 +60,7 @@ public sealed class PlayerWindowRuntimeArchitectureTests
         var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
 
         Assert.True(File.Exists(bufferPath), "Geteilter Detection-Pending-Zustand soll in einem eigenen Buffer liegen.");
-        Assert.True(File.Exists(controllerPath), "LiveDetectionController soll den Detection-Pending-Zustand fuer PlayerWindow besitzen.");
+        Assert.True(File.Exists(controllerPath), "LiveDetectionController soll den Detection-Pending-Zustand für PlayerWindow besitzen.");
 
         var buffer = File.ReadAllText(bufferPath);
         var controller = File.ReadAllText(controllerPath);
@@ -142,7 +142,7 @@ public sealed class PlayerWindowRuntimeArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Partials sollen Coding-Analyse-CTS ueber CodingAiController/Lifecycle-Helfer kapseln:\n"
+            "PlayerWindow-Partials sollen Coding-Analyse-CTS über CodingAiController/Lifecycle-Helfer kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -165,7 +165,7 @@ public sealed class PlayerWindowRuntimeArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Partials sollen Runtime-Services ueber Owner/Hosts statt direkte Felder nutzen:\n"
+            "PlayerWindow-Partials sollen Runtime-Services über Owner/Hosts statt direkte Felder nutzen:\n"
             + string.Join("\n", offenders));
     }
 
@@ -215,7 +215,7 @@ public sealed class PlayerWindowRuntimeArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Coding soll Session-VM-Zugriff, Pending-State und Host-Besitz ueber Player-Services kapseln:\n"
+            "PlayerWindow-Coding soll Session-VM-Zugriff, Pending-State und Host-Besitz über Player-Services kapseln:\n"
             + string.Join("\n", offenders));
     }
 
@@ -269,7 +269,7 @@ public sealed class PlayerWindowRuntimeArchitectureTests
 
         Assert.True(
             dependencyOffenders.Length == 0,
-            "PlayerWindow-Partials sollen konkrete Services ueber PlayerWindowProtocolContext-APIs statt Dependencies-Bag nutzen:\n"
+            "PlayerWindow-Partials sollen konkrete Services über PlayerWindowProtocolContext-APIs statt Dependencies-Bag nutzen:\n"
             + string.Join("\n", dependencyOffenders));
 
         var bridgeOffenders = FindFileTokenOffenders(

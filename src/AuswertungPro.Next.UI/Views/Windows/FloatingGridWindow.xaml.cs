@@ -34,10 +34,10 @@ public partial class FloatingGridWindow : Window
     /// <summary>Aktualisiert Titel und Statusleiste.</summary>
     public void UpdateInfo(string? projectName, int recordCount, string? selectedHaltung)
     {
-        TitleText.Text = string.IsNullOrWhiteSpace(projectName)
+        TitleText.Title = string.IsNullOrWhiteSpace(projectName)
             ? "Haltungen (abgedockt)"
             : $"Haltungen - {projectName} (abgedockt)";
-        Title = TitleText.Text;
+        Title = TitleText.Title;
 
         RecordCountText.Text = $"{recordCount} Haltungen";
         SelectedInfoText.Text = string.IsNullOrWhiteSpace(selectedHaltung)

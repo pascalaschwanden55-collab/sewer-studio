@@ -3,26 +3,33 @@
 Der Client kann keinen Modellpfad vorgeben. Der Wrapper liest nur direkte
 Unterordner des konfigurierten Kandidaten-Roots und prueft Manifest, Status,
 Pilot, Mindestdatenmenge und SHA-256 der Gewichte. Das produktive YOLO-Modell
-im Slot ``YOLO`` wird weder ersetzt noch entladen.
+im Slot ``YOLO`` wird nicht ersetzt. Bei VRAM-Mangel darf der allgemeine
+LRU-Manager es voruebergehend entladen; der produktive Artefaktzeiger bleibt
+unveraendert und das Modell wird bei Bedarf wieder geladen.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import math
 import os
-import threading
+import re
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
+from .. import osd_meter
 from ..config import settings
 from ..gpu_manager import ModelSlot, ModelUnloadedError, gpu_manager
 from ..schemas.detection import BccTestYoloResponse, YoloDetection
-from . import yolo_wrapper
+from . import osd_model_wrapper, yolo_wrapper, yolo_test_slot
+
+logger = logging.getLogger(__name__)
 
 
 class BccTestCandidateError(RuntimeError):
@@ -39,8 +46,28 @@ class BccCandidate:
     created_utc: str
 
 
-_predict_lock = threading.Lock()
-_loaded_candidate_sha256: str | None = None
+# Gemeinsam mit lernstufe_wrapper — beide belegen den Slot YOLO_TEST (Audit S-H1).
+_predict_lock = yolo_test_slot.PREDICT_LOCK
+_CANDIDATE_ID_PATTERN = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"
+)
+_EXPECTED_CLASS_NAMES = {
+    0: "BCA_anschluss",
+    1: "BAB_riss",
+    2: "BAC_bruch",
+    3: "BAA_verformung",
+    4: "BAF_oberflaeche",
+    5: "BAH_schadanschluss",
+    6: "BAI_dichtung",
+    7: "BAJ_verbindung",
+    8: "BBA_wurzeln",
+    9: "BBB_anhaftung",
+    10: "BBC_ablagerung",
+    11: "BBD_boden",
+    12: "BBF_infiltration",
+    13: "SONST_schaden",
+    14: "BCC_bogen",
+}
 
 
 def _is_link_or_junction(path: Path) -> bool:
@@ -80,6 +107,9 @@ def _read_candidate(child: Path, root: Path) -> BccCandidate | None:
     except OSError:
         return None
     if resolved_child.parent != root:
+        return None
+    candidate_id = resolved_child.name
+    if _CANDIDATE_ID_PATTERN.fullmatch(candidate_id) is None:
         return None
 
     manifest_path = resolved_child / "candidate_manifest.json"
@@ -140,7 +170,7 @@ def _read_candidate(child: Path, root: Path) -> BccCandidate | None:
         created_utc = ""
 
     return BccCandidate(
-        candidate_id=resolved_child.name,
+        candidate_id=candidate_id,
         weights_path=weights_path,
         weights_sha256=expected_sha.lower(),
         map50=map50,
@@ -149,8 +179,8 @@ def _read_candidate(child: Path, root: Path) -> BccCandidate | None:
     )
 
 
-def select_candidate() -> BccCandidate:
-    """Waehlt deterministisch den besten gueltigen, nicht aktiven BCC-Kandidaten."""
+def list_candidates() -> list[BccCandidate]:
+    """Liefert manifest- und hashgepruefte direkte Kandidaten, neueste zuerst."""
 
     configured_root = Path(settings.training_model_candidates_root)
     try:
@@ -175,6 +205,55 @@ def select_candidate() -> BccCandidate:
         raise BccTestCandidateError(
             "Kein gültiges, nicht aktives BCC-Testmodell gefunden."
         )
+
+    return sorted(
+        candidates,
+        key=lambda item: (
+            item.created_utc,
+            item.epochs_completed,
+            item.map50,
+            item.candidate_id,
+        ),
+        reverse=True,
+    )
+
+
+def select_candidate(
+    candidate_id: str | None = None,
+    candidate_sha256: str | None = None,
+) -> BccCandidate:
+    """Waehlt den angehefteten oder kompatibel den automatisch besten Kandidaten."""
+
+    if (candidate_id is None) != (candidate_sha256 is None):
+        raise BccTestCandidateError(
+            "BCC-Kandidaten-ID und SHA-256 muessen gemeinsam angegeben werden."
+        )
+
+    candidates = list_candidates()
+    if candidate_id is not None:
+        if (
+            _CANDIDATE_ID_PATTERN.fullmatch(candidate_id) is None
+            or not _is_sha256(candidate_sha256)
+        ):
+            raise BccTestCandidateError(
+                "Die angeforderte BCC-Kandidaten-ID ist ungueltig."
+            )
+
+        requested_sha = str(candidate_sha256).lower()
+        selected = next(
+            (
+                item
+                for item in candidates
+                if item.candidate_id == candidate_id
+                and item.weights_sha256 == requested_sha
+            ),
+            None,
+        )
+        if selected is None:
+            raise BccTestCandidateError(
+                "Der angeforderte BCC-Testkandidat ist nicht sicher verfuegbar."
+            )
+        return selected
 
     return max(
         candidates,
@@ -208,49 +287,128 @@ def _normalized_names(raw_names: object) -> dict[int, str]:
 def _load_candidate(candidate: BccCandidate, device: str):
     from ultralytics import YOLO
 
-    model = YOLO(str(candidate.weights_path))
-    names = _normalized_names(model.names)
-    if len(names) != 15 or names.get(14) != "BCC_bogen":
+    # YOLO darf den veraenderbaren Kandidatenpfad nicht erneut oeffnen. Wir
+    # kopieren genau einen gelesenen Byte-Strom in eine private Temp-Datei,
+    # pruefen dessen Hash und laden ausschliesslich diese Momentaufnahme.
+    try:
+        with tempfile.TemporaryDirectory(prefix="sewerstudio_bcc_") as temp_dir:
+            snapshot_path = Path(temp_dir) / "candidate.pt"
+            digest = hashlib.sha256()
+            with candidate.weights_path.open("rb") as source, snapshot_path.open("xb") as target:
+                for chunk in iter(lambda: source.read(1 << 20), b""):
+                    digest.update(chunk)
+                    target.write(chunk)
+            if digest.hexdigest().lower() != candidate.weights_sha256:
+                raise BccTestCandidateError(
+                    "Der Hash des BCC-Testmodells hat sich vor dem Laden geaendert."
+                )
+
+            model = YOLO(str(snapshot_path))
+            names = _normalized_names(model.names)
+            if names != _EXPECTED_CLASS_NAMES:
+                raise BccTestCandidateError(
+                    "Das BCC-Testmodell hat nicht die freigegebene 15er-Klassenkarte."
+                )
+            if _sha256(snapshot_path).lower() != candidate.weights_sha256:
+                raise BccTestCandidateError(
+                    "Die private BCC-Modellkopie hat sich waehrend des Ladens geaendert."
+                )
+            model.to(device)
+            return model, None
+    except BccTestCandidateError:
+        raise
+    except OSError as exc:
         raise BccTestCandidateError(
-            "Das BCC-Testmodell hat nicht die freigegebene 15er-Klassenkarte."
-        )
-    model.to(device)
-    return model, None
-
-
-def _discard_stale_candidate(candidate: BccCandidate) -> None:
-    """Entlaedt den Test-Slot bei Kandidatenwechsel.
-
-    Muss UNTER _predict_lock, aber VOR der Busy-Lease laufen (Paket 2): eine
-    eigene Lease wuerde das unload sonst sperren (Lease-Schutz). Der
-    _predict_lock serialisiert alle Zugriffe auf diesen Slot, darum kann hier
-    keine fremde Lease aktiv sein.
-    """
-    global _loaded_candidate_sha256
-
-    if _loaded_candidate_sha256 != candidate.weights_sha256:
-        gpu_manager.unload(ModelSlot.YOLO_TEST)
-        _loaded_candidate_sha256 = None
+            "Die gepruefte BCC-Modellkopie konnte nicht sicher erstellt werden."
+        ) from exc
 
 
 def _ensure_candidate_model(candidate: BccCandidate, device: str):
-    global _loaded_candidate_sha256
+    """Sorgt dafuer, dass GENAU dieser Kandidat im Test-Slot liegt.
 
+    Den Kandidatenwechsel entscheidet der gpu_manager anhand der Inhaltskennung
+    (Gewichts-SHA-256). Das ist wichtig, weil sich `lernstufe_wrapper` denselben
+    Slot teilt: Eine Modulvariable hier wuerde dessen Wechsel nicht sehen und das
+    fremde Modell inferieren lassen (Audit 2026-08-14, S-H1).
+    """
     state = gpu_manager.ensure_loaded(
         ModelSlot.YOLO_TEST,
         device,
         lambda: _load_candidate(candidate, device),
+        content_id=candidate.weights_sha256,
     )
-    _loaded_candidate_sha256 = candidate.weights_sha256
     return state.model
 
 
-def detect(image_base64: str, confidence_threshold: float) -> BccTestYoloResponse:
+def _extract_bcc_detections(results: object) -> list[YoloDetection]:
+    """Gibt im BCC-Pilot nur die gepruefte Pilotklasse mit fester ID 14 aus."""
+
+    detections: list[YoloDetection] = []
+    if not results:
+        return detections
+
+    result = results[0]
+    boxes = result.boxes
+    if boxes is None:
+        return detections
+
+    for box in boxes:
+        class_id = int(box.cls[0].cpu().item())
+        if class_id != 14:
+            continue
+        xyxy = box.xyxy[0].cpu().numpy()
+        confidence = float(box.conf[0].cpu().item())
+        detections.append(
+            YoloDetection(
+                x1=float(xyxy[0]),
+                y1=float(xyxy[1]),
+                x2=float(xyxy[2]),
+                y2=float(xyxy[3]),
+                class_name=_EXPECTED_CLASS_NAMES[14],
+                confidence=confidence,
+            )
+        )
+    return detections
+
+
+def _lese_meter_sicher(image, meter_format: str | None) -> float | None:
+    """Rohe OSD-Meterlesung desselben Bildes.
+
+    Rein lesend und zustandslos pro Bild; die Sequenz-Plausibilitaet gehoert
+    dem Aufrufer (Thin-AI: C# entscheidet). Ein Lesefehler darf die Erkennung
+    nie gefaehrden — der Wert ist dann eben nicht lesbar (None).
+    """
+
+    try:
+        modell_leser = (
+            osd_model_wrapper.lese
+            if settings.osd_model_fallback_enabled
+            else None
+        )
+        return osd_meter.lese_meter(
+            image,
+            osd_meter.get_templates(),
+            format=meter_format,
+            modell_leser=modell_leser,
+        )["meter"]
+    except Exception:
+        logger.warning("OSD-Meterlesung fehlgeschlagen", exc_info=True)
+        return None
+
+
+def detect(
+    image_base64: str,
+    confidence_threshold: float,
+    candidate_id: str | None = None,
+    candidate_sha256: str | None = None,
+    meter_format: str | None = None,
+) -> BccTestYoloResponse:
     """Fuehrt nur auf ausdruecklichen Aufruf eine BCC-Kandidaten-Erkennung aus."""
 
     image = yolo_wrapper.decode_image(image_base64)
+    meter_value = _lese_meter_sicher(image, meter_format)
     usable, quality_reason = yolo_wrapper._is_frame_usable(image)
-    candidate = select_candidate()
+    candidate = select_candidate(candidate_id, candidate_sha256)
     device = _resolve_device()
 
     if not usable:
@@ -263,15 +421,24 @@ def detect(image_base64: str, confidence_threshold: float) -> BccTestYoloRespons
             candidate_sha256=candidate.weights_sha256,
             model_name=candidate.candidate_id,
             device=device,
+            frame_usable=False,
+            quality_reason=quality_reason,
+            meter_value=meter_value,
         )
 
+    # Das Lock teilen sich beide Nutzer des Slots YOLO_TEST; damit kann sich
+    # kein fremder Modellwechsel zwischen Laden und Inferenz schieben.
     with _predict_lock:
-        # Kandidatenwechsel VOR der Lease erledigen (eigene Lease wuerde das
-        # unload sonst sperren); danach Laden + Inferenz UNTER der Lease
-        # (Paket 2): das geladene Kandidaten-Modell ist vom ensure_loaded bis
-        # zum Inferenzende vor Eviction geschuetzt, und wartende Requests
-        # koennen die Busy-Uhr nicht verschieben.
-        _discard_stale_candidate(candidate)
+        # Fremden Inhalt VOR der Lease raeumen (eigene Lease wuerde das unload
+        # sonst sperren). Der Vergleich laeuft ueber die Inhaltskennung des Slots,
+        # nicht ueber eine Modulvariable — sonst bliebe ein Wechsel des
+        # Lernstufen-Wrappers unbemerkt (Audit S-H1).
+        gpu_manager.discard_foreign_content(
+            ModelSlot.YOLO_TEST, candidate.weights_sha256)
+        # Danach Laden + Inferenz UNTER der Lease (Paket 2): das geladene
+        # Kandidaten-Modell ist vom ensure_loaded bis zum Inferenzende vor
+        # Eviction geschuetzt, und wartende Requests koennen die Busy-Uhr nicht
+        # verschieben.
         with gpu_manager.busy_slot(ModelSlot.YOLO_TEST):
             model = _ensure_candidate_model(candidate, device)
             if model is None:
@@ -279,34 +446,18 @@ def detect(image_base64: str, confidence_threshold: float) -> BccTestYoloRespons
                 # entladen -> kontrollierter 503 statt AttributeError/500.
                 raise ModelUnloadedError(ModelSlot.YOLO_TEST.value)
             started = time.perf_counter()
+            # Ultralytics behandelt NumPy-Eingaben als BGR; ein PIL-RGB-Array
+            # wuerde Rot und Blau still vertauschen (belegt 2026-08-02). Der
+            # gemeinsame Helfer gilt auch hier.
             results = model.predict(
-                source=np.array(image),
+                source=yolo_wrapper._pil_rgb_to_ultralytics_bgr(image),
                 conf=confidence_threshold,
                 imgsz=settings.yolo_imgsz,
                 verbose=False,
             )
             inference_time_ms = (time.perf_counter() - started) * 1000
 
-    detections: list[YoloDetection] = []
-    if results:
-        result = results[0]
-        boxes = result.boxes
-        names = _normalized_names(result.names)
-        if boxes is not None:
-            for box in boxes:
-                xyxy = box.xyxy[0].cpu().numpy()
-                class_id = int(box.cls[0].cpu().item())
-                confidence = float(box.conf[0].cpu().item())
-                detections.append(
-                    YoloDetection(
-                        x1=float(xyxy[0]),
-                        y1=float(xyxy[1]),
-                        x2=float(xyxy[2]),
-                        y2=float(xyxy[3]),
-                        class_name=names.get(class_id, f"class{class_id}"),
-                        confidence=confidence,
-                    )
-                )
+    detections = _extract_bcc_detections(results)
 
     return BccTestYoloResponse(
         available=True,
@@ -318,4 +469,5 @@ def detect(image_base64: str, confidence_threshold: float) -> BccTestYoloRespons
         candidate_sha256=candidate.weights_sha256,
         model_name=candidate.candidate_id,
         device=device,
+        meter_value=meter_value,
     )

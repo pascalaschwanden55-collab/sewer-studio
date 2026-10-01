@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 
 namespace AuswertungPro.Next.UI.Controls;
@@ -37,4 +38,14 @@ public static class MotionSettings
 
     /// <summary>Nur fuer Tests: ausdrueckliche Einstellung verwerfen, wieder dem System folgen.</summary>
     public static void ResetForTests() => _reduceMotionOverride = null;
+
+    /// <summary>
+    /// Nova-Etappe 2: die Hintergrund-Engine wurde ein-/ausgeschaltet (Einstellungen-Seite).
+    /// Die Shell abonniert dies, um <c>ShellViewModel.HintergrundEngine</c> ohne Service-Locator
+    /// im Control neu zu melden; MainWindow bindet nur an die Shell-Eigenschaft.
+    /// </summary>
+    public static event Action? EngineChanged;
+
+    /// <summary>Aufrufer: SettingsPageViewModel, nachdem <c>AppSettings.HintergrundEngine</c> gespeichert wurde.</summary>
+    public static void RaiseEngineChanged() => EngineChanged?.Invoke();
 }

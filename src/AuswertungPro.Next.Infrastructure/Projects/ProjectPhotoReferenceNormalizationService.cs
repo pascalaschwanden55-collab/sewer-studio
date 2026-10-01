@@ -104,10 +104,55 @@ public sealed class ProjectPhotoReferenceNormalizationService : IProjectPhotoRef
             if (string.IsNullOrWhiteSpace(renamed))
                 return null;
 
-            return ProjectPathResolver.MakeRelative(renamed, projectRoot);
+            return DarfUmstellen(rawPath, renamed, projectRoot)
+                ? ProjectPathResolver.MakeRelative(renamed, projectRoot)
+                : null;
         }
 
-        return ProjectPathResolver.MakeRelative(central, projectRoot);
+        return DarfUmstellen(rawPath, central, projectRoot)
+            ? ProjectPathResolver.MakeRelative(central, projectRoot)
+            : null;
+    }
+
+    /// <summary>
+    /// Ein Dateiname ist kein Identitaetsnachweis. Zeigt der bestehende Verweis noch auf
+    /// eine vorhandene, ANDERE Datei, wird nur bei belegt gleichem Inhalt umgestellt -
+    /// sonst zeigte ein Befund nach dem Laden ein fremdes Bild (F3, 17.09.2026). Ein
+    /// nicht mehr aufloesbarer Verweis bleibt der Reparaturfall dieses Dienstes.
+    /// </summary>
+    private static bool DarfUmstellen(string rawPath, string ziel, string projectRoot)
+    {
+        var bestehend = BestehendeDatei(rawPath, projectRoot);
+        if (bestehend is null)
+            return true;
+        if (string.Equals(bestehend, Path.GetFullPath(ziel), StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        try
+        {
+            return FileContentComparer.FilesEqual(bestehend, ziel);
+        }
+        catch
+        {
+            // Nicht lesbar heisst nicht "gleich": im Zweifel den bestehenden Verweis lassen.
+            return false;
+        }
+    }
+
+    private static string? BestehendeDatei(string rawPath, string projectRoot)
+    {
+        try
+        {
+            var pfad = rawPath.Trim().Replace('/', Path.DirectorySeparatorChar);
+            var voll = Path.IsPathRooted(pfad)
+                ? Path.GetFullPath(pfad)
+                : Path.GetFullPath(Path.Combine(projectRoot, pfad));
+            return File.Exists(voll) ? voll : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static string? FindUniqueRenamedHoldingPhoto(string projectRoot, string holdingSan, string staleFileName)

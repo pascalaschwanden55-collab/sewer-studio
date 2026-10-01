@@ -10,6 +10,28 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class SystemMonitorProcessSafetyTests
 {
     [Fact]
+    public void NvidiaSmi_PATH_Suche_startet_keinen_Probeprozess()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "SewerStudio-nvidia-path-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var executable = Path.Combine(root, "nvidia-smi.exe");
+            File.WriteAllText(executable, "test");
+
+            var result = SystemMonitorService.FindExecutableOnPath(
+                "nvidia-smi.exe",
+                $"C:\\fehlt{Path.PathSeparator}{root}");
+
+            Assert.Equal(executable, result);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void SystemMonitor_can_skip_native_hardware_sensor_initialization()
     {
         using var monitor = new SystemMonitorService(enableHardwareSensorInit: false);
@@ -28,6 +50,7 @@ public sealed class SystemMonitorProcessSafetyTests
         Assert.Contains("ExternalProcessRunner.RunAsync", source);
         Assert.DoesNotContain(".ReadToEnd()", source);
         Assert.DoesNotContain("WaitForExit(", source);
+        Assert.DoesNotContain("[\"--version\"]", source, StringComparison.Ordinal);
     }
 
     [Fact]

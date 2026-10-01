@@ -15,7 +15,8 @@ public sealed class DataPageDropdownCommandFactoryTests
             Actions("eigentuemer", calls),
             Actions("pruefungsresultat", calls),
             Actions("referenzpruefung", calls),
-            Actions("massnahmen", calls));
+            Actions("massnahmen", calls),
+            Actions("rohrmaterial", calls));
 
         ExecuteAll(commands.Sanieren, "sanieren-value");
         ExecuteAll(commands.Eigentuemer, "eigentuemer-value");

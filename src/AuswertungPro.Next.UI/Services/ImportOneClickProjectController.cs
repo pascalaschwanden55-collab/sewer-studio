@@ -1,5 +1,7 @@
-using AuswertungPro.Next.Application.Common;
+﻿using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.UseCases.Import.Quellen;
+using AuswertungPro.Next.Application.UseCases.Import;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Services;
@@ -14,7 +16,15 @@ internal sealed record ImportOneClickProjectActions(
     Action<string> SetProgress,
     Action<string> AppendSummary,
     Action<string> AppendDetails,
-    Func<Project, string>? ComputeSignature = null);
+    Func<Project, string>? ComputeSignature = null,
+    Func<string?>? GetProjectPath = null,
+    CancellationToken CancellationToken = default,
+    Action<string>? SetPhase = null,
+    Action<double>? SetProgressPercent = null,
+    Action<bool>? SetIndeterminate = null,
+    Action<string>? SetCounter = null,
+    Action<string>? SetRemaining = null,
+    Action<string>? SetLastReportPath = null);
 
 /// <summary>Steuert den vollständigen Ein-Knopf-Import eines Kanalfernseh-Projekts.</summary>
 internal sealed class ImportOneClickProjectController
@@ -23,14 +33,29 @@ internal sealed class ImportOneClickProjectController
     private readonly Func<IOneClickProjectImportService> _createImporter;
     private readonly IOneClickImportReportWriter _reportWriter;
 
+    /// <summary>
+    /// Nimmt die Dateien zurueck, wenn das Importergebnis verworfen wird
+    /// (Gesamtaudit 2026-08-14, P1-5). Optional, damit bestehende Aufrufer und Tests
+    /// ohne Ledger unveraendert laufen.
+    /// </summary>
+    private readonly IImportedFileLedger? _fileLedger;
+    private readonly IImportFileStagingService? _fileStaging;
+    private readonly IImportTransactionJournal? _transactionJournal;
+
     public ImportOneClickProjectController(
         IDialogService dialogs,
         Func<IOneClickProjectImportService> createImporter,
-        IOneClickImportReportWriter reportWriter)
+        IOneClickImportReportWriter reportWriter,
+        IImportedFileLedger? fileLedger = null,
+        IImportFileStagingService? fileStaging = null,
+        IImportTransactionJournal? transactionJournal = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _createImporter = createImporter ?? throw new ArgumentNullException(nameof(createImporter));
         _reportWriter = reportWriter ?? throw new ArgumentNullException(nameof(reportWriter));
+        _fileLedger = fileLedger;
+        _fileStaging = fileStaging;
+        _transactionJournal = transactionJournal;
     }
 
     public async Task ExecuteAsync(ImportOneClickProjectActions actions)
@@ -47,117 +72,339 @@ internal sealed class ImportOneClickProjectController
         }
 
         var sourceFolder = _dialogs.SelectFolder(
-            "Quellordner der Kanalfernsehdaten waehlen (WinCan-, IKAS- oder KINS-Projektordner)",
+            "Quellordner der Kanalfernsehdaten wählen (WinCan-, IKAS- oder KINS-Projektordner)",
             null);
         if (string.IsNullOrWhiteSpace(sourceFolder))
             return;
 
-        // Wie beim manuellen Importlauf (ImportRunWorkflowController): der Import arbeitet
-        // auf einer unabhaengigen Kopie. Erst nach einem erfolgreichen Lauf wird die
-        // Live-Referenz getauscht — Fehler/Abbruch hinterlassen kein halb mutiertes Projekt.
         var liveProject = actions.GetProject();
         var projectContext = new ProjectOperationContext(liveProject, projectFolder);
         if (!TryComputeSignature(actions, liveProject, out var initialSignature))
             return;
         var targetProject = actions.DeepCopyProject(liveProject);
 
-        actions.SetProgress(
-            "Kanalfernseh-Projekt importieren: erkennen → archivieren → parsen → verteilen...");
-        var context = new ImportRunContext(
-            CancellationToken.None,
-            null,
-            new ImportRunLog(),
-            collectionLock: actions.CollectionLock);
-
-        OneClickProjectImportResult result;
+        ImportFileTransaction? fileTransaction = null;
+        var legacyRollbackEnabled = true;
+        var projectCommitted = false;
+        var receiveProgress = true;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var estimator = new ImportRestzeitSchaetzer();
+        void ShowProgress(ImportProgress value)
+        {
+            actions.SetPhase?.Invoke(value.Phase);
+            actions.SetProgress(ImportFortschrittText.Datei(value));
+            actions.SetProgressPercent?.Invoke(ImportFortschrittText.Prozent(value));
+            actions.SetIndeterminate?.Invoke(!ImportFortschrittText.IstBestimmt(value));
+            actions.SetCounter?.Invoke(ImportFortschrittText.Zaehler(value));
+            var remaining = estimator.Aktualisiere(value, clock.Elapsed);
+            // Nur diese Kanaele melden sicher erledigte Dateien bzw. Haltungen.
+            var countable = value.Phase == ImportFortschrittText.Phase(4, "Medien")
+                || value.Phase == ImportFortschrittText.Phase(6, "Schachtprotokolle");
+            actions.SetRemaining?.Invoke(ImportFortschrittText.Restzeit(value.Phase, countable ? remaining : null));
+        }
+        var progress = new Progress<ImportProgress>(value =>
+        {
+            if (receiveProgress)
+                ShowProgress(value);
+        });
         try
         {
-            result = await Task.Run(() =>
-                _createImporter().Import(sourceFolder, projectFolder, targetProject, context));
+            var staging = _fileStaging?.Begin(actions.GetProjectPath?.Invoke());
+            fileTransaction = new ImportFileTransaction(
+                "Kanalfernseh-Projekt",
+                staging,
+                _transactionJournal);
+
+            ShowProgress(new ImportProgress(ImportFortschrittText.Phase(1, "Vorbereiten"), 0, 0,
+                "Import wird vorbereitet …"));
+            // Bis 2026-09-05 stand hier CancellationToken.None: Der Ein-Knopf-Import
+            // liess sich nicht abbrechen, auch wenn er Gigabyte kopierte. Der manuelle
+            // Weg hatte diesen Anschluss laengst.
+            var context = new ImportRunContext(
+                actions.CancellationToken,
+                progress,
+                new ImportRunLog(),
+                collectionLock: actions.CollectionLock,
+                fileStaging: staging);
+
+            // Das alte Ledger bleibt bis zum Beginn der Veroeffentlichung ein zusaetzliches
+            // Sicherheitsnetz fuer noch nicht migrierte Altpfade.
+            var folderBeforeRun = TryCaptureFolder(projectFolder);
+
+            OneClickProjectImportResult result;
+            try
+            {
+                result = await Task.Run(() =>
+                    _createImporter().Import(sourceFolder, projectFolder, targetProject, context));
+                receiveProgress = false;
+                ShowProgress(new ImportProgress(ImportFortschrittText.Phase(7, "Abschliessen"), 0, 0,
+                    "Ergebnis prüfen und Projekt speichern …"));
+                actions.CancellationToken.ThrowIfCancellationRequested();
+            }
+            // Ein Abbruch durch den Benutzer ist kein Fehler: Er bekommt einen Hinweis,
+            // keinen roten Fehlerdialog. Die angelegten Dateien werden auf demselben Weg
+            // zurueckgenommen wie bei einem echten Fehlschlag.
+            catch (OperationCanceledException)
+            {
+                receiveProgress = false;
+                actions.SetProgress(string.Empty);
+                var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
+                _dialogs.Info(
+                    "Import abgebrochen - Projektdaten wurden nicht übernommen." + rollback,
+                    "Import Kanalfernseh-Projekt");
+                return;
+            }
+            catch (Exception ex)
+            {
+                receiveProgress = false;
+                actions.SetProgress(string.Empty);
+                var userMessage = UserError.DescribeAndReport(ex, "Kanalfernseh-Projekt importieren");
+                var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
+                _dialogs.Error(
+                    $"Import fehlgeschlagen - Projektdaten wurden nicht übernommen:\n{userMessage}{rollback}",
+                    "Import Kanalfernseh-Projekt");
+                return;
+            }
+            if (result.Format is OneClickProjectImportFormat.Unknown or OneClickProjectImportFormat.Ambiguous)
+            {
+                var hint = string.Join("\n", result.Messages.Take(6));
+                var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
+                _dialogs.Info(
+                    $"Format nicht eindeutig erkannt ({result.Format}).\n{hint}\n\n"
+                    + "Nutze ggf. die manuellen Import-Knöpfe (WinCan/XTF/PDF/IBAK/KINS)."
+                    + rollback,
+                    "Import Kanalfernseh-Projekt");
+                return;
+            }
+
+            if (!ActiveProjectGuard.IsCurrent(
+                    projectContext,
+                    actions.GetProject(),
+                    actions.GetProjectFolder()))
+            {
+                var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
+                _dialogs.Error(
+                    "Während des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
+                    "Das Importergebnis wurde aus Sicherheitsgründen nicht übernommen." + rollback,
+                    "Import Kanalfernseh-Projekt");
+                return;
+            }
+
+            if (!TryComputeSignature(actions, liveProject, out var currentSignature))
+            {
+                if (legacyRollbackEnabled)
+                    TryRollback(folderBeforeRun);
+                return;
+            }
+
+            if (actions.ComputeSignature is not null
+                && !string.Equals(initialSignature, currentSignature, StringComparison.Ordinal))
+            {
+                var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
+                _dialogs.Error(
+                    "Das Projekt wurde während des Imports bearbeitet. " +
+                    "Das Importergebnis wurde aus Sicherheitsgründen nicht übernommen; " +
+                    "die zwischenzeitlichen Änderungen bleiben erhalten." + rollback,
+                    "Import Kanalfernseh-Projekt");
+                return;
+            }
+
+            // Stopptor VOR der Veroeffentlichung. Derselbe Massstab wie im manuellen
+            // Import: Der Ein-Knopf-Weg hat einen eigenen Publish und braucht deshalb
+            // sein eigenes Tor, sonst wandert ein unstimmiges Ergebnis ungeprueft durch.
+            var urteil = ImportPlausibilitaetsTor.Beurteile(
+                result.Quellenprotokoll, result.BearbeiteteHaltungen);
+            if (!DarfUebernehmen(urteil, folderBeforeRun, ref legacyRollbackEnabled))
+                return;
+
+            if (actions.CancellationToken.IsCancellationRequested)
+            {
+                var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
+                _dialogs.Info("Import abgebrochen - Projektdaten wurden nicht übernommen." + rollback,
+                    "Import Kanalfernseh-Projekt");
+                return;
+            }
+
+            // Ab hier besitzt ausschliesslich der persistente Marker die Ruecknahme.
+            // Das Ordner-Ledger darf veroeffentlichte Dateien nie wieder loeschen.
+            legacyRollbackEnabled = false;
+            fileTransaction.Publish();
+            fileTransaction.StampProject(targetProject);
+            actions.ReplaceProject(targetProject);
+            projectCommitted = true;
+            fileTransaction.MarkProjectCommitted();
+            var reportPath = _reportWriter.TryWrite(projectFolder, result);
+
+            var saved = ProjectSaveAttempt.Try(
+                actions.SaveProject,
+                "Kanalfernseh-Projekt nach Ein-Knopf-Import speichern",
+                out var saveError);
+            if (saved)
+                fileTransaction.MarkProjectSaved();
+
+            // Derselbe Weg wie beim manuellen Import: «Bericht öffnen» zeigt diesen Lauf.
+            if (!string.IsNullOrWhiteSpace(reportPath))
+                actions.SetLastReportPath?.Invoke(reportPath);
+
+            var summary = saved
+                ? $"Import abgeschlossen ({result.Format}):"
+                : $"Import übernommen, aber Speichern fehlgeschlagen ({result.Format}):";
+            summary += $"\n  {result.Found} Haltungen ({result.Created} neu, {result.Updated} aktualisiert)"
+                + $"\n  {result.Errors} Fehler, {result.Conflicts} Feld-Konflikte"
+                + $"\n  {OneClickImportVollstaendigkeit.Beschreibe(result)}"
+                + "\n  Rohdaten archiviert, Filme/Fotos verteilt (Report in __IMPORT_REPORTS\\)";
+            // Ehrlicher Abschluss: "0 Fehler" ist keine Vollstaendigkeitszusage, wenn der
+            // Lauf gar keine Sollzahl hatte, und jeder fehlerhafte Schritt wird benannt
+            // (Audit 2026-09-05).
+            foreach (var zeile in result.Fehlerbilanz.Berichtszeilen(maxGruendeJeSchritt: 3))
+                summary += "\n  " + zeile;
+            if (!saved)
+            {
+                summary += "\n  Hinweis: Die Projektdaten liegen nur im Arbeitsspeicher. " +
+                           "Bitte das Projekt manuell speichern, sonst geht der Import beim Schliessen verloren."
+                           + ProjectSaveAttempt.ErrorDetails(saveError);
+            }
+            actions.AppendSummary("\n" + summary);
+            if (result.Messages.Count > 0)
+            {
+                actions.AppendDetails(
+                    "\n\nKanalfernseh-Import:\n" + string.Join("\n", result.Messages.Take(80)));
+            }
+
+            if (saved)
+                _dialogs.Info(summary, "Import Kanalfernseh-Projekt");
+            else
+                _dialogs.Error(summary, "Import Kanalfernseh-Projekt");
         }
         catch (Exception ex)
         {
             actions.SetProgress(string.Empty);
-            var userMessage = UserError.DescribeAndReport(ex, "Kanalfernseh-Projekt importieren");
+            var userMessage = UserError.DescribeAndReport(ex, "Kanalfernseh-Projekt abschliessen");
             _dialogs.Error(
-                $"Import fehlgeschlagen — Projektdaten wurden nicht uebernommen:\n{userMessage}",
+                projectCommitted
+                    ? "Der Import wurde übernommen, aber der Abschluss ist fehlgeschlagen. " +
+                      "Bitte das Projekt manuell speichern.\n" + userMessage
+                    : "Import fehlgeschlagen - Projektdaten wurden nicht übernommen.\n" + userMessage,
                 "Import Kanalfernseh-Projekt");
-            return;
         }
-        actions.SetProgress(string.Empty);
-
-        if (result.Format is OneClickProjectImportFormat.Unknown or OneClickProjectImportFormat.Ambiguous)
+        finally
         {
-            var hint = string.Join("\n", result.Messages.Take(6));
-            _dialogs.Info(
-                $"Format nicht eindeutig erkannt ({result.Format}).\n{hint}\n\n"
-                + "Nutze ggf. die manuellen Import-Knoepfe (WinCan/XTF/PDF/IBAK/KINS).",
-                "Import Kanalfernseh-Projekt");
-            return;
+            receiveProgress = false;
+            var cleanup = fileTransaction?.Cleanup();
+            if (cleanup is { StagingCleanupSucceeded: false, StagingCleanupError: { } error })
+            {
+                actions.AppendDetails(
+                    "\n\nDatei-Arbeitsordner konnte nicht vollständig aufgeräumt werden: " +
+                    error.Message);
+            }
+            actions.SetPhase?.Invoke(string.Empty);
+            actions.SetProgress(string.Empty);
+            actions.SetProgressPercent?.Invoke(0);
+            actions.SetIndeterminate?.Invoke(true);
+            actions.SetCounter?.Invoke(string.Empty);
+            actions.SetRemaining?.Invoke(string.Empty);
         }
+    }
 
-        // Hat der Nutzer waehrend des Laufs das aktive Projekt gewechselt, darf das
-        // Ergebnis nicht in das neue Projekt gekippt werden (gleiche Regel wie im
-        // manuellen Importlauf).
-        if (!ActiveProjectGuard.IsCurrent(
-                projectContext,
-                actions.GetProject(),
-                actions.GetProjectFolder()))
+    /// <summary>
+    /// Momentaufnahme des Projektordners. Ein Fehler dabei darf den Import nicht
+    /// verhindern — dann gibt es lediglich keine Ruecknahme.
+    /// </summary>
+    private ImportFolderSnapshot? TryCaptureFolder(string projectFolder)
+    {
+        if (_fileLedger is null)
+            return null;
+
+        try
+        {
+            return _fileLedger.Capture(projectFolder);
+        }
+        catch (Exception ex)
+        {
+            UserError.DescribeAndReport(ex, "Projektordner vor dem Import erfassen");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Nimmt die Dateien des verworfenen Laufs zurueck und liefert einen Zusatz fuer die
+    /// Meldung. Der Benutzer soll immer erfahren, was mit den Dateien geschehen ist —
+    /// auch dann, wenn die Ruecknahme aus Sicherheitsgruenden verweigert wurde.
+    /// </summary>
+    /// <summary>
+    /// Entscheidet vor der Veroeffentlichung, ob das Ergebnis uebernommen werden darf.
+    ///
+    /// Ein harter Abbruch (keine einzige lesbare Quelle) laesst sich nicht uebersteuern.
+    /// Eine Mengenabweichung darf uebersteuert werden, ist aber mit "Nein" vorbelegt.
+    /// Der Ein-Knopf-Weg kennt keine Vorschau, deshalb wird hier immer gefragt — ein
+    /// doppeltes Fragen kann es nicht geben.
+    /// </summary>
+    private bool DarfUebernehmen(
+        PlausibilitaetsUrteil urteil,
+        ImportFolderSnapshot? folderBeforeRun,
+        ref bool legacyRollbackEnabled)
+    {
+        if (urteil.Stufe == PlausibilitaetsStufe.Gruen)
+            return true;
+
+        var rollback = legacyRollbackEnabled ? TryRollback(folderBeforeRun) : string.Empty;
+        legacyRollbackEnabled = false;
+
+        if (urteil.Stufe == PlausibilitaetsStufe.HartAbbruch)
         {
             _dialogs.Error(
-                "Waehrend des Imports wurde das aktive Projekt oder sein Speicherpfad gewechselt. " +
-                "Das Importergebnis wurde aus Sicherheitsgruenden nicht uebernommen.",
+                urteil.VollerText() + NeueZeile + NeueZeile
+                + PlausibilitaetsUrteil.AbbruchHinweis + rollback,
                 "Import Kanalfernseh-Projekt");
-            return;
+            return false;
         }
 
-        if (!TryComputeSignature(actions, liveProject, out var currentSignature))
-            return;
-        if (actions.ComputeSignature is not null
-            && !string.Equals(initialSignature, currentSignature, StringComparison.Ordinal))
+        var trotzdem = _dialogs.ConfirmWarn(
+            urteil.VollerText() + NeueZeile + NeueZeile
+            + "Trotzdem übernehmen?" + NeueZeile
+            + "(Empfohlen: abbrechen und die Quellen prüfen.)",
+            "Import Kanalfernseh-Projekt",
+            defaultNo: true);
+
+        if (!trotzdem)
         {
-            _dialogs.Error(
-                "Das Projekt wurde waehrend des Imports bearbeitet. " +
-                "Das Importergebnis wurde aus Sicherheitsgruenden nicht uebernommen; " +
-                "die zwischenzeitlichen Aenderungen bleiben erhalten.",
-                "Import Kanalfernseh-Projekt");
-            return;
+            _dialogs.Info(PlausibilitaetsUrteil.AbbruchHinweis + rollback, "Import Kanalfernseh-Projekt");
+            return false;
         }
 
-        actions.ReplaceProject(targetProject);
-        _reportWriter.TryWrite(projectFolder, result);
+        return true;
+    }
 
-        var saved = ProjectSaveAttempt.Try(
-            actions.SaveProject,
-            "Kanalfernseh-Projekt nach Ein-Knopf-Import speichern",
-            out var saveError);
+    private const string NeueZeile = "\n";
 
-        var summary = saved
-            ? $"Import abgeschlossen ({result.Format}):"
-            : $"Import uebernommen, aber Speichern fehlgeschlagen ({result.Format}):";
-        summary += $"\n  {result.Found} Haltungen ({result.Created} neu, {result.Updated} aktualisiert)"
-            + $"\n  {result.Errors} Fehler, {result.Conflicts} Feld-Konflikte"
-            + "\n  Rohdaten archiviert, Filme/Fotos verteilt (Report in __IMPORT_REPORTS\\)";
-        if (!saved)
-        {
-            summary += "\n  Hinweis: Die Projektdaten liegen nur im Arbeitsspeicher. " +
-                       "Bitte das Projekt manuell speichern, sonst geht der Import beim Schliessen verloren."
-                       + ProjectSaveAttempt.ErrorDetails(saveError);
-        }
-        actions.AppendSummary("\n" + summary);
-        if (result.Messages.Count > 0)
-        {
-            actions.AppendDetails(
-                "\n\nKanalfernseh-Import:\n" + string.Join("\n", result.Messages.Take(80)));
-        }
+    private string TryRollback(ImportFolderSnapshot? before)
+    {
+        if (_fileLedger is null || before is null)
+            return string.Empty;
 
-        if (saved)
+        try
         {
-            _dialogs.Info(summary, "Import Kanalfernseh-Projekt");
+            var result = _fileLedger.RollbackNewFiles(before);
+            if (result.RolledBack && result.DeletedFiles == 0 && result.KeptFiles == 0)
+                return "\n\nEs waren keine neuen Dateien im Projektordner zurückzunehmen.";
+
+            if (result.RolledBack)
+            {
+                var rest = result.KeptFiles > 0
+                    ? $" {result.KeptFiles} Datei(en) blieben liegen und sollten geprüft werden."
+                    : string.Empty;
+                return "\n\nDie während des Laufs angelegten Dateien wurden zurückgenommen "
+                       + $"({result.DeletedFiles} entfernt).{rest}";
+            }
+
+            return "\n\nAchtung: Die angelegten Dateien konnten nicht sicher zurückgenommen werden "
+                   + "und liegen weiterhin im Projektordner. Grund: "
+                   + string.Join(" ", result.Messages.Take(2));
         }
-        else
+        catch (Exception ex)
         {
-            _dialogs.Error(summary, "Import Kanalfernseh-Projekt");
+            var userMessage = UserError.DescribeAndReport(ex, "Importdateien zurücknehmen");
+            return $"\n\nAchtung: Die angelegten Dateien konnten nicht zurückgenommen werden: {userMessage}";
         }
     }
 
@@ -179,10 +426,10 @@ internal sealed class ImportOneClickProjectController
         {
             var userMessage = UserError.DescribeAndReport(
                 ex,
-                "Projektinhalt fuer Kanalfernseh-Import pruefen");
+                "Projektinhalt für Kanalfernseh-Import prüfen");
             _dialogs.Error(
-                "Der aktuelle Projektstand konnte nicht sicher geprueft werden. " +
-                $"Das Importergebnis wurde nicht uebernommen.\n{userMessage}",
+                "Der aktuelle Projektstand konnte nicht sicher geprüft werden. " +
+                $"Das Importergebnis wurde nicht übernommen.\n{userMessage}",
                 "Import Kanalfernseh-Projekt");
             return false;
         }

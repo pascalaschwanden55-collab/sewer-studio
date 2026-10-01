@@ -18,16 +18,21 @@ using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class SchaechtePageViewModel : ObservableObject
+public sealed partial class SchaechtePageViewModel : ObservableObject, IConfirmLeave, IDisposable
 {
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
+    private readonly IToastService? _toasts;
     private readonly ISchachtProtocolImportService _schachtProtocolImport;
     private readonly SchachtProtocolRefreshController _schachtProtocolRefreshController;
     private readonly SchachtProtocolSingleImportController _schachtProtocolSingleImportController;
     private readonly ISchachtStammdatenErgaenzungsService _schachtStammdatenErgaenzung;
     private readonly ISchachtMassnahmenKatalogStore _schachtMassnahmenKatalog;
     private readonly IProjectCostStoreRepository _schachtRecommendationCosts;
+    // Nur der DI-Weg liefert den Katalog. Alte Aufrufer bekommen null; der Dialog
+    // faellt dann auf den App-Standardsatz zurueck. Bewusst KEINE
+    // Kompatibilitaets-Fassade hier — die darf laut Wachtest nicht wieder wachsen.
+    private readonly ICostCatalogStore? _schachtCostCatalog;
     private readonly IDropdownOptionsStore _dropdownOptions;
     private readonly IShaftRenameService _shaftRename;
     private readonly IPdfTextLayerRewriter _pdfTextLayerRewrite;
@@ -35,14 +40,17 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private readonly ISafeShellOpenService _shellOpen;
     private readonly ISchaechteTemplateColumnReader _templateColumnReader;
     private readonly ISchachtFileTargetResolver _schachtFileTargets;
+    private readonly ISchachtProtocolFileLocator _protocolFileLocator;
     private readonly ShellViewModel _shell;
     private readonly SchaechteDropdownCommands _dropdownCommands;
-    private bool _suppressRequiredFieldWarning;
 
     internal AppSettings Settings => _settings;
     internal IDialogService Dialogs => _dialogs;
+    internal IToastService? Toasts => _toasts;
     internal ISchachtMassnahmenKatalogStore SchachtMassnahmenKatalog => _schachtMassnahmenKatalog;
     internal IProjectCostStoreRepository SchachtRecommendationCosts => _schachtRecommendationCosts;
+    /// <summary>Quelle des Projekt-MWST-Satzes fuer den Schacht-Massnahmen-Dialog.</summary>
+    internal ICostCatalogStore? SchachtCostCatalog => _schachtCostCatalog;
     internal IShaftRenameService ShaftRename => _shaftRename;
     internal IPdfTextLayerRewriter PdfTextLayerRewrite => _pdfTextLayerRewrite;
     internal IExplorerRevealService ExplorerReveal => _explorerReveal;
@@ -50,6 +58,13 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     internal ISchachtFileTargetResolver SchachtFileTargets => _schachtFileTargets;
 
     public ObservableCollection<SchachtRecord> Records => _shell.Project.SchaechteData;
+
+    /// <summary>
+    /// Das ganze Projekt — die Schachtseite braucht dafuer auch die
+    /// Haltungen: Ober- und Unterschacht liegen an derselben Stelle wie
+    /// die Leitung, also gilt dort dieselbe Strasse.
+    /// </summary>
+    internal Project Project => _shell.Project;
     public ObservableCollection<string> Columns { get; } = new();
 
     public ObservableCollection<string> SanierenOptions { get; }
@@ -58,6 +73,11 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     public ObservableCollection<string> ReferenzpruefungOptions { get; }
     public ObservableCollection<string> AusgefuehrtDurchOptions { get; }
     public ObservableCollection<string> SchachtformOptions { get; }
+    public ObservableCollection<string> BelastungsklasseOptions { get; }
+    public ObservableCollection<string> SchachtFunktionOptions { get; }
+    public IReadOnlyList<string> BauwerksartOptions => AbwasserbauwerkVokabular.Auswahl;
+    public IReadOnlyList<string> VersickerungsartOptions => AbwasserbauwerkVokabular.Versickerungsarten;
+    public ObservableCollection<string> SchachtMaterialOptions { get; }
 
     [ObservableProperty] private SchachtRecord? _selected;
     [ObservableProperty] private string _lastResult = "";
@@ -109,15 +129,58 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             schachtStammdatenErgaenzung: services.SchachtStammdatenErgaenzung,
             schachtMassnahmenKatalog: services.SchachtMassnahmenKatalog,
             schachtRecommendationCosts: services.CostStores.CreateProjectCostStore("schacht_empfehlungen.json"),
+            schachtCostCatalog: services.CostStores.CreateCostCatalogStore(),
             dropdownOptions: services.DropdownOptions,
             shaftRename: services.ShaftRename,
             pdfTextLayerRewrite: services.PdfTextLayerRewrite,
             shellOpen: services.ShellOpen,
             explorerReveal: services.ExplorerReveal,
             templateColumnReader: services.SchaechteTemplateColumns,
-            schachtFileTargets: services.SchachtFileTargets)
+            schachtFileTargets: services.SchachtFileTargets,
+            protocolFileLocator: services.SchachtProtocolFiles,
+            toasts: services.Toasts)
     {
+        // Nachschlagen leerer Felder beim Kanton. Optional: Die aelteren Uebergangskonstruktoren kennen den Dienst nicht, dort bleibt der Menuepunkt aus.
+        FeldNachschlag = services.FeldNachschlag;
+        QgisBestand = services.QgisBestand;
+        SchachtLage = services.SchachtLage;
+        KatasterKennungen = services.KatasterKennungen;
+        _geoShop = services.GeoShop;
+        _geoShopSicherung = services.GeoShopSicherung;
+        _webGisHolen = services.WebGisHolen;
+        ObjektakteErstellen = Services.ObjektaktenDialog.Fabrik("schacht", () => _shell.Project, Settings,
+            () => CanMutateShaftData, () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); }, Save, services.ObjektaktenPakete, _dialogs,
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
+        ObjektakteCommand = Services.ObjektaktenDialog.Befehl("schacht", () => _shell.Project, () => Selected?.Id,
+            Settings, () => CanMutateShaftData, () => _shell.MarkProjectDirty(), Save, services.ObjektaktenPakete, _dialogs,
+            services.ObjektaktenListenErgaenzungen, services.GeoShop, services.GeoShopSicherung, services.DatenaenderungsVerlauf);
+        CodeCatalog = services.CodeCatalog;
     }
+
+    /// <summary>
+    /// Aktiver Codekatalog fuer die Klartexte der Schachtgrafik. Null, wenn das ViewModel ueber
+    /// einen Uebergangskonstruktor ohne Dienste entstand — dann bleibt die Grafik bei Code ohne
+    /// Klartext.
+    /// </summary>
+    internal AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? CodeCatalog { get; }
+
+    /// <summary>
+    /// Der QGIS-Bestand fuer "Leere Felder aus QGIS ergaenzen". Null, wenn das ViewModel ueber
+    /// einen Uebergangskonstruktor ohne Dienste entstand — dann bleibt der Knopf einfach aus.
+    /// </summary>
+    internal AuswertungPro.Next.Application.Lookup.IQgisBestandLeser? QgisBestand { get; }
+
+    /// <summary>Schachtpunkt und Leitungsrichtungen (QGIS-Kopien) fuer den Grundriss der Schachtgrafik; null bei den Uebergangskonstruktoren, dann schematisch.</summary>
+    internal AuswertungPro.Next.Application.Lookup.ISchachtLageQuelle? SchachtLage { get; set; }
+
+    /// <summary>Die Kennungstabelle fuer "Katasterkennungen ergaenzen". Null, wenn das ViewModel ueber einen Uebergangskonstruktor ohne Dienste entstand.</summary>
+    internal AuswertungPro.Next.Application.Lookup.IKatasterKennungLeser? KatasterKennungen { get; }
+
+    /// <summary>
+    /// Schlaegt leere Schachtfelder beim Kanton nach. Null, wenn das
+    /// ViewModel ueber einen Uebergangskonstruktor ohne Dienste entstand.
+    /// </summary>
+    internal AuswertungPro.Next.Application.UseCases.FeldNachschlagUseCase? FeldNachschlag { get; }
 
     [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
     public SchaechtePageViewModel(
@@ -164,11 +227,15 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         IShaftRenameService? shaftRename = null,
         IExplorerRevealService? explorerReveal = null,
         ISchaechteTemplateColumnReader? templateColumnReader = null,
-        ISchachtFileTargetResolver? schachtFileTargets = null)
+        ISchachtFileTargetResolver? schachtFileTargets = null,
+        ISchachtProtocolFileLocator? protocolFileLocator = null,
+        ICostCatalogStore? schachtCostCatalog = null,
+        IToastService? toasts = null)
     {
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
+        _toasts = toasts;
         _schachtProtocolImport = schachtProtocolImport ?? throw new ArgumentNullException(nameof(schachtProtocolImport));
         _schachtStammdatenErgaenzung = schachtStammdatenErgaenzung ?? throw new ArgumentNullException(nameof(schachtStammdatenErgaenzung));
         _schachtMassnahmenKatalog = schachtMassnahmenKatalog ?? throw new ArgumentNullException(nameof(schachtMassnahmenKatalog));
@@ -180,6 +247,33 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         _explorerReveal = explorerReveal ?? ExplorerRevealService.DefaultService;
         _templateColumnReader = templateColumnReader ?? SchaechteTemplateColumnReader.DefaultReader;
         _schachtFileTargets = schachtFileTargets ?? SchachtFileTargetResolver.CompatibilityService;
+        _protocolFileLocator = protocolFileLocator ?? SchachtProtocolFileCompatibility.Default;
+        _schachtCostCatalog = schachtCostCatalog;
+        _sharedProtocolImportState = SharedProtocolImportStates.GetValue(
+            _shell,
+            static _ => new SharedProtocolImportOperationState());
+        _protocolImportShellGuard = new ProtocolImportShellOperationGuard(
+            _sharedProtocolImportState);
+        _shell.RegisterShellOperationGuard(_protocolImportShellGuard);
+        try
+        {
+            _saveProjectForProtocolImport =
+                _shell.CreateActiveProjectOperationSaveDelegate(_protocolImportShellGuard);
+        }
+        catch
+        {
+            try
+            {
+                _shell.UnregisterShellOperationGuard(_protocolImportShellGuard);
+            }
+            finally
+            {
+                _protocolImportShellGuard.Dispose();
+            }
+
+            throw;
+        }
+
         _schachtProtocolRefreshController = new SchachtProtocolRefreshController(
             _dialogs,
             new SchachtProtocolRefreshActions(
@@ -187,11 +281,11 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
                 CaptureProject: () => new ProjectOperationContext(
                     _shell.Project,
                     _settings.LastProjectPath),
-                ResolveLinkedFile: ProjectPathResolver.ResolveFilePathFromProjectFolder,
+                LocateProtocolFile: LocateProtocolFile,
                 ReadProtocolAsync: ReadProtocolAsync,
                 ProjectIsStillOpen: ProjectIsStillOpen,
-                Apply: _schachtProtocolImport.Apply,
-                SaveProject: _shell.TrySaveProject,
+                Apply: RebuildFromProtocol,
+                SaveProject: _saveProjectForProtocolImport,
                 SetLastResult: value => LastResult = value));
         _schachtProtocolSingleImportController = new SchachtProtocolSingleImportController(
             _dialogs,
@@ -200,7 +294,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
                 ReadProtocolAsync: ReadProtocolAsync,
                 ProjectIsStillOpen: ProjectIsStillOpen,
                 CollectionLock: _shell.CollectionLock,
-                SaveProject: _shell.TrySaveProject,
+                SaveProject: _saveProjectForProtocolImport,
                 SetSelected: record => Selected = record,
                 ClearSelectedIfSame: ClearSelectedIfSame,
                 SetLastResult: value => LastResult = value));
@@ -219,17 +313,27 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         PruefungsresultatOptions = new ObservableCollection<string>(_dropdownOptions.LoadPruefungsresultatOptions());
         ReferenzpruefungOptions = new ObservableCollection<string>(_dropdownOptions.LoadReferenzpruefungOptions());
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
-        SchachtformOptions = new ObservableCollection<string>(
-            new[] { "Rund", "Oval", "Quadratisch", "Rechteckig" });
+        SchachtformOptions = new ObservableCollection<string>(SchachtformVokabular.Auswahl);
+        BelastungsklasseOptions = new ObservableCollection<string>(
+            FieldCatalog.GetComboItems(FieldKeys.LoadClass));
+        // Keine zweite Liste: die Begriffe fuehren die Vokabulare, damit Anzeige und
+        // XTF-Wert nicht auseinanderlaufen koennen.
+        SchachtFunktionOptions = new ObservableCollection<string>(
+            WebGisBegriffe.Fuer(true, WebGisBegriffe.SchachtFunktion)!.Auswahl); // WebGIS-Liste (23.09.2026)
+        SchachtMaterialOptions = new ObservableCollection<string>(SchachtMaterialVokabular.Auswahl);
         EnforceEigentuemerOptionsExact();
 
-        AddCommand = new RelayCommand(Add);
-        RemoveCommand = new RelayCommand(Remove, () => Selected is not null);
+        AddCommand = new RelayCommand(Add, CanMutateShaftDataForCommand);
+        RemoveCommand = new RelayCommand(
+            Remove,
+            () => CanMutateShaftData && Selected is not null);
         MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
         MoveDownCommand = new RelayCommand(MoveDown, CanMoveDown);
-        SaveCommand = new RelayCommand(Save);
+        SaveCommand = new RelayCommand(Save, CanMutateShaftDataForCommand);
         RefreshProtocolCommand = new AsyncRelayCommand(RefreshProtocolAsync, CanRefreshProtocol);
-        ImportProtocolCommand = new AsyncRelayCommand(ImportProtocolAsync);
+        ImportProtocolCommand = new AsyncRelayCommand(
+            ImportProtocolAsync,
+            CanStartProtocolPdfOperation);
         ErgaenzeStammdatenAusPdfsCommand = new AsyncRelayCommand(
             ErgaenzeStammdatenAusPdfsAsync,
             CanErgaenzeStammdatenAusPdfs);
@@ -253,6 +357,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         EnsureRecordColumns();
         UpdateNr();
         UpdateSearchResultInfo(Records.Count);
+        _protocolImportShellGuard.OperationAvailabilityChanged +=
+            OnProtocolPdfOperationAvailabilityChanged;
     }
 
     partial void OnSelectedChanged(SchachtRecord? value)
@@ -265,23 +371,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         (RefreshProtocolCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
     }
 
-    partial void OnSelectedChanging(SchachtRecord? oldValue, SchachtRecord? newValue)
-    {
-        if (_suppressRequiredFieldWarning)
-            return;
-        if (oldValue is null || newValue is null)
-            return;
-        if (ReferenceEquals(oldValue, newValue) || oldValue.Id == newValue.Id)
-            return;
-
-        var missing = SchachtSanierungPflichtfeldValidator.MissingFields(oldValue);
-        if (missing.Count == 0)
-            return;
-
-        _dialogs.Warn(
-            $"Beim Schacht {ResolveSchachtNummer(oldValue)} fehlen:\n- {string.Join("\n- ", missing)}",
-            "Schacht-Felder fehlen");
-    }
 
     partial void OnGridMinRowHeightChanged(double value)
     {
@@ -336,25 +425,60 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         Columns.Clear();
 
         var result = _templateColumnReader.LoadFromExportDirectory(AppContext.BaseDirectory);
+        if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+        {
+            LastResult = result.ErrorMessage;
+            return;
+        }
+
         if (!result.TemplateFound)
         {
-            LastResult = "Schaechte-Vorlage nicht gefunden.";
+            LastResult = "Schächte-Vorlage nicht gefunden.";
             return;
         }
 
         foreach (var column in result.Columns)
             Columns.Add(column);
 
-        // Schaechte kennen in der Vorlage kein "Ausgefuehrt durch" — fuer die kategorisierte
-        // QGIS-Einfaerbung + Auswertung ergaenzen wir es als editierbare Dropdown-Spalte. Die
-        // Optionen (Baumeister/Sanierer/Gaertner) stehen ueber AusgefuehrtDurchOptions bereit.
+        // Form sowie groesstes und kleinstes Innenmass muessen immer editierbar sein,
+        // auch wenn eine aeltere Excel-Vorlage diese drei GEONIS-Felder noch nicht hat.
+        SchaechteColumnPolicy.ErgaenzeFormUndMasse(Columns);
+        foreach (var feld in new[] { FieldKeys.ShaftStructureType, FieldKeys.InfiltrationType, "Funktion", "Material", FieldKeys.OperatingStatus, FieldKeys.RehabilitationNeed })
+            if (!Columns.Any(c => SchaechteColumnPolicy.ResolveOptionField(c) == feld)) Columns.Add(feld);
+        SchaechteColumnPolicy.ErgaenzeKatasterKennung(Columns);
+
+        // Aeltere Schacht-Vorlagen kannten kein "Ausgefuehrt durch". Fuer diese
+        // Bestandsdateien bleibt der Rueckfall als editierbare Dropdown-Spalte erhalten.
         if (!Columns.Any(c => c.IndexOf("usgef", StringComparison.OrdinalIgnoreCase) >= 0
                            && c.IndexOf("durch", StringComparison.OrdinalIgnoreCase) >= 0))
             Columns.Add("Ausgefuehrt durch");
 
+        // Belastungsklasse der Abdeckung (EN 124). Aeltere Vorlagen fuehren an dieser
+        // Stelle nur eine Spalte mit der Ueberschrift "0", die als reine Ziffer
+        // weggefiltert wird - der Wert liesse sich dann nirgends erfassen.
+        if (!Columns.Any(c => SchaechteColumnPolicy.ResolveOptionField(c) == FieldKeys.LoadClass))
+            Columns.Add(FieldKeys.LoadClass);
+
+        // Die Felder, die "Leere Felder aus QGIS ergaenzen" setzt. Ohne Spalte laege
+        // der Wert im Datensatz und waere nirgends zu sehen — von den 16 Feldern
+        // fuehrt die Vorlage nur drei (Funktion, Zustandsklasse, Bemerkungen).
+        //
+        // Verglichen wird ueber SchachtFeldnamen: Die Vorlage schreibt "Eigentümer"
+        // mit Umlaut, das Feld heisst "Eigentuemer" — beides ist dieselbe Spalte und
+        // darf nicht zweimal erscheinen.
+        foreach (var feld in AuswertungPro.Next.Application.Lookup.QgisFeldKarte.Felder(
+                     AuswertungPro.Next.Application.Lookup.BauteilArt.Schacht))
+        {
+            var gefaltet = SchachtFeldnamen.Falte(feld);
+            if (!Columns.Any(c => string.Equals(SchachtFeldnamen.Falte(c), gefaltet, StringComparison.Ordinal)))
+                Columns.Add(feld);
+        }
+
         EnsureRecordColumns();
         UpdateNr();
-        LastResult = $"Spalten geladen: {Columns.Count}";
+        // Aufgabe 17 (Optikanalyse 28.09.2026): "Spalten geladen: N" ist ein rein technisches
+        // Detail ohne Wert fuer Pascal — LastResult bleibt fuer wirkliche Probleme reserviert
+        // (siehe die beiden Fehlerfaelle oben); ein erfolgreicher Ladevorgang meldet nichts.
     }
 
     private void EnsureRecordColumns()
@@ -371,8 +495,11 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     private void Save()
     {
+        if (!EnsureShaftDataMutationAllowed("Speichern"))
+            return;
+
         var ok = _shell.TrySaveProject();
-        LastResult = ok ? "Schaechte gespeichert." : "Speichern fehlgeschlagen.";
+        LastResult = ok ? "Schächte gespeichert." : "Speichern fehlgeschlagen.";
     }
 
     private void AddOptionIfMissing(ObservableCollection<string> options, string value)

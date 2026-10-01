@@ -28,7 +28,7 @@ public static class HaltungCadastreExtractor
     public static void Use(IHaltungCadastreTableStore store) =>
         throw new NotSupportedException(
             "Die globale Kataster-Tabellenablage kann nicht mehr ausgetauscht werden. " +
-            "IHaltungCadastreTableStore bitte per Konstruktor uebergeben.");
+            "IHaltungCadastreTableStore bitte per Konstruktor übergeben.");
 
     public static IEnumerable<CadastreHaltung> Extract(string xtfPath)
         => Current.Extract(xtfPath);

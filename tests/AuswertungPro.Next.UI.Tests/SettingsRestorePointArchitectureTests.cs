@@ -9,7 +9,7 @@ public sealed class SettingsRestorePointArchitectureTests
     [Fact]
     public void SettingsRestorePointsUseCentralInstanceAndKeepStaticFacadeThin()
     {
-        var root = FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var provider = File.ReadAllText(Path.Combine(
             root,
             "src",
@@ -46,20 +46,4 @@ public sealed class SettingsRestorePointArchitectureTests
             store);
     }
 
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (Directory.Exists(Path.Combine(directory.FullName, "src")) &&
-                Directory.Exists(Path.Combine(directory.FullName, "tests")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
-    }
 }

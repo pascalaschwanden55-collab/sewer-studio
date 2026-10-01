@@ -34,6 +34,8 @@ public sealed class RetrievalService(
     private long _cacheMaxRowId = -1;
     private long _cacheHumanConfirmedCount = -1;
     private string _cacheMaxConfirmedAtUtc = string.Empty;
+    // Der Zwischenspeicher gehoert zu genau einem Embedding-Modell.
+    private string? _cacheModel;
 
     /// <summary>Aktuelles Embedding-Modell in der DB (null = leer / unbekannt).</summary>
     public string? StoredEmbedModel { get; private set; }
@@ -233,7 +235,8 @@ public sealed class RetrievalService(
                 && rowCount == _cacheRowCount
                 && maxRowId == _cacheMaxRowId
                 && humanConfirmedCount == _cacheHumanConfirmedCount
-                && string.Equals(maxConfirmedAtUtc, _cacheMaxConfirmedAtUtc, StringComparison.Ordinal))
+                && string.Equals(maxConfirmedAtUtc, _cacheMaxConfirmedAtUtc, StringComparison.Ordinal)
+                && string.Equals(_cacheModel, embedder.ModelName, StringComparison.OrdinalIgnoreCase))
                 return _cache;
 
             _cache = LoadAllEmbeddingsWithSamples();
@@ -241,6 +244,7 @@ public sealed class RetrievalService(
             _cacheMaxRowId = maxRowId;
             _cacheHumanConfirmedCount = humanConfirmedCount;
             _cacheMaxConfirmedAtUtc = maxConfirmedAtUtc;
+            _cacheModel = embedder.ModelName;
             return _cache;
         }
     }
@@ -281,6 +285,10 @@ public sealed class RetrievalService(
     {
         var list = new List<(string, float[], SampleRecord?)>();
         using var cmd = db.Connection.CreateCommand();
+        // Nur Suchvektoren des AKTUELLEN Embedding-Modells. Nach einem Modellwechsel
+        // liefern alte und neue Vektoren zwar gleich lange Zahlenreihen, stammen aber aus
+        // verschiedenen Bedeutungsraeumen — rechnerisch aehnlich heisst dann fachlich
+        // nichts (Auditbefund 17). Lieber kein Vergleichswissen als falsches.
         cmd.CommandText = """
             SELECT e.SampleId, e.Vector,
                    s.CaseId, s.VsaCode, s.Beschreibung, s.MeterStart, s.MeterEnd,
@@ -288,7 +296,11 @@ public sealed class RetrievalService(
                    s.HumanConfirmed, s.Corrected, s.ConfirmedByUser, s.ConfirmedAtUtc
             FROM Embeddings e
             LEFT JOIN Samples s ON e.SampleId = s.SampleId
+            WHERE e.Model IS NOT NULL
+              AND TRIM(e.Model) <> ''
+              AND LOWER(TRIM(e.Model)) = LOWER(TRIM($model))
             """;
+        cmd.Parameters.AddWithValue("$model", embedder.ModelName ?? string.Empty);
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {

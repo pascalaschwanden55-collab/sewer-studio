@@ -113,21 +113,21 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
             var incoming = FilterEvalContamination(samples);
             var existing = FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false));
             var signatures = existing
-                .Where(sample => !string.IsNullOrEmpty(sample.Signature))
-                .Select(sample => sample.Signature)
+                .SelectMany(GetDedupSignatures)
                 .ToHashSet(StringComparer.Ordinal);
 
             var reportAdded = false;
             foreach (var sample in incoming)
             {
-                if (!string.IsNullOrEmpty(sample.Signature) && signatures.Contains(sample.Signature))
+                var sampleSignatures = GetDedupSignatures(sample).ToArray();
+                if (sampleSignatures.Any(signatures.Contains))
                     continue;
 
                 existing.Add(sample);
                 if (ReferenceEquals(sample, reportSample))
                     reportAdded = true;
-                if (!string.IsNullOrEmpty(sample.Signature))
-                    signatures.Add(sample.Signature);
+                foreach (var signature in sampleSignatures)
+                    signatures.Add(signature);
             }
 
             await SaveInternalAsync(existing).ConfigureAwait(false);
@@ -137,6 +137,25 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         {
             fileLock.Release();
         }
+    }
+
+    private static IEnumerable<string> GetDedupSignatures(TrainingSample sample)
+    {
+        if (!string.IsNullOrEmpty(sample.Signature))
+            yield return sample.Signature;
+
+        if (!sample.HasBbox)
+            yield break;
+
+        yield return TrainingSample.BuildCanonicalSignature(
+            sample.CaseId,
+            sample.Code,
+            sample.MeterStart,
+            sample.MeterEnd,
+            sample.BboxXCenter,
+            sample.BboxYCenter,
+            sample.BboxWidth,
+            sample.BboxHeight);
     }
 
     public async Task MergeOrUpdateAsync(IEnumerable<TrainingSample> samples)
@@ -238,9 +257,9 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
             if (signatureOwner is not null)
             {
                 throw new InvalidOperationException(
-                    $"Die Signatur des Samples '{sample.SampleId}' gehoert bereits zu " +
+                    $"Die Signatur des Samples '{sample.SampleId}' gehört bereits zu " +
                     $"Sample '{signatureOwner.SampleId}'. Der bestehende Gold-Datenbestand " +
-                    "wurde nicht veraendert.");
+                    "wurde nicht verändert.");
             }
 
             existing.RemoveAt(index);
@@ -364,9 +383,17 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
             }
         }
 
-        BestEffort.ReportWarning(
-            "[TrainingSampleFileStore] KRITISCH: Kein lesbares Backup gefunden, starte leer");
-        return [];
+        // Kein lesbarer Stand mehr: Hier darf NICHT eine leere Liste zurueckgegeben
+        // werden. Die Hauptdatei existierte (sonst waere dieser Pfad nie erreicht
+        // worden) — leer weiterzugeben liesse den naechsten Speichervorgang den
+        // vorhandenen Bestand mit fast nichts ueberschreiben. Unlesbar ist ein
+        // Fehler, nicht ein Erstlauf. Dieselbe Unterscheidung gilt fuer die
+        // Kostendateien (CostStoreFileProbe): fehlend = leer, unlesbar = Fehler.
+        throw new InvalidOperationException(
+            $"Die Trainingsdaten sind nicht lesbar, und keine Sicherungskopie ist "
+            + $"lesbar ({path}). Der vorhandene Bestand wurde NICHT verändert — "
+            + "es wird nichts gespeichert.",
+            error);
     }
 
     private async Task SaveInternalAsync(List<TrainingSample> samples)
@@ -398,7 +425,7 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
                 }
             }
 
-            File.Move(tempPath, path, overwrite: true);
+            await ReplaceAtomicallyAsync(tempPath, path).ConfigureAwait(false);
             CleanupBadFiles(path);
         }
         catch
@@ -409,8 +436,53 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
                     if (File.Exists(tempPath))
                         File.Delete(tempPath);
                 },
-                "Trainingsdaten: Temp-Datei nach Speicherfehler loeschen");
+                "Trainingsdaten: Temp-Datei nach Speicherfehler löschen");
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Wartezeiten in Millisekunden zwischen zwei Ersetzungsversuchen (rund 4,5 s gesamt).
+    /// </summary>
+    private static readonly int[] ReplaceRetryDelaysMs = [50, 100, 200, 400, 800, 1000, 1000, 1000];
+
+    /// <summary>
+    /// Ersetzt die Zieldatei atomar und wiederholt den Schritt bei einer voruebergehenden
+    /// Sperre. Windows verweigert eine Ersetzung, solange ein anderer Leser die Zieldatei
+    /// geoeffnet haelt — der eigene Spiegeldienst, ein Virenscanner oder eine
+    /// Dateivorschau reichen dafuer. Der Freigabemodus des Lesers hilft dabei nicht.
+    /// Da die neue Datei zu diesem Zeitpunkt bereits vollstaendig geschrieben und
+    /// geprueft ist, ist Warten die richtige Antwort; ein Abbruch wuerde den ganzen
+    /// Speichervorgang verwerfen. Bleibt die Sperre bestehen, wird der Fehler gemeldet.
+    /// </summary>
+    internal static async Task ReplaceAtomicallyAsync(
+        string tempPath,
+        string targetPath,
+        Action<string, string>? move = null,
+        Func<int, Task>? delay = null)
+    {
+        move ??= static (source, target) => File.Move(source, target, overwrite: true);
+        delay ??= static milliseconds => Task.Delay(milliseconds);
+
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                move(tempPath, targetPath);
+                if (attempt > 0)
+                {
+                    BestEffort.ReportWarning(
+                        $"Trainingsdaten: Zieldatei war kurz gesperrt, Ersetzung nach "
+                        + $"{attempt + 1} Versuchen erfolgreich ({Path.GetFileName(targetPath)}).");
+                }
+
+                return;
+            }
+            catch (Exception ex) when (attempt < ReplaceRetryDelaysMs.Length
+                                       && ex is UnauthorizedAccessException or IOException)
+            {
+                await delay(ReplaceRetryDelaysMs[attempt]).ConfigureAwait(false);
+            }
         }
     }
 

@@ -1,0 +1,46 @@
+SCHACHTPRO
+
+Projekt: 2.26.167 Goeschenen GEP 2026_9 Datum: 20.08.2026
+Koordinaten (LV95): E 2688034,764643 / N 1169265,302516
+
+Schachtprotokoll Schacht Nr. 8705
+
+STAMMDATEN & SKIZZE                             DECKEL                 SKIZZE
+SCHACHT
+
+Medium                  Schmutzabwasser         Deckelform             Rund                            A1 DN150
+Schachtfunktion         Kontrollschacht         Deckeltyp              Geschlossener Deckel                       12
+Tiefe (m)               1.28                    Belastungsklasse       -
+Durchmesser (m)         0.50                    Deckeldurchmesser (m)  0.50                      9                    3
+Form                    Rund                    Deckelmaterial         Beton                 E3 DN150
+Material                Fertigbetonelement
+Ausgeführt von          Muster                                                                                     E1 DN100
+Wetter                  schoen_trocken
+                                                                                                       6
+SCHACHTAUFBAU               Form                                                                         E2 DN120
+                            Rund
+Bauteil                     Rund                Dimension                                    Höhe (m)
+                                                0.50                                         -
+Deckel/Rahmen                                   0.50                                         -
+Unterteil
+
+ZUSTAND DER SCHACHTBAUTEILE
+
+Schachthals             Ausgebrochen · Riss
+Bankett                 Mangelhaft ausgebildet
+Durchlaufrinne          Mangelhaft ausgebildet
+Tauchbogen              nicht notwendig
+
+ANSCHLÜSSE
+
+Ansc... Uhrzeit  Tiefe  Durchmesser Typ         Medium                 Material              Zustand
+A1 12            1.28                           Schmutzabwasser        Normalbeton (NB)      Mangelhaft eingebunden
+E1 4             0.67   150 mm  Auslauf         Schmutzabwasser        Normalbeton (NB)      in Ordnung
+E2 6             1.20   100 mm  Einlauf         Schmutzabwasser        Normalbeton (NB)      in Ordnung
+E3 7             1.22                           Schmutzabwasser        Normalbeton (NB)      in Ordnung
+                        120 mm  Einlauf
+
+                        150 mm  Einlauf
+
+GKS Cahenzli AG - info@gks.swiss041/250 56 69                                                                         Seite 1 von 4
+

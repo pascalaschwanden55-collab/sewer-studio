@@ -48,7 +48,7 @@ internal static class PersonalGoldBrainCommitRecovery
             PersonalGoldBrainCommitRecoveryState.ActiveKnowledgePublished => paths.KnowledgeRoot,
             PersonalGoldBrainCommitRecoveryState.Restored => null,
             _ => throw new InvalidDataException(
-                "Unklarer Commit-Journal-Zustand; es wird nichts automatisch veraendert.")
+                "Unklarer Commit-Journal-Zustand; es wird nichts automatisch verändert.")
         };
         if (ownerRoot is not null)
         {
@@ -236,7 +236,7 @@ internal static class PersonalGoldBrainCommitRecovery
                     StringComparer.Ordinal))
             {
                 throw new InvalidDataException(
-                    "Archivmarker gehoert nicht zur offenen Commit-Transaktion.");
+                    "Archivmarker gehört nicht zur offenen Commit-Transaktion.");
             }
         }
 
@@ -264,7 +264,7 @@ internal static class PersonalGoldBrainCommitRecovery
                     StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException(
-                    "Protokollkopie im Commit-Archiv besitzt eine falsche Pruefsumme.");
+                    "Protokollkopie im Commit-Archiv besitzt eine falsche Prüfsumme.");
             }
         }
 
@@ -277,7 +277,7 @@ internal static class PersonalGoldBrainCommitRecovery
                 .Any(entry => !allowed.Contains(Path.GetFullPath(entry))))
             {
                 throw new InvalidDataException(
-                    "Commit-Archiv enthaelt unbekannte Daten im erzeugten Kontextordner.");
+                    "Commit-Archiv enthält unbekannte Daten im erzeugten Kontextordner.");
             }
         }
     }
@@ -322,7 +322,7 @@ internal static class PersonalGoldBrainCommitRecovery
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                "Protokoll-Lerndatei stimmt nicht mit dem Commit-Journal ueberein.");
+                "Protokoll-Lerndatei stimmt nicht mit dem Commit-Journal überein.");
         }
     }
 

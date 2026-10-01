@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
@@ -49,7 +50,7 @@ public static class LiveDetectionStartupWorkflow
         catch (Exception ex)
         {
             actions.UncheckToggle();
-            dialogs.ShowStartFailed(ex.Message);
+            dialogs.ShowStartFailed(UserError.DescribeAndReport(ex, "Live-Erkennung starten"));
             return false;
         }
     }

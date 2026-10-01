@@ -1,0 +1,59 @@
+{
+  "utc": "2026-09-08T04:36:10.7219582Z",
+  "theme": "Light",
+  "seite": "TrainingStudio",
+  "width": 1920,
+  "height": 1080,
+  "zielFenster": "TrainingStudioWindow",
+  "zielBreite": 1920,
+  "zielHoehe": 1080,
+  "primaryWidth": 1920,
+  "primaryHeight": 1080,
+  "dpiX": 96,
+  "dpiY": 96,
+  "fullRows": 12,
+  "windowCount": 2,
+  "selected": "AuswertungPro.Next.Domain.Models.HaltungRecord",
+  "severityButtons": [
+    {
+      "stufe": "1",
+      "Width": 40,
+      "MinWidth": 100,
+      "ActualWidth": 100,
+      "x": 1575,
+      "fensterbreite": 1920
+    },
+    {
+      "stufe": "2",
+      "Width": 40,
+      "MinWidth": 100,
+      "ActualWidth": 100,
+      "x": 1679,
+      "fensterbreite": 1920
+    },
+    {
+      "stufe": "3",
+      "Width": 40,
+      "MinWidth": 100,
+      "ActualWidth": 100,
+      "x": 1783,
+      "fensterbreite": 1920
+    },
+    {
+      "stufe": "4",
+      "Width": 40,
+      "MinWidth": 100,
+      "ActualWidth": 100,
+      "x": 1887,
+      "fensterbreite": 1920
+    },
+    {
+      "stufe": "5",
+      "Width": 40,
+      "MinWidth": 100,
+      "ActualWidth": 100,
+      "x": 1991,
+      "fensterbreite": 1920
+    }
+  ]
+}

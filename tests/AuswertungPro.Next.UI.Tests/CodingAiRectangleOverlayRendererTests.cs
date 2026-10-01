@@ -26,6 +26,7 @@ public sealed class CodingAiRectangleOverlayRendererTests
             var rendered = CodingAiRectangleOverlayRenderer.Render(
                 canvas,
                 overlay,
+                Scale(200, 100),
                 canvasWidth: 200,
                 canvasHeight: 100,
                 code: "BCA",
@@ -72,6 +73,7 @@ public sealed class CodingAiRectangleOverlayRendererTests
             Assert.False(CodingAiRectangleOverlayRenderer.Render(
                 canvas,
                 Geometry((0.1, 0.2), (0.3, 0.4)),
+                Scale(200, 100),
                 200,
                 100,
                 "BCA",
@@ -80,6 +82,7 @@ public sealed class CodingAiRectangleOverlayRendererTests
             Assert.False(CodingAiRectangleOverlayRenderer.Render(
                 canvas,
                 Geometry(OverlayToolType.Line, (0.1, 0.2), (0.3, 0.4), (0.5, 0.6), (0.7, 0.8)),
+                Scale(200, 100),
                 200,
                 100,
                 "BCA",
@@ -105,6 +108,9 @@ public sealed class CodingAiRectangleOverlayRendererTests
             ToolType = tool,
             Points = points.Select(p => new NormalizedPoint(p.X, p.Y)).ToList()
         };
+
+    private static Func<NormalizedPoint, Point> Scale(double width, double height)
+        => point => new Point(point.X * width, point.Y * height);
 
     private static void RunOnStaThread(Action action)
     {

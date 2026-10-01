@@ -212,14 +212,14 @@ internal static class PersonalGoldBrainSeparationInput
         string confirmedByUser)
     {
         if (string.IsNullOrWhiteSpace(confirmedByUser))
-            throw new ArgumentException("Bestaetiger fehlt.", nameof(confirmedByUser));
+            throw new ArgumentException("Bestätiger fehlt.", nameof(confirmedByUser));
 
         var selected = samples
             .Where(sample => ManualGoldTrainingPolicy.IsManuallyConfirmed(sample, confirmedByUser))
             .OrderBy(sample => sample.SampleId, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (selected.Length == 0)
-            throw new InvalidDataException("Keine persoenlich bestaetigten Goldsamples gefunden.");
+            throw new InvalidDataException("Keine persönlich bestätigten Goldsamples gefunden.");
         var uniqueIds = selected
             .Select(sample => sample.SampleId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -236,7 +236,7 @@ internal static class PersonalGoldBrainSeparationInput
         foreach (var sample in selected)
         {
             if (string.IsNullOrWhiteSpace(sample.FramePath) || !File.Exists(sample.FramePath))
-                throw new FileNotFoundException($"Goldbild fehlt fuer Sample '{sample.SampleId}'.");
+                throw new FileNotFoundException($"Goldbild fehlt für Sample '{sample.SampleId}'.");
             if (!PersonalGoldBrainFileService.IsInside(goldFramesRoot, sample.FramePath))
             {
                 throw new InvalidDataException(
@@ -253,7 +253,7 @@ internal static class PersonalGoldBrainSeparationInput
     {
         var paths = PersonalGoldMigrationDatabaseStore.ReadPaths(databasePath, selected);
         if (paths.Count != selected.Count)
-            throw new InvalidDataException("Nicht alle persoenlichen Goldsamples liegen in KnowledgeBase.db.");
+            throw new InvalidDataException("Nicht alle persönlichen Goldsamples liegen in KnowledgeBase.db.");
 
         using var connection = new Microsoft.Data.Sqlite.SqliteConnection(
             new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
@@ -274,7 +274,7 @@ internal static class PersonalGoldBrainSeparationInput
         for (var index = 0; index < selected.Count; index++)
             embeddings.Parameters.AddWithValue($"$id{index}", selected[index].SampleId);
         if (Convert.ToInt32(embeddings.ExecuteScalar()) != selected.Count)
-            throw new InvalidDataException("Nicht alle persoenlichen Goldsamples besitzen eine Einbettung.");
+            throw new InvalidDataException("Nicht alle persönlichen Goldsamples besitzen eine Einbettung.");
 
         return new PersonalGoldBrainSourceDatabaseInspection(sourceSamples);
     }
@@ -396,7 +396,7 @@ internal static class PersonalGoldBrainSeparationInput
                     || PersonalGoldBrainFileService.IsInside(candidate, root))
                 {
                     throw new InvalidDataException(
-                        "Der alte Protokoll-Lernpfad ueberlappt einen Quell-, " +
+                        "Der alte Protokoll-Lernpfad überlappt einen Quell-, " +
                         $"Archiv- oder Arbeitsordner: {candidate} / {root}");
                 }
             }
@@ -407,7 +407,7 @@ internal static class PersonalGoldBrainSeparationInput
                     commitJournalPath + ".tmp"))
             {
                 throw new InvalidDataException(
-                    "Der alte Protokoll-Lernpfad ueberlappt das Commit-Journal.");
+                    "Der alte Protokoll-Lernpfad überlappt das Commit-Journal.");
             }
         }
     }

@@ -133,10 +133,10 @@ public sealed class SanierungsMatrixPageViewModelDependencyTests : IDisposable
 
         var viewModel = new SanierungsMatrixPageViewModel(shell, services);
 
-        Assert.Contains("Haltungslaenge", viewModel.Status, StringComparison.Ordinal);
+        Assert.Contains("Haltungslänge", viewModel.Status, StringComparison.Ordinal);
         Assert.Contains("H-100", viewModel.Status, StringComparison.Ordinal);
         Assert.Contains("Berechnungen und Speichern", viewModel.Status, StringComparison.Ordinal);
-        Assert.Contains("Haltungslaenge", dialogs.LastError, StringComparison.Ordinal);
+        Assert.Contains("Haltungslänge", dialogs.LastError, StringComparison.Ordinal);
 
         viewModel.SpeichernCommand.Execute(null);
 
@@ -176,7 +176,7 @@ public sealed class SanierungsMatrixPageViewModelDependencyTests : IDisposable
 
         Assert.Null(row.StoredCost);
         Assert.Equal(0m, row.Total);
-        Assert.Contains("Laenge", row.Hinweis, StringComparison.Ordinal);
+        Assert.Contains("Länge", row.Hinweis, StringComparison.Ordinal);
         Assert.Contains("H-LEER", viewModel.Status, StringComparison.Ordinal);
     }
 
@@ -258,8 +258,8 @@ public sealed class SanierungsMatrixPageViewModelDependencyTests : IDisposable
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") { }
         public void Error(string message, string title = "Fehler") => LastError = message;
-        public bool Confirm(string message, string title = "Bestaetigung") => true;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => true;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Yes;
+        public bool Confirm(string message, string title = "Bestätigung") => true;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => true;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Yes;
     }
 }

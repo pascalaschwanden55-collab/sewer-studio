@@ -33,6 +33,7 @@ internal static class PipelineTraceEntryMapper
         DetectionsTotal = source.DetectionsTotal,
         DropReason = source.DropReason,
         Degraded = source.Degraded,
-        DegradedReason = source.DegradedReason
+        DegradedReason = source.DegradedReason,
+        OsdMeterRejected = source.OsdMeterRejected
     };
 }

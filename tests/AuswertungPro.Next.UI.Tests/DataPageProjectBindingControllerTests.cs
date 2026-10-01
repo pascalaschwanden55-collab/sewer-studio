@@ -9,6 +9,29 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class DataPageProjectBindingControllerTests
 {
     [Fact]
+    public void Reihenfolgewechsel_aktualisiert_befehle_ohne_neue_auswahl()
+    {
+        BindingHarness? state = null;
+        var selected = CreateRecord("eins");
+        var up = new RelayCommand(() => { }, () => state!.Records.IndexOf(selected) > 0);
+        var observed = new List<bool>();
+        up.CanExecuteChanged += (_, _) => observed.Add(up.CanExecute(null));
+        using var harness = new BindingHarness(up);
+        state = harness;
+        harness.Records.Add(selected);
+        harness.Records.Add(CreateRecord("zwei"));
+        harness.Controller.Start();
+        harness.Selected = selected;
+
+        harness.Records.Move(0, 1);
+        harness.Records.Move(1, 0);
+
+        Assert.Equal(new[] { true, false }, observed);
+        Assert.Same(selected, harness.Selected);
+        Assert.Empty(harness.MapWrites);
+    }
+
+    [Fact]
     public void Start_uebernimmt_tolerante_kartenauswahl_ohne_echo()
     {
         using var harness = new BindingHarness();
@@ -108,7 +131,7 @@ public sealed class DataPageProjectBindingControllerTests
         private event PropertyChangedEventHandler? ProjectStateChanged;
         private event Action? MapSelectionChanged;
 
-        public BindingHarness()
+        public BindingHarness(params IRelayCommand?[] commands)
         {
             DataPageProjectBindingController? controller = null;
             controller = new DataPageProjectBindingController(
@@ -129,7 +152,7 @@ public sealed class DataPageProjectBindingControllerTests
                 action => action(),
                 () => ReadinessChangedCount++,
                 () => ProjectChangedCount++,
-                Array.Empty<IRelayCommand?>(),
+                commands,
                 _ => NormalizeCount++,
                 _ => SyncCount++,
                 () => RefreshCount++);
@@ -139,7 +162,7 @@ public sealed class DataPageProjectBindingControllerTests
         public DataPageProjectBindingController Controller { get; }
         public Guid ProjectId { get; } = Guid.NewGuid();
         public ObservableCollection<HaltungRecord> Records { get; set; } = new();
-        public HaltungRecord? Selected { get; private set; }
+        public HaltungRecord? Selected { get; set; }
         public string? MapSelection { get; set; }
         public List<string?> MapWrites { get; } = new();
         public int ReadinessChangedCount { get; private set; }

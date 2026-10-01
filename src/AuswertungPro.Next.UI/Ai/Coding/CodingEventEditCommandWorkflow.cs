@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.UI.Ai.Coding;
 
@@ -37,6 +38,7 @@ public static class CodingEventEditCommandWorkflow
                 CodingEventEditCommandWorkflowOutcome.NoSelection);
 
         actions.PausePlayback();
+        CodingPointFollowUpPolicy.MarkHumanTouched(selectedEvent);
 
         if (!actions.TryEdit(selectedEvent))
             return new CodingEventEditCommandWorkflowResult(

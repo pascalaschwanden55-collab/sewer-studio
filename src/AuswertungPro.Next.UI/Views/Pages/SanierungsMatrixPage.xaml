@@ -30,11 +30,11 @@
                         <TextBlock Text="{Binding PauschalenText}"
                                    Visibility="{Binding HasPauschalen, Converter={StaticResource BoolToVis}}"
                                    Opacity="0.78" HorizontalAlignment="Right"/>
-                        <TextBlock Text="{Binding BelegteHaltungen, StringFormat='{}{0} Haltungen mit Maßnahme'}"
+                        <TextBlock Text="{Binding BelegteHaltungen, StringFormat='{}{0} Haltungen mit Massnahme'}"
                                    Opacity="0.7" HorizontalAlignment="Right"/>
                     </StackPanel>
                     <Button Content="Preise / Katalog" Command="{Binding KatalogBearbeitenCommand}" Margin="0,0,8,0"
-                            ToolTip="Den (einen) Preis-Katalog bearbeiten — Preise pro m / Stk / DN. Wird nach dem Schließen sofort angewendet."/>
+                            ToolTip="Den (einen) Preis-Katalog bearbeiten — Preise pro m / Stk / DN. Wird nach dem Schliessen sofort angewendet."/>
                     <Button Content="Neu laden" Command="{Binding ReloadCommand}" Margin="0,0,8,0"/>
                     <Button Content="Speichern" Command="{Binding SpeichernCommand}"
                             Style="{StaticResource PrimaryButton}"/>
@@ -83,7 +83,7 @@
                     <DataGridTextColumn Header="Länge m" Binding="{Binding Laenge}" IsReadOnly="True" Width="80"/>
                     <DataGridTextColumn Header="Anschl." Binding="{Binding Anschluesse}" IsReadOnly="True" Width="70"/>
 
-                    <DataGridTemplateColumn Header="Maßnahmen" Width="2*">
+                    <DataGridTemplateColumn Header="Massnahmen" Width="2*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Grid>
@@ -143,12 +143,12 @@
                     <DataGridCheckBoxColumn Header="VD" Width="44"
                                             Binding="{Binding OptVerkehrsdienst, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <DataGridCheckBoxColumn.ElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.ElementStyle>
                         <DataGridCheckBoxColumn.EditingElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.EditingElementStyle>
@@ -156,12 +156,12 @@
                     <DataGridCheckBoxColumn Header="Wasser" Width="60"
                                             Binding="{Binding OptWasserhaltung, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <DataGridCheckBoxColumn.ElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.ElementStyle>
                         <DataGridCheckBoxColumn.EditingElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.EditingElementStyle>
@@ -169,12 +169,12 @@
                     <DataGridCheckBoxColumn Header="Fräsen" Width="62"
                                             Binding="{Binding OptFraesen, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <DataGridCheckBoxColumn.ElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.ElementStyle>
                         <DataGridCheckBoxColumn.EditingElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.EditingElementStyle>
@@ -182,12 +182,12 @@
                     <DataGridCheckBoxColumn Header="Dicht." Width="52"
                                             Binding="{Binding OptDichtheit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <DataGridCheckBoxColumn.ElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.ElementStyle>
                         <DataGridCheckBoxColumn.EditingElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.EditingElementStyle>
@@ -195,12 +195,12 @@
                     <DataGridCheckBoxColumn Header="Doku" Width="48"
                                             Binding="{Binding OptDokumentation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <DataGridCheckBoxColumn.ElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.ElementStyle>
                         <DataGridCheckBoxColumn.EditingElementStyle>
-                            <Style TargetType="CheckBox">
+                            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                                 <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
                             </Style>
                         </DataGridCheckBoxColumn.EditingElementStyle>
@@ -221,7 +221,7 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Grid x:Name="BalkenHost" Margin="4,6">
-                                    <Border HorizontalAlignment="Left" CornerRadius="2"
+                                    <Border HorizontalAlignment="Left" CornerRadius="{DynamicResource RadiusS}"
                                             Background="{DynamicResource AccentBrush}" Opacity="0.35"
                                             ToolTip="{Binding Total, StringFormat='{}{0:N2} CHF'}">
                                         <Border.Width>
@@ -241,6 +241,23 @@
                     <DataGridTextColumn Header="Hinweis" Binding="{Binding Hinweis}" IsReadOnly="True" Width="150"/>
                 </DataGrid.Columns>
             </DataGrid>
+
+            <uc:EmptyStateControl Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                                  IsHitTestVisible="False"
+                                  Icon="&#xE80A;"
+                                  Title="Noch keine Massnahmen"
+                                  Message="Sobald Haltungen mit erfasstem Sanierungsbedarf im Projekt vorhanden sind, erscheinen sie hier zur Auswahl.">
+                <uc:EmptyStateControl.Style>
+                    <Style TargetType="uc:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems, ElementName=MatrixRowsGrid}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </uc:EmptyStateControl.Style>
+            </uc:EmptyStateControl>
 
             <Border x:Name="DetailPanel" Padding="12">
                 <Border.Style>
@@ -323,7 +340,7 @@
                                                         VerticalAlignment="Center"
                                                         Command="{Binding DataContext.SaveTemplateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
-                                                        ToolTip="Die aktuellen Positionen dieser Maßnahme als Vorlage sichern (gilt für neue Projekte)."/>
+                                                        ToolTip="Die aktuellen Positionen dieser Massnahme als Vorlage sichern (gilt für neue Projekte)."/>
                                                 <TextBlock Text="{Binding MeasureName}"
                                                            Style="{StaticResource Body}"
                                                            FontWeight="SemiBold"
@@ -360,70 +377,92 @@
                                                           AlternationCount="2">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border x:Name="DetailLineRow"
-                                                                BorderBrush="{DynamicResource BorderLightBrush}"
-                                                                BorderThickness="0,0,0,1"
-                                                                MinHeight="38"
-                                                                Padding="8,6">
-                                                            <Border.Style>
-                                                                <Style TargetType="{x:Type Border}">
-                                                                    <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
-                                                                    <Style.Triggers>
-                                                                        <Trigger Property="ItemsControl.AlternationIndex" Value="1">
-                                                                            <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
-                                                                        </Trigger>
-                                                                        <DataTrigger Binding="{Binding Selected}" Value="True">
-                                                                            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Border.Style>
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="34"/>
-                                                                    <ColumnDefinition Width="3*"/>
-                                                                    <ColumnDefinition Width="56"/>
-                                                                    <ColumnDefinition Width="96"/>
-                                                                    <ColumnDefinition Width="70"/>
-                                                                    <ColumnDefinition Width="110"/>
-                                                                    <ColumnDefinition Width="112"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                <CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                          HorizontalAlignment="Center"
-                                                                          VerticalAlignment="Center"/>
-                                                                <TextBlock Text="{Binding Text}"
-                                                                           Grid.Column="1"
-                                                                           Style="{StaticResource Body}"
-                                                                           TextWrapping="Wrap"
-                                                                           VerticalAlignment="Center"/>
-                                                                <CheckBox Grid.Column="2"
-                                                                          IsChecked="{Binding TransferMarked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                          HorizontalAlignment="Center"
-                                                                          VerticalAlignment="Center"
-                                                                          ToolTip="In 'Empfohlene Sanierungsmassnahme' übertragen"/>
-                                                                <TextBox Grid.Column="3"
-                                                                         Text="{Binding Qty, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                                                         HorizontalContentAlignment="Right"
-                                                                         MinWidth="70"
-                                                                         Margin="8,0,0,0"/>
-                                                                <TextBlock Grid.Column="4"
-                                                                           Text="{Binding Unit}"
-                                                                           Style="{StaticResource Caption}"
-                                                                           TextAlignment="Center"
-                                                                           VerticalAlignment="Center"/>
-                                                                <TextBox Grid.Column="5"
-                                                                         Text="{Binding UnitPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                                                         HorizontalContentAlignment="Right"
-                                                                         MinWidth="80"
-                                                                         Margin="8,0,0,0"/>
-                                                                <TextBlock Grid.Column="6"
-                                                                           Text="{Binding LineTotal, StringFormat='{}{0:N2}'}"
-                                                                           Style="{StaticResource Body}"
-                                                                           VerticalAlignment="Center"
-                                                                           TextAlignment="Right"
-                                                                           Margin="8,0,8,0"/>
-                                                            </Grid>
-                                                        </Border>
+                                                        <!-- Fix-Runde 4 (Aufgabe 13, Befund D): Zeile und Hochkontrast-Auswahlrahmen uebereinander.
+                                                             Der Rahmen nimmt keinen Platz ein und ist in den normalen Themes transparent - die Zeile
+                                                             springt beim Auswaehlen nicht mehr (Runde 3 stellte die Rahmendicke 0,0,0,1 auf 1 um). -->
+                                                        <Grid>
+                                                            <Border x:Name="DetailLineRow"
+                                                                    BorderBrush="{DynamicResource BorderLightBrush}"
+                                                                    BorderThickness="0,0,0,1"
+                                                                    MinHeight="38"
+                                                                    Padding="8,6">
+                                                                <Border.Style>
+                                                                    <Style TargetType="{x:Type Border}">
+                                                                        <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                                                                        <Style.Triggers>
+                                                                            <!-- Fix-Runde 4 (Aufgabe 13, Befund F): AlternationIndex steht am
+                                                                                 Item-Container (dem ContentPresenter, der diese Vorlage zeigt),
+                                                                                 nicht an dieser Border - der fruehere Trigger auf die eigene
+                                                                                 Eigenschaft griff nie, die Zebrastreifen fehlten trotz
+                                                                                 AlternationCount="2". -->
+                                                                            <DataTrigger Binding="{Binding (ItemsControl.AlternationIndex), RelativeSource={RelativeSource TemplatedParent}}" Value="1">
+                                                                                <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding Selected}" Value="True">
+                                                                                <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="34"/>
+                                                                        <ColumnDefinition Width="3*"/>
+                                                                        <ColumnDefinition Width="56"/>
+                                                                        <ColumnDefinition Width="96"/>
+                                                                        <ColumnDefinition Width="70"/>
+                                                                        <ColumnDefinition Width="110"/>
+                                                                        <ColumnDefinition Width="112"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                              HorizontalAlignment="Center"
+                                                                              VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding Text}"
+                                                                               Grid.Column="1"
+                                                                               Style="{StaticResource Body}"
+                                                                               TextWrapping="Wrap"
+                                                                               VerticalAlignment="Center"/>
+                                                                    <CheckBox Grid.Column="2"
+                                                                              IsChecked="{Binding TransferMarked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                              HorizontalAlignment="Center"
+                                                                              VerticalAlignment="Center"
+                                                                              ToolTip="In 'Empfohlene Sanierungsmassnahme' übertragen"/>
+                                                                    <TextBox Grid.Column="3"
+                                                                             Text="{Binding Qty, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                                                             HorizontalContentAlignment="Right"
+                                                                             MinWidth="70"
+                                                                             Margin="8,0,0,0"/>
+                                                                    <TextBlock Grid.Column="4"
+                                                                               Text="{Binding Unit}"
+                                                                               Style="{StaticResource Caption}"
+                                                                               TextAlignment="Center"
+                                                                               VerticalAlignment="Center"/>
+                                                                    <TextBox Grid.Column="5"
+                                                                             Text="{Binding UnitPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                                                             HorizontalContentAlignment="Right"
+                                                                             MinWidth="80"
+                                                                             Margin="8,0,0,0"/>
+                                                                    <TextBlock Grid.Column="6"
+                                                                               Text="{Binding LineTotal, StringFormat='{}{0:N2}'}"
+                                                                               Style="{StaticResource Body}"
+                                                                               VerticalAlignment="Center"
+                                                                               TextAlignment="Right"
+                                                                               Margin="8,0,8,0"/>
+                                                                </Grid>
+                                                            </Border>
+                                                            <Border IsHitTestVisible="False" BorderThickness="1">
+                                                                <Border.Style>
+                                                                    <Style TargetType="{x:Type Border}">
+                                                                        <Setter Property="BorderBrush" Value="Transparent"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Selected}" Value="True">
+                                                                                <Setter Property="BorderBrush" Value="{DynamicResource HcAuswahlRahmenBrush}"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                            </Border>
+                                                        </Grid>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>

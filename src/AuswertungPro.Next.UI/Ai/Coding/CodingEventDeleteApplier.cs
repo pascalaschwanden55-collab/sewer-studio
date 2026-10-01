@@ -17,6 +17,7 @@ public static class CodingEventDeleteApplier
         CodingEvent? selectedDefect)
     {
         ArgumentNullException.ThrowIfNull(codingEvent);
+        CodingPointFollowUpPolicy.MarkHumanTouched(codingEvent);
 
         codingSessionService?.RemoveEvent(codingEvent.EventId);
         var removedFromList = codingEvents?.Remove(codingEvent) == true;

@@ -9,7 +9,16 @@ namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 /// </summary>
 internal static class PdfPrimaryDamageStructureSynchronizer
 {
-    internal static void Sync(HaltungRecord record)
+    internal static void Sync(HaltungRecord record) => Sync(record, null);
+
+    /// <param name="rows">
+    /// Strukturiert gelesene Schadenszeilen desselben PDF. Nur dafuer da, den
+    /// Videozaehlerstand nachzutragen; null laesst das bisherige Verhalten
+    /// unveraendert.
+    /// </param>
+    internal static void Sync(
+        HaltungRecord record,
+        IReadOnlyList<PrimaryDamageRowParser.PrimaryDamageRow>? rows)
     {
         ArgumentNullException.ThrowIfNull(record);
 
@@ -23,7 +32,7 @@ internal static class PdfPrimaryDamageStructureSynchronizer
             return;
 
         var findings = PdfPrimaryDamageFindingBuilder.Build(
-            record.GetFieldValue(FieldKeys.PrimaryDamages));
+            record.GetFieldValue(FieldKeys.PrimaryDamages), rows);
         if (findings.Count == 0)
             return;
 

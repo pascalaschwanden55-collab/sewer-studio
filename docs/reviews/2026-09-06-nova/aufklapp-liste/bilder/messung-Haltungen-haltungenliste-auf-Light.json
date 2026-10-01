@@ -1,0 +1,21 @@
+{
+  "utc": "2026-09-08T08:07:23.7794552Z",
+  "theme": "Light",
+  "seite": "Haltungen",
+  "variante": "haltungenliste",
+  "zustand": "auf",
+  "listeGefunden": true,
+  "zeilenGesamt": 2,
+  "sichtbareKopfzeilen": 1,
+  "recordDetailsViewImBaum": 4,
+  "offeneHaltung": "10001-10002",
+  "hoeheOffeneZeile": 1559.3,
+  "viewportHoehe": 749.4,
+  "width": 1920,
+  "height": 1080,
+  "primaryWidth": 1920,
+  "primaryHeight": 1080,
+  "dpiX": 96,
+  "dpiY": 96,
+  "windowCount": 1
+}

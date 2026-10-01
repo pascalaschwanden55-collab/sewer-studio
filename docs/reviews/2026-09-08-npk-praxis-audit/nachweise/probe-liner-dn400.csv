@@ -1,0 +1,22 @@
+NPK-135-Leistungsverzeichnis;;;;;;;;
+Sanierungsmassnahmen Kanalisation — Projekt: Synthetische Auditprobe DN400;;;;;;;;
+Abwasser Uri — Zentrale Dienste — Giessenstrasse 46 — 6460 Altdorf;;;;;;;;
+Erstellt: 08.09.2026;;;;;;;;
+;;;;;;;;
+NPK;NPK D/16;Position;DN;Menge;Einheit;EP CHF;Total CHF;Haltungen
+;;NPK 100 — Einrichtung;;;;;;
+="151.001";="160.161.101";Installation HL-Anlage mehrere Haltungen;;1;pl;500.00;500.00;1
+;;Zwischentotal NPK 100 — Einrichtung;;;;;500.00;
+;;NPK 200 — Reinigung / Zustandserfassung;;;;;;
+="211.110";="200.211.101";Kanalreinigung Vorreinigung;;20;m;5.00;100.00;1
+="221.102";="800.821.111";TV Abnahme nach Sanierung (VSA-QUICK);;20;m;3.00;60.00;1
+="221.102";="200.220.101";TV Vorkontrolle / Referenzaufnahme;;20;m;3.00;60.00;1
+;;Zwischentotal NPK 200 — Reinigung / Zustandserfassung;;;;;220.00;
+;;NPK 300 — Vorarbeiten;;;;;;
+="351.101";="300.350.101";Haltung einmessung / Kalibrierung;;1;Stk;80.00;80.00;1
+;;Zwischentotal NPK 300 — Vorarbeiten;;;;;80.00;
+;;NPK 600 — Renovierung;;;;;;
+="612.111";="600.612";Schlauchliner (Nadelfilz) (Preis von DN 300 uebernommen);400;20;m;320.00;6400.00;1
+="621.110";="600.621.110";Linerendmanschette (LEM) / Schachtanbindung;400;2;Stk;640.00;1280.00;1
+;;Zwischentotal NPK 600 — Renovierung;;;;;7680.00;
+;;TOTAL (exkl. MwSt.);;;;;8480.00;

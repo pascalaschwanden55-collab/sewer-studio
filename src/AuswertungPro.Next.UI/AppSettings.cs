@@ -21,18 +21,68 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public const string DefaultQgisExportDirectory = @"D:\QGIS_V4.03\Export_Sewer_Studio";
     public const string DefaultAbwasserkatasterXtfPath = DefaultQgisExportDirectory + @"\Abwasserkataster_Uri_korrigiert.xtf";
     public const string DefaultKantonUriXtfDirectory = DefaultQgisExportDirectory;
+
+    // Die lokalen QGIS-Kopien des Abwassernetzes. Ein GeoPackage ist eine
+    // SQLite-Datenbank: Daraus laesst sich der ganze Bestand offline lesen, ohne
+    // den gedrosselten Netzdienst des Kantons anzufragen.
+    public const string DefaultQgisLayerDirectory = @"D:\QGIS_V4.2\Layer";
+    public const string DefaultQgisHaltungenGpkgPath = DefaultQgisLayerDirectory + @"\Leitungen Lokal.gpkg";
+    public const string DefaultQgisSchaechteGpkgPath = DefaultQgisLayerDirectory + @"\Schächte-Selektioniert-Ausführung_durch.gpkg";
+    // Die Kennungstabelle aus der GEONIS-Kopie: nur SIA405-Kennungen je Haltung
+    // und Schacht, damit ein Neu-Export Objekte schreibt, die GEONIS wiedererkennt.
+    public const string DefaultKatasterKennungenGpkgPath = DefaultQgisLayerDirectory + @"\Kataster_Kennungen_GEONIS_2024-12.gpkg";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
         PropertyNameCaseInsensitive = true
     };
     private static readonly object SaveSync = new();
+    // Auditbefund 15: Verzoegerte und sofortige Speicherung duerfen sich nicht
+    // ueberholen. Die Regel entscheidet und schreibt im selben Abschnitt.
+    private static readonly SettingsWriteOrder WriteOrder = new();
     private static Timer? SaveDebounceTimer;
     private static PendingSettingsWrite? PendingWrite;
     private ISettingsFileStore _settingsFileStore = SettingsStore.CreateDefault();
 
+    // Gesetzt, wenn eine VORHANDENE settings.json beim Start nicht gelesen werden konnte.
+    // Solange das gesetzt ist, wird nichts geschrieben (M3). Bewusst nicht serialisiert.
+    private string? _loadError;
+
+    /// <summary>
+    /// Wahr, wenn die vorhandene Einstellungsdatei nicht gelesen werden konnte und
+    /// deshalb kein Speichern erlaubt ist. Verhindert, dass Standardwerte die echten
+    /// Einstellungen ersetzen.
+    /// </summary>
+    [JsonIgnore]
+    public bool PersistenceBlocked => _loadError is not null;
+
+    /// <summary>Meldungstext fuer die Oberflaeche, wenn <see cref="PersistenceBlocked"/> gilt.</summary>
+    [JsonIgnore]
+    public string? PersistenceBlockedWarning => _loadError is null
+        ? null
+        : "Die Einstellungsdatei konnte nicht gelesen werden. Änderungen an den " +
+          "Einstellungen werden bis zum nächsten Programmstart NICHT gespeichert, damit " +
+          "die vorhandene Datei nicht durch Standardwerte ersetzt wird.\n" +
+          $"Datei: {SettingsPath}\n" +
+          $"Fehler: {_loadError}";
+
     public bool EnableDiagnostics { get; set; } = true;
     public string? PdfToTextPath { get; set; }
+
+    /// <summary>
+    /// Anzahl Fotos je Seite in den selbst erzeugten Haltungsprotokollen und im
+    /// Haltungsdossier. Erlaubt sind 1, 2, 4 und 6; ungueltige Werte gelten als 2.
+    /// </summary>
+    public int ProtocolPhotosPerPage { get; set; } =
+        AuswertungPro.Next.Application.Reports.ProtocolPdfPhotoLayout.DefaultPhotosPerPage;
+
+    /// <summary>
+    /// Eigenes Logo fuer Berichte (PDF-/Excel-Export, Dossier). Leer oder nicht
+    /// (mehr) vorhanden = das mitgelieferte Standardlogo
+    /// <c>Assets/Brand/abwasser-uri-logo.png</c> neben dem Programm gilt weiter
+    /// (<see cref="AuswertungPro.Next.Application.Reports.BerichtsLogoResolver"/>).
+    /// </summary>
+    public string? BerichtsLogoPfad { get; set; }
     public string? LastProjectPath { get; set; }
 
     // Basisverzeichnis fuer neu angelegte Projekte. Leer = beim ersten Anlegen
@@ -46,6 +96,20 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     // entfernt ein Projekt nur aus der Liste — die Dateien im Ordner bleiben erhalten.
     public List<string> HiddenProjectPaths { get; set; } = new();
     public bool OverviewProjectListCollapsed { get; set; }
+
+    /// <summary>
+    /// Der Kopfblock des Dossier-Cockpits (Kacheln, Zustand, Schaeden) ist
+    /// zugeklappt. Zugeklappt bleibt eine Zusammenzugszeile stehen; der
+    /// gewonnene Platz geht an die Tabellen der Leitungen und Schaechte.
+    /// </summary>
+    public bool DossierSummaryCollapsed { get; set; }
+
+    /// <summary>
+    /// Schluessel fuer die Telefonsuche von search.ch. Ohne ihn bleibt die
+    /// Suche aus: die Nutzungsbedingungen erlauben nur die Schnittstelle mit
+    /// eigenem Schluessel, nicht das Auslesen der Webseite.
+    /// </summary>
+    public string? SearchChApiKey { get; set; }
 
     /// <summary>Projekt-Pfad in RecentProjectPaths einfuegen (Duplikate vermeiden, max 20).</summary>
     public void AddRecentProject(string path)
@@ -104,6 +168,10 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     // gilt false, und MotionSettings folgt dann der Windows-Systemeinstellung.
     public bool ReduceMotion { get; set; }
 
+    // Nova-Etappe 2: leises Leitungsnetz im Fensterhintergrund, reine Optik. Standard an;
+    // ReduceMotion und ein inaktives Fenster halten die Engine unabhaengig davon an.
+    public bool HintergrundEngine { get; set; } = true;
+
     // Video player tuning
     public bool VideoHwDecoding { get; set; } = true;
     public bool VideoDropLateFrames { get; set; } = true;
@@ -117,12 +185,45 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public double PlayerOverlayOpacity { get; set; } = 1d;
     public DataPageLayoutSettings DataPageLayout { get; set; } = new();
     public DataPageLayoutSettings SchaechtePageLayout { get; set; } = new();
+    public Dictionary<string, bool> ObjektakteSichtbarkeit { get; set; } = new();
+    public Dictionary<string, bool> ObjektakteFavoriten { get; set; } = new();
+    public Dictionary<string, bool> ObjektakteGruppen { get; set; } = new();
+    // Feldmarkierung «will ich ausfuellen» (11.09.2026): Feld-Id -> Farbname aus ObjektFeldViewModel.Farben.
+    public Dictionary<string, string> ObjektakteFarben { get; set; } = new();
 
     // Haltungsansicht: per GridSplitter einstellbare Hoehe des "Primaere Schaeden"-Panels (in px).
     public double HaltungsansichtSchadenHeight { get; set; } = 240d;
 
+    /// <summary>Nova-Etappe 1: Liste mit Uebersicht rechts und Eingabefeldern unten als Standard. false = bisherige Haltungsansicht.</summary>
+    public bool ShowHaltungenNovaLayout { get; set; } = true;
+
+    /// <summary>
+    /// Nova, Aufklapp-Liste: Welche der beiden Nova-Ansichten die Haltungsseite zeigt —
+    /// "liste" (Standard, Formular in der aufgeklappten Zeile) oder "tabelle". Unbekannte
+    /// Werte gelten als "liste" (<see cref="DataPage.HaltungenAnsichtRegel"/>).
+    /// </summary>
+    public string HaltungenAnsicht { get; set; } = "liste";
+
     // Schachtansicht: per GridSplitter einstellbare Hoehe des "Schaeden"-Panels (in px).
     public double SchachtansichtSchadenHeight { get; set; } = 240d;
+
+    /// <summary>Nova-Etappe 2: Liste mit Schachtansicht rechts und Eingabefeldern unten als Standard. false = bisherige Schachtansicht.</summary>
+    public bool ShowSchaechteNovaLayout { get; set; } = true;
+
+    /// <summary>
+    /// Nova, Aufklapp-Liste (Task 6): Welche der beiden Nova-Ansichten die Schachtseite zeigt —
+    /// "liste" (Standard, Formular in der aufgeklappten Zeile) oder "tabelle". Unbekannte
+    /// Werte gelten als "liste" (dieselbe Regel wie bei den Haltungen,
+    /// <see cref="DataPage.HaltungenAnsichtRegel"/>).
+    /// </summary>
+    public string SchaechteAnsicht { get; set; } = "liste";
+
+    /// <summary>
+    /// Nova-Fixwelle F3: Bei offenem Projekt zeigt "Uebersicht" die neue Projektuebersicht.
+    /// false schaltet auf die klassische Uebersichtsseite zurueck (Menue "Ansicht &#8594;
+    /// Klassische Uebersicht"), die weiterhin Projektliste, Vorschau und Vorschau-PDF traegt.
+    /// </summary>
+    public bool ShowUebersichtNovaLayout { get; set; } = true;
 
     // Foto-Galerie: Kachelbreite im Haltungs-/Schachtdetail.
     public double PhotoGalleryTileSize { get; set; } = 124d;
@@ -281,14 +382,28 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     // Vollstaendiger XTF-Datenbestand Kanton Uri (Leitungen und Schaechte).
     public string KantonUriXtfDirectory { get; set; } = DefaultKantonUriXtfDirectory;
 
-    // Lokale QGIS-XYZ-Kacheln fuer die Kartenansicht. Fehlt der Ordner, bleibt es beim WMS.
-    public string QgisTilesPath { get; set; } = DefaultQgisExportDirectory + @"\tiles_test";
+    // Quellen fuer "Leere Felder aus QGIS ergaenzen". Fehlt die Datei, meldet der
+    // Knopf das und aendert nichts.
+    public string QgisHaltungenGpkgPath { get; set; } = DefaultQgisHaltungenGpkgPath;
+    public string QgisSchaechteGpkgPath { get; set; } = DefaultQgisSchaechteGpkgPath;
 
-    // Offline-Hintergrundkarten: Basisordner im Programmordner mit den Unterordnern
-    // "satellit" (SWISSIMAGE, JPEG) und "av" (AV-Karte farbig/Grundbuch, PNG), Kanton Uri z18.
-    // Standard-Hintergrund der App-Karte; fehlt ein Ordner, wird stattdessen OSM online genutzt.
-    // In den Einstellungen aenderbar.
-    public string OfflineBasemapPath { get; set; } = @"c:\Sewer-Studio_KI_4.5\basemap_tiles";
+    // Quelle fuer "Katasterkennungen ergaenzen". Fehlt die Datei, meldet der
+    // Knopf das und aendert nichts.
+    public string KatasterKennungenGpkgPath { get; set; } = DefaultKatasterKennungenGpkgPath;
+
+    // Zuletzt gewaehlte GeoShop-XTF (11.09.2026): fuer «Fehlende Felder aus GeoShop-XTF» an der
+    // einzelnen Haltung/dem Schacht und den Abgleich der ganzen Seite. Leer heisst: beim naechsten Mal fragen.
+    public string GeoShopXtfPath { get; set; } = "";
+
+    // WebGIS-Uebertragung (21.09.2026): WebOffice-Projekt und GEONIS-Datenquelle der AWU;
+    // der X-syn-Kontext wird nach der ersten Anmeldung gemerkt, damit spaeter die Anmeldung
+    // allein genuegt. Kein Passwort — die Anmeldung laeuft im sichtbaren Browser.
+    public string WebGisBasisUrl { get; set; } = "https://www.geohost.ch";
+    public string WebGisProjekt { get; set; } = "awu_abw_edit";
+    public string WebGisDatenquelle { get; set; } = "awu_abw";
+    public string WebGisSynLogin { get; set; } = "";
+    public string WebGisSynRoles { get; set; } = "";
+    public string WebGisSynGroups { get; set; } = "";
 
     // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
     // Null bedeutet Default an.
@@ -310,6 +425,12 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
     // AI / Ollama settings (overrides env vars if set)
     public bool AiStartOnProgramStart { get; set; }
+
+    /// <summary>
+    /// Vorabdurchlauf (Bogen, Rohranfang, Rohrende) beim Oeffnen des Codiermodus.
+    /// Standard ein; ein fehlender Wert in settings.json bleibt ein.
+    /// </summary>
+    public bool CodingSuggestionsEnabled { get; set; } = true;
     public bool? AiEnabled { get; set; }
     public string? AiOllamaUrl { get; set; }
     public string? AiVisionModel { get; set; }
@@ -327,7 +448,8 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     public DateTime? LastFullBackupUtc { get; set; }
     public string? LastFullBackupPath { get; set; }
     public long? LastFullBackupSizeBytes { get; set; }
-    public bool FullBackupIncludeProjectVideos { get; set; }
+    public bool FullBackupIncludeProjectVideos { get; set; } = true;
+    public int FullBackupSafetyVersion { get; set; }
 
     public static string AppDataDir
         => AppDataPathResolver.Resolve(AppIdentity.ProductName);
@@ -364,7 +486,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
             var json = File.ReadAllText(SettingsPath);
             var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions)
-                ?? throw new JsonException("settings.json enthaelt kein gueltiges Settings-Objekt.");
+                ?? throw new JsonException("settings.json enthält kein gültiges Settings-Objekt.");
             return NormalizeAfterLoad(settings);
         }
         catch (JsonException ex)
@@ -375,12 +497,56 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         catch (Exception ex)
         {
             TryAppendSettingsLog("Settings konnten nicht geladen werden. Es werden Standardwerte verwendet.", ex);
-            return new AppSettings();
+
+            var fallback = new AppSettings();
+            // Existiert die Datei, stehen echte Einstellungen auf dem Spiel: Dann darf
+            // NICHTS gespeichert werden, sonst ersetzt der naechste beliebige Save die
+            // vorhandene Datei durch Standardwerte (Audit 2026-08-10/14, M3).
+            // Ungueltiges JSON geht oben in die Quarantaene und bleibt dadurch erhalten;
+            // hier geht es um gesperrte, verweigerte oder kurz nicht erreichbare Dateien.
+            if (SettingsFileMightExist())
+                fallback._loadError = UserError.Describe(ex);
+            return fallback;
+        }
+    }
+
+    /// <summary>
+    /// Sperrt jedes Schreiben, solange die vorhandene Datei nicht gelesen werden konnte.
+    /// Liefert true, wenn der Aufrufer abbrechen muss.
+    /// </summary>
+    private bool BlockPersistenceIfUnreadable()
+    {
+        if (_loadError is null)
+            return false;
+
+        TryAppendSettingsLog(
+            "Speichern der Einstellungen ist gesperrt, weil die vorhandene settings.json " +
+            $"beim Start nicht gelesen werden konnte ({_loadError}). Es wird nichts geschrieben.");
+        return true;
+    }
+
+    /// <summary>
+    /// Konservative Existenzpruefung fuer den Fehlerfall. <see cref="File.Exists"/>
+    /// liefert bei Zugriffsfehlern ebenfalls false; wir behandeln deshalb jeden
+    /// Zweifelsfall als "Datei ist da" und sperren lieber das Schreiben.
+    /// </summary>
+    private static bool SettingsFileMightExist()
+    {
+        try
+        {
+            return File.Exists(SettingsPath);
+        }
+        catch
+        {
+            return true;
         }
     }
 
     public void Save()
     {
+        if (BlockPersistenceIfUnreadable())
+            return;
+
         LastVideoFolder = LastVideoSourceFolder;
         MigrateLegacyExcelExportRoot();
         var json = JsonSerializer.Serialize(this, JsonOptions);
@@ -388,6 +554,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         lock (SaveSync)
         {
             PendingWrite = new PendingSettingsWrite(
+                WriteOrder.Next(),
                 json,
                 EnableRestorePoints,
                 _settingsFileStore);
@@ -409,9 +576,13 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
     public void SaveImmediate()
     {
+        if (BlockPersistenceIfUnreadable())
+            return;
+
         LastVideoFolder = LastVideoSourceFolder;
         MigrateLegacyExcelExportRoot();
         var json = JsonSerializer.Serialize(this, JsonOptions);
+        var sequence = WriteOrder.Next();
 
         lock (SaveSync)
         {
@@ -420,7 +591,11 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
             SaveDebounceTimer = null;
         }
 
-        PersistSerializedState(json, EnableRestorePoints, _settingsFileStore);
+        // Ein bereits laufender, aelterer Schreibvorgang darf diesen Stand nicht
+        // ueberholen — und umgekehrt (Auditbefund 15).
+        var store = _settingsFileStore;
+        var restorePoints = EnableRestorePoints;
+        WriteOrder.Write(sequence, () => PersistSerializedState(json, restorePoints, store));
     }
 
     public static void FlushPendingSave()
@@ -437,10 +612,12 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         if (pending is null)
             return;
 
-        PersistSerializedState(
-            pending.Json,
-            pending.EnableRestorePoints,
-            pending.SettingsFileStore);
+        WriteOrder.Write(
+            pending.Sequence,
+            () => PersistSerializedState(
+                pending.Json,
+                pending.EnableRestorePoints,
+                pending.SettingsFileStore));
     }
 
     private static void MigrateLegacySettingsIfNeeded(
@@ -453,13 +630,18 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         if (migrationResult.Error is not null)
         {
             TryAppendSettingsLog(
-                "Alte Einstellungen konnten nicht uebernommen werden.",
+                "Alte Einstellungen konnten nicht übernommen werden.",
                 migrationResult.Error);
         }
     }
 
     private static AppSettings NormalizeAfterLoad(AppSettings settings)
     {
+        if (settings.FullBackupSafetyVersion < 1)
+        {
+            settings.FullBackupIncludeProjectVideos = true;
+            settings.FullBackupSafetyVersion = 1;
+        }
         settings.MigrateLegacyKnowledgeRootPath();
         settings.HaltungDistribution ??= new DistributionTargetConfig { DateiPattern = "{Datum}_{Haltung}" };
         settings.SchachtDistribution ??= new DistributionTargetConfig { DateiPattern = "{Datum}_{Schachtnummer}" };
@@ -477,15 +659,22 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
         settings.HydraulikPanel ??= new HydraulikPanelSettings();
         settings.DataPageLayout ??= new DataPageLayoutSettings();
         settings.DataPageLayout.Columns ??= new List<DataPageColumnLayout>();
+        settings.DataPageLayout.DetailLayout ??= new DetailLayoutSettings();
         settings.SchaechtePageLayout ??= new DataPageLayoutSettings();
         settings.SchaechtePageLayout.Columns ??= new List<DataPageColumnLayout>();
+        settings.SchaechtePageLayout.DetailLayout ??= new DetailLayoutSettings();
         if (string.IsNullOrWhiteSpace(settings.LastVideoSourceFolder))
             settings.LastVideoSourceFolder = settings.LastVideoFolder;
         if (string.IsNullOrWhiteSpace(settings.LastVideoFolder))
             settings.LastVideoFolder = settings.LastVideoSourceFolder;
         settings.AbwasserkatasterXtfPath ??= DefaultAbwasserkatasterXtfPath;
         settings.KantonUriXtfDirectory ??= DefaultKantonUriXtfDirectory;
-        settings.UiTheme = ThemeManager.NormalizeTheme(settings.UiTheme);
+        settings.QgisHaltungenGpkgPath ??= DefaultQgisHaltungenGpkgPath;
+        settings.QgisSchaechteGpkgPath ??= DefaultQgisSchaechteGpkgPath;
+        settings.KatasterKennungenGpkgPath ??= DefaultKatasterKennungenGpkgPath;
+        // NormalizePreference statt NormalizeTheme: die dritte Design-Wahl "Wie Windows"
+        // (ThemeManager.System) muss die Migration ueberleben, nicht auf Hell zurueckfallen.
+        settings.UiTheme = ThemeManager.NormalizePreference(settings.UiTheme);
         settings.PhotoGalleryTileSize = Math.Clamp(settings.PhotoGalleryTileSize, 80d, 260d);
         settings.PlayerVolume = Math.Clamp(settings.PlayerVolume, 0, 100);
         settings.PlayerOverlayOpacity = Math.Clamp(settings.PlayerOverlayOpacity, 0.35d, 1d);
@@ -546,6 +735,7 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
     }
 
     private sealed record PendingSettingsWrite(
+        long Sequence,
         string Json,
         bool EnableRestorePoints,
         ISettingsFileStore SettingsFileStore);
@@ -553,10 +743,59 @@ public sealed class AppSettings : IAiStartupSettings, IPlayerControlSettingsStor
 
 public sealed class DataPageLayoutSettings
 {
+    /// <summary>Gewaehlte Spaltenansicht der Haltungsliste (Schluessel aus DataPageColumnViewCatalog). Leer = alle Spalten.</summary>
+    public string ActiveColumnView { get; set; } = "alle";
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 4: Kompakt wird nur EINMAL als Standard gesetzt, wenn eine
+    /// bestehende Installation aktualisiert wird (das Flag ist dann noch nicht gesetzt).
+    /// Danach zaehlt ausschliesslich die vom Benutzer gewaehlte Ansicht — siehe
+    /// <c>KompaktStartRegel</c>. Gilt gleichermassen fuer Haltungen (<c>DataPageLayout</c>)
+    /// und Schaechte (<c>SchaechtePageLayout</c>), da beide dieselbe Klasse verwenden.
+    /// </summary>
+    public bool NovaKompaktEinmalGesetzt { get; set; }
+
+    /// <summary>
+    /// Nova-Fixwelle 2b, Runde 2: Die Regel „Zahlen stehen rechts" wirkt nur beim Aufbau
+    /// neuer Spalten. In einer bestehenden Installation liegt aber ein gespeichertes
+    /// Spaltenlayout mit <c>HorizontalAlignment = Left</c> vor und gewinnt — dort staenden
+    /// DN und Laenge weiter links. Ist dieses Flag noch nicht gesetzt, hebt
+    /// <c>ZahlenRechtsMigration</c> die gespeicherte Ausrichtung aller Zahlenspalten genau
+    /// einmal auf Right und die gespeicherten Breiten von Name, Strasse und Material nur
+    /// dann an, wenn sie unter der Startbreite liegen. Danach zaehlt wieder ausschliesslich,
+    /// was der Benutzer eingestellt hat. Gilt fuer Haltungen und Schaechte.
+    /// </summary>
+    public bool ZahlenRechtsEinmalGesetzt { get; set; }
+
     public double GridMinRowHeight { get; set; } = 38d;
     public double GridZoom { get; set; } = 1.0d;
     public bool IsColumnReorderEnabled { get; set; }
     public List<DataPageColumnLayout> Columns { get; set; } = new();
+
+    /// <summary>
+    /// Persoenliche Gestaltung der Detailansicht: Spalten, Feldreihenfolge und
+    /// ausgeblendete Felder. Leer = Werkseinstellung wie bisher.
+    /// Betrifft nur die Anzeige; ein ausgeblendetes Feld behaelt seinen Wert und geht in
+    /// jeden Export weiterhin mit.
+    /// </summary>
+    public DetailLayoutSettings DetailLayout { get; set; } = new();
+}
+
+/// <summary>
+/// Gespeicherte Gestaltung der Detailansicht. Bewusst eigene, einfache Klassen statt
+/// der UI-Typen: die Einstellungsdatei soll lesbar bleiben und beim Laden nichts
+/// erzwingen, was die Oberflaeche gerade nicht hergibt.
+/// </summary>
+public sealed class DetailLayoutSettings
+{
+    public List<DetailLayoutColumnSettings> Columns { get; set; } = new();
+    public List<string> HiddenFields { get; set; } = new();
+}
+
+public sealed class DetailLayoutColumnSettings
+{
+    public string Title { get; set; } = "";
+    public List<string> Fields { get; set; } = new();
 }
 
 public sealed class DataPageColumnLayout

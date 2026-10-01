@@ -8,6 +8,8 @@ $ErrorActionPreference = "Stop"
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $projectPath = Join-Path $repoRoot "src\AuswertungPro.Next.UI\AuswertungPro.Next.UI.csproj"
 $sidecarSource = Join-Path $repoRoot "sidecar"
+$goldenTestName = "AuswertungPro.Next.Pipeline.Tests.SidecarRealVideoIntegrationTests.EchtesVideo_ErfuelltGoldenVertrag"
+$gateReceiptPath = Join-Path $repoRoot ".tmp\ki-release-gate\gate-receipt.json"
 $projectXml = [xml](Get-Content -LiteralPath $projectPath -Raw)
 $appVersion = [string](
     $projectXml.Project.PropertyGroup |
@@ -15,6 +17,44 @@ $appVersion = [string](
         Select-Object -First 1 -ExpandProperty Version)
 if ($appVersion -notmatch '^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$') {
     throw "Keine gueltige Version im UI-Projekt gefunden: '$appVersion'"
+}
+
+$currentCommitLines = @(& git -C $repoRoot rev-parse HEAD 2>$null)
+$gitCommitExitCode = $LASTEXITCODE
+$currentCommit = [string]($currentCommitLines | Select-Object -First 1)
+if ($gitCommitExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($currentCommit)) {
+    throw "Der aktuelle Git-Quellstand konnte nicht ermittelt werden."
+}
+$currentCommit = $currentCommit.Trim()
+
+$sourceStatus = @(& git -C $repoRoot status --porcelain --untracked-files=normal)
+if ($LASTEXITCODE -ne 0) {
+    throw "Der Git-Quellstand konnte nicht geprueft werden."
+}
+if ($sourceStatus.Count -gt 0) {
+    throw "Der Quellstand ist nicht sauber. Vor dem Release alle Aenderungen committen oder bewusst sichern."
+}
+
+if (-not (Test-Path -LiteralPath $gateReceiptPath -PathType Leaf)) {
+    throw "Golden-Beleg fehlt: $gateReceiptPath. Zuerst scripts\ki-release-gate.ps1 erfolgreich ausfuehren."
+}
+try {
+    $gateReceipt = Get-Content -LiteralPath $gateReceiptPath -Raw | ConvertFrom-Json
+} catch {
+    throw "Golden-Beleg ist nicht lesbar: $gateReceiptPath"
+}
+if (-not [bool]$gateReceipt.success -or
+    -not [string]::Equals(
+        [string]$gateReceipt.test_fully_qualified_name,
+        $goldenTestName,
+        [StringComparison]::Ordinal)) {
+    throw "Golden-Beleg bestaetigt nicht den vorgeschriebenen Test: $goldenTestName"
+}
+if (-not [string]::Equals(
+        [string]$gateReceipt.source_commit,
+        $currentCommit,
+        [StringComparison]::OrdinalIgnoreCase)) {
+    throw "Golden-Beleg passt nicht zum aktuellen Commit. Quellstand erneut mit dem KI-Release-Gate pruefen."
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
@@ -215,7 +255,7 @@ Write-Host "Sidecar-Installation abgeschlossen." -ForegroundColor Green
 '@
 Write-Utf8NoBom (Join-Path $outputPath "Install-Sidecar.ps1") $sidecarInstaller
 
-$commit = (& git -C $repoRoot rev-parse HEAD 2>$null | Select-Object -First 1)
+$commit = $currentCommit
 & git -C $repoRoot diff --quiet -- src sidecar tools/Publish-SewerStudio.ps1
 $trackedWorktreeDirty = $LASTEXITCODE -ne 0
 & git -C $repoRoot diff --cached --quiet -- src sidecar tools/Publish-SewerStudio.ps1

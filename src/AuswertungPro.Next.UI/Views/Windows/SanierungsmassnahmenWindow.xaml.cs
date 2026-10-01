@@ -23,6 +23,7 @@ public partial class SanierungsmassnahmenWindow : Window
         InitializeComponent();
         WindowStateManager.Track(this);
         DataContext = vm;
+        Closed += (_, _) => vm.Dispose();
 
         vm.CostCalcVm.Saved += () => Close();
         vm.CloseRequested += () => Close();
@@ -250,7 +251,7 @@ public partial class SanierungsmassnahmenWindow : Window
         {
             var origBrush = blockBorder.BorderBrush;
             var origThickness = blockBorder.BorderThickness;
-            blockBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(0x00, 0xDD, 0xFF));
+            blockBorder.BorderBrush = ResolveAccentBrush(0xFF);
             blockBorder.BorderThickness = new Thickness(3);
 
             var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
@@ -282,7 +283,7 @@ public partial class SanierungsmassnahmenWindow : Window
             return;
 
         var origBg = row.Background;
-        row.Background = new SolidColorBrush(Color.FromArgb(0xCC, 0x25, 0x63, 0xEB));
+        row.Background = ResolveAccentBrush(0xCC);
 
         var flashTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         flashTimer.Tick += (_, _) =>
@@ -291,6 +292,18 @@ public partial class SanierungsmassnahmenWindow : Window
             flashTimer.Stop();
         };
         flashTimer.Start();
+    }
+
+    /// <summary>
+    /// Aufmerksamkeits-Blitz (Rand/Zeile) in der Akzentfarbe des aktiven Theme statt eines hartkodierten
+    /// Cyan-/Blautons – folgt damit auch dem Dunkelmodus. Die Deckkraft bleibt je Aufrufer wählbar.
+    /// </summary>
+    private Brush ResolveAccentBrush(byte alpha)
+    {
+        var farbe = TryFindResource("AccentBrush") is SolidColorBrush accent
+            ? accent.Color
+            : Color.FromRgb(0x25, 0x63, 0xEB);
+        return new SolidColorBrush(Color.FromArgb(alpha, farbe.R, farbe.G, farbe.B));
     }
 
     /// <summary>Finds the first Border that has a non-zero BorderThickness (the DataTemplate block border).</summary>

@@ -90,7 +90,7 @@ public sealed class VsaYoloClassMapFileStoreTests : IDisposable
     [Theory]
     [InlineData("{\"A\":0,\"B\":0}", "mehrfach")]
     [InlineData("{\"A\":-1}", "negative")]
-    [InlineData("{\"A\":0,\"B\":2}", "lueckenlos")]
+    [InlineData("{\"A\":0,\"B\":2}", "lückenlos")]
     [InlineData("{\"BAB\":0,\"bab\":1}", "mehrfach")]
     public void Ungueltige_Legacy_IDs_werden_abgelehnt(string json, string expectedMessage)
     {

@@ -1,4 +1,4 @@
-namespace AuswertungPro.Next.UI.DataPage;
+﻿namespace AuswertungPro.Next.UI.DataPage;
 
 public sealed record GridDropdownFieldSpec(
     string OptionField,
@@ -17,6 +17,7 @@ public static class GridDropdownFieldPolicy
     {
         spec = optionField switch
         {
+            "Nutzungsart" => new GridDropdownFieldSpec(optionField, "NutzungsartOptions", AllowFreeText: false, Managed: false),
             "Sanieren_JaNein" => new GridDropdownFieldSpec(
                 optionField,
                 "SanierenOptions",
@@ -27,10 +28,18 @@ public static class GridDropdownFieldPolicy
                 ResetCommand: "ResetSanierenOptionsCommand",
                 RemoveCommand: "RemoveSanierenOptionCommand",
                 AddCommand: "AddSanierenOptionCommand"),
+            // Freitext, obwohl die Liste fest ist: Der Kanton fuehrt mehr
+            // Eigentuemer als die fuenf Kurzformen — "Abwasser Uri", die
+            // einzelnen Gemeinden, "unbekannt". Bei AllowFreeText: false
+            // bindet die Vorlage auf SelectedItem; ein Wert ausserhalb der
+            // Liste ist dort nicht darstellbar, das Feld sieht leer aus und
+            // die erste Bedienung ersetzt ihn durch den ersten Listeneintrag
+            // — bisher "Kanton". Ein nachgeschlagener Eigentuemer ging so
+            // verloren.
             "Eigentuemer" => new GridDropdownFieldSpec(
                 optionField,
                 "EigentuemerOptions",
-                AllowFreeText: false,
+                AllowFreeText: true,
                 Managed: true,
                 EditCommand: "EditEigentuemerOptionsCommand",
                 PreviewCommand: "PreviewEigentuemerOptionsCommand",
@@ -57,14 +66,91 @@ public static class GridDropdownFieldPolicy
                 ResetCommand: "ResetReferenzpruefungOptionsCommand",
                 RemoveCommand: "RemoveReferenzpruefungOptionCommand",
                 AddCommand: "AddReferenzpruefungOptionCommand"),
+            // Rohrmaterial: feste Katalogwerte plus eigene Ergaenzungen. Freitext ist
+            // erlaubt, ein neu getippter Wert wandert ueber EnsureOptionForField in die Liste.
+            "Rohrmaterial" => new GridDropdownFieldSpec(
+                optionField,
+                "RohrmaterialOptions",
+                AllowFreeText: true,
+                Managed: true,
+                EditCommand: "EditRohrmaterialOptionsCommand",
+                PreviewCommand: "PreviewRohrmaterialOptionsCommand",
+                ResetCommand: "ResetRohrmaterialOptionsCommand",
+                RemoveCommand: "RemoveRohrmaterialOptionCommand",
+                AddCommand: "AddRohrmaterialOptionCommand"),
             "Ausgefuehrt_durch" => new GridDropdownFieldSpec(
                 optionField,
                 "AusgefuehrtDurchOptions",
                 AllowFreeText: true,
                 Managed: false),
+            "Bauwerksart" => new GridDropdownFieldSpec(optionField, "BauwerksartOptions", AllowFreeText: false, Managed: false),
+            "Versickerungsart" => new GridDropdownFieldSpec(optionField, "VersickerungsartOptions", AllowFreeText: false, Managed: false),
             "Schachtform" => new GridDropdownFieldSpec(
                 optionField,
                 "SchachtformOptions",
+                AllowFreeText: false,
+                Managed: false),
+            // Belastungsklasse nach EN 124: feste Liste, kein Freitext. Eine getippte
+            // Klasse waere eine unbelegte Aussage ueber die Tragfaehigkeit.
+            "Belastungsklasse" => new GridDropdownFieldSpec(
+                optionField,
+                "BelastungsklasseOptions",
+                AllowFreeText: false,
+                Managed: false),
+            // Schachtfunktion und -material nach SIA405: feste Listen, kein Freitext
+            // und nicht vom Benutzer erweiterbar. Ein getippter Wert haette keinen
+            // Normwert und koennte deshalb nie in eine XTF geschrieben werden.
+            "Funktion" => new GridDropdownFieldSpec(
+                optionField,
+                "SchachtFunktionOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Material" => new GridDropdownFieldSpec(
+                optionField,
+                "SchachtMaterialOptions",
+                AllowFreeText: false,
+                Managed: false),
+            // Die vier SIA405-Felder der revidierten XTF: feste Wertelisten aus dem
+            // Modell, kein Freitext. Ein getippter Wert waere im Export nicht
+            // abbildbar und wuerde dort still liegen bleiben.
+            "FunktionHierarchisch" => new GridDropdownFieldSpec(
+                optionField,
+                "FunktionHierarchischOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Verbindungsart" => new GridDropdownFieldSpec(
+                optionField,
+                "VerbindungsartOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Bettung_Umhuellung" => new GridDropdownFieldSpec(
+                optionField,
+                "BettungUmhuellungOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Profiltyp" => new GridDropdownFieldSpec(
+                optionField,
+                "ProfiltypOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "FunktionHydraulisch" => new GridDropdownFieldSpec(
+                optionField,
+                "FunktionHydraulischOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Status" => new GridDropdownFieldSpec(
+                optionField,
+                "StatusOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Sanierungsbedarf" => new GridDropdownFieldSpec(
+                optionField,
+                "SanierungsbedarfOptions",
+                AllowFreeText: false,
+                Managed: false),
+            "Lagebestimmung" => new GridDropdownFieldSpec(
+                optionField,
+                "LagebestimmungOptions",
                 AllowFreeText: false,
                 Managed: false),
             _ => null!

@@ -13,7 +13,7 @@ public sealed class TrainingReviewFeedbackServiceFactoryTests
         Directory.CreateDirectory(root);
         using var db = new KnowledgeBaseContext(Path.Combine(root, "kb.db"));
 
-        var service = TrainingReviewFeedbackServiceFactory.Create(db, settings: null);
+        using var service = TrainingReviewFeedbackServiceFactory.Create(db, settings: null);
 
         Assert.NotNull(service);
     }

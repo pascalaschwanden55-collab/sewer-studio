@@ -1,0 +1,182 @@
+[
+  {
+    "theme": "Light",
+    "page": "Uebersicht",
+    "viewModel": "ProjektUebersichtPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Projekt",
+    "viewModel": "ProjectPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Haltungen",
+    "viewModel": "DataPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Schaechte",
+    "viewModel": "SchaechtePageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Import",
+    "viewModel": "ImportPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Export",
+    "viewModel": "ExportPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Medienkonflikte",
+    "ok": false,
+    "error": "System.Windows.Markup.XamlParseException: Die Angabe eines Werts f\u00FCr \u0022System.Windows.Markup.StaticResourceHolder\u0022 f\u00FChrte zu einer Ausnahme.\r\n ---\u003E System.Exception: Die Ressource mit dem Namen \u0022SecondaryButton\u0022 kann nicht gefunden werden. Bei Ressourcennamen wird die Gro\u00DF- und Kleinschreibung ber\u00FCcksichtigt.\r\n   at System.Windows.StaticResourceExtension.ProvideValue(IServiceProvider serviceProvider)\r\n   at MS.Internal.Xaml.Runtime.ClrObjectRuntime.CallProvideValue(MarkupExtension me, IServiceProvider serviceProvider)\r\n   --- End of inner exception stack trace ---\r\n   at System.Windows.Markup.XamlReader.RewrapException(Exception e, IXamlLineInfo lineInfo, Uri baseUri)\r\n   at System.Windows.Markup.XamlReader.RewrapException(Exception e, Uri baseUri)\r\n   at System.Windows.FrameworkTemplate.LoadTemplateXaml(XamlReader templateReader, XamlObjectWriter currentWriter)\r\n   at System.Windows.FrameworkTemplate.LoadOptimizedTemplateContent(DependencyObject container, IComponentConnector componentConnector, IStyleConnector styleConnector, List\u00601 affectedChildren, UncommonField\u00601 templatedNonFeChildrenField)\r\n   at System.Windows.FrameworkTemplate.ApplyTemplateContent(UncommonField\u00601 templateDataField, FrameworkElement container)\r\n   at System.Windows.FrameworkElement.ApplyTemplate()\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.DockPanel.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Border.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureCell(Int32 cell, Boolean forceInfinityV)\r\n   at System.Windows.Controls.Grid.MeasureCellsGroup(Int32 cellsHead, Size referenceSize, Boolean ignoreDesiredSizeU, Boolean forceInfinityV, Boolean\u0026 hasDesiredSizeUChanged)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureCell(Int32 cell, Boolean forceInfinityV)\r\n   at System.Windows.Controls.Grid.MeasureCellsGroup(Int32 cellsHead, Size referenceSize, Boolean ignoreDesiredSizeU, Boolean forceInfinityV, Boolean\u0026 hasDesiredSizeUChanged)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.ContentPresenter.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Border.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Control.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.ContentPresenter.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Control.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Border.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureCell(Int32 cell, Boolean forceInfinityV)\r\n   at System.Windows.Controls.Grid.MeasureCellsGroup(Int32 cellsHead, Size referenceSize, Boolean ignoreDesiredSizeU, Boolean forceInfinityV, Boolean\u0026 hasDesiredSizeUChanged)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.DockPanel.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.ContentPresenter.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Decorator.MeasureOverride(Size constraint)\r\n   at System.Windows.Documents.AdornerDecorator.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Border.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Window.MeasureOverrideHelper(Size constraint)\r\n   at System.Windows.Window.MeasureOverride(Size availableSize)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.ContextLayoutManager.UpdateLayout()\r\n   at Program.PruefeSeiten(ShellViewModel shell, Window window) in C:\\Sewer-Studio_KI_4.5\\.tmp\\redesign-review\\host\\Seitenprobe.cs:line 26"
+  },
+  {
+    "theme": "Light",
+    "page": "Druckcenter",
+    "viewModel": "BuilderPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Dossiers",
+    "viewModel": "DossiersPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Sanierungs-Matrix",
+    "viewModel": "SanierungsMatrixPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Schacht-Matrix",
+    "viewModel": "SchachtSanierungsMatrixPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Schattenauswertung",
+    "viewModel": "SchattenauswertungPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "VSA",
+    "viewModel": "VsaPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Diagnose",
+    "viewModel": "DiagnosticsPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Light",
+    "page": "Einstellungen",
+    "viewModel": "SettingsPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Uebersicht",
+    "viewModel": "ProjektUebersichtPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Projekt",
+    "viewModel": "ProjectPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Haltungen",
+    "viewModel": "DataPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Schaechte",
+    "viewModel": "SchaechtePageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Import",
+    "viewModel": "ImportPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Export",
+    "viewModel": "ExportPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Medienkonflikte",
+    "ok": false,
+    "error": "System.Windows.Markup.XamlParseException: Die Angabe eines Werts f\u00FCr \u0022System.Windows.Markup.StaticResourceHolder\u0022 f\u00FChrte zu einer Ausnahme.\r\n ---\u003E System.Exception: Die Ressource mit dem Namen \u0022SecondaryButton\u0022 kann nicht gefunden werden. Bei Ressourcennamen wird die Gro\u00DF- und Kleinschreibung ber\u00FCcksichtigt.\r\n   at System.Windows.StaticResourceExtension.ProvideValue(IServiceProvider serviceProvider)\r\n   at MS.Internal.Xaml.Runtime.ClrObjectRuntime.CallProvideValue(MarkupExtension me, IServiceProvider serviceProvider)\r\n   --- End of inner exception stack trace ---\r\n   at System.Windows.Markup.XamlReader.RewrapException(Exception e, IXamlLineInfo lineInfo, Uri baseUri)\r\n   at System.Windows.Markup.XamlReader.RewrapException(Exception e, Uri baseUri)\r\n   at System.Windows.FrameworkTemplate.LoadTemplateXaml(XamlReader templateReader, XamlObjectWriter currentWriter)\r\n   at System.Windows.FrameworkTemplate.LoadOptimizedTemplateContent(DependencyObject container, IComponentConnector componentConnector, IStyleConnector styleConnector, List\u00601 affectedChildren, UncommonField\u00601 templatedNonFeChildrenField)\r\n   at System.Windows.FrameworkTemplate.ApplyTemplateContent(UncommonField\u00601 templateDataField, FrameworkElement container)\r\n   at System.Windows.FrameworkElement.ApplyTemplate()\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.DockPanel.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Border.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureCell(Int32 cell, Boolean forceInfinityV)\r\n   at System.Windows.Controls.Grid.MeasureCellsGroup(Int32 cellsHead, Size referenceSize, Boolean ignoreDesiredSizeU, Boolean forceInfinityV, Boolean\u0026 hasDesiredSizeUChanged)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureCell(Int32 cell, Boolean forceInfinityV)\r\n   at System.Windows.Controls.Grid.MeasureCellsGroup(Int32 cellsHead, Size referenceSize, Boolean ignoreDesiredSizeU, Boolean forceInfinityV, Boolean\u0026 hasDesiredSizeUChanged)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.ContentPresenter.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Border.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Control.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.ContentPresenter.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Control.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Border.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureCell(Int32 cell, Boolean forceInfinityV)\r\n   at System.Windows.Controls.Grid.MeasureCellsGroup(Int32 cellsHead, Size referenceSize, Boolean ignoreDesiredSizeU, Boolean forceInfinityV, Boolean\u0026 hasDesiredSizeUChanged)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.DockPanel.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Grid.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.ContentPresenter.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Documents.AdornerDecorator.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Controls.Border.MeasureOverride(Size constraint)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.Window.MeasureOverrideHelper(Size constraint)\r\n   at System.Windows.Window.MeasureOverride(Size availableSize)\r\n   at System.Windows.FrameworkElement.MeasureCore(Size availableSize)\r\n   at System.Windows.UIElement.Measure(Size availableSize)\r\n   at System.Windows.ContextLayoutManager.UpdateLayout()\r\n   at Program.PruefeSeiten(ShellViewModel shell, Window window) in C:\\Sewer-Studio_KI_4.5\\.tmp\\redesign-review\\host\\Seitenprobe.cs:line 26"
+  },
+  {
+    "theme": "Dark",
+    "page": "Druckcenter",
+    "viewModel": "BuilderPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Dossiers",
+    "viewModel": "DossiersPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Sanierungs-Matrix",
+    "viewModel": "SanierungsMatrixPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Schacht-Matrix",
+    "viewModel": "SchachtSanierungsMatrixPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Schattenauswertung",
+    "viewModel": "SchattenauswertungPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "VSA",
+    "viewModel": "VsaPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Diagnose",
+    "viewModel": "DiagnosticsPageViewModel",
+    "ok": true
+  },
+  {
+    "theme": "Dark",
+    "page": "Einstellungen",
+    "viewModel": "SettingsPageViewModel",
+    "ok": true
+  }
+]

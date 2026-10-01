@@ -9,7 +9,7 @@ Bezug: `../../Agent-Konzept_Training-Ops.md` und `../../Trainingsplan_Detail_KI-
 | Datei | Zweck |
 |---|---|
 | `training_ops_agent.py` | Agent + Tools + CLI-Einstieg |
-| `guardrails.py` | Sicherheitsprüfungen im Code (VRAM/Sidecar, versiegelte Splits, Pfad-Sandbox) |
+| `guardrails.py` | Sicherheitsprüfungen im Code (VRAM/Sidecar und versiegelte Splits) |
 | `schicht1.py` | dünne Wrapper um die Skripte in `../scripts/` (melden ehrlich, wenn ein Skript noch fehlt) |
 | `config.py` | Pfade, Sidecar-URL, Backend-Wahl — alles per ENV überschreibbar |
 | `test_guardrails.py` | fokussierte Tests der Kernlogik (ohne SDK lauffähig) |
@@ -49,6 +49,7 @@ python test_guardrails.py
 - **VRAM-Schutz:** `train_detect` verweigert, solange der Sidecar erreichbar ist (`127.0.0.1:8100/health`) oder zu wenig VRAM frei ist — schützt das 29-GB-Laufzeitbudget.
 - **Versiegeltes Abnahme-Set:** `run_eval` läuft nur auf Dev-Val; jeder Split mit `abnahme/gold/sealed/...` wird hart abgelehnt.
 - **Tool-Whitelist:** Der Agent hat nur die vier `training_ops`-Tools — **kein** generisches Bash/Write/Edit.
+- **Keine allgemeine Pfad-Sandbox:** Die vier festen Werkzeuge wählen ihre Ziele selbst. Es gibt keinen unverdrahteten Schutz, der freie Schreibpfade nur scheinbar absichert.
 - **Schleifen-Limit:** `max_turns` (Standard 24) verhindert Kosten-/Endlosausreißer.
 
 ## Nächste Schritte

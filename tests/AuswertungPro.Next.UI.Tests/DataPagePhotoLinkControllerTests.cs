@@ -11,7 +11,7 @@ public sealed class DataPagePhotoLinkControllerTests
             " ",
             @"C:\Projekt\Projektdateien\projekt.json",
             (_, _) => throw new InvalidOperationException("Soll nicht aufloesen"),
-            _ => throw new InvalidOperationException("Soll nicht pruefen"));
+            _ => throw new InvalidOperationException("Soll nicht prüfen"));
 
         Assert.Equal(DataPagePhotoLinkStatus.Noop, plan.Status);
     }

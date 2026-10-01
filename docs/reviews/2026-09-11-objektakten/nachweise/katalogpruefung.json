@@ -1,0 +1,13 @@
+{
+  "Quellfelder": 200,
+  "Quellanzeigen": 204,
+  "Dropdownstellen": 91,
+  "Kataloge": 78,
+  "Quellbelege": 17,
+  "Katalogeintraege": 1158,
+  "AlleEintraegeUnveraendert": true,
+  "sha256": {
+    "feldkatalog.json": "7752adeb0524f3e40ae697fe430bf4df6e34e87d097501414f9480d07fb2a396",
+    "auswahlkataloge.json": "0ca8337a78c64a5ffecfc0dee2ce5b8e32b992e605e437ac8e99adec0421c2c4"
+  }
+}

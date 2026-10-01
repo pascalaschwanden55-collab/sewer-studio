@@ -1,0 +1,281 @@
+using System.Text;
+using AuswertungPro.Next.Application.Xtf;
+using AuswertungPro.Next.Application.Xtf.Dss;
+
+namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
+
+/// <summary>
+/// Fuehrt den vollstaendigen Neu-Export zusammen: Verlaeufe holen, Plan bauen, Bericht
+/// schreiben und die eigenstaendige XTF veroeffentlichen.
+///
+/// Jeder Lauf bekommt einen eigenen Dateinamen mit Zeitstempel; nichts Bestehendes wird
+/// ersetzt. Die Objektkennungen bleiben ueber Laeufe hinweg dieselben — nur so wird aus
+/// einem zweiten Export eine Korrektur und nicht eine Verdopplung im Zielsystem.
+/// </summary>
+public sealed class XtfNeuExportService : IXtfNeuExportService
+{
+    private readonly IXtfVerlaufQuelle? _verlaeufe;
+
+    public XtfNeuExportService(IXtfVerlaufQuelle? verlaeufe = null)
+        => _verlaeufe = verlaeufe;
+
+    public XtfNeuExportResult Erzeuge(XtfNeuExportRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.Projekt is null)
+            return new XtfNeuExportResult(false, "", "Es ist kein Projekt geladen.", null);
+
+        if (string.IsNullOrWhiteSpace(request.ZielOrdner) && !request.NurPruefen)
+            return new XtfNeuExportResult(false, "", "Es wurde kein Zielordner angegeben.", null);
+
+        var verlaeufe = LiesVerlaeufe(out var quellHinweis);
+
+        XtfNeuPlan plan;
+        try
+        {
+        var projekt = XtfQuellverbundErgaenzung.Vorbereite(request.Projekt, request.Quelldateien);
+        plan = DssExportPlanBuilder.Benoetigt(projekt)
+            ? DssExportPlanBuilder.Build(projekt, verlaeufe, request.MitZusatzangaben || request.NurAenderungen)
+            : XtfNeuPlanBuilder.Build(
+            request.Projekt.Data,
+            request.Projekt.SchaechteData,
+            request.Projekt.Id.ToString("N"),
+            verlaeufe);
+        if (plan.Haltungen != request.Projekt.Data.Count || plan.Schaechte != request.Projekt.SchaechteData.Count)
+            throw new InvalidOperationException("Nicht alle Projektobjekte erfüllen die Pflichtangaben. Keine unvollständige XTF geschrieben.\n" + string.Join("\n", plan.Hinweise));
+        if ((request.MitZusatzangaben || request.NurAenderungen) && !plan.Dss)
+            plan = XtfZusatzangaben.Ergaenze(plan, request.Projekt);
+        if (request.NurAenderungen)
+            plan = plan.Dss ? DssAenderungsPlanBuilder.Build(plan, projekt) : XtfAenderungsPlanBuilder.Build(plan, projekt);
+        else if (!request.MitZusatzangaben && !plan.Dss)
+            plan = plan with { Hinweise = plan.Hinweise.Select(HinweisOhneZusatz)
+                .Append("Reiner SIA405-Erstexport: Programmeigene Zusatzangaben verbleiben im Projekt und sind nicht in dieser Datei enthalten.").ToArray() };
+        }
+        catch (XtfQuelleFehltException ex)
+        {
+            return new(false, "Original-Bezugsobjekte fehlen; keine XTF geschrieben.", ex.Message, null, QuelleFehlt: true);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.Xml.XmlException or IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            return new(false, "XTF-Prüfung nicht bestanden; keine XTF geschrieben.", ex.Message, null);
+        }
+
+        var bericht = BaueBericht(plan, request.Projekt, quellHinweis);
+
+        if (plan.Leer)
+        {
+            return new XtfNeuExportResult(
+                false, bericht,
+                request.NurAenderungen ? "Keine lieferbaren Handänderungen vorhanden. Leere Angaben und reine Dateipfadänderungen werden nicht geliefert." : "Es gibt nichts zu exportieren — kein Objekt erfüllt die Pflichtangaben.",
+                null);
+        }
+
+        if (request.NurPruefen)
+            return new XtfNeuExportResult(true, bericht, null, null, Aenderungen: plan.Auftraege);
+
+        var stempel = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var name = Dateiname(request.Projekt.Name);
+        var modus = request.NurAenderungen ? "_Aenderungen" : "";
+        var ziel = Path.Combine(request.ZielOrdner, $"{name}{modus}_{stempel}.xtf");
+
+        var ergebnis = XtfNeuWriter.Schreibe(plan, ziel);
+        return ergebnis.Ok
+            ? new XtfNeuExportResult(true, bericht + $"\n\nGeschrieben: {ergebnis.Datei}", null, ergebnis.Datei, Aenderungen: plan.Auftraege)
+            : new XtfNeuExportResult(false, bericht, ergebnis.Fehler, null);
+    }
+
+    private static string HinweisOhneZusatz(string hinweis)
+    {
+        foreach (var ende in new[] { "siehe Zusatzangaben.", "vollständig in den Zusatzangaben." })
+            if (hinweis.EndsWith(ende, StringComparison.Ordinal))
+                return hinweis[..^ende.Length] + "Originalwert verbleibt im Projekt.";
+        return hinweis;
+    }
+
+    private IReadOnlyDictionary<string, XtfNeuGeometrie>? LiesVerlaeufe(out string hinweis)
+    {
+        hinweis = "Keine QGIS-Quelle eingerichtet — die Objekte gehen ohne Verlauf hinaus.";
+        if (_verlaeufe is null)
+            return null;
+
+        try
+        {
+            var gelesen = _verlaeufe.Lies();
+            hinweis = gelesen.Count == 0
+                ? $"Aus \"{_verlaeufe.Quellpfad}\" konnte kein Verlauf gelesen werden."
+                : $"{gelesen.Count} Verläufe aus \"{_verlaeufe.Quellpfad}\".";
+            return gelesen;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException
+                                      or UnauthorizedAccessException)
+        {
+            // Eine unlesbare Bestandsquelle darf den Export nicht verhindern — die
+            // Sachdaten stehen im Projekt und sind davon unabhaengig.
+            hinweis = $"Die QGIS-Quelle war nicht lesbar ({ex.Message}) — Objekte ohne Verlauf.";
+            return null;
+        }
+    }
+
+    private static string BaueBericht(XtfNeuPlan plan, Domain.Models.Project projekt, string quellHinweis)
+    {
+        var text = new StringBuilder();
+        text.AppendLine($"Projekt: {projekt.Name}");
+        text.AppendLine(plan.NurAenderungen ? "Lieferart: nur Handänderungen mit Feldaufträgen." : "Lieferart: Projektstand gemäss Exportumfang und Hinweisen.");
+        text.AppendLine();
+        text.AppendLine($"Im Projekt: {projekt.Data.Count} Haltungen, {projekt.SchaechteData.Count} Schaechte.");
+        text.AppendLine($"In die Datei: {plan.Haltungen} Haltungen, {plan.Schaechte} Schaechte " +
+                        $"({plan.Objekte.Count} Objekte insgesamt).");
+        text.AppendLine(plan.Dss ? $"{plan.Objekte.Count(o => o.Geometrie is not null || o.Strukturen?.Count > 0)} Objekte mit gespeicherter GeoShop-/QGIS-Geometrie." : quellHinweis);
+
+        SchreibeHinweise(text, plan);
+
+        text.AppendLine();
+        text.AppendLine("Die Objektkennungen bleiben bei jedem Export dieselben. Ein zweiter Lauf");
+        text.AppendLine("kann damit bestehende Objekte treffen, sofern die Kennungen im Ziel bestätigt sind. Bauteile mit");
+        text.AppendLine("GEONIS-Kennung (\"Katasterkennungen ergänzen\") tragen die Kennung des Katasters.");
+        if (plan.Dss) text.AppendLine("Importierte Rollen und Verknüpfungen behalten ihre Original-TIDs. Fehlende externe Organisationen nennt der Bericht. Ein tatsächlicher GEONIS-Import ist damit noch nicht geprüft.");
+        else
+        {
+            text.AppendLine("Datenherr und Datenlieferant kommen aus ihren Projektfeldern. Ist ein Feld");
+            text.AppendLine("leer, gilt der Eigentuemer. Ein gesetzter unbekannter Wert sperrt das Objekt.");
+        }
+
+        return text.ToString().TrimEnd();
+    }
+
+    /// <summary>
+    /// Die Hinweise, nach Art zusammengefasst.
+    ///
+    /// Ungefiltert waeren es im Alltag Dutzende gleichlautende Zeilen — bei einem
+    /// Projekt ohne erfasste Eigentuemer eine je Schacht. Der Dialog waere unlesbar und
+    /// die eine Zeile, auf die es ankommt, ginge darin unter.
+    /// </summary>
+    private static void SchreibeHinweise(StringBuilder text, XtfNeuPlan plan)
+    {
+        if (plan.Hinweise.Count == 0)
+            return;
+        if (plan.Dss)
+        {
+            text.AppendLine(); text.AppendLine("Hinweise:");
+            foreach (var h in plan.Hinweise) text.AppendLine("  " + h);
+            return;
+        }
+
+        var ohneEigentuemer = plan.Hinweise.Count(h => h.Contains("ohne Eigentuemer", StringComparison.Ordinal));
+        var ohneVerlauf = plan.Hinweise.Count(h => h.Contains("kein Verlauf", StringComparison.Ordinal));
+        var ohneSchacht = plan.Hinweise
+            .Where(h => h.Contains("ist im Projekt nicht erfasst", StringComparison.Ordinal))
+            .Count();
+        var mitObjektId = plan.Hinweise.Count(h => h.Contains("Objekt-ID", StringComparison.Ordinal));
+        var mitGeonis = plan.Hinweise.Count(h => h.Contains("GEONIS-Kennung", StringComparison.Ordinal));
+        var gedreht = plan.Hinweise.Count(h => h.Contains("Gegenrichtung zum Kataster", StringComparison.Ordinal));
+        var ohneBauwerk = plan.Hinweise.Count(h => h.Contains("hat dort keine Kennung", StringComparison.Ordinal));
+        var profilAbweichend = plan.Hinweise
+            .Where(h => h.Contains("Rohrprofil weicht vom Kataster ab", StringComparison.Ordinal))
+            .ToList();
+        var uebrige = plan.Hinweise
+            .Where(h => !h.Contains("ohne Eigentuemer", StringComparison.Ordinal)
+                     && !h.Contains("kein Verlauf", StringComparison.Ordinal)
+                     && !h.Contains("ist im Projekt nicht erfasst", StringComparison.Ordinal)
+                     && !h.Contains("Objekt-ID", StringComparison.Ordinal)
+                     && !h.Contains("GEONIS-Kennung", StringComparison.Ordinal)
+                     && !h.Contains("Rohrprofil weicht vom Kataster ab", StringComparison.Ordinal))
+            .ToList();
+
+        text.AppendLine();
+        text.AppendLine("Hinweise:");
+
+        if (mitGeonis > 0)
+        {
+            text.AppendLine(mitGeonis == 1
+                ? "  1 Objekt trägt seine GEONIS-Kennung aus dem Kataster."
+                : $"  {mitGeonis} Objekte tragen ihre GEONIS-Kennung aus dem Kataster.");
+            text.AppendLine("  FME muss diese Kennungen gegen die aktuelle SIA405_ID prüfen.");
+            text.AppendLine("  Unbekannte oder mehrdeutige Kennungen erlauben kein Update.");
+            if (gedreht > 0)
+            {
+                text.AppendLine(
+                    $"  {gedreht} davon heissen im Projekt in der Gegenrichtung zum Kataster; die");
+                text.AppendLine("  Punktkennungen sind entsprechend vertauscht.");
+            }
+
+            if (ohneBauwerk > 0)
+            {
+                text.AppendLine(
+                    $"  {ohneBauwerk} Schaechte haben im Kataster nur eine Knoten-, keine Bauwerkskennung;");
+                text.AppendLine("  ihr Bauwerk bekommt eine eigene Kennung.");
+            }
+        }
+
+        // Ein abweichendes Profil ist eine fachliche Aussage an den Kataster — jede
+        // Zeile einzeln, damit klar ist, welche Haltung betroffen ist.
+        foreach (var hinweis in profilAbweichend.Take(20))
+            text.AppendLine($"  {hinweis}");
+        if (profilAbweichend.Count > 20)
+            text.AppendLine($"  … und {profilAbweichend.Count - 20} weitere Haltungen mit abweichendem Profil.");
+
+        if (mitObjektId > 0)
+        {
+            if (mitObjektId == 1)
+            {
+                text.AppendLine("  1 Objekt hat eine Objekt-ID und wird trotzdem geschrieben.");
+            }
+            else
+            {
+                text.AppendLine(
+                    $"  {mitObjektId} Objekte haben eine Objekt-ID und werden trotzdem geschrieben.");
+            }
+
+            text.AppendLine("  Eine einzelne ID reicht nicht für den ganzen XTF-Objektverbund; die Datei");
+            text.AppendLine("  erhält deshalb eigene, gleichbleibende XTF-Kennungen.");
+            text.AppendLine("  Beim Import in einen bereits gefüllten Kataster können dadurch Duplikate");
+            text.AppendLine("  entstehen. Für eine Aktualisierung bitte \"Revidierte XTF\" verwenden.");
+        }
+
+        if (ohneEigentuemer > 0)
+        {
+            text.AppendLine(
+                $"  {ohneEigentuemer} Objekte haben keinen Eigentuemer und bleiben deshalb draussen.");
+            text.AppendLine(
+                "  In SIA405 ist der Verweis auf eine Organisation Pflicht. Der Knopf");
+            text.AppendLine(
+                "  \"Leere Felder aus QGIS ergänzen\" auf der Haltungs- und der Schachtseite");
+            text.AppendLine(
+                "  füllt ihn dort, wo der Kataster ihn kennt.");
+        }
+
+        if (ohneVerlauf > 0)
+            text.AppendLine($"  {ohneVerlauf} Haltungen ohne Verlauf in der QGIS-Kopie.");
+
+        if (ohneSchacht > 0)
+        {
+            text.AppendLine(
+                $"  {ohneSchacht} Haltungsenden verweisen auf Schaechte, die das Projekt nicht");
+            text.AppendLine(
+                "  führt. Die Haltung geht trotzdem hinaus, ihr Endpunkt bleibt nur ohne");
+            text.AppendLine("  Verbindung zum Schacht.");
+        }
+
+        // Alles Uebrige einzeln, aber gedeckelt: Eine lange Liste liest ohnehin niemand.
+        foreach (var hinweis in uebrige.Take(20))
+            text.AppendLine($"  {hinweis}");
+
+        if (uebrige.Count > 20)
+            text.AppendLine($"  … und {uebrige.Count - 20} weitere.");
+    }
+
+    /// <summary>Ein Dateiname aus dem Projektnamen, ohne fuer Windows unzulaessige Zeichen.</summary>
+    private static string Dateiname(string? projekt)
+    {
+        var roh = (projekt ?? "").Trim();
+        if (roh.Length == 0)
+            return "SewerStudio-Export";
+
+        var sauber = new StringBuilder(roh.Length);
+        foreach (var zeichen in roh)
+            sauber.Append(Path.GetInvalidFileNameChars().Contains(zeichen) ? '_' : zeichen);
+
+        return sauber.ToString();
+    }
+}

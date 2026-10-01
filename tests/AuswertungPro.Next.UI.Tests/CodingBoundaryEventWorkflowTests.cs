@@ -8,6 +8,58 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CodingBoundaryEventWorkflowTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Bound_start_preserves_reference_position_but_records_actual_delayed_photo_origin(bool cleanAvailable)
+    {
+        var service = new RecordingCodingSessionService();
+        var frame = new CodingAnalyzedFrameEvidence([1, 2, 3], TimeSpan.FromSeconds(120), 10.74, true);
+        var clean = new byte[] { 8, 9, 10 };
+        var completion = new TaskCompletionSource<byte[]?>();
+        var pending = CodingBoundaryEventWorkflow.EnsureStartAsync(
+            new(10.74, [], [], [Event("bcd", .12, 5)], service, 6.5, [99]) { AnalyzedFrame = frame },
+            Actions(tryExtractFrameAtSecondsAsync: _ => completion.Task,
+                attachBoundaryAnalyzedFramePhoto: (entry, bytes) =>
+                {
+                    Assert.Same(cleanAvailable ? clean : frame.ImageBytes, bytes);
+                    entry.FotoPaths.Add("bound.png");
+                }));
+        Assert.False(pending.IsCompleted);
+        completion.SetResult(cleanAvailable ? clean : null);
+        await pending;
+        var ev = Assert.Single(service.AddedEvents);
+        Assert.Equal(.12, ev.MeterAtCapture);
+        Assert.Equal(TimeSpan.FromSeconds(5), ev.VideoTimestamp);
+        var meta = ev.Entry.CodeMeta!.Parameters;
+        Assert.Equal("120", meta["ai.frame.time_seconds"]);
+        Assert.Equal(cleanAvailable ? "6.5" : "120", meta["ai.photo.time_seconds"]);
+        Assert.Equal(cleanAvailable ? "first_clean_frame" : "analyzed_frame", meta["ai.photo.source"]);
+        Assert.Equal("import_bcd", meta["ai.event.position.source"]);
+        Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(cleanAvailable ? clean : frame.ImageBytes)).ToLowerInvariant(),
+            meta["ai.photo.sha256"]);
+    }
+
+    [Fact]
+    public void Bound_end_uses_resolved_meter_and_capture_time_instead_of_stale_cache_import_or_player()
+    {
+        var service = new RecordingCodingSessionService();
+        var frame = new CodingAnalyzedFrameEvidence([1, 2, 3], TimeSpan.FromSeconds(250), 15.9, false);
+        CodingBoundaryEventWorkflow.EnsureEnd(
+            new([], [Event("BCE", 16, 300)], service, 14.5, 16, 16, TimeSpan.FromSeconds(254), [99]) { AnalyzedFrame = frame },
+            Actions(attachBoundaryAnalyzedFramePhoto: (entry, bytes) =>
+            {
+                Assert.Same(frame.ImageBytes, bytes);
+                entry.FotoPaths.Add("end.png");
+            }));
+        var ev = Assert.Single(service.AddedEvents);
+        Assert.Equal(15.9, ev.MeterAtCapture);
+        Assert.Equal(TimeSpan.FromSeconds(250), ev.VideoTimestamp);
+        Assert.Equal("250", ev.Entry.CodeMeta!.Parameters["ai.photo.time_seconds"]);
+        Assert.Equal("resolved_fallback", ev.Entry.CodeMeta.Parameters["ai.frame.meter_source"]);
+        Assert.Equal("geschaetzt", ev.Entry.CodeMeta.Parameters["vsa.meter.quelle"]);
+    }
+
     [Fact]
     public async Task EnsureStart_skips_existing_bcd_without_adding_event()
     {

@@ -30,8 +30,38 @@ public partial class BuilderPage : UserControl
         _savedViews = new SavedViewsController(RowsGrid, PageViewKey);
         SavedViewsBox.ItemsSource = _savedViews.Names;
 
+        // Der Spaltenkopf muss dem Bereich folgen. DataGridColumn haengt nicht im VisualTree
+        // und kann darum nicht selbst binden — darum hier von Hand nachgezogen.
+        DataContextChanged += OnDataContextChanged;
+
         Loaded += OnLoaded;
     }
+
+    private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        _ = sender;
+
+        if (e.OldValue is ViewModels.Pages.BuilderPageViewModel oldVm)
+            oldVm.PropertyChanged -= OnViewModelPropertyChanged;
+
+        if (e.NewValue is ViewModels.Pages.BuilderPageViewModel newVm)
+        {
+            newVm.PropertyChanged += OnViewModelPropertyChanged;
+            UpdateBauteilColumnHeader(newVm);
+        }
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (sender is ViewModels.Pages.BuilderPageViewModel vm
+            && e.PropertyName is nameof(ViewModels.Pages.BuilderPageViewModel.BauteilLabel))
+        {
+            UpdateBauteilColumnHeader(vm);
+        }
+    }
+
+    private void UpdateBauteilColumnHeader(ViewModels.Pages.BuilderPageViewModel vm)
+        => BauteilColumn.Header = vm.BauteilLabel;
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {

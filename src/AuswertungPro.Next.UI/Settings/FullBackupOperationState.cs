@@ -35,7 +35,7 @@ public sealed partial class FullBackupOperationState : ObservableObject
 
         Percent = 0;
         CurrentFile = string.Empty;
-        StatusText = "Berechne Groessen...";
+        StatusText = "Berechne Grössen...";
         IsRunning = true;
         return true;
     }
@@ -62,7 +62,7 @@ public sealed partial class FullBackupOperationState : ObservableObject
         if (cancellation is null)
             return;
 
-        StatusText = "Abbruch wird ausgefuehrt...";
+        StatusText = "Abbruch wird ausgeführt...";
         try
         {
             cancellation.Cancel();

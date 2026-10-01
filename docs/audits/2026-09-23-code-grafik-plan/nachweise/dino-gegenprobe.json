@@ -1,0 +1,23 @@
+[
+  {
+    "requested": "cpu",
+    "managed_device": "cpu",
+    "predict_device": "cuda",
+    "degraded": false,
+    "dependency_default": "cuda"
+  },
+  {
+    "requested": "cuda:1",
+    "managed_device": "cuda:1",
+    "predict_device": "cuda",
+    "degraded": false,
+    "dependency_default": "cuda"
+  },
+  {
+    "requested": "cuda:0",
+    "managed_device": "cuda:0",
+    "predict_device": "cuda",
+    "degraded": false,
+    "dependency_default": "cuda"
+  }
+]

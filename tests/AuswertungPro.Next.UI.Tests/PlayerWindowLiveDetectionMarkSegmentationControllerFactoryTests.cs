@@ -6,6 +6,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Coding;
+using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Views.Windows;
 
@@ -87,9 +88,13 @@ public sealed class PlayerWindowLiveDetectionMarkSegmentationControllerFactoryTe
                 overlay);
 
             Assert.Equal(2, contentRectReads);
-            Assert.Contains(
+            Assert.DoesNotContain(
                 overlayCanvas.Children.OfType<FrameworkElement>(),
                 element => Equals(element.Tag, OverlayTags.BendMarker));
+            Assert.True(
+                overlayCanvas.Children.OfType<FrameworkElement>()
+                    .Count(element => Equals(element.Tag, SamMaskRenderer.MaskTag)) >= 2,
+                "Auch ein erkannter Bogen muss als echte SAM-Maske sichtbar sein.");
         });
     }
 

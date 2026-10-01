@@ -432,7 +432,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             if (result.Status == HwInfoReadStatus.InvalidSignature)
             {
                 _hwInfoAvailable = false;
-                Log("HWiNFO: Shared Memory Signatur ungueltig");
+                Log("HWiNFO: Shared Memory Signatur ungültig");
                 return;
             }
 
@@ -488,12 +488,12 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             // HWiNFO not running or Shared Memory not enabled — retry next cycle
             if (!_hwInfoLogged)
             {
-                Log("HWiNFO: Shared Memory nicht gefunden (HWiNFO laeuft nicht oder SM nicht aktiviert)");
+                Log("HWiNFO: Shared Memory nicht gefunden (HWiNFO läuft nicht oder SM nicht aktiviert)");
                 _hwInfoLogged = true;
 
                 if (IsSensorBlocked)
                 {
-                    SensorBlockedReason += "\nTipp: HWiNFO64 starten mit Shared Memory Support fuer Temp-Anzeige trotz HVCI.";
+                    SensorBlockedReason += "\nTipp: HWiNFO64 starten mit Shared Memory Support für Temp-Anzeige trotz HVCI.";
                 }
 
                 SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: HWiNFO Shared Memory ist nicht aktiv oder LHM liefert keinen CPU-Temperatursensor.");
@@ -576,14 +576,14 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 });
 
                 if (_wmiTempSkip <= 6)
-                    Log($"PerfCounter CPU-Temp: {celsius} °C (kein Admin noetig)");
+                    Log($"PerfCounter CPU-Temp: {celsius} °C (kein Admin nötig)");
                 return;
             }
 
             if (Interlocked.Increment(ref _perfCounterTempFailCount) >= 3)
             {
                 _perfCounterTempAvailable = false;
-                Log("PerfCounter CPU-Temp: nicht verfuegbar, versuche ACPI Fallback...");
+                Log("PerfCounter CPU-Temp: nicht verfügbar, versuche ACPI Fallback...");
                 SetCpuTempUnavailable("CPU-Temperatur noch nicht verfügbar: Windows Thermal-Zone-Fallback wird geprüft.");
             }
         }
@@ -636,7 +636,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             if (Interlocked.Increment(ref _wmiTempFailCount) >= 3)
             {
                 _wmiTempAvailable = false;
-                Log("ACPI CPU-Temp: nicht verfuegbar auf diesem System");
+                Log("ACPI CPU-Temp: nicht verfügbar auf diesem System");
                 SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: Windows liefert keinen nutzbaren CPU-Thermalsensor.");
             }
         }
@@ -827,19 +827,35 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         if (File.Exists(nvidiaDriver))
             return nvidiaDriver;
 
-        // Fallback: try from PATH
-        try
+        // PATH ohne Prozessstart durchsuchen. Der Konstruktor laeuft auf dem
+        // UI-Thread; ein Probeprozess mit Timeout konnte den Programmstart
+        // sonst bis zu drei Sekunden blockieren.
+        return FindExecutableOnPath(
+            "nvidia-smi.exe",
+            Environment.GetEnvironmentVariable("PATH"));
+    }
+
+    internal static string? FindExecutableOnPath(string executableName, string? pathVariable)
+    {
+        if (string.IsNullOrWhiteSpace(executableName) || string.IsNullOrWhiteSpace(pathVariable))
+            return null;
+
+        foreach (var rawFolder in pathVariable.Split(
+                     Path.PathSeparator,
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            var result = ExternalProcessRunner.RunAsync(
-                "nvidia-smi",
-                ["--version"],
-                TimeSpan.FromSeconds(3),
-                Encoding.UTF8,
-                Encoding.UTF8).GetAwaiter().GetResult();
-            if (result.Success)
-                return "nvidia-smi";
+            try
+            {
+                var folder = Environment.ExpandEnvironmentVariables(rawFolder.Trim('"'));
+                var candidate = Path.Combine(folder, executableName);
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                // Einen ungueltigen PATH-Eintrag ueberspringen.
+            }
         }
-        catch { /* not in PATH */ }
 
         return null;
     }

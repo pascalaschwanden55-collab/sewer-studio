@@ -149,6 +149,37 @@ public sealed class CodingMultiModelFindingEventCommandWorkflowTests
         Assert.Equal(TimeSpan.FromSeconds(13), result.VideoTime);
     }
 
+    [Fact]
+    public void AnalyzedFrame_uses_meter_and_time_of_the_frame_even_if_the_resolver_is_stale()
+    {
+        // Bild A wurde bei 12,3 m und 45 s analysiert; inzwischen stehen Player und
+        // Meterquelle woanders. Befund und Streckenschaden duerfen nur den Beleg verwenden.
+        var frame = new CodingAnalyzedFrameEvidence([1, 2, 3], TimeSpan.FromSeconds(45), 12.3, MeterFromOsd: true);
+        var resolverCalls = 0;
+        double? trackedMeter = null;
+        TimeSpan? trackedTime = null;
+
+        var result = CodingMultiModelFindingEventCommandWorkflow.ExecuteAnalyzedFrame(
+            Request(currentVideoTime: TimeSpan.FromSeconds(99), fallbackVideoTime: TimeSpan.FromSeconds(98)),
+            frame,
+            new CodingMultiModelAnalyzedFrameEventActions(
+                ResolveMeterForFrame: (_, _) => { resolverCalls++; return 99; },
+                ApplyStretchTracking: (_, meter, time) => { trackedMeter = meter; trackedTime = time; return []; },
+                ResolveFindingCode: (_, _) => null,
+                LookupVsaLabel: _ => null,
+                AttachExactFramePhoto: (_, _) => { },
+                Trace: _ => { },
+                RefreshEvents: () => { },
+                UpdateToolBadge: () => { }));
+
+        Assert.Equal(CodingMultiModelFindingEventCommandOutcome.Executed, result.Outcome);
+        Assert.Equal(0, resolverCalls);
+        Assert.Equal(12.3, result.Meter);
+        Assert.Equal(TimeSpan.FromSeconds(45), result.VideoTime);
+        Assert.Equal(12.3, trackedMeter);
+        Assert.Equal(TimeSpan.FromSeconds(45), trackedTime);
+    }
+
     private static CodingMultiModelFindingEventCommandRequest Request(
         bool hasCodingViewModel = true,
         ICodingSessionService? codingSessionService = null,

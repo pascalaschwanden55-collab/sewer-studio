@@ -17,7 +17,7 @@ public static class CodingProtocolMatchSummaryFormatter
         var hits = green + yellow;
 
         return
-            $"Abgleich: {hits} Treffer ({green} gruen/{yellow} gelb) | " +
+            $"Abgleich: {hits} Treffer ({green} grün/{yellow} gelb) | " +
             $"{wrong} falscher Code | {missed} fehlen | {extra} extra | " +
             $"P {routing.Match.Precision:P0} R {routing.Match.Recall:P0}";
     }

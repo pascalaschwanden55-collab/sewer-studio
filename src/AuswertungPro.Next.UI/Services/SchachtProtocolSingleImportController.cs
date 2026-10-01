@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.UseCases;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Services;
@@ -39,9 +40,11 @@ internal sealed class SchachtProtocolSingleImportController
     internal async Task ExecuteAsync(
         ProjectOperationContext projectContext,
         string projectFolder,
-        string pdfPath)
+        string pdfPath,
+        SchachtRecord? ausgewaehlterSchacht = null)
     {
         var project = projectContext.Project;
+        var ausgewaehlterName = ausgewaehlterSchacht is null ? "" : SchachtPdfVerknuepfung.Name(ausgewaehlterSchacht);
         var result = await _actions.ReadProtocolAsync(pdfPath, DialogTitle);
         if (result is null
             || !_actions.ProjectIsStillOpen(
@@ -50,10 +53,20 @@ internal sealed class SchachtProtocolSingleImportController
                 ProjectOperationImpact.None))
             return;
 
-        if (!result.IstSchachtprotokoll)
+        var nurVerknuepfen = (!result.IstSchachtprotokoll || string.IsNullOrWhiteSpace(result.Schachtnummer))
+            && ausgewaehlterSchacht is not null && ausgewaehlterName.Length > 0;
+        if (nurVerknuepfen && (!project.SchaechteData.Contains(ausgewaehlterSchacht!)
+            || SchachtPdfVerknuepfung.Name(ausgewaehlterSchacht!) != ausgewaehlterName))
+        {
+            _dialogs.Warn("Der ausgewählte Schacht wurde inzwischen entfernt oder umbenannt. Bitte die Datei erneut auswählen.", DialogTitle);
+            return;
+        }
+        if (nurVerknuepfen) result = result with { Schachtnummer = ausgewaehlterName };
+
+        if (!result.IstSchachtprotokoll && !nurVerknuepfen)
         {
             var warning = string.IsNullOrWhiteSpace(result.Lesehinweis)
-                ? "Das gewaehlte PDF ist kein Schachtprotokoll."
+                ? "Das gewählte PDF ist kein Schachtprotokoll."
                 : result.Lesehinweis;
             _dialogs.Warn(warning, DialogTitle);
             return;
@@ -67,9 +80,11 @@ internal sealed class SchachtProtocolSingleImportController
             return;
         }
 
-        var target = ResolveTarget(project, result);
-        if (target is null)
+        var targetResolution = nurVerknuepfen
+            ? new TargetResolution(ausgewaehlterSchacht!, RequiresProjectMembership: true) : ResolveTarget(project, result);
+        if (targetResolution is null)
             return;
+        var target = targetResolution.Target;
 
         SchachtProtocolDistributionResult distribution;
         try
@@ -101,13 +116,36 @@ internal sealed class SchachtProtocolSingleImportController
                 fileImpact))
             return;
 
-        _protocolImport.Apply(target, result, distribution.RelativePath);
-        if (!project.SchaechteData.Contains(target))
+        var targetRemoved = false;
+        lock (_actions.CollectionLock)
         {
-            lock (_actions.CollectionLock)
+            if (targetResolution.RequiresProjectMembership
+                && (!project.SchaechteData.Contains(target)
+                    || nurVerknuepfen && SchachtPdfVerknuepfung.Name(target) != ausgewaehlterName))
             {
-                project.SchaechteData.Add(target);
+                targetRemoved = true;
             }
+            else
+            {
+                if (nurVerknuepfen) SchachtPdfVerknuepfung.Verknuepfe(target, distribution.RelativePath);
+                else _protocolImport.Apply(target, result, distribution.RelativePath);
+                if (!targetResolution.RequiresProjectMembership
+                    && !project.SchaechteData.Contains(target))
+                {
+                    project.SchaechteData.Add(target);
+                }
+            }
+        }
+
+        if (targetRemoved)
+        {
+            var removed =
+                $"Protokoll nicht übernommen: Schacht {result.Schachtnummer} wurde inzwischen entfernt.";
+            _actions.SetLastResult(removed);
+            _dialogs.Warn(
+                removed + " Der gelöschte Datensatz wurde nicht wieder eingefügt.",
+                DialogTitle);
+            return;
         }
 
         project.ModifiedAtUtc = DateTime.UtcNow;
@@ -138,8 +176,9 @@ internal sealed class SchachtProtocolSingleImportController
         if (!saved)
         {
             var notSaved =
-                $"Protokoll uebernommen, aber nicht gespeichert: Schacht {result.Schachtnummer} " +
-                $"({result.Schaeden.Count} Beobachtungen).";
+                nurVerknuepfen ? $"PDF verknüpft, aber nicht gespeichert: Schacht {result.Schachtnummer}."
+                : $"Protokoll übernommen, aber nicht gespeichert: Schacht {result.Schachtnummer} " +
+                  $"({result.Schaeden.Count} Beobachtungen).";
             _actions.SetLastResult(notSaved);
             _dialogs.Warn(
                 notSaved + "\n\nBitte das Projekt erneut speichern."
@@ -149,7 +188,8 @@ internal sealed class SchachtProtocolSingleImportController
         }
 
         _actions.SetLastResult(
-            $"Protokoll importiert: Schacht {result.Schachtnummer} " +
+            nurVerknuepfen ? $"PDF verknüpft: Schacht {result.Schachtnummer}. Keine Protokolldaten automatisch erkannt; bestehende Angaben bleiben erhalten."
+            : $"Protokoll importiert: Schacht {result.Schachtnummer} " +
             $"({result.Schaeden.Count} Beobachtungen).");
     }
 
@@ -173,7 +213,7 @@ internal sealed class SchachtProtocolSingleImportController
             FileCreated: true);
     }
 
-    private SchachtRecord? ResolveTarget(
+    private TargetResolution? ResolveTarget(
         Project project,
         SchachtProtocolParseResult result)
     {
@@ -181,20 +221,30 @@ internal sealed class SchachtProtocolSingleImportController
             project,
             result.Schachtnummer);
         if (existing is null)
-            return new SchachtRecord();
+            return new TargetResolution(
+                new SchachtRecord(),
+                RequiresProjectMembership: false);
 
         var choice = _dialogs.ConfirmCancel(
             $"Schacht {result.Schachtnummer} ist bereits vorhanden.\n\n" +
-            "Ja = Ueberschreiben\nNein = Als neuen Schacht anlegen\nAbbrechen = Nichts tun",
+            "Ja = Überschreiben\nNein = Als neuen Schacht anlegen\nAbbrechen = Nichts tun",
             DialogTitle);
 
         return choice switch
         {
-            DialogConfirm.Yes => existing,
-            DialogConfirm.No => new SchachtRecord(),
+            DialogConfirm.Yes => new TargetResolution(
+                existing,
+                RequiresProjectMembership: true),
+            DialogConfirm.No => new TargetResolution(
+                new SchachtRecord(),
+                RequiresProjectMembership: false),
             _ => null
         };
     }
+
+    private sealed record TargetResolution(
+        SchachtRecord Target,
+        bool RequiresProjectMembership);
 
     private static void Validate(SchachtProtocolSingleImportActions actions)
     {

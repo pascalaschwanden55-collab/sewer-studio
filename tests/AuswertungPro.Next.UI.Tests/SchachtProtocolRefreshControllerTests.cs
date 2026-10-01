@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Services;
@@ -52,7 +52,7 @@ public sealed class SchachtProtocolRefreshControllerTests
             new[]
             {
                 "project-folder",
-                "info|Aktualisieren|Kein Projekt geoeffnet."
+                "info|Aktualisieren|Kein Projekt geöffnet."
             },
             harness.Calls);
     }
@@ -70,7 +70,7 @@ public sealed class SchachtProtocolRefreshControllerTests
             {
                 "project-folder",
                 "project-context",
-                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand erfasste Werte gehen dabei verloren. Fortfahren?"
+                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geänderte Felder bleiben erhalten; alle übrigen werden ersetzt. Fortfahren?"
             },
             harness.Calls);
     }
@@ -78,7 +78,7 @@ public sealed class SchachtProtocolRefreshControllerTests
     [Fact]
     public async Task ExecuteAsync_warns_when_linked_file_cannot_be_resolved()
     {
-        var harness = new Harness { ResolvedPath = null };
+        var harness = new Harness { Match = null };
 
         var outcome = await harness.Controller.ExecuteAsync(CreateRecord());
 
@@ -88,9 +88,9 @@ public sealed class SchachtProtocolRefreshControllerTests
             {
                 "project-folder",
                 "project-context",
-                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand erfasste Werte gehen dabei verloren. Fortfahren?",
-                "resolve|Schaechte_Verteilt/S-1/protokoll.pdf|C:\\Projekt",
-                "warn|Aktualisieren|Die verknuepfte Protokoll-Datei wurde nicht gefunden."
+                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geänderte Felder bleiben erhalten; alle übrigen werden ersetzt. Fortfahren?",
+                "locate|Schaechte_Verteilt/S-1/protokoll.pdf|C:\\Projekt",
+                "warn|Aktualisieren|Die verknüpfte Protokoll-Datei wurde nicht gefunden."
             },
             harness.Calls);
     }
@@ -129,8 +129,8 @@ public sealed class SchachtProtocolRefreshControllerTests
     }
 
     [Theory]
-    [InlineData(false, "S-1", null, "Das verknuepfte PDF ist kein lesbares Schachtprotokoll.")]
-    [InlineData(true, "   ", "", "Das verknuepfte PDF ist kein lesbares Schachtprotokoll.")]
+    [InlineData(false, "S-1", null, "Das verknüpfte PDF ist kein lesbares Schachtprotokoll.")]
+    [InlineData(true, "   ", "", "Das verknüpfte PDF ist kein lesbares Schachtprotokoll.")]
     [InlineData(true, null, "Parser-Hinweis", "Parser-Hinweis")]
     public async Task ExecuteAsync_warns_for_invalid_protocol_result(
         bool isProtocol,
@@ -172,9 +172,10 @@ public sealed class SchachtProtocolRefreshControllerTests
             {
                 "project-folder",
                 "project-context",
-                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand erfasste Werte gehen dabei verloren. Fortfahren?",
-                "resolve|Schaechte_Verteilt/S-1/protokoll.pdf|C:\\Projekt",
+                "confirm|Aktualisieren|defaultNo=True|Der Schacht wird komplett aus dem Protokoll neu aufgebaut. Von Hand geänderte Felder bleiben erhalten; alle übrigen werden ersetzt. Fortfahren?",
+                "locate|Schaechte_Verteilt/S-1/protokoll.pdf|C:\\Projekt",
                 "read|C:\\Projekt\\protokoll.pdf|Aktualisieren",
+                "project-still-open|C:\\Projekt\\projekt.json|Aktualisieren|impact=None",
                 "project-still-open|C:\\Projekt\\projekt.json|Aktualisieren|impact=None",
                 "apply|Schaechte_Verteilt/S-1/protokoll.pdf",
                 "project-still-open|C:\\Projekt\\projekt.json|Aktualisieren|impact=ProjectDataChanged",
@@ -188,6 +189,80 @@ public sealed class SchachtProtocolRefreshControllerTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_uebernimmt_im_Schachtordner_gefundene_Datei_und_erneuert_den_Pfad()
+    {
+        var harness = new Harness
+        {
+            Match = new SchachtProtocolFileMatch(
+                "C:\\Projekt\\Schaechte_Verteilt\\S-1\\20250924_S-1.pdf",
+                SchachtProtocolFileOrigin.Schachtordner)
+        };
+        var record = CreateRecord(shaftNumber: "S-1");
+
+        var outcome = await harness.Controller.ExecuteAsync(record);
+
+        Assert.Equal(SchachtProtocolRefreshOutcome.Updated, outcome);
+        Assert.Same(record, harness.AppliedRecord);
+        Assert.Equal("Schaechte_Verteilt/S-1/20250924_S-1.pdf", harness.AppliedPath);
+        Assert.Contains(
+            "read|C:\\Projekt\\Schaechte_Verteilt\\S-1\\20250924_S-1.pdf|Aktualisieren",
+            harness.Calls);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_uebernimmt_keine_fremde_Schachtnummer_ohne_zweite_Bestaetigung()
+    {
+        var harness = new Harness
+        {
+            Match = new SchachtProtocolFileMatch(
+                "C:\\Projekt\\Schaechte_Verteilt\\S-1\\fremd.pdf",
+                SchachtProtocolFileOrigin.Schachtordner),
+            ReadResult = CreateParseResult(shaftNumber: "S-9"),
+            ConfirmAnswers = new[] { true, false }
+        };
+
+        var outcome = await harness.Controller.ExecuteAsync(CreateRecord(shaftNumber: "S-1"));
+
+        Assert.Equal(SchachtProtocolRefreshOutcome.ForeignShaftNumber, outcome);
+        Assert.Equal(
+            "confirm|Aktualisieren|defaultNo=True|Die verknüpfte Datei fehlt. Im Ordner dieses "
+            + "Schachts wurde stattdessen \"fremd.pdf\" gefunden, sie gehört laut Protokoll aber "
+            + "zu Schacht S-9. Trotzdem übernehmen?",
+            harness.Calls[^1]);
+        Assert.DoesNotContain(harness.Calls, call => call.StartsWith("apply|", StringComparison.Ordinal));
+        Assert.DoesNotContain(harness.Calls, call => call.StartsWith("save|", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_uebernimmt_fremde_Schachtnummer_nur_nach_ausdruecklichem_Ja()
+    {
+        var harness = new Harness
+        {
+            Match = new SchachtProtocolFileMatch(
+                "C:\\Projekt\\Schaechte_Verteilt\\S-1\\fremd.pdf",
+                SchachtProtocolFileOrigin.Schachtordner),
+            ReadResult = CreateParseResult(shaftNumber: "S-9"),
+            ConfirmAnswers = new[] { true, true }
+        };
+
+        var outcome = await harness.Controller.ExecuteAsync(CreateRecord(shaftNumber: "S-1"));
+
+        Assert.Equal(SchachtProtocolRefreshOutcome.Updated, outcome);
+        Assert.Equal("Schaechte_Verteilt/S-1/fremd.pdf", harness.AppliedPath);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_uebernimmt_ausdrueckliche_Verknuepfung_auch_bei_abweichender_Nummer()
+    {
+        var harness = new Harness { ReadResult = CreateParseResult(shaftNumber: "S-9") };
+
+        var outcome = await harness.Controller.ExecuteAsync(CreateRecord(shaftNumber: "S-1"));
+
+        Assert.Equal(SchachtProtocolRefreshOutcome.Updated, outcome);
+        Assert.Equal("Schaechte_Verteilt/S-1/protokoll.pdf", harness.AppliedPath);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_reports_updated_but_not_saved_when_save_returns_false()
     {
         var harness = new Harness { SaveResult = false };
@@ -197,11 +272,11 @@ public sealed class SchachtProtocolRefreshControllerTests
         Assert.Equal(SchachtProtocolRefreshOutcome.UpdatedButNotSaved, outcome);
         Assert.Contains("save|dirty=True|modified=True", harness.Calls);
         Assert.Contains(
-            "last-result|Schacht S-1 uebernommen, aber nicht gespeichert (1 Beobachtungen).",
+            "last-result|Schacht S-1 übernommen, aber nicht gespeichert (1 Beobachtungen).",
             harness.Calls);
         Assert.Contains(
             harness.Calls,
-            call => call.Contains("uebernommen, aber nicht gespeichert", StringComparison.Ordinal));
+            call => call.Contains("übernommen, aber nicht gespeichert", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -217,7 +292,7 @@ public sealed class SchachtProtocolRefreshControllerTests
         Assert.Equal(SchachtProtocolRefreshOutcome.UpdatedButNotSaved, outcome);
         Assert.Contains(
             harness.Calls,
-            call => call.Contains("uebernommen, aber nicht gespeichert", StringComparison.Ordinal));
+            call => call.Contains("übernommen, aber nicht gespeichert", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -238,7 +313,7 @@ public sealed class SchachtProtocolRefreshControllerTests
     [Fact]
     public async Task ExecuteAsync_project_change_after_apply_keeps_dirty_commit_but_stops_save()
     {
-        var harness = new Harness { ProjectChecks = new[] { true, false } };
+        var harness = new Harness { ProjectChecks = new[] { true, true, false } };
 
         var outcome = await harness.Controller.ExecuteAsync(CreateRecord());
 
@@ -256,10 +331,12 @@ public sealed class SchachtProtocolRefreshControllerTests
             call => call.StartsWith("last-result|", StringComparison.Ordinal));
     }
 
-    private static SchachtRecord CreateRecord()
+    private static SchachtRecord CreateRecord(string? shaftNumber = null)
     {
         var record = new SchachtRecord();
         record.SetFieldValue("PDF_Path", "Schaechte_Verteilt/S-1/protokoll.pdf");
+        if (!string.IsNullOrWhiteSpace(shaftNumber))
+            record.SetFieldValue("Schachtnummer", shaftNumber);
         return record;
     }
 
@@ -286,10 +363,11 @@ public sealed class SchachtProtocolRefreshControllerTests
     {
         private readonly DialogFake _dialogs;
         private int _projectCheckIndex;
+        private int _confirmIndex;
 
         internal Harness()
         {
-            _dialogs = new DialogFake(Calls, () => ConfirmRefresh);
+            _dialogs = new DialogFake(Calls, NextConfirmAnswer);
             Actions = new SchachtProtocolRefreshActions(
                 GetProjectFolder: () =>
                 {
@@ -301,10 +379,12 @@ public sealed class SchachtProtocolRefreshControllerTests
                     Calls.Add("project-context");
                     return new ProjectOperationContext(Project, ProjectPath);
                 },
-                ResolveLinkedFile: (relativePath, projectFolder) =>
+                LocateProtocolFile: (record, projectFolder) =>
                 {
-                    Calls.Add($"resolve|{relativePath}|{projectFolder}");
-                    return ResolvedPath;
+                    if (!Project.SchaechteData.Contains(record))
+                        Project.SchaechteData.Add(record);
+                    Calls.Add($"locate|{record.GetFieldValue("PDF_Path")}|{projectFolder}");
+                    return Match;
                 },
                 ReadProtocolAsync: (absolutePath, title) =>
                 {
@@ -348,9 +428,23 @@ public sealed class SchachtProtocolRefreshControllerTests
         internal SchachtProtocolRefreshController Controller { get; }
         internal SchachtProtocolRefreshActions Actions { get; }
         internal bool ConfirmRefresh { get; init; } = true;
+
+        /// <summary>Antworten fuer mehrere Rueckfragen in Reihenfolge; leer = <see cref="ConfirmRefresh"/>.</summary>
+        internal IReadOnlyList<bool> ConfirmAnswers { get; init; } = Array.Empty<bool>();
+
+        private bool NextConfirmAnswer()
+        {
+            if (ConfirmAnswers.Count == 0)
+                return ConfirmRefresh;
+
+            var index = Math.Min(_confirmIndex, ConfirmAnswers.Count - 1);
+            _confirmIndex++;
+            return ConfirmAnswers[index];
+        }
         internal string? ProjectFolder { get; init; } = "C:\\Projekt";
         internal string? ProjectPath { get; init; } = "C:\\Projekt\\projekt.json";
-        internal string? ResolvedPath { get; init; } = "C:\\Projekt\\protokoll.pdf";
+        internal SchachtProtocolFileMatch? Match { get; init; }
+            = new("C:\\Projekt\\protokoll.pdf", SchachtProtocolFileOrigin.Verknuepfung);
         internal SchachtProtocolParseResult? ReadResult { get; init; } = CreateParseResult();
         internal IReadOnlyList<bool> ProjectChecks { get; init; } = new[] { true, true };
         internal Project Project { get; } = new() { ModifiedAtUtc = DateTime.UnixEpoch };
@@ -380,15 +474,15 @@ public sealed class SchachtProtocolRefreshControllerTests
         public void Info(string message, string title = "Hinweis") => _calls.Add($"info|{title}|{message}");
         public void Warn(string message, string title = "Warnung") => _calls.Add($"warn|{title}|{message}");
         public void Error(string message, string title = "Fehler") => _calls.Add($"error|{title}|{message}");
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
 
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true)
         {
             _calls.Add($"confirm|{title}|defaultNo={defaultNo}|{message}");
             return _confirmWarn();
         }
 
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung")
             => DialogConfirm.Cancel;
     }
 }

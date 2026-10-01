@@ -47,7 +47,14 @@ public sealed class CodingExplorerEntryFactoryTests
             MeterEnd = 3.0,
             IsStreckenschaden = true,
             CodeMeta = meta,
-            FotoPaths = ["a.png"]
+            FotoPaths = ["overlay.png"],
+            OriginalFotoPaths = ["original.png"],
+            Training = new ProtocolEntryTrainingMeta
+            {
+                SkipAutomaticPersistence = true,
+                SkipReason = "Fotoannotation bereits separat gespeichert",
+                PhotoAnnotationSampleIds = ["photo-sample-1"]
+            }
         };
 
         var entry = CodingExplorerEntryFactory.CreateManualFromSelected(
@@ -63,6 +70,14 @@ public sealed class CodingExplorerEntryFactoryTests
         Assert.Equal(TimeSpan.FromSeconds(4), entry.Zeit);
         Assert.True(entry.IsStreckenschaden);
         Assert.Same(meta, entry.CodeMeta);
-        Assert.Equal(["a.png"], entry.FotoPaths);
+        Assert.Equal(["overlay.png"], entry.FotoPaths);
+        Assert.Equal(["original.png"], entry.OriginalFotoPaths);
+        Assert.NotSame(selected.OriginalFotoPaths, entry.OriginalFotoPaths);
+        Assert.NotSame(selected.Training, entry.Training);
+        Assert.True(entry.Training!.SkipAutomaticPersistence);
+        Assert.Equal(["photo-sample-1"], entry.Training.PhotoAnnotationSampleIds);
+
+        selected.Training.PhotoAnnotationSampleIds.Add("photo-sample-2");
+        Assert.Single(entry.Training.PhotoAnnotationSampleIds);
     }
 }

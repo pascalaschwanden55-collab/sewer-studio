@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Protocol;
@@ -107,7 +108,7 @@ public static class CodingAiRuntimeFactory
                 VisionClient: null,
                 MultiModel: null,
                 BoxSegmentation: null,
-                MultiModelError: ex.Message,
+                MultiModelError: UserError.DescribeAndReport(ex, "Multi-Model-KI aufbauen"),
                 OwnedOllamaClient: ollamaClient);
         }
     }

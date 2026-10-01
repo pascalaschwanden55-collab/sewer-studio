@@ -46,7 +46,9 @@ public static class CodingExplorerEntryFactory
             Zeit = selectedEntry.Zeit ?? fallbackTime,
             IsStreckenschaden = selectedEntry.IsStreckenschaden,
             CodeMeta = selectedEntry.CodeMeta,
-            FotoPaths = selectedEntry.FotoPaths?.ToList() ?? []
+            FotoPaths = selectedEntry.FotoPaths?.ToList() ?? [],
+            OriginalFotoPaths = selectedEntry.OriginalFotoPaths?.ToList() ?? [],
+            Training = ProtocolEntryCloner.CloneTrainingMeta(selectedEntry.Training)
         };
     }
 }

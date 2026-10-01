@@ -29,7 +29,7 @@ public static class PersonalGoldProgressCalculator
             // sie tauchen so im Goldstand als "unvollstaendig" auf, nie aber als vollstaendig
             // (HasBbox && HasSamMask fehlt ihnen per Konstruktion).
             .Where(sample =>
-                ManualGoldTrainingPolicy.IsManuallyConfirmed(sample, confirmedByUser)
+                ManualGoldTrainingPolicy.IsPersonallyReviewed(sample, confirmedByUser)
                 || GoldDraftMatcher.IsOwnDraft(sample, confirmedByUser))
             .ToArray();
         var required = (requiredMainCodes ?? PersonalGoldMainCodeCatalog.RequiredCodes)

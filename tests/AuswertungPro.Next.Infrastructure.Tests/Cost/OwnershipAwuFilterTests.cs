@@ -19,6 +19,11 @@ public sealed class OwnershipAwuFilterTests
     [InlineData("Abwasser Uri")]
     [InlineData("abwasser uri")]
     [InlineData("Abwasser Uri (AWU)")]
+    // Seit das Holen den Eigentuemer wie im WebGIS setzt (24.09.2026), stehen dort diese Namen.
+    [InlineData("AWU_von_privat")]
+    [InlineData("AWU_von_oeffentlich")]
+    [InlineData("AWU_von_privat (Abwasserverband)")]
+    [InlineData("AWU_von_oeffentlich (Abwasserverband)")]
     public void IsAwu_erkennt_awu_und_freitext(string owner)
     {
         Assert.True(OwnershipAwuFilter.IsAwu(owner));
@@ -30,6 +35,9 @@ public sealed class OwnershipAwuFilterTests
     [InlineData("Kanton")]
     [InlineData("Bund")]
     [InlineData("Gemeinde Buerglen")]
+    [InlineData("Privat (Privat)")]
+    [InlineData("RUAG (Privat)")]
+    [InlineData("Kanton Uri (Kanton)")]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]

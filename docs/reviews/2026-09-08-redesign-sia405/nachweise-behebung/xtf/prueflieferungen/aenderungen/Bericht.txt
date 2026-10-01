@@ -1,0 +1,20 @@
+Projekt: Synthetische_Abnahme
+Lieferart: nur Handaenderungen mit Feldauftraegen.
+
+Im Projekt: 1 Haltungen, 5 Schaechte.
+In die Datei: 1 Haltungen, 5 Schaechte (85 Objekte insgesamt).
+Keine QGIS-Quelle eingerichtet — die Objekte gehen ohne Verlauf hinaus.
+
+Hinweise:
+  1 Haltungen ohne Verlauf in der QGIS-Kopie.
+  Aenderungslieferung: 1 bearbeitete Haltungen, 5 bearbeitete Bauwerke, 58 Feldauftraege. Andere Objekte sind nur Verknuepfungshilfen und duerfen nicht aktualisiert werden.
+  14 Zusatzwerte und 58 Aenderungseintraege in derselben XTF; das Modell SewerStudio_Zusatz_2026.ili gehoert zur Lieferung.
+  Auswahl anhand der Handmarkierung je Feld, ohne bestaetigten GEONIS-Vergleichsstand. Bereits frueher exportierte Handaenderungen bleiben bis zur geklaerten Uebernahme enthalten; der Export setzt keine Markierung zurueck.
+
+Die Objektkennungen bleiben bei jedem Export dieselben. Ein zweiter Lauf
+kann damit bestehende Objekte treffen, sofern die Kennungen im Ziel bestaetigt sind. Bauteile mit
+GEONIS-Kennung ("Katasterkennungen ergaenzen") tragen die Kennung des Katasters.
+Datenherr und Datenlieferant kommen aus ihren Projektfeldern. Ist ein Feld
+leer, gilt der Eigentuemer. Ein gesetzter unbekannter Wert sperrt das Objekt.
+
+Geschrieben: C:\Sewer-Studio_KI_4.5\.tmp\redesign-xtf-validation\ausgabe-20260908-195021\aenderungen\Synthetische_Abnahme_Aenderungen_20260908_195021.xtf

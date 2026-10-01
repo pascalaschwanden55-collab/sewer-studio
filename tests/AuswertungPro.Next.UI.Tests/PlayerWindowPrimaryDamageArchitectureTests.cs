@@ -16,9 +16,9 @@ public sealed class PlayerWindowPrimaryDamageArchitectureTests
         var synchronizerFactoryPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageSynchronizerFactory.cs");
         var syncWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageSyncWorkflow.cs");
 
-        Assert.True(File.Exists(synchronizerPath), "Primaere-Schaeden-Synchronisierung muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(synchronizerFactoryPath), "Primaere-Schaeden-Synchronisierung muss ueber Factory verdrahtet werden.");
-        Assert.True(File.Exists(syncWorkflowPath), "Primaere-Schaeden-Synchronisierung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(synchronizerPath), "Primaere-Schäden-Synchronisierung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(synchronizerFactoryPath), "Primaere-Schäden-Synchronisierung muss über Factory verdrahtet werden.");
+        Assert.True(File.Exists(syncWorkflowPath), "Primaere-Schäden-Synchronisierung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         var protocol = File.ReadAllText(protocolPath);
         var policy = File.ReadAllText(policyPath);
         var synchronizer = File.ReadAllText(synchronizerPath);
@@ -45,11 +45,11 @@ public sealed class PlayerWindowPrimaryDamageArchitectureTests
         var syncWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageSyncWorkflow.cs");
         var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingPrimaryDamageSyncCommandWorkflow.cs");
 
-        Assert.True(File.Exists(policyPath), "Primaere-Schaeden-Textbildung muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(synchronizerPath), "Primaere-Schaeden-Feldschreiben muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(synchronizerFactoryPath), "Primaere-Schaeden-Feldschreiben muss ueber Factory verdrahtet werden.");
-        Assert.True(File.Exists(syncWorkflowPath), "Primaere-Schaeden-Feldschreiben soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
-        Assert.True(File.Exists(commandWorkflowPath), "Primaere-Schaeden-Sync-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(policyPath), "Primaere-Schäden-Textbildung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(synchronizerPath), "Primaere-Schäden-Feldschreiben muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(synchronizerFactoryPath), "Primaere-Schäden-Feldschreiben muss über Factory verdrahtet werden.");
+        Assert.True(File.Exists(syncWorkflowPath), "Primaere-Schäden-Feldschreiben soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(commandWorkflowPath), "Primaere-Schäden-Sync-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var protocol = File.ReadAllText(protocolPath);
         var policy = File.ReadAllText(policyPath);

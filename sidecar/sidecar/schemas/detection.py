@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # ── YOLO ────────────────────────────────────────────────────────────────────
@@ -10,6 +12,34 @@ from pydantic import BaseModel, Field
 class YoloRequest(BaseModel):
     image_base64: str
     confidence_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+
+
+class BccTestYoloRequest(BaseModel):
+    """Getrennter BCC-Testvertrag ohne frei waehlbaren Modellpfad."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    image_base64: str
+    confidence_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+    candidate_id: str | None = Field(
+        default=None,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+    )
+    candidate_sha256: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-fA-F]{64}$",
+    )
+    # Optionaler Format-Lock fuer die OSD-Meterlesung desselben Bildes.
+    # Werte spiegeln sidecar.osd_meter.FORMATE; None = auto (bisheriges Verhalten).
+    meter_format: Literal["auto", "ein_dezimal", "vierziffern"] | None = None
+
+    @model_validator(mode="after")
+    def validate_candidate_pin(self) -> "BccTestYoloRequest":
+        if (self.candidate_id is None) != (self.candidate_sha256 is None):
+            raise ValueError(
+                "candidate_id und candidate_sha256 muessen gemeinsam angegeben werden."
+            )
+        return self
 
 
 class YoloDetection(BaseModel):
@@ -52,6 +82,26 @@ class BccTestYoloResponse(BaseModel):
     candidate_sha256: str = ""
     model_name: str = ""
     device: str = ""
+    frame_usable: bool = True
+    quality_reason: str | None = None
+    # Rohe OSD-Meterlesung desselben Bildes; None = nicht lesbar, niemals "0,0".
+    meter_value: float | None = None
+
+
+class BccTestCandidateInfo(BaseModel):
+    """Pfadfreie Metadaten eines manifest- und hashgeprueften Testkandidaten."""
+
+    candidate_id: str
+    candidate_sha256: str
+    map50: float
+    epochs_completed: int
+    created_utc: str
+
+
+class BccTestCandidatesResponse(BaseModel):
+    available: bool = False
+    error: str | None = None
+    candidates: list[BccTestCandidateInfo] = Field(default_factory=list)
 
 
 # ── Grounding DINO ──────────────────────────────────────────────────────────
@@ -133,3 +183,49 @@ class YoloClassifyResponse(BaseModel):
     bend_veto_failed: bool = False
     vanish_x: float = 0.5
     vanish_y: float = 0.5
+
+
+class LernstufeInfo(BaseModel):
+    """Eine freigegebene Lernstufe, wie der Client sie auswaehlen darf."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    klasse: str
+    gewicht_sha256: str
+    freigabe_sha256: str
+    # Gemessen an frischen Videos mit vorher festgeschriebener Regel.
+    precision: float
+    recall: float
+    regel: str
+
+
+class LernstufenResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lernstufen: list[LernstufeInfo]
+
+
+class LernstufeRequest(BaseModel):
+    """Klasse und erwarteter Gewicht-Hash. Kein Modellpfad vom Client."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    image_base64: str
+    klasse: str = Field(pattern=r"^[a-z][a-z_]{0,31}$")
+    gewicht_sha256: str = Field(pattern=r"^[0-9a-fA-F]{64}$")
+    imgsz: int = Field(default=640, ge=64, le=2048)
+
+
+class LernstufeResponse(BaseModel):
+    """Nur eine Konfidenz fuer das GANZE Bild — diese Modelle liefern keine Box."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    klasse: str
+    konfidenz: float
+    gewicht_sha256: str
+    freigabe_sha256: str
+    precision: float
+    recall: float
+    device: str | None = None
+    inference_time_ms: float

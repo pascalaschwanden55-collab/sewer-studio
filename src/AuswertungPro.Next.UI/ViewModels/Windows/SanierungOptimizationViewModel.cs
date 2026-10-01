@@ -10,12 +10,13 @@ using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
-public sealed partial class SanierungOptimizationViewModel : ObservableObject
+public sealed partial class SanierungOptimizationViewModel : ObservableObject, IDisposable
 {
     private readonly HaltungRecord _record;
     private readonly IAiSanierungOptimizationService _aiService;
     private readonly IAiOptimizationSessionStore _sessionStore;
     private readonly SanierungOptimizationRequest _request;
+    private bool _disposed;
 
     // ── Observable properties ─────────────────────────────────────────────
 
@@ -166,7 +167,7 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
             Result.CostEstimate.Expected.ToString("0.00", CultureInfo.InvariantCulture),
             FieldSource.Unknown, userEdited: false);
         // Bemerkung mit KI-Vorschlag UND Kosten-Hinweis
-        var costNote = $"Kosten {Result.CostEstimate.Expected:N0} CHF = KI-Schaetzung (nicht kalkuliert), Bandbreite {Result.CostEstimate.Min:N0}–{Result.CostEstimate.Max:N0} CHF";
+        var costNote = $"Kosten {Result.CostEstimate.Expected:N0} CHF = KI-Schätzung (nicht kalkuliert), Bandbreite {Result.CostEstimate.Min:N0}–{Result.CostEstimate.Max:N0} CHF";
         var reasoning = !string.IsNullOrWhiteSpace(Result.Reasoning) ? Result.Reasoning : "";
         _record.SetFieldValue("Bemerkungen",
             $"[KI-Vorschlag] {reasoning}\n{costNote}", FieldSource.Unknown, userEdited: false);
@@ -182,6 +183,16 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject
     private void Cancel()
     {
         CloseRequested?.Invoke();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        if (_aiService is IDisposable disposable)
+            disposable.Dispose();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────

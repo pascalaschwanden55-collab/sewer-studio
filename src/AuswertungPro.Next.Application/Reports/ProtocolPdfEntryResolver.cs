@@ -9,6 +9,12 @@ namespace AuswertungPro.Next.Application.Reports;
 
 internal static class ProtocolPdfEntryResolver
 {
+    private static readonly string[] ClockStartAliases =
+        ["vsa.uhr.von", "ClockPos1", "Uhr_von", "SchadenlageAnfang"];
+
+    private static readonly string[] ClockEndAliases =
+        ["vsa.uhr.bis", "ClockPos2", "Uhr_bis", "SchadenlageEnde"];
+
     internal static double? ResolveHoldingLength(HaltungRecord record, IReadOnlyList<ProtocolEntry> entries)
     {
         var raw = record.GetFieldValue("Haltungslaenge_m");
@@ -155,12 +161,52 @@ internal static class ProtocolPdfEntryResolver
 
         target.CodeMeta ??= new ProtocolEntryCodeMeta { Code = target.Code };
         target.CodeMeta.Parameters ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var targetHasClockStart = HasValidClock(target.CodeMeta.Parameters, ClockStartAliases);
+        var targetHasClockEnd = HasValidClock(target.CodeMeta.Parameters, ClockEndAliases);
+
         foreach (var kv in source.CodeMeta.Parameters)
         {
-            if (!string.IsNullOrWhiteSpace(kv.Value))
+            if (string.IsNullOrWhiteSpace(kv.Value))
+                continue;
+
+            if (IsAlias(kv.Key, ClockStartAliases))
+            {
+                if (targetHasClockStart
+                    || !ProtocolTextHelpers.TryParseClockHourValue(kv.Value, out _))
+                {
+                    continue;
+                }
+
                 target.CodeMeta.Parameters[kv.Key] = kv.Value;
+                targetHasClockStart = true;
+                continue;
+            }
+
+            if (IsAlias(kv.Key, ClockEndAliases))
+            {
+                if (targetHasClockEnd
+                    || !ProtocolTextHelpers.TryParseClockHourValue(kv.Value, out _))
+                {
+                    continue;
+                }
+
+                target.CodeMeta.Parameters[kv.Key] = kv.Value;
+                targetHasClockEnd = true;
+                continue;
+            }
+
+            target.CodeMeta.Parameters[kv.Key] = kv.Value;
         }
     }
+
+    private static bool HasValidClock(
+        IReadOnlyDictionary<string, string> parameters,
+        IReadOnlyList<string> aliases)
+        => parameters.Any(parameter => IsAlias(parameter.Key, aliases)
+                                       && ProtocolTextHelpers.TryParseClockHourValue(parameter.Value, out _));
+
+    private static bool IsAlias(string key, IReadOnlyList<string> aliases)
+        => aliases.Any(alias => string.Equals(alias, key, StringComparison.OrdinalIgnoreCase));
 
     private static List<ProtocolEntry> BuildImportedEntriesFromFindings(IReadOnlyList<VsaFinding> findings)
     {
@@ -200,10 +246,19 @@ internal static class ProtocolPdfEntryResolver
                 Source = ProtocolEntrySource.Imported
             };
 
+            var clock = VsaFindingClockResolver.Resolve(f);
+            var clockStart = clock.Start;
+            var clockEnd = clock.End;
+            if (ProtocolTextHelpers.IsLateralConnection(entry))
+            {
+                clockStart ??= ProtocolTextHelpers.ExtractClockHourFromText(entry.Beschreibung);
+                clockEnd ??= ProtocolTextHelpers.ExtractClockHourEndFromText(entry.Beschreibung);
+            }
+
             if (!string.IsNullOrWhiteSpace(f.Quantifizierung1)
                 || !string.IsNullOrWhiteSpace(f.Quantifizierung2)
-                || TryFormatClock(f.SchadenlageAnfang) is not null
-                || TryFormatClock(f.SchadenlageEnde) is not null)
+                || clockStart is not null
+                || clockEnd is not null)
             {
                 var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -211,8 +266,8 @@ internal static class ProtocolPdfEntryResolver
                     ["Quantifizierung2"] = f.Quantifizierung2 ?? string.Empty
                 };
 
-                var uhrVon = TryFormatClock(f.SchadenlageAnfang);
-                var uhrBis = TryFormatClock(f.SchadenlageEnde);
+                var uhrVon = clockStart?.ToString(CultureInfo.InvariantCulture);
+                var uhrBis = clockEnd?.ToString(CultureInfo.InvariantCulture);
                 if (!string.IsNullOrWhiteSpace(uhrVon))
                     parameters["vsa.uhr.von"] = uhrVon;
                 if (!string.IsNullOrWhiteSpace(uhrBis))
@@ -234,11 +289,6 @@ internal static class ProtocolPdfEntryResolver
 
         return list;
     }
-
-    private static string? TryFormatClock(double? value)
-        => value is > 0 and <= 12
-            ? value.Value.ToString("0.##", CultureInfo.InvariantCulture)
-            : null;
 
     private static List<ProtocolEntry> ParsePrimaryDamagesToEntries(string? rawText)
     {

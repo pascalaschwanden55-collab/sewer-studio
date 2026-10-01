@@ -1,0 +1,39 @@
+Seilergasse: Hinweise zur Prüflieferung
+
+Diese Datei ist zum Prüfen gedacht.
+Vor einem echten GEONIS-Import müssen die aktuellen Kennnummern geklärt werden.
+
+Was geliefert wird:
+
+- Eine bearbeitete Haltung: 78998-79002.
+- Ein bearbeiteter Schacht: 78998.
+- 13 Aufträge für einzelne Felder.
+- Drei Zusatzwerte: Schachtform, Rohrbreite und Profiltyp.
+
+FME darf nur die ausdrücklich beauftragten Felder ändern.
+Weitere Objekte in der Datei erklären die Verbindungen. Sie sind keine zusätzlichen Schreibaufträge.
+Fehlende oder leere Felder dürfen nichts in GEONIS löschen.
+
+Die Kennnummern stammen noch aus dem alten Stand.
+Beim Schacht trägt der Knoten die Kennung ch23h1a4ftlGdbHU.
+Die Haltung trägt die Kennung ch23h1a4uL3A2Sjp.
+Andreas hat andere aktuelle Kennungen genannt. Die Gegenüberstellung steht in FME_Importvorgabe.md.
+
+Im alten Katasterstand war die Profilform unbekannt.
+Im Projekt steht Kreisprofil mit gleichem Höhen- und Breitenmass.
+Die XTF enthält dafür eine eigene Profilbeschreibung. FME darf deren Kennung nicht einfach in GEONIS einsetzen.
+
+Der Schacht 79002 ist im Projekt nicht erfasst.
+Das entsprechende Haltungsende hat deshalb keine Verbindung zu einem mitgelieferten Schacht.
+
+Die Datei SewerStudio_Zusatz_2026.ili gehört zur Lieferung.
+Sie erklärt FME den Aufbau der Zusatzwerte und Änderungsaufträge.
+
+SewerStudio erkennt bisher, dass ein Feld von Hand bearbeitet wurde.
+Es prüft noch nicht, ob am Ende wieder der ursprüngliche Wert darin steht.
+Auch 500 löschen und wieder 500 eingeben kann deshalb als Auftrag mitkommen.
+Steht in GEONIS bereits 500, muss FME den Wert unverändert lassen.
+
+Beim Export wird keine Bearbeitungsmarkierung zurückgesetzt.
+Eine automatische Bestätigung der erfolgreichen GEONIS-Übernahme fehlt noch.
+Deshalb können frühere Änderungen erneut geliefert werden.

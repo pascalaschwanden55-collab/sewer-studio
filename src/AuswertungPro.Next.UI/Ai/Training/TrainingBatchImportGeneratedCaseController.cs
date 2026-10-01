@@ -89,7 +89,7 @@ public static class TrainingBatchImportGeneratedCaseController
     {
         var lines = new List<string>
         {
-            $"  -> {samples.Count} Samples (Status: Neu, Freigabe ueber Review):"
+            $"  -> {samples.Count} Samples (Status: Neu, Freigabe über Review):"
         };
         lines.AddRange(samples.Select(sample =>
             $"     {sample.Code} @ {sample.MeterStart:F2}m [{sample.Status}] - {sample.Beschreibung}"));

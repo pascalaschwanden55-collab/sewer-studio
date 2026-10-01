@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System.Threading;
 using System.Windows.Media;
 using AuswertungPro.Next.UI.Ai.Live;
@@ -69,7 +70,7 @@ public static class CodingAnalysisCommandWorkflow
         catch (Exception ex)
         {
             actions.SetCodingAiState(
-                $"Fehler: {ex.Message}",
+                $"Fehler: {UserError.DescribeAndReport(ex, "KI-Analyse ausführen")}",
                 PlayerStatusColors.Error,
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(request.ModelName)}");
             return Result(CodingAnalysisCommandWorkflowOutcome.Failed);

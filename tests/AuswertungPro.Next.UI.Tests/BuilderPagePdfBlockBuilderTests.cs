@@ -53,4 +53,17 @@ public sealed class BuilderPagePdfBlockBuilderTests
             block);
     }
 
+    /// <summary>
+    /// Auf einem Schacht-Ausdruck darf im PDF nicht "Haltungen im Ausdruck" stehen.
+    /// </summary>
+    [Fact]
+    public void BuildObjectBlock_benennt_das_Bauteil_wie_uebergeben()
+    {
+        var block = BuilderPagePdfBlockBuilder.BuildObjectBlock(
+            new Dictionary<string, string> { ["Zone"] = "Projekt A" },
+            holdingCount: 7,
+            bauteilLabelPlural: "Schächte");
+
+        Assert.Equal("Projekt: Projekt A\nSchächte im Ausdruck: 7", block);
+    }
 }

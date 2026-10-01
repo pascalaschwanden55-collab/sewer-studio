@@ -1,0 +1,292 @@
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using AuswertungPro.Next.Application.WebGis;
+
+namespace AuswertungPro.Next.Infrastructure.WebGis;
+
+/// <summary>
+/// Stufe 2: Sanierungsmassnahmen (AWZ_UNTERHALT, art=4) am Elternobjekt anlegen.
+/// Nachgebaut aus dem im Browser mitgeschnittenen Anlege-Aufruf (21.09.2026):
+/// getEmptyData (liefert leere Komponenten samt Combo-Katalogen) -> saveData mit
+/// relation/relationKeyField/relationId im Kopf; Antwort {newId, isFailure, message}.
+/// </summary>
+public sealed partial class GeonisWebGisClient
+{
+    public async Task<WebGisSanierungKatalog?> LeseSanierungKatalogAsync(
+        WebGisObjektart art, string elternGlobalId, CancellationToken ct = default)
+    {
+        var leer = await LiesLeeresSanierungsobjektAsync(art, elternGlobalId, ct).ConfigureAwait(false);
+        if (leer is null) return null;
+        var data = leer.Value;
+        if (!data.TryGetProperty("components", out var comps) || comps.ValueKind != JsonValueKind.Array) return null;
+
+        var katalog = new WebGisSanierungKatalog();
+        foreach (var comp in comps.EnumerateArray())
+        {
+            if (!comp.TryGetProperty("refId", out var refEl)) continue;
+            if (!comp.TryGetProperty("keys", out var keys) || keys.ValueKind != JsonValueKind.Array) continue;
+            if (!comp.TryGetProperty("values", out var values) || values.ValueKind != JsonValueKind.Array) continue;
+            var n = Math.Min(keys.GetArrayLength(), values.GetArrayLength());
+            var liste = new List<(string, string)>(n);
+            for (var i = 0; i < n; i++)
+                liste.Add((keys[i].ToString(), values[i].ValueKind == JsonValueKind.Null ? "" : values[i].ToString()));
+            katalog.Setze(refEl.GetString() ?? "", liste);
+        }
+
+        // Verfahren haengt von der Art ab: je Art-Schluessel die gefilterte Liste holen.
+        // Fehlt auch nur eine, ist der ganze Katalog unbrauchbar: Dieselbe Nummer bedeutet je
+        // Art etwas anderes, und ein Rueckfall auf die ungefilterte Liste wuerde ein falsches
+        // Verfahren anlegen. Lieber alle Massnahmen sperren (Pruefung 22.09.2026).
+        var subtyp = WebGisSanierungFeldkarte.SubtypFeld + ":" + WebGisSanierungFeldkarte.SubtypWert;
+        foreach (var (artKey, _) in katalog.Eintraege(WebGisSanierungFeldkarte.ArtRef))
+        {
+            var gefiltert = await LiesGefilterteWerteAsync(
+                WebGisSanierungFeldkarte.Tabelle, subtyp, WebGisSanierungFeldkarte.VerfahrenRef, artKey, ct).ConfigureAwait(false);
+            if (gefiltert is null) return null;
+            katalog.Setze(WebGisSanierungFeldkarte.VerfahrenRef, gefiltert, artKey);
+        }
+        return katalog;
+    }
+
+    /// <summary>
+    /// Abhaengige Liste eines Combo-Felds der Objektmaske, z.B. die Material-Details der
+    /// Gruppe «Beton», wenn die Maske gerade eine andere Gruppe zeigt. Der Aufruf folgt dem
+    /// fuer AWZ_UNTERHALT mitgeschnittenen Muster, nur ohne Subtyp; traegt die Antwort die
+    /// refId nicht, kommt null zurueck — das Feld bleibt dann gemeldet, nie geraten.
+    /// </summary>
+    public async Task<IReadOnlyList<(string Key, string Text)>?> LeseKatalogListeAsync(
+        WebGisObjektart art, string refId, string filter, string? subtyp = null, CancellationToken ct = default)
+        => await LiesGefilterteWerteAsync(WebGisFeldkarte.Tabelle(art), subtyp, refId, filter, ct).ConfigureAwait(false);
+
+    /// <summary>
+    /// getControlValues: abhaengige Combo-Liste (refid) fuer einen Filterwert. Mit
+    /// <paramref name="subtyp"/> fuer AWZ_UNTERHALT (art:4), ohne fuer die Objektmasken.
+    /// Null, wenn die Antwort die refId nicht traegt.
+    /// </summary>
+    private async Task<List<(string, string)>?> LiesGefilterteWerteAsync(
+        string tabelle, string? subtyp, string refId, string filter, CancellationToken ct)
+    {
+        var z = _zugang();
+        if (z is null) return null;
+        var url = z.EditorBasis + "getControlValues?project=" + z.Datenquelle + "&datasource=" + z.Datenquelle
+                + "&table=" + tabelle + "&lang=de&f=pjson&ts=" + Ts()
+                + (subtyp is null ? "" : "&subtype=" + subtyp)
+                + "&refid=" + refId + "&filter=" + Uri.EscapeDataString(filter) + "&" + z.AuthQuery();
+        using var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
+        PruefeStatus(resp, "beim Laden einer Auswahlliste");
+        var text = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        using var doc = LiesJsonOderSitzungsfehler(text);
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            throw new WebGisAntwortException("Ungültige Antwort beim Laden einer Auswahlliste (kein Objekt): " + Kurz(text.Trim(), 120));
+        if (!doc.RootElement.TryGetProperty("components", out var comps) || comps.ValueKind != JsonValueKind.Array) return null;
+        foreach (var comp in comps.EnumerateArray())
+        {
+            if (!comp.TryGetProperty("refId", out var r) || r.GetString() != refId) continue;
+            return KatalogAus(comp);
+        }
+        return null;
+    }
+
+    public async Task<WebGisSchreibErgebnis> ErstelleSanierungAsync(
+        WebGisObjektart art, string elternGlobalId,
+        IReadOnlyDictionary<string, string> felder, CancellationToken ct = default)
+    {
+        if (felder.Count == 0) return WebGisSchreibErgebnis.Fehlgeschlagen("Keine Felder zum Anlegen.");
+        var z = _zugang();
+        if (z is null) return WebGisSchreibErgebnis.Fehlgeschlagen("Nicht am WebGIS angemeldet.");
+
+        var leer = await LiesLeeresSanierungsobjektAsync(art, elternGlobalId, ct).ConfigureAwait(false);
+        if (leer is null) return WebGisSchreibErgebnis.Fehlgeschlagen("Leeres Sanierungsobjekt nicht lesbar.");
+        var data = leer.Value;
+        if (!data.TryGetProperty("components", out var comps) || comps.ValueKind != JsonValueKind.Array)
+            return WebGisSchreibErgebnis.Fehlgeschlagen("Leeres Sanierungsobjekt ohne components.");
+
+        // Jedes geplante Feld braucht genau EINE Komponente in der Maske. Frueher genuegte ein
+        // einziges gesetztes Feld: Fehlte etwa das Sanierungsjahr in der Maske, ging die Massnahme
+        // ohne Jahr hinaus und galt als angelegt (Pruefung 28.09.2026).
+        var luecke = FehlendeOderDoppelte(comps, felder.Keys);
+        if (luecke is not null)
+            return WebGisSchreibErgebnis.Fehlgeschlagen(luecke + " — Massnahme nicht angelegt.");
+
+        // Alle Komponenten wie der Browser: {value, refId, missingValue}; Combo-Wert = Schluessel als Text.
+        var komponenten = new List<Dictionary<string, object?>>();
+        foreach (var comp in comps.EnumerateArray())
+        {
+            if (!comp.TryGetProperty("refId", out var refEl)) continue;
+            var refId = refEl.GetString() ?? "";
+            object? wert = null;
+            if (felder.TryGetValue(refId, out var neu)) wert = neu;
+            else if (comp.TryGetProperty("keySelected", out var ks) && ks.ValueKind != JsonValueKind.Null)
+                wert = ks.ToString(); // Vorgabe der Maske (z.B. Art=4) beibehalten
+            komponenten.Add(new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["value"] = wert, ["refId"] = refId, ["missingValue"] = false,
+            });
+        }
+
+        // Subtyp bleibt wie im Browser konstant art:4 (Layout-Vorgabe); GEONIS uebernimmt den
+        // gespeicherten Subtyp aus dem Feld Art (live geprueft 21.09.2026: Art=2 -> subtype art=2).
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["components"] = komponenten,
+            ["objectKeyValue"] = null,
+            ["objectKeyField"] = "objectid",
+            ["subtype"] = new[] { new Dictionary<string, object?> { ["name"] = WebGisSanierungFeldkarte.SubtypFeld, ["value"] = WebGisSanierungFeldkarte.SubtypWert } },
+            ["dataReadonly"] = false,
+            ["relation"] = WebGisSanierungFeldkarte.Relation(art),
+            ["relationKeyField"] = WebGisSanierungFeldkarte.RelationSchluesselfeld,
+            ["relationId"] = elternGlobalId,
+        };
+
+        var json = JsonSerializer.Serialize(payload);
+        var body = "jsonobject=" + Uri.EscapeDataString(json) + "&" + z.AuthQuery();
+        var url = z.EditorBasis + "saveData?project=" + z.Datenquelle + "&datasource=" + z.Datenquelle
+                + "&table=" + WebGisSanierungFeldkarte.Tabelle + "&lang=de&f=pjson&ts=" + Ts();
+
+        using var content = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded");
+        using var resp = await _http.PostAsync(url, content, ct).ConfigureAwait(false);
+        var text = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        if (!resp.IsSuccessStatusCode)
+            return WebGisSchreibErgebnis.Fehlgeschlagen($"HTTP {(int)resp.StatusCode}: {Kurz(text)}");
+        return AntwortAuswerten(text, neueIdPflicht: true);
+    }
+
+    /// <summary>
+    /// Prueft, dass jede geplante refId genau einmal als Komponente vorkommt. Liefert die
+    /// Fehlerbeschreibung oder null. Gilt fuer Objekt und Massnahme gleich: Ein fehlendes Feld
+    /// darf nie still wegfallen, und eine doppelte Komponente ersetzt kein fehlendes.
+    /// </summary>
+    internal static string? FehlendeOderDoppelte(JsonElement comps, IEnumerable<string> geplant)
+    {
+        var anzahl = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var comp in comps.EnumerateArray())
+        {
+            if (!comp.TryGetProperty("refId", out var refEl)) continue;
+            var refId = refEl.GetString() ?? "";
+            anzahl[refId] = anzahl.TryGetValue(refId, out var n) ? n + 1 : 1;
+        }
+
+        var fehlend = new List<string>();
+        var doppelt = new List<string>();
+        foreach (var refId in geplant)
+        {
+            if (!anzahl.TryGetValue(refId, out var n)) fehlend.Add(refId);
+            else if (n > 1) doppelt.Add(refId);
+        }
+
+        if (fehlend.Count == 0 && doppelt.Count == 0) return null;
+        var teile = new List<string>();
+        if (fehlend.Count > 0)
+            teile.Add("Geplante Felder ohne Komponente in der WebGIS-Maske: " + string.Join(", ", fehlend));
+        if (doppelt.Count > 0)
+            teile.Add("Felder doppelt in der WebGIS-Maske: " + string.Join(", ", doppelt));
+        return string.Join("; ", teile);
+    }
+
+    /// <summary>getEmptyData fuer AWZ_UNTERHALT art=4 mit Sender-Kontext (Elternobjekt).</summary>
+    private async Task<JsonElement?> LiesLeeresSanierungsobjektAsync(
+        WebGisObjektart art, string elternGlobalId, CancellationToken ct)
+    {
+        var z = _zugang();
+        if (z is null) return null;
+        var url = z.EditorBasis + "getEmptyData?project=" + z.Datenquelle + "&datasource=" + z.Datenquelle
+                + "&table=" + WebGisSanierungFeldkarte.Tabelle
+                + "&subtype=" + WebGisSanierungFeldkarte.SubtypFeld + ":" + WebGisSanierungFeldkarte.SubtypWert
+                + "&lang=de&f=pjson"
+                + "&senderTable=" + WebGisFeldkarte.Tabelle(art)
+                + "&senderRefId=" + WebGisSanierungFeldkarte.ListeRef(art)
+                + "&senderRelation=" + WebGisSanierungFeldkarte.Relation(art)
+                + "&senderId=" + elternGlobalId
+                + "&ts=" + Ts() + "&" + z.AuthQuery();
+        using var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
+        PruefeStatus(resp, "beim Laden der leeren Sanierungsmaske");
+        var text = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        using var doc = LiesJsonOderSitzungsfehler(text);
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            throw new WebGisAntwortException("Ungültige Antwort beim Laden der leeren Sanierungsmaske (kein Objekt): " + Kurz(text.Trim(), 120));
+        return doc.RootElement.Clone();
+    }
+
+    /// <summary>
+    /// Antwort von saveData: {newId, message, isFailure} — oder ein faultstring (Sitzung abgelaufen).
+    /// Erfolg gibt es NUR mit der Bestaetigung, die der Server bei jedem echten Speichern liefert:
+    /// <c>isFailure</c> als JSON-Wahrheitswert <c>false</c> (belegt 21.09.2026:
+    /// <c>{"newId":null,"message":"Das Objekt wurde gespeichert.","isFailure":false}</c>). Eine blosse
+    /// Nachricht («Validation failed») oder ein blosses <c>newId</c> belegen nichts (Pruefung
+    /// 28.09.2026). Beim Anlegen muss zusaetzlich eine neue Kennung vorliegen (belegt: «66921»),
+    /// sonst ist nicht nachgewiesen, dass eine Massnahme entstanden ist. Alles andere heisst «nicht
+    /// als geschrieben gewertet»: Ein falsches OK im Log ist schlimmer als ein Fehlschlag, den man
+    /// nachpruefen kann (Lehre vom 21.09.2026).
+    /// </summary>
+    internal static WebGisSchreibErgebnis AntwortAuswerten(string text, bool neueIdPflicht = false)
+    {
+        if (text.Contains("\"faultstring\"", StringComparison.OrdinalIgnoreCase))
+        {
+            var fault = Faultstring(text);
+            return IstSitzungsfehler(fault)
+                ? WebGisSchreibErgebnis.Fehlgeschlagen("WebGIS-Sitzung: " + fault + " — neu anmelden.")
+                : WebGisSchreibErgebnis.Fehlgeschlagen("WebGIS meldet Fehler: " + fault);
+        }
+        if (text.Contains("PERMISSION_DENIED", StringComparison.OrdinalIgnoreCase))
+            return WebGisSchreibErgebnis.Fehlgeschlagen("WebGIS meldet Fehler: " + Kurz(text));
+
+        JsonDocument doc;
+        try
+        {
+            doc = JsonDocument.Parse(text);
+        }
+        catch (JsonException)
+        {
+            return WebGisSchreibErgebnis.Fehlgeschlagen(
+                "Unerwartete Antwort des WebGIS (kein JSON) — nicht als geschrieben gewertet: " + Kurz(text.Trim(), 120));
+        }
+        using (doc)
+        {
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return WebGisSchreibErgebnis.Fehlgeschlagen(
+                    "Unerwartete Antwort des WebGIS (kein Objekt) — nicht als geschrieben gewertet: " + Kurz(text.Trim(), 120));
+
+            var hatIsFailure = root.TryGetProperty("isFailure", out var f);
+            var message = root.TryGetProperty("message", out var m) && m.ValueKind == JsonValueKind.String ? m.GetString() : null;
+            if ((hatIsFailure && f.ValueKind == JsonValueKind.True) || root.TryGetProperty("error", out _))
+                return WebGisSchreibErgebnis.Fehlgeschlagen("WebGIS meldet Fehler: " + (message ?? Kurz(text)));
+
+            if (!hatIsFailure || f.ValueKind != JsonValueKind.False)
+                return WebGisSchreibErgebnis.Fehlgeschlagen(
+                    "Antwort ohne Speicherbestätigung (isFailure:false fehlt) — nicht als geschrieben gewertet: " + Kurz(text.Trim(), 120));
+
+            var neueId = root.TryGetProperty("newId", out var id)
+                         && id.ValueKind is JsonValueKind.String or JsonValueKind.Number
+                ? id.ToString().Trim()
+                : null;
+            if (string.IsNullOrEmpty(neueId)) neueId = null;
+            if (neueIdPflicht && neueId is null)
+                return WebGisSchreibErgebnis.Fehlgeschlagen(
+                    "Antwort ohne neue Kennung — nicht belegt, dass die Massnahme angelegt wurde. Vor einem neuen Versuch im WebGIS nachsehen: "
+                    + Kurz(text.Trim(), 120));
+            return WebGisSchreibErgebnis.Ok(neueId);
+        }
+    }
+
+    /// <summary>Zeilen der Liste "Sanierungsmassnahmen": [Beginn, Art, Status, Verfahren, GlobalId].</summary>
+    internal static IEnumerable<WebGisSanierungZeile> SanierungsZeilen(JsonElement listComp)
+    {
+        if (!listComp.TryGetProperty("values", out var rows) || rows.ValueKind != JsonValueKind.Array) yield break;
+        foreach (var row in rows.EnumerateArray())
+        {
+            if (row.ValueKind != JsonValueKind.Array || row.GetArrayLength() < 5) continue;
+            yield return new WebGisSanierungZeile
+            {
+                Beginn = Zelle(row[0]), Art = Zelle(row[1]), Status = Zelle(row[2]), Verfahren = Zelle(row[3]), GlobalId = Zelle(row[4]),
+            };
+        }
+    }
+
+    private static string? Zelle(JsonElement e) => e.ValueKind == JsonValueKind.Null ? null : e.ToString();
+}

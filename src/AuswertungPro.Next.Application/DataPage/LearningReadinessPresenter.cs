@@ -2,6 +2,10 @@ using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Application.DataPage;
 
+/// <param name="IsVisible">
+/// Aufgabe 17: false, solange kein einziger Fall gelernt wurde (nichts Handlungsleitendes zu
+/// zeigen); sobald mindestens ein Fall vorliegt, immer true.
+/// </param>
 public sealed record LearningReadinessPresentation(
     string Info,
     string Color,
@@ -10,6 +14,11 @@ public sealed record LearningReadinessPresentation(
 
 /// <summary>
 /// Reine Praesentations-Logik fuer die Lernbereitschafts-Ampel (Rot/Gelb/Gruen).
+///
+/// Nova-Fixwelle 2b (P5): Die Rueckgabetexte sind SICHTBARE Beschriftungen (Ampeltext und
+/// Zeile "Lernbasis: ..." auf der Haltungsseite). Sie schreiben deshalb echte Umlaute; die
+/// ae/oe/ue-Konvention gilt nur fuer Bezeichner und Kommentare (Waechter
+/// <c>DesignAuditLaufzeittexteTests</c>).
 /// Berechnet Farbe und Text anhand der Anzahl gelernter Faelle.
 /// Aus <c>DataPageViewModel.UpdateLearningTrafficLight</c> extrahiert (verhaltensneutral).
 /// </summary>
@@ -25,11 +34,11 @@ public static class LearningReadinessPresenter
     /// Berechnet Ampelfarbe (CSS-Hex) und Ampeltext fuer die angezeigte Fallanzahl.
     /// </summary>
     /// <param name="totalSamples">Gesamtanzahl der gelernten Faelle.</param>
-    /// <returns>Tupel (Farbe, Text) – z.B. ("#2E7D32", "Gruen").</returns>
+    /// <returns>Tupel (Farbe, Text) – z.B. ("#2E7D32", "Grün").</returns>
     public static (string Color, string Text) Evaluate(int totalSamples)
     {
         if (totalSamples >= StrongModelThreshold)
-            return ("#2E7D32", "Gruen");
+            return ("#2E7D32", "Grün");
 
         if (totalSamples >= MinimumSamplesForTraining)
             return ("#F9A825", "Gelb");
@@ -44,23 +53,30 @@ public static class LearningReadinessPresenter
     {
         var (color, text) = Evaluate(stats.TotalSamples);
 
+        // Aufgabe 17 (Optikanalyse 28.09.2026): Ohne einen einzigen gelernten Fall stand hier
+        // dauerhaft "Rot · Lernbasis: 0 Fälle" über der Werkzeugleiste — fuer ein frisches
+        // Projekt eine staendige, nicht handlungsleitende Warnmeldung. Die Ampel-Schwellenwerte
+        // (Evaluate/StrongModelThreshold/MinimumSamplesForTraining) und der Infotext bleiben
+        // unveraendert; nur die Sichtbarkeit ist eine reine Darstellungsentscheidung: Ohne
+        // Faelle gibt es nichts zu zeigen, sobald der erste Fall gelernt ist, erscheint die
+        // Ampel wie bisher.
         if (stats.TotalSamples <= 0)
-            return new LearningReadinessPresentation("Lernbasis: 0 Faelle", color, text, true);
+            return new LearningReadinessPresentation("Lernbasis: 0 Fälle", color, text, false);
 
         var suffix = string.Empty;
         if (similarCases is not null && similarCases.Value > 0)
         {
             suffix = estimatedCost is null
-                ? $" / letzte Schaetzung aus {similarCases.Value} aehnlichen Haltungen"
-                : $" / letzte Kostenschaetzung {estimatedCost.Value:0.00} aus {similarCases.Value} aehnlichen Haltungen";
+                ? $" / letzte Schätzung aus {similarCases.Value} ähnlichen Haltungen"
+                : $" / letzte Kostenschätzung {estimatedCost.Value:0.00} aus {similarCases.Value} ähnlichen Haltungen";
         }
 
         var modelText = stats.TrainedModelAvailable
-            ? $" / KI-Modell aktiv ({stats.TrainedModelSamples ?? 0} Faelle)"
-            : $" / KI-Modell ab {MinimumSamplesForTraining} Faellen";
+            ? $" / KI-Modell aktiv ({stats.TrainedModelSamples ?? 0} Fälle)"
+            : $" / KI-Modell ab {MinimumSamplesForTraining} Fällen";
 
         return new LearningReadinessPresentation(
-            $"Lernbasis: {stats.TotalSamples} Faelle{suffix}{modelText}",
+            $"Lernbasis: {stats.TotalSamples} Fälle{suffix}{modelText}",
             color,
             text,
             true);

@@ -64,7 +64,7 @@ public static class MetrierungProximityEvaluator
         // 2) Befund ueberschreitet den DN-Kreis nach aussen (reicht in den Ring
         //    DN-Kreis..Bildrand) -> nah genug, Codierbar. Das ist die zentrale Regel.
         if (outerR >= 1.0 - t.WallTolerance)
-            return Result(MetrierungProximity.Codierbar, "ueberschreitet DN-Kreis nach aussen (Nahbereich)");
+            return Result(MetrierungProximity.Codierbar, "überschreitet DN-Kreis nach aussen (Nahbereich)");
 
         // 2b) Richtungsgebundenes Ereignis (Bogen BCC): kein Wand-Punktschaden, sondern ein
         //     seitlich VERSCHOBENER Fluchtpunkt. Solche Befunde liegen geometrisch im DN-Kreis

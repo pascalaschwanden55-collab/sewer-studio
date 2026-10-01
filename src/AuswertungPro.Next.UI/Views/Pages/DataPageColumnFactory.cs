@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
@@ -11,8 +12,16 @@ public static class DataPageColumnFactory
         string fieldName,
         string header,
         KeyboardFocusChangedEventHandler lostKeyboardFocus,
-        SelectionChangedEventHandler selectionChanged)
+        SelectionChangedEventHandler selectionChanged,
+        bool novaLayout = true)
     {
+        // Nova-Etappe 2b: Der Tabellenkopf schreibt gross (Kapitaelchen greifen mit der
+        // Programmschrift nicht). Die Umwandlung passiert hier statt im Kopf-Template, weil
+        // Theme.xaml/ThemeLight.xaml von PageTitleUnderlineTests roh per XamlReader.Load
+        // geladen werden und dort keinen eigenen Konverter-Typ referenzieren duerfen (siehe
+        // GrossbuchstabenConverter-Doku).
+        header = GrossbuchstabenConverter.Anwenden(header) ?? header;
+
         if (GridDropdownFieldPolicy.TryResolve(fieldName, out var comboSpec))
         {
             return comboSpec.Managed
@@ -20,8 +29,10 @@ public static class DataPageColumnFactory
                 : CreateSimpleComboColumn(fieldName, header, comboSpec.ItemsSourcePath, lostKeyboardFocus, selectionChanged);
         }
 
-        if (fieldName == "Empfohlene_Sanierungsmassnahmen")
-            return DataGridWrappingTextColumnFactory.Create(fieldName, header);
+        // Nova-Etappe 2b, Fix-Runde 1 (F4): Die Drei-Zeilen-Grenze gilt nur im Nova-Layout;
+        // die alte Haltungsansicht bleibt genau wie bisher.
+        if (DataPageColumnStyleRules.IstUmbruchspalte(fieldName))
+            return DataGridWrappingTextColumnFactory.Create(fieldName, header, novaLayout);
 
         if (fieldName == "Kosten")
             return DataGridCostColumnFactory.Create(fieldName, header);
@@ -29,7 +40,7 @@ public static class DataPageColumnFactory
         var updateSourceTrigger = fieldName == "Haltungsname"
             ? UpdateSourceTrigger.Explicit
             : UpdateSourceTrigger.LostFocus;
-        return DataGridStandardTextColumnFactory.Create(fieldName, header, updateSourceTrigger);
+        return DataGridStandardTextColumnFactory.Create(fieldName, header, updateSourceTrigger, novaLayout);
     }
 
     private static DataGridTemplateColumn CreateManagedComboColumn(

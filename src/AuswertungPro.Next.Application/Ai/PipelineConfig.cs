@@ -19,7 +19,11 @@ public sealed record PipelineConfig(
     int SidecarTimeoutSec,
     int? PipeDiameterMmOverride,
     bool SamStabilityCheckEnabled = false,
-    bool McDropoutEnabled = true);
+    bool McDropoutEnabled = true)
+{
+    /// <summary>Haltungs-DN des aktuellen Auftrags; hat Vorrang vor der globalen Vorgabe.</summary>
+    public int? PipeDiameterMm { get; init; }
+}
 
 public enum PipelineMode
 {

@@ -26,7 +26,7 @@ public sealed class PersonalGoldAlbumService(
         var items = samples
             // Eigene Entwuerfe (Draft) bleiben im Album als "unvollstaendig" sichtbar.
             .Where(sample =>
-                ManualGoldTrainingPolicy.IsManuallyConfirmed(sample, confirmedByUser)
+                ManualGoldTrainingPolicy.IsPersonallyReviewed(sample, confirmedByUser)
                 || GoldDraftMatcher.IsOwnDraft(sample, confirmedByUser))
             .Select(ToAlbumItem)
             .OrderBy(item => item.MainCode, StringComparer.OrdinalIgnoreCase)

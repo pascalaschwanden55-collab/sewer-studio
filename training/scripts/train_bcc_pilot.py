@@ -41,6 +41,9 @@ class ValidatedDataset:
     validation_count: int
     instance_count: int
     manifest_sha256: str
+    receipt_sha256: str
+    data_yaml_sha256: str
+    classes_sha256: str
 
 
 def _sha256_file(path: Path) -> str:
@@ -85,11 +88,27 @@ def discover_dataset(dataset_root: Path) -> Path:
     return max(candidates, key=lambda directory: directory.stat().st_mtime_ns)
 
 
-def _validate_receipt(dataset: Path, manifest: Path) -> dict[str, Any]:
+def _validate_receipt(
+    dataset: Path,
+    manifest: Path,
+    data_yaml: Path,
+    classes_path: Path,
+) -> dict[str, Any]:
     receipt_path = dataset / "_export_receipt.json"
     receipt = _load_json_object(receipt_path)
     if receipt.get("manifest_sha256") != _sha256_file(manifest):
         raise ValueError("Der Datensatzbeleg passt nicht mehr zu manifest.json.")
+    for field, target, label in (
+        ("data_yaml_sha256", data_yaml, "data.yaml"),
+        ("classes_sha256", classes_path, "classes.txt"),
+    ):
+        expected_hash = receipt.get(field)
+        if (
+            not isinstance(expected_hash, str)
+            or not re.fullmatch(r"[0-9a-fA-F]{64}", expected_hash)
+            or expected_hash.lower() != _sha256_file(target)
+        ):
+            raise ValueError(f"Der Datensatzbeleg passt nicht mehr zu {label}.")
 
     for category in ("images", "labels"):
         entries = receipt.get(category)
@@ -106,6 +125,55 @@ def _validate_receipt(dataset: Path, manifest: Path) -> dict[str, Any]:
             if _sha256_file(target) != expected_hash:
                 raise ValueError(f"Datensatzdatei wurde nach dem Export veraendert: {relative}")
     return receipt
+
+
+def _validate_data_yaml(path: Path, class_count: int) -> None:
+    top_level: dict[str, str] = {}
+    for line_number, line in enumerate(
+        path.read_text(encoding="utf-8-sig").splitlines(),
+        start=1,
+    ):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or line[0].isspace():
+            continue
+        if ":" not in line:
+            raise ValueError(f"Ungueltige data.yaml, Zeile {line_number}.")
+        key, raw_value = line.split(":", maxsplit=1)
+        key = key.strip()
+        if key in top_level:
+            raise ValueError(f"data.yaml enthaelt den Schluessel mehrfach: {key}")
+        value = raw_value.strip()
+        if (
+            len(value) >= 2
+            and value[0] in ("'", '"')
+            and value[-1] == value[0]
+        ):
+            value = value[1:-1]
+        top_level[key] = value
+
+    allowed_keys = {"path", "train", "val", "nc", "names"}
+    if set(top_level) != allowed_keys:
+        raise ValueError(
+            "data.yaml darf nur path, train, val, nc und names enthalten."
+        )
+    required_paths = {
+        "path": ".",
+        "train": "images/train",
+        "val": "images/val",
+    }
+    if any(top_level.get(key) != value for key, value in required_paths.items()):
+        raise ValueError(
+            "data.yaml darf nur die lokalen Ziele '.', "
+            "'images/train' und 'images/val' verwenden."
+        )
+    if top_level["names"]:
+        raise ValueError("data.yaml muss die Klassennamen unter 'names:' auflisten.")
+    try:
+        declared_class_count = int(top_level["nc"])
+    except ValueError as error:
+        raise ValueError("data.yaml enthaelt keine gueltige Klassenzahl.") from error
+    if declared_class_count != class_count:
+        raise ValueError("data.yaml und classes.txt verwenden verschiedene Klassenzahlen.")
 
 
 def _validate_label_file(path: Path) -> int:
@@ -166,6 +234,7 @@ def validate_dataset(dataset: Path, dataset_root: Path) -> ValidatedDataset:
     classes = classes_path.read_text(encoding="utf-8-sig").splitlines()
     if len(classes) != 15 or classes[PILOT_CLASS_ID] != PILOT_CLASS_NAME:
         raise ValueError("Die feste Detect-Klassenkarte v2 mit BCC-ID 14 fehlt.")
+    _validate_data_yaml(data_yaml, len(classes))
 
     manifest = _load_json_object(manifest_path)
     manifest_classes = manifest.get("classes")
@@ -175,7 +244,7 @@ def validate_dataset(dataset: Path, dataset_root: Path) -> ValidatedDataset:
     if not plan_id or plan_id != root.name:
         raise ValueError("Datensatzordner und unveraenderlicher Plan stimmen nicht ueberein.")
 
-    receipt = _validate_receipt(root, manifest_path)
+    receipt = _validate_receipt(root, manifest_path, data_yaml, classes_path)
     if str(receipt.get("plan_id") or "") != plan_id:
         raise ValueError("Der Exportbeleg gehoert zu einem anderen Plan.")
 
@@ -219,6 +288,9 @@ def validate_dataset(dataset: Path, dataset_root: Path) -> ValidatedDataset:
         validation_count=counts["val"],
         instance_count=instance_count,
         manifest_sha256=_sha256_file(manifest_path),
+        receipt_sha256=_sha256_file(root / "_export_receipt.json"),
+        data_yaml_sha256=_sha256_file(data_yaml),
+        classes_sha256=_sha256_file(classes_path),
     )
 
 
@@ -401,6 +473,9 @@ def train(
         "dataset": {
             "plan_id": dataset.plan_id,
             "manifest_sha256": dataset.manifest_sha256,
+            "receipt_sha256": dataset.receipt_sha256,
+            "data_yaml_sha256": dataset.data_yaml_sha256,
+            "classes_sha256": dataset.classes_sha256,
             "images": dataset.image_count,
             "train_images": dataset.train_count,
             "validation_images": dataset.validation_count,

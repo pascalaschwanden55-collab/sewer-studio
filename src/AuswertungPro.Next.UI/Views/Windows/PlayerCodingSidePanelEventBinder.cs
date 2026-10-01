@@ -26,7 +26,11 @@ public sealed record PlayerCodingSidePanelEventHandlers(
     RoutedEventHandler CodingAcceptGreenMatches,
     RoutedEventHandler ImportShowPhotos,
     RoutedEventHandler ImportEdit,
-    RoutedEventHandler ImportConfirmToBrain);
+    RoutedEventHandler ImportConfirmToBrain,
+    MouseButtonEventHandler SuggestionsDoubleClick,
+    RoutedEventHandler SuggestionSeek,
+    RoutedEventHandler SuggestionConfirm,
+    RoutedEventHandler SuggestionReject);
 
 public static class PlayerCodingSidePanelEventBinder
 {
@@ -59,5 +63,9 @@ public static class PlayerCodingSidePanelEventBinder
         sidePanel.ImportShowPhotosRequested += handlers.ImportShowPhotos;
         sidePanel.ImportEditRequested += handlers.ImportEdit;
         sidePanel.ImportConfirmToBrainRequested += handlers.ImportConfirmToBrain;
+        sidePanel.SuggestionsDoubleClickRequested += handlers.SuggestionsDoubleClick;
+        sidePanel.SuggestionSeekRequested += handlers.SuggestionSeek;
+        sidePanel.SuggestionConfirmRequested += handlers.SuggestionConfirm;
+        sidePanel.SuggestionRejectRequested += handlers.SuggestionReject;
     }
 }

@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 
@@ -74,6 +75,7 @@ public static class TrainingBatchImportWorkflow
                 async () => await request.LoadSamplesAsync().ConfigureAwait(false),
                 request.BatchUi.SetProgressMax,
                 request.BatchUi.Log).ConfigureAwait(false);
+            using var generator = runtimeSetup.Generator;
 
             await TrainingBatchImportCaseLoopController.RunAsync(
                 runtimeSetup.CasesToProcess,
@@ -108,7 +110,7 @@ public static class TrainingBatchImportWorkflow
                 },
                 ex =>
                 {
-                    runtimeSetup.RunSummary.RecordError(ex.Message);
+                    runtimeSetup.RunSummary.RecordError(UserError.DescribeAndReport(ex, "Trainings-Stapelimport"));
                     request.BatchUi.Log($"  FEHLER: {ex.Message}");
                 },
                 request.CancellationToken).ConfigureAwait(false);
@@ -133,7 +135,7 @@ public static class TrainingBatchImportWorkflow
         catch (Exception ex)
         {
             request.BatchUi.Log($"FATALER FEHLER: {ex.Message}");
-            request.BatchUi.SetStatusText($"Fehler beim Batch-Import: {ex.Message}");
+            request.BatchUi.SetStatusText($"Fehler beim Batch-Import: {UserError.Describe(ex)}");
         }
         finally
         {

@@ -47,6 +47,25 @@ public sealed class VideoFrameStreamTests
     }
 
     [Fact]
+    public async Task ReadFramesCore_BewahrtGeteiltePngSignaturUeberLesegrenze()
+    {
+        var png = MiniPng();
+        using var source = new ChunkedReadStream(png[..5], png[5..]);
+        var frames = new List<FrameData>();
+
+        await foreach (var frame in VideoFrameStream.ReadFramesCoreAsync(
+            source, stepSeconds: 2.0, frameTimeout: TimeSpan.FromSeconds(5),
+            maxConsecutiveTimeouts: 3, CancellationToken.None))
+        {
+            frames.Add(frame);
+        }
+
+        var resultFrame = Assert.Single(frames);
+        Assert.Equal(0.0, resultFrame.TimestampSeconds);
+        Assert.Equal(png, resultFrame.PngBytes);
+    }
+
+    [Fact]
     public async Task ReadFramesCore_EndetStill_beiEofOhneWurf()
     {
         // Sauberes Videoende (ffmpeg fertig) = 0 Bytes -> Sequenz endet normal, KEIN Wurf.
@@ -97,6 +116,38 @@ public sealed class VideoFrameStreamTests
         {
             await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(false);
             return 0;
+        }
+    }
+
+    private sealed class ChunkedReadStream(params byte[][] chunks) : Stream
+    {
+        private int _index;
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_index >= chunks.Length)
+                return ValueTask.FromResult(0);
+
+            var chunk = chunks[_index++];
+            if (chunk.Length > buffer.Length)
+                throw new InvalidOperationException("Testabschnitt ist groesser als der Lesepuffer.");
+
+            chunk.AsSpan().CopyTo(buffer.Span);
+            return ValueTask.FromResult(chunk.Length);
         }
     }
 }

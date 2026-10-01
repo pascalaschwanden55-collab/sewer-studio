@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.Application.Ai;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
@@ -11,24 +12,22 @@ public partial class PlayerWindow
 {
     private async Task<bool> TryHandleBoundaryClassifierResultAsync(
         SingleFrameResult mmResult,
-        double captureTimestampSec,
-        double? frameOsdMeter)
+        CodingAnalyzedFrameEvidence frame)
     {
         var result = await CodingBoundaryClassifierCommandWorkflow.ExecuteAsync(
             new CodingBoundaryClassifierCommandRequest(
                 Result: mmResult,
                 HasCodingViewModel: _codingSessionHost.HasViewModel,
                 HasCodingSessionService: _codingSessionRuntimeOwner.Service is not null,
-                CaptureTimestampSeconds: captureTimestampSec,
-                FrameOsdMeter: frameOsdMeter,
-                CurrentVideoTime: _codingSessionHost.CurrentVideoTime,
-                FallbackVideoTime: TimeSpan.FromSeconds(captureTimestampSec),
+                CaptureTimestampSeconds: frame.CaptureTime.TotalSeconds,
+                FrameOsdMeter: frame.HasSameFrameOsd ? frame.Meter : null,
+                CurrentVideoTime: frame.CaptureTime,
+                FallbackVideoTime: frame.CaptureTime,
                 EndMeter: _codingSessionHost.EndMeter,
                 ExistingEventCount: _codingSessionHost.EventCollection?.Count ?? 0,
-                AnalyzedFrameBytes: _liveDetectionController.PendingConfirmationFrameBytes),
+                AnalyzedFrameBytes: frame.ImageBytes),
             new CodingBoundaryClassifierCommandActions(
-                ResolveMeterForFrame: (timestamp, osdMeter) =>
-                    ResolveCodingMeterForFrame(timestamp, osdMeter),
+                ResolveMeterForFrame: (_, _) => frame.Meter,
                 ExecuteResultWorkflowAsync: request => CodingBoundaryClassifierResultWorkflow.ExecuteAsync(
                     request,
                     new CodingBoundaryClassifierResultWorkflowActions(
@@ -44,9 +43,9 @@ public partial class PlayerWindow
                             CodingFindingsList,
                             code,
                             label),
-                        (meter, _, frameBytes) => _codingBoundaryContext.EnsureStartAsync(meter, frameBytes),
+                        (_, _, _) => _codingBoundaryContext.EnsureStartAsync(frame),
                         _codingStreckenschadenTrackingController.CloseTracked,
-                        (meter, _, frameBytes) => _codingBoundaryContext.EnsureEnd(meter, frameBytes),
+                        (_, _, _) => _codingBoundaryContext.EnsureEnd(frame),
                         () => _codingSessionHost.EventCollection?.Count ?? 0,
                         (status, color, detail) => _liveDetectionStatusController.SetCodingAiState(status, color, detail)))));
         return result.Handled;

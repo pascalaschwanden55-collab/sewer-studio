@@ -17,8 +17,8 @@ public static class SelfTrainingHistoryStore
     [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(ISelfTrainingHistoryStore store) =>
         throw new NotSupportedException(
-            "Der globale Speicher fuer den Selbsttraining-Verlauf kann nicht mehr ausgetauscht werden. " +
-            "ISelfTrainingHistoryStore bitte per Konstruktor uebergeben.");
+            "Der globale Speicher für den Selbsttraining-Verlauf kann nicht mehr ausgetauscht werden. " +
+            "ISelfTrainingHistoryStore bitte per Konstruktor übergeben.");
 
     public static Task<List<SelfTrainingRunSnapshot>> LoadAsync() =>
         Current.LoadAsync();

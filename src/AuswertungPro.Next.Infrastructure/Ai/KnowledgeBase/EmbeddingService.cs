@@ -101,7 +101,7 @@ public sealed class EmbeddingService(HttpClient http, OllamaConfig config)
             return Array.Empty<float>();
         if (blob.Length % sizeof(float) != 0)
             throw new ArgumentException(
-                $"Embedding-BLOB hat ungueltige Laenge {blob.Length} (nicht durch {sizeof(float)} teilbar).",
+                $"Embedding-BLOB hat ungültige Länge {blob.Length} (nicht durch {sizeof(float)} teilbar).",
                 nameof(blob));
 
         var vector = new float[blob.Length / sizeof(float)];

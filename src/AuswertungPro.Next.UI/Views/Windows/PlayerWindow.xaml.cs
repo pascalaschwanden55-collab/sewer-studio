@@ -352,6 +352,10 @@ public partial class PlayerWindow : Window
                 HasCodingViewModel: () => _codingSessionHost.HasViewModel,
                 GetHaltungRecord: () => _protocolContext.HaltungRecord,
                 GetEventCollection: () => _codingSessionHost.EventCollection,
+                AddAutomaticBoundaryEvent: entry =>
+                    (_codingSessionRuntimeOwner.Service
+                     ?? throw new InvalidOperationException("Codiersitzung ist nicht verfügbar."))
+                    .AddEvent(entry),
                 GetEvents: () => _codingSessionHost.Events,
                 IsCodingMode: () => _codingModeState.IsCodingMode,
                 GetBaselineSignature: () => _codingBaselineSignatureState.BaselineSignature,
@@ -366,7 +370,15 @@ public partial class PlayerWindow : Window
                 ShowOverlay: ShowOverlay,
                 ConfirmUnappliedChanges: applyChanges => CodingUnappliedChangesCloseDialogWorkflow.Execute(
                     runWithSuspendedOverlay: callback => _codingOverlayInputVisibilityController.Run(callback),
-                    applyChanges: applyChanges)));
+                    applyChanges: applyChanges),
+                // Nur das Stammdatenfeld, kein zweiter Wert: Der EndMeter der
+                // Sitzung stammt aus genau denselben zwei Feldern
+                // (CodingSessionService.StartSession) und war deshalb nie eine
+                // eigene Quelle - er haette den Vorschlag nur mit einer Herkunft
+                // beschriftet, die er nicht hat.
+                GetHaltungslaenge: CodingHaltungslaengeResolver.TryReadHaltungslaenge,
+                ConfirmMissingPipeEnd: prompt => _codingOverlayInputVisibilityController.Run(
+                    () => CodingApplyDialogServiceFactory.Create().ConfirmMissingPipeEnd(prompt))));
         _codingInlineDefectController = new CodingInlineDefectController(
             new CodingInlineDefectControllerBindings(
                 HasCodingViewModel: () => _codingSessionHost.HasViewModel,
@@ -453,6 +465,7 @@ public partial class PlayerWindow : Window
                     CodingSidePanel: CodingSidePanel,
                     CodingSidePanelColumn: CodingSidePanelColumn,
                     CodingToolbar: CodingToolbar,
+                    CodierModusChip: CodierModusChip,
                     CodingTimelinePanel: CodingTimelinePanel,
                     CodingCalibrationHint: CodingCalibrationHint,
                     CodingMeasurementPanel: CodingMeasurementPanel,
@@ -465,7 +478,8 @@ public partial class PlayerWindow : Window
                 Actions: new PlayerWindowCodingModeExitActions(
                     CloseOpenStreckenschaeden: CloseOpenStreckenschaeden,
                     HideInlineDefectDetail: HideInlineDefectDetail,
-                    ResetFrameReadiness: ResetFrameReadiness)));
+                    ResetFrameReadiness: ResetFrameReadiness,
+                    CancelSuggestionScan: CancelSuggestionScan)));
         _playerSliderInputController = new PlayerSliderInputController(_playerControllers);
         var liveDetectionTrainingControllers = LiveDetectionTrainingControllerSetFactory.Create(
             new LiveDetectionTrainingControllerSetDependencies(

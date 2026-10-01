@@ -11,6 +11,13 @@ public sealed record ProjectRecoveryResult(
     string? QuarantinedPath);
 
 /// <summary>
+/// Ergebnis der sicheren Bereitstellung einer bereits geprueften Projektsicherung.
+/// </summary>
+public sealed record ProjectRecoveryMaterializationResult(
+    string Detail,
+    bool ProjectFolderModified);
+
+/// <summary>
 /// Kompatibilitaetsfassade fuer bestehende Aufrufer. Neue Aufrufer erhalten
 /// <see cref="IProjectRecoveryService"/> zentral als Instanz.
 /// </summary>

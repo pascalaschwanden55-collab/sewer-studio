@@ -22,7 +22,7 @@ public sealed class TrainingReviewSamWorkflowTests
             CancellationToken.None));
 
         Assert.Equal(TrainingReviewSamOutcome.MissingSelection, result.Outcome);
-        Assert.Equal("Bitte zuerst einen Review-Kandidaten waehlen.", result.UserHint);
+        Assert.Equal("Bitte zuerst einen Review-Kandidaten wählen.", result.UserHint);
         Assert.False(started);
         Assert.Equal(0, service.CallCount);
     }
@@ -60,7 +60,7 @@ public sealed class TrainingReviewSamWorkflowTests
             CancellationToken.None));
 
         Assert.Equal(TrainingReviewSamOutcome.MissingFrame, result.Outcome);
-        Assert.Equal("Der Review-Frame ist nicht verfuegbar.", result.UserHint);
+        Assert.Equal("Der Review-Frame ist nicht verfügbar.", result.UserHint);
         Assert.False(started);
         Assert.Equal(0, service.CallCount);
     }
@@ -131,8 +131,8 @@ public sealed class TrainingReviewSamWorkflowTests
     }
 
     [Theory]
-    [InlineData("Zeitueberschreitung", 2, 3, "SAM: keine Maske (Zeitueberschreitung)")]
-    [InlineData(null, 2, 3, "SAM: keine Maske (2/3 Box(en) uebersprungen)")]
+    [InlineData("Zeitüberschreitung", 2, 3, "SAM: keine Maske (Zeitüberschreitung)")]
+    [InlineData(null, 2, 3, "SAM: keine Maske (2/3 Box(en) übersprungen)")]
     [InlineData(null, 0, 0, "SAM: keine Maske")]
     public async Task Leere_Antwort_behaelt_den_bisherigen_Statustext(
         string? error,

@@ -74,3 +74,41 @@ def test_dino_model_unloaded_liefert_503_statt_degraded(client, monkeypatch):
         assert resp.json()["code"] == "model_unloaded"
     finally:
         gpu_manager.unload(ModelSlot.DINO)
+
+
+def test_dino_vram_mangel_liefert_503_statt_degraded(client, monkeypatch):
+    """Ein bereits beim Laden erkannter VRAM-Mangel muss den zentralen
+    Kapazitaetsfehler-Vertrag erreichen und darf nicht als leeres 200 enden."""
+    import sys
+    import types
+
+    from sidecar.gpu_manager import InsufficientVramError, ModelSlot, gpu_manager
+
+    package = types.ModuleType("groundingdino")
+    util = types.ModuleType("groundingdino.util")
+    inference = types.ModuleType("groundingdino.util.inference")
+    inference.predict = lambda **_kw: ([], [], [])
+    package.util = util
+    util.inference = inference
+    monkeypatch.setitem(sys.modules, "groundingdino", package)
+    monkeypatch.setitem(sys.modules, "groundingdino.util", util)
+    monkeypatch.setitem(sys.modules, "groundingdino.util.inference", inference)
+
+    def fail_to_load(*_args, **_kwargs):
+        raise InsufficientVramError(
+            ModelSlot.DINO,
+            free_gb=1.0,
+            required_gb=5.0,
+            reserved_gb=1.5,
+        )
+
+    monkeypatch.setattr(gpu_manager, "ensure_loaded", fail_to_load)
+
+    resp = client.post("/detect/dino", json={
+        "image_base64": _make_test_image(),
+        "box_threshold": 0.30,
+        "text_threshold": 0.25,
+    })
+
+    assert resp.status_code == 503
+    assert resp.json()["code"] == "insufficient_vram"

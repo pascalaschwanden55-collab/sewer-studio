@@ -43,12 +43,12 @@ public sealed class VsaCodeExplorerValidationRendererTests
             VsaCodeExplorerValidationRenderer.Apply(
                 new VsaCodeExplorerValidationPresentation(
                     CanApply: false,
-                    ValidationText: "Bitte Code auswaehlen.",
+                    ValidationText: "Bitte Code auswählen.",
                     ShowValidation: true),
                 harness.Targets);
 
             Assert.False(harness.ApplyButton.IsEnabled);
-            Assert.Equal("Bitte Code auswaehlen.", harness.ValidationText);
+            Assert.Equal("Bitte Code auswählen.", harness.ValidationText);
             Assert.Equal(Visibility.Visible, harness.ValidationVisibility);
         });
     }

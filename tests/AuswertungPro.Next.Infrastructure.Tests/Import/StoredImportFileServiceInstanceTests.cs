@@ -1,6 +1,7 @@
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
@@ -217,6 +218,49 @@ public sealed class StoredImportFileServiceInstanceTests : IDisposable
             new Dictionary<string, string>(),
             importKind,
             Array.Empty<string>()));
+    }
+
+    [JunctionFact]
+    public void Store_SchreibtNichtDurchVerknuepftenImportordner()
+    {
+        var projectDirectory = Path.Combine(_tempRoot, "Projekt");
+        var projectPath = Path.Combine(projectDirectory, "projekt.json");
+        var sourceDirectory = Path.Combine(_tempRoot, "Quelle");
+        var external = Path.Combine(_tempRoot, "Fremdziel");
+        var importsDirectory = Path.Combine(projectDirectory, "Imports");
+        Directory.CreateDirectory(projectDirectory);
+        Directory.CreateDirectory(sourceDirectory);
+        Directory.CreateDirectory(external);
+        File.WriteAllText(projectPath, "{}");
+        var source = Path.Combine(sourceDirectory, "quelle.pdf");
+        File.WriteAllText(source, "kundenoriginal");
+        JunctionTestSupport.CreateDirectoryLink(importsDirectory, external);
+
+        try
+        {
+            var metadata = new Dictionary<string, string>();
+            IStoredImportFileService service = new StoredImportFileService();
+
+            var result = service.Store(projectPath, metadata, "PDF", [source]);
+
+            Assert.Empty(result.StoredRelativePaths);
+            Assert.Single(result.Errors);
+            Assert.False(metadata.ContainsKey("PDF_StoredFiles"));
+            Assert.Empty(Directory.EnumerateFiles(external, "*", SearchOption.AllDirectories));
+            Assert.Equal("kundenoriginal", File.ReadAllText(source));
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(importsDirectory))
+                    Directory.Delete(importsDirectory);
+            }
+            catch
+            {
+                // Nur Test-Aufraeumen.
+            }
+        }
     }
 
     public void Dispose()

@@ -30,13 +30,18 @@ $env:SEWERSTUDIO_E2E_VIDEO = 'D:\Videoprojekte\golden\referenz.mpg'
 
 Das Skript [`scripts/ki-release-gate.ps1`](../scripts/ki-release-gate.ps1)
 - prüft, dass ein Referenzvideo gesetzt und vorhanden ist,
+- verlangt einen sauberen, bereits committeten Quellstand,
 - schaltet den maschinengebundenen Test frei (`SEWERSTUDIO_RUN_MACHINE_INTEGRATION=1`),
-- fährt den Golden-Lauf (`--filter Category=Integration`),
-- endet mit Exit-Code 0 nur, wenn der Golden-Vertrag erfüllt ist.
+- fährt genau `SidecarRealVideoIntegrationTests.EchtesVideo_ErfuelltGoldenVertrag`,
+- schreibt bei Erfolg einen Beleg unter `.tmp/ki-release-gate/gate-receipt.json`,
+- bindet diesen Beleg an den geprüften Git-Commit und den SHA-256-Wert des Videos.
 
 **Regel: Ist dieses Gate rot, geht keine Release raus.** Erst wenn es grün ist,
-darf der Release-Tag gesetzt/gepusht werden — ergänzend zum schnellen
-[Entwicklungs-Gate](ENTWICKLUNGS-GATE.md) (Unit-/Struktur-Tests vor jedem Push).
+darf `tools/Publish-SewerStudio.ps1` ausgeführt werden. Das Veröffentlichungsskript
+bricht ab, wenn der Quellstand nicht sauber ist, der Beleg fehlt oder zu einem
+anderen Commit gehört. So kann ein alter Golden-Lauf keine neue Release freigeben.
+Das Gate ergänzt das schnelle [Entwicklungs-Gate](ENTWICKLUNGS-GATE.md)
+(Unit-/Struktur-Tests vor jedem Push).
 
 ## Referenzvideo festhalten
 

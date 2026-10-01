@@ -9,6 +9,52 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// </summary>
 internal static class SchaechteColumnPolicy
 {
+    internal static readonly IReadOnlyList<string> FormUndMasseFelder =
+    [
+        FieldKeys.ShaftShape,
+        FieldKeys.ShaftDimension1Mm,
+        FieldKeys.ShaftDimension2Mm
+    ];
+
+    /// <summary>
+    /// Ergaenzt die drei Urner Formfelder, ohne gleichbedeutende Vorlagenspalten zu
+    /// verdoppeln.
+    /// </summary>
+    public static void ErgaenzeFormUndMasse(ICollection<string> columns)
+    {
+        ArgumentNullException.ThrowIfNull(columns);
+
+        foreach (var feld in FormUndMasseFelder)
+        {
+            var vorhanden = string.Equals(feld, FieldKeys.ShaftShape, StringComparison.Ordinal)
+                ? columns.Any(c => string.Equals(
+                    ResolveOptionField(c), FieldKeys.ShaftShape, StringComparison.Ordinal))
+                : columns.Any(c => string.Equals(
+                    SchachtFeldnamen.Falte(c),
+                    SchachtFeldnamen.Falte(feld),
+                    StringComparison.Ordinal));
+
+            if (!vorhanden)
+                columns.Add(feld);
+        }
+    }
+
+    /// <summary>
+    /// Ergaenzt die Spalte fuer die GEONIS-Kennung, wenn die Vorlage sie nicht fuehrt.
+    /// Sie wird von "Katasterkennungen ergaenzen" gefuellt und ist ohne Spalte unsichtbar.
+    /// </summary>
+    public static void ErgaenzeKatasterKennung(ICollection<string> columns)
+    {
+        ArgumentNullException.ThrowIfNull(columns);
+
+        var vorhanden = columns.Any(c => string.Equals(
+            SchachtFeldnamen.Falte(c),
+            SchachtFeldnamen.Falte(FieldKeys.GeonisId),
+            StringComparison.Ordinal));
+        if (!vorhanden)
+            columns.Add(FieldKeys.GeonisId);
+    }
+
     public static bool TryResolveDropdownColumnSpec(string columnName, out GridDropdownFieldSpec spec)
     {
         var optionField = ResolveOptionField(columnName);
@@ -22,10 +68,30 @@ internal static class SchaechteColumnPolicy
     public static string? ResolveOptionField(string columnName)
     {
         var normalized = Normalize(columnName);
+        if (normalized is "funktion" or "schachtfunktion") return "Funktion";
+        if (normalized is "material" or "schachtmaterial") return "Material";
+        if (normalized == "status") return FieldKeys.OperatingStatus;
+        // Seit 23.09.2026 Auswahlfelder mit der WebGIS-Liste (vorher Freitext).
+        if (normalized == "nutzungsart") return FieldKeys.UsageType;
+        if (normalized == "lagebestimmung") return FieldKeys.PositionAccuracy;
+        if (normalized == "sanierungsbedarf") return FieldKeys.RehabilitationNeed;
+        if (normalized == "bauwerksart") return FieldKeys.ShaftStructureType;
+        if (normalized == "versickerungsart") return FieldKeys.InfiltrationType;
 
         if (normalized.Contains("schachtform", StringComparison.Ordinal)
             || string.Equals(normalized, "form", StringComparison.Ordinal))
-            return "Schachtform";
+            return FieldKeys.ShaftShape;
+
+        // Vor der Zustandsklasse pruefen: beide Namen enden auf "klasse".
+        // Excel-Kopfzeilen tragen oft einen Umbruch oder Trennstrich
+        // ("Belastungs-\nklasse"); fuer den Vergleich faellt beides weg.
+        var ohneTrenner = normalized
+            .Replace("-", "", StringComparison.Ordinal)
+            .Replace("\r", "", StringComparison.Ordinal)
+            .Replace("\n", "", StringComparison.Ordinal)
+            .Replace(" ", "", StringComparison.Ordinal);
+        if (ohneTrenner.Contains("belastungsklasse", StringComparison.Ordinal))
+            return FieldKeys.LoadClass;
 
         if ((normalized.Contains("ausgefuehrt", StringComparison.Ordinal)
              || normalized.Contains("ausgefuhrt", StringComparison.Ordinal))
@@ -64,9 +130,28 @@ internal static class SchaechteColumnPolicy
     }
 
     public static string GetDisplayHeader(string columnName)
-        => string.Equals(ResolveOptionField(columnName), "Sanieren_JaNein", StringComparison.Ordinal)
-            ? "Sanieren Ja/Nein"
-            : columnName;
+    {
+        if (string.Equals(ResolveOptionField(columnName), "Sanieren_JaNein", StringComparison.Ordinal))
+            return "Sanieren Ja/Nein";
+
+        var gefaltet = SchachtFeldnamen.Falte(columnName);
+        if (string.Equals(gefaltet, SchachtFeldnamen.Falte(FieldKeys.GeonisId), StringComparison.Ordinal))
+            return "SIA405-TID";
+
+        if (string.Equals(
+                gefaltet,
+                SchachtFeldnamen.Falte(FieldKeys.ShaftDimension1Mm),
+                StringComparison.Ordinal))
+            return "Grösstes Innenmass mm";
+
+        if (string.Equals(
+                gefaltet,
+                SchachtFeldnamen.Falte(FieldKeys.ShaftDimension2Mm),
+                StringComparison.Ordinal))
+            return "Kleinstes Innenmass mm";
+
+        return columnName;
+    }
 
     public static bool IsCostColumn(string columnName)
         => Normalize(columnName).Contains("kosten", StringComparison.Ordinal);
@@ -106,6 +191,7 @@ internal static class SchaechteColumnPolicy
 
     public static string ResolveSchachtDetailGroup(string columnName)
     {
+        if (SchachtDetailGruppen.Fuer(columnName) is { } gruppe) return gruppe;
         var normalized = Normalize(columnName);
 
         if (ContainsAny(normalized, "kosten", "sanier", "renovierung", "reparatur", "erneuerung", "anschluss"))

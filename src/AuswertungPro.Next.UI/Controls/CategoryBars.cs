@@ -227,7 +227,7 @@ public sealed class CategoryBars : Grid
             Text = item.ValueText,
             TextAlignment = TextAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
-            FontSize = 10,
+            FontSize = 11,
             Foreground = ResolveThemeBrush("MutedBrush", Color.FromRgb(102, 112, 128)),
             Margin = new Thickness(0, 0, 0, 4)
         };

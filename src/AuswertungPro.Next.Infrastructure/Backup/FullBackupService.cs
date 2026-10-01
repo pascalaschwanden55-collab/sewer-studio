@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -103,8 +103,8 @@ public sealed class FullBackupService : IFullBackupService
 
     public Task<FullBackupSizeReport> AnalyzeAsync(IProgress<string>? progress = null, CancellationToken ct = default)
     {
-        var sources = _sourcesFactory();
-        return Task.FromResult(Analyze(sources, progress, ct));
+        var sources = BackupExternalReferences.Resolve(_sourcesFactory(), ct);
+        return Task.FromResult(Analyze(BackupPlanBuilder.Build(sources), progress, ct));
     }
 
     public async Task<FullBackupResult> RunAsync(
@@ -114,10 +114,11 @@ public sealed class FullBackupService : IFullBackupService
     {
         var started = Stopwatch.StartNew();
         var backupRoot = Path.Combine(targetFolder, BackupPlanBuilder.TargetFolderName);
+        Protokolliere(targetFolder, "=== Lauf gestartet ===");
 
         try
         {
-            var sources = _sourcesFactory();
+            var sources = BackupExternalReferences.Resolve(_sourcesFactory(), ct);
             var plan = BackupPlanBuilder.Build(sources);
             var conflict = BackupTargetGuard.CheckSourceTargetConflict(backupRoot, CollectSourceRoots(plan));
             if (conflict is not null)
@@ -128,16 +129,23 @@ public sealed class FullBackupService : IFullBackupService
                 return Failure(markerError, backupRoot, started.Elapsed);
             BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot);
 
+            using var journal = new BackupRunJournal(backupRoot);
+            // Erst nach Recovery und unter der Laufsperre die bestehende Zuordnung
+            // lesen: fehlende Altquellen muessen ihren bisherigen Zielordner behalten.
+            var previousProjectTargets = BackupProjectTargetMapping.Read(backupRoot);
+            plan = BackupPlanBuilder.Build(sources, previousProjectTargets);
+
             _walCheckpoint?.Invoke();
 
             // Pro Lauf ein datierter Versions-Stand: ersetzte/entfallene Dateien
             // wandern dorthin statt endgueltig zu verschwinden.
             var mirror = new DirectoryMirror(
-                BackupVersionRetention.BuildStandName(DateTime.Now),
+                versionsStandName: null,
                 afterTemporaryFileWritten: null,
-                sqliteSnapshots: _sqliteSnapshots);
+                sqliteSnapshots: _sqliteSnapshots,
+                preserveTarget: journal.Preserve);
 
-            var sizeReport = Analyze(sources, progress: null, ct);
+            var sizeReport = Analyze(plan, progress: null, ct);
             var bytesToWrite = await EstimateRequiredCopyBytesAsync(plan, backupRoot, ct)
                 .ConfigureAwait(false);
             var requiredFreeBytes = checked(bytesToWrite + BackupDiskSpaceGuard.MinimumReserveBytes);
@@ -195,57 +203,115 @@ public sealed class FullBackupService : IFullBackupService
                 "Die Vollsicherung konnte nicht alle Quellen sicher lesen. " +
                 "Der bisherige Spiegelstand wurde nicht bereinigt.");
 
+            Protokolliere(
+                targetFolder,
+                $"Kopieren fertig: {stats.Copied} kopiert, {stats.Unchanged} unverändert");
             progressState.Report(progress, "Extras", "umgebung.txt", force: true);
-            await WriteGeneratedExtrasAsync(backupRoot, sources, ct).ConfigureAwait(false);
+            await WriteGeneratedExtrasAsync(backupRoot, sources, (path, text) => journal.WriteText(path, text), ct).ConfigureAwait(false);
+
+            // Ab hier laeuft der Abschluss MEHRFACH ueber den ganzen Zielbaum:
+            // dreimal die Sicherheitspruefung, einmal das Aufraeumen (fuer jede Datei
+            // jede Pfadstufe), einmal das Zaehlen. Bei 274'334 Dateien auf einer
+            // USB-Platte sind das Stunden. Ohne eigene Meldungen stand der Balken
+            // dabei auf 100 % und der Lauf sah aus wie ein Haenger (Buerglen
+            // 23.09.2026). Jede dieser Phasen meldet deshalb ihren Fortschritt.
+            void MeldeAbschluss(string phase, int eintraege)
+            {
+                if (eintraege == 0) Protokolliere(targetFolder, "Phase: " + phase);
+                progress?.Report(new FullBackupProgress(
+                    phase, $"{eintraege:N0} geprüft", 0, 0, eintraege, 0));
+            }
 
             ct.ThrowIfCancellationRequested();
-            EnsureTargetStillTrusted(backupRoot);
-            mirror.RemoveOrphans(backupRoot, expectedTargets, stats);
+            MeldeAbschluss(PhaseZielordner, 0);
+            EnsureTargetStillTrusted(backupRoot, ct, n => MeldeAbschluss(PhaseZielordner, n));
+            if (!sources.IncludeProjectVideos)
+                BackupExcludedVideos.Preserve(backupRoot, expectedTargets);
+            MeldeAbschluss(PhaseAufraeumen, 0);
+            mirror.RemoveOrphans(
+                backupRoot, expectedTargets, stats, ct, n => MeldeAbschluss(PhaseAufraeumen, n));
             ThrowIfMirrorErrors(
                 stats,
-                "Die Vollsicherung konnte den Zielstand nicht vollstaendig bereinigen.");
+                "Die Vollsicherung konnte den Zielstand nicht vollständig bereinigen.");
 
-            EnsureTargetStillTrusted(backupRoot);
-            var versionStaende = RotateVersionStaende(backupRoot, stats);
+            EnsureTargetStillTrusted(backupRoot, ct, n => MeldeAbschluss(PhaseZielordner, n));
+            var versionStaende = Math.Min(BackupVersionRetention.MaxStaende,
+                Directory.EnumerateDirectories(Path.Combine(backupRoot, "_Versionen"))
+                    .Count(p => BackupVersionRetention.IsStandName(Path.GetFileName(p))) + (journal.HasHistory ? 1 : 0));
             ThrowIfMirrorErrors(
                 stats,
-                "Die Vollsicherung konnte die Versionsstaende nicht sicher bereinigen.");
+                "Die Vollsicherung konnte die Versionsstände nicht sicher bereinigen.");
 
             var skipped = stats.Warnings.Take(200).ToArray();
-            var hashProgressThrottle = Stopwatch.StartNew();
-            BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot);
+            BackupTargetPathGuard.EnsureTreeIsSafe(
+                backupRoot, ct, n => MeldeAbschluss(PhaseZielordner, n));
+
+            // Die Pruefphase liest die ganze Sicherung erneut und rechnet jede
+            // SHA-256 nach — bei einer grossen Sicherung ist das der laengste Teil
+            // des Laufs. Sie bekommt deshalb einen EIGENEN Fortschritt, der bei
+            // null beginnt: vorher stand der Balken die ganze Zeit auf 100 % und
+            // sah aus, als haenge die Sicherung.
+            //
+            // Bezugsgroesse ist der ZIELBAUM, nicht die Quelle: Er enthaelt
+            // zusaetzlich Marker, Extras und Manifest und ist deshalb groesser.
+            // Der Vorabdurchlauf liest nur Verzeichniseintraege und faellt neben
+            // dem anschliessenden Lesen aller Dateien nicht ins Gewicht.
+            var checkFiles = 0;
+            var checkBytes = 0L;
+            MeldeAbschluss(PhaseZaehlen, 0);
+            foreach (var file in EnumerateFiles(backupRoot, BackupVersionRetention.IsVersionsDir))
+            {
+                ct.ThrowIfCancellationRequested();
+                TryAddFileSize(file, ref checkBytes, ref checkFiles);
+                if (checkFiles % MeldeJeEintraege == 0)
+                    MeldeAbschluss(PhaseZaehlen, checkFiles);
+            }
+
+            MeldeAbschluss(PhaseZaehlen, checkFiles);
+
+            Protokolliere(
+                targetFolder,
+                $"Phase: Prüfe Sicherung ({checkFiles:N0} Dateien, SHA-256 — längster Teil)");
+            var checkProgress = new ProgressState(checkBytes, checkFiles);
             var manifestFiles = await _manifestIntegrity.CreateEntriesAsync(
                     backupRoot,
-                    file =>
-                    {
-                        if (progress is null || hashProgressThrottle.ElapsedMilliseconds < 250)
-                            return;
-
-                        hashProgressThrottle.Restart();
-                        progress.Report(new FullBackupProgress(
-                            "Pruefe Sicherung",
-                            Path.GetRelativePath(backupRoot, file),
-                            sizeReport.TotalBytes,
-                            sizeReport.TotalBytes,
-                            sizeReport.TotalFiles,
-                            sizeReport.TotalFiles));
-                    },
+                    file => checkProgress.FileDone(
+                        progress,
+                        "Prüfe Sicherung",
+                        Path.GetRelativePath(backupRoot, file),
+                        TryGetFileLength(file)),
                     ct)
                 .ConfigureAwait(false);
-            progressState.Report(progress, "Pruefe Sicherung", "SHA-256 abgeschlossen", force: true);
+            checkProgress.Report(progress, "Prüfe Sicherung", "SHA-256 abgeschlossen", force: true);
+            var manifestPlan = BackupProjectTargetMapping.ForManifest(plan, previousProjectTargets, backupRoot);
             var manifest = BuildManifest(
-                sources, plan, sizeReport, stats, skipped, versionStaende,
+                sources, manifestPlan, sizeReport, stats, skipped, versionStaende,
                 requiredFreeBytes, confirmedAvailableBytes, manifestFiles);
             var manifestJson = JsonSerializer.Serialize(manifest, ManifestJsonOptions);
             var manifestPath = BackupTargetPathGuard.ResolveRelativePath(
                 backupRoot,
                 "manifest.json");
-            await AtomicTextFileWriter.WriteAllTextAsync(
-                manifestPath,
-                manifestJson,
-                ct).ConfigureAwait(false);
+            journal.Preserve(manifestPath);
+            journal.Preserve(manifestPath + ".bak");
+            ct.ThrowIfCancellationRequested();
+            EnsureTargetStillTrusted(backupRoot);
+            journal.WriteText(manifestPath, manifestJson, saveBackup: true);
+            journal.Commit();
+            // Erst ein vollständig abgeschlossener Lauf darf alte Stände ausdünnen.
+            RotateVersionStaende(backupRoot, stats);
 
             progressState.Report(progress, "Fertig", "manifest.json", force: true);
+            // Rueckgabe und Manifest bleiben auf 200 Pfade gekuerzt; die VOLLSTAENDIGE Liste steht im
+            // Laufprotokoll, damit keine Luecke ohne Pfad bleibt (Audit A17, 23.09.2026).
+            if (stats.Warnings.Count > 0)
+            {
+                Protokolliere(targetFolder, $"Nicht gesichert oder übersprungen ({stats.Warnings.Count}):");
+                foreach (var warnung in stats.Warnings)
+                    Protokolliere(targetFolder, "  " + warnung);
+            }
+            Protokolliere(
+                targetFolder,
+                $@"=== Abgeschlossen nach {started.Elapsed:hh\:mm\:ss} ===");
 
             return new FullBackupResult(
                 Success: true,
@@ -255,8 +321,9 @@ public sealed class FullBackupService : IFullBackupService
                 FilesCopied: stats.Copied,
                 FilesUnchanged: stats.Unchanged,
                 FilesDeleted: stats.Deleted,
-                SkippedFiles: skipped,
+                SkippedFiles: stats.Warnings.Take(200).ToArray(),
                 Duration: started.Elapsed,
+                SkippedFileTotal: stats.Warnings.Count,
                 FilesVerified: stats.Verified,
                 DatabasesSnapshotted: stats.DatabasesSnapshotted,
                 RequiredFreeBytes: requiredFreeBytes,
@@ -264,23 +331,75 @@ public sealed class FullBackupService : IFullBackupService
         }
         catch (OperationCanceledException)
         {
+            Protokolliere(
+                targetFolder,
+                $@"=== Abgebrochen nach {started.Elapsed:hh\:mm\:ss} ===");
             throw;
         }
         catch (Exception ex)
         {
+            Protokolliere(targetFolder, "=== Fehler: " + ex.Message + " ===");
             return Failure(ex.Message, backupRoot, started.Elapsed);
         }
     }
 
-    private void EnsureTargetStillTrusted(string backupRoot)
+    /// <summary>
+    /// Name des Laufprotokolls. Es liegt NEBEN dem Sicherungsordner, nicht darin:
+    /// innerhalb wuerde es beim Aufraeumen als verwaiste Datei entfernt und die
+    /// Manifest-Pruefsumme brechen, weil es nach dem Hashen weiterwaechst.
+    /// </summary>
+    public const string ProtokollDateiName = "SewerStudio_Sicherung_Protokoll.txt";
+
+    /// <summary>
+    /// Haelt fest, was der Lauf gerade tut. Der Lauf vom 22./23.09.2026 arbeitete
+    /// 15 Stunden und hinterliess nirgends eine Spur — im ganzen Sicherungsweg gab
+    /// es keinen Logger, und hinterher liess sich nicht feststellen, wo er stand.
+    /// Ein Schreibfehler darf die Sicherung nie scheitern lassen: das Protokoll ist
+    /// eine Hilfe, kein Bestandteil des Sicherungsguts.
+    /// </summary>
+    private static void Protokolliere(string targetFolder, string zeile)
+    {
+        try
+        {
+            File.AppendAllText(
+                Path.Combine(targetFolder, ProtokollDateiName),
+                $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}  {zeile}{Environment.NewLine}");
+        }
+        catch (Exception ex) when (ex is IOException
+                                   or UnauthorizedAccessException
+                                   or PathTooLongException
+                                   or NotSupportedException
+                                   or ArgumentException)
+        {
+            // Ohne Protokoll laeuft die Sicherung weiter — sie ist wichtiger.
+        }
+    }
+
+    /// <summary>Namen der Abschlussphasen — sie erscheinen im Fortschrittsdialog.</summary>
+    private const string PhaseZielordner = "Zielordner prüfen";
+    private const string PhaseAufraeumen = "Alte Dateien aufräumen";
+    private const string PhaseZaehlen = "Sicherung zählen";
+
+    /// <summary>Wie oft die Abschlussphasen ein Lebenszeichen geben.</summary>
+    private const int MeldeJeEintraege = 2000;
+
+    private void EnsureTargetStillTrusted(
+        string backupRoot, CancellationToken ct = default, Action<int>? beiEintrag = null)
     {
         var markerError = _targetMarkerGuard.ValidateAndCreateMarker(backupRoot);
         if (!string.IsNullOrWhiteSpace(markerError))
             throw new InvalidDataException(markerError);
 
-        BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot);
+        BackupTargetPathGuard.EnsureTreeIsSafe(backupRoot, ct, beiEintrag);
     }
 
+    private const int MaxGemeldeteFehler = 5;
+
+    /// <summary>
+    /// Bricht bei blockierenden Fehlern ab und nennt dabei ALLE davon, bis zur
+    /// Anzeigegrenze. Frueher stand nur der erste im Dialog — bei mehreren
+    /// fehlenden Quellen blieb der Rest unsichtbar.
+    /// </summary>
     private static void ThrowIfMirrorErrors(
         DirectoryMirror.MirrorStats stats,
         string message)
@@ -288,17 +407,21 @@ public sealed class FullBackupService : IFullBackupService
         if (stats.Errors.Count == 0)
             return;
 
-        throw new IOException($"{message} Fehler: {stats.Errors[0]}");
+        var beispiele = string.Join(Environment.NewLine, stats.Errors.Take(MaxGemeldeteFehler));
+        var rest = stats.Errors.Count > MaxGemeldeteFehler
+            ? $"{Environment.NewLine}... und {stats.Errors.Count - MaxGemeldeteFehler} weitere"
+            : string.Empty;
+
+        throw new IOException(
+            $"{message} {stats.Errors.Count} Fehler:{Environment.NewLine}{beispiele}{rest}");
     }
 
     private FullBackupSizeReport Analyze(
-        FullBackupSources sources,
+        IReadOnlyList<BackupComponent> plan,
         IProgress<string>? progress,
         CancellationToken ct)
     {
         var components = new List<ComponentSize>();
-        var plan = BackupPlanBuilder.Build(sources);
-
         foreach (var component in plan)
         {
             ct.ThrowIfCancellationRequested();
@@ -349,6 +472,19 @@ public sealed class FullBackupService : IFullBackupService
             components,
             components.Sum(c => c.Bytes),
             components.Sum(c => c.FileCount));
+    }
+
+    /// <summary>Dateigroesse fuer die Fortschrittsanzeige; ein Fehler zaehlt als 0.</summary>
+    private static long TryGetFileLength(string file)
+    {
+        try
+        {
+            return new FileInfo(file).Length;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return 0;
+        }
     }
 
     private static void TryAddFileSize(string file, ref long bytes, ref int files)
@@ -408,7 +544,8 @@ public sealed class FullBackupService : IFullBackupService
         }
     }
 
-    private async Task WriteGeneratedExtrasAsync(string backupRoot, FullBackupSources sources, CancellationToken ct)
+    private async Task WriteGeneratedExtrasAsync(string backupRoot, FullBackupSources sources,
+        Action<string, string> write, CancellationToken ct)
     {
         var extrasDir = BackupTargetPathGuard.ResolveRelativePath(backupRoot, "Extras");
         Directory.CreateDirectory(extrasDir);
@@ -418,22 +555,16 @@ public sealed class FullBackupService : IFullBackupService
             backupRoot,
             Path.Combine("Extras", "RESTORE-ANLEITUNG.txt"));
         BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, restorePath);
-        await File.WriteAllTextAsync(
-            restorePath,
-            RestoreAnleitungText.Build(sources),
-            Encoding.UTF8,
-            ct).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+        write(restorePath, RestoreAnleitungText.Build(sources));
 
         var environmentText = await BuildUmgebungTextAsync(sources, ct).ConfigureAwait(false);
         var environmentPath = BackupTargetPathGuard.ResolveRelativePath(
             backupRoot,
             Path.Combine("Extras", "umgebung.txt"));
         BackupTargetPathGuard.EnsurePathIsSafe(backupRoot, environmentPath);
-        await File.WriteAllTextAsync(
-            environmentPath,
-            environmentText,
-            Encoding.UTF8,
-            ct).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+        write(environmentPath, environmentText);
     }
 
     private async Task<long> EstimateRequiredCopyBytesAsync(
@@ -489,7 +620,7 @@ public sealed class FullBackupService : IFullBackupService
         var targetInfo = new FileInfo(targetFile);
         return await DirectoryMirror.IsUnchangedAsync(sourceInfo, targetInfo, ct).ConfigureAwait(false)
             ? 0
-            : sourceInfo.Length;
+            : checked(sourceInfo.Length + (targetInfo.Exists ? targetInfo.Length : 0));
     }
 
     private async Task<string> BuildUmgebungTextAsync(FullBackupSources sources, CancellationToken ct)
@@ -522,7 +653,7 @@ public sealed class FullBackupService : IFullBackupService
         sb.AppendLine();
         sb.AppendLine("Ollama Modelle:");
         var ollama = _ollamaList is null ? null : await _ollamaList(ct).ConfigureAwait(false);
-        sb.AppendLine(string.IsNullOrWhiteSpace(ollama) ? "  (ollama list nicht verfuegbar)" : ollama.TrimEnd());
+        sb.AppendLine(string.IsNullOrWhiteSpace(ollama) ? "  (ollama list nicht verfügbar)" : ollama.TrimEnd());
         return sb.ToString();
     }
 
@@ -560,7 +691,9 @@ public sealed class FullBackupService : IFullBackupService
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                stats.Errors.Add($"{standDir}: Alter Versions-Stand nicht entfernt ({ex.Message})");
+                // Ein stehengebliebener alter Stand kostet nur Platz. Eine verletzte
+                // Zielgrenze wird oben nicht gefangen und bricht weiterhin ab.
+                stats.Warnings.Add($"{standDir}: Alter Versions-Stand nicht entfernt ({ex.Message})");
             }
         }
 
@@ -629,6 +762,7 @@ public sealed class FullBackupService : IFullBackupService
                 Files = c.Files?.Select(f => new { f.SourcePath, f.TargetRelativePath }).ToArray()
             }).ToArray(),
             Files = files,
+            SkippedFileCount = stats.Warnings.Count,
             SkippedFiles = skipped
         };
 
@@ -677,6 +811,7 @@ public sealed class FullBackupService : IFullBackupService
         private readonly Stopwatch _throttle = Stopwatch.StartNew();
         private long _bytesDone;
         private int _filesDone;
+        private bool _reportedOnce;
 
         public void FileDone(
             IProgress<FullBackupProgress>? progress,
@@ -698,9 +833,12 @@ public sealed class FullBackupService : IFullBackupService
             if (progress is null)
                 return;
 
-            if (!force && _throttle.ElapsedMilliseconds < 250 && _filesDone < filesTotal)
+            // Die erste Meldung geht immer sofort raus: sonst bleibt der Balken zu
+            // Beginn einer Phase leer stehen, obwohl bereits gearbeitet wird.
+            if (!force && _reportedOnce && _throttle.ElapsedMilliseconds < 250 && _filesDone < filesTotal)
                 return;
 
+            _reportedOnce = true;
             _throttle.Restart();
             progress.Report(new FullBackupProgress(
                 component,

@@ -12,8 +12,6 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 /// </summary>
 internal static class PipelineResultPresenter
 {
-    private const int MaxVisibleDetections = 250;
-
     internal static PipelineResultPresentation ApplySuccessful(
         VideoAnalysisPipelineViewModel viewModel,
         PipelineResult result)
@@ -22,13 +20,32 @@ internal static class PipelineResultPresenter
         ArgumentNullException.ThrowIfNull(result);
 
         if (!result.IsSuccess)
-            throw new ArgumentException("Nur erfolgreiche Pipeline-Ergebnisse koennen dargestellt werden.", nameof(result));
+            throw new ArgumentException("Nur erfolgreiche Pipeline-Ergebnisse können dargestellt werden.", nameof(result));
 
         var rawDetections = result.Detections ?? Array.Empty<RawVideoDetection>();
         ApplyStatistics(viewModel, result.Stats, rawDetections);
         viewModel.TelemetryText = PipelineTelemetryFormatter.Format(result.Telemetry);
+        ApplyCompletion(viewModel, result);
 
         return new PipelineResultPresentation(BuildVisibleDetections(result.MappedEntries, rawDetections));
+    }
+
+    private static void ApplyCompletion(VideoAnalysisPipelineViewModel viewModel, PipelineResult result)
+    {
+        var warnings = (result.Warnings ?? Array.Empty<string>())
+            .Where(message => !string.IsNullOrWhiteSpace(message))
+            .Select(message => message.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (result.Incomplete)
+            warnings.Insert(0, "Die Videoanalyse ist unvollständig. Fehlende Abschnitte und Befunde müssen geprüft werden.");
+
+        viewModel.ResultWarningText = string.Join(Environment.NewLine, warnings);
+        viewModel.PhaseLabel = result.Incomplete ? "Unvollständig"
+            : warnings.Count > 0 ? "Fertig mit Hinweisen" : "Fertig";
+        viewModel.StatusText = warnings.Count > 0
+            ? $"{viewModel.PhaseLabel}. Bitte Hinweise und Befunde vor dem Übertragen prüfen."
+            : "Fertig. Du kannst jetzt übertragen.";
     }
 
     private static void ApplyStatistics(
@@ -58,13 +75,11 @@ internal static class PipelineResultPresenter
         if (mappedEntries is { Count: > 0 })
         {
             return mappedEntries
-                .Take(MaxVisibleDetections)
                 .Select(DetectionItem.FromMapped)
                 .ToList();
         }
 
         return rawDetections
-            .Take(MaxVisibleDetections)
             .Select(DetectionItem.From)
             .ToList();
     }

@@ -37,9 +37,9 @@ public sealed class DataPageDichtheitPdfController
         {
             var name = record?.GetFieldValue(FieldKeys.HoldingName) ?? "(unbekannt)";
             _dialogs.Info(
-                $"Kein Dichtheitspruefungsprotokoll fuer Haltung '{name}' gefunden.\n" +
+                $"Kein Dichtheitsprüfungsprotokoll für Haltung '{name}' gefunden.\n" +
                 "Dichtheitsprotokolle werden beim Kanalfernseh-Import automatisch verteilt (…_DP.pdf).",
-                "Dichtheitspruefung");
+                "Dichtheitsprüfung");
             return;
         }
 
@@ -47,8 +47,8 @@ public sealed class DataPageDichtheitPdfController
         if (!result.Success)
         {
             _dialogs.Warn(
-                $"Dichtheitspruefung konnte nicht geoeffnet werden:\n{result.Error}",
-                "Dichtheitspruefung");
+                $"Dichtheitsprüfung konnte nicht geöffnet werden:\n{result.Error}",
+                "Dichtheitsprüfung");
         }
     }
 }

@@ -107,8 +107,8 @@ internal static class GroundTruthFieldParser
         var m = QuantPattern.Match(text);
         if (!m.Success) return null;
 
-        if (!double.TryParse(m.Groups["val"].Value.Replace(',', '.'),
-                NumberStyles.Float, CultureInfo.InvariantCulture, out var val))
+        // Gemeinsame Dezimalregel mit TryParseMeter: Komma als Trennzeichen, invariant-kulturell.
+        if (!TryParseMeter(m.Groups["val"].Value, out var val))
             return null;
 
         var unit = m.Groups["unit"].Value.ToLowerInvariant() switch

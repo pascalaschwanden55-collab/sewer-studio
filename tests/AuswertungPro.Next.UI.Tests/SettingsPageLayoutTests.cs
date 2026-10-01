@@ -41,7 +41,7 @@ public sealed class SettingsPageLayoutTests
         Assert.Contains("Header=\"Datenordner und Logs\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Programmbereinigung\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Command=\"{Binding CleanProgramDataCommand}\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"Pruefen und bereinigen\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Prüfen und bereinigen\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Wiederherstellung\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Importquellen\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Header=\"Referenzdaten\"", xaml, StringComparison.Ordinal);
@@ -79,10 +79,10 @@ public sealed class SettingsPageLayoutTests
         var firstScrollViewerIndex = xaml.IndexOf("<ScrollViewer", StringComparison.Ordinal);
 
         Assert.True(tabControlIndex >= 0, "SettingsPage braucht die linke Tab-Navigation.");
-        Assert.True(firstScrollViewerIndex >= 0, "Die Tab-Inhalte muessen weiterhin scrollbar sein.");
+        Assert.True(firstScrollViewerIndex >= 0, "Die Tab-Inhalte müssen weiterhin scrollbar sein.");
         Assert.True(
             tabControlIndex < firstScrollViewerIndex,
-            "Kopfzeile und linke Einstellungsnavigation duerfen nicht in einem aeusseren ScrollViewer liegen.");
+            "Kopfzeile und linke Einstellungsnavigation dürfen nicht in einem aeusseren ScrollViewer liegen.");
         Assert.Contains("<TabControl Grid.Row=\"1\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Key=\"SettingsTabScrollViewer\"", xaml, StringComparison.Ordinal);
     }
@@ -235,6 +235,19 @@ public sealed class SettingsPageLayoutTests
         Assert.DoesNotContain("MinWidth=\"400\"", xaml, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void SettingsPage_formularstile_behalten_die_themegerechten_steuerelemente()
+    {
+        var xaml = ReadSettingsPage();
+
+        AssertStyleKeepsTheme(xaml, "SettingsTextInput", "TextBox");
+        AssertStyleKeepsTheme(xaml, "SettingsComboInput", "ComboBox");
+        AssertStyleKeepsTheme(xaml, "SettingsBrowseButton", "Button");
+        AssertStyleKeepsTheme(xaml, "SettingsActionButton", "Button");
+        AssertStyleKeepsTheme(xaml, "SettingsWideActionButton", "Button");
+        AssertStyleKeepsTheme(xaml, "SettingsFieldCheckBox", "CheckBox");
+    }
+
     private static string[] ReadTabHeaders(string xaml)
         => Regex.Matches(xaml, "<TabItem Header=\"([^\"]+)\"", RegexOptions.CultureInvariant)
             .Select(match => match.Groups[1].Value)
@@ -285,6 +298,20 @@ public sealed class SettingsPageLayoutTests
         }
 
         return count;
+    }
+
+    private static void AssertStyleKeepsTheme(string xaml, string styleKey, string controlType)
+    {
+        var declaration = Regex.Match(
+            xaml,
+            $"<Style\\s+x:Key=\"{styleKey}\"(?<attributes>[^>]*)>",
+            RegexOptions.CultureInvariant);
+
+        Assert.True(declaration.Success, $"Der Stil {styleKey} fehlt.");
+        Assert.Contains(
+            $"BasedOn=\"{{StaticResource {{x:Type {controlType}}}}}\"",
+            declaration.Groups["attributes"].Value,
+            StringComparison.Ordinal);
     }
 
     private static string ReadSettingsPage()

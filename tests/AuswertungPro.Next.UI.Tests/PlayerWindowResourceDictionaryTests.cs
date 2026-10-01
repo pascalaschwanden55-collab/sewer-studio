@@ -9,7 +9,7 @@ public sealed class PlayerWindowResourceDictionaryTests
     [Fact]
     public void Player_window_keeps_theme_dependent_styles_in_window_scope()
     {
-        var root = FindRepoRoot();
+        var root = FindRepositoryRoot();
         var xamlPath = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml");
         var csprojPath = Path.Combine(root, "src", "AuswertungPro.Next.UI", "AuswertungPro.Next.UI.csproj");
 

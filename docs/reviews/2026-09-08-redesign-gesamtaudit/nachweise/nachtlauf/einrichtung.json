@@ -1,0 +1,14 @@
+﻿{
+    "state":  "geplant",
+    "taskName":  "SewerStudio_Redesign_Gesamtaudit_20260908_0252",
+    "registeredUtc":  "2026-09-07T20:00:03.0800443Z",
+    "scheduledUtc":  "2026-09-08T00:52:00.0000000Z",
+    "nextRunLocal":  "2026-09-08T02:52:00.0000000+02:00",
+    "taskState":  "Ready",
+    "userId":  "Besitzer",
+    "logonType":  "Interactive",
+    "runLevel":  "Limited",
+    "triggerCount":  1,
+    "startWhenAvailable":  true,
+    "reportDirectory":  "C:\\Sewer-Studio_KI_4.5\\docs\\reviews\\2026-09-08-redesign-gesamtaudit"
+}

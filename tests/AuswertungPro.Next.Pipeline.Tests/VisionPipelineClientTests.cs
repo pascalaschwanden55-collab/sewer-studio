@@ -474,6 +474,148 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
+    public async Task DetectBccTestYoloAsync_sends_only_candidate_id_and_sha_not_a_path()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "available": true,
+            "error": null,
+            "is_relevant": false,
+            "detections": [],
+            "frame_class": "empty",
+            "inference_time_ms": 1.0,
+            "candidate_id": "bcc_bogen_b50b37ab8a4f",
+            "candidate_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "model_name": "bcc_bogen_b50b37ab8a4f",
+            "device": "cpu"
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "bcc-token");
+
+        await client.DetectBccTestYoloAsync(new BccTestYoloRequest(
+            "abc",
+            0.25,
+            "bcc_bogen_b50b37ab8a4f",
+            "a" + new string('a', 63)));
+
+        using var request = JsonDocument.Parse(Assert.IsType<string>(handler.LastRequestBody));
+        Assert.Equal(
+            "bcc_bogen_b50b37ab8a4f",
+            request.RootElement.GetProperty("candidate_id").GetString());
+        Assert.Equal(
+            new string('a', 64),
+            request.RootElement.GetProperty("candidate_sha256").GetString());
+        Assert.DoesNotContain("path", handler.LastRequestBody, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DetectBccTestYoloAsync_maps_meter_value_and_sends_meter_format()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "available": true,
+            "error": null,
+            "is_relevant": true,
+            "detections": [],
+            "frame_class": "relevant",
+            "inference_time_ms": 12.5,
+            "candidate_id": "bcc_bogen_b50b37ab8a4f",
+            "candidate_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "model_name": "bcc_bogen_b50b37ab8a4f",
+            "device": "cpu",
+            "meter_value": 14.1
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "bcc-token");
+
+        var response = await client.DetectBccTestYoloAsync(new BccTestYoloRequest(
+            "abc",
+            0.25,
+            "bcc_bogen_b50b37ab8a4f",
+            new string('a', 64),
+            "vierziffern"));
+
+        Assert.True(response.Available);
+        Assert.Equal(14.1, response.MeterValue);
+        using var request = JsonDocument.Parse(Assert.IsType<string>(handler.LastRequestBody));
+        Assert.Equal("vierziffern", request.RootElement.GetProperty("meter_format").GetString());
+    }
+
+    [Fact]
+    public async Task DetectBccTestYoloAsync_rejects_missing_exact_pin_before_post()
+    {
+        var handler = new CaptureHandler("""{"available":true,"detections":[]}""");
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "bcc-token");
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => client.DetectBccTestYoloAsync(new BccTestYoloRequest(
+                "abc",
+                0.25,
+                null!,
+                null!)));
+
+        Assert.Null(handler.LastRequestPath);
+    }
+
+    [Fact]
+    public async Task GetBccTestCandidatesAsync_uses_catalog_endpoint_and_token()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "available": true,
+            "error": null,
+            "candidates": [
+                {
+                    "candidate_id": "bcc_bogen_b50b37ab8a4f",
+                    "candidate_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "map50": 0.74,
+                    "epochs_completed": 40,
+                    "created_utc": "2026-07-28T14:43:21Z"
+                }
+            ]
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "bcc-token");
+
+        var response = await client.GetBccTestCandidatesAsync();
+
+        Assert.True(response.Available);
+        Assert.Equal(
+            "bcc_bogen_b50b37ab8a4f",
+            Assert.Single(response.Candidates).CandidateId);
+        Assert.Equal("/detect/yolo/bcc-test/candidates", handler.LastRequestPath);
+        Assert.Equal("bcc-token", handler.LastSidecarToken);
+    }
+
+    [Fact]
+    public async Task Default_candidate_pin_never_falls_back_to_unpinned_request()
+    {
+        IVisionPipelineClient client = new LegacyVisionPipelineClient();
+
+        var error = await Assert.ThrowsAsync<NotSupportedException>(
+            () => client.DetectBccTestYoloAsync(new BccTestYoloRequest(
+                "abc",
+                0.25,
+                "bcc_bogen_b50b37ab8a4f",
+                "a" + new string('0', 63))));
+
+        Assert.Contains("exakte", error.Message);
+        Assert.Equal(0, ((LegacyVisionPipelineClient)client).UnpinnedCandidateCalls);
+    }
+
+    [Fact]
     public void MultiModelFrameResult_CanBeConstructed()
     {
         var result = new MultiModelFrameResult(
@@ -494,12 +636,107 @@ public class VisionPipelineClientTests
         Assert.Equal(640, result.ImageWidth);
     }
 
+    // ── Lernstufen (Rohranfang/Rohrende): Vertrag zu /classify/lernstufen und /classify/lernstufe ──
+
+    [Fact]
+    public async Task GetLernstufenAsync_liest_die_freigegebenen_Lernstufen_mit_Token()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "lernstufen": [
+                {
+                    "klasse": "rohranfang",
+                    "gewicht_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "freigabe_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                    "precision": 0.8545,
+                    "recall": 0.9783,
+                    "regel": "Die staerkste gruppierte Meldung des Modells im GANZEN Video. Kein Zeitfenster."
+                }
+            ]
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "lernstufen-token");
+
+        var antwort = await client.GetLernstufenAsync();
+
+        var stufe = Assert.Single(antwort.Lernstufen);
+        Assert.Equal("rohranfang", stufe.Klasse);
+        Assert.Equal(new string('a', 64), stufe.GewichtSha256);
+        Assert.Equal(0.8545, stufe.Precision, 4);
+        Assert.Equal(0.9783, stufe.Recall, 4);
+        Assert.Contains("staerkste", stufe.Regel);
+        Assert.Equal("/classify/lernstufen", handler.LastRequestPath);
+        Assert.Equal("lernstufen-token", handler.LastSidecarToken);
+    }
+
+    [Fact]
+    public async Task ClassifyLernstufeAsync_sendet_Klasse_Hash_Bild_und_Bildgroesse_aber_keinen_Pfad()
+    {
+        var handler = new CaptureHandler("""
+        {
+            "klasse": "rohrende",
+            "konfidenz": 0.91,
+            "gewicht_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "freigabe_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "precision": 0.8889,
+            "recall": 0.8837,
+            "device": "cuda:0",
+            "inference_time_ms": 9.5
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "lernstufen-token");
+
+        var antwort = await client.ClassifyLernstufeAsync(
+            new LernstufeRequest("abc", "rohrende", new string('a', 64)));
+
+        Assert.Equal("rohrende", antwort.Klasse);
+        Assert.Equal(0.91, antwort.Konfidenz, 3);
+        Assert.Equal(new string('a', 64), antwort.GewichtSha256);
+        Assert.Equal("cuda:0", antwort.Device);
+        Assert.Equal("/classify/lernstufe", handler.LastRequestPath);
+        Assert.Equal("lernstufen-token", handler.LastSidecarToken);
+        using var request = JsonDocument.Parse(Assert.IsType<string>(handler.LastRequestBody));
+        var wurzel = request.RootElement;
+        Assert.Equal("abc", wurzel.GetProperty("image_base64").GetString());
+        Assert.Equal("rohrende", wurzel.GetProperty("klasse").GetString());
+        Assert.Equal(new string('a', 64), wurzel.GetProperty("gewicht_sha256").GetString());
+        // Die Freigabe wurde mit imgsz 640 gemessen; der Sidecar-Standard ist derselbe Wert.
+        Assert.Equal(640, wurzel.GetProperty("imgsz").GetInt32());
+        Assert.DoesNotContain("path", handler.LastRequestBody, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ClassifyLernstufeAsync_lehnt_ungueltige_Klasse_oder_Hash_vor_dem_Senden_ab()
+    {
+        var handler = new CaptureHandler("{}");
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "lernstufen-token");
+
+        // Klassenname ausserhalb des Sidecar-Musters ^[a-z][a-z_]{0,31}$ ...
+        await Assert.ThrowsAsync<ArgumentException>(() => client.ClassifyLernstufeAsync(
+            new LernstufeRequest("abc", "Rohranfang-1", new string('a', 64))));
+        // ... und ein Hash, der kein SHA-256 ist.
+        await Assert.ThrowsAsync<ArgumentException>(() => client.ClassifyLernstufeAsync(
+            new LernstufeRequest("abc", "rohranfang", "kein-hash")));
+
+        Assert.Null(handler.LastRequestPath);
+    }
+
     private sealed class CaptureHandler(string json) : HttpMessageHandler
     {
         public string? LastSidecarToken { get; private set; }
         public string? LastRequestPath { get; private set; }
+        public string? LastRequestBody { get; private set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(
+        protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
@@ -507,12 +744,15 @@ public class VisionPipelineClientTests
             LastSidecarToken = request.Headers.TryGetValues("X-Sidecar-Token", out var values)
                 ? values.SingleOrDefault()
                 : null;
+            LastRequestBody = request.Content is null
+                ? null
+                : await request.Content.ReadAsStringAsync(cancellationToken);
 
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
-            return Task.FromResult(response);
+            return response;
         }
     }
 
@@ -527,6 +767,46 @@ public class VisionPipelineClientTests
         }
 
         public string? ResolvePath() => null;
+    }
+
+    private sealed class LegacyVisionPipelineClient : IVisionPipelineClient
+    {
+        public int UnpinnedCandidateCalls { get; private set; }
+
+        public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
+            => Task.FromResult<SidecarHealthResponse?>(null);
+
+        public Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(
+            CancellationToken ct = default)
+            => Task.FromException<PipelineHealthCheckResult>(new NotSupportedException());
+
+        public Task<YoloResponse> DetectYoloAsync(
+            YoloRequest request,
+            CancellationToken ct = default)
+            => Task.FromException<YoloResponse>(new NotSupportedException());
+
+        public Task<BccTestYoloResponse> DetectBccTestYoloAsync(
+            YoloRequest request,
+            CancellationToken ct = default)
+        {
+            UnpinnedCandidateCalls++;
+            return Task.FromException<BccTestYoloResponse>(new NotSupportedException());
+        }
+
+        public Task<DinoResponse> DetectDinoAsync(
+            DinoRequest request,
+            CancellationToken ct = default)
+            => Task.FromException<DinoResponse>(new NotSupportedException());
+
+        public Task<SamResponse> SegmentSamAsync(
+            SamRequest request,
+            CancellationToken ct = default)
+            => Task.FromException<SamResponse>(new NotSupportedException());
+
+        public Task<YoloClassifyResponse> ClassifyYoloAsync(
+            YoloClassifyRequest request,
+            CancellationToken ct = default)
+            => Task.FromException<YoloClassifyResponse>(new NotSupportedException());
     }
 
     private sealed class StatusCodeHandler(HttpStatusCode statusCode, string body) : HttpMessageHandler

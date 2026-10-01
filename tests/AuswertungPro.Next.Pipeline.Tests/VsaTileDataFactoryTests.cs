@@ -115,6 +115,24 @@ public sealed class VsaTileDataFactoryTests
     }
 
     [Fact]
+    public void ForChar1_mit_c2_zeigt_semantischen_navigationsklartext()
+    {
+        var charDef = new CharDef { Label = "Bogen nach links" };
+        var tile = VsaTileDataFactory.ForChar1(
+            "A",
+            charDef,
+            "BCC",
+            false,
+            hasC2: true,
+            null,
+            "#2563EB",
+            catalogLabel: "Bogen nach links",
+            parentCatalogLabel: "Bogen");
+
+        Assert.Equal("Bogen nach links", tile.Description);
+    }
+
+    [Fact]
     public void ForChar1_xprefix_erscheint_im_label()
     {
         var charDef = new CharDef { Label = "partiell" };
@@ -146,6 +164,23 @@ public sealed class VsaTileDataFactoryTests
     {
         var tile = VsaTileDataFactory.ForChar2("A", "label", "BAC", "A", true, false, "#DC2626");
         Assert.Equal("BACXAA", tile.Label);
+    }
+
+    [Fact]
+    public void ForChar2_zeigt_den_exakten_finalen_katalogklartext()
+    {
+        var tile = VsaTileDataFactory.ForChar2(
+            "A",
+            "oben",
+            "BCC",
+            "A",
+            false,
+            false,
+            "#2563EB",
+            catalogLabel: "Bogen nach links oben",
+            parentCatalogLabel: "Bogen nach links");
+
+        Assert.Equal("Bogen nach links oben", tile.Description);
     }
 
     // ── F4: ForChar1 altes Verhalten – kein "Q"-Fallback bei fehlender Einheit ────────────

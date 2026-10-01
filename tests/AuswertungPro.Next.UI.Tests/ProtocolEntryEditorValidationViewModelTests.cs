@@ -46,7 +46,7 @@ public sealed class ProtocolEntryEditorValidationViewModelTests
         Assert.False(result.StreckenschadenOk);
         Assert.False(result.Vsa.DistanzOk);
         Assert.Equal("Code ist nicht im Katalog vorhanden.", result.Errors[0]);
-        Assert.Contains("MeterStart ist ungueltig.", result.Errors);
+        Assert.Contains("MeterStart ist ungültig.", result.Errors);
         Assert.Contains("Streckenschaden: MeterStart und MeterEnde sind Pflicht.", result.Errors);
         Assert.Contains("VSA: Distanz (m) ist erforderlich.", result.Errors);
         Assert.Contains("Code nicht im Katalog.", result.Errors);
@@ -86,7 +86,7 @@ public sealed class ProtocolEntryEditorValidationViewModelTests
         });
 
         Assert.False(result.Q1Ok);
-        Assert.Contains("VSA: Quantifizierung 1 ist fuer diesen Code nicht vorgesehen.", result.Errors);
+        Assert.Contains("VSA: Quantifizierung 1 ist für diesen Code nicht vorgesehen.", result.Errors);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class ProtocolEntryEditorValidationViewModelTests
 
         Assert.True(result.Q1Ok);
         Assert.DoesNotContain(
-            "VSA: Quantifizierung 1 ist fuer diesen Code nicht vorgesehen.",
+            "VSA: Quantifizierung 1 ist für diesen Code nicht vorgesehen.",
             result.Errors);
     }
 

@@ -4,10 +4,13 @@
              xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
              xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Schachtansicht"
+             xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
+             xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
              x:Name="Root">
     <UserControl.Resources>
         <local:SchachtSummaryConverter x:Key="SummaryConv"/>
         <local:SchachtZustandsklasseBrushConverter x:Key="ZkBrushConv"/>
+        <dp:ZustandsklasseInkConverter x:Key="ZkInkConv"/>
     </UserControl.Resources>
 
     <Grid Margin="8">
@@ -17,8 +20,8 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <ListBox Grid.Column="0"
-                 x:Name="SchachtList"
+        <Grid Grid.Column="0">
+        <ListBox x:Name="SchachtList"
                  HorizontalContentAlignment="Stretch"
                  ItemsSource="{Binding Records}"
                  SelectedItem="{Binding Selected, Mode=TwoWay}"
@@ -71,7 +74,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding Fields[NR.]}"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
-                                           FontSize="11"
+                                           FontSize="{DynamicResource TextXS}"
                                            Margin="0,0,8,0"
                                            MinWidth="16"
                                            TextAlignment="Right"/>
@@ -81,7 +84,7 @@
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
                             <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
-                                       FontSize="12"
+                                       FontSize="{DynamicResource TextS}"
                                        TextTrimming="CharacterEllipsis"
                                        Margin="0,2,0,0">
                                 <TextBlock.Text>
@@ -96,21 +99,38 @@
                         <Border Grid.Column="1"
                                 Width="32"
                                 Height="22"
-                                CornerRadius="4"
+                                CornerRadius="{DynamicResource RadiusS}"
                                 VerticalAlignment="Center"
                                 Margin="8,0,4,0"
                                 Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}">
                             <TextBlock Text="{Binding Fields[Zustandsklasse]}"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
-                                       Foreground="#000000"
-                                       FontSize="12"
+                                       Foreground="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkInkConv}}"
+                                       FontSize="{DynamicResource TextS}"
                                        FontWeight="Bold"/>
                         </Border>
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
+
+        <uc:EmptyStateControl IsHitTestVisible="False"
+                              Icon="&#xE8A5;"
+                              Title="Noch keine Schächte"
+                              Message="Importiere Schachtinspektionen, damit sie hier erscheinen.">
+            <uc:EmptyStateControl.Style>
+                <Style TargetType="uc:EmptyStateControl">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasItems, ElementName=SchachtList}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </uc:EmptyStateControl.Style>
+        </uc:EmptyStateControl>
+        </Grid>
 
         <GridSplitter Grid.Column="1"
                       Width="6"
@@ -119,56 +139,14 @@
 
         <Grid Grid.Column="2" Margin="8,0,0,0">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*" MinHeight="120"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition x:Name="SchadenRowDef" Height="240" MinHeight="80"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0"
-                    Margin="0,0,0,8"
-                    Padding="10,8"
-                    Background="{DynamicResource CardBrush}"
-                    BorderBrush="{DynamicResource BorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8">
-                <DockPanel LastChildFill="False">
-                    <TextBlock DockPanel.Dock="Left"
-                               Text="Zustand 0-4"
-                               Foreground="{DynamicResource TextBrush}"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"
-                               Margin="0,0,12,0"/>
-                    <ItemsControl DockPanel.Dock="Left"
-                                  ItemsSource="{Binding ZustandsklasseOptions, ElementName=Root}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Width="34"
-                                        Height="28"
-                                        Margin="0,0,6,0"
-                                        Padding="0"
-                                        Content="{Binding}"
-                                        Tag="{Binding}"
-                                        Click="ZustandsklasseValue_Click"
-                                        Foreground="#000000"
-                                        FontWeight="Bold"
-                                        ToolTip="Zustandsklasse setzen"
-                                        Background="{Binding Converter={StaticResource ZkBrushConv}}"
-                                        BorderBrush="{DynamicResource BorderBrush}"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </DockPanel>
-            </Border>
+            <controls:RecordDetailsView Grid.Row="0" x:Name="Detail" IsCompactLayout="True"/>
 
-            <controls:RecordDetailsView Grid.Row="1" x:Name="Detail"/>
-
-            <GridSplitter Grid.Row="2"
+            <GridSplitter Grid.Row="1"
                           Height="6"
                           Margin="0,4,0,0"
                           HorizontalAlignment="Stretch"
@@ -179,18 +157,18 @@
                           DragCompleted="SchadenSplitter_DragCompleted"
                           ToolTip="Ziehen, um die H&#x00F6;he von &quot;Sch&#x00E4;den&quot; einzustellen"/>
 
-            <Border Grid.Row="3"
+            <Border Grid.Row="2"
                     Margin="0,4,0,0"
                     Padding="12"
                     Background="{DynamicResource CardBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="10">
+                    CornerRadius="{DynamicResource RadiusXL}">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
                         <TextBlock DockPanel.Dock="Left"
                                    Text="Sch&#x00E4;den"
-                                   FontSize="14"
+                                   FontSize="{DynamicResource TextL}"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}"
                                    VerticalAlignment="Center"/>
@@ -201,6 +179,7 @@
                                 ToolTip="Schacht-Details &#x00F6;ffnen"/>
                     </DockPanel>
 
+                    <Grid>
                     <ListBox x:Name="DamageList"
                              Background="Transparent"
                              BorderThickness="0"
@@ -215,7 +194,7 @@
                                         Background="{DynamicResource HeaderBrush}"
                                         BorderBrush="{DynamicResource BorderBrush}"
                                         BorderThickness="1"
-                                        CornerRadius="6">
+                                        CornerRadius="{DynamicResource RadiusM}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140"/>
@@ -236,6 +215,23 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+
+                    <uc:EmptyStateControl IsHitTestVisible="False"
+                                          Icon="&#xE73E;"
+                                          Title="Keine Schäden"
+                                          Message="Keine baulichen oder betrieblichen Schäden erfasst.">
+                        <uc:EmptyStateControl.Style>
+                            <Style TargetType="uc:EmptyStateControl">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasItems, ElementName=DamageList}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </uc:EmptyStateControl.Style>
+                    </uc:EmptyStateControl>
+                    </Grid>
                 </DockPanel>
             </Border>
         </Grid>

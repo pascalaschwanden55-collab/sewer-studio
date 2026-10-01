@@ -1,9 +1,13 @@
 <Window x:Class="AuswertungPro.Next.UI.Views.ProtocolCodePickerDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Code auswählen"
+        xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
+        ui:WindowFx.Entrance="True"
+        Title="SewerStudio — Code auswählen"
         Width="1080"
         Height="700"
+        MinWidth="760" MinHeight="490"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -11,6 +15,7 @@
 
     <Grid Margin="12">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -20,14 +25,16 @@
             <ColumnDefinition Width="1.4*" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,10,10">
+        <controls:NovaDialogHeader Grid.Row="0" Grid.ColumnSpan="2" Title="Code auswählen"/>
+
+        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,10,10">
             <TextBlock Text="Suche:" VerticalAlignment="Center" Margin="0,0,6,0" />
             <TextBox Width="240" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
             <TextBlock Text="Gruppe:" VerticalAlignment="Center" Margin="12,0,6,0" />
             <ComboBox Width="180" ItemsSource="{Binding GroupOptions}" SelectedItem="{Binding SelectedGroup}" />
         </StackPanel>
 
-        <Grid Grid.Row="1" Grid.Column="0" Margin="0,0,10,0">
+        <Grid Grid.Row="2" Grid.Column="0" Margin="0,0,10,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -50,14 +57,14 @@
                             <TextBlock Text="{Binding Label}" />
                             <Border Margin="6,0,0,0"
                                     Padding="4,1"
-                                    CornerRadius="2"
-                                    Background="#FFF0F2F5"
-                                    BorderBrush="#FFD0D7E2"
+                                    CornerRadius="{DynamicResource RadiusS}"
+                                    Background="{DynamicResource CardBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
                                     Visibility="{Binding HasSourceBadge, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="{Binding SourceBadgeText}"
-                                           FontSize="10"
-                                           Foreground="#FF4B5563" />
+                                           FontSize="{DynamicResource TextXS}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" />
                             </Border>
                         </StackPanel>
                     </HierarchicalDataTemplate>
@@ -68,7 +75,7 @@
                        Text="Nicht normal auswählbar"
                        Margin="0,8,0,6"
                        FontWeight="SemiBold"
-                       Foreground="#FF6B7280" />
+                       Foreground="{DynamicResource MutedBrush}" />
             <TreeView Grid.Row="3"
                       ItemsSource="{Binding LockedCodeTree}"
                       SelectedItemChanged="TreeView_SelectedItemChanged">
@@ -84,14 +91,14 @@
                             <TextBlock Text="{Binding Label}" />
                             <Border Margin="6,0,0,0"
                                     Padding="4,1"
-                                    CornerRadius="2"
-                                    Background="#FFFFF3E0"
-                                    BorderBrush="#FFFFCC80"
+                                    CornerRadius="{DynamicResource RadiusS}"
+                                    Background="{DynamicResource WarningSubtleBrush}"
+                                    BorderBrush="{DynamicResource WarningBrush}"
                                     BorderThickness="1"
                                     Visibility="{Binding HasSourceBadge, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="{Binding SourceBadgeText}"
-                                           FontSize="10"
-                                           Foreground="#FF9A3412" />
+                                           FontSize="{DynamicResource TextXS}"
+                                           Foreground="{DynamicResource WarningTextBrush}" />
                             </Border>
                         </StackPanel>
                     </HierarchicalDataTemplate>
@@ -99,9 +106,9 @@
             </TreeView>
         </Grid>
 
-        <ScrollViewer Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1" Grid.RowSpan="2" Grid.Column="1" VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <TextBlock Text="Ausgewählter Code" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+                <TextBlock Text="Ausgewählter Code" FontSize="{DynamicResource TextL}" FontWeight="SemiBold" Margin="0,0,0,10" />
 
                 <Grid Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
@@ -181,7 +188,8 @@
                                 <TextBox Grid.Column="1"
                                          Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                                     <TextBox.Style>
-                                        <Style TargetType="TextBox">
+                                        <Style TargetType="TextBox"
+                                               BasedOn="{StaticResource {x:Type TextBox}}">
                                             <Setter Property="Visibility" Value="Visible" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsEnum}" Value="True">
@@ -199,7 +207,9 @@
                 </ItemsControl>
 
                 <TextBlock Text="Streckenschaden" FontWeight="SemiBold" Margin="0,8,0,4" />
-                <TextBlock Text="{Binding RangeHint}" TextWrapping="Wrap" Foreground="DarkSlateGray" />
+                <TextBlock Text="{Binding RangeHint}"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
 
                 <Separator Margin="0,8,0,8" />
                 <TextBlock Text="Quantifizierung" FontWeight="SemiBold" Margin="0,0,0,6" />
@@ -252,9 +262,11 @@
             </StackPanel>
         </ScrollViewer>
 
-        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button x:Name="ApplyButton" Content="Übernehmen" Width="120" Margin="0,0,8,0" />
-            <Button x:Name="CancelButton" Content="Abbrechen" Width="120" IsCancel="True" />
+        <Border Grid.Row="3" Grid.ColumnSpan="2" Style="{StaticResource DialogButtonBar}" Margin="0,10,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="CancelButton" Content="Abbrechen" Width="120" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" IsCancel="True" />
+            <Button x:Name="ApplyButton" Content="Übernehmen" Width="120" Style="{StaticResource PrimaryButton}" IsDefault="True" />
         </StackPanel>
+        </Border>
     </Grid>
 </Window>

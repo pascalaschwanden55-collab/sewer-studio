@@ -1,0 +1,217 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Export;
+using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.UseCases.Import;
+using AuswertungPro.Next.Application.UseCases.Verteilung;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure;
+using AuswertungPro.Next.Infrastructure.HoldingDistribution;
+using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.UI.Services;
+
+namespace AuswertungPro.Next.UI.ViewModels.Pages;
+
+public sealed partial class ExportPageViewModel
+{
+    private async Task DistributeShaftsAsync(VerteilAuftrag auftrag)
+    {
+        if (auftrag.Quelle.IstTxt || !auftrag.Quelle.IstGewaehlt)
+            return;
+
+        var variant = auftrag.Ablage;
+        var pdfFolder = auftrag.Quelle.IstEinzeldateien ? null : auftrag.Quelle.Ordner;
+        var selectedPdfFiles = auftrag.Quelle.IstEinzeldateien ? auftrag.Quelle.Dateien.ToArray() : Array.Empty<string>();
+
+        var destFolder = ResolveConfiguredDistributionRoot(_settings.SchachtDistribution)
+            ?? ResolveDistributionSubfolder(ProjectStructure.SchaechteVerteilt);
+        if (string.IsNullOrWhiteSpace(destFolder))
+            return;
+        if (!VerteilzielErreichbar(destFolder))
+            return;
+
+        var directoryConfig = SnapshotDistributionTree(_settings.SchachtDistribution);
+        var projectContext = new ProjectOperationContext(
+            _shell.Project,
+            _settings.LastProjectPath);
+        var projectRoot = ProjectFileLocator.ProjectRootFromFile(projectContext.ProjectPath);
+        ImportFileTransaction? fileTransaction = null;
+
+        try
+        {
+            IsDistributionInProgress = true;
+            IsDistributionIndeterminate = true;
+            DistributionPercent = 0;
+            DistributionProgress = "Schacht-Verteilung gestartet...";
+            _shell.SetStatus(DistributionProgress);
+
+            var progress = new Progress<ShaftDistributionProgress>(p =>
+            {
+                IsDistributionIndeterminate = p.Total <= 0;
+                DistributionPercent = p.Total > 0 ? (p.Processed * 100.0 / p.Total) : 0;
+                var name = string.IsNullOrWhiteSpace(p.CurrentFile)
+                    ? ""
+                    : $" ({Path.GetFileName(p.CurrentFile)})";
+                DistributionProgress = $"Verteilung: {p.Processed}/{p.Total}{name}";
+                _shell.SetStatus(DistributionProgress);
+            });
+
+            var useProjectTransaction = _importFileStaging is not null
+                                        && IsSameOrBelow(destFolder, projectRoot);
+            var staging = useProjectTransaction
+                ? _importFileStaging!.Begin(projectContext.ProjectPath)
+                : null;
+            if (staging is not null)
+            {
+                fileTransaction = new ImportFileTransaction(
+                    "Schachtprotokolle verteilen",
+                    staging,
+                    _importTransactionJournal);
+            }
+
+            var batch = await Task.Run(() => _shaftDistribution.Distribute(
+                new ShaftDistributionRequest(
+                    Project: projectContext.Project,
+                    DestinationFolder: destFolder,
+                    PdfFiles: selectedPdfFiles.Length > 0 ? selectedPdfFiles : null,
+                    PdfSourceFolder: pdfFolder,
+                    DirectoryConfig: directoryConfig,
+                    Variant: variant,
+                    Progress: progress,
+                    FileStaging: staging)));
+
+            if (!ProjectIsStillCurrent(
+                    projectContext,
+                    "Schacht-Verteilung",
+                    filesMayRemain: staging is null && batch.Items.Any(static item => item.Success)))
+            {
+                return;
+            }
+
+            fileTransaction?.Publish();
+            if (fileTransaction is not null
+                && !ProjectIsStillCurrent(
+                    projectContext,
+                    "Schacht-Verteilung",
+                    filesMayRemain: false))
+            {
+                return;
+            }
+
+            fileTransaction?.StampProject(projectContext.Project);
+            var results = batch.Items.Select(ToLegacyDistributionResult).ToList();
+            var summary = DistributionSummaryBuilder.BuildShaftDistributionSummary(results);
+            var verknuepfung = SchachtProtokollVerknuepfung.Verknuepfe(
+                batch.Items
+                    .Where(item => item.Success
+                                   && !string.IsNullOrWhiteSpace(item.TargetPdfPath)
+                                   && !string.IsNullOrWhiteSpace(item.ShaftFolder))
+                    .Select(item => (item.TargetPdfPath!, item.ShaftFolder!, item.SourcePdfPath))
+                    .ToList(),
+                projectContext.Project,
+                projectRoot);
+            var pdfUpdated = verknuepfung.Verknuepft;
+            foreach (var offen in verknuepfung.Meldungen)
+                summary += offen + Environment.NewLine;
+            var saved = true;
+            if (fileTransaction is not null)
+            {
+                fileTransaction.MarkProjectCommitted();
+                if (!ProjectIsStillCurrent(
+                        projectContext,
+                        "Schacht-Verteilung",
+                        filesMayRemain: true,
+                        projectDataChanged: true))
+                {
+                    return;
+                }
+
+                saved = _saveProjectForActiveDistribution();
+                if (saved)
+                    fileTransaction.MarkProjectSaved();
+                else
+                    summary += "Änderungen übernommen, aber nicht gespeichert. Bitte erneut speichern."
+                               + Environment.NewLine;
+            }
+
+            LastResult = pdfUpdated > 0
+                ? summary + $"PDF-Pfade aktualisiert: {pdfUpdated}{Environment.NewLine}"
+                : summary;
+            _shell.SetStatus(saved
+                ? "Schachtprotokolle verteilt"
+                : "Schachtprotokolle verteilt, aber nicht gespeichert");
+            MeldeVerteilung(
+                "Schächte",
+                LastResult,
+                results.Count(static r => !r.Success) + (saved ? 0 : 1));
+
+            if (selectedPdfFiles.Length > 0)
+                StorePdfFiles(selectedPdfFiles, projectContext);
+        }
+        catch (Exception ex)
+        {
+            var message = UserError.DescribeAndReport(ex, "Schachtprotokolle verteilen");
+            LastResult = "Schacht-Verteilung fehlgeschlagen: " + message;
+            _dialogs.Warn(LastResult, "Schächte verteilen");
+        }
+        finally
+        {
+            try
+            {
+                var cleanup = fileTransaction?.Cleanup();
+                if (cleanup is { StagingCleanupSucceeded: false, StagingCleanupError: { } error })
+                {
+                    LastResult += Environment.NewLine
+                                  + "Datei-Arbeitsordner konnte nicht vollständig aufgeräumt werden: "
+                                  + error.Message;
+                }
+            }
+            finally
+            {
+                IsDistributionInProgress = false;
+                IsDistributionIndeterminate = false;
+                DistributionProgress = "";
+                DistributionPercent = 0;
+            }
+        }
+    }
+
+    private static HoldingFolderDistributor.DistributionResult ToLegacyDistributionResult(
+        ShaftDistributionItem item)
+        => new(
+            item.Success,
+            item.Message,
+            item.SourcePdfPath,
+            SourceVideoPath: null,
+            DestPdfPath: item.TargetPdfPath,
+            DestVideoPath: null,
+            InfoPath: null,
+            HoldingFolder: item.ShaftFolder,
+            HoldingFolderDistributor.VideoMatchStatus.NotChecked);
+
+    private static bool IsSameOrBelow(string path, string? root)
+    {
+        if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(root))
+            return false;
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var fullRoot = Path.GetFullPath(root)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return fullPath.Equals(fullRoot, StringComparison.OrdinalIgnoreCase)
+                   || fullPath.StartsWith(
+                       fullRoot + Path.DirectorySeparatorChar,
+                       StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}

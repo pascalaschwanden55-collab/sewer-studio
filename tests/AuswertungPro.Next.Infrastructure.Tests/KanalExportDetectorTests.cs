@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.IO;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -107,6 +108,39 @@ public sealed class KanalExportDetectorTests
         Assert.EndsWith("large.db3", result.Db3Path, StringComparison.OrdinalIgnoreCase);
     }
 
+    [JunctionFact]
+    public void Detect_BetrittKeineUntergeordneteVerzeichnisverknuepfung_AberAkzeptiertSieAlsExpliziteWurzel()
+    {
+        using var temp = new TempDir();
+        var sourceRoot = Path.Combine(temp.Path, "quelle");
+        var externalRoot = Path.Combine(temp.Path, "extern");
+        var externalDb = Path.Combine(externalRoot, "DB", "projekt.db3");
+        var link = Path.Combine(sourceRoot, "verknuepft");
+        Directory.CreateDirectory(sourceRoot);
+        Directory.CreateDirectory(Path.GetDirectoryName(externalDb)!);
+        File.WriteAllText(externalDb, "fremde-datenbank");
+        JunctionTestSupport.CreateDirectoryLink(link, externalRoot);
+
+        try
+        {
+            var nested = KanalExportDetector.Detect(sourceRoot);
+            var explicitlySelected = KanalExportDetector.Detect(link);
+
+            Assert.Equal(KanalExportFormat.Unknown, nested.Format);
+            Assert.Null(nested.Db3Path);
+            Assert.Equal(KanalExportFormat.WinCan, explicitlySelected.Format);
+            Assert.Equal(
+                Path.Combine(link, "DB", "projekt.db3"),
+                explicitlySelected.Db3Path,
+                ignoreCase: true);
+        }
+        finally
+        {
+            if (Directory.Exists(link))
+                Directory.Delete(link);
+        }
+    }
+
     // -------------------------------------------------------------------------
     // IKAS-Erkennung ueber VSA_KEK-XTF
     // -------------------------------------------------------------------------
@@ -153,9 +187,12 @@ public sealed class KanalExportDetectorTests
     {
         // Arrange: nur VSA_KEK-XTF, kein KIAS-Pattern (kein .fdb/Film)
         using var tmp = new TempDir();
+        // Seit 2026-09-05 liest die Erkennung den Modellnamen aus dem XML-Kopf statt
+        // die Datei als Text nach einer Zeichenfolge zu durchsuchen. Eine echte XTF ist
+        // INTERLIS-XML; die frueher hier stehende reine Textzeile war kein realer Fall.
         File.WriteAllText(
             System.IO.Path.Combine(tmp.Path, "export.xtf"),
-            "Irgendwas VSA_KEK_2020_LV95 noch mehr Text");
+            "<TRANSFER><HEADERSECTION><MODEL NAME=\"VSA_KEK_2020_LV95\" /></HEADERSECTION></TRANSFER>");
 
         // Act
         var result = KanalExportDetector.Detect(tmp.Path);
@@ -233,9 +270,10 @@ public sealed class KanalExportDetectorTests
         Directory.CreateDirectory(dbDir);
         File.WriteAllText(System.IO.Path.Combine(dbDir, "proj.db3"), "wincan-data");
 
+        // Echte XTF statt blossem Text — siehe Kommentar im IKAS-Test oben.
         File.WriteAllText(
             System.IO.Path.Combine(tmp.Path, "export.xtf"),
-            "Inhalt mit VSA_KEK_2020_LV95 Referenz");
+            "<TRANSFER><HEADERSECTION><MODEL NAME=\"VSA_KEK_2020_LV95\" /></HEADERSECTION></TRANSFER>");
 
         // Act
         var result = KanalExportDetector.Detect(tmp.Path);
@@ -244,5 +282,47 @@ public sealed class KanalExportDetectorTests
         Assert.Equal(KanalExportFormat.Ambiguous, result.Format);
         Assert.NotNull(result.Db3Path);
         Assert.NotNull(result.VsaKekXtfPath);
+    }
+
+    // -------------------------------------------------------------------------
+    // Versteckte Ordner/Dateien (Audit 2026-08-17)
+    //
+    // Die Sucher benutzten die Standard-Aufzaehloptionen von .NET. Deren
+    // AttributesToSkip ist "Hidden, System" — ein versteckter Ordner oder eine
+    // versteckte Datei verschwand damit lautlos aus dem Import, und der Bericht
+    // meldete nur eine kleinere Fundzahl. Nachgemessen auf .NET 10: 1 von 3
+    // Dateien gefunden. Kundendaten von optischen Medien, aus Sicherungen oder
+    // von Netzlaufwerken tragen diese Merker regelmaessig.
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void Detect_WinCanDb3_ImVerstecktenOrdner_WirdGefunden()
+    {
+        using var temp = new TempDir();
+        var db = Path.Combine(temp.Path, "DB");
+        Directory.CreateDirectory(db);
+        File.WriteAllText(Path.Combine(db, "projekt.db3"), "x");
+        new DirectoryInfo(db).Attributes |= FileAttributes.Hidden;
+
+        var ergebnis = KanalExportDetector.Detect(temp.Path);
+
+        Assert.Equal(KanalExportFormat.WinCan, ergebnis.Format);
+        Assert.NotNull(ergebnis.Db3Path);
+    }
+
+    [Fact]
+    public void Detect_VersteckteDb3Datei_WirdGefunden()
+    {
+        using var temp = new TempDir();
+        var db = Path.Combine(temp.Path, "DB");
+        Directory.CreateDirectory(db);
+        var datei = Path.Combine(db, "projekt.db3");
+        File.WriteAllText(datei, "x");
+        File.SetAttributes(datei, FileAttributes.Hidden);
+
+        var ergebnis = KanalExportDetector.Detect(temp.Path);
+
+        Assert.Equal(KanalExportFormat.WinCan, ergebnis.Format);
+        Assert.NotNull(ergebnis.Db3Path);
     }
 }

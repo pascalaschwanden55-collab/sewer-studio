@@ -66,6 +66,29 @@ public sealed class TrainingSelectedReviewRuntimeTests
         Assert.Equal(["BAG:feedback:Beschreibung"], calls);
     }
 
+    [Fact]
+    public async Task ApproveAsync_gibt_den_erzeugten_Feedback_Dienst_frei()
+    {
+        var feedback = new FeedbackProbe();
+
+        await TrainingSelectedReviewRuntime.ApproveAsync(
+            Item(),
+            new ReviewQueueService(),
+            CancellationToken.None,
+            box: null,
+            mask: null,
+            openScope: () => new ScopeProbe(),
+            createFeedback: _ => feedback,
+            approveAsync: (_, current, _, _, _, _) =>
+            {
+                Assert.Same(feedback, current);
+                Assert.False(feedback.Disposed);
+                return Task.CompletedTask;
+            });
+
+        Assert.True(feedback.Disposed);
+    }
+
     private static ReviewQueueItem Item()
         => new("review-1", null, 0.5, DateTime.UnixEpoch);
 
@@ -77,5 +100,12 @@ public sealed class TrainingSelectedReviewRuntimeTests
         {
             Disposed = true;
         }
+    }
+
+    private sealed class FeedbackProbe : IDisposable
+    {
+        public bool Disposed { get; private set; }
+
+        public void Dispose() => Disposed = true;
     }
 }

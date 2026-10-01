@@ -103,12 +103,12 @@ public sealed class SchaechteProtocolFolderProjectGuardTests
         Assert.Equal(0, harness.Dialogs.SaveFileCalls);
         Assert.Null(harness.ViewModel.Selected);
         Assert.Equal(
-            "Projekt wurde gewechselt: Aenderungen wurden uebernommen, aber nicht gespeichert.",
+            "Projekt wurde gewechselt: Änderungen wurden übernommen, aber nicht gespeichert.",
             harness.ViewModel.LastResult);
         Assert.Contains(
             harness.Dialogs.Warnings,
             warning => warning.Message.Contains(
-                "Aenderungen im zuvor gestarteten Projekt wurden nicht gespeichert",
+                "Änderungen im zuvor gestarteten Projekt wurden nicht gespeichert",
                 StringComparison.Ordinal));
     }
 
@@ -163,12 +163,12 @@ public sealed class SchaechteProtocolFolderProjectGuardTests
 
         Assert.False(isCurrent);
         Assert.Equal(
-            "Projekt wurde gewechselt: PDF-Verteilung abgeschlossen; Projektdaten wurden nicht uebernommen.",
+            "Projekt wurde gewechselt: PDF-Verteilung abgeschlossen; Projektdaten wurden nicht übernommen.",
             harness.ViewModel.LastResult);
         var warning = Assert.Single(harness.Dialogs.Warnings);
         Assert.Contains("Mindestens eine PDF-Datei wurde bereits", warning.Message, StringComparison.Ordinal);
-        Assert.Contains("nicht in dessen Projektdaten uebernommen", warning.Message, StringComparison.Ordinal);
-        Assert.DoesNotContain("Aenderungen wurden uebernommen", warning.Message, StringComparison.Ordinal);
+        Assert.Contains("nicht in dessen Projektdaten übernommen", warning.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Änderungen wurden übernommen", warning.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -184,11 +184,11 @@ public sealed class SchaechteProtocolFolderProjectGuardTests
 
         Assert.False(isCurrent);
         Assert.Equal(
-            "Projekt wurde gewechselt: PDF-Verteilung abgeschlossen; Projektdaten uebernommen, aber nicht gespeichert.",
+            "Projekt wurde gewechselt: PDF-Verteilung abgeschlossen; Projektdaten übernommen, aber nicht gespeichert.",
             harness.ViewModel.LastResult);
         var warning = Assert.Single(harness.Dialogs.Warnings);
         Assert.Contains("Mindestens eine PDF-Datei", warning.Message, StringComparison.Ordinal);
-        Assert.Contains("Projektdaten wurden uebernommen", warning.Message, StringComparison.Ordinal);
+        Assert.Contains("Projektdaten wurden übernommen", warning.Message, StringComparison.Ordinal);
         Assert.Contains("nicht gespeichert", warning.Message, StringComparison.Ordinal);
     }
 
@@ -207,7 +207,7 @@ public sealed class SchaechteProtocolFolderProjectGuardTests
         Assert.Contains(
             harness.Dialogs.Warnings,
             warning => warning.Message.Contains(
-                "Projekt wurde waehrend des Einlesens gewechselt",
+                "Projekt wurde während des Einlesens gewechselt",
                 StringComparison.Ordinal));
     }
 
@@ -302,11 +302,11 @@ public sealed class SchaechteProtocolFolderProjectGuardTests
             var method = typeof(SchaechtePageViewModel).GetMethod(
                 "ProjectIsStillOpen",
                 BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? throw new InvalidOperationException("Projektpruefung fehlt.");
+                ?? throw new InvalidOperationException("Projektprüfung fehlt.");
             return (bool)(method.Invoke(
                 ViewModel,
                 new object[] { projectContext, "Protokoll importieren", impact })
-                ?? throw new InvalidOperationException("Projektpruefung lieferte kein Ergebnis."));
+                ?? throw new InvalidOperationException("Projektprüfung lieferte kein Ergebnis."));
         }
 
         public void Dispose()
@@ -408,11 +408,11 @@ public sealed class SchaechteProtocolFolderProjectGuardTests
         public void Info(string message, string title = "Hinweis") { }
         public void Warn(string message, string title = "Warnung") => Warnings.Add((message, title));
         public void Error(string message, string title = "Fehler") { }
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
 
         public bool ConfirmWarn(
             string message,
-            string title = "Bestaetigung",
+            string title = "Bestätigung",
             bool defaultNo = true)
         {
             ConfirmWarnCalls++;
@@ -421,7 +421,7 @@ public sealed class SchaechteProtocolFolderProjectGuardTests
 
         public DialogConfirm ConfirmCancel(
             string message,
-            string title = "Bestaetigung")
+            string title = "Bestätigung")
             => DialogConfirm.Cancel;
     }
 }

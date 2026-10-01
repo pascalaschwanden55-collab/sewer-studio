@@ -114,6 +114,28 @@ public sealed class PrimaryDamageParserTests
         Assert.Equal("BDA", result[0].KanalSchadencode);
     }
 
+    [Fact]
+    public void EnrichFindings_VerwendetUhrlageNichtAlsMeterstand()
+    {
+        var findings = new List<VsaFinding>
+        {
+            new()
+            {
+                KanalSchadencode = "BAJ",
+                MeterStart = null,
+                SchadenlageAnfang = 9,
+                Raw = "Rohrverbindung Knick"
+            }
+        };
+        var primaryDamageText = "BAJ.C @9.00m (Knick A)\nBAJ.D @4.00m (Knick B)";
+
+        var result = new List<VsaFinding>(
+            PrimaryDamageParser.EnrichFindingsFromPrimaryDamage(findings, primaryDamageText));
+
+        Assert.Single(result);
+        Assert.Equal("BAJ", result[0].KanalSchadencode);
+    }
+
     // ── CopyFinding ───────────────────────────────────────────────────────
 
     [Fact]

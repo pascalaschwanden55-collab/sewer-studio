@@ -1,6 +1,5 @@
-using System.Text;
+﻿using System.Text;
 using System.Xml.Linq;
-using System.Text.RegularExpressions;
 using System.Text.Json.Nodes;
 using ImportRunContext = AuswertungPro.Next.Application.Import.ImportRunContext;
 using ImportLogStatus = AuswertungPro.Next.Application.Import.ImportLogStatus;
@@ -9,6 +8,8 @@ using IVsaMediaPathResolver = AuswertungPro.Next.Application.Import.IVsaMediaPat
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Common;
+using AuswertungPro.Next.Infrastructure.Import.Xtf.Sia405;
+using AuswertungPro.Next.Infrastructure.Import.Xtf.VsaKek;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
@@ -65,7 +66,7 @@ public sealed partial class LegacyXtfImportService
                     {
                         Level = "Warn",
                         Context = "IMPORT",
-                        Message = $"Nicht unterstuetzte Datei uebersprungen: {Path.GetFileName(path)}"
+                        Message = $"Nicht unterstützte Datei übersprungen: {Path.GetFileName(path)}"
                     });
                     continue;
                 }
@@ -103,7 +104,7 @@ public sealed partial class LegacyXtfImportService
             {
                 Level = "Warn",
                 Context = "XTF-ARCHIV",
-                Message = $"Rohdatenkopie fehlgeschlagen, Import laeuft weiter: {ex.Message}"
+                Message = $"Rohdatenkopie fehlgeschlagen, Import läuft weiter: {ex.Message}"
             });
         }
     }
@@ -131,7 +132,7 @@ public sealed partial class LegacyXtfImportService
             {
                 Level = "Warn",
                 Context = "XTF-ARCHIV",
-                Message = $"Altes XTF-Rohdatenarchiv konnte nicht vollstaendig verschoben werden: {ex.Message}"
+                Message = $"Altes XTF-Rohdatenarchiv konnte nicht vollständig verschoben werden: {ex.Message}"
             });
         }
     }
@@ -162,7 +163,27 @@ public sealed partial class LegacyXtfImportService
         var sia405Imported = false;
         if (isSia405)
         {
-            var records = ParseSia405(doc);
+            // Schaechte sind unabhaengig von den Haltungen: Eine Datei kann Normschaechte
+            // ohne Kanaele enthalten, und umgekehrt (Goeschenen hat 17 Haltungen und
+            // null Schaechte).
+            var schaechte = ParseSia405Schaechte(doc);
+            if (schaechte.Count > 0)
+            {
+                var beruehrt = MergeSchaechteIntoProject(project, schaechte, stats, ctx);
+                if (beruehrt > 0)
+                {
+                    stats.Messages.Add(new ImportMessage
+                    {
+                        Level = "Info",
+                        Context = "XTF405",
+                        Message = $"Importiert {beruehrt} Schaechte aus {Path.GetFileName(path)}"
+                    });
+                }
+            }
+
+            var records = ParseSia405(doc, out var meldungen);
+            stats.Messages.AddRange(meldungen);
+
             if (records.Count > 0)
             {
                 sia405Imported = true;
@@ -180,6 +201,20 @@ public sealed partial class LegacyXtfImportService
                 });
 
                 stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF405", Message = $"Importiert {records.Count} Haltungen aus {Path.GetFileName(path)}" });
+
+                // SIA405 hat Vorrang; die VSA-KEK-Untersuchungen derselben Datei bleiben
+                // liegen. Bis 01.10.2026 geschah das ohne Meldung.
+                var liegenGeblieben = isVsa ? VsaKekObjektLeser.Lies(doc).Untersuchungen.Count : 0;
+                if (liegenGeblieben > 0)
+                {
+                    stats.Messages.Add(new ImportMessage
+                    {
+                        Level = "Warn",
+                        Context = "XTF",
+                        Message = $"{Path.GetFileName(path)}: Datei enthält zusätzlich {liegenGeblieben} VSA-KEK-Untersuchung(en), "
+                                  + "die nicht übernommen wurden – die SIA405-Haltungen haben Vorrang."
+                    });
+                }
             }
             else if (isVsa)
             {
@@ -188,24 +223,57 @@ public sealed partial class LegacyXtfImportService
             }
         }
 
+        if (isSia405)
+            XtfZusatzReader.Uebernehme(doc, project, stats);
+
         // VSA_KEK verarbeiten, wenn NICHT bereits erfolgreich als SIA405 importiert
         if (!sia405Imported && isVsa)
         {
-            var records = ParseVsaKek(doc, path, mediaPaths, out _);
-            stats.Found += records.Count;
+            var ergebnis = ParseVsaKek(doc, path, mediaPaths, out var luecken);
+            stats.Found += ergebnis.Haltungen.Count;
 
-            foreach (var rec in records)
+            foreach (var rec in ergebnis.Haltungen)
                 MergeRecordIntoProject(project, rec, FieldSource.Xtf, stats, ctx);
+
+            var beruehrteSchaechte = MergeVsaKekSchaechteIntoProject(project, ergebnis.Schaechte, stats, ctx);
 
             project.ImportHistory.Add(new JsonObject
             {
                 ["type"] = "xtf",
                 ["file"] = Path.GetFileName(path),
                 ["timestampUtc"] = DateTime.UtcNow.ToString("o"),
-                ["count"] = records.Count
+                ["count"] = ergebnis.Haltungen.Count,
+                ["schaechte"] = beruehrteSchaechte
             });
 
-            stats.Messages.Add(new ImportMessage { Level = "Info", Context = "XTF", Message = $"Importiert {records.Count} Untersuchungen aus {Path.GetFileName(path)}" });
+            // Bauwerke, Untersuchungen und ungeklaerte Faelle getrennt zaehlen. Eine
+            // einzige Zahl "Untersuchungen" liess frueher offen, wie viele Bauwerke
+            // daraus wurden — und verdeckte, dass Schaechte als Haltungen ankamen.
+            stats.Messages.Add(new ImportMessage
+            {
+                Level = "Info",
+                Context = "XTF",
+                Message = $"{Path.GetFileName(path)}: {ergebnis.Untersuchungen} Untersuchungen gelesen — "
+                          + $"{ergebnis.Haltungen.Count} Haltung(en), {beruehrteSchaechte} Schaecht(e), "
+                          + $"{ergebnis.Offene.Count} ungeklärt."
+            });
+
+            foreach (var offen in ergebnis.Offene)
+            {
+                stats.Uncertain++;
+                stats.Messages.Add(new ImportMessage
+                {
+                    Level = "Warn",
+                    Context = "XTF",
+                    Message = $"Untersuchung \"{offen.Bezeichnung}\" nicht zugeordnet: {offen.Grund}"
+                });
+            }
+
+            stats.Messages.AddRange(luecken);
+
+            // Weitere Untersuchungen derselben Haltung (z.B. Gegenbefahrung): als eigene
+            // Protokollfassung ablegen, erst nach der Uebernahme der Haupt-Untersuchungen.
+            VsaKekWeitereUntersuchungen.LegeAb(project, ergebnis.Weitere, stats);
         }
 
         if (!isSia405 && !isVsa)
@@ -258,7 +326,7 @@ public sealed partial class LegacyXtfImportService
         {
             Level = "Info",
             Context = "M150",
-            Message = $"M150-Details: HG erkannt={hgCount}, HI erkannt={hiCount}, uebernommen={records.Count}, neu={Math.Max(0, createdDelta)}, aktualisiert={Math.Max(0, updatedDelta)}"
+            Message = $"M150-Details: HG erkannt={hgCount}, HI erkannt={hiCount}, übernommen={records.Count}, neu={Math.Max(0, createdDelta)}, aktualisiert={Math.Max(0, updatedDelta)}"
         });
     }
 
@@ -339,6 +407,13 @@ public sealed partial class LegacyXtfImportService
             VsaFindingProtocolSynchronizer.Sync(target, target.VsaFindings);
         }
 
+        // Ankerangabe der eingelesenen Datei uebernehmen. Sie gehoert zum aktuellen
+        // Importstand; ohne diese Zeile ginge sie beim Zusammenfuehren mit einem
+        // bestehenden Datensatz verloren. Ein vorhandener Anker bleibt erhalten,
+        // wenn die Quelle keinen mitbringt.
+        if (source.XtfHerkunft is not null)
+            target.XtfHerkunft = source.XtfHerkunft;
+
         foreach (var c in merge.ConflictDetails)
         {
             stats.ConflictDetails.Add(c);
@@ -351,620 +426,40 @@ public sealed partial class LegacyXtfImportService
         => Common.HoldingKeyNormalizer.Normalize(value);
 
     // ===================== SIA405 =====================
-    private sealed class KanalData
+    private static List<HaltungRecord> ParseSia405(XDocument doc, out List<ImportMessage> meldungen)
     {
-        public string Tid { get; init; } = "";
-        public string Bezeichnung { get; set; } = "";
-        public string Standortname { get; set; } = "";
-        public string Status { get; set; } = "";
-        public string Nutzungsart { get; set; } = "";
-        public string Bemerkung { get; set; } = "";
-        public string Zugaenglichkeit { get; set; } = "";
-        public string Eigentuemer { get; set; } = "";
-        public string Baujahr { get; set; } = "";
-        public string Rohrlaenge { get; set; } = "";
-        public string Funktion { get; set; } = "";
+        // Drei getrennte Schritte, damit eine neue Feldregel nur die Abbildung beruehrt:
+        // 1. Objekte lesen — die Verweise bleiben Kennungen,
+        // 2. Bezuege aufloesen — Kanal, Rohrprofil, Organisationen, Schachtnamen,
+        //    danach je Bezeichnung nur die erste Haltung (keine Vermischung); was sich
+        //    nicht aufloesen liess, meldet Sia405Bezugsmeldungen (seit 01.10.2026),
+        // 3. fachlich abbilden — welche Angabe in welches Programmfeld geht.
+        // Die Uebernahme ins Projekt (Handwertschutz, Konflikte) macht danach
+        // MergeRecordIntoProject.
+        var bestand = Sia405ObjektLeser.Lies(doc);
+        var haltungen = Sia405DoppelteBezeichnungen.NurErste(Sia405Beziehungen.Loese(bestand, out var ohneNamen), out var doppelte);
+        meldungen = doppelte.Select(m => new ImportMessage { Level = "Warn", Context = "XTF405", Message = m }).ToList();
+        meldungen.AddRange(Sia405Bezugsmeldungen.Erzeuge(bestand, haltungen, ohneNamen));
+        return haltungen.Select(Sia405HaltungAbbildung.BaueRecord).ToList();
     }
-
-    private sealed class HaltungData
-    {
-        public string Tid { get; init; } = "";
-        public string Bezeichnung { get; set; } = "";
-        public string Laenge { get; set; } = "";
-        public string LichteHoehe { get; set; } = "";
-        public string LichteBreite { get; set; } = "";
-        public string Material { get; set; } = "";
-        public string KanalRef { get; set; } = "";
-        public string VonRef { get; set; } = "";
-        public string NachRef { get; set; } = "";
-        public string LetzteAenderung { get; set; } = "";
-    }
-
-    private static List<HaltungRecord> ParseSia405(XDocument doc)
-    {
-        var kanaele = new Dictionary<string, KanalData>(StringComparer.OrdinalIgnoreCase);
-        var kanaeleByBez = new Dictionary<string, KanalData>(StringComparer.OrdinalIgnoreCase);
-        var haltungen = new Dictionary<string, HaltungData>(StringComparer.OrdinalIgnoreCase);
-        var haltungspunkte = new Dictionary<string, (string Bezeichnung, string? AbwassernetzelementRef)>(StringComparer.OrdinalIgnoreCase);
-        var abwasserknoten = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        var baskets = doc.Descendants()
-            .Where(e => e.Name.LocalName.EndsWith("SIA405_Abwasser.SIA405_Abwasser", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        var scope = baskets.Count > 0 ? baskets.SelectMany(b => b.Descendants()) : doc.Descendants();
-
-        foreach (var node in scope)
-        {
-            var local = node.Name.LocalName;
-
-            // Kanal
-            if (local.Equals("Kanal", StringComparison.OrdinalIgnoreCase) || local.EndsWith(".Kanal", StringComparison.OrdinalIgnoreCase))
-            {
-                var tid = (string?)node.Attribute("TID");
-                if (string.IsNullOrWhiteSpace(tid)) continue;
-                var kd = new KanalData { Tid = tid! };
-                foreach (var child in node.Elements())
-                {
-                    switch (child.Name.LocalName)
-                    {
-                        case "Bezeichnung": kd.Bezeichnung = child.Value; break;
-                        case "Standortname": kd.Standortname = child.Value; break;
-                        case "Status": kd.Status = child.Value; break;
-                        case "Nutzungsart_Ist": kd.Nutzungsart = child.Value; break;
-                        case "Bemerkung": kd.Bemerkung = child.Value; break;
-                        case "Zugaenglichkeit": kd.Zugaenglichkeit = child.Value; break;
-                        case "Eigentuemer": kd.Eigentuemer = child.Value; break;
-                        case "Baujahr": kd.Baujahr = child.Value; break;
-                        case "Rohrlaenge": kd.Rohrlaenge = child.Value; break;
-                        case "Funktionhierarchisch": kd.Funktion = child.Value; break;
-                        case "Funktion_hierarchisch": kd.Funktion = child.Value; break;
-                    }
-                }
-                kanaele[tid!] = kd;
-                if (!string.IsNullOrWhiteSpace(kd.Bezeichnung))
-                    kanaeleByBez[kd.Bezeichnung] = kd;
-            }
-
-            // Haltung
-            if (local.Equals("Haltung", StringComparison.OrdinalIgnoreCase) || local.EndsWith(".Haltung", StringComparison.OrdinalIgnoreCase))
-            {
-                var tid = (string?)node.Attribute("TID");
-                if (string.IsNullOrWhiteSpace(tid)) continue;
-                var hd = new HaltungData { Tid = tid! };
-                foreach (var child in node.Elements())
-                {
-                    switch (child.Name.LocalName)
-                    {
-                        case "Bezeichnung": hd.Bezeichnung = child.Value; break;
-                        case "LaengeEffektiv": hd.Laenge = child.Value; break;
-                        case "Lichte_Hoehe": hd.LichteHoehe = child.Value; break;
-                        case "Lichte_Breite": hd.LichteBreite = child.Value; break;
-                        case "Material": hd.Material = child.Value; break;
-                        case "Letzte_Aenderung": hd.LetzteAenderung = child.Value; break;
-                        case "AbwasserbauwerkRef": hd.KanalRef = (string?)child.Attribute("REF") ?? ""; break;
-                        case "vonHaltungspunktRef": hd.VonRef = (string?)child.Attribute("REF") ?? ""; break;
-                        case "nachHaltungspunktRef": hd.NachRef = (string?)child.Attribute("REF") ?? ""; break;
-                    }
-                }
-                haltungen[tid!] = hd;
-            }
-
-            // Haltungspunkt
-            if (local.Equals("Haltungspunkt", StringComparison.OrdinalIgnoreCase) || local.EndsWith(".Haltungspunkt", StringComparison.OrdinalIgnoreCase))
-            {
-                var tid = (string?)node.Attribute("TID");
-                if (string.IsNullOrWhiteSpace(tid)) continue;
-                string bezeichnung = "";
-                string? abwRef = null;
-                foreach (var child in node.Elements())
-                {
-                    switch (child.Name.LocalName)
-                    {
-                        case "Bezeichnung": bezeichnung = child.Value; break;
-                        case "AbwassernetzelementRef": abwRef = (string?)child.Attribute("REF"); break;
-                    }
-                }
-                haltungspunkte[tid!] = (bezeichnung, abwRef);
-            }
-
-            // Abwasserknoten
-            if (local.Equals("Abwasserknoten", StringComparison.OrdinalIgnoreCase) || local.EndsWith(".Abwasserknoten", StringComparison.OrdinalIgnoreCase))
-            {
-                var tid = (string?)node.Attribute("TID");
-                if (string.IsNullOrWhiteSpace(tid)) continue;
-                string bezeichnung = "";
-                foreach (var child in node.Elements())
-                {
-                    if (child.Name.LocalName == "Bezeichnung")
-                        bezeichnung = child.Value;
-                }
-                abwasserknoten[tid!] = bezeichnung;
-            }
-        }
-
-        // Hilfsfunktion für Schacht-Label
-        string? ResolveSchachtLabel(string? refTid)
-        {
-            if (string.IsNullOrWhiteSpace(refTid)) return null;
-            if (haltungspunkte.TryGetValue(refTid, out var hp))
-            {
-                if (!string.IsNullOrWhiteSpace(hp.Bezeichnung)) return hp.Bezeichnung;
-                if (!string.IsNullOrWhiteSpace(hp.AbwassernetzelementRef) && abwasserknoten.TryGetValue(hp.AbwassernetzelementRef, out var knBez))
-                    return knBez;
-            }
-            return null;
-        }
-
-        string? ResolveKnotenName(string? refTid)
-        {
-            if (string.IsNullOrWhiteSpace(refTid)) return null;
-            if (!haltungspunkte.TryGetValue(refTid, out var hp)) return null;
-            if (!string.IsNullOrWhiteSpace(hp.AbwassernetzelementRef) && abwasserknoten.TryGetValue(hp.AbwassernetzelementRef, out var knBez))
-                return knBez;
-            return string.IsNullOrWhiteSpace(hp.Bezeichnung) ? null : hp.Bezeichnung;
-        }
-
-        var records = new List<HaltungRecord>();
-        foreach (var hd in haltungen.Values)
-        {
-            KanalData? kanal = null;
-            if (!string.IsNullOrWhiteSpace(hd.KanalRef) && kanaele.TryGetValue(hd.KanalRef, out var kdByRef))
-                kanal = kdByRef;
-            else if (!string.IsNullOrWhiteSpace(hd.Bezeichnung) && kanaeleByBez.TryGetValue(hd.Bezeichnung, out var kdByBez))
-                kanal = kdByBez;
-
-            var haltungsname = !string.IsNullOrWhiteSpace(hd.Bezeichnung) ? hd.Bezeichnung : (kanal?.Bezeichnung ?? "");
-            if (string.IsNullOrWhiteSpace(haltungsname))
-                continue;
-
-            var material = NormalizeSiaMaterial(hd.Material);
-            var nutzungsart = kanal is null ? "" : NormalizeNutzungsart(kanal.Nutzungsart);
-
-            var rec = new HaltungRecord();
-            rec.SetFieldValue("Haltungsname", haltungsname, FieldSource.Xtf405, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(hd.Laenge)) rec.SetFieldValue("Haltungslaenge_m", hd.Laenge, FieldSource.Xtf405, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(material)) rec.SetFieldValue("Rohrmaterial", material, FieldSource.Xtf405, userEdited: false);
-
-            var dn = !string.IsNullOrWhiteSpace(hd.LichteHoehe) ? hd.LichteHoehe : hd.LichteBreite;
-            if (!string.IsNullOrWhiteSpace(dn)) rec.SetFieldValue("DN_mm", dn, FieldSource.Xtf405, userEdited: false);
-
-            var vonKnoten = ResolveKnotenName(hd.VonRef);
-            var nachKnoten = ResolveKnotenName(hd.NachRef);
-            // Keine Inspektionsrichtung: SIA405 ist der Kataster-Bestand und kennt keine Untersuchung.
-            // Sie kommt aus der VSA-KEK-Untersuchung (<Fliessrichtung>), siehe ParseVsaKek.
-
-            var datum = NormalizeDate_yyyymmdd(hd.LetzteAenderung);
-            if (!string.IsNullOrWhiteSpace(datum))
-                rec.SetFieldValue("Datum_Jahr", datum, FieldSource.Xtf405, userEdited: false);
-
-            if (kanal is not null)
-            {
-                if (!string.IsNullOrWhiteSpace(kanal.Standortname)) rec.SetFieldValue("Strasse", kanal.Standortname, FieldSource.Xtf405, userEdited: false);
-                if (!string.IsNullOrWhiteSpace(nutzungsart)) rec.SetFieldValue("Nutzungsart", nutzungsart, FieldSource.Xtf405, userEdited: false);
-                if (!string.IsNullOrWhiteSpace(kanal.Bemerkung)) rec.SetFieldValue("Bemerkungen", kanal.Bemerkung, FieldSource.Xtf405, userEdited: false);
-                if (!string.IsNullOrWhiteSpace(kanal.Eigentuemer)) rec.SetFieldValue("Eigentuemer", kanal.Eigentuemer, FieldSource.Xtf405, userEdited: false);
-
-                // Funktionhierarchisch -> Katalog-Combo "PAA.<Suffix>" (speist u.a. VSA-Zustandsnote B4)
-                var funktion = NormalizeFunktionHierarchisch(kanal.Funktion);
-                if (!string.IsNullOrWhiteSpace(funktion)) rec.SetFieldValue("FunktionHierarchisch", funktion, FieldSource.Xtf405, userEdited: false);
-
-                // Baujahr -> Datum_Jahr (falls leer)
-                if (!string.IsNullOrWhiteSpace(kanal.Baujahr) && string.IsNullOrWhiteSpace(rec.GetFieldValue("Datum_Jahr")))
-                    rec.SetFieldValue("Datum_Jahr", kanal.Baujahr, FieldSource.Xtf405, userEdited: false);
-
-                // Status -> offen/abgeschlossen (wie PS)
-                var status = kanal.Status ?? "";
-                if (!string.IsNullOrWhiteSpace(status))
-                {
-                    if (Regex.IsMatch(status, "(?i)in_Betrieb|aktiv"))
-                        rec.SetFieldValue("Offen_abgeschlossen", "abgeschlossen", FieldSource.Xtf405, userEdited: false);
-                    else if (Regex.IsMatch(status, "(?i)ausser_Betrieb|stillgelegt"))
-                        rec.SetFieldValue("Offen_abgeschlossen", "offen", FieldSource.Xtf405, userEdited: false);
-                }
-
-                // Zugaenglichkeit als Bemerkung ergänzen
-                if (!string.IsNullOrWhiteSpace(kanal.Zugaenglichkeit) && !string.Equals(kanal.Zugaenglichkeit, "unbekannt", StringComparison.OrdinalIgnoreCase))
-                {
-                    var existing = rec.GetFieldValue("Bemerkungen") ?? "";
-                    var add = $"Zugaenglichkeit: {kanal.Zugaenglichkeit}";
-                    rec.SetFieldValue("Bemerkungen", string.IsNullOrWhiteSpace(existing) ? add : (existing + "\n" + add), FieldSource.Xtf405, userEdited: false);
-                }
-            }
-
-            // Schacht-Labels (optional, für Debug/Logging)
-            var schachtOben = ResolveSchachtLabel(hd.VonRef);
-            var schachtUnten = ResolveSchachtLabel(hd.NachRef);
-            if (!string.IsNullOrWhiteSpace(schachtOben)) rec.SetFieldValue("Schacht_oben", schachtOben, FieldSource.Xtf405, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(schachtUnten)) rec.SetFieldValue("Schacht_unten", schachtUnten, FieldSource.Xtf405, userEdited: false);
-
-            records.Add(rec);
-        }
-
-        return records;
-    }
-
-    // Bekannte FunktionHierarchisch-Suffixe (ohne "PAA."-Praefix), passend zu FieldCatalog.ComboItems.
-    private static readonly string[] FunktionHierarchischSuffixe =
-    {
-        "Sammelkanal", "Hauptsammelkanal", "Hauptsammelkanal_regional",
-        "Liegenschaftsentwaesserung", "Sanierungsleitung",
-        "Strassenentwaesserung", "Gewaesser"
-    };
-
-    /// <summary>
-    /// Normalisiert die SIA405-Funktion (Funktionhierarchisch) auf einen GUELTIGEN Katalog-Combo-Wert
-    /// "PAA.&lt;Suffix&gt;". Verarbeitet gaengige Rohformen (mit/ohne "PAA."-Praefix, Sub-Level-Trenner "."
-    /// wie "Hauptsammelkanal.regional", Umlaute). Liefert leer, wenn der Rohwert keinem bekannten Suffix
-    /// entspricht — dann wird das Feld NICHT gesetzt (kein ungueltiger Combo-Wert im Datagrid).
-    /// </summary>
-    private static string NormalizeFunktionHierarchisch(string? raw)
-    {
-        var v = (raw ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(v))
-            return "";
-
-        if (v.StartsWith("PAA.", StringComparison.OrdinalIgnoreCase))
-            v = v.Substring(4);
-
-        // Sub-Level-Trenner "." -> "_" (Hauptsammelkanal.regional -> Hauptsammelkanal_regional)
-        v = v.Replace('.', '_');
-        // Umlaute -> ASCII (Katalog nutzt ...entwaesserung)
-        v = v.Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue")
-             .Replace("Ä", "Ae").Replace("Ö", "Oe").Replace("Ü", "Ue");
-
-        foreach (var known in FunktionHierarchischSuffixe)
-            if (string.Equals(v, known, StringComparison.OrdinalIgnoreCase))
-                return "PAA." + known;
-
-        return "";
-    }
-
-    // Delegation: Logik liegt jetzt in XtfValueNormalizer
-    private static string NormalizeSiaMaterial(string material)
-        => XtfValueNormalizer.NormalizeSiaMaterial(material);
-
-    // Delegation: Logik liegt jetzt in XtfValueNormalizer
-    private static string NormalizeNutzungsart(string v)
-        => XtfValueNormalizer.NormalizeNutzungsart(v);
 
     // ===================== VSA_KEK =====================
-    private sealed class Untersuchung
+    private static XtfVsaKekErgebnis ParseVsaKek(XDocument doc, string sourcePath,
+        IVsaMediaPathResolver mediaPaths, out List<ImportMessage> luecken)
     {
-        public string Tid { get; init; } = "";
-        public string Bezeichnung { get; set; } = "";
-        public string Ausfuehrender { get; set; } = "";
-        public string Zeitpunkt { get; set; } = "";
-        public string InspizierteLaenge { get; set; } = "";
-        public string Erfassungsart { get; set; } = "";
-        public string Fahrzeug { get; set; } = "";
-        public string Geraet { get; set; } = "";
-        public string Witterung { get; set; } = "";
-        public string Grund { get; set; } = "";
-        public string VonPunkt { get; set; } = "";
-        public string BisPunkt { get; set; } = "";
-        /// <summary>Rohwert aus der XTF: "in_Fliessrichtung" / "gegen_Fliessrichtung".</summary>
-        public string Fliessrichtung { get; set; } = "";
-        public List<Schaden> Schaeden { get; } = new();
+        // Gleiche drei Schritte wie bei SIA405:
+        // 1. Objekte lesen — Untersuchung, Kanal-/Normschachtschaden, Datei, Bauwerke,
+        // 2. Bezuege aufloesen — Schaden und Datei zur Untersuchung ueber die TID, dann
+        //    Haltung, Schacht oder ungeklaert; danach je Haltung die Haupt-Untersuchung
+        //    waehlen (die vollstaendigste, die weiteren werden Protokollfassungen),
+        // 3. fachlich abbilden — Haltungsfelder, Schachtprotokoll, Importbeleg.
+        // Die Uebernahme ins Projekt machen danach MergeRecordIntoProject,
+        // MergeVsaKekSchaechteIntoProject und VsaKekWeitereUntersuchungen.
+        var bestand = VsaKekObjektLeser.Lies(doc);
+        var bezuege = VsaKekBeziehungen.Loese(bestand, sourcePath, mediaPaths);
+        // Nicht Zuordenbares wird nicht uebernommen, aber seit 01.10.2026 gemeldet.
+        luecken = VsaKekLueckenmeldungen.Erzeuge(bezuege);
+        var gruppen = VsaKekUntersuchungsWahl.Waehle(bezuege.Haltungsuntersuchungen, u => u.Bezeichnung, VsaKekAbbildung.Merkmale);
+        return VsaKekAbbildung.Baue(bezuege, gruppen, sourcePath, bestand.ModellName);
     }
-
-    private sealed class Schaden
-    {
-        public string ObjId { get; set; } = "";
-        public string Schadencode { get; set; } = "";
-        public string Distanz { get; set; } = "";
-        public string Anmerkung { get; set; } = "";
-        public string Einzelschadenklasse { get; set; } = "";
-        public string Streckenschaden { get; set; } = "";
-        public string Quantifizierung1 { get; set; } = "";
-        public string Quantifizierung2 { get; set; } = "";
-        public string SchadenlageAnfang { get; set; } = "";
-        public string SchadenlageEnde { get; set; } = "";
-        public double LL { get; set; }
-    }
-
-    private static List<HaltungRecord> ParseVsaKek(XDocument doc, string sourcePath,
-        IVsaMediaPathResolver mediaPaths,
-        out Dictionary<string, List<VsaFinding>> findingsPerHaltung)
-    {
-        var untersuchungen = new Dictionary<string, Untersuchung>(StringComparer.Ordinal);
-        findingsPerHaltung = new Dictionary<string, List<VsaFinding>>(StringComparer.OrdinalIgnoreCase);
-        var findingsByObjId = new Dictionary<string, VsaFinding>(StringComparer.OrdinalIgnoreCase);
-        var findingsByTid = new Dictionary<string, VsaFinding>(StringComparer.OrdinalIgnoreCase);
-        // Video-Pfad je Untersuchungs-TID (KEK.Datei mit Klasse=Untersuchung)
-        var videoByUntersuchungTid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var node in doc.Descendants().Where(e => e.Name.LocalName.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)))
-        {
-            var tid = (string?)node.Attribute("TID");
-            if (string.IsNullOrWhiteSpace(tid))
-                continue;
-
-            var u = new Untersuchung { Tid = tid! };
-
-            foreach (var child in node.Elements())
-            {
-                switch (child.Name.LocalName)
-                {
-                    case "Bezeichnung": u.Bezeichnung = child.Value; break;
-                    case "Ausfuehrender": u.Ausfuehrender = child.Value; break;
-                    case "Zeitpunkt": u.Zeitpunkt = child.Value; break;
-                    case "Inspizierte_Laenge": u.InspizierteLaenge = child.Value; break;
-                    case "Erfassungsart": u.Erfassungsart = child.Value; break;
-                    case "Fahrzeug": u.Fahrzeug = child.Value; break;
-                    case "Geraet": u.Geraet = child.Value; break;
-                    case "Witterung": u.Witterung = child.Value; break;
-                    case "Grund": u.Grund = child.Value; break;
-                    case "vonPunktBezeichnung": u.VonPunkt = child.Value; break;
-                    case "bisPunktBezeichnung": u.BisPunkt = child.Value; break;
-                    case "Fliessrichtung": u.Fliessrichtung = child.Value; break;
-                }
-            }
-
-            untersuchungen[tid!] = u;
-        }
-
-        foreach (var node in doc.Descendants().Where(e => e.Name.LocalName.Contains("Kanalschaden", StringComparison.OrdinalIgnoreCase)))
-        {
-            // UntersuchungRef/@REF
-            var refNode = node.Elements().FirstOrDefault(e => e.Name.LocalName == "UntersuchungRef");
-            var refTid = (string?)refNode?.Attribute("REF");
-            if (string.IsNullOrWhiteSpace(refTid) || !untersuchungen.TryGetValue(refTid!, out var u))
-                continue;
-
-            var schadenTid = (string?)node.Attribute("TID");
-            var s = new Schaden();
-            var finding = new VsaFinding();
-            foreach (var child in node.Elements())
-            {
-                switch (child.Name.LocalName)
-                {
-                    case "OBJ_ID":
-                        s.ObjId = child.Value;
-                        break;
-                    case "KanalSchadencode":
-                        s.Schadencode = child.Value;
-                        finding.KanalSchadencode = child.Value;
-                        break;
-                    case "Distanz":
-                        s.Distanz = child.Value;
-                        if (TryParseDouble(child.Value, out var meter))
-                            finding.MeterStart = meter;
-                        break;
-                    case "Anmerkung":
-                        s.Anmerkung = child.Value;
-                        finding.Raw = child.Value;
-                        break;
-                    case "Einzelschadenklasse":
-                        s.Einzelschadenklasse = child.Value;
-                        if (int.TryParse(child.Value, out var ez))
-                        {
-                            // Best-effort: wenn keine Regel vorhanden, nutze Einzelschadenklasse für alle Anforderungen
-                            if (ez < 0) ez = 0;
-                            if (ez > 4) ez = 4;
-                            finding.EZD = ez;
-                            finding.EZS = ez;
-                            finding.EZB = ez;
-                        }
-                        break;
-                    case "Streckenschaden":
-                        s.Streckenschaden = child.Value;
-                        break;
-                    case "Quantifizierung1":
-                        s.Quantifizierung1 = child.Value;
-                        finding.Quantifizierung1 = child.Value;
-                        break;
-                    case "Quantifizierung2":
-                        s.Quantifizierung2 = child.Value;
-                        finding.Quantifizierung2 = child.Value;
-                        break;
-                    case "SchadenlageAnfang":
-                        s.SchadenlageAnfang = child.Value;
-                        if (double.TryParse(child.Value.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var anfang))
-                            finding.SchadenlageAnfang = anfang;
-                        break;
-                    case "SchadenlageEnde":
-                        s.SchadenlageEnde = child.Value;
-                        if (double.TryParse(child.Value.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var ende))
-                            finding.SchadenlageEnde = ende;
-                        break;
-                }
-            }
-
-            // LL berechnen wie PS
-            double ll = 0.0;
-            if (string.Equals(s.Streckenschaden, "true", StringComparison.OrdinalIgnoreCase))
-            {
-                if (TryParseDouble(s.SchadenlageAnfang, out var anf) && TryParseDouble(s.SchadenlageEnde, out var end) && end > anf)
-                    ll = end - anf;
-                else if (TryParseDouble(s.Quantifizierung1, out var q1))
-                    ll = q1;
-            }
-            s.LL = ll;
-            finding.LL = ll;
-
-            u.Schaeden.Add(s);
-            if (!string.IsNullOrWhiteSpace(s.ObjId))
-                findingsByObjId[s.ObjId] = finding;
-            // XTF-Variante nutzt Datei.Objekt = Kanalschaden-TID (kein OBJ_ID-Element vorhanden) — auch nach TID indizieren.
-            if (!string.IsNullOrWhiteSpace(schadenTid))
-                findingsByTid[schadenTid!] = finding;
-            // Add finding to findingsPerHaltung (by Bezeichnung)
-            if (!string.IsNullOrWhiteSpace(refTid) && untersuchungen.TryGetValue(refTid, out var untersuchung))
-            {
-                var haltungName = untersuchung.Bezeichnung;
-                if (!string.IsNullOrWhiteSpace(haltungName))
-                {
-                    if (!findingsPerHaltung.TryGetValue(haltungName, out var list))
-                    {
-                        list = new List<VsaFinding>();
-                        findingsPerHaltung[haltungName] = list;
-                    }
-                    list.Add(finding);
-                }
-            }
-        }
-
-        foreach (var node in doc.Descendants().Where(e => e.Name.LocalName.Contains("Datei", StringComparison.OrdinalIgnoreCase)))
-        {
-            string art = "";
-            string klasse = "";
-            string objekt = "";
-            string bezeichnung = "";
-            string relativpfad = "";
-
-            foreach (var child in node.Elements())
-            {
-                switch (child.Name.LocalName)
-                {
-                    case "Art":
-                        art = child.Value;
-                        break;
-                    case "Klasse":
-                        klasse = child.Value;
-                        break;
-                    case "Objekt":
-                        objekt = child.Value;
-                        break;
-                    case "Bezeichnung":
-                        bezeichnung = child.Value;
-                        break;
-                    case "Relativpfad":
-                        relativpfad = child.Value;
-                        break;
-                }
-            }
-
-            // --- Untersuchungs-Video (Klasse=Untersuchung, Dateierweiterung=mpg/mp4/avi/mpeg ODER relativpfad=Film) ---
-            if (klasse.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)
-                && !string.IsNullOrWhiteSpace(objekt))
-            {
-                var ext = Path.GetExtension(bezeichnung).ToLowerInvariant();
-                var istVideo = ext is ".mpg" or ".mp4" or ".avi" or ".mpeg"
-                               || relativpfad.Contains("Film", StringComparison.OrdinalIgnoreCase);
-                if (istVideo)
-                {
-                    var videoPfad = mediaPaths.ResolveVideo(sourcePath, relativpfad, bezeichnung);
-                    if (!string.IsNullOrWhiteSpace(videoPfad)
-                        && !videoByUntersuchungTid.ContainsKey(objekt))
-                    {
-                        videoByUntersuchungTid[objekt] = videoPfad;
-                    }
-                }
-                continue;
-            }
-
-            if (!art.Contains("Foto", StringComparison.OrdinalIgnoreCase))
-                continue;
-            if (!klasse.Contains("Kanalschaden", StringComparison.OrdinalIgnoreCase))
-                continue;
-            // Datei.Objekt referenziert den Kanalschaden — je nach XTF-Variante via OBJ_ID ODER TID.
-            if (string.IsNullOrWhiteSpace(objekt)
-                || !(findingsByObjId.TryGetValue(objekt, out var finding)
-                     || findingsByTid.TryGetValue(objekt, out finding)))
-                continue;
-
-            var fotoPath = mediaPaths.ResolvePhoto(sourcePath, relativpfad, bezeichnung);
-            if (string.IsNullOrWhiteSpace(fotoPath))
-                continue;
-
-            if (string.IsNullOrWhiteSpace(finding.FotoPath))
-                finding.FotoPath = fotoPath;
-        }
-
-        var records = new List<HaltungRecord>();
-
-        foreach (var u in untersuchungen.Values)
-        {
-            if (string.IsNullOrWhiteSpace(u.Bezeichnung))
-                continue;
-
-            var zeitpunkt = NormalizeDate_yyyymmdd(u.Zeitpunkt);
-
-            var primaere = new List<string>();
-
-            if (findingsPerHaltung.TryGetValue(u.Bezeichnung, out var findings))
-            {
-                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var f in findings)
-                {
-                    var code = (f.KanalSchadencode ?? "").Trim().ToUpperInvariant();
-                    if (code.Length == 0) continue;
-                    var meter = f.MeterStart ?? f.SchadenlageAnfang;
-                    var key = $"{code}|{(meter.HasValue ? meter.Value.ToString("F2") : "")}";
-                    if (!seen.Add(key)) continue;
-
-                    var detail = XtfPrimaryDamageFormatter.FormatLine(f);
-                    if (!string.IsNullOrWhiteSpace(detail))
-                        primaere.Add(detail);
-                }
-            }
-
-            var rec = new HaltungRecord();
-            rec.SetFieldValue("Haltungsname", u.Bezeichnung, FieldSource.Xtf, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(u.InspizierteLaenge)) rec.SetFieldValue("Haltungslaenge_m", u.InspizierteLaenge, FieldSource.Xtf, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(zeitpunkt)) rec.SetFieldValue("Datum_Jahr", zeitpunkt, FieldSource.Xtf, userEdited: false);
-            // Schacht oben/unten aus der Untersuchung (von-/bisPunktBezeichnung) — VSA_KEK ist Hauptquelle,
-            // eine spaetere SIA405-Anreicherung fuellt nur, falls hier leer.
-            if (!string.IsNullOrWhiteSpace(u.VonPunkt)) rec.SetFieldValue("Schacht_oben", u.VonPunkt, FieldSource.Xtf, userEdited: false);
-            if (!string.IsNullOrWhiteSpace(u.BisPunkt)) rec.SetFieldValue("Schacht_unten", u.BisPunkt, FieldSource.Xtf, userEdited: false);
-            if (findings is not null && findings.Count > 0)
-                rec.VsaFindings = new List<VsaFinding>(findings);
-
-            // Video-Link aus KEK.Datei (Klasse=Untersuchung) setzen, falls noch kein Link vorhanden
-            if (videoByUntersuchungTid.TryGetValue(u.Tid, out var videoLink)
-                && string.IsNullOrWhiteSpace(rec.GetFieldValue("Link")))
-            {
-                rec.SetFieldValue("Link", videoLink, FieldSource.Xtf, userEdited: false);
-            }
-
-            if (primaere.Count > 0)
-            {
-                var val = XtfPrimaryDamageFormatter.DeduplicateText(string.Join("\n", primaere));
-                rec.SetFieldValue("Primaere_Schaeden", val, FieldSource.Xtf, userEdited: false);
-            }
-
-            // NOTE: VSA-Zustandsnote wird NICHT hier berechnet, sondern später durch VsaEvaluationService
-            // Die korrekte Berechnung basiert auf VSA-Regeln und allen Schadenscodes pro Haltung
-            
-            // maxKlasse wird hier nicht korrekt berechnet - entfernt um falsche Werte zu vermeiden
-            // if (maxKlasse > 0)
-            // {
-            //     rec.SetFieldValue("Zustandsklasse", maxKlasse.ToString(), FieldSource.Xtf, userEdited: false);
-            //     rec.SetFieldValue("VSA_Zustandsnote_D", maxKlasse.ToString(), FieldSource.Xtf, userEdited: false);
-            // }
-
-            // Inspektionsrichtung aus der Untersuchung (IKAS liefert sie als <Fliessrichtung>).
-            var richtung = XtfValueNormalizer.NormalizeInspectionDirection(u.Fliessrichtung);
-            if (!string.IsNullOrWhiteSpace(richtung))
-                rec.SetFieldValue("Inspektionsrichtung", richtung, FieldSource.Xtf, userEdited: false);
-
-            // Bemerkungen mit Inspektionskontext anreichern. VSA_KEK ist Hauptquelle und darf Bemerkungen
-            // setzen. Alle verfuegbaren Kontextangaben einbeziehen (nicht nur wenn Erfassungsart da ist),
-            // damit Grund/Witterung/Ausfuehrender/Fahrzeug/Geraet nicht verloren gehen.
-            var bemParts = new List<string>();
-            if (!string.IsNullOrWhiteSpace(u.Erfassungsart)) bemParts.Add($"Erfassung: {u.Erfassungsart}");
-            if (!string.IsNullOrWhiteSpace(u.Grund)) bemParts.Add($"Grund: {u.Grund}");
-            if (!string.IsNullOrWhiteSpace(u.Witterung)) bemParts.Add($"Witterung: {u.Witterung}");
-            if (!string.IsNullOrWhiteSpace(u.Ausfuehrender)) bemParts.Add($"Ausfuehrender: {u.Ausfuehrender}");
-            if (!string.IsNullOrWhiteSpace(u.Fahrzeug)) bemParts.Add($"Fahrzeug: {u.Fahrzeug}");
-            if (!string.IsNullOrWhiteSpace(u.Geraet)) bemParts.Add($"Geraet: {u.Geraet}");
-            if (bemParts.Count > 0)
-            {
-                rec.SetFieldValue("Bemerkungen", string.Join(", ", bemParts), FieldSource.Xtf, userEdited: false);
-                rec.SetFieldValue("Pruefungsresultat", "", FieldSource.Xtf, userEdited: false);
-            }
-
-            records.Add(rec);
-        }
-
-        return records;
-    }
-
-    // Delegation: Logik liegt jetzt in XtfValueNormalizer
-    private static bool TryParseDouble(string? s, out double value)
-        => XtfValueNormalizer.TryParseDouble(s, out value);
-
-    // Delegation: Logik liegt jetzt in XtfValueNormalizer
-    private static string NormalizeDate_yyyymmdd(string? yyyymmdd)
-        => XtfValueNormalizer.NormalizeDate_yyyymmdd(yyyymmdd);
 }

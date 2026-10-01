@@ -16,7 +16,7 @@ public static class ProcessOutputReader
     public static void Use(IProcessOutputReader reader) =>
         throw new NotSupportedException(
             "Der globale Prozessausgabe-Leser kann nicht mehr ausgetauscht werden. " +
-            "IProcessOutputReader bitte per Konstruktor uebergeben.");
+            "IProcessOutputReader bitte per Konstruktor übergeben.");
 
     public static Task<ProcessOutputResult?> ReadToExitAsync(
         ProcessStartInfo startInfo,

@@ -66,14 +66,15 @@ public static class VsaTileDataFactory
         VsaCodeDef cd,
         QuantField? q1,
         string? groupColor,
-        bool isSelected = false)
+        bool isSelected = false,
+        string? catalogLabel = null)
     {
         var (badgeText, badgeColor) = GetQuantBadge(q1);
         return new VsaTileData
         {
             Key = key,
             Label = key,
-            Description = cd.Label,
+            Description = PreferCatalogLabel(cd.Label, catalogLabel),
             IsFinal = cd.FinalCode is not null,
             IsSteuer = cd.IsSteuer,
             BadgeText = badgeText,
@@ -95,7 +96,9 @@ public static class VsaTileDataFactory
         bool hasC2,
         QuantField? q1,
         string? groupColor,
-        bool isSelected = false)
+        bool isSelected = false,
+        string? catalogLabel = null,
+        string? parentCatalogLabel = null)
     {
         var prefix = xPrefix ? "X" : "";
         var fullCode = $"{codeKey}{prefix}{key}";
@@ -107,7 +110,15 @@ public static class VsaTileDataFactory
         {
             Key = key,
             Label = fullCode,
-            Description = charDef.Label,
+            Description = hasC2
+                ? BuildNavigationDescription(
+                    charDef.Label,
+                    catalogLabel,
+                    parentCatalogLabel)
+                : BuildOptionDescription(
+                    charDef.Label,
+                    catalogLabel,
+                    parentCatalogLabel),
             IsFinal = !hasC2,
             BadgeText = badgeText,
             BadgeColor = badgeColor,
@@ -127,7 +138,9 @@ public static class VsaTileDataFactory
         bool xPrefix,
         bool isInvalid,
         string? groupColor,
-        bool isSelected = false)
+        bool isSelected = false,
+        string? catalogLabel = null,
+        string? parentCatalogLabel = null)
     {
         var prefix = xPrefix ? "X" : "";
         var fullCode = $"{codeKey}{prefix}{char1Key}{key}";
@@ -135,11 +148,125 @@ public static class VsaTileDataFactory
         {
             Key = key,
             Label = fullCode,
-            Description = label,
+            Description = BuildFinalOptionDescription(label, catalogLabel),
             IsFinal = true,
             IsInvalid = isInvalid,
             GroupColor = groupColor,
             IsSelected = isSelected
         };
     }
+
+    internal static string BuildOptionDescription(
+        string fallback,
+        string? catalogLabel,
+        string? parentCatalogLabel)
+    {
+        var clearText = ExtractLeafLabel(catalogLabel, parentCatalogLabel);
+        if (string.IsNullOrWhiteSpace(clearText))
+            return fallback;
+
+        if (LooksLikeAbbreviation(fallback)
+            && !Equivalent(fallback, clearText))
+        {
+            return $"{fallback.Trim()} \u00B7 {clearText}";
+        }
+
+        return clearText;
+    }
+
+    internal static string BuildNavigationDescription(
+        string fallback,
+        string? catalogLabel,
+        string? parentCatalogLabel)
+    {
+        if (!string.IsNullOrWhiteSpace(catalogLabel))
+            return catalogLabel.Trim();
+
+        if (string.IsNullOrWhiteSpace(parentCatalogLabel)
+            || Equivalent(fallback, parentCatalogLabel)
+            || fallback.Trim().StartsWith(
+                parentCatalogLabel.Trim(),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return fallback;
+        }
+
+        return $"{parentCatalogLabel.Trim()} \u00B7 {fallback.Trim()}";
+    }
+
+    internal static string BuildFinalOptionDescription(
+        string fallback,
+        string? catalogLabel)
+        => string.IsNullOrWhiteSpace(catalogLabel)
+            ? fallback
+            : catalogLabel.Trim();
+
+    private static string PreferCatalogLabel(string fallback, string? catalogLabel)
+        => string.IsNullOrWhiteSpace(catalogLabel)
+            ? fallback
+            : catalogLabel.Trim();
+
+    private static string? ExtractLeafLabel(string? catalogLabel, string? parentCatalogLabel)
+    {
+        if (string.IsNullOrWhiteSpace(catalogLabel))
+            return null;
+
+        var exact = catalogLabel.Trim();
+        if (string.IsNullOrWhiteSpace(parentCatalogLabel))
+            return exact;
+
+        var parent = parentCatalogLabel.Trim();
+        if (!exact.StartsWith(parent, StringComparison.OrdinalIgnoreCase))
+            return exact;
+
+        var suffix = exact[parent.Length..]
+            .Trim()
+            .TrimStart(':', ',', '-', '\u2013', '\u2014')
+            .Trim();
+        // Einige Manifest-Eintraege (z. B. AEDXA = "unbek.") wiederholen nur
+        // den Titel des Elterncodes. Dann ist im Katalog kein genauerer
+        // Klartext vorhanden und die kuratierte Optionsbezeichnung ist besser.
+        return suffix.Length == 0 ? null : suffix;
+    }
+
+    private static bool LooksLikeAbbreviation(string? value)
+    {
+        var text = value?.Trim() ?? string.Empty;
+        if (text.Length is 0 or > 8)
+            return false;
+
+        var hasUpperLetter = false;
+        foreach (var ch in text)
+        {
+            if (char.IsUpper(ch))
+            {
+                hasUpperLetter = true;
+                continue;
+            }
+
+            if (char.IsDigit(ch) || char.IsWhiteSpace(ch) || char.IsPunctuation(ch))
+                continue;
+
+            return false;
+        }
+
+        return hasUpperLetter;
+    }
+
+    private static bool Equivalent(string left, string right)
+        => string.Equals(
+            NormalizeComparable(left),
+            NormalizeComparable(right),
+            StringComparison.Ordinal);
+
+    private static string NormalizeComparable(string value)
+        => new string(value
+                .Trim()
+                .ToLowerInvariant()
+                .Replace("\u00E4", "ae", StringComparison.Ordinal)
+                .Replace("\u00F6", "oe", StringComparison.Ordinal)
+                .Replace("\u00FC", "ue", StringComparison.Ordinal)
+                .Replace("\u00DF", "ss", StringComparison.Ordinal)
+                .Where(char.IsLetterOrDigit)
+                .ToArray());
 }

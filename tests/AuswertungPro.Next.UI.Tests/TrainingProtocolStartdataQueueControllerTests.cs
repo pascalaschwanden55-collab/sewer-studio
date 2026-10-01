@@ -23,7 +23,7 @@ public sealed class TrainingProtocolStartdataQueueControllerTests
 
         Assert.Equal(2, result.AddedCount);
         Assert.Equal(2, result.CandidateCount);
-        Assert.Equal("2 Protokoll-Startdaten als Kandidaten eingereiht (Freigabe ueber Review).", result.StatusText);
+        Assert.Equal("2 Protokoll-Startdaten als Kandidaten eingereiht (Freigabe über Review).", result.StatusText);
         Assert.Equal("Protokoll-Startdaten: 2 Kandidaten eingereiht (von 2 gefiltert).", result.LogText);
 
         var queued = queue.GetAll();
@@ -61,7 +61,7 @@ public sealed class TrainingProtocolStartdataQueueControllerTests
         Assert.Equal(1, result.AddedCount);
         Assert.Equal(2, result.CandidateCount);
         Assert.Equal(2, queue.Count);
-        Assert.Equal("1 Protokoll-Startdaten als Kandidaten eingereiht (Freigabe ueber Review).", result.StatusText);
+        Assert.Equal("1 Protokoll-Startdaten als Kandidaten eingereiht (Freigabe über Review).", result.StatusText);
         Assert.Equal("Protokoll-Startdaten: 1 Kandidaten eingereiht (von 2 gefiltert).", result.LogText);
     }
 

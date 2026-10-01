@@ -65,11 +65,9 @@ internal static class FindingEntryMatcher
         if (byCode.Count > 0)
             return byCode[0].Finding;
 
-        return scored
-            .OrderByDescending(s => s.HasPhoto)
-            .ThenBy(s => s.Delta)
-            .Select(s => s.Finding)
-            .FirstOrDefault();
+        // Ohne Meter- oder Codebezug ist jede Zuordnung geraten. Ein solcher Fallback
+        // hing frueher Foto und Zeit eines beliebigen Befunds an den Protokolleintrag.
+        return null;
     }
 
     /// <summary>

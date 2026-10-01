@@ -14,8 +14,8 @@ public sealed class PlayerWindowSnapshotArchitectureTests
         var codeExplorerDialogPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.CodeExplorer.Dialog.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingLiveSnapshotPathPolicy.cs");
 
-        Assert.True(File.Exists(policyPath), "Temp-Pfade fuer Live-Snapshots muessen ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(codeExplorerDialogPath), "Live-Snapshot-Provider fuer den Code-Explorer muss gebuendelt bleiben.");
+        Assert.True(File.Exists(policyPath), "Temp-Pfade für Live-Snapshots müssen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(codeExplorerDialogPath), "Live-Snapshot-Provider für den Code-Explorer muss gebuendelt bleiben.");
 
         var codeExplorerDialog = File.ReadAllText(codeExplorerDialogPath);
         var policy = File.ReadAllText(policyPath);
@@ -42,12 +42,12 @@ public sealed class PlayerWindowSnapshotArchitectureTests
         var snapshotHostPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotCaptureHost.cs");
         var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
 
-        Assert.True(File.Exists(policyPath), "Temp-Pfad fuer Player-Snapshots muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(policyPath), "Temp-Pfad für Player-Snapshots muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(captureServicePath), "Snapshot-Datei-Capture muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pauseStarterPath), "Snapshot-Pause-Start muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(snapshotWorkflowPath), "Snapshot-Verfuegbarkeit und Capture-Reihenfolge sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(snapshotCaptureWorkflowPath), "Snapshot-Pfad und Datei-Capture-Serviceaufruf sollen ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(snapshotHostPath), "Direkter VLC-Snapshot-Capture soll ueber einen Host laufen.");
+        Assert.True(File.Exists(snapshotHostPath), "Direkter VLC-Snapshot-Capture soll über einen Host laufen.");
         Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
 
         var snapshot = File.ReadAllText(snapshotPath);
@@ -89,7 +89,7 @@ public sealed class PlayerWindowSnapshotArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "PlayerWindow-Snapshot-Partial soll Capture/Pause-Details ueber Snapshot-Services kapseln:\n"
+            "PlayerWindow-Snapshot-Partial soll Capture/Pause-Details über Snapshot-Services kapseln:\n"
             + string.Join("\n", offenders));
     }
 }

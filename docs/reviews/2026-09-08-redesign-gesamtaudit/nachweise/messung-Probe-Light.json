@@ -1,0 +1,18 @@
+{
+  "utc": "2026-09-08T04:35:58.0608024Z",
+  "theme": "Light",
+  "seite": "Probe",
+  "width": 1920,
+  "height": 1080,
+  "zielFenster": "MainWindow",
+  "zielBreite": 1920,
+  "zielHoehe": 1080,
+  "primaryWidth": 1920,
+  "primaryHeight": 1080,
+  "dpiX": 96,
+  "dpiY": 96,
+  "fullRows": 0,
+  "windowCount": 1,
+  "selected": null,
+  "severityButtons": []
+}

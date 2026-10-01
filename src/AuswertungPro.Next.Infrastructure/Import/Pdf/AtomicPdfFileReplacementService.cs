@@ -59,7 +59,7 @@ public sealed class AtomicPdfFileReplacementService : IAtomicPdfFileReplacer
                     if (File.Exists(stagedPath))
                         File.Delete(stagedPath);
                 },
-                "PDF Temp-Datei loeschen");
+                "PDF Temp-Datei löschen");
         }
     }
 
@@ -111,6 +111,6 @@ public sealed class AtomicPdfFileReplacementService : IAtomicPdfFileReplacer
         using var document = PdfDocument.Open(pdfPath);
         PdfImportSafetyPolicy.ThrowIfTooManyPages(document.NumberOfPages);
         if (document.NumberOfPages <= 0)
-            throw new InvalidDataException("Erzeugte PDF enthaelt keine Seite.");
+            throw new InvalidDataException("Erzeugte PDF enthält keine Seite.");
     }
 }

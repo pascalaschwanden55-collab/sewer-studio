@@ -42,7 +42,7 @@ public sealed class DataPageRowNavigationControllerTests
 
         Assert.False(result);
         Assert.False(moved);
-        Assert.Equal(("Bitte eine gueltige Zahl eingeben.", "Position"), Assert.Single(dialogs));
+        Assert.Equal(("Bitte eine gültige Zahl eingeben.", "Position"), Assert.Single(dialogs));
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public sealed class DataPageRowNavigationControllerTests
             (message, title) => dialogs.Add((message, title)));
 
         Assert.False(result);
-        Assert.Equal(("Verschieben nicht moeglich. Bitte Zeile auswaehlen.", "Position"), Assert.Single(dialogs));
+        Assert.Equal(("Verschieben nicht möglich. Bitte Zeile auswählen.", "Position"), Assert.Single(dialogs));
     }
 
     [Theory]
@@ -95,7 +95,7 @@ public sealed class DataPageRowNavigationControllerTests
 
         Assert.False(resolved);
         Assert.Equal(-1, rowIndex);
-        Assert.Equal(("Bitte eine gueltige Zeilennummer eingeben.", "Gehe zu Zeile"), Assert.Single(dialogs));
+        Assert.Equal(("Bitte eine gültige Zeilennummer eingeben.", "Gehe zu Zeile"), Assert.Single(dialogs));
     }
 
     [Fact]

@@ -57,8 +57,8 @@ public static class SelfTrainingStepPresentationBuilder
                 if (step.Technique is { } technique)
                 {
                     techniqueGrade = technique.OverallGrade;
-                    techniqueDetails = $"Licht: {technique.LightingQuality} | Schaerfe: {technique.SharpnessQuality}";
-                    logLines.Add($"Technik: {technique.OverallGrade} (Licht={technique.LightingQuality}, Schaerfe={technique.SharpnessQuality})");
+                    techniqueDetails = $"Licht: {technique.LightingQuality} | Schärfe: {technique.SharpnessQuality}";
+                    logLines.Add($"Technik: {technique.OverallGrade} (Licht={technique.LightingQuality}, Schärfe={technique.SharpnessQuality})");
                 }
                 break;
 

@@ -36,17 +36,18 @@ public sealed class SchachtStammdatenResultApplierTests
                 alreadyComplete: 3));
 
         Assert.Equal("rund", record.GetFieldValue("Schachtform"));
-        Assert.Equal("1200", record.GetFieldValue("Dimension"));
+        Assert.Equal("1200", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("1200", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
         Assert.Equal("2.40", record.GetFieldValue("Schachttiefe"));
         Assert.Equal("bleibt", record.GetFieldValue("Notiz"));
         Assert.Equal(
-            ["Fields[Schachtform]", "Fields[Dimension]", "Fields[Schachttiefe]"],
+            ["Fields[Schachtform]", "Fields[Dimension 1 mm]", "Fields[Dimension 2 mm]", "Fields[Schachttiefe]"],
             changedFields);
         Assert.Equal(1, result.ChangedShaftCount);
         Assert.Equal(3, result.AddedFieldCount);
         Assert.Equal(
-            "Ergaenzt: 1 Schaechte / 3 Felder. PDF gefunden: 4, ohne PDF: 2, " +
-            "kein passendes Schachtprotokoll: 1, bereits vollstaendig: 3.",
+            "Ergänzt: 1 Schächte / 3 Felder. PDF gefunden: 4, ohne PDF: 2, " +
+            "kein passendes Schachtprotokoll: 1, bereits vollständig: 3.",
             result.Summary);
         Assert.Empty(result.Details);
         Assert.Equal(result.Summary, result.DialogText);
@@ -79,7 +80,7 @@ public sealed class SchachtStammdatenResultApplierTests
                 ]));
 
         Assert.Equal("eckig", record.GetFieldValue("Schachtform"));
-        Assert.Empty(record.GetFieldValue("Dimension"));
+        Assert.Empty(record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
         Assert.Equal("2.00", record.GetFieldValue("Schachttiefe"));
         Assert.Equal(1, result.ChangedShaftCount);
         Assert.Equal(1, result.AddedFieldCount);
@@ -108,7 +109,8 @@ public sealed class SchachtStammdatenResultApplierTests
     {
         var record = new SchachtRecord();
         record.SetFieldValue("Schachtform", "rund");
-        record.SetFieldValue("Dimension", "1000");
+        record.SetFieldValue(FieldKeys.ShaftDimension1Mm, "1000");
+        record.SetFieldValue(FieldKeys.ShaftDimension2Mm, "1000");
         record.SetFieldValue("Schachttiefe", "2.00");
 
         var result = SchachtStammdatenResultApplier.Apply(
@@ -125,11 +127,11 @@ public sealed class SchachtStammdatenResultApplierTests
                 ]));
 
         Assert.Equal("rund", record.GetFieldValue("Schachtform"));
-        Assert.Equal("1000", record.GetFieldValue("Dimension"));
+        Assert.Equal("1000", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
         Assert.Equal("2.00", record.GetFieldValue("Schachttiefe"));
         Assert.Equal(0, result.ChangedShaftCount);
         Assert.Equal(0, result.AddedFieldCount);
-        Assert.StartsWith("Ergaenzt: 0 Schaechte / 0 Felder.", result.Summary, StringComparison.Ordinal);
+        Assert.StartsWith("Ergänzt: 0 Schächte / 0 Felder.", result.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -253,4 +255,30 @@ public sealed class SchachtStammdatenResultApplierTests
             NichtLesbar: unreadable,
             Ergaenzungen: additions ?? [],
             Meldungen: messages ?? []);
+
+    [Fact]
+    public void Ein_von_Hand_geleertes_Feld_wird_nicht_als_ergaenzt_gezaehlt()
+    {
+        // Der Schutz lehnt den Schreibvorgang ab. Ohne Auswertung des Ergebnisses
+        // meldete der Nachlauf trotzdem "ergaenzt" - der Wert stand aber nirgends.
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtform", "", FieldSource.Manual, userEdited: true);
+
+        var result = SchachtStammdatenResultApplier.Apply(
+            [record],
+            Result(
+                additions:
+                [
+                    new SchachtStammdatenErgaenzung(record.Id, "protokoll.pdf", "rund", "1200", "2.40")
+                ],
+                pdfFound: 1,
+                pdfMissing: 0,
+                unreadable: 0,
+                alreadyComplete: 0));
+
+        Assert.Equal("", record.GetFieldValue("Schachtform"));
+        Assert.Equal("1200", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("1200", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
+        Assert.Equal(2, result.AddedFieldCount);
+    }
 }

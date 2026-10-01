@@ -189,7 +189,7 @@ public sealed class KinsDvdTextEnricherTests : IDisposable
         Assert.Equal(0, result.LaengenGesetzt);
         Assert.Equal(0, result.DatumGesetzt);
         Assert.Equal(
-            ["kiDVDaten.txt nicht gefunden — Anreicherung uebersprungen."],
+            ["kiDVDaten.txt nicht gefunden — Anreicherung übersprungen."],
             result.Messages);
         Assert.Equal("0", record.GetFieldValue("Haltungslaenge_m"));
         Assert.False(File.Exists(fehlenderPfad));

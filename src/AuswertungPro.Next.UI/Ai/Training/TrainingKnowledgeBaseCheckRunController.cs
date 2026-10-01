@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 namespace AuswertungPro.Next.UI.Ai.Training;
 
 public sealed record TrainingKnowledgeBaseCheckStartResult(
@@ -42,7 +43,7 @@ public static class TrainingKnowledgeBaseCheckRunController
         ArgumentNullException.ThrowIfNull(log);
         ArgumentNullException.ThrowIfNull(setStatus);
 
-        setStatus($"KB-Prüfung fehlgeschlagen: {exception.Message}");
+        setStatus($"KB-Prüfung fehlgeschlagen: {UserError.DescribeAndReport(exception, "KB-Prüfung")}");
         log($"KB-Prüfung FEHLER: {exception.Message}");
     }
 }

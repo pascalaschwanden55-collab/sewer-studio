@@ -30,7 +30,9 @@ public sealed partial class SchaechtePageViewModel
     }
 
     private bool CanErgaenzeStammdatenAusPdfs()
-        => !IsStammdatenErgaenzungInProgress && Records.Count > 0;
+        => CanStartProtocolPdfOperation()
+           && !IsStammdatenErgaenzungInProgress
+           && Records.Count > 0;
 
     private void CancelStammdatenErgaenzung()
     {
@@ -40,30 +42,51 @@ public sealed partial class SchaechtePageViewModel
 
     private async Task ErgaenzeStammdatenAusPdfsAsync()
     {
-        var projektOrdner = _shell.GetProjectFolder();
+        if (!TryBeginProtocolPdfOperation("PDF-Stammdaten-Nachlauf"))
+            return;
+
+        try
+        {
+            await ErgaenzeStammdatenAusPdfsCoreAsync();
+        }
+        finally
+        {
+            EndProtocolPdfOperation();
+        }
+    }
+
+    private async Task ErgaenzeStammdatenAusPdfsCoreAsync()
+    {
+        const string dialogTitle = "PDF-Stammdaten ergänzen";
+        var projectContext = new ProjectOperationContext(
+            _shell.Project,
+            _settings.LastProjectPath);
+        var projectRecords = projectContext.Project.SchaechteData;
+        var projektOrdner = ProjectFileLocator.ProjectRootFromFile(projectContext.ProjectPath);
         if (string.IsNullOrWhiteSpace(projektOrdner))
         {
-            _dialogs.Info("Kein Projekt geoeffnet.", "PDF-Stammdaten ergaenzen");
+            _dialogs.Info("Kein Projekt geöffnet.", dialogTitle);
             return;
         }
 
         if (!_dialogs.ConfirmWarn(
-                "Fehlende Schachtform, Dimension und Schachttiefe werden aus den bereits vorhandenen PDFs ergaenzt.\n\n" +
-                "Vorhandene Eintraege bleiben unveraendert. Der Vorgang kann bei vielen PDFs einige Minuten dauern.",
-                "PDF-Stammdaten ergaenzen"))
+                "Fehlende Schachtform, Dimension und Schachttiefe werden aus den bereits vorhandenen PDFs ergänzt.\n\n" +
+                "Vorhandene Einträge bleiben unverändert. Der Vorgang kann bei vielen PDFs einige Minuten dauern.",
+                dialogTitle))
             return;
 
         List<SchachtStammdatenQuelle> quellen;
         lock (_shell.CollectionLock)
         {
-            quellen = Records
+            quellen = projectRecords
                 .Select(record => new SchachtStammdatenQuelle(
                     record.Id,
                     ResolveSchachtNummer(record),
                     record.GetFieldValue("PDF_Path"),
                     record.GetFieldValue("Link"),
                     record.GetFieldValue("Schachtform"),
-                    record.GetFieldValue("Dimension"),
+                    // Die Masse leben in zwei Zahlenfeldern; fuer "fehlt noch" genuegt das erste.
+                    record.GetFieldValue(Domain.Models.SchachtFeldnamen.Feld(record, Domain.Models.FieldKeys.ShaftDimension1Mm)),
                     record.GetFieldValue("Schachttiefe")))
                 .ToList();
         }
@@ -73,7 +96,7 @@ public sealed partial class SchaechtePageViewModel
         var cancellationToken = _stammdatenErgaenzungCts.Token;
         IsStammdatenErgaenzungInProgress = true;
         StammdatenErgaenzungProgress = 0;
-        StammdatenErgaenzungText = "Vorhandene Schacht-PDFs werden geprueft ...";
+        StammdatenErgaenzungText = "Vorhandene Schacht-PDFs werden geprüft ...";
 
         var progress = new Progress<SchachtStammdatenErgaenzungsFortschritt>(p =>
         {
@@ -94,8 +117,14 @@ public sealed partial class SchaechtePageViewModel
                 cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
+            if (!ProjectIsStillOpen(
+                    projectContext,
+                    dialogTitle,
+                    ProjectOperationImpact.None))
+                return;
+
             var applyResult = SchachtStammdatenResultApplier.Apply(
-                Records,
+                projectRecords,
                 result,
                 beforeApply: () =>
                 {
@@ -105,31 +134,40 @@ public sealed partial class SchaechtePageViewModel
 
             if (applyResult.ChangedShaftCount > 0)
             {
+                var project = projectContext.Project;
+                project.ModifiedAtUtc = DateTime.UtcNow;
+                project.Dirty = true;
+                if (!ProjectIsStillOpen(
+                        projectContext,
+                        dialogTitle,
+                        ProjectOperationImpact.ProjectDataChanged))
+                    return;
+
                 _shell.MarkProjectDirty();
-                if (!_shell.TrySaveProject())
+                if (!_saveProjectForProtocolImport())
                 {
                     _dialogs.Warn(
-                        "Die Werte wurden in der geoeffneten Ansicht ergaenzt, konnten aber noch nicht gespeichert werden. Bitte erneut speichern.",
-                        "PDF-Stammdaten ergaenzen");
+                        "Die Werte wurden in der geöffneten Ansicht ergänzt, konnten aber noch nicht gespeichert werden. Bitte erneut speichern.",
+                        dialogTitle);
                 }
             }
 
             StammdatenErgaenzungProgress = 100;
             LastResult = applyResult.Summary;
             StammdatenErgaenzungText = applyResult.Summary;
-            _dialogs.Info(applyResult.DialogText, "PDF-Stammdaten ergaenzen");
+            _dialogs.Info(applyResult.DialogText, dialogTitle);
         }
         catch (OperationCanceledException)
         {
-            LastResult = "PDF-Stammdaten: Vorgang abgebrochen. Es wurden keine Werte uebernommen.";
+            LastResult = "PDF-Stammdaten: Vorgang abgebrochen. Es wurden keine Werte übernommen.";
             StammdatenErgaenzungText = LastResult;
         }
         catch (Exception ex)
         {
-            LastResult = "PDF-Stammdaten konnten nicht ergaenzt werden: "
+            LastResult = "PDF-Stammdaten konnten nicht ergänzt werden: "
                          + UserError.DescribeAndReport(ex, "Schacht-PDF-Stammdaten");
             StammdatenErgaenzungText = LastResult;
-            _dialogs.Warn(LastResult, "PDF-Stammdaten ergaenzen");
+            _dialogs.Warn(LastResult, dialogTitle);
         }
         finally
         {

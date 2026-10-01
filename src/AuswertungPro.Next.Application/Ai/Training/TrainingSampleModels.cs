@@ -57,6 +57,39 @@ public static class SourceTypeNames
     public const string ImportedProtocol = "ImportedProtocol";
 }
 
+/// <summary>
+/// Woher die menschliche Entscheidung stammt: mit oder ohne sichtbaren
+/// Modellvorschlag. <see cref="Unknown"/> ist der Standard und gilt fuer den
+/// gesamten Altbestand — unbekannt zaehlt bewusst nicht als unabhaengig.
+/// </summary>
+public enum TrainingSampleSuggestionOrigin
+{
+    Unknown = 0,
+    Independent = 1,
+    SuggestionShown = 2
+}
+
+/// <summary>
+/// Haelt fest, ob dem Menschen beim Codieren ein Modellvorschlag sichtbar war
+/// und von welchem Modell er stammte. Ein Copilot verzerrt die Daten, die er
+/// selbst erzeugt; ohne diese Angabe laesst sich spaeter nicht mehr trennen,
+/// was der Mensch selbst gefunden und was er nur bestaetigt hat.
+/// </summary>
+public sealed class TrainingSampleSuggestionProvenance
+{
+    public TrainingSampleSuggestionOrigin Origin { get; set; }
+
+    /// <summary>ID des gepinnten Kandidaten, der den Vorschlag erzeugt hat.</summary>
+    public string? ModelId { get; set; }
+
+    /// <summary>SHA-256 des Gewichts — bindet den Vorschlag an genau ein Artefakt.</summary>
+    public string? ModelSha256 { get; set; }
+
+    public string? SuggestedCode { get; set; }
+
+    public double? SuggestedConfidence { get; set; }
+}
+
 public sealed class TrainingSample
 {
     public string SampleId { get; set; } = string.Empty;
@@ -65,6 +98,19 @@ public sealed class TrainingSample
     public string Beschreibung { get; set; } = string.Empty;
     public double MeterStart { get; set; }
     public double MeterEnd { get; set; }
+
+    /// <summary>
+    /// Wahr, wenn zur Quelle gar kein Meterstand vorlag. <see cref="MeterStart"/>
+    /// und <see cref="MeterEnd"/> stehen dann auf 0 und sind KEIN Messwert.
+    ///
+    /// Bewusst ein Kennzeichen statt eines nullbaren Typs — dasselbe Muster wie
+    /// BendSuggestion.MeterIsEstimated und das Feld VSA_Geschaetzt. Das haelt den
+    /// Altbestand gueltig: Ein fehlendes Feld liest sich als false und bedeutet
+    /// damit "Meter bekannt", so wie es bisher immer gemeint war
+    /// (Codeaudit 2026-08-17).
+    /// </summary>
+    public bool MeterIsUnknown { get; set; }
+
     public bool IsStreckenschaden { get; set; }
     public double TimeSeconds { get; set; }
     public double? DetectedMeter { get; set; }
@@ -92,6 +138,25 @@ public sealed class TrainingSample
 
     /// <summary>Herkunft des Samples, siehe SourceTypeNames.</summary>
     public string? SourceType { get; set; }
+
+    /// <summary>
+    /// War beim Codieren ein Modellvorschlag sichtbar? Fehlt das Feld, gilt die
+    /// Herkunft als unbekannt und das Sample taugt nicht zum Messen.
+    /// Siehe <see cref="SuggestionProvenancePolicy"/>.
+    /// </summary>
+    public TrainingSampleSuggestionProvenance? SuggestionProvenance { get; set; }
+
+    /// <summary>
+    /// Urspruenglicher Code einer externen, bereits codierten Referenz.
+    /// Der persoenlich bestaetigte finale <see cref="Code"/> darf davon abweichen.
+    /// </summary>
+    public string? SourceReferenceCode { get; set; }
+
+    /// <summary>
+    /// Urspruenglicher Befundtext einer externen Referenz. Er bleibt neben einer
+    /// persoenlichen Korrektur erhalten und ist kein automatischer KI-Vorschlag.
+    /// </summary>
+    public string? SourceReferenceDescription { get; set; }
 
     /// <summary>Strukturierte VSA-Zusatzdaten aus Import oder Codiermodus.</summary>
     public ProtocolEntryCodeMeta? CodeMeta { get; set; }
@@ -183,6 +248,19 @@ public sealed class TrainingSample
     /// Objekte (Format "...|b:x,y,w,h", je 3 Dezimalstellen, InvariantCulture).
     /// Ohne Box bleibt das 4-Teiler-Format — Legacy-Daten bleiben gueltig.
     /// </summary>
+    /// <param name="meterIsUnknown">
+    /// Wahr, wenn zur Quelle gar kein Meterstand vorlag. Dann steht in der
+    /// Signatur ein Fragezeichen statt einer Zahl: Ein Befund ohne bekannten Ort
+    /// ist etwas anderes als einer am Rohranfang, und genau diese Verwechslung
+    /// hat 809 von 1787 Goldsamples auf Meter 0,00 gesetzt — darunter 25-mal
+    /// BCE (Rohrende), das dort per Definition nicht liegen kann
+    /// (Codeaudit 2026-08-17).
+    ///
+    /// Der Standardwert false haelt jede bestehende Signatur unveraendert:
+    /// Altdaten ohne dieses Feld gelten weiterhin als "Meter bekannt", sonst
+    /// griffe die Dublettensperre nicht mehr und erneutes Akzeptieren legte
+    /// Zweitstuecke an.
+    /// </param>
     public static string BuildCanonicalSignature(
         string caseId,
         string code,
@@ -191,11 +269,14 @@ public sealed class TrainingSample
         double? bboxXCenter,
         double? bboxYCenter,
         double? bboxWidth,
-        double? bboxHeight)
+        double? bboxHeight,
+        bool meterIsUnknown = false)
     {
         var rc = Math.Round(meterCenter, 1);
         var re = Math.Round(meterEnd, 1);
-        var baseSignature = $"{caseId}|{code}|{rc:F1}|{re:F1}";
+        var baseSignature = meterIsUnknown
+            ? $"{caseId}|{code}|?|?"
+            : $"{caseId}|{code}|{rc:F1}|{re:F1}";
         if (bboxXCenter is null || bboxYCenter is null || bboxWidth is null || bboxHeight is null)
             return baseSignature;
 

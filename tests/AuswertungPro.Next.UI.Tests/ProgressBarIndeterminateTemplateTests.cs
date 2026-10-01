@@ -72,15 +72,18 @@ public sealed class ProgressBarIndeterminateTemplateTests
     /// <summary>Baut eine ProgressBar mit dem echten Controls.xaml-Style in einem gerenderten Fenster.</summary>
     private static ProgressBar CreateThemedProgressBar(bool indeterminate)
     {
-        var controls = new ResourceDictionary();
-        controls.Add(typeof(ProgressBar), LoadProgressBarStyleFromTheme());
-
         var bar = new ProgressBar
         {
             Width = 200,
             IsIndeterminate = indeterminate,
             Minimum = 0,
-            Maximum = 100
+            Maximum = 100,
+            // Optikanalyse 28.09.2026, Aufgabe 11 Fix-Runde 1: die Vorlage (Spur/Indikator/
+            // Wanderstreif) steht seither nur noch EINMAL im gemeinsamen Basisstil
+            // "ProgressBarBaseFuerZweiHoehen"; ProgressBarThin/Standard UND der implizite
+            // Fallback sind BasedOn darauf. Der Stil wird deshalb direkt gesetzt statt als
+            // impliziter Typ-Stil registriert zu werden.
+            Style = LoadProgressBarStyleFromTheme()
         };
 
         // Ein echtes Fenster: Trigger und Storyboards greifen erst im gerenderten Baum.
@@ -94,7 +97,6 @@ public sealed class ProgressBarIndeterminateTemplateTests
             ShowInTaskbar = false,
             Content = bar
         };
-        window.Resources.MergedDictionaries.Add(controls);
         window.Show();
         PumpFor(TimeSpan.FromMilliseconds(50));
 
@@ -102,23 +104,27 @@ public sealed class ProgressBarIndeterminateTemplateTests
     }
 
     /// <summary>
-    /// Schneidet den echten ProgressBar-Style aus Theme/Controls.xaml und parst nur ihn.
+    /// Schneidet den echten, gemeinsamen ProgressBar-Basisstil aus Theme/Controls.xaml und
+    /// parst nur ihn.
     ///
     /// Warum nicht die ganze Datei: Sie nutzt x:Shared, das nur in kompilierten Woerterbuechern
     /// erlaubt ist. Und nicht ueber pack: — dafuer braucht es eine laufende WPF-Anwendung.
-    /// So wird die gepflegte Definition getestet und nicht eine Kopie im Test.
+    /// So wird die gepflegte Definition getestet und nicht eine Kopie im Test. Seit Fix-Runde 1
+    /// ist "ProgressBarBaseFuerZweiHoehen" die EINE Stelle mit der echten ControlTemplate
+    /// (Spur/Indikator/Wanderstreif) — ProgressBarThin, ProgressBarStandard und der implizite
+    /// Fallback sind alle nur noch BasedOn darauf, ohne eigene Kopie der Vorlage.
     /// </summary>
     private static Style LoadProgressBarStyleFromTheme()
     {
         var xaml = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "Theme", "Controls.xaml"));
 
-        const string marker = "<Style TargetType=\"{x:Type ProgressBar}\">";
+        const string marker = "<Style x:Key=\"ProgressBarBaseFuerZweiHoehen\" TargetType=\"ProgressBar\">";
         var start = xaml.IndexOf(marker, StringComparison.Ordinal);
-        Assert.True(start >= 0, "ProgressBar-Style wurde in Theme/Controls.xaml nicht gefunden.");
+        Assert.True(start >= 0, "ProgressBarBaseFuerZweiHoehen-Style wurde in Theme/Controls.xaml nicht gefunden.");
 
         const string closing = "</Style>";
         var end = xaml.IndexOf(closing, start, StringComparison.Ordinal);
-        Assert.True(end > start, "ProgressBar-Style hat kein schliessendes Tag.");
+        Assert.True(end > start, "ProgressBarBaseFuerZweiHoehen-Style hat kein schliessendes Tag.");
 
         var styleXaml = xaml[start..(end + closing.Length)];
         var document =
@@ -128,7 +134,7 @@ public sealed class ProgressBarIndeterminateTemplateTests
             + "</ResourceDictionary>";
 
         var dictionary = (ResourceDictionary)XamlReader.Parse(document);
-        return (Style)dictionary[typeof(ProgressBar)];
+        return (Style)dictionary["ProgressBarBaseFuerZweiHoehen"];
     }
 
     /// <summary>Laesst den Dispatcher laufen, damit Animationen tatsaechlich Frames erzeugen.</summary>

@@ -107,6 +107,7 @@ public sealed class CodingCurrentMeterResolverTests
 
     [Theory]
     [InlineData("12.34m", 12.34)]
+    [InlineData("12,34m", 12.34)]
     [InlineData(" 12.34 m ", 12.34)]
     [InlineData("12.34", 12.34)]
     public void ParseDisplayedMeterOrZero_reads_invariant_meter_text(

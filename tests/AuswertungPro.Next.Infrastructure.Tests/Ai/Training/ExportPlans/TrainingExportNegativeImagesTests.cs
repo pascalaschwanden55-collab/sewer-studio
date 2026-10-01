@@ -169,6 +169,160 @@ public sealed class TrainingExportNegativeImagesTests : IDisposable
         Assert.Equal(TrainingExportTarget.Validation, negative.Target);
     }
 
+    [Fact]
+    public void Streng_gebundenes_Negativ_traegt_echte_Haltung_und_Split_im_Plan()
+    {
+        var source = CreateFile("frame.png", PngBytes);
+        var bound = BindNegative(
+            CreateNegative("neg_bound.bmp", BmpBytes(0x45)),
+            "638910-1367",
+            TrainingExportTarget.Validation);
+
+        var bundle = CreateBundle(source, TrainingExportHoldingRole.Train, [bound]);
+
+        var negative = Assert.Single(bundle.Plan.Images, image => image.IsNegative);
+        Assert.Equal("638910-1367", negative.HoldingKey);
+        Assert.Equal(TrainingExportTarget.Validation, negative.Target);
+        Assert.Contains("638910-1367", bundle.Plan.ValidationHoldingKeys);
+        Assert.DoesNotContain(TrainingExportNegativePool.HoldingKey, bundle.Plan.ValidationHoldingKeys);
+    }
+
+    [Fact]
+    public void Gebundene_Gegenrichtungen_mit_widerspruechlichem_Split_stoppen()
+    {
+        var source = CreateFile("frame.png", PngBytes);
+        var train = BindNegative(
+            CreateNegative("neg_train.bmp", BmpBytes(0x46)),
+            "100-200",
+            TrainingExportTarget.Train);
+        var validation = BindNegative(
+            CreateNegative("neg_val.bmp", BmpBytes(0x47)),
+            "200-100",
+            TrainingExportTarget.Validation);
+
+        var error = Assert.Throws<TrainingExportPlanException>(() =>
+            CreateBundle(source, TrainingExportHoldingRole.Train, [train, validation]));
+
+        Assert.Contains("Haltung", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Train", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Gebundenes_Negativ_mit_beliebigem_Haltungstext_stoppt_den_Plan()
+    {
+        var source = CreateFile("frame.png", PngBytes);
+        var bound = BindNegative(
+            CreateNegative("neg_invalid_holding.bmp", BmpBytes(0x4A)),
+            "keine-haltung",
+            TrainingExportTarget.Train);
+
+        var error = Assert.Throws<TrainingExportPlanException>(() =>
+            CreateBundle(source, TrainingExportHoldingRole.Train, [bound]));
+
+        Assert.Contains("Haltung", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Schachtpaar", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Gebundene_Negativ_Haltung_in_geschuetzter_Gegenrichtung_stoppt_den_Plan()
+    {
+        var source = CreateFile("frame.png", PngBytes);
+        var bound = BindNegative(
+            CreateNegative("neg_eval.bmp", BmpBytes(0x48)),
+            "200-100",
+            TrainingExportTarget.Train);
+
+        var error = Assert.Throws<TrainingExportPlanException>(() =>
+            CreateBundle(
+                source,
+                TrainingExportHoldingRole.Train,
+                [bound],
+                protectedHoldingKeys: new HashSet<string> { "100-200" }));
+
+        Assert.Contains("Eval", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Haltung", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Gebundenes_Negativ_mit_falscher_aktiver_Klassenkarte_stoppt_den_Plan()
+    {
+        var source = CreateFile("frame.png", PngBytes);
+        var bound = BindNegative(
+            CreateNegative("neg_wrong_class_map.bmp", BmpBytes(0x4B)),
+            "100-200",
+            TrainingExportTarget.Train);
+        var wrongClassMap = new TrainingYoloClassMapSnapshot(
+            YoloDetectClassMapV3.Version,
+            new string('d', 64),
+            YoloDetectClassMapV3.Classes,
+            [],
+            classMapSha256: new string('8', 64));
+
+        var error = Assert.Throws<TrainingExportPlanException>(() =>
+            CreateBundle(
+                source,
+                TrainingExportHoldingRole.Train,
+                [bound],
+                classMap: wrongClassMap));
+
+        Assert.Contains("Klassenkarte", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task InputBuilder_blockiert_gebundene_Negativ_Haltung_in_geschuetzter_Gegenrichtung()
+    {
+        var bound = BindNegative(
+            CreateNegative("neg_input_eval.bmp", BmpBytes(0x49)),
+            "200-100",
+            TrainingExportTarget.Train);
+        var registry = CreateRegistry(
+            TrainingExportHoldingRole.Train,
+            [bound]);
+        var inventory = CreateInventorySnapshot(
+            protectedHoldingKeys: new HashSet<string> { "100-200" });
+        var classMap = CreateActiveClassMap();
+
+        var error = await Assert.ThrowsAsync<TrainingExportPlanException>(() =>
+            new TrainingExportPlanInputBuilder().BuildAsync(
+                inventory,
+                registry,
+                new HashSet<string>(),
+                classMap,
+                DateTimeOffset.Parse("2026-07-17T08:00:00Z")));
+
+        Assert.Contains("Eval", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Haltung", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task InputBuilder_blockiert_striktes_Negativ_mit_falschem_Klassenkarten_Hash()
+    {
+        var bound = BindNegative(
+            CreateNegative("neg_input_class_map.bmp", BmpBytes(0x4C)),
+            "300-400",
+            TrainingExportTarget.Train);
+        var registry = CreateRegistry(
+            TrainingExportHoldingRole.Train,
+            [bound]);
+        var inventory = CreateInventorySnapshot(new HashSet<string> { "900-901" });
+        var wrongClassMap = new TrainingYoloClassMapSnapshot(
+            YoloDetectClassMapV3.Version,
+            new string('d', 64),
+            YoloDetectClassMapV3.Classes,
+            [],
+            classMapSha256: new string('8', 64));
+
+        var error = await Assert.ThrowsAsync<TrainingExportPlanException>(() =>
+            new TrainingExportPlanInputBuilder().BuildAsync(
+                inventory,
+                registry,
+                new HashSet<string>(),
+                wrongClassMap,
+                DateTimeOffset.Parse("2026-07-17T08:00:00Z")));
+
+        Assert.Contains("Klassenkarte", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ── Hilfen ───────────────────────────────────────────────────────────
 
     private string CreateFile(string name, byte[] bytes)
@@ -188,28 +342,47 @@ public sealed class TrainingExportNegativeImagesTests : IDisposable
             SplitHint: null);
     }
 
+    private static TrainingExportNegativeImage BindNegative(
+        TrainingExportNegativeImage negative,
+        string holdingKey,
+        TrainingExportTarget split)
+    {
+        var parts = holdingKey.Split('-', StringSplitOptions.None);
+        var physicalHoldingKey = parts.Length == 2
+            ? StringComparer.Ordinal.Compare(parts[0], parts[1]) <= 0
+                ? $"{parts[0]}|{parts[1]}"
+                : $"{parts[1]}|{parts[0]}"
+            : holdingKey;
+        return negative with
+        {
+            NegativeSourceType = "reviewed_negative_set",
+            HoldingKey = holdingKey,
+            PhysicalHoldingKey = physicalHoldingKey,
+            SplitHint = split,
+            NegativeSetId = new string('a', 64),
+            NegativeSetManifestSha256 = new string('6', 64),
+            QueueId = new string('b', 64),
+            ReviewSha256 = new string('7', 64),
+            QueueManifestSha256 = new string('8', 64),
+            CandidatesSha256 = new string('c', 64),
+            ClassMapVersion = 3,
+            ClassMapSha256 = new string('9', 64),
+            VsaManifestHash = new string('d', 64),
+            ReviewItemId = "bcc-hn-review-item",
+            ReviewDecision = "all_classes_clear"
+        };
+    }
+
     private TrainingExportPlanBundle CreateBundle(
         string sourcePath,
         TrainingExportHoldingRole role,
         IReadOnlyList<TrainingExportNegativeImage>? negatives = null,
-        IReadOnlySet<string>? protectedImageHashes = null)
+        IReadOnlySet<string>? protectedImageHashes = null,
+        IReadOnlySet<string>? protectedHoldingKeys = null,
+        TrainingYoloClassMapSnapshot? classMap = null)
     {
-        var classMap = new TrainingYoloClassMapSnapshot(
-            YoloDetectClassMapV2.Version,
-            new string('a', 64),
-            YoloDetectClassMapV2.Classes,
-            []);
-        var registry = new TrainingExportRegistrySnapshot(
-            TrainingExportRegistrySnapshot.CurrentSchemaVersion,
-            new string('b', 64),
-            TrainingExportRegistryApprovalStatus.Approved,
-            "Test User",
-            DateTimeOffset.Parse("2026-07-17T08:00:00Z"),
-            new Dictionary<string, TrainingExportHoldingRole> { ["100-200"] = role },
-            [new TrainingExportProtectedSetReference(
-                "dev-val-v1",
-                TrainingExportProtectedSetRole.DevelopmentValidation,
-                new string('c', 64))]);
+        classMap ??= CreateActiveClassMap();
+        var registry = CreateRegistry(role, negatives);
         return new TrainingExportPlanService().CreatePlan(new TrainingExportPlanRequest(
             [new TrainingExportPlanCandidate(
                 new TrainingExportSourceRef(TrainingExportSourceType.TrainingSample, "sample-1"),
@@ -231,12 +404,117 @@ public sealed class TrainingExportNegativeImagesTests : IDisposable
             },
             true,
             protectedImageHashes ?? new HashSet<string>(),
-            new HashSet<string>(),
+            protectedHoldingKeys ?? new HashSet<string>(),
             DateTimeOffset.Parse("2026-07-17T08:00:00Z"))
         {
             NegativeImages = negatives ?? []
         });
     }
+
+    private static TrainingYoloClassMapSnapshot CreateActiveClassMap()
+        => new(
+            YoloDetectClassMapV3.Version,
+            new string('d', 64),
+            YoloDetectClassMapV3.Classes,
+            [],
+            classMapSha256: new string('9', 64));
+
+    private static TrainingExportRegistrySnapshot CreateRegistry(
+        TrainingExportHoldingRole role,
+        IReadOnlyList<TrainingExportNegativeImage>? negatives = null)
+        => new(
+            TrainingExportRegistrySnapshot.CurrentSchemaVersion,
+            new string('b', 64),
+            TrainingExportRegistryApprovalStatus.Approved,
+            "Test User",
+            DateTimeOffset.Parse("2026-07-17T08:00:00Z"),
+            new Dictionary<string, TrainingExportHoldingRole> { ["100-200"] = role },
+            [new TrainingExportProtectedSetReference(
+                "dev-val-v1",
+                TrainingExportProtectedSetRole.DevelopmentValidation,
+                new string('c', 64))])
+        {
+            NegativeImages = negatives ?? []
+        };
+
+    private static TrainingDataInventoryRuntimeSnapshot CreateInventorySnapshot(
+        IReadOnlySet<string> protectedHoldingKeys)
+    {
+        var setRoot = Path.Combine(Path.GetTempPath(), "training-export-negative-tests", "eval");
+        var knowledgeRoot = Path.Combine(
+            Path.GetTempPath(),
+            "training-export-negative-tests",
+            "knowledge");
+        var sources = new[]
+        {
+            CreateInventorySource(
+                Path.Combine(knowledgeRoot, "teacher_annotations.json"),
+                TrainingInventoryDataKind.TeacherAnnotations,
+                new string('a', 64)),
+            CreateInventorySource(
+                Path.Combine(knowledgeRoot, "training_samples.json"),
+                TrainingInventoryDataKind.TrainingSamples,
+                new string('b', 64))
+        };
+        var status = new TrainingInventoryEvalProtectionStatus
+        {
+            ImageHashCheckEnabled = true,
+            Sets =
+            [
+                new TrainingInventoryEvalSetStatus
+                {
+                    RootPath = setRoot,
+                    ImageFiles = 1,
+                    ManifestImageHashes = 1,
+                    VerifiedImageHashes = 1,
+                    HoldingKeys = protectedHoldingKeys.Count,
+                    ImageHashesComplete = true,
+                    HoldingKeysComplete = true
+                }
+            ]
+        };
+        return new TrainingDataInventoryRuntimeSnapshot(
+            new TrainingDataInventoryReport
+            {
+                KnowledgeRoot = knowledgeRoot,
+                RunId = "11111111111111111111111111111111",
+                GeneratedUtc = DateTimeOffset.Parse("2026-07-17T08:00:00Z"),
+                EvalSetRoot = setRoot,
+                SearchRoots = [knowledgeRoot],
+                ProtectedRoots = [setRoot],
+                EvalProtection = status,
+                Sources = sources,
+                Summary = TrainingInventorySummaryBuilder.Build([], sources)
+            },
+            [],
+            [],
+            new TrainingInventoryProtectionSnapshot(
+                status,
+                new HashSet<string>(),
+                protectedHoldingKeys,
+                [new TrainingInventoryProtectedSetSnapshot(
+                    "dev-val-v1",
+                    setRoot,
+                    new string('c', 64))],
+                new string('f', 64)));
+    }
+
+    private static TrainingInventorySourceDocument CreateInventorySource(
+        string path,
+        TrainingInventoryDataKind dataKind,
+        string sha256)
+        => new()
+        {
+            Path = path,
+            DataKind = dataKind,
+            Role = TrainingInventorySourceRole.Current,
+            Bytes = 2,
+            LastWriteUtc = DateTimeOffset.Parse("2026-07-17T07:00:00Z"),
+            Sha256 = sha256,
+            ParseState = TrainingInventoryParseState.Parsed,
+            ValidationLevel = TrainingInventoryValidationLevel.TypedRecords,
+            RecordCount = 0
+        };
 
     private static byte[] BmpBytes(byte fill)
     {

@@ -62,7 +62,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var displayPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiButtonDisplayPolicy.cs");
         var settingsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingLiveAiTimerSettings.cs");
 
-        Assert.True(File.Exists(settingsPath), "Live-AI-Timer-Intervalle muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(settingsPath), "Live-AI-Timer-Intervalle müssen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Nutzung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
@@ -311,22 +311,19 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
         var preflightWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingAnalysisPreflightWorkflow.cs");
         var singleModelWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSingleModelAnalysisWorkflow.cs");
-        var multiModelCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelAnalysisCommandWorkflow.cs");
-        var multiModelRuntimeGateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelRuntimeGateWorkflow.cs");
-        var multiModelStartWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelAnalysisStartWorkflow.cs");
+        var multiModelUseCasePath = RepoFile(
+            "src", "AuswertungPro.Next.Application", "UseCases", "CodingEinzelbild", "CodingEinzelbildAnalyseUseCase.cs");
+        var multiModelStatusPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingEinzelbildStatusAnzeige.cs");
         var multiModelInferenceWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingMultiModelInferenceWorkflow.cs");
-        var endMeterResolveWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingEndMeterResolveWorkflow.cs");
         var segmentedFindingsWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSegmentedFindingsBuildWorkflow.cs");
 
         Assert.False(File.Exists(helpersPath), "Gemeinsame Coding-AI-Adapter sollen kein PlayerWindow-Partial mehr sein.");
         Assert.True(File.Exists(contextPath), "Gemeinsame Coding-AI-Adapter sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(preflightWorkflowPath), "Coding-AI-Preflight-Entscheidungen sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(singleModelWorkflowPath), "Coding-AI-Single-Model-Ablauf soll ausserhalb von PlayerWindow liegen.");
-        Assert.True(File.Exists(multiModelCommandWorkflowPath), "Coding-AI-Multi-Model-Sequenz soll ausserhalb von PlayerWindow liegen.");
-        Assert.True(File.Exists(multiModelRuntimeGateWorkflowPath), "Coding-AI-Multi-Model-Runtime-Gate soll ausserhalb von PlayerWindow liegen.");
-        Assert.True(File.Exists(multiModelStartWorkflowPath), "Coding-AI-Multi-Model-Startablauf soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(multiModelUseCasePath), "Coding-AI-Multi-Model-Ablauf soll als Anwendungsfall ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(multiModelStatusPath), "Coding-AI-Multi-Model-Statusanzeige soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(multiModelInferenceWorkflowPath), "Coding-AI-Multi-Model-Inferenzablauf soll ausserhalb von PlayerWindow liegen.");
-        Assert.True(File.Exists(endMeterResolveWorkflowPath), "Coding-Endmeter-Gate soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(segmentedFindingsWorkflowPath), "SegmentedFinding-Build-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
@@ -336,11 +333,9 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var windowRoot = File.ReadAllText(windowRootPath);
         var preflightWorkflow = File.ReadAllText(preflightWorkflowPath);
         var singleModelWorkflow = File.ReadAllText(singleModelWorkflowPath);
-        var multiModelCommandWorkflow = File.Exists(multiModelCommandWorkflowPath) ? File.ReadAllText(multiModelCommandWorkflowPath) : "";
-        var multiModelRuntimeGateWorkflow = File.Exists(multiModelRuntimeGateWorkflowPath) ? File.ReadAllText(multiModelRuntimeGateWorkflowPath) : "";
-        var multiModelStartWorkflow = File.ReadAllText(multiModelStartWorkflowPath);
+        var multiModelUseCase = File.ReadAllText(multiModelUseCasePath);
+        var multiModelStatus = File.ReadAllText(multiModelStatusPath);
         var multiModelInferenceWorkflow = File.ReadAllText(multiModelInferenceWorkflowPath);
-        var endMeterResolveWorkflow = File.Exists(endMeterResolveWorkflowPath) ? File.ReadAllText(endMeterResolveWorkflowPath) : "";
         var segmentedFindingsWorkflow = File.ReadAllText(segmentedFindingsWorkflowPath);
         var playerWindowPartials = string.Join(
             Environment.NewLine,
@@ -378,23 +373,24 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("actions.TryReadAnalyzedFrameOsdMeterAsync", singleModelWorkflow);
         Assert.Contains("result with { MeterReading = frameOsdMeter }", singleModelWorkflow);
         Assert.Contains("\"Frame nicht extrahierbar\"", singleModelWorkflow);
-        Assert.Contains("CodingMultiModelAnalysisCommandWorkflow.ExecuteAsync", multiModel);
-        Assert.Contains("CodingMultiModelRuntimeGateWorkflow.Execute", multiModelCommandWorkflow);
-        Assert.Contains("request.MultiModel is null", multiModelRuntimeGateWorkflow);
-        Assert.Contains("request.AnalysisCancellation is null", multiModelRuntimeGateWorkflow);
-        Assert.Contains("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", multiModel);
-        Assert.Contains("CodingMultiModelInferenceWorkflow.ExecuteAsync", multiModel);
-        Assert.Contains("CodingEndMeterResolveWorkflow.Execute", multiModel);
-        Assert.Contains("if (!request.HasCodingViewModel)", endMeterResolveWorkflow);
-        Assert.Contains("actions.ResolveEndMeter()", endMeterResolveWorkflow);
+        // Verhalten des Ablaufs: CodingEinzelbildAnalyseUseCaseTests und CodingEinzelbildAblaufTests.
+        Assert.Contains("CodingEinzelbildAnalyseUseCase.ExecuteAsync", multiModel);
+        Assert.Contains("anfrage.Mehrmodell is not { } mehrmodell", multiModelUseCase);
+        Assert.Contains("anfrage.Abbruchquelle is null", multiModelUseCase);
+        Assert.Contains("schritte.HatCodiersitzung() ? schritte.EndmeterLesen() : null", multiModelUseCase);
+        Assert.Contains("HatCodiersitzung: () => _codingSessionHost.HasViewModel", multiModel);
         Assert.Contains("_codingSessionHost", multiModel);
-        Assert.Contains("actions.StoreAnalyzedFrame(pngBytes, request.CaptureTimestampSeconds)", multiModelStartWorkflow);
-        Assert.Contains("actions.UpdateFrameReadiness", multiModelStartWorkflow);
-        Assert.Contains("\"Schritt 2 von 4: YOLO und DINO\"", multiModelStartWorkflow);
+        Assert.Contains("schritte.AnalysebildMerken(bild, sekunden)", multiModelUseCase);
+        Assert.Contains("schritte.BildbereitschaftAktualisieren", multiModelUseCase);
+        Assert.Contains("\"Schritt 2 von 4: YOLO und DINO\"", multiModelStatus);
+        Assert.Contains("CodingMultiModelClassifierInputPolicy.Build", multiModelUseCase);
         Assert.Contains("CodingMultiModelClassifierInputPolicy.Build", multiModelInferenceWorkflow);
         Assert.Contains("actions.TryHandleBoundaryClassifierResult", multiModelInferenceWorkflow);
         Assert.Contains("actions.TryHandleStructuralClassifierResult", multiModelInferenceWorkflow);
-        Assert.Contains("actions.HandleAnalysisResult(result)", multiModelInferenceWorkflow);
+        Assert.Contains("actions.HandleAnalysisResult(analysis)", multiModelInferenceWorkflow);
+        // Die Verteilung Fehler -> Grenze -> Struktur -> Ergebnis liegt im Anwendungsfall;
+        // Verhalten: CodingEinzelbildAnalyseUseCaseTests.
+        Assert.Contains("CodingEinzelbildAnalyseUseCase.AuswertenAsync", multiModelInferenceWorkflow);
     }
 
     [Fact]

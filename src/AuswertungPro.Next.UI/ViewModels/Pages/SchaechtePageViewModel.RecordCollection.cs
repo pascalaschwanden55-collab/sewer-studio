@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+﻿using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using CommunityToolkit.Mvvm.Input;
 
@@ -16,31 +16,42 @@ public sealed partial class SchaechtePageViewModel
 
     private void Add()
     {
+        if (!EnsureShaftDataMutationAllowed("Schacht anlegen"))
+            return;
+
         var record = RecordCollectionController.Add();
-        SetSelectedWithoutRequiredFieldWarning(record);
+        Selected = record;
         UpdateSearchResultInfo(Records.Count);
         MarkRecordCollectionChanged();
     }
 
     private void Remove()
     {
+        if (!CanMutateRecord(Selected, "Schacht löschen"))
+            return;
+
         if (!RecordCollectionController.TryRemove(Selected, out var nextSelection))
             return;
 
-        SetSelectedWithoutRequiredFieldWarning(nextSelection);
+        Selected = nextSelection;
         UpdateNr();
         UpdateSearchResultInfo(Records.Count);
         MarkRecordCollectionChanged();
     }
 
     private bool CanMoveUp()
-        => RecordCollectionController.CanMoveUp(Selected);
+        => CanMutateShaftData
+           && RecordCollectionController.CanMoveUp(Selected);
 
     private bool CanMoveDown()
-        => RecordCollectionController.CanMoveDown(Selected);
+        => CanMutateShaftData
+           && RecordCollectionController.CanMoveDown(Selected);
 
     private void MoveUp()
     {
+        if (!CanMutateRecord(Selected, "Schacht verschieben"))
+            return;
+
         if (!RecordCollectionController.TryMoveUp(Selected))
             return;
 
@@ -49,6 +60,9 @@ public sealed partial class SchaechtePageViewModel
 
     private void MoveDown()
     {
+        if (!CanMutateRecord(Selected, "Schacht verschieben"))
+            return;
+
         if (!RecordCollectionController.TryMoveDown(Selected))
             return;
 
@@ -60,6 +74,9 @@ public sealed partial class SchaechtePageViewModel
     /// </summary>
     public bool MoveToPosition(int targetPosition)
     {
+        if (!CanMutateRecord(Selected, "Schacht verschieben"))
+            return false;
+
         if (!RecordCollectionController.TryMoveToPosition(Selected, targetPosition))
             return false;
 
@@ -80,20 +97,7 @@ public sealed partial class SchaechtePageViewModel
 
     private void MarkRecordCollectionChanged()
     {
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
+        ScheduleAutoSave();
     }
 
-    private void SetSelectedWithoutRequiredFieldWarning(SchachtRecord? record)
-    {
-        _suppressRequiredFieldWarning = true;
-        try
-        {
-            Selected = record;
-        }
-        finally
-        {
-            _suppressRequiredFieldWarning = false;
-        }
-    }
 }

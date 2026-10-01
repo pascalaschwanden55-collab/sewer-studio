@@ -69,7 +69,7 @@ public partial class MediaSearchWindow : Window
 
     private void Browse_Click(object sender, RoutedEventArgs e)
     {
-        var folder = _dialogs.SelectFolder("Medien-Suchordner waehlen", FolderBox.Text);
+        var folder = _dialogs.SelectFolder("Medien-Suchordner wählen", FolderBox.Text);
         if (!string.IsNullOrWhiteSpace(folder))
             FolderBox.Text = folder;
     }

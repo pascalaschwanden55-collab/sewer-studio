@@ -97,6 +97,22 @@ public sealed class DataPageSanierungCostMapperTests
     }
 
     [Fact]
+    public void ClearAutomaticRecommendation_LeertNurAutomatischGesetzteFelder()
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue("Empfohlene_Sanierungsmassnahmen", "Alt", FieldSource.Unknown, userEdited: false);
+        record.SetFieldValue("Kosten", "1000", FieldSource.Unknown, userEdited: false);
+        record.SetFieldValue("Renovierung_Inliner_m", "12", FieldSource.Manual, userEdited: true);
+
+        var changed = DataPageSanierungCostMapper.ClearAutomaticRecommendation(record);
+
+        Assert.True(changed);
+        Assert.Equal("", record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
+        Assert.Equal("", record.GetFieldValue("Kosten"));
+        Assert.Equal("12", record.GetFieldValue("Renovierung_Inliner_m"));
+    }
+
+    [Fact]
     public void ApplyCosts_schreibt_keine_explizite_null_fuer_anschluesse()
     {
         var record = new HaltungRecord();
@@ -229,7 +245,7 @@ public sealed class DataPageSanierungCostMapperTests
                     {
                         new CostLine { ItemKey = "MANSCHETTE_PER_ST", Text = "Manschette", Qty = 2m, Selected = true },
                         new CostLine { ItemKey = "MANSCHETTE_EDELSTAHL", Text = "Edelstahl", Qty = 1m, Selected = true },
-                        new CostLine { ItemKey = "MANSCHETTE_PER_ST", Text = "nicht gewaehlt", Qty = 5m, Selected = false },
+                        new CostLine { ItemKey = "MANSCHETTE_PER_ST", Text = "nicht gewählt", Qty = 5m, Selected = false },
                     },
                 },
             },

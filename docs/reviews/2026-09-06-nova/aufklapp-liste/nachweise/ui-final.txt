@@ -1,0 +1,91 @@
+Testlauf für "C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\bin\Release\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll" (.NETCoreApp,Version=v10.0)
+VSTest-Version 18.0.2 (x64)
+
+Die Testausführung wird gestartet, bitte warten...
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster überein.
+[xUnit.net 00:00:22.31]     AuswertungPro.Next.UI.Tests.BeobachtungenWindowIsolatedSmokeTests.Kindprozess_oeffnet_Fenster_mit_echten_App_Ressourcen [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.BeobachtungenWindowIsolatedSmokeTests.Kindprozess_oeffnet_Fenster_mit_echten_App_Ressourcen [1 ms]
+[xUnit.net 00:00:24.92]     AuswertungPro.Next.UI.Tests.ComboBoxAnzeigeIsolatedSmokeTests.Kindprozess_ComboBox_zeigt_die_Beschriftung_statt_ToString [SKIP]
+[xUnit.net 00:00:24.92]     AuswertungPro.Next.UI.Tests.DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests.Kindprozess_Spaltenkopf_erscheint_gross_in_beiden_Themes [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.ComboBoxAnzeigeIsolatedSmokeTests.Kindprozess_ComboBox_zeigt_die_Beschriftung_statt_ToString [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataGridColumnHeaderGrossbuchstabenIsolatedSmokeTests.Kindprozess_Spaltenkopf_erscheint_gross_in_beiden_Themes [1 ms]
+[xUnit.net 00:00:27.42]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Haltungsseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [SKIP]
+[xUnit.net 00:00:27.42]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz [SKIP]
+[xUnit.net 00:00:27.42]     AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Haltungsseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_Rohrring_und_KI_Hinweis_folgen_derselben_Entries_Instanz [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.DataPageNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [1 ms]
+[xUnit.net 00:00:33.82]     AuswertungPro.Next.UI.Tests.HaltungAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_die_aufgeklappte_Haltung [SKIP]
+[xUnit.net 00:00:33.82]     AuswertungPro.Next.UI.Tests.HaltungsgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Haltungsgrafik [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.HaltungAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_die_aufgeklappte_Haltung [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.HaltungsgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Haltungsgrafik [1 ms]
+dotnet : [xUnit.net 00:01:36.25]
+AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern [FAIL]
+In Zeile:2 Zeichen:1
++ dotnet test tests/AuswertungPro.Next.UI.Tests -c Release --no-build - ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([xUnit.net 00:0..._Feldern [FAIL]:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+  Fehler AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern [1 m 1 s]
+  Fehlermeldung:
+   Isolierter WPF-Test fehlgeschlagen (Exit-Code 1; Szenario-Bestaetigung fehlt).
+
+stdout:
+VSTest-Version 18.0.2 (x64)
+
+Die Testausf├╝hrung wird gestartet, bitte warten...
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster ├╝berein.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.11]   Discovering: AuswertungPro.Next.UI.Tests
+[xUnit.net 00:00:00.41]   Discovered:  AuswertungPro.Next.UI.Tests
+[xUnit.net 00:00:00.42]   Starting:    AuswertungPro.Next.UI.Tests
+[xUnit.net 00:01:00.46]       Der WPF-Test wurde nicht innerhalb von 60 Sekunden beendet. Er kann blockiert sein oder unter hoher Systemlast zu langsam laufen.
+[xUnit.net 00:01:00.46]       Stack Trace:
+[xUnit.net 00:01:00.46]         C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs(36,0): at AuswertungPro.Next.UI.Tests.StaTestRunner.Run(Action action, Nullable`1 timeout)
+[xUnit.net 00:01:00.46]         C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs(65,0): at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues()
+[xUnit.net 00:01:00.46]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:01:00.46]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:01:00.47]   Finished:    AuswertungPro.Next.UI.Tests
+  Fehler AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [1 m]
+  Fehlermeldung:
+   Der WPF-Test wurde nicht innerhalb von 60 Sekunden beendet. Er kann blockiert sein oder unter hoher Systemlast zu langsam laufen.
+  Stapelverfolgung:
+     at AuswertungPro.Next.UI.Tests.StaTestRunner.Run(Action action, Nullable`1 timeout) in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs:line 36
+   at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues() in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs:line 65
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Gesamtzahl Tests: 1
+     Nicht bestanden: 1
+ Gesamtzeit: 1.0140 Minuten
+
+
+stderr:
+[xUnit.net 00:01:00.46]     AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [FAIL]
+Fehler beim Testlauf.
+
+  Stapelverfolgung:
+     at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern() in C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs:line 58
+--- End of stack trace from previous location ---
+[xUnit.net 00:01:36.25]     AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [SKIP]
+[xUnit.net 00:01:36.25]     AuswertungPro.Next.UI.Tests.NovaPageHeaderIsolatedSmokeTests.Kindprozess_SettingsPage_und_BuilderPage_zeigen_den_Seitenkopf_korrekt [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.NovaPageHeaderIsolatedSmokeTests.Kindprozess_SettingsPage_und_BuilderPage_zeigen_den_Seitenkopf_korrekt [1 ms]
+[xUnit.net 00:01:39.30]     AuswertungPro.Next.UI.Tests.OberflaechenBindungsRauchtestTests.Kindprozess_erzeugt_alle_Bedienelemente [SKIP]
+[xUnit.net 00:01:40.53]     AuswertungPro.Next.UI.Tests.SchachtgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Schachtgrafik_lesbar [SKIP]
+[xUnit.net 00:01:40.53]     AuswertungPro.Next.UI.Tests.SchaechteAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_den_aufgeklappten_Schacht [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.OberflaechenBindungsRauchtestTests.Kindprozess_erzeugt_alle_Bedienelemente [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchachtgrafikControlIsolatedSmokeTests.Kindprozess_zeichnet_die_Schachtgrafik_lesbar [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteAufklappListeIsolatedSmokeTests.Kindprozess_zeigt_das_Formular_nur_fuer_den_aufgeklappten_Schacht [1 ms]
+[xUnit.net 00:01:42.33]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [SKIP]
+[xUnit.net 00:01:42.33]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_Schachtuebersicht_folgt_Datensatzaenderungen_ohne_neue_Bindung [SKIP]
+[xUnit.net 00:01:43.62]     AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Schaechteseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_prueft_Formular_je_Ansicht [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_Schachtuebersicht_folgt_Datensatzaenderungen_ohne_neue_Bindung [1 ms]
+  Übersprungen AuswertungPro.Next.UI.Tests.SchaechteNovaLayoutIsolatedSmokeTests.Kindprozess_baut_Schaechteseite_und_zugeklappte_Eingabefelder_geben_Platz_frei [1 ms]
+[xUnit.net 00:01:48.74]     AuswertungPro.Next.UI.Tests.SettingsPageLayoutIsolatedSmokeTests.Kindprozess_Erste_Gruppe_beginnt_oben [SKIP]
+  Übersprungen AuswertungPro.Next.UI.Tests.SettingsPageLayoutIsolatedSmokeTests.Kindprozess_Erste_Gruppe_beginnt_oben [1 ms]
+Ergebnisdatei: C:\Sewer-Studio_KI_4.5-nova\.tmp\nova-abnahme-codex\final\ui-final.trx
+
+Fehler!      : Fehler:     1, erfolgreich:  6864, übersprungen:    17, gesamt:  6882, Dauer: 3 m 14 s - AuswertungPro.Next.UI.Tests.dll (net10.0)

@@ -173,7 +173,7 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingSidePanelWidthPolicy.cs");
 
-        Assert.True(File.Exists(policyPath), "Breitenentscheidung fuer das Coding-Detailpanel muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(policyPath), "Breitenentscheidung für das Coding-Detailpanel muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var detail = File.ReadAllText(detailPath);
         var policy = File.ReadAllText(policyPath);

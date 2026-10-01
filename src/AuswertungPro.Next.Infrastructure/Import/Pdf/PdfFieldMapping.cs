@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Infrastructure.Import.Common;
 
+using AuswertungPro.Next.Domain.Models;
+
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 public sealed class PdfFieldRule
@@ -163,10 +165,15 @@ public static class PdfPostProcessors
         var trimmed = v.Trim();
         if (trimmed is "-" or "--" or "n/a" or "N/A" or "k.A." or "")
             return "";
-        if (Regex.IsMatch(v, "(?i)Schmutzabwasser|Schmutzwasser")) return "Schmutzwasser";
-        if (Regex.IsMatch(v, "(?i)Regenabwasser|Regenwasser")) return "Regenwasser";
-        if (Regex.IsMatch(v, "(?i)Mischabwasser|Mischwasser")) return "Mischabwasser";
-        return trimmed;
+        // Die Begriffe selbst stehen in NutzungsartVokabular; hier nur das Erkennen
+        // von Teiltexten aus dem PDF ("Nutzungsart: Schmutzabwasser (Trennsystem)").
+        if (Regex.IsMatch(v, "(?i)Schmutzabwasser|Schmutzwasser"))
+            return NutzungsartVokabular.Normalisieren("Schmutzabwasser");
+        if (Regex.IsMatch(v, "(?i)Niederschlagsabwasser|Regenabwasser|Regenwasser"))
+            return NutzungsartVokabular.Normalisieren("Niederschlagsabwasser");
+        if (Regex.IsMatch(v, "(?i)Mischabwasser|Mischwasser"))
+            return NutzungsartVokabular.Normalisieren("Mischabwasser");
+        return NutzungsartVokabular.Normalisieren(trimmed);
     }
 
     private static string NormalizeDn(string v)

@@ -341,6 +341,8 @@ public sealed class KnowledgeRealtimeMirrorService : IKnowledgeRealtimeMirrorSer
             }
 
             _targetRoot = targetRoot;
+            foreach (var warnung in stats.Warnings)
+                _logger.LogWarning("KI-Spiegel: {Warnung}", warnung);
             _logger.LogInformation(
                 "KI-Spiegel aktuell: {Copied} kopiert, {Unchanged} unverändert, {Deleted} entfernt, " +
                 "{Verified} geprüft, {Databases} SQLite-Snapshot(s).",
@@ -448,7 +450,7 @@ public sealed class KnowledgeRealtimeMirrorService : IKnowledgeRealtimeMirrorSer
                                    or NotSupportedException)
         {
             throw new InvalidDataException(
-                $"KI-Quelldatei konnte nicht sicher geprueft werden: {sourcePath}",
+                $"KI-Quelldatei konnte nicht sicher geprüft werden: {sourcePath}",
                 ex);
         }
     }
@@ -531,8 +533,9 @@ public sealed class KnowledgeRealtimeMirrorService : IKnowledgeRealtimeMirrorSer
         }
     }
 
-    private bool IsSourceDirectoryExcluded(string relativePath)
-        => IsReparsePoint(Path.Combine(_sourceRoot, relativePath));
+    // Verknuepfte Ordner werden NICHT hier ausgeschlossen, sondern von DirectoryMirror uebersprungen: Nur so
+    // bleibt ihre bisherige Spiegelkopie erhalten, und die Warnung erscheint (Audit A01, 23.09.2026).
+    private static bool IsSourceDirectoryExcluded(string relativePath) => false;
 
     private bool IsSourceFileExcluded(string relativePath)
     {

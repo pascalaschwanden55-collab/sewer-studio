@@ -1,0 +1,219 @@
+[
+  [
+    "Start, Projektwechsel, Navigation",
+    "Automatisch geprüft",
+    "WPF-Bindungs- und Navigationsprüfungen; Registrierungen und Startpfade untersucht.",
+    "Bedienprobe jeder Seite im frisch gebauten Programm bleibt offen.",
+    "src/AuswertungPro.Next.UI/ServiceProvider.cs"
+  ],
+  [
+    "Projekt öffnen, speichern, retten",
+    "Befund",
+    "JSON-Speicherweg und Sicherungsauswahl gelesen; null-Gegenprobe ausgeführt.",
+    "A03: Falscher Erfolg bei null-Projekt und null-Sicherung.",
+    "src/AuswertungPro.Next.Infrastructure/Projects/JsonProjectRepository.cs"
+  ],
+  [
+    "Haltungen und Felder",
+    "Automatisch geprüft",
+    "Feldmodelle, Bearbeitung, Mehrfachauswahl und Umbenennungsprüfungen in .NET-Suiten.",
+    "Alle realen Feldkombinationen und Tastaturwege nicht manuell durchgespielt.",
+    "src/AuswertungPro.Next.UI/DataPage/DataPageHoldingRenameController.cs"
+  ],
+  [
+    "Schächte und Umbenennung",
+    "Befund",
+    "Echter Dienst mit künstlichen Ordnern ausgeführt; UI-Aufrufpfad nachgewiesen.",
+    "A01 und A02: Originalschutz und Unterordnerverweise.",
+    "src/AuswertungPro.Next.Application/Common/ShaftRenameService.cs"
+  ],
+  [
+    "PDF-Import und OCR",
+    "Automatisch geprüft",
+    "Parser-, OCR-, Seiten-, Wiederholungs- und Verteilungstests; Fehlerbehandlung untersucht.",
+    "Keine neue vollständige Abnahme aller Lieferanten-PDFs.",
+    "src/AuswertungPro.Next.Infrastructure/Import/Pdf"
+  ],
+  [
+    "XTF, M150 und VSA-KEK Import",
+    "Automatisch geprüft",
+    "Parser und neue Importänderungen geprüft; zugehörige Suite besteht nach Umgebungswiederholung.",
+    "Kundendaten-Rundreise in eigener Kopie als Freigabetest ergänzen.",
+    "src/AuswertungPro.Next.Infrastructure/Import/Xtf"
+  ],
+  [
+    "WinCan und IBAK",
+    "Automatisch geprüft",
+    "Erkennung, Befahrungsrollen, Datenbankleser und künstliche Importfälle geprüft.",
+    "Echte vollständige Orchestratorläufe aller Bestände fehlen; bestehende Reader-Nachweise sind enger.",
+    "docs/PROJEKTIMPORT-TERRA-FORTSCHRITT.md"
+  ],
+  [
+    "Import verteilen und Konflikte",
+    "Befund",
+    "Verteilungsdienste, Wiederholung, Konfliktbilanz und Architekturgrenzen untersucht.",
+    "A04; Abbruch erfolgt teilweise nur an Schrittgrenzen. Grosse Kopierlast noch nicht gemessen.",
+    "src/AuswertungPro.Next.Infrastructure/Import/ProjectImportOrchestrator.cs"
+  ],
+  [
+    "Medienzuordnung, Fotos, Gegenbefahrung",
+    "Automatisch geprüft",
+    "Zuordnung, Konfliktfälle und neue Befahrungsrollen über Tests erfasst.",
+    "Gleichnamige Medien und Gegenfahrten mit Kundensatz vollständig abnehmen.",
+    "docs/PROJEKTIMPORT-TERRA-FORTSCHRITT.md"
+  ],
+  [
+    "Video und Protokollbearbeitung",
+    "Automatisch geprüft",
+    "Player-Controller, Zeit-/Meterzuordnung, Protokollabläufe und Bindungen getestet.",
+    "Keine durchgehende manuelle Aufnahme bis zum fertigen Protokoll; native Videoformate nicht alle abgespielt.",
+    "src/AuswertungPro.Next.UI/Views/Windows"
+  ],
+  [
+    "VSA-Codierung und Schattenauswertung",
+    "Automatisch geprüft",
+    "Regeln, Codes, Vorschläge und Berichtsteile in Domain-, Application- und Pipeline-Tests.",
+    "Fachliche Vollständigkeit aller Regelkombinationen nicht neu gegen Normoriginale abgenommen.",
+    "src/AuswertungPro.Next.Application"
+  ],
+  [
+    "PDF-Ausgabe und Druckcenter",
+    "Automatisch geprüft",
+    "Export- und Modelltests; PDF-Korrektur-Aufrufpfade geprüft.",
+    "A01; optische Druckprüfung aller Vorlagen und Drucker offen.",
+    "src/AuswertungPro.Next.Infrastructure/Output"
+  ],
+  [
+    "XTF-Ausgabe und GEONIS",
+    "Befund",
+    "Export, stabile Kennungen und synthetische Rundreise vorhanden und getestet.",
+    "A11: Rückabgleich und Konflikte mit neuerem Zielbestand offen.",
+    "docs/PROJEKTIMPORT-TERRA-FORTSCHRITT.md"
+  ],
+  [
+    "Dossiers und kantonale Auskünfte",
+    "Teilweise geprüft",
+    "Lokale Tests, Datenaufbereitung und Quellregeln erfasst.",
+    "Vier Live-Tests der externen Auskunft wurden übersprungen.",
+    "tests/AuswertungPro.Next.Infrastructure.Tests/Dossiers/Lookup/GeoUrLiveAcceptanceTests.cs"
+  ],
+  [
+    "Sanierungs- und Schachtmatrix",
+    "Automatisch geprüft",
+    "Fachmodelle, Berechnung, Vorgaben und UI-Workflows über vorhandene Suiten.",
+    "Fachliche Vergleichsrechnung mit einem freigegebenen kompletten Auftrag ergänzen.",
+    "src/AuswertungPro.Next.Application"
+  ],
+  [
+    "Kosten, Devis, Angebote, NPK",
+    "Automatisch geprüft",
+    "Kostenmodelle und Ausgabeprüfungen; grosse Berechnungsfunktionen inventarisiert.",
+    "Keine neue Preis- oder Tarifabnahme, kein neues vollständiges Devis gegengerechnet.",
+    "src/AuswertungPro.Next.Infrastructure/Costs"
+  ],
+  [
+    "Karte, Kataster und QGIS",
+    "Teilweise geprüft",
+    "10 QGIS-Brückentests bestanden; Kataster- und Kennungsprüfungen in .NET-Suiten.",
+    "QGIS-Bedienung mit echter Karte und vollständiger Hin-/Rückübertragung offen.",
+    "integrations/qgis"
+  ],
+  [
+    "Datensicherung und Wiederherstellung",
+    "Automatisch geprüft",
+    "Backup-, Pfadschutz-, SQLite-Schnappschuss- und Goldarchivprüfungen ausgeführt.",
+    "A03; kein Wiederaufbau auf einem leeren zweiten Windows-System durchgeführt.",
+    "src/AuswertungPro.Next.Infrastructure/Backup"
+  ],
+  [
+    "Einstellungen und Diagnose",
+    "Teilweise geprüft",
+    "Speicher-/Diagnosetests; laufendes Fenster gezielt als Text gelesen.",
+    "Vollständiger Klicktest durch Sicherheits-/Geometriegrenze des UI-Werkzeugs nicht möglich.",
+    "src/AuswertungPro.Next.UI/ViewModels/Pages"
+  ],
+  [
+    "Nachschlagmenüs",
+    "Befund",
+    "Isolierter WPF-Test zweimal ausgeführt.",
+    "A05: wiederholter Hänger; genaue Ursache noch offen.",
+    "tests/AuswertungPro.Next.UI.Tests/NachschlagKontextmenueTests.cs"
+  ],
+  [
+    "Sidecar: Zugriff und Fehler",
+    "Automatisch geprüft",
+    "572 Tests ohne GPU: Token, Host, Eingabegrössen, Pfade, Fehlermeldungen, Last- und Zustandsregeln.",
+    "Route-spezifisch kleinere frühe Grenzen und längeren Lasttest vorschlagen.",
+    "sidecar/sidecar/main.py"
+  ],
+  [
+    "YOLO: Schäden und Bildklassen",
+    "Befund",
+    "Qualifikationsdatei, aktive Klassenmodellwahl, Verträge und Klassenkarten geprüft.",
+    "A08: alter Detektor gesperrt; fachliche 9/10-Abnahme fehlt.",
+    "sidecar/models/model_qualification.json"
+  ],
+  [
+    "DINO und SAM",
+    "Teilweise geprüft",
+    "Ladepfade, Sperren, Grafikspeicherverwaltung und Fehlerverträge geprüft. GPU-Versuch separat protokolliert.",
+    "Ein Start-/Schematest belegt keine richtige Schadensbox oder Maske.",
+    "sidecar/sidecar/models"
+  ],
+  [
+    "Ollama, Qwen und Wissensdatenbank",
+    "Teilweise geprüft",
+    "Client-, Kontext-, Speicher-, Such- und Fehlerpfade in Tests; Trainingsablehnung gelesen.",
+    "Keine neue fachliche Antwortbewertung. Stille Deindexierungsfehler zusätzlich instrumentieren.",
+    "src/AuswertungPro.Next.UI/Ai/Training/TrainingKnowledgeBaseSampleDeindexer.cs"
+  ],
+  [
+    "Tracking, Zusammenführung und KI-Ablauf",
+    "Automatisch geprüft",
+    "2.562 Pipeline-Tests bestanden. Zusammenführung, Rückfälle, Abbruch und Zustandsregeln erfasst.",
+    "Drei maschinen-/datengebundene Videoprüfungen übersprungen.",
+    "src/AuswertungPro.Next.Infrastructure/Ai/Pipeline"
+  ],
+  [
+    "Meteranzeige, Rohranfang, Rohrende, Bogen",
+    "Teilweise geprüft",
+    "Regeln, Trainingshilfen und vorhandene Mess-/Abnahmewerkzeuge untersucht.",
+    "Historische Messungen nicht als neue Qualitätsmessung gewertet. Klassenweise Videoabnahme offen.",
+    "training/scripts"
+  ],
+  [
+    "Trainingsstudio, Gold-Daten und Export",
+    "Automatisch geprüft",
+    "Freigabe-, Export-, Status-, Trennungs- und Rückgewinnungstests. 37 gezielte Infrastrukturtests im Wiederholungslauf grün.",
+    "Vollständiges reales Training bis zur Freigabe wurde nicht ausgelöst.",
+    "src/AuswertungPro.Next.Infrastructure/Ai/Training"
+  ],
+  [
+    "Python-Trainingshilfen und Review",
+    "Befund",
+    "168 Agent-/Reviewtests, 312 weitere Tests, 13 nur mit Audit-Lader. 166 Unterfälle zusätzlich.",
+    "A06 und A07: Paketkonflikt und fehlende Agentenschritte.",
+    "training/agent/schicht1.py"
+  ],
+  [
+    "Architektur, Schnittstellen, Registrierung",
+    "Befund",
+    "Alle 52 Projekte in der Lösung. Schichtentests und UI-Ai-Freeze-Prüfung laufen mit; Dateien und Deklarationen inventarisiert.",
+    "A04. Dateisystemlogik der Schachtumbenennung liegt weiterhin in Application.",
+    "src/AuswertungPro.Next.UI/ServiceProvider.cs"
+  ],
+  [
+    "Hilfsprogramme und Modernisierung",
+    "Teilweise geprüft",
+    "Alle Lösungsprojekte gebaut; 62 ProjectModernizer-Tests bestanden. Hilfsprogramme im Funktionsinventar.",
+    "Nicht jedes schreibende Kommando gegen echte Daten ausgeführt.",
+    "tools"
+  ],
+  [
+    "Pakete, Build und automatische Prüfung",
+    "Befund",
+    "Isolierter Release-Build: 0 Warnungen, 0 Fehler. NuGet-/Python-Prüfung ausgeführt.",
+    "A09/A10; Standardausgabe durch laufenden MCP-Dienst gesperrt.",
+    "AuswertungPro.sln"
+  ]
+]

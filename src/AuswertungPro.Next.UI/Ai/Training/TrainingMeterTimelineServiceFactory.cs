@@ -21,6 +21,6 @@ public static class TrainingMeterTimelineServiceFactory
             numCtx: cfg.OllamaNumCtx);
         var vision = new OllamaVisionFindingsService(ollamaClient, cfg.VisionModel);
         var osd = new OsdMeterDetectionService(vision);
-        return new MeterTimelineService(cfg, osd, concurrency);
+        return new MeterTimelineService(cfg, osd, concurrency, ownedResource: ollamaClient);
     }
 }

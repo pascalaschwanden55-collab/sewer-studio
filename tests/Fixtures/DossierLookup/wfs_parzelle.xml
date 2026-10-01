@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wfs:FeatureCollection xmlns:wfs="http://www.opengis.net/wfs/2.0"
+                       xmlns:gml="http://www.opengis.net/gml/3.2"
+                       xmlns:av="http://geo.ur.ch/av"
+                       numberMatched="1" numberReturned="1">
+  <wfs:member>
+    <av:ch059_liegenschaften_flaechen gml:id="x.1">
+      <av:grundstueckart>Liegenschaft</av:grundstueckart>
+      <av:nummer>439</av:nummer>
+      <av:egris_egrid>CH114627077847</av:egris_egrid>
+      <av:flaechenmass>1139</av:flaechenmass>
+      <av:url_grundbuch>https://geo.ur.ch/grundbuchauskunft?gem=1206&amp;nr=439</av:url_grundbuch>
+      <av:bfsnr>1206</av:bfsnr>
+      <av:gemeinde>Musterdorf</av:gemeinde>
+      <av:wkb_geometry>
+        <gml:MultiSurface srsName="urn:ogc:def:crs:EPSG::2056">
+          <gml:surfaceMember>
+            <gml:Polygon>
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>2692400.5 1185800.25 2692430.5 1185800.25 2692430.5 1185830.75 2692400.5 1185830.75 2692400.5 1185800.25</gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+          </gml:surfaceMember>
+        </gml:MultiSurface>
+      </av:wkb_geometry>
+    </av:ch059_liegenschaften_flaechen>
+  </wfs:member>
+</wfs:FeatureCollection>

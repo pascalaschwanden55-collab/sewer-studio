@@ -33,6 +33,7 @@ public sealed record QuantRule
     public QuantField? Q1 { get; init; }
     public Dictionary<string, QuantField?>? Q1PerChar1 { get; init; }
     public QuantField? Q2 { get; init; }
+    public Dictionary<string, QuantField?>? Q2PerChar1 { get; init; }
 }
 
 public sealed record QuantField

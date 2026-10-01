@@ -33,7 +33,7 @@ public static class VsaCodeExplorerQuantPanelPresenter
         return new VsaCodeExplorerQuantPanelPresentation(
             ShowNoQuant: noQuant,
             Q1: BuildField("Q1", q1, includeRange: true),
-            Q2: BuildField("Q2", q2, includeRange: false));
+            Q2: BuildField("Q2", q2, includeRange: true));
     }
 
     private static VsaCodeExplorerQuantFieldPresentation BuildField(
@@ -53,8 +53,8 @@ public static class VsaCodeExplorerQuantPanelPresenter
 
         return new VsaCodeExplorerQuantFieldPresentation(
             ShowPanel: true,
-            LabelText: $"{prefix}: {field.Label}",
-            UnitText: field.Einheit ?? "",
+            LabelText: $"{prefix}: {field.Label ?? "Quantifizierung"}",
+            UnitText: field.Einheit ?? "Einheit fehlt",
             RangeText: includeRange ? FormatRange(field) : "",
             ShowRequiredBadge: requiredBadge is not null,
             RequiredBadge: requiredBadge);

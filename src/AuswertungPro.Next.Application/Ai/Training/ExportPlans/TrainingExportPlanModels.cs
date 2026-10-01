@@ -178,6 +178,41 @@ public static class TrainingExportNegativePool
 }
 
 /// <summary>
+/// Richtungsunabhaengige Identitaet einer Haltung. Der im Plan sichtbare
+/// Schluessel behaelt seine Richtung; nur Vergleiche behandeln A-B und B-A gleich.
+/// </summary>
+internal static class TrainingExportHoldingIdentity
+{
+    public static bool IsCompleteNumericPair(string holdingKey)
+    {
+        var normalized = EvalContaminationGuard.NormalizeHaltungKey(holdingKey)
+                         ?? holdingKey.Trim();
+        var parts = normalized.Split('-', StringSplitOptions.None);
+        return parts.Length == 2
+               && parts.All(part =>
+                   part.Length > 0
+                   && part.All(character => character is >= '0' and <= '9'));
+    }
+
+    public static string PhysicalKey(string holdingKey)
+    {
+        var normalized = EvalContaminationGuard.NormalizeHaltungKey(holdingKey)
+                         ?? holdingKey.Trim();
+        var parts = normalized.Split('-', StringSplitOptions.None);
+        if (parts.Length != 2
+            || string.IsNullOrWhiteSpace(parts[0])
+            || string.IsNullOrWhiteSpace(parts[1]))
+        {
+            return normalized;
+        }
+
+        return StringComparer.OrdinalIgnoreCase.Compare(parts[0], parts[1]) <= 0
+            ? $"{parts[0]}|{parts[1]}"
+            : $"{parts[1]}|{parts[0]}";
+    }
+}
+
+/// <summary>
 /// Menschlich kuratiertes Negativ-/Hintergrundbild (schadensfrei). Wird wie
 /// <c>approved_sample_ids</c> im Exportregister freigegeben; optional mit Split-Hinweis —
 /// ohne Hinweis entscheidet der Planer deterministisch ueber den Bild-Hash.
@@ -185,7 +220,53 @@ public static class TrainingExportNegativePool
 public sealed record TrainingExportNegativeImage(
     string Path,
     string Sha256,
-    TrainingExportTarget? SplitHint);
+    TrainingExportTarget? SplitHint)
+{
+    /// <summary>
+    /// Echte, normalisierte Haltung eines streng gebundenen Negativbilds.
+    /// Null kennzeichnet den kompatiblen alten Negativ-Pool.
+    /// </summary>
+    public string? HoldingKey { get; init; }
+
+    /// <summary>Richtungsunabhaengiger Schachtpaar-Schluessel, zum Beispiel 100|200.</summary>
+    public string? PhysicalHoldingKey { get; init; }
+
+    /// <summary>Erzeugertyp der strikten Registry-Zeile.</summary>
+    public string? NegativeSourceType { get; init; }
+
+    /// <summary>Eindeutige ID des menschlich freigegebenen Negativ-Sets.</summary>
+    public string? NegativeSetId { get; init; }
+
+    /// <summary>SHA-256 des eingefrorenen Negativ-Set-Manifests.</summary>
+    public string? NegativeSetManifestSha256 { get; init; }
+
+    /// <summary>ID der eingefrorenen Hard-Negative-Review-Queue.</summary>
+    public string? QueueId { get; init; }
+
+    /// <summary>SHA-256 der vollstaendigen menschlichen Review-Datei.</summary>
+    public string? ReviewSha256 { get; init; }
+
+    /// <summary>SHA-256 des eingefrorenen Review-Queue-Manifests.</summary>
+    public string? QueueManifestSha256 { get; init; }
+
+    /// <summary>SHA-256 der eingefrorenen Queue-Kandidatenliste.</summary>
+    public string? CandidatesSha256 { get; init; }
+
+    /// <summary>Version der fuer das Review gebundenen Detect-Klassenkarte.</summary>
+    public int? ClassMapVersion { get; init; }
+
+    /// <summary>SHA-256 der fuer das Review gebundenen Detect-Klassenkarte.</summary>
+    public string? ClassMapSha256 { get; init; }
+
+    /// <summary>SHA-256 des an die Klassenkarte gebundenen VSA-Manifests.</summary>
+    public string? VsaManifestHash { get; init; }
+
+    /// <summary>Bild-ID aus der menschlich geprueften Queue.</summary>
+    public string? ReviewItemId { get; init; }
+
+    /// <summary>Menschliche Freigabeentscheidung; strikt all_classes_clear.</summary>
+    public string? ReviewDecision { get; init; }
+}
 
 public sealed record TrainingExportPlannedImage(
     string ImageSha256,

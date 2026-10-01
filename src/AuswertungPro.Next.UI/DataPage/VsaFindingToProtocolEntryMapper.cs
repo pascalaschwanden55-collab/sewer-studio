@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -53,10 +54,15 @@ public static class VsaFindingToProtocolEntryMapper
                 Source = ProtocolEntrySource.Imported
             };
 
+            var clock = DataPageProtocolObservationMapper.ApplyClockTextFallback(
+                VsaFindingClockResolver.Resolve(f),
+                entry,
+                f.Raw);
+
             if (!string.IsNullOrWhiteSpace(f.Quantifizierung1)
                 || !string.IsNullOrWhiteSpace(f.Quantifizierung2)
-                || TryFormatClock(f.SchadenlageAnfang) is not null
-                || TryFormatClock(f.SchadenlageEnde) is not null)
+                || clock.Start.HasValue
+                || clock.End.HasValue)
             {
                 var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -64,12 +70,10 @@ public static class VsaFindingToProtocolEntryMapper
                     ["Quantifizierung2"] = f.Quantifizierung2 ?? string.Empty
                 };
 
-                var uhrVon = TryFormatClock(f.SchadenlageAnfang);
-                var uhrBis = TryFormatClock(f.SchadenlageEnde);
-                if (!string.IsNullOrWhiteSpace(uhrVon))
-                    parameters["vsa.uhr.von"] = uhrVon;
-                if (!string.IsNullOrWhiteSpace(uhrBis))
-                    parameters["vsa.uhr.bis"] = uhrBis;
+                if (clock.Start.HasValue)
+                    parameters["vsa.uhr.von"] = clock.Start.Value.ToString(CultureInfo.InvariantCulture);
+                if (clock.End.HasValue)
+                    parameters["vsa.uhr.bis"] = clock.End.Value.ToString(CultureInfo.InvariantCulture);
 
                 entry.CodeMeta = new ProtocolEntryCodeMeta
                 {
@@ -87,9 +91,4 @@ public static class VsaFindingToProtocolEntryMapper
 
         return list;
     }
-
-    private static string? TryFormatClock(double? value)
-        => value is > 0 and <= 12
-            ? value.Value.ToString("0.##", CultureInfo.InvariantCulture)
-            : null;
 }

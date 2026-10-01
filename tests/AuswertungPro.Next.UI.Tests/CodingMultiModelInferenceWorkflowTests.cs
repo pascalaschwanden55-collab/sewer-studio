@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.UseCases.CodingEinzelbild;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Coding;
@@ -6,6 +7,7 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CodingMultiModelInferenceWorkflowTests
 {
+    // Aufnahmebindung des Players: CodingEinzelbildAnalyseUseCaseTests und CodingEinzelbildAblaufTests.
     [Fact]
     public async Task ExecuteAsync_resolves_classifier_input_before_analysis_and_result_handling()
     {

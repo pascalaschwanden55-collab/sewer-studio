@@ -16,8 +16,8 @@ public static class SidecarTokenResolver
     [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(ISidecarTokenResolver resolver)
         => throw new NotSupportedException(
-            "Die globale Sidecar-Token-Aufloesung kann nicht mehr ausgetauscht werden. " +
-            "ISidecarTokenResolver bitte per Konstruktor uebergeben.");
+            "Die globale Sidecar-Token-Auflösung kann nicht mehr ausgetauscht werden. " +
+            "ISidecarTokenResolver bitte per Konstruktor übergeben.");
 
     public static string? Resolve(string? configuredToken = null)
         => Current.Resolve(configuredToken);

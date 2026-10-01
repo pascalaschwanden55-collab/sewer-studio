@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -24,23 +25,43 @@ public partial class VideoAnalysisPipelineWindow : Window
     private PipelinePipeRadarMode _overlayMode = PipelinePipeRadarMode.Detail;
     private LiveFrameWindow? _liveFrameWindow;
 
+    /// <summary>
+    /// Aufgabe 13 (Windows-Integration, 28.09.2026): spiegelt den Fortschritt der Videoanalyse
+    /// am Programmsymbol in der Taskleiste - sichtbar auch, wenn dieses Fenster von anderen
+    /// verdeckt oder minimiert ist. Optional (null bei Aufrufern ohne ServiceProvider).
+    /// </summary>
+    private readonly ITaskbarFortschritt? _taskbar;
+
+    /// <summary>
+    /// Fix-Runde 1, MINOR 5: Vm.SetError("Abgebrochen.") setzt HasError=true wie ein echter
+    /// Fehler (bestehendes, unveraendertes Verhalten der Fehleranzeige im Fenster - siehe
+    /// Vm.HasError-Bindungen in der XAML). Ein Benutzerabbruch ist aber KEIN Fehler; dieses Flag
+    /// haelt das nur fuer die Taskleiste fest, ohne die Fehlerbanner-Anzeige selbst anzufassen.
+    /// </summary>
+    private bool _abgebrochen;
+
     private PipelineResult? _result;
     public PipelineResult? Result => _result;
 
     public VideoAnalysisPipelineViewModel Vm { get; }
 
-    public VideoAnalysisPipelineWindow(PipelineRequest request, IVideoAnalysisPipelineService pipeline)
+    public VideoAnalysisPipelineWindow(
+        PipelineRequest request,
+        IVideoAnalysisPipelineService pipeline,
+        ITaskbarFortschritt? taskbar = null)
     {
         InitializeComponent();
         WindowStateManager.Track(this);
 
         _request = request;
         _pipeline = pipeline;
+        _taskbar = taskbar;
 
         Vm = new VideoAnalysisPipelineViewModel();
         DataContext = Vm;
 
         Vm.Detections.CollectionChanged += OnDetectionsChanged;
+        Vm.PropertyChanged += OnVmPropertyChangedForTaskbar;
         PipeRadarCanvas.SizeChanged += (_, _) => RenderPipeRadar();
         LiveFrameOverlayCanvas.SizeChanged += (_, _) => RenderLiveFrameOverlay();
 
@@ -49,8 +70,41 @@ public partial class VideoAnalysisPipelineWindow : Window
             _cts.Cancel();
             _cts.Dispose();
             Vm.Detections.CollectionChanged -= OnDetectionsChanged;
+            Vm.PropertyChanged -= OnVmPropertyChangedForTaskbar;
+            _taskbar?.Beenden();
             CloseLiveFrameWindow();
         };
+    }
+
+    private void OnVmPropertyChangedForTaskbar(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_taskbar is null)
+            return;
+
+        if (Vm.HasError)
+        {
+            // Ein Abbruch ist kein Fehler (MINOR 5, Fix-Runde 1) - Taskleiste zurueck auf
+            // "keine Anzeige" statt rot.
+            if (_abgebrochen)
+                _taskbar.Beenden();
+            else
+                _taskbar.Fehler();
+            return;
+        }
+
+        if (Vm.IsDone)
+        {
+            _taskbar.Beenden();
+            return;
+        }
+
+        // Zwei nacheinander laufende Phasen (Video, dann Mapping) - solange die Videophase noch
+        // nicht fertig ist, zeigt ihr eigener Anteil den Fortschritt, danach der der Mapping-Phase.
+        var anteil = Vm.VideoPhaseDone ? Vm.MappingProgressPct : Vm.VideoProgressPct;
+        if (anteil > 0)
+            _taskbar.SetzeFortschritt(anteil / 100d);
+        else
+            _taskbar.SetzeUnbestimmt();
     }
 
     private async void Start_Click(object sender, RoutedEventArgs e)
@@ -62,7 +116,7 @@ public partial class VideoAnalysisPipelineWindow : Window
         }
         catch (Exception ex)
         {
-            Vm.SetError(ex.Message);
+            Vm.SetError(UserError.DescribeAndReport(ex, "Videoanalyse"));
         }
     }
 
@@ -70,6 +124,7 @@ public partial class VideoAnalysisPipelineWindow : Window
     {
         using var _aiToken = Services.AiActivityTracker.Begin("Videoanalyse-Pipeline");
         Vm.Reset();
+        _abgebrochen = false;
         _liveFrameFindings.Clear();
 
         // Speed mode from ComboBox
@@ -110,16 +165,15 @@ public partial class VideoAnalysisPipelineWindow : Window
             var visibleDetections = presentation.VisibleDetections;
             ReplaceVisibleDetections(visibleDetections);
 
-            Vm.StatusText = "Fertig. Du kannst jetzt übertragen.";
-            Vm.PhaseLabel = "Fertig";
         }
         catch (OperationCanceledException)
         {
+            _abgebrochen = true;
             Vm.SetError("Abgebrochen.");
         }
         catch (Exception ex)
         {
-            Vm.SetError(ex.Message);
+            Vm.SetError(UserError.DescribeAndReport(ex, "Videoanalyse"));
         }
     }
 

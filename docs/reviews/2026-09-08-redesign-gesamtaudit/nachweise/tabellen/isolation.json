@@ -1,0 +1,17 @@
+{
+  "process": 42656,
+  "productAssembly": "C:\\Sewer-Studio_KI_4.5\\src\\AuswertungPro.Next.UI\\bin\\Release\\net10.0-windows10.0.19041\\SewerStudio.dll",
+  "profile": "C:\\Sewer-Studio_KI_4.5\\.tmp\\redesign-audit-20260908\\tabellen\\profil",
+  "KnowledgeRoot": "C:\\Sewer-Studio_KI_4.5\\.tmp\\redesign-audit-20260908\\tabellen\\wissen",
+  "EvalSetRoot": "C:\\Sewer-Studio_KI_4.5\\.tmp\\redesign-audit-20260908\\tabellen\\wissen\\eval_set",
+  "theme": "Light",
+  "seite": "Haltungen",
+  "breite": 1920,
+  "hoehe": 1080,
+  "applicationOnStartupInvoked": false,
+  "realtimeMirrorStarted": false,
+  "qgisBridgeStarted": false,
+  "QgisHaltungenGpkgPath": "C:\\Sewer-Studio_KI_4.5\\.tmp\\redesign-audit-20260908\\tabellen\\quellen\\leitungen.gpkg",
+  "QgisSchaechteGpkgPath": "C:\\Sewer-Studio_KI_4.5\\.tmp\\redesign-audit-20260908\\tabellen\\quellen\\schaechte.gpkg",
+  "KatasterKennungenGpkgPath": "C:\\Sewer-Studio_KI_4.5\\.tmp\\redesign-audit-20260908\\tabellen\\quellen\\kennungen.gpkg"
+}

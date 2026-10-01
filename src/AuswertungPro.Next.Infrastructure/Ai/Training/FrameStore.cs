@@ -13,7 +13,7 @@ public static class FrameStore
     public static void Use(ITrainingFrameStore store) =>
         throw new NotSupportedException(
             "Der globale Trainings-Frame-Speicher kann nicht mehr ausgetauscht werden. " +
-            "ITrainingFrameStore bitte per Konstruktor uebergeben.");
+            "ITrainingFrameStore bitte per Konstruktor übergeben.");
 
     public static string GetFramesDir(string? customDir = null) =>
         Current.GetFramesDir(customDir);

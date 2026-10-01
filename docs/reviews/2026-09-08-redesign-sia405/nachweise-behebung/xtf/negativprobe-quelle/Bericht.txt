@@ -1,0 +1,19 @@
+Projekt: Synthetische_Abnahme
+Lieferart: vollstaendiger Projektstand.
+
+Im Projekt: 1 Haltungen, 5 Schaechte.
+In die Datei: 1 Haltungen, 5 Schaechte (31 Objekte insgesamt).
+Keine QGIS-Quelle eingerichtet — die Objekte gehen ohne Verlauf hinaus.
+
+Hinweise:
+  1 Haltungen ohne Verlauf in der QGIS-Kopie.
+  TEST0-TEST1: FunktionHierarchisch = "Sammelkanal" hat in SIA405 keinen Wert — nicht geschrieben.
+  15 Zusatzangaben in derselben XTF. Das Zusatzmodell SewerStudio_Zusatz_2026.ili wird mitgeliefert. FME muss diese Angaben ausdruecklich zuordnen; leere Felder loeschen nichts.
+
+Die Objektkennungen bleiben bei jedem Export dieselben. Ein zweiter Lauf
+kann damit bestehende Objekte treffen, sofern die Kennungen im Ziel bestaetigt sind. Bauteile mit
+GEONIS-Kennung ("Katasterkennungen ergaenzen") tragen die Kennung des Katasters.
+Datenherr und Datenlieferant kommen aus ihren Projektfeldern. Ist ein Feld
+leer, gilt der Eigentuemer. Ein gesetzter unbekannter Wert sperrt das Objekt.
+
+Geschrieben: C:\Sewer-Studio_KI_4.5\.tmp\redesign-xtf-validation\ausgabe-20260908-192024\zusatz\Synthetische_Abnahme_20260908_192025.xtf

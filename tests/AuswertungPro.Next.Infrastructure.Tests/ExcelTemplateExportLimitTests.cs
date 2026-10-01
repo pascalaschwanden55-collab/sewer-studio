@@ -54,6 +54,29 @@ public sealed class ExcelTemplateExportLimitTests
         Assert.False(File.Exists(outputPath));
     }
 
+    [Fact]
+    public void ExportSchaechteToTemplate_rejects_oversized_project_before_loading_workbook()
+    {
+        using var directory = new TempDirectory();
+        var templatePath = Path.Combine(directory.Path, "placeholder.xlsx");
+        var outputPath = Path.Combine(directory.Path, "output.xlsx");
+        File.WriteAllText(templatePath, "absichtlich keine echte Arbeitsmappe");
+        var project = new Project();
+        for (var index = 0; index <= ExcelTemplateExportLimit.MaxRecords; index++)
+            project.SchaechteData.Add(new SchachtRecord());
+
+        var result = new ExcelTemplateExportService().ExportSchaechteToTemplate(
+            project,
+            templatePath,
+            outputPath,
+            headerRow: 11,
+            startRow: 12);
+
+        Assert.False(result.Ok);
+        Assert.Equal("EXP-EXCEL-SCHACHT-LIMIT", result.ErrorCode);
+        Assert.False(File.Exists(outputPath));
+    }
+
     private sealed class TempDirectory : IDisposable
     {
         public string Path { get; } = Directory.CreateTempSubdirectory().FullName;

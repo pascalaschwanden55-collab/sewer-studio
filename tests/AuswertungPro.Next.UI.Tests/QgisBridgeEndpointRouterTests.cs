@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using AuswertungPro.Next.UI.QgisBridge;
 
@@ -39,7 +40,7 @@ public sealed class QgisBridgeEndpointRouterTests : IDisposable
     [InlineData("/qgis/schaechte.geojson")]
     [InlineData("/qgis/current_schacht.geojson")]
     [InlineData("/qgis/schacht_sanierungstyp.geojson")]
-    public void AlleGeoJsonPfade_LiefernLeereGueltigeFeatureCollection(string path)
+    public void AlleGeoJsonPfade_LiefernOhneDatenEineSchemazeile(string path)
     {
         var router = CreateRouter();
 
@@ -49,7 +50,20 @@ public sealed class QgisBridgeEndpointRouterTests : IDisposable
         Assert.Equal("application/geo+json; charset=utf-8", response.ContentType);
         using var json = JsonDocument.Parse(response.Body);
         Assert.Equal("FeatureCollection", json.RootElement.GetProperty("type").GetString());
-        Assert.Empty(json.RootElement.GetProperty("features").EnumerateArray());
+
+        // Bewusst NICHT "features":[] — eine GeoJSON ohne Objekte hat in QGIS auch
+        // keine Spalten, und jede gespeicherte Abfrage darauf laesst den Layer
+        // unbrauchbar werden ("unsicher verortet"). Darum genau eine Schemazeile
+        // mit allen Spalten, ohne Werte und ohne Geometrie.
+        var feature = Assert.Single(json.RootElement.GetProperty("features").EnumerateArray());
+        Assert.Equal("Feature", feature.GetProperty("type").GetString());
+        Assert.Equal(JsonValueKind.Null, feature.GetProperty("geometry").ValueKind);
+
+        var properties = feature.GetProperty("properties");
+        Assert.NotEmpty(properties.EnumerateObject());
+        Assert.All(
+            properties.EnumerateObject().ToList(),
+            p => Assert.Equal(JsonValueKind.Null, p.Value.ValueKind));
     }
 
     [Fact]

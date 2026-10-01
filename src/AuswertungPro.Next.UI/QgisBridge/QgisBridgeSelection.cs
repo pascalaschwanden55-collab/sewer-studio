@@ -2,7 +2,7 @@ namespace AuswertungPro.Next.UI.QgisBridge;
 
 /// <summary>
 /// Merkt sich die zuletzt gewaehlte Haltung fuer die QGIS-Bridge — unabhaengig davon,
-/// auf welcher Seite oder in welchem Fenster (Haltungen-Seite, Karte-Seite, KarteWindow)
+/// auf welcher Seite (Haltungen-Seite, Schaechte-Seite, Dossier-Cockpit)
 /// die Auswahl passiert ist. Eine Abwahl (null/leer) loescht die Auswahl bewusst NICHT:
 /// QGIS soll die zuletzt bearbeitete Haltung weiter anzeigen, auch wenn der Nutzer
 /// zwischenzeitlich auf eine andere Seite navigiert.

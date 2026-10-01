@@ -73,7 +73,7 @@ public sealed class BackupTargetGuardTests : IDisposable
         var error = BackupTargetGuard.ValidateAndCreateMarker(backupRoot);
 
         Assert.NotNull(error);
-        Assert.Contains("ungueltig", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ungültig", error, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("alt", File.ReadAllText(Path.Combine(backupRoot, "old.txt")));
     }
 

@@ -19,9 +19,11 @@ public sealed class ShellProjectOpenPhotoReferenceTests
         var projectFile = Path.Combine(temp.Path, "Projektdateien", "projekt.json");
         Directory.CreateDirectory(Path.GetDirectoryName(projectFile)!);
 
+        // Archiv und zentrale Ablage sind Kopien DERSELBEN Datei - so entstehen sie beim
+        // Import. Nur dann darf der Verweis umgestellt werden (F3, Entscheid 17.09.2026).
         var stalePhoto = Path.Combine(temp.Path, "Importdateien", "XTF", "Foto", "H_06-001_002.jpg");
         Directory.CreateDirectory(Path.GetDirectoryName(stalePhoto)!);
-        File.WriteAllText(stalePhoto, "archiv");
+        File.WriteAllText(stalePhoto, "dasselbe bild");
 
         var project = BuildProjectWithStalePhoto(stalePhoto);
         var repo = new JsonProjectRepository();
@@ -30,7 +32,7 @@ public sealed class ShellProjectOpenPhotoReferenceTests
 
         var centralPhotoDir = Path.Combine(temp.Path, "Fotos", "Haltungen", "06-001");
         Directory.CreateDirectory(centralPhotoDir);
-        File.WriteAllText(Path.Combine(centralPhotoDir, "H_06-001_002.jpg"), "zentral");
+        File.WriteAllText(Path.Combine(centralPhotoDir, "H_06-001_002.jpg"), "dasselbe bild");
 
         using var loggerFactory = LoggerFactory.Create(_ => { });
         var services = new ServiceProvider(
@@ -52,6 +54,40 @@ public sealed class ShellProjectOpenPhotoReferenceTests
 
         Assert.Equal("Fotos/Haltungen/06-001/H_06-001_002.jpg", persistedFinding.FotoPath?.Replace('\\', '/'));
         Assert.Equal("Fotos/Haltungen/06-001/H_06-001_002.jpg", Assert.Single(persistedEntry.FotoPaths).Replace('\\', '/'));
+    }
+
+    [Fact]
+    public void TryOpenProject_GleicherFotonameAndererInhalt_BehaeltDieVerknuepfung()
+    {
+        using var temp = new TempDir();
+        var projectFile = Path.Combine(temp.Path, "Projektdateien", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(projectFile)!);
+
+        var verknuepft = Path.Combine(temp.Path, "Importdateien", "XTF", "Foto", "H_06-001_002.jpg");
+        Directory.CreateDirectory(Path.GetDirectoryName(verknuepft)!);
+        File.WriteAllText(verknuepft, "BEABSICHTIGTES FOTO");
+
+        var repo = new JsonProjectRepository();
+        Assert.True(repo.Save(BuildProjectWithStalePhoto(verknuepft), projectFile).Ok);
+
+        var centralPhotoDir = Path.Combine(temp.Path, "Fotos", "Haltungen", "06-001");
+        Directory.CreateDirectory(centralPhotoDir);
+        File.WriteAllText(Path.Combine(centralPhotoDir, "H_06-001_002.jpg"), "EIN ANDERES FOTO");
+
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var services = new ServiceProvider(
+            new AppSettings { EnableRestorePoints = false },
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+        using var shell = new ShellViewModel(services, new SystemMonitorService(enableHardwareSensorInit: false));
+
+        Assert.True(shell.TryOpenProject(projectFile));
+
+        var record = Assert.Single(shell.Project.Data);
+        var eintrag = Assert.Single(record.Protocol!.Current.Entries);
+        Assert.Equal("BEABSICHTIGTES FOTO", File.ReadAllText(Assert.Single(eintrag.FotoPaths)));
+        Assert.Equal("BEABSICHTIGTES FOTO", File.ReadAllText(Assert.Single(record.VsaFindings).FotoPath!));
     }
 
     private static Project BuildProjectWithStalePhoto(string stalePhoto)

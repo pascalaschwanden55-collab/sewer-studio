@@ -17,7 +17,7 @@ public static class CodeUsageTrackers
         get => Default;
         [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. ICodeUsageTracker direkt uebergeben.")]
         set => throw new NotSupportedException(
-            "CodeUsageTrackers.Current ist unveraenderlich. ICodeUsageTracker direkt uebergeben.");
+            "CodeUsageTrackers.Current ist unveränderlich. ICodeUsageTracker direkt übergeben.");
     }
 
     private sealed class NoopCodeUsageTracker : ICodeUsageTracker

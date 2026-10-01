@@ -1,0 +1,125 @@
+using System.Globalization;
+using System.Text.Json;
+using System.Xml.Linq;
+using AuswertungPro.Next.Domain.Models;
+
+namespace AuswertungPro.Next.Application.Xtf.Dss;
+
+/// <summary>Feldaufträge am geprüften Originalverbund; Pflichtkontext bleibt normgerecht vollständig.</summary>
+public static class DssAenderungsPlanBuilder
+{
+    public static XtfNeuPlan Build(XtfNeuPlan voll, Project projekt)
+    {
+        if (!voll.Dss) throw new InvalidOperationException("DSS-Änderungen benötigen einen geprüften DSS-Plan.");
+        var quellen = DssExportPlanBuilder.Quellen(projekt);
+        var auftraege = new Dictionary<(string Tid, string Feld), DateTime>();
+        // Was der Mensch vor dem Schreiben sehen soll. Reine Anzeige: Geschrieben wird
+        // allein aus den Planobjekten, nie aus dieser Liste.
+        var zeilen = new Dictionary<(string Tid, string Feld), (string Alt, string Neu)>();
+        var zeit = DateTime.UtcNow;
+        var ids = new XtfNeuKennungen(projekt.Id.ToString("N"));
+        foreach (var o in voll.Objekte.Where(o => !o.ImTopicZusatz && !o.OhneTid))
+        {
+            quellen.TryGetValue(o.Tid, out var q);
+            if (q is not null && q.Klasse != o.Klasse)
+                throw new InvalidOperationException($"DSS: Originalkennung {o.Tid} gehört zu {q.Klasse}, nicht zu {o.Klasse}.");
+            var alt = q is null ? new Dictionary<string, string>() : Werte(q);
+            if (o.Klasse == "Unterhalt")
+            {
+                var firmen = quellen.Values.Where(q => q.Klasse == "Erhaltungsereignis_Ausfuehrende_FirmaAssoc"
+                    && q.Referenzen.GetValueOrDefault("Erhaltungsereignis_Ausfuehrende_FirmaAssocRef") == o.Tid)
+                    .Select(q => q.Referenzen.GetValueOrDefault("Ausfuehrende_FirmaRef")).Where(t => t is not null).Distinct().ToArray();
+                if (firmen.Length == 1) alt["Ausfuehrende_FirmaRef"] = firmen[0]!;
+            }
+            var neu = Werte(o);
+            foreach (var feld in alt.Keys.Union(neu.Keys, StringComparer.Ordinal).Where(f => f != "Letzte_Aenderung"))
+                if (alt.GetValueOrDefault(feld) != neu.GetValueOrDefault(feld)
+                    && !(q is not null && feld == "Bezeichnung" && !alt.ContainsKey(feld) && neu.GetValueOrDefault(feld) == o.Tid))
+                {
+                    auftraege[(o.Tid, feld)] = zeit;
+                    zeilen[(o.Tid, feld)] = (Anzeige(feld, alt.GetValueOrDefault(feld)), Anzeige(feld, neu.GetValueOrDefault(feld)));
+                }
+        }
+        const string beziehung = "Erhaltungsereignis_AbwasserbauwerkAssoc";
+        var neuBezuege = voll.Objekte.Where(o => o.Klasse == beziehung)
+            .GroupBy(o => o.Verweise.Single(v => v.Name == beziehung + "Ref").ZielTid)
+            .ToDictionary(g => g.Key, g => g.Select(o => o.Verweise.Single(v => v.Name == "AbwasserbauwerkRef").ZielTid).ToHashSet(StringComparer.Ordinal));
+        foreach (var (tid, neu) in neuBezuege)
+        {
+            var alt = quellen.Values.Where(q => q.Klasse == beziehung && q.Referenzen.GetValueOrDefault(beziehung + "Ref") == tid)
+                .Select(q => q.Referenzen["AbwasserbauwerkRef"]).ToHashSet(StringComparer.Ordinal);
+            if (!alt.SetEquals(neu))
+            {
+                auftraege[(tid, "Beziehung:" + beziehung)] = zeit;
+                zeilen[(tid, "Beziehung:" + beziehung)] = (Bauwerke(alt), Bauwerke(neu));
+            }
+        }
+        var objekte = voll.Objekte.Where(o => !o.ImTopicZusatz).ToList();
+        foreach (var zusatz in voll.Objekte.Where(o => o.ImTopicZusatz && o.Klasse == "Zusatzangabe"))
+        {
+            var tid = zusatz.Felder.Single(f => f.Key == "ObjektTid").Value;
+            var feld = zusatz.Felder.Single(f => f.Key == "Feld").Value;
+            // Das Paket erhält auch bewusst geleerte Werte; ein Export quittiert sie nicht.
+            if (feld == DssProjektAngaben.Feld)
+            {
+                using var json = JsonDocument.Parse(zusatz.Felder.Single(f => f.Key == "Wert").Value);
+                objekte.Add(zusatz);
+                if (!HatHandwert(json.RootElement) && !auftraege.Keys.Any(k => k.Tid == tid)) continue;
+            }
+            else continue; // Doppelte Kurzwerte werden durch das vollständige Eingabepaket abgedeckt.
+            auftraege[(tid, "Zusatz:" + feld)] = zeit;
+            // Auch das Eingabepaket ist ein Auftrag und muss in der Vorschau stehen, sonst
+            // nennen Vorschau und Bericht verschiedene Zahlen.
+            zeilen[(tid, "Zusatz:" + feld)] = ("", "(Eingabepaket)");
+        }
+        if (auftraege.Count == 0) return new([], voll.Hinweise, 0, 0, true, true);
+        foreach (var ((tid, feld), datum) in auftraege.OrderBy(p => p.Key.Tid, StringComparer.Ordinal).ThenBy(p => p.Key.Feld, StringComparer.Ordinal))
+            objekte.Add(new("Aenderung", ids.Fuer("Aenderung", tid + "|" + feld),
+                [new("ObjektTid", tid), new("Feld", feld), new("GeaendertAm", datum.ToString("O", CultureInfo.InvariantCulture))], [], ImTopicZusatz: true));
+        var anzeige = auftraege.Keys.Where(k => zeilen.ContainsKey(k))
+            .OrderBy(k => Name(k.Tid), StringComparer.Ordinal).ThenBy(k => k.Feld, StringComparer.Ordinal)
+            .Select(k => new XtfAenderungsZeile(Name(k.Tid), k.Feld, zeilen[k].Alt, zeilen[k].Neu)).ToArray();
+        var hinweise = voll.Hinweise.Append($"Änderungslieferung: {auftraege.Count} Feldaufträge an Original-TIDs. Nur Aenderung-Einträge sind Schreibaufträge. Der neue Wert steht am Objekt mit der genannten ObjektTid, NICHT im Auftrag; ein Auftrag trägt selbst nie einen Wert. Nur wenn das genannte Attribut am Objekt fehlt, ist das Feld zu leeren. Beziehung:{beziehung} bezeichnet den vollständigen Bauwerksbezug des genannten Ereignisses über die gleichnamigen Normassoziationen. Alle übrigen Normobjekte dienen als vollständiger Bezugskontext. Zusatz:Erfasste_Angaben enthält separat zuzuordnende Eingaben, keine erfundenen DSS-Attribute. GeaendertAm ist der Zeitpunkt der Auftragserzeugung; die gespeicherten Bearbeitungszeiten stehen unverändert im Eingabepaket.").ToArray();
+        return voll with { Objekte = objekte, Hinweise = hinweise, NurAenderungen = true, Auftraege = anzeige };
+
+        string Name(string tid)
+        {
+            var o = voll.Objekte.FirstOrDefault(x => x.Tid == tid && !x.ImTopicZusatz);
+            if (o is null) return tid;
+            var bezeichnung = o.Felder.FirstOrDefault(f => f.Key == "Bezeichnung").Value;
+            return string.IsNullOrWhiteSpace(bezeichnung) ? $"{o.Klasse} {tid}" : $"{o.Klasse} {bezeichnung}";
+        }
+
+        string Bauwerke(IEnumerable<string> tids)
+            => string.Join(", ", tids.Select(Name).OrderBy(n => n, StringComparer.Ordinal));
+    }
+
+    /// <summary>Geometrien und lange Strukturen gehoeren nicht als Rohtext in eine Vorschauzeile.</summary>
+    private static string Anzeige(string feld, string? wert)
+    {
+        if (string.IsNullOrEmpty(wert)) return "";
+        if (feld is "Lage" or "Verlauf") return "(Geometrie)";
+        return wert.Length <= 80 ? wert : wert[..79] + "…";
+    }
+
+    private static Dictionary<string, string> Werte(ObjektQuellbeleg q) =>
+        Werte(new XtfNeuObjekt(q.Klasse, q.Kennung, q.Werte.ToArray(), q.Referenzen.Select(p => new XtfNeuVerweis(p.Key, p.Value)).ToArray(), Strukturen: q.Strukturen));
+    private static Dictionary<string, string> Werte(XtfNeuObjekt o)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (k, v) in o.Felder)
+            if (!DssQuellabweichungen.IstAbweichung(o.Klasse, k, v) && DssExportSchema.Normalisiere(o.Klasse, k, v) is { } norm) result.Add(k, norm);
+        foreach (var v in o.Verweise) result.Add(v.Name, v.ZielTid);
+        foreach (var (k, v) in o.Strukturen ?? new Dictionary<string, string>()) result.Add(k, XElement.Parse(v).ToString(SaveOptions.DisableFormatting));
+        if (o.Geometrie is not null) result[o.Geometrie.Feldname] = JsonSerializer.Serialize(o.Geometrie);
+        return result;
+    }
+    private static bool HatHandwert(JsonElement e) => e.ValueKind switch
+    {
+        JsonValueKind.Object => e.EnumerateObject().Any(p => p.Name == "VonHand" && p.Value.ValueKind == JsonValueKind.True
+            || p.Name == "Unterlisten" && p.Value.ValueKind == JsonValueKind.Object && p.Value.EnumerateObject().Any()
+            || HatHandwert(p.Value)),
+        JsonValueKind.Array => e.EnumerateArray().Any(HatHandwert),
+        _ => false
+    };
+}

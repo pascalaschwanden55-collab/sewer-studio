@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.VsaCatalog;
@@ -21,11 +22,11 @@ public static class VsaCodeResolver
     /// <summary>
     /// Liest den aktuell konfigurierten Katalog-Provider (zum Sichern/Wiederherstellen in Tests).
     /// </summary>
-    public static ICodeCatalogProvider? CurrentCatalog => _catalogProvider;
+    public static ICodeCatalogProvider? CurrentCatalog => Volatile.Read(ref _catalogProvider);
 
     public static void ConfigureCatalog(ICodeCatalogProvider? catalogProvider)
     {
-        _catalogProvider = catalogProvider;
+        Volatile.Write(ref _catalogProvider, catalogProvider);
     }
 
     /// <summary>
@@ -82,6 +83,37 @@ public static class VsaCodeResolver
             if (catalogLabel != null) return catalogLabel;
         }
         return null;
+    }
+
+    /// <summary>
+    /// True nur fuer einen exakt im aktiven Katalog vorhandenen, auswaehlbaren
+    /// VSA-Code. Anders als <see cref="LookupLabel"/> gibt es hier absichtlich
+    /// keinen Rueckfall auf Haupt- oder Gruppencodes: Ein erfundener Untercode
+    /// darf nie als Gold, KB- oder Teacher-Wahrheit gespeichert werden.
+    /// </summary>
+    public static bool IsExactSelectableCode(string? code)
+    {
+        var catalog = CurrentCatalog;
+        if (catalog is null || string.IsNullOrWhiteSpace(code))
+            return false;
+
+        var normalized = code.Trim().Replace(".", "").ToUpperInvariant();
+        if (!Regex.IsMatch(normalized, @"^[A-Z]{2,8}$")
+            || !catalog.TryGet(normalized, out var definition))
+        {
+            return false;
+        }
+
+        var definitionCode = definition.Code?
+            .Trim()
+            .Replace(".", "")
+            .ToUpperInvariant();
+        return string.Equals(
+                   normalized,
+                   definitionCode,
+                   StringComparison.Ordinal)
+               && definition.IsSelectable
+               && !definition.IsObservedExtension;
     }
 
     public static bool IsStreckenschadenCode(string code)
@@ -337,7 +369,7 @@ public static class VsaCodeResolver
 
     private static string? CatalogValidated(string code)
     {
-        if (_catalogProvider is null)
+        if (CurrentCatalog is null)
             return code;
 
         return NormalizeFindingCode(code) is null ? null : code;
@@ -354,7 +386,7 @@ public static class VsaCodeResolver
     private static bool TryGetCatalogDefinition(string code, out CodeDefinition def)
     {
         def = new CodeDefinition();
-        var catalog = _catalogProvider;
+        var catalog = CurrentCatalog;
         if (catalog is null || string.IsNullOrWhiteSpace(code))
             return false;
 

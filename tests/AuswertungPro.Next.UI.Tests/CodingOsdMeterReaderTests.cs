@@ -49,8 +49,8 @@ public sealed class CodingOsdMeterReaderTests
                 var searchImage = CodingOsdMeterReader.BuildOsdSearchImage(png);
                 var size = ReadSize(searchImage);
 
-                Assert.True(size.Width >= 300, $"Suchbild muss fuer OCR hochskaliert werden, Breite={size.Width}.");
-                Assert.True(size.Height >= 100, $"Suchbild muss fuer OCR hochskaliert werden, Hoehe={size.Height}.");
+                Assert.True(size.Width >= 300, $"Suchbild muss für OCR hochskaliert werden, Breite={size.Width}.");
+                Assert.True(size.Height >= 100, $"Suchbild muss für OCR hochskaliert werden, Hoehe={size.Height}.");
 
                 AssertColorDominates(ReadPixelAt(searchImage, size.Width / 6, size.Height / 4), "red");
                 AssertColorDominates(ReadPixelAt(searchImage, size.Width / 2, size.Height / 4), "lime");

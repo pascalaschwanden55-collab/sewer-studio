@@ -24,6 +24,8 @@ internal sealed class ImportManualWorkflowController
     private readonly IWinCanDbImportService _winCanImport;
     private readonly IIbakImportService _ibakImport;
     private readonly IKinsImportService _kinsImport;
+    private readonly ISchachtProImportService _schachtProImport;
+    private readonly ISchachtProQrImportService? _schachtProQrImport;
     private readonly IStoredImportFileService _storedImportFiles;
     private readonly IImportFileStagingService _fileStaging;
     private readonly IImportMediaDistributionService _mediaDistribution;
@@ -36,10 +38,12 @@ internal sealed class ImportManualWorkflowController
         IWinCanDbImportService winCanImport,
         IIbakImportService ibakImport,
         IKinsImportService kinsImport,
+        ISchachtProImportService schachtProImport,
         IStoredImportFileService storedImportFiles,
         IImportFileStagingService fileStaging,
         IImportMediaDistributionService mediaDistribution,
-        string? pdfToTextPath)
+        string? pdfToTextPath,
+        ISchachtProQrImportService? schachtProQrImport = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _pdfImport = pdfImport ?? throw new ArgumentNullException(nameof(pdfImport));
@@ -47,10 +51,12 @@ internal sealed class ImportManualWorkflowController
         _winCanImport = winCanImport ?? throw new ArgumentNullException(nameof(winCanImport));
         _ibakImport = ibakImport ?? throw new ArgumentNullException(nameof(ibakImport));
         _kinsImport = kinsImport ?? throw new ArgumentNullException(nameof(kinsImport));
+        _schachtProImport = schachtProImport ?? throw new ArgumentNullException(nameof(schachtProImport));
         _storedImportFiles = storedImportFiles ?? throw new ArgumentNullException(nameof(storedImportFiles));
         _fileStaging = fileStaging ?? throw new ArgumentNullException(nameof(fileStaging));
         _mediaDistribution = mediaDistribution ?? throw new ArgumentNullException(nameof(mediaDistribution));
         _pdfToTextPath = pdfToTextPath;
+        _schachtProQrImport = schachtProQrImport;
     }
 
     internal Task ImportPdfAsync(ImportManualWorkflowContext context)
@@ -102,23 +108,111 @@ internal sealed class ImportManualWorkflowController
     internal Task ImportWinCanAsync(ImportManualWorkflowContext context)
         => ImportFolderAsync(
             "WinCan",
-            "WinCan-Projektordner waehlen",
+            "WinCan-Projektordner wählen",
             _winCanImport.ImportWinCanExport,
             context);
 
     internal Task ImportIbakAsync(ImportManualWorkflowContext context)
         => ImportFolderAsync(
             "IBAK",
-            "IBAK-Projektordner waehlen",
+            "IBAK-Projektordner wählen",
             _ibakImport.ImportIbakExport,
             context);
 
     internal Task ImportKinsAsync(ImportManualWorkflowContext context)
         => ImportFolderAsync(
             "KINS",
-            "KINS-Projektordner waehlen",
+            "KINS-Projektordner wählen",
             _kinsImport.ImportKinsExport,
             context);
+
+    internal Task ImportSchachtProAsync(ImportManualWorkflowContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var paths = _dialogs.OpenFiles(
+            "SchachtPro-Archiv importieren",
+            "SchachtPro-Archiv (*.spro)|*.spro|Alle Dateien|*.*");
+        if (paths.Length == 0)
+            return Task.CompletedTask;
+
+        return RunAsync(
+            "SchachtPro",
+            paths,
+            (source, project, runContext) => ImportSchachtProBatch(source, project, runContext),
+            (source, project, runContext) => PostImportFilesAsync(
+                source,
+                project,
+                runContext,
+                context,
+                "SchachtPro",
+                "SchachtPro-Archive"),
+            context);
+    }
+
+    internal Task ImportSchachtProQrAsync(ImportManualWorkflowContext context)
+    {
+        var paths = _dialogs.OpenFiles("SchachtPro-QR aus Bild importieren", "QR-Bilder (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg");
+        if (paths.Length == 0) return Task.CompletedTask;
+        if (_schachtProQrImport is null) throw new InvalidOperationException("QR-Importdienst fehlt.");
+        return RunAsync("SchachtPro-QR", paths,
+            (source, project, runContext) => ImportSchachtProBatch(source, project, runContext, qr: true),
+            (source, project, runContext) => PostImportFilesAsync(source, project, runContext,
+                context, "SchachtPro-QR", "QR-Bilder"), context);
+    }
+
+    private Result<ImportStats> ImportSchachtProBatch(
+        string[] paths,
+        Project project,
+        ImportRunContext runContext, bool qr = false)
+    {
+        var totalFound = 0;
+        var totalCreated = 0;
+        var totalUpdated = 0;
+        var totalUncertain = 0;
+        var totalErrors = 0;
+        var messages = new List<string>();
+
+        for (var index = 0; index < paths.Length; index++)
+        {
+            runContext.CancellationToken.ThrowIfCancellationRequested();
+            var path = paths[index];
+            runContext.Progress?.Report(new ImportProgress(
+                qr ? "SchachtPro-QR lesen" : "SchachtPro-Archiv lesen",
+                index + 1,
+                paths.Length,
+                $"Datei {index + 1}/{paths.Length}: {Path.GetFileName(path)}",
+                Path.GetFileName(path)));
+
+            var result = qr
+                ? _schachtProQrImport!.ImportImage(path, project, runContext)
+                : _schachtProImport.ImportSchachtProArchive(path, project, runContext);
+            if (!result.Ok || result.Value is null)
+            {
+                totalErrors++;
+                messages.Add($"Error: {Path.GetFileName(path)}: {result.ErrorMessage}");
+                continue;
+            }
+
+            totalFound += result.Value.Found;
+            totalCreated += result.Value.Created;
+            totalUpdated += result.Value.Updated;
+            totalUncertain += result.Value.Uncertain;
+            totalErrors += result.Value.Errors;
+            foreach (var message in result.Value.Messages)
+                messages.Add($"{Path.GetFileName(path)}: {message}");
+        }
+
+        if (qr && totalFound == 0)
+            return Result<ImportStats>.Fail("SPQR_NO_IMPORT", string.Join(Environment.NewLine, messages));
+
+        return Result<ImportStats>.Success(new ImportStats(
+            totalFound,
+            totalCreated,
+            totalUpdated,
+            totalErrors,
+            totalUncertain,
+            messages));
+    }
 
     private Task ImportFolderAsync(
         string label,

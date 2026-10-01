@@ -10,6 +10,13 @@
     <ProjectReference Include="..\..\src\AuswertungPro.Next.Infrastructure\AuswertungPro.Next.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\AuswertungPro.Next.Domain\AuswertungPro.Next.Domain.csproj" />
     <ProjectReference Include="..\..\tools\VsaShadowReport.Core\VsaShadowReport.Core.csproj" />
+    <ProjectReference Include="..\..\tools\SelfTrainingHarness\SelfTrainingHarness.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\Fixtures\DossierLookup\**\*" Link="Fixtures\DossierLookup\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

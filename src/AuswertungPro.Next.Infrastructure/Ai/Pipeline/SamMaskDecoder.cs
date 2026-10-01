@@ -65,24 +65,30 @@ public static class SamMaskDecoder
     }
 
     /// <summary>
-    /// Skaliert eine Masken-Bitmap auf kleinere Zieldimensionen herunter (Nearest-Neighbour).
-    /// Wird fuer Konturberechnung zur Performance-Reduktion verwendet.
+    /// Skaliert eine Masken-Bitmap fuer die Anzeige auf kleinere Zieldimensionen herunter.
+    /// Ein Zielpunkt ist gesetzt, sobald IRGENDEIN Quellpixel seines Blocks gesetzt ist.
+    /// Eine Stichprobe je Block (Nearest-Neighbour) liess einen 1 Pixel breiten Riss
+    /// zwischen den Stichproben ganz verschwinden (Audit 23.09.2026, B04). Nur fuer die
+    /// Zeichnung; Vermessung und gespeicherte Maske verwenden die Originalmaske.
+    /// Zielblock r umfasst die Quellzeilen [r*srcH/dstH, (r+1)*srcH/dstH), ebenso je Spalte.
     /// </summary>
     public static bool[,] Downsample(bool[,] src, int srcH, int srcW, int dstH, int dstW)
     {
         if (dstH >= srcH && dstW >= srcW) return src;
+        if (dstH <= 0 || dstW <= 0) return new bool[Math.Max(0, dstH), Math.Max(0, dstW)];
 
         var dst = new bool[dstH, dstW];
-        double yScale = (double)srcH / dstH;
-        double xScale = (double)srcW / dstW;
+        var spaltenBlock = new int[srcW];
+        for (int c = 0; c < srcW; c++)
+            spaltenBlock[c] = Math.Min((int)((long)c * dstW / srcW), dstW - 1);
 
-        for (int r = 0; r < dstH; r++)
+        for (int srcR = 0; srcR < srcH; srcR++)
         {
-            int srcR = Math.Min((int)(r * yScale), srcH - 1);
-            for (int c = 0; c < dstW; c++)
+            int r = Math.Min((int)((long)srcR * dstH / srcH), dstH - 1);
+            for (int srcC = 0; srcC < srcW; srcC++)
             {
-                int srcC = Math.Min((int)(c * xScale), srcW - 1);
-                dst[r, c] = src[srcR, srcC];
+                if (src[srcR, srcC])
+                    dst[r, spaltenBlock[srcC]] = true;
             }
         }
         return dst;

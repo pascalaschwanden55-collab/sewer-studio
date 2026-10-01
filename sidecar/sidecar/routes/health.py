@@ -1,5 +1,6 @@
 """Health check endpoint."""
 
+import asyncio
 import os
 from pathlib import Path
 
@@ -34,7 +35,11 @@ async def health():
         "sam": _weights_present("sam2.1", ("*.pth", "*.pt")),
     }
     classifier = yolo_wrapper.get_classifier_status()
-    detector = detector_qualification.evaluate_active_detector()
+    # Die Qualifikationspruefung bildet den SHA-256-Hash der aktiven Gewichte.
+    # Bei grossen Modelldateien darf das den FastAPI-Ereignisfaden nicht blockieren.
+    detector = await asyncio.to_thread(
+        detector_qualification.evaluate_active_detector
+    )
     # "ok" nur, wenn wirklich alles bereit ist. Fehlende DINO/SAM-Gewichte bleiben der
     # bekannte Fehlerfall; ein nicht geladener Klassifikator degradiert jetzt ebenfalls
     # den Status (Warnung, kein harter Blocker — Analyse laeuft ohne VSA-cls-Codes).

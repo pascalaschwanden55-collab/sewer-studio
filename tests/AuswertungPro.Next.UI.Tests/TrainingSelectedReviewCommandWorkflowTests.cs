@@ -62,7 +62,9 @@ public sealed class TrainingSelectedReviewCommandWorkflowTests
 
         Assert.False(cleared);
         Assert.Equal(["Review-Freigabe Fehler: kaputt"], state.Logs);
-        Assert.Equal("Fehler: kaputt", state.StatusText);
+        Assert.Equal(
+            "Fehler: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
+            state.StatusText);
     }
 
     [Fact]

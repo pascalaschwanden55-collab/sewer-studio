@@ -6,6 +6,23 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class ObservationCatalogWindowInputNormalizerArchitectureTests
 {
     [Fact]
+    public void Uhrlagen_Auswahl_schreibt_den_Wert_direkt_ins_ViewModel()
+    {
+        var xamlPath = RepoFile(
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Windows",
+            "ObservationCatalogWindow.xaml");
+        var xaml = File.ReadAllText(xamlPath);
+
+        Assert.Contains(
+            "<controls:ClockPickerControl Value=\"{Binding Value, UpdateSourceTrigger=PropertyChanged}\" />",
+            xaml,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Fenster_nutzt_zentrale_Protokoll_Normalisierung_und_behaelt_UI_Ablauf()
     {
         var windowPath = RepoFile(
@@ -92,11 +109,11 @@ public sealed class ObservationCatalogWindowInputNormalizerArchitectureTests
         AssertInOrder(
             apply,
             "ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterStartText, out var meterStart)",
-            "ValidationMessage = \"MeterStart ist ungueltig.\";",
+            "ValidationMessage = \"MeterStart ist ungültig.\";",
             "ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterEndText, out var meterEnd)",
-            "ValidationMessage = \"MeterEnd ist ungueltig.\";",
+            "ValidationMessage = \"MeterEnd ist ungültig.\";",
             "ProtocolEntryInputNormalizer.TryParseOptionalTimeSpan(ZeitText, out var zeit)",
-            "ValidationMessage = \"Zeit ist ungueltig.\";",
+            "ValidationMessage = \"Zeit ist ungültig.\";",
             "ProtocolEntryInputNormalizer.TryParseOptionalDouble(",
             "VsaDistanz ?? string.Empty,",
             "out var vsaDistanz)");

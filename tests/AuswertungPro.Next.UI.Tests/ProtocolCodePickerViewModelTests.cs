@@ -50,7 +50,7 @@ public sealed class ProtocolCodePickerViewModelTests
         var applied = vm.ApplySelection();
 
         Assert.False(applied);
-        Assert.Contains("nicht auswaehlbar", vm.ValidationMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nicht auswählbar", vm.ValidationMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public sealed class ProtocolCodePickerViewModelTests
                 CanonicalCode = "BAG",
                 Source = VsaKekCatalogSources.Ili,
                 IsSelectable = true,
-                Group = "Kanal/Anschluesse"
+                Group = "Kanal/Anschlüsse"
             },
             new CodeDefinition
             {
@@ -124,7 +124,7 @@ public sealed class ProtocolCodePickerViewModelTests
                 Title = "Anschluss einragend Regelcode",
                 Source = VsaKekCatalogSources.Icm,
                 IsSelectable = false,
-                Group = "Kanal/Anschluesse"
+                Group = "Kanal/Anschlüsse"
             },
             new CodeDefinition
             {

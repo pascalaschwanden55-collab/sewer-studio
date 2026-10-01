@@ -1,0 +1,121 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="e3ae4e39-b623-4ce7-9355-be54a4eb1a51" name="Besitzer@PCW11X01 2026-09-08 06:43:32" runUser="PCW11X01\Besitzer" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-08T06:43:32.7346721+02:00" queuing="2026-09-08T06:43:32.7346723+02:00" start="2026-09-08T06:42:30.7611961+02:00" finish="2026-09-08T06:43:32.7396262+02:00" />
+  <TestSettings name="default" id="1ebde4ea-54cc-4a6c-b755-572dc10f58b0">
+    <Deployment runDeploymentRoot="Besitzer_PCW11X01_2026-09-08_06_43_32" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="ff330d64-71bd-4d48-9c44-43fe3a22926a" testId="3bdd13a5-262d-b1f2-4c18-c3047214493b" testName="AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern" computerName="PCW11X01" duration="00:01:01.1707126" startTime="2026-09-08T06:43:32.6665461+02:00" endTime="2026-09-08T06:43:32.6665647+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ff330d64-71bd-4d48-9c44-43fe3a22926a">
+      <Output>
+        <ErrorInfo>
+          <Message>Isolierter WPF-Test fehlgeschlagen (Exit-Code 1; Szenario-Bestaetigung fehlt).
+
+stdout:
+VSTest-Version 18.0.2 (x64)&#xD;
+&#xD;
+Die Testausf├╝hrung wird gestartet, bitte warten...&#xD;
+Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster ├╝berein.&#xD;
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.12]   Discovering: AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:00:00.45]   Discovered:  AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:00:00.46]   Starting:    AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:01:00.49]       Der WPF-Test wurde nicht innerhalb von 60 Sekunden beendet. Er kann blockiert sein oder unter hoher Systemlast zu langsam laufen.&#xD;
+[xUnit.net 00:01:00.49]       Stack Trace:&#xD;
+[xUnit.net 00:01:00.49]         C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs(36,0): at AuswertungPro.Next.UI.Tests.StaTestRunner.Run(Action action, Nullable`1 timeout)&#xD;
+[xUnit.net 00:01:00.49]         C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs(65,0): at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues()&#xD;
+[xUnit.net 00:01:00.49]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:01:00.49]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:01:00.49]   Finished:    AuswertungPro.Next.UI.Tests&#xD;
+  Fehler AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [1 m]&#xD;
+  Fehlermeldung:&#xD;
+   Der WPF-Test wurde nicht innerhalb von 60 Sekunden beendet. Er kann blockiert sein oder unter hoher Systemlast zu langsam laufen.&#xD;
+  Stapelverfolgung:&#xD;
+     at AuswertungPro.Next.UI.Tests.StaTestRunner.Run(Action action, Nullable`1 timeout) in C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs:line 36&#xD;
+   at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues() in C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs:line 65&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+&#xD;
+Gesamtzahl Tests: 1&#xD;
+     Nicht bestanden: 1&#xD;
+ Gesamtzeit: 1.0149 Minuten&#xD;
+
+
+stderr:
+[xUnit.net 00:01:00.49]     AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [FAIL]&#xD;
+Fehler beim Testlauf.&#xD;
+</Message>
+          <StackTrace>   at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern() in C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs:line 58&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern" storage="c:\sewer-studio_ki_4.5\tests\auswertungpro.next.ui.tests\bin\release\net10.0-windows10.0.19041\auswertungpro.next.ui.tests.dll" id="3bdd13a5-262d-b1f2-4c18-c3047214493b">
+      <Execution id="ff330d64-71bd-4d48-9c44-43fe3a22926a" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\bin\Release\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests" name="Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="3bdd13a5-262d-b1f2-4c18-c3047214493b" executionId="ff330d64-71bd-4d48-9c44-43fe3a22926a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Ergebnisse nicht in einer Liste" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Alle geladenen Ergebnisse" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="1" executed="1" passed="0" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.12]   Discovering: AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:00:00.44]   Discovered:  AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:00:00.45]   Starting:    AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:01:01.65]       Isolierter WPF-Test fehlgeschlagen (Exit-Code 1; Szenario-Bestaetigung fehlt).
+
+stdout:
+VSTest-Version 18.0.2 (x64)&#xD;
+[xUnit.net 00:01:01.65]       &#xD;
+[xUnit.net 00:01:01.65]       Die Testausf├╝hrung wird gestartet, bitte warten...&#xD;
+[xUnit.net 00:01:01.65]       Insgesamt 1 Testdateien stimmten mit dem angegebenen Muster ├╝berein.&#xD;
+[xUnit.net 00:01:01.65]       [xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:01:01.65]       [xUnit.net 00:00:00.12]   Discovering: AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:01:01.65]       [xUnit.net 00:00:00.45]   Discovered:  AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:01:01.65]       [xUnit.net 00:00:00.46]   Starting:    AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:01:01.65]       [xUnit.net 00:01:00.49]       Der WPF-Test wurde nicht innerhalb von 60 Sekunden beendet. Er kann blockiert sein oder unter hoher Systemlast zu langsam laufen.&#xD;
+[xUnit.net 00:01:01.65]       [xUnit.net 00:01:00.49]       Stack Trace:&#xD;
+[xUnit.net 00:01:01.65]       [xUnit.net 00:01:00.49]         C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs(36,0): at AuswertungPro.Next.UI.Tests.StaTestRunner.Run(Action action, Nullable`1 timeout)&#xD;
+[xUnit.net 00:01:01.65]       [xUnit.net 00:01:00.49]         C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs(65,0): at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues()&#xD;
+[xUnit.net 00:01:01.65]       [xUnit.net 00:01:00.49]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:01:01.65]       [xUnit.net 00:01:00.49]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:01:01.65]       [xUnit.net 00:01:00.49]   Finished:    AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:01:01.65]         Fehler AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [1 m]&#xD;
+[xUnit.net 00:01:01.65]         Fehlermeldung:&#xD;
+[xUnit.net 00:01:01.65]          Der WPF-Test wurde nicht innerhalb von 60 Sekunden beendet. Er kann blockiert sein oder unter hoher Systemlast zu langsam laufen.&#xD;
+[xUnit.net 00:01:01.65]         Stapelverfolgung:&#xD;
+[xUnit.net 00:01:01.65]            at AuswertungPro.Next.UI.Tests.StaTestRunner.Run(Action action, Nullable`1 timeout) in C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\StaTestRunner.cs:line 36&#xD;
+[xUnit.net 00:01:01.65]          at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues() in C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs:line 65&#xD;
+[xUnit.net 00:01:01.65]          at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:01:01.65]          at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:01:01.65]       &#xD;
+[xUnit.net 00:01:01.65]       Gesamtzahl Tests: 1&#xD;
+[xUnit.net 00:01:01.65]            Nicht bestanden: 1&#xD;
+[xUnit.net 00:01:01.65]        Gesamtzeit: 1.0149 Minuten&#xD;
+[xUnit.net 00:01:01.65]       
+
+stderr:
+[xUnit.net 00:01:00.49]     AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Kindprozess_prueft_die_Kontextmenues [FAIL]&#xD;
+[xUnit.net 00:01:01.65]       Fehler beim Testlauf.&#xD;
+[xUnit.net 00:01:01.65]       &#xD;
+[xUnit.net 00:01:01.65]       Stack Trace:&#xD;
+[xUnit.net 00:01:01.65]         C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\NachschlagKontextmenueTests.cs(58,0): at AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern()&#xD;
+[xUnit.net 00:01:01.65]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:01:01.66]   Finished:    AuswertungPro.Next.UI.Tests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="PCW11X01" outcome="Error" timestamp="2026-09-08T06:43:32.6638821+02:00">
+        <Text>[xUnit.net 00:01:01.65]     AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

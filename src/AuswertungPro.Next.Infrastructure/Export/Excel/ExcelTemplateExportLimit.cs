@@ -1,11 +1,15 @@
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Export;
 
 namespace AuswertungPro.Next.Infrastructure.Export.Excel;
 
 /// <summary>Schuetzt den speichergebundenen ClosedXML-Export vor unbegrenzten Datenmengen.</summary>
 internal static class ExcelTemplateExportLimit
 {
-    internal const int MaxRecords = 20_000;
+    // Jede exportierte Zeile muss von Kennzahlen und bedingter Formatierung
+    // erfasst werden. Eine hoehere reine Speichergrenze wuerde zwar eine Datei
+    // erzeugen, aber ab Zeile 5001 falsche Summen anzeigen.
+    internal const int MaxRecords = ExcelVorlagenLayout.MaximaleDatenzeilen;
 
     public static Result? RejectIfExceeded(int recordCount, string recordLabel, string errorCode)
     {
@@ -14,7 +18,7 @@ internal static class ExcelTemplateExportLimit
 
         return Result.Fail(
             errorCode,
-            $"Excel-Export abgebrochen: {recordCount} {recordLabel} ueberschreiten die sichere " +
+            $"Excel-Export abgebrochen: {recordCount} {recordLabel} überschreiten die sichere " +
             $"Obergrenze von {MaxRecords} Zeilen. Bitte das Projekt oder den Export aufteilen.");
     }
 }

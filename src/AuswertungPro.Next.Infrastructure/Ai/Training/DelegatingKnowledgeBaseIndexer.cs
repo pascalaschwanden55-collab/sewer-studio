@@ -11,17 +11,21 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// (IncrementalKbUpdateAsync / TryDeindexSample) via Func/Action.
 /// Erzeugt keine neue Logik — reines Bridging.
 /// </summary>
-public sealed class DelegatingKnowledgeBaseIndexer : IKnowledgeBaseIndexer
+public sealed class DelegatingKnowledgeBaseIndexer : IKnowledgeBaseIndexer, IDisposable
 {
     private readonly Func<IReadOnlyList<TrainingSample>, CancellationToken, Task<KbIndexOutcome>> _index;
     private readonly Action<string> _deindex;
+    private readonly Action? _dispose;
+    private bool _disposed;
 
     public DelegatingKnowledgeBaseIndexer(
         Func<IReadOnlyList<TrainingSample>, CancellationToken, Task<KbIndexOutcome>> index,
-        Action<string> deindex)
+        Action<string> deindex,
+        Action? dispose = null)
     {
         _index = index ?? throw new ArgumentNullException(nameof(index));
         _deindex = deindex ?? throw new ArgumentNullException(nameof(deindex));
+        _dispose = dispose;
     }
 
     /// <inheritdoc />
@@ -30,4 +34,13 @@ public sealed class DelegatingKnowledgeBaseIndexer : IKnowledgeBaseIndexer
 
     /// <inheritdoc />
     public void Deindex(string sampleId) => _deindex(sampleId);
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        _dispose?.Invoke();
+    }
 }

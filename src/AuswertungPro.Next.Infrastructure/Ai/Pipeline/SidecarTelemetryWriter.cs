@@ -12,7 +12,7 @@ public static class SidecarTelemetryWriter
     [Obsolete("Globale Dienstwechsel sind nicht mehr erlaubt. ISidecarTelemetryWriter direkt uebergeben.")]
     public static void Use(ISidecarTelemetryWriter writer) =>
         throw new NotSupportedException(
-            "SidecarTelemetryWriter ist unveraenderlich. ISidecarTelemetryWriter direkt uebergeben.");
+            "SidecarTelemetryWriter ist unveränderlich. ISidecarTelemetryWriter direkt übergeben.");
 
     public static Task WriteAsync(SidecarTelemetryEvent entry) => Current.WriteAsync(entry);
 

@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Application.Diagnostics;
+﻿using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
@@ -13,8 +13,10 @@ public sealed class SchaechtePageViewModelRequiredFieldWarningTests : IDisposabl
 {
     private readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(_ => { });
 
+    // Das Fenster «Schacht-Felder fehlen» beim Zeilenwechsel ist entfernt (Entscheid Pascal
+    // 13.09.2026): Es unterbrach jede Auswahl. Bei den Haltungen gab es nie ein solches Fenster.
     [Fact]
-    public void Selected_wechsel_warnt_wenn_vorheriger_schacht_pflichtfelder_nicht_hat()
+    public void Selected_wechsel_zeigt_kein_Fenster_auch_wenn_pflichtfelder_fehlen()
     {
         var dialogs = new DialogFake();
         var (_, vm) = CreateVm(dialogs);
@@ -26,10 +28,7 @@ public sealed class SchaechtePageViewModelRequiredFieldWarningTests : IDisposabl
         vm.Selected = first;
         vm.Selected = second;
 
-        Assert.Equal(1, dialogs.WarnCalls);
-        Assert.Contains("S-1", dialogs.LastWarnMessage);
-        Assert.Contains("Sanieren Ja/Nein", dialogs.LastWarnMessage);
-        Assert.Contains("Ausgefuehrt durch", dialogs.LastWarnMessage);
+        Assert.Equal(0, dialogs.WarnCalls);
     }
 
     [Fact]
@@ -185,9 +184,41 @@ public sealed class SchaechtePageViewModelRequiredFieldWarningTests : IDisposabl
         Assert.Equal(1, moveDownChanges);
     }
 
-    private (ShellViewModel Shell, SchaechtePageViewModel Vm) CreateVm(DialogFake dialogs)
+    [Fact]
+    public void Schacht_Autosave_schreibt_Feldwerte_und_Reihenfolge_in_die_Projektdatei()
     {
-        var settings = new AppSettings();
+        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "shaft-autosave-" + Guid.NewGuid());
+        var path = System.IO.Path.Combine(root, "Projektdateien", "projekt.json");
+        var settings = new AppSettings { LastProjectPath = path, EnableRestorePoints = false,
+            DataAutoSaveMode = AutoSaveMode.OnEachChange };
+        var (shell, vm) = CreateVm(new DialogFake(), settings);
+        using (shell)
+        {
+            try
+            {
+                shell.MarkProjectReady();
+                shell.HasPersistedProject = true;
+                vm.Records.Add(Record("S-1"));
+                vm.Records.Add(Record("S-2"));
+                vm.Selected = vm.Records[1];
+                vm.MoveUpCommand.Execute(null);
+                vm.Records[0].SetFieldValue("Strasse", "Teststrasse");
+                vm.ScheduleAutoSave();
+                typeof(SchaechtePageViewModel).GetMethod("SavePendingShaftChanges",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(vm, null);
+                var loaded = new AuswertungPro.Next.Infrastructure.Projects.JsonProjectRepository().Load(path);
+                Assert.True(loaded.Ok, loaded.ErrorMessage);
+                Assert.Equal("S-2", loaded.Value!.SchaechteData[0].GetFieldValue("Schachtnummer"));
+                Assert.Equal("Teststrasse", loaded.Value.SchaechteData[0].GetFieldValue("Strasse"));
+                Assert.False(shell.Project.Dirty);
+            }
+            finally { if (System.IO.Directory.Exists(root)) System.IO.Directory.Delete(root, recursive: true); }
+        }
+    }
+
+    private (ShellViewModel Shell, SchaechtePageViewModel Vm) CreateVm(DialogFake dialogs, AppSettings? configured = null)
+    {
+        var settings = configured ?? new AppSettings();
         var services = new ServiceProvider(
             settings,
             new DiagnosticsOptions(),
@@ -230,8 +261,8 @@ public sealed class SchaechtePageViewModelRequiredFieldWarningTests : IDisposabl
             LastWarnMessage = message;
         }
         public void Error(string message, string title = "Fehler") { }
-        public bool Confirm(string message, string title = "Bestaetigung") => false;
-        public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true) => false;
-        public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung") => DialogConfirm.Cancel;
+        public bool Confirm(string message, string title = "Bestätigung") => false;
+        public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
+        public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Cancel;
     }
 }

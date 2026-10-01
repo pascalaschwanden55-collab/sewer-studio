@@ -19,12 +19,13 @@ public static class TrainingReviewFeedbackServiceFactory
         var weights = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.WeightLearningService(db.Connection);
 
         KnowledgeBaseManager? kbManager = null;
+        HttpClient? http = null;
         try
         {
             var cfg = new AppSettingsAiSettingsProvider()
                 .Load()
                 .ToOllamaConfig();
-            var http = new HttpClient { Timeout = cfg.RequestTimeout };
+            http = new HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new EmbeddingService(http, cfg);
             var evalSets = EvalContaminationSetProvider.Load(settings);
             kbManager = new KnowledgeBaseManager(db, embedder, evalSets.ImageHashes, evalSets.HaltungKeys);
@@ -32,8 +33,14 @@ public static class TrainingReviewFeedbackServiceFactory
         catch
         {
             // Feedback wird weiterhin geloggt; nur das optionale KB-Update faellt aus.
+            http?.Dispose();
+            http = null;
         }
 
-        return new InfraSelfImproving.FeedbackIngestionService(logger, weights, kbManager);
+        return new InfraSelfImproving.FeedbackIngestionService(
+            logger,
+            weights,
+            kbManager,
+            ownedResource: http);
     }
 }

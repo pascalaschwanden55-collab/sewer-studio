@@ -1,0 +1,107 @@
+{
+ "datum": "2026-09-30",
+ "commit": "3211155cd",
+ "vergleichsbasis": "0c2d5c17b (Messung 27.09.2026)",
+ "produktcode": {
+  "dateien": [
+   3218,
+   3282
+  ],
+  "zeilen": [
+   375221,
+   383896
+  ],
+  "methoden": [
+   14879,
+   15252
+  ],
+  "methoden_ueber_100": [
+   191,
+   198
+  ],
+  "methoden_ueber_200": [
+   33,
+   33
+  ],
+  "entscheidungen_ueber_20": [
+   163,
+   169
+  ],
+  "parameter_ueber_8": [
+   155,
+   156
+  ],
+  "async_void": [
+   30,
+   32
+  ],
+  "leere_catch": [
+   232,
+   237
+  ],
+  "exakte_klongruppen": [
+   12,
+   11
+  ],
+  "dateien_900_1000": [
+   23,
+   23
+  ],
+  "dateien_975_1000": [
+   8,
+   10
+  ],
+  "dateien_ueber_1000": [
+   2,
+   0
+  ],
+  "teilklassen_1800_2000": [
+   7,
+   8
+  ],
+  "teilklassen_ueber_2000": [
+   2,
+   2
+  ],
+  "teilklassen_dateien": [
+   219,
+   228
+  ],
+  "application_dateien_mit_dateizugriff": [
+   34,
+   37
+  ]
+ },
+ "testcode": {
+  "dateien": [
+   2620,
+   2682
+  ],
+  "zeilen": [
+   363392,
+   378037
+  ]
+ },
+ "ui_ai": {
+  "dateien": [
+   599,
+   599
+  ],
+  "zeilen": [
+   34200,
+   34278
+  ]
+ },
+ "claude_md": {
+  "zeilen": [
+   5260,
+   6756
+  ],
+  "bytes": [
+   411362,
+   548074
+  ],
+  "geschaetzte_tokens_heute": 153716
+ },
+ "hinweis": "Paare = [27.09., 30.09.]. Gemessen mit docs/audits/2026-09-27-wartbarkeit/nachweise/analysator (unveraendert). Leere catch 27.09. aus dem Bericht; 30.09. aus empty-catches.json gefiltert auf src/."
+}

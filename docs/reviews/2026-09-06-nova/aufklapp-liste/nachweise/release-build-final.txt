@@ -1,0 +1,58 @@
+  MdbSchemaReader -> C:\Sewer-Studio_KI_4.5-nova\tools\MdbSchemaReaderApp\bin\Release\net10.0\MdbSchemaReader.dll
+  FachwissenIndexer -> C:\Sewer-Studio_KI_4.5-nova\tools\FachwissenIndexer\bin\Release\net10.0\FachwissenIndexer.dll
+  PdfHeaderReader -> C:\Sewer-Studio_KI_4.5-nova\tools\PdfHeaderReader\bin\Release\net10.0\PdfHeaderReader.dll
+  VsaShadowReport.Core -> C:\Sewer-Studio_KI_4.5-nova\tools\VsaShadowReport.Core\bin\Release\net10.0\VsaShadowReport.Core.dll
+  AuswertungPro.Next.Domain -> C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.Domain\bin\Release\net10.0\AuswertungPro.Next.Domain.dll
+  BasemapDownloader -> C:\Sewer-Studio_KI_4.5-nova\tools\BasemapDownloader\bin\Release\net10.0\BasemapDownloader.dll
+  CadasterDbReader -> C:\Sewer-Studio_KI_4.5-nova\tools\CadasterDbReader\bin\Release\net8.0\CadasterDbReader.dll
+  KnowledgeBaseInspector -> C:\Sewer-Studio_KI_4.5-nova\tools\KnowledgeBaseInspector\bin\Release\net10.0\KnowledgeBaseInspector.dll
+  IbakPdfAnalyzer -> C:\Sewer-Studio_KI_4.5-nova\tools\IbakPdfAnalyzer\bin\Release\net10.0\IbakPdfAnalyzer.dll
+  VsaPdfExtractor -> C:\Sewer-Studio_KI_4.5-nova\tools\VsaPdfExtractor\bin\Release\net10.0\VsaPdfExtractor.dll
+  PdfImageAnalyzer -> C:\Sewer-Studio_KI_4.5-nova\tools\PdfImageAnalyzer\bin\Release\net10.0-windows\PdfImageAnalyzer.dll
+  VsaShadowReport -> C:\Sewer-Studio_KI_4.5-nova\tools\VsaShadowReport\bin\Release\net10.0\VsaShadowReport.dll
+  AuswertungPro.Next.Application -> C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.Application\bin\Release\net10.0\AuswertungPro.Next.Application.dll
+  EvalSetV2Builder -> C:\Sewer-Studio_KI_4.5-nova\tools\EvalSetV2Builder\bin\Release\net10.0\EvalSetV2Builder.dll
+  EvalSetManifestHasher -> C:\Sewer-Studio_KI_4.5-nova\tools\EvalSetManifestHasher\bin\Release\net10.0\EvalSetManifestHasher.dll
+  BefundMatcher -> C:\Sewer-Studio_KI_4.5-nova\tools\BefundMatcher\bin\Release\net10.0\BefundMatcher.dll
+  ClassifierDatasetBuilder -> C:\Sewer-Studio_KI_4.5-nova\tools\ClassifierDatasetBuilder\bin\Release\net10.0\ClassifierDatasetBuilder.dll
+  IliCatalogReader -> C:\Sewer-Studio_KI_4.5-nova\tools\IliCatalogReader\bin\Release\net10.0\IliCatalogReader.dll
+  AuswertungPro.Next.Infrastructure -> C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.Infrastructure\bin\Release\net10.0\AuswertungPro.Next.Infrastructure.dll
+  FullBackupSmoke -> C:\Sewer-Studio_KI_4.5-nova\tools\FullBackupSmoke\bin\Release\net10.0\FullBackupSmoke.dll
+  ProjectModernizer -> C:\Sewer-Studio_KI_4.5-nova\tools\ProjectModernizer\bin\Release\net10.0\ProjectModernizer.dll
+  PersonalGoldMigration -> C:\Sewer-Studio_KI_4.5-nova\tools\PersonalGoldMigration\bin\Release\net10.0\PersonalGoldMigration.dll
+  TrainingDataInventory -> C:\Sewer-Studio_KI_4.5-nova\tools\TrainingDataInventory\bin\Release\net10.0\TrainingDataInventory.dll
+  KostenfallAufbau -> C:\Sewer-Studio_KI_4.5-nova\tools\KostenfallAufbau\bin\Release\net10.0\KostenfallAufbau.dll
+  StageAExporter -> C:\Sewer-Studio_KI_4.5-nova\tools\StageAExporter\bin\Release\net10.0\StageAExporter.dll
+  StammdatenExporter -> C:\Sewer-Studio_KI_4.5-nova\tools\StammdatenExporter\bin\Release\net10.0\StammdatenExporter.dll
+  KbCodeCleanup -> C:\Sewer-Studio_KI_4.5-nova\tools\KbCodeCleanup\bin\Release\net10.0\KbCodeCleanup.dll
+  DetectReleaseHoldoutPdfExtractor -> C:\Sewer-Studio_KI_4.5-nova\tools\DetectReleaseHoldoutPdfExtractor\bin\Release\net10.0\DetectReleaseHoldoutPdfExtractor.dll
+  SelfTrainingHarness -> C:\Sewer-Studio_KI_4.5-nova\tools\SelfTrainingHarness\bin\Release\net10.0\SelfTrainingHarness.dll
+  SidecarE2eSmoke -> C:\Sewer-Studio_KI_4.5-nova\tools\SidecarE2eSmoke\bin\Release\net10.0\SidecarE2eSmoke.dll
+  GoldBrainSeparation -> C:\Sewer-Studio_KI_4.5-nova\tools\GoldBrainSeparation\bin\Release\net10.0\GoldBrainSeparation.dll
+  InspectionDateAudit -> C:\Sewer-Studio_KI_4.5-nova\tools\InspectionDateAudit\bin\Release\net10.0\InspectionDateAudit.dll
+  SewerStudio.AiTestRunner -> C:\Sewer-Studio_KI_4.5-nova\tools\SewerStudio.AiTestRunner\bin\Release\net10.0\SewerStudio.AiTestRunner.dll
+  CadastreTableBuilder -> C:\Sewer-Studio_KI_4.5-nova\tools\CadastreTableBuilder\bin\Release\net10.0\CadastreTableBuilder.dll
+  PdfCoverageAudit -> C:\Sewer-Studio_KI_4.5-nova\tools\PdfCoverageAudit\bin\Release\net10.0\PdfCoverageAudit.dll
+  PdfCodeScanner -> C:\Sewer-Studio_KI_4.5-nova\tools\PdfCodeScanner\bin\Release\net10.0\PdfCodeScanner.dll
+  AiDocPdf -> C:\Sewer-Studio_KI_4.5-nova\tools\AiDocPdf\bin\Release\net10.0\AiDocPdf.dll
+  EvalSetBenchmark -> C:\Sewer-Studio_KI_4.5-nova\tools\EvalSetBenchmark\bin\Release\net10.0\EvalSetBenchmark.dll
+  AuswertungPro.MeasureCatalogCli -> C:\Sewer-Studio_KI_4.5-nova\tools\AuswertungPro.MeasureCatalogCli\bin\Release\net10.0\AuswertungPro.MeasureCatalogCli.dll
+  ProjectModernizer.Tests -> C:\Sewer-Studio_KI_4.5-nova\tests\ProjectModernizer.Tests\bin\Release\net10.0\ProjectModernizer.Tests.dll
+  DichtheitDistributeTest -> C:\Sewer-Studio_KI_4.5-nova\tools\DichtheitDistributeTest\bin\Release\net10.0\DichtheitDistributeTest.dll
+  SewerStudioMcpServer -> C:\Sewer-Studio_KI_4.5-nova\tools\SewerStudioMcpServer\bin\Release\net10.0\SewerStudio.McpServer.dll
+  DiagnosticPdfParser -> C:\Sewer-Studio_KI_4.5-nova\tools\DiagnosticPdfParser\bin\Release\net10.0\DiagnosticPdfParser.dll
+  QuickPdfAnalyzer -> C:\Sewer-Studio_KI_4.5-nova\tools\QuickPdfAnalyzer\bin\Release\net10.0\QuickPdfAnalyzer.dll
+  ClassifierPilot -> C:\Sewer-Studio_KI_4.5-nova\tools\ClassifierPilot\bin\Release\net10.0\ClassifierPilot.dll
+  AuswertungPro.Next.Infrastructure.Tests -> C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.Infrastructure.Tests\bin\Release\net10.0\AuswertungPro.Next.Infrastructure.Tests.dll
+  AiQualityReport -> C:\Sewer-Studio_KI_4.5-nova\tools\AiQualityReport\bin\Release\net10.0\AiQualityReport.dll
+  VsaClassificationRuleBuilder -> C:\Sewer-Studio_KI_4.5-nova\tools\VsaClassificationRuleBuilder\bin\Release\net10.0\VsaClassificationRuleBuilder.dll
+  NightlySoakRunner -> C:\Sewer-Studio_KI_4.5-nova\tools\NightlySoakRunner\bin\Release\net10.0\NightlySoakRunner.dll
+  AuswertungPro.Next.Pipeline.Tests -> C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.Pipeline.Tests\bin\Release\net10.0\AuswertungPro.Next.Pipeline.Tests.dll
+  AuswertungPro.Next.UI -> C:\Sewer-Studio_KI_4.5-nova\src\AuswertungPro.Next.UI\bin\Release\net10.0-windows10.0.19041\SewerStudio.dll
+  AuswertungPro.Next.UI.Tests -> C:\Sewer-Studio_KI_4.5-nova\tests\AuswertungPro.Next.UI.Tests\bin\Release\net10.0-windows10.0.19041\AuswertungPro.Next.UI.Tests.dll
+
+Der Buildvorgang wurde erfolgreich ausgeführt.
+    0 Warnung(en)
+    0 Fehler
+
+Verstrichene Zeit 00:00:13.07

@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using System.IO;
@@ -12,6 +12,7 @@ using AuswertungPro.Next.Application.Dashboard;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.Projects;
+using AuswertungPro.Next.Application.UseCases.Uebersicht;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI.Services;
 using System.Windows.Threading;
@@ -34,6 +35,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private readonly AppSettings _settings;
         private readonly DashboardRefreshNotifier _dashboardRefresh;
         private readonly IDialogService _dialogs;
+        private readonly IToastService? _toasts;
         private readonly IProjectRepository _projects;
         private readonly IProjectOverviewCatalog _projectOverviewCatalog;
         private readonly IProjectDropPathResolver _projectDropPaths;
@@ -41,6 +43,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private readonly OverviewPreviewLoadController _previewController;
         private readonly IProjectCostStoreRepository _haltungCostRepo;
         private readonly IProjectCostStoreRepository _schachtCostRepo;
+        // Zweite gepflegte Schachtquelle (Massnahmen-Dialog). Ohne sie stand ein
+        // Projekt, das nur diesen Weg nutzt, im Cockpit mit 0 CHF da.
+        private readonly IProjectCostStoreRepository? _schachtEmpfehlungCostRepo;
         private Project? _subscribedProject;
         private string? _activeCostLoadError;
 
@@ -71,10 +76,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         private bool _disposed;
 
         public IRelayCommand NewCommand { get; }
-        public IRelayCommand OpenCommand { get; }
         public IRelayCommand OpenSelectedCommand { get; }
-        public IRelayCommand ContinueCommand { get; }
-        public IRelayCommand RefreshCommand { get; }
         public IAsyncRelayCommand PrintPreviewPdfCommand { get; }
         public IRelayCommand ClearFilterCommand { get; }
         public IRelayCommand DeleteSelectedCommand { get; }
@@ -83,7 +85,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         public IRelayCommand<object?> NavigateDamageCommand { get; }
         public IRelayCommand<object?> NavigateDnCommand { get; }
         public IRelayCommand ToggleProjectListCommand { get; }
-        public bool HasLastProject => !string.IsNullOrWhiteSpace(LastProjectPath) && File.Exists(LastProjectPath);
 
         public OverviewPageViewModel(ShellViewModel shell, ServiceProvider sp)
             : this(
@@ -95,8 +96,10 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 sp.CostStores.CreateProjectCostStore(),
                 sp.CostStores.CreateProjectCostStore("schacht_costs.json"),
                 sp.ProjectOverviewCatalog,
-                sp.ProjectDropPaths)
+                sp.CostStores.CreateProjectCostStore("schacht_empfehlungen.json"),
+                projectDropPaths: sp.ProjectDropPaths)
         {
+            _toasts = sp.Toasts;
         }
 
         [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen die Kosten-Speicher injizieren.")]
@@ -158,7 +161,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 haltungCostRepo,
                 schachtCostRepo,
                 ProjectOverviewCatalogCompatibility.Create(projectFileDiscovery),
-                projectDropPaths)
+                projectDropPaths: projectDropPaths)
         {
         }
 
@@ -171,6 +174,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             IProjectCostStoreRepository haltungCostRepo,
             IProjectCostStoreRepository schachtCostRepo,
             IProjectOverviewCatalog projectOverviewCatalog,
+            IProjectCostStoreRepository? schachtEmpfehlungCostRepo = null,
             IProjectDropPathResolver? projectDropPaths = null)
         {
             _shell = shell ?? throw new ArgumentNullException(nameof(shell));
@@ -180,6 +184,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _projects = projects ?? throw new ArgumentNullException(nameof(projects));
             _haltungCostRepo = haltungCostRepo ?? throw new ArgumentNullException(nameof(haltungCostRepo));
             _schachtCostRepo = schachtCostRepo ?? throw new ArgumentNullException(nameof(schachtCostRepo));
+            _schachtEmpfehlungCostRepo = schachtEmpfehlungCostRepo;
             _projectOverviewCatalog = projectOverviewCatalog
                 ?? throw new ArgumentNullException(nameof(projectOverviewCatalog));
             _projectDropPaths = projectDropPaths ?? ProjectDropPathResolver.CompatibilityService;
@@ -187,10 +192,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             _dashboardRefreshTimer.Tick += DashboardRefreshTimerTick;
 
             NewCommand = new RelayCommand(NewProject);
-            OpenCommand = new AsyncRelayCommand(OpenProjectAsync);
             OpenSelectedCommand = new AsyncRelayCommand(OpenSelectedProjectAsync, () => SelectedProjectEntry is not null);
-            ContinueCommand = new AsyncRelayCommand(OpenLastProjectAsync, () => HasLastProject);
-            RefreshCommand = new RelayCommand(LoadAllProjects);
             PrintPreviewPdfCommand = new AsyncRelayCommand(PrintPreviewPdfAsync, CanPrintPreviewPdf);
             ClearFilterCommand = new RelayCommand(ClearFilter);
             DeleteSelectedCommand = new RelayCommand(DeleteSelectedProject, () => SelectedProjectEntry is not null);
@@ -351,9 +353,25 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             out string? costLoadError)
         {
             var hCosts = LoadCostStore(_haltungCostRepo, projectPath, out var hError);
-            var sCosts = LoadCostStore(_schachtCostRepo, projectPath, out var sError);
+            var sCosts = LoadSchachtCostStore(projectPath, out var sError);
             costLoadError = CombineCostLoadErrors(hError, sError);
             return DashboardStatisticsBuilder.Build(project, hCosts, sCosts);
+        }
+
+        /// <summary>
+        /// Schacht-Kosten aus Matrix UND Massnahmen-Dialog; die Matrix hat Vorrang.
+        /// Dieselbe Regel wie im Druckcenter.
+        /// </summary>
+        private ProjectCostStore LoadSchachtCostStore(string? projectPath, out string? error)
+        {
+            var matrix = LoadCostStore(_schachtCostRepo, projectPath, out var matrixError);
+            string? empfehlungenError = null;
+            var empfehlungen = _schachtEmpfehlungCostRepo is null
+                ? new ProjectCostStore()
+                : LoadCostStore(_schachtEmpfehlungCostRepo, projectPath, out empfehlungenError);
+
+            error = CombineCostLoadErrors(matrixError, empfehlungenError);
+            return SchachtCostStoreMerger.Merge(matrix, empfehlungen);
         }
 
         private static ProjectCostStore LoadCostStore(
@@ -399,7 +417,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
 
         private static string FormatDashboardCostText(DashboardStatistics? stats)
-            => stats is null ? "-" : stats.TotalCost.ToString("N0", CultureInfo.CurrentCulture);
+            // Fest de-CH statt CurrentCulture: CHF-Betraege sollen auf jeder
+            // Windows-Einstellung gleich aussehen wie die uebrigen Kostenkacheln.
+            => stats is null ? "-" : stats.TotalCost.ToString("N0", CultureInfo.GetCultureInfo("de-CH"));
 
         private bool CanPrintPreviewPdf()
             => HasActiveDashboard
@@ -412,38 +432,16 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             if (!CanPrintPreviewPdf())
                 return;
 
-            var preview = BuildPrintablePreview();
-            if (preview is null)
-            {
-                _dialogs.Info("Keine Projektvorschau zum Drucken vorhanden.", "Projektvorschau");
-                return;
-            }
-
-            var output = _dialogs.SaveFile(
-                "Projektvorschau PDF speichern",
-                "PDF (*.pdf)|*.pdf",
-                defaultExt: "pdf",
-                defaultFileName: BuildPreviewPdfFileName(preview.Name));
-            if (string.IsNullOrWhiteSpace(output))
-                return;
-
             IsPreviewPdfExportInProgress = true;
             try
             {
-                var target = Path.GetFullPath(output);
-                var directory = Path.GetDirectoryName(target);
-                if (!string.IsNullOrWhiteSpace(directory))
-                    Directory.CreateDirectory(directory);
-
-                var pdf = await Task.Run(() => ProjectPreviewPdfBuilder.Build(preview));
-                await File.WriteAllBytesAsync(target, pdf);
-                _dialogs.Info($"PDF erstellt:\n{target}", "Projektvorschau");
-            }
-            catch (Exception ex)
-            {
-                _dialogs.Error(
-                    $"PDF konnte nicht erstellt werden:\n{UserError.DescribeAndReport(ex, "Projektvorschau PDF erstellen")}",
-                    "Projektvorschau");
+                // F3: Derselbe Ablauf wie auf der neuen Uebersichtsseite. Er liegt einmal im
+                // UseCase; hier wird nur angeschlossen.
+                await ProjektVorschauPdfWorkflow.AusfuehrenAsync(
+                    BuildPrintablePreview,
+                    _dialogs,
+                    "Keine Projektvorschau zum Drucken vorhanden.",
+                    _toasts);
             }
             finally
             {
@@ -458,7 +456,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
             var projectPath = _settings.LastProjectPath ?? string.Empty;
             var hCosts = LoadCostStore(_haltungCostRepo, projectPath, out var hError);
-            var sCosts = LoadCostStore(_schachtCostRepo, projectPath, out var sError);
+            var sCosts = LoadSchachtCostStore(projectPath, out var sError);
             _activeCostLoadError = CombineCostLoadErrors(hError, sError);
             if (_activeCostLoadError is not null)
             {
@@ -473,22 +471,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         }
 
         internal static string BuildPreviewPdfFileName(string? projectName)
-        {
-            var safeName = SanitizeFilePart(string.IsNullOrWhiteSpace(projectName) ? "Projekt" : projectName);
-            return $"Projektvorschau_{safeName}_{DateTime.Now:yyyyMMdd}.pdf";
-        }
-
-        private static string SanitizeFilePart(string? value)
-        {
-            var text = (value ?? string.Empty).Trim();
-            if (text.Length == 0)
-                return "Projekt";
-
-            foreach (var invalid in Path.GetInvalidFileNameChars())
-                text = text.Replace(invalid, '_');
-
-            return string.IsNullOrWhiteSpace(text) ? "Projekt" : text;
-        }
+            => ProjektVorschauPdfUseCase.Dateiname(projectName);
 
         private void NavigateCondition(object? key)
         {
@@ -602,13 +585,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         _shell.StartNewProjectDraft();
     }
 
-    private async Task OpenProjectAsync()
-    {
-        if (!await _shell.TryOpenProjectWithDialogAsync())
-            return;
-        AfterProjectOpened();
-    }
-
     private async Task OpenSelectedProjectAsync()
     {
         var path = SelectedProjectEntry?.Path;
@@ -662,7 +638,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         try
         {
-            // Nur ausblenden, NICHT loeschen: die Projektdatei und alle Daten bleiben auf der Platte.
+            // Nur aus der Uebersicht entfernen, NICHT loeschen: Projektdatei und Daten bleiben auf der Platte.
             var wasActive = string.Equals(_settings.LastProjectPath, entry.Path, StringComparison.OrdinalIgnoreCase);
             if (wasActive && !_shell.ConfirmDiscardUnsavedChanges())
                 return;
@@ -672,7 +648,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
             if (wasActive)
             {
-                // Das aktive Projekt wurde ausgeblendet: Dirty-Flag zuruecksetzen und zum
+                // Das aktive Projekt wurde aus der Uebersicht entfernt: Dirty-Flag zuruecksetzen und zum
                 // Start-Bildschirm navigieren. EnterLauncher() baut die OverviewPage neu auf.
                 _shell.Project.Dirty = false;
                 _shell.EnterLauncher();
@@ -687,15 +663,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 $"Entfernen fehlgeschlagen: {UserError.DescribeAndReport(ex, "Letztes Projekt entfernen")}",
                 "Fehler");
         }
-    }
-
-    private async Task OpenLastProjectAsync()
-    {
-        if (!HasLastProject || LastProjectPath is null)
-            return;
-        if (!await _shell.TryOpenProjectAsync(LastProjectPath))
-            return;
-        AfterProjectOpened();
     }
 
     partial void OnSelectedProjectEntryChanged(ProjectOverviewEntry? value)
@@ -772,7 +739,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             if (res.Ok && res.Value is not null)
             {
                 var hCosts = LoadCostStore(_haltungCostRepo, request.Path, out var hError);
-                var sCosts = LoadCostStore(_schachtCostRepo, request.Path, out var sError);
+                var sCosts = LoadSchachtCostStore(request.Path, out var sError);
                 ct.ThrowIfCancellationRequested();
                 return ProjectPreviewFactory
                     .FromProject(res.Value, request.Path, hCosts, sCosts)
@@ -815,12 +782,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             AuftragNr: string.Empty,
             Firma: string.Empty,
             Statistics: emptyStatistics);
-    }
-
-    partial void OnLastProjectPathChanged(string? value)
-    {
-        ContinueCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(HasLastProject));
     }
 
 }

@@ -1,0 +1,36 @@
+[
+  {
+    "datei": ".tmp\\nova-abnahme-codex\\gesamt\\Besitzer_PCW11X01_2026-09-08_15_17_28.trx",
+    "projekt": "ProjectModernizer.Tests.dll",
+    "bestanden": 62,
+    "fehler": 0,
+    "uebersprungen": 0,
+    "rote_tests": []
+  },
+  {
+    "datei": ".tmp\\nova-abnahme-codex\\gesamt\\Besitzer_PCW11X01_2026-09-08_15_17_28[1].trx",
+    "projekt": "AuswertungPro.Next.Pipeline.Tests.dll",
+    "bestanden": 2644,
+    "fehler": 0,
+    "uebersprungen": 3,
+    "rote_tests": []
+  },
+  {
+    "datei": ".tmp\\nova-abnahme-codex\\gesamt\\Besitzer_PCW11X01_2026-09-08_15_17_28[2].trx",
+    "projekt": "AuswertungPro.Next.Infrastructure.Tests.dll",
+    "bestanden": 6291,
+    "fehler": 0,
+    "uebersprungen": 6,
+    "rote_tests": []
+  },
+  {
+    "datei": ".tmp\\nova-abnahme-codex\\final\\ui-final.trx",
+    "projekt": "AuswertungPro.Next.UI.Tests.dll",
+    "bestanden": 6864,
+    "fehler": 1,
+    "uebersprungen": 17,
+    "rote_tests": [
+      "AuswertungPro.Next.UI.Tests.NachschlagKontextmenueTests.Das_Nachschlagmenue_haengt_an_den_richtigen_Feldern"
+    ]
+  }
+]

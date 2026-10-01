@@ -118,4 +118,48 @@ public sealed class SchaechteFieldEditControllerTests
         record.SetFieldValue(fieldName, value);
         return record;
     }
+
+    /// <summary>
+    /// Nova-Etappe 2b, Task 6 (Fix-Runde 1): Die Zustandsklasse steht in einer Vorlagenspalte
+    /// (Marke mit Auswahl 0 bis 4). Deren TwoWay-Bindung schreibt direkt in das
+    /// <c>Fields</c>-Dictionary — ohne Herkunft, ohne Handmarkierung. Genau die braucht der
+    /// XTF-Export aber: <c>XtfSchachtPlanBuilder</c> schreibt <c>BaulicherZustand</c> nur bei
+    /// einem handgesetzten Feld. Der Zellen-Commit stempelt deshalb nach.
+    /// </summary>
+    [Fact]
+    public void Eine_echte_Auswahl_stempelt_die_Zustandsklasse_als_Handeingabe()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Zustandsklasse", "2", FieldSource.Xtf405, userEdited: false);
+        // Was die Auswahl der Marke tut: direkt in das Dictionary schreiben.
+        record.Fields["Zustandsklasse"] = "3";
+
+        var applied = SchaechteFieldEditController.ApplyZustandsklasse("Zustandsklasse", record, "2");
+
+        Assert.True(applied);
+        Assert.Equal("3", record.GetFieldValue("Zustandsklasse"));
+        Assert.Equal(FieldSource.Manual, record.FieldMeta["Zustandsklasse"].Source);
+        Assert.True(record.FieldMeta["Zustandsklasse"].UserEdited);
+    }
+
+    /// <summary>
+    /// Gegenprobe zu F1: Blosses Oeffnen und Schliessen ohne Auswahl aendert nichts — weder den
+    /// Wert noch seine Herkunft. Sonst waere ein Klick auf die Zelle eine Handeingabe und ginge
+    /// als solche in die XTF.
+    /// </summary>
+    [Theory]
+    [InlineData("2")]
+    [InlineData("2,4")]
+    public void Ohne_Aenderung_wird_nichts_gestempelt(string wert)
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Zustandsklasse", wert, FieldSource.Xtf405, userEdited: false);
+
+        var applied = SchaechteFieldEditController.ApplyZustandsklasse("Zustandsklasse", record, wert);
+
+        Assert.False(applied);
+        Assert.Equal(wert, record.GetFieldValue("Zustandsklasse"));
+        Assert.Equal(FieldSource.Xtf405, record.FieldMeta["Zustandsklasse"].Source);
+        Assert.False(record.FieldMeta["Zustandsklasse"].UserEdited);
+    }
 }

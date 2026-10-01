@@ -4,7 +4,8 @@
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
-        Title="SN EN 13508-2 Beobachtungskatalog für Haltungen &amp; Leitungen"
+        xmlns:nova="clr-namespace:AuswertungPro.Next.UI.Controls"
+        Title="SewerStudio — Beobachtungskatalog SN EN 13508-2"
         Width="1400"
         Height="780"
         MinWidth="1100"
@@ -37,7 +38,15 @@
             <sys:String>EZ4</sys:String>
         </x:Array>
     </Window.Resources>
-    <Grid Margin="6" Background="#E6E6E6">
+    <Grid Margin="6">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <nova:NovaDialogHeader Grid.Row="0" Title="Beobachtungskatalog SN EN 13508-2"/>
+
+        <Grid Grid.Row="1" Margin="0,10,0,0" Background="{DynamicResource BgLightBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="300"/>
             <ColumnDefinition Width="*"/>
@@ -62,31 +71,49 @@
                      Grid.Row="1"
                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                      Margin="0,0,0,6"/>
-            <ListView Grid.Row="2"
-                      x:Name="SearchList"
-                      ItemsSource="{Binding FilteredCodes}"
-                      SelectionChanged="SearchList_SelectionChanged">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn Header="Code" Width="70" DisplayMemberBinding="{Binding Code}"/>
-                        <GridViewColumn Header="Text" Width="200" DisplayMemberBinding="{Binding Title}"/>
-                    </GridView>
-                </ListView.View>
-            </ListView>
+            <Grid Grid.Row="2">
+                <ListView x:Name="SearchList"
+                          ItemsSource="{Binding FilteredCodes}"
+                          SelectionChanged="SearchList_SelectionChanged">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Code" Width="70" DisplayMemberBinding="{Binding Code}"/>
+                            <GridViewColumn Header="Text" Width="200" DisplayMemberBinding="{Binding Title}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+
+                <nova:EmptyStateControl IsHitTestVisible="False"
+                                        Icon="&#xE721;"
+                                        Title="Keine Treffer"
+                                        Message="Keine Treffer für die aktuelle Suche.">
+                    <nova:EmptyStateControl.Style>
+                        <Style TargetType="nova:EmptyStateControl">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasItems, ElementName=SearchList}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </nova:EmptyStateControl.Style>
+                </nova:EmptyStateControl>
+            </Grid>
         </Grid>
 
         <!-- Oben Mitte: Code-Titel und Beschreibung (wie WinCan-Original) -->
         <StackPanel Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="2" Margin="4,0,0,0">
             <TextBlock Text="Beobachtung" FontWeight="SemiBold" Margin="0,2,0,4"/>
-            <TextBlock Text="{Binding CodeTitle}" FontSize="18" FontWeight="Bold" Foreground="#1F4E9E"
+            <TextBlock Text="{Binding CodeTitle}" FontSize="{DynamicResource TextXL}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
                        Margin="0,0,0,4" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding CodeDescription}" Foreground="#444" TextWrapping="Wrap"
+            <TextBlock Text="{Binding CodeDescription}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"
                        Margin="0,0,0,6" MaxHeight="40"/>
         </StackPanel>
 
         <!-- Mitte: Kaskaden-Navigation -->
-        <Border Grid.Column="1" Grid.Row="1" Grid.RowSpan="2" BorderBrush="#8A8A8A" BorderThickness="1"
-                Background="#CFCFCF" Margin="4,0,6,0">
+        <Border Grid.Column="1" Grid.Row="1" Grid.RowSpan="2"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                Background="{DynamicResource CardBrush}" Margin="4,0,6,0">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding Columns}">
                     <ItemsControl.ItemsPanel>
@@ -102,7 +129,7 @@
                                      MinWidth="180"
                                      MaxWidth="260"
                                      Margin="0,0,2,0"
-                                     Background="#EFEFEF"
+                                     Background="{DynamicResource CardBrush}"
                                      BorderThickness="0">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
@@ -130,7 +157,8 @@
                                           IsEditable="True"
                                           Visibility="{Binding IsEnum, Converter={StaticResource BoolToVis}}">
                                     <ComboBox.Style>
-                                        <Style TargetType="ComboBox">
+                                        <Style TargetType="ComboBox"
+                                               BasedOn="{StaticResource {x:Type ComboBox}}">
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsValid}" Value="False">
                                                     <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
@@ -144,7 +172,8 @@
                                 <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                          Background="{DynamicResource VsaInputHighlightBrush}">
                                     <TextBox.Style>
-                                        <Style TargetType="TextBox">
+                                        <Style TargetType="TextBox"
+                                               BasedOn="{StaticResource {x:Type TextBox}}">
                                             <Setter Property="Visibility" Value="Visible"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsEnum}" Value="True">
@@ -167,7 +196,8 @@
                                 <StackPanel Visibility="{Binding IsClock, Converter={StaticResource BoolToVis}}">
                                     <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,6">
                                         <TextBox.Style>
-                                            <Style TargetType="TextBox">
+                                            <Style TargetType="TextBox"
+                                                   BasedOn="{StaticResource {x:Type TextBox}}">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsValid}" Value="False">
                                                         <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
@@ -183,7 +213,7 @@
                                     </Border>
                                 </StackPanel>
 
-                                <TextBlock Text="{Binding UnitSuffix}" Foreground="{StaticResource MutedBrush}" />
+                                <TextBlock Text="{Binding UnitSuffix}" Foreground="{DynamicResource MutedBrush}" />
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -191,10 +221,10 @@
 
                 <!-- VSA-KEK Bereich -->
                 <GroupBox Header="VSA-KEK (Kanalschaden)" Margin="0,4,0,0"
-                          BorderBrush="#4A90D9" BorderThickness="2">
+                          BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2">
                     <GroupBox.HeaderTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding}" FontWeight="Bold" Foreground="#1F4E9E"/>
+                            <TextBlock Text="{Binding}" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
                         </DataTemplate>
                     </GroupBox.HeaderTemplate>
                     <Grid Margin="8,6,8,8">
@@ -331,14 +361,17 @@
                         Height="32"
                         Margin="0,0,10,0"
                         Visibility="{Binding HasKiService, Converter={StaticResource BoolToVis}}"/>
-                <TextBlock Text="{Binding KiStatus}" VerticalAlignment="Center" Foreground="DarkCyan" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding KiStatus}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource SecondaryAccentBrush}" TextWrapping="Wrap"/>
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="CancelButton" Content="Abbrechen" Width="130" Height="32"
+                        Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" IsCancel="True"/>
                 <Button x:Name="ApplyButton" Content="Übernehmen" Width="130" Height="32"
-                        FontWeight="SemiBold" Margin="0,0,8,0"/>
-                <Button x:Name="CancelButton" Content="Abbrechen" Width="130" Height="32" IsCancel="True"/>
+                        Style="{StaticResource PrimaryButton}" IsDefault="True"/>
             </StackPanel>
+        </Grid>
         </Grid>
     </Grid>
 </Window>

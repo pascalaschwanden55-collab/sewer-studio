@@ -7,7 +7,8 @@ namespace AuswertungPro.Next.Application.DataPage;
 
 public sealed record DataPageHydraulikAvailability(double? DnMm, double? GefaellePromille)
 {
-    public bool IsAvailable => DnMm is > 0 && GefaellePromille is > 0;
+    public bool IsAvailable => DnMm is > 0 && double.IsFinite(DnMm.Value)
+        && GefaellePromille is > 0 && double.IsFinite(GefaellePromille.Value);
 }
 
 public static class DataPageHydraulikReportCalculator
@@ -41,10 +42,15 @@ public static class DataPageHydraulikReportCalculator
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(panel);
 
-        var dn = dnMm
-            ?? DnValueParser.TryParseMillimeters(record.GetFieldValue(FieldKeys.NominalDiameterMm))
-            ?? 300d;
-        var material = HydraulikMaterialCatalog.Resolve(
+        var availability = ReadAvailability(record);
+        if (dnMm.HasValue)
+            availability = availability with { DnMm = dnMm };
+        if (!availability.IsAvailable)
+            return null;
+
+        var dn = availability.DnMm!.Value;
+        // Ein Rohrmaterial ohne Rauheitswert rechnet mit der Einstellung — und der Bericht sagt das (Audit A13).
+        var (material, materialHinweis) = HydraulikMaterialCatalog.ResolveMitHinweis(
             record.GetFieldValue(FieldKeys.PipeMaterial),
             panel.MaterialKey);
         var kb = panel.IsNeuzustand ? material.KbNeu : material.KbAlt;
@@ -52,7 +58,7 @@ public static class DataPageHydraulikReportCalculator
         var input = new HydraulikInput(
             DN_mm: dn,
             Wasserstand_mm: dn / 2,
-            Gefaelle_Promille: panel.Gefaelle,
+            Gefaelle_Promille: availability.GefaellePromille!.Value,
             Kb: kb,
             AbwasserTyp: "MR",
             Temperatur_C: panel.Temperatur);
@@ -65,6 +71,7 @@ public static class DataPageHydraulikReportCalculator
         panel.MaterialKey = material.Key;
         saveSettings?.Invoke();
 
-        return HydraulikCalcResultMapper.ToReportResult(input, result, material.Label);
+        var materialText = materialHinweis is null ? material.Label : $"{material.Label} ({materialHinweis})";
+        return HydraulikCalcResultMapper.ToReportResult(input, result, materialText);
     }
 }

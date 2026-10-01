@@ -43,6 +43,42 @@ public sealed class DataPageColumnSetupTests
         });
     }
 
+    /// <summary>
+    /// Nova-Fixwelle 2b (P1): Jede Zahlenspalte bekommt die rechte Ausrichtung, nicht nur
+    /// "Kosten". Vorher schrieb der DataGridColumnLayoutController die hier gelieferte linke
+    /// Ausrichtung ueber das TextAlignment.Right der Spaltenfabrik.
+    /// </summary>
+    [Theory]
+    [InlineData("DN_mm")]
+    [InlineData("Lichte_Breite_mm")]
+    [InlineData("Haltungslaenge_m")]
+    [InlineData("Baujahr")]
+    [InlineData("Gefaelle_Promille")]
+    [InlineData("Bruttokosten")]
+    [InlineData("VSA_Zustandsnote_D")]
+    public void Apply_richtet_jede_Zahlenspalte_rechts_aus(string feld)
+    {
+        RunOnSta(() =>
+        {
+            var setup = DataPageColumnSetup.Apply(new DataGridTextColumn(), feld);
+            Assert.Equal(HorizontalAlignment.Right, setup.DefaultHorizontalAlignment);
+        });
+    }
+
+    /// <summary>Textspalten bleiben links — die Regel gilt nur fuer Zahlen.</summary>
+    [Theory]
+    [InlineData("Haltungsname")]
+    [InlineData("Strasse")]
+    [InlineData("Rohrmaterial")]
+    public void Apply_laesst_Textspalten_links(string feld)
+    {
+        RunOnSta(() =>
+        {
+            var setup = DataPageColumnSetup.Apply(new DataGridTextColumn(), feld);
+            Assert.Equal(HorizontalAlignment.Left, setup.DefaultHorizontalAlignment);
+        });
+    }
+
     [Fact]
     public void Apply_uses_compact_min_width_for_nr_column()
     {

@@ -37,7 +37,7 @@ public sealed class TrainingCenterSampleGenerationStatusFormatterTests
 
         Assert.Equal(TrainingCenterBatchSkipKind.DuplicateOnly, info.Kind);
         Assert.Equal("4 Duplikate", info.ResultSummary);
-        Assert.Equal("  -> 0 Samples (alle 4 Eintraege bereits vorhanden)", info.LogMessage);
+        Assert.Equal("  -> 0 Samples (alle 4 Einträge bereits vorhanden)", info.LogMessage);
         Assert.Equal("4 Duplikate", info.LiveCodeInfo);
         Assert.Equal("bereits vorhanden", info.LiveMeterInfo);
     }

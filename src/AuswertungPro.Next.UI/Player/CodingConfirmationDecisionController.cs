@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
@@ -132,7 +133,7 @@ public sealed class CodingConfirmationDecisionController
         }
         catch (Exception ex)
         {
-            return CodingConfirmationDecisionApplyOutcome.PersistenceFailed(ex.Message);
+            return CodingConfirmationDecisionApplyOutcome.PersistenceFailed(UserError.DescribeAndReport(ex, "Codier-Entscheidung speichern"));
         }
     }
 

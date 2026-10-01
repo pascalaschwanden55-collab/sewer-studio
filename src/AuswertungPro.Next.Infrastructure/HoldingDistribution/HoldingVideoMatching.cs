@@ -111,10 +111,10 @@ internal static class HoldingVideoMatching
         var gKey = hKey + "g";
         var containing = files.Where(f =>
         {
-            var nameKey = NormalizeHoldingVideoKey(Path.GetFileNameWithoutExtension(f));
-            return nameKey.Contains(hKey, StringComparison.OrdinalIgnoreCase)
-                   && !nameKey.Contains(gKey, StringComparison.OrdinalIgnoreCase)
-                   && nameKey.Contains(dateKey, StringComparison.OrdinalIgnoreCase);
+            var name = HoldingKeyNormalizer.NormalizeIbak(Path.GetFileNameWithoutExtension(f));
+            return HoldingTextNormalizer.ContainsNormalizedKeyAtBoundary(name, hKey)
+                   && !HoldingTextNormalizer.ContainsNormalizedKeyAtBoundary(name, gKey)
+                   && HoldingTextNormalizer.ContainsNormalizedKeyAtBoundary(name, dateKey);
         }).ToList();
         if (containing.Count == 1)
             return new HoldingFolderDistributor.VideoFindResult(HoldingFolderDistributor.VideoMatchStatus.Matched, containing[0], Array.Empty<string>(), null);
@@ -127,9 +127,9 @@ internal static class HoldingVideoMatching
         // Import-Report etikettiert (Sicherheitsnetz statt zusaetzlicher UI).
         var haltungOnly = files.Where(f =>
         {
-            var nameKey = NormalizeHoldingVideoKey(Path.GetFileNameWithoutExtension(f));
-            return nameKey.Contains(hKey, StringComparison.OrdinalIgnoreCase)
-                   && !nameKey.Contains(gKey, StringComparison.OrdinalIgnoreCase);
+            var name = HoldingKeyNormalizer.NormalizeIbak(Path.GetFileNameWithoutExtension(f));
+            return HoldingTextNormalizer.ContainsNormalizedKeyAtBoundary(name, hKey)
+                   && !HoldingTextNormalizer.ContainsNormalizedKeyAtBoundary(name, gKey);
         }).ToList();
 
         if (haltungOnly.Count == 0)
@@ -175,8 +175,8 @@ internal static class HoldingVideoMatching
                 if (secondDist - bestDist >= 1.0)
                 {
                     var message = bestDist < 1.0
-                        ? "Naechstes Haltung-Video ueber Datum/Zeitstempel zugeordnet"
-                        : "Naechstes Haltung-Video zugeordnet (Datum weicht ab)";
+                        ? "Nächstes Haltung-Video über Datum/Zeitstempel zugeordnet"
+                        : "Nächstes Haltung-Video zugeordnet (Datum weicht ab)";
                     return new HoldingFolderDistributor.VideoFindResult(
                         HoldingFolderDistributor.VideoMatchStatus.Matched, scored[0].File, Array.Empty<string>(), message);
                 }
@@ -187,7 +187,7 @@ internal static class HoldingVideoMatching
         // damit sie im Report sichtbar bleiben.
         return new HoldingFolderDistributor.VideoFindResult(
             HoldingFolderDistributor.VideoMatchStatus.Ambiguous, null, haltungOnly,
-            "Mehrere Haltung-Videos, nicht eindeutig per Datum/Zeitstempel aufloesbar");
+            "Mehrere Haltung-Videos, nicht eindeutig per Datum/Zeitstempel auflösbar");
     }
 
     // Extrahiert das Datum aus dem Dateinamen (nach Tilgung der Haltungsnummer), falls vorhanden

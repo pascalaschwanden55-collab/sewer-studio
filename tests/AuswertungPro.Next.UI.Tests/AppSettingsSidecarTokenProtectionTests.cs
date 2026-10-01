@@ -49,7 +49,7 @@ public sealed class AppSettingsSidecarTokenProtectionTests
         const string json = """
             {
               "EnableDiagnostics": false,
-              "PipelineSidecarToken": "dpapi:v1:kein-gueltiges-base64"
+              "PipelineSidecarToken": "dpapi:v1:kein-gültiges-base64"
             }
             """;
 

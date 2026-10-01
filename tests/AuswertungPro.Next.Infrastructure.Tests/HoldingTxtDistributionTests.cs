@@ -60,10 +60,13 @@ public sealed class HoldingTxtDistributionTests
         var dateStamp = new DateTime(2014, 12, 4).ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         Assert.Contains($"{dateStamp}_100-200", Path.GetFileName(item.DestPdfPath!), StringComparison.OrdinalIgnoreCase);
         Assert.Contains($"{dateStamp}_100-200", Path.GetFileName(item.DestVideoPath!), StringComparison.OrdinalIgnoreCase);
+        // Der Verteiler kennt den echten Projektroot nicht und darf ihn deshalb nicht
+        // aus einem blossen Ordnernamen erraten. Der zentrale Projektsave relativiert
+        // den nachgewiesen internen Link spaeter.
         Assert.Equal(
-            Path.GetRelativePath(projectRoot, item.DestVideoPath!).Replace('\\', '/'),
+            Path.GetFullPath(item.DestVideoPath!),
             record.GetFieldValue("Link"));
-        Assert.False(Path.IsPathRooted(record.GetFieldValue("Link")));
+        Assert.True(Path.IsPathRooted(record.GetFieldValue("Link")));
     }
 
     private sealed class TempDir : IDisposable

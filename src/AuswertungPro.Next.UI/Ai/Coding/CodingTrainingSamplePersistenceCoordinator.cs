@@ -101,7 +101,7 @@ public sealed class CodingTrainingSamplePersistenceCoordinator
         catch (Exception ex)
         {
             _log($"[Training] Einzelspeicherung Fehler: {ex.Message}");
-            return CodingTrainingSamplePersistenceResult.Failed(ex.Message);
+            return CodingTrainingSamplePersistenceResult.Failed(UserError.DescribeAndReport(ex, "Trainingsfall speichern"));
         }
     }
 
@@ -138,7 +138,7 @@ public sealed class CodingTrainingSamplePersistenceCoordinator
         catch (Exception ex)
         {
             _log($"[Training] Fehler: {ex.Message}");
-            return CodingTrainingSamplePersistenceResult.Failed(ex.Message);
+            return CodingTrainingSamplePersistenceResult.Failed(UserError.DescribeAndReport(ex, "Trainingsfälle speichern"));
         }
     }
 
@@ -240,5 +240,6 @@ public sealed class CodingTrainingSamplePersistenceCoordinator
     }
 
     private static bool CanPersist(CodingEvent codingEvent)
-        => !string.IsNullOrWhiteSpace(codingEvent.Entry.Code);
+        => codingEvent.Entry.Training?.SkipAutomaticPersistence != true
+           && !string.IsNullOrWhiteSpace(codingEvent.Entry.Code);
 }

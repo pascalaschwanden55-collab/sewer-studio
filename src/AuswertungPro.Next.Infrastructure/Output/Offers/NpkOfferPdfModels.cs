@@ -1,8 +1,11 @@
 using System.Collections.Generic;
+using AuswertungPro.Next.Application.Output;
 
 namespace AuswertungPro.Next.Infrastructure.Output.Offers;
 
-public sealed class NpkOfferPdfModel
+// Der Marker bindet das Modell typsicher an den Exportvertrag. Ohne ihn musste der
+// NPK-Weg am Vertrag vorbei rendern.
+public sealed class NpkOfferPdfModel : IOfferPdfModel
 {
     public string LogoDataUri { get; set; } = "";
     public string DocumentKindLabel { get; set; } = "NPK-135-Offerte";

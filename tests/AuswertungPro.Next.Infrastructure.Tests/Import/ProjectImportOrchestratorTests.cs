@@ -1,11 +1,16 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
+using AuswertungPro.Next.Infrastructure.Projects;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
@@ -18,6 +23,851 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 /// </summary>
 public sealed class ProjectImportOrchestratorTests
 {
+    [Fact]
+    public void Import_WinCan_RoutesToWinCanImporter_AndCarriesStats()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+
+        try
+        {
+            var winCan = new CapturingWinCanImporter();
+            var project = new Project();
+            var orchestrator = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                exportDetector: new FixedWinCanDetector());
+
+            var result = orchestrator.Import(sourceDir, projectDir, project);
+
+            Assert.Equal(KanalExportFormat.WinCan, result.Format);
+            Assert.Equal(sourceDir, winCan.SourceFolder);
+            Assert.Same(project, winCan.Project);
+            Assert.Equal(1, winCan.CallCount);
+            Assert.Equal(2, result.Found);
+            Assert.Equal(1, result.Created);
+            Assert.Equal(1, result.Updated);
+            Assert.Contains("WinCan-Testimport", result.Messages);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_WinCan_RecordsImporterFailure()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+
+        try
+        {
+            var winCan = new CapturingWinCanImporter { Fail = true };
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(1, winCan.CallCount);
+            Assert.True(result.Errors >= 1);
+            Assert.Contains(result.Messages, message =>
+                message.Contains("Parse fehlgeschlagen [TEST_FAILURE]: Testfehler", StringComparison.Ordinal));
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Quelle einlesen"
+                && step.Gruende.Contains("Parse fehlgeschlagen [TEST_FAILURE]: Testfehler"));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_WinCan_PropagatesCancellationFromImporter()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+
+        try
+        {
+            var winCan = new CapturingWinCanImporter { Cancel = true };
+            var orchestrator = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                exportDetector: new FixedWinCanDetector());
+
+            Assert.Throws<OperationCanceledException>(() =>
+                orchestrator.Import(sourceDir, projectDir, new Project()));
+            Assert.Equal(1, winCan.CallCount);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_ArchivePhase_ReportsArchiveAndPlanResults()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var archiver = new RecordingSourceArchiver();
+            var plans = new RecordingPlanPdfImporter();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                sourceArchiver: archiver,
+                planPdfImporter: plans,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(sourceDir, archiver.SourceFolder);
+            Assert.Equal(projectDir, archiver.ProjectFolder);
+            Assert.Equal(ProjectStructure.ImportdateienDir(projectDir, ProjectStructure.PdfDir), plans.ArchivedPdfDir);
+            Assert.Equal(projectDir, plans.ProjectFolder);
+            Assert.Contains("Archiviert: 2 neu, 1 wiederverwendet.", result.Messages);
+            Assert.Contains("Pläne: 1 neu, 0 wiederverwendet, 1 Fehler.", result.Messages);
+            Assert.Contains("Planfehler", result.Messages);
+            Assert.True(result.Errors >= 1);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_ArchivePhase_ContinuesParsingAfterArchiveFailure()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var plans = new RecordingPlanPdfImporter();
+            var winCan = new CapturingWinCanImporter();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                sourceArchiver: new RecordingSourceArchiver { Fail = true },
+                planPdfImporter: plans,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Contains("Archivierung fehlgeschlagen: Testarchivfehler", result.Messages);
+            Assert.Null(plans.ArchivedPdfDir);
+            Assert.Equal(1, winCan.CallCount);
+            Assert.True(result.Errors >= 1);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Archivierung"
+                && step.Gruende.Contains("Archivierung fehlgeschlagen: Testarchivfehler"));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_ArchivePhase_PropagatesCancellation()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var winCan = new CapturingWinCanImporter();
+            var orchestrator = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                sourceArchiver: new RecordingSourceArchiver { Cancel = true },
+                exportDetector: new FixedWinCanDetector());
+
+            Assert.Throws<OperationCanceledException>(() =>
+                orchestrator.Import(sourceDir, projectDir, new Project()));
+            Assert.Equal(0, winCan.CallCount);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    private static (string SourceDir, string ProjectDir) CreateEmptyWinCanFixture()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"orch-wincan-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "source");
+        var projectDir = Path.Combine(root, "projekt");
+        Directory.CreateDirectory(sourceDir);
+        Directory.CreateDirectory(projectDir);
+        return (sourceDir, projectDir);
+    }
+
+    [Fact]
+    public void Import_DetectionFailure_ReportsTheSameReasonInMessagesAndLedger()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var winCan = new CapturingWinCanImporter();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                winCan,
+                exportDetector: new ThrowingDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            const string reason = "Formaterkennung fehlgeschlagen: Testdetektorfehler";
+            Assert.Equal(KanalExportFormat.Unknown, result.Format);
+            Assert.Contains(reason, result.Messages);
+            Assert.Equal(1, result.Errors);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Formaterkennung"
+                && step.Anzahl == 1
+                && step.Gruende.Contains(reason));
+            Assert.Equal(0, winCan.CallCount);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_PhotoPhase_UsesPhotoOnlyRequestAndCountsErrors()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var media = new RecordingMediaDistributor();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: media,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.NotNull(media.Request);
+            Assert.Equal(projectDir, media.Request.ProjectFolder);
+            Assert.False(media.Request.IncludeVideos);
+            Assert.False(media.Request.IncludePdfs);
+            Assert.False(media.Request.IncludeSchacht);
+            Assert.False(media.Request.DryRun);
+            Assert.NotNull(media.Request.CollectionLock);
+            Assert.Contains("Fotofehler", result.Messages);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Fotoverteilung"
+                && step.Anzahl == 1
+                && step.Gruende.Contains("Fotofehler"));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_PhotoPhase_ContinuesAfterDistributorFailure()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var project = new Project();
+            var kanalDistributor = new RecordingKanalDistributor();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Fail = true },
+                kanalDistributor: kanalDistributor,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, project);
+
+            Assert.True(project.Dirty);
+            Assert.Equal(0, kanalDistributor.CallCount);
+            Assert.Contains("Medienverteilung fehlgeschlagen: Testmedienfehler", result.Messages);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Medienverteilung"
+                && step.Gruende.Contains("Medienverteilung fehlgeschlagen: Testmedienfehler"));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_PhotoPhase_PropagatesCancellation()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var project = new Project();
+            var orchestrator = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Cancel = true },
+                exportDetector: new FixedWinCanDetector());
+
+            Assert.Throws<OperationCanceledException>(() =>
+                orchestrator.Import(sourceDir, projectDir, project));
+            Assert.False(project.Dirty);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_DistributesPhotosBeforeNamedAndChannelProtocols()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var order = new System.Collections.Generic.List<string>();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { OnDistribute = () => order.Add("Fotos") },
+                protocolDistributor: new RecordingProtocolDistributor(() => order.Add("Namen")),
+                kanalDistributor: new RecordingKanalDistributor
+                {
+                    OnDistribute = () => order.Add("Kanal"),
+                    FailureMessage = "Testfehler Kanalverteilung"
+                },
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(["Fotos", "Namen", "Kanal"], order);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Fotoverteilung" && step.Gruende.Contains("Fotofehler"));
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Medienverteilung"
+                && step.Gruende.Contains("Medienverteilung fehlgeschlagen: Testfehler Kanalverteilung"));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_ReportsNamedProtocolCopyFailuresInMessagesAndLedger()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var kanal = new RecordingKanalDistributor { FailureMessage = "Teststopp Kanalverteilung" };
+            var report = new ProtocolDistributionReport(1, 1, 0, ["unbekannt.pdf"], ["Kopierfehler"]);
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor
+                {
+                    Result = new ImportMediaDistributionResult(0, 0, 0, [])
+                },
+                protocolDistributor: new RecordingProtocolDistributor(() => { }, report),
+                kanalDistributor: kanal,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(1, kanal.CallCount);
+            var messages = result.Messages.ToList();
+            var summary = messages.IndexOf("Protokolle name-basiert verteilt: 1 Haltungen, 1 Schächte, 0 Schächte angelegt.");
+            var unmatched = messages.IndexOf("Protokoll nicht zugeordnet: unbekannt.pdf");
+            var copyFailure = messages.IndexOf("Protokoll nicht kopiert: Kopierfehler");
+            Assert.True(summary >= 0 && summary < unmatched && unmatched < copyFailure);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Name-basierte Protokollverteilung"
+                && step.Anzahl == 1
+                && step.Gruende.Contains("Kopierfehler"));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_RunsDichtheitsverteilungAfterSuccessfulKanalverteilung_AndReportsSummary()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var order = new System.Collections.Generic.List<string>();
+            var dichtheit = new RecordingDichtheitDistributor
+            {
+                OnDistribute = () => order.Add("Dichtheit"),
+                Result = new DichtheitImportDistributor.Result(
+                    2, 1, 1, ["DP-Hinweis A", "DP-Hinweis B"])
+            };
+            var kanal = new RecordingKanalDistributor
+            {
+                OnDistribute = () => order.Add("Kanal"),
+                SuccessResult = new KanalImportDistributor.Result(0, 0, 0, [])
+            };
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { OnDistribute = () => order.Add("Fotos") },
+                protocolDistributor: new RecordingProtocolDistributor(() => order.Add("Namen")),
+                kanalDistributor: kanal,
+                dichtheitDistributor: dichtheit,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(["Fotos", "Namen", "Kanal", "Dichtheit"], order);
+
+            var messages = result.Messages.ToList();
+            var erste = messages.IndexOf("DP-Hinweis A");
+            var zweite = messages.IndexOf("DP-Hinweis B");
+            var zusammenfassung = messages.IndexOf(
+                "Dichtheitspruefung: 2 Protokolle verteilt, 1 nicht zugeordnet, 1 bereits vorhanden, 0 Fehler.");
+
+            Assert.True(erste >= 0, "Meldungen der Dichtheitsverteilung muessen unveraendert erscheinen.");
+            Assert.Equal(erste + 1, zweite);
+            Assert.Equal(zweite + 1, zusammenfassung);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_CountsAndReportsPdfFallbackHoldingFromKanalDistributor()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var project = new Project();
+            var kanal = new RecordingKanalDistributor
+            {
+                SuccessResult = new KanalImportDistributor.Result(0, 0, 0, []),
+                AddHaltungOnSuccess = true
+            };
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                kanalDistributor: kanal,
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, project);
+
+            // CapturingWinCanImporter meldet ohne Fallback Found=2/Created=1 (siehe
+            // Import_WinCan_RoutesToWinCanImporter_AndCarriesStats); der PDF-Fallback des
+            // Kanal-Fakes fuegt genau eine Haltung hinzu und erhoeht deshalb beide um eins.
+            Assert.Single(project.Data);
+            Assert.Equal(3, result.Found);
+            Assert.Equal(2, result.Created);
+            Assert.Contains("PDF-Fallback: 1 Haltungen aus Original-Protokollen angelegt.", result.Messages);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_DistributesShaftProtocolsLast_AndReportsOnlyRealFailures()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var order = new System.Collections.Generic.List<string>();
+            var shaft = new RecordingShaftDistributor(
+                () => order.Add("Schacht"),
+                new ShaftDistributionResult(
+                [
+                    new(true, "ok", "a.pdf", Path.Combine(projectDir, "Schaechte_Verteilt", "S1", "a.pdf"), null, "S1"),
+                    new(false, "Parse failed: kein Schachtprotokoll", "haltung.pdf", null, null, null),
+                    new(false, "Zielordner gesperrt", "b.pdf", null, null, null)
+                ], UsesPersistentProjectTransaction: false));
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor
+                {
+                    OnDistribute = () => order.Add("Fotos"),
+                    Result = new ImportMediaDistributionResult(4, 0, 0, [])
+                },
+                protocolDistributor: new RecordingProtocolDistributor(() => order.Add("Namen")),
+                kanalDistributor: new RecordingKanalDistributor
+                {
+                    OnDistribute = () => order.Add("Kanal"),
+                    SuccessResult = new KanalImportDistributor.Result(3, 2, 1, ["Videofehler"])
+                },
+                dichtheitDistributor: new RecordingDichtheitDistributor { OnDistribute = () => order.Add("Dichtheit") },
+                exportDetector: new FixedWinCanDetector(),
+                shaftDistribution: shaft)
+                .Import(sourceDir, projectDir, new Project());
+
+            Assert.Equal(["Fotos", "Namen", "Kanal", "Dichtheit", "Schacht"], order);
+            var messages = result.Messages.ToList();
+            Assert.Contains(messages, m => m.StartsWith("Schachtprotokolle: 1 verteilt", StringComparison.Ordinal));
+            Assert.Contains("Schachtprotokoll b.pdf nicht verteilt: Zielordner gesperrt", messages);
+            Assert.DoesNotContain(messages, m => m.Contains("haltung.pdf", StringComparison.Ordinal));
+            Assert.Contains(result.Fehlerbilanz.Schritte, step => step.Schritt == "Schachtprotokolle" && step.Anzahl == 1);
+            // Die Abschlusszeile folgt den Schachtmeldungen und zaehlt alle Fehler der Phase
+            // (hier ein Kanal- und ein Schachtfehler), wie die Fehlerbilanz.
+            var summary = messages.IndexOf("Verteilung: 4 Fotos/Dateien, 3 Videos, 2 Original-Protokolle, 2 Fehler.");
+            Assert.True(summary > messages.IndexOf("Schachtprotokoll b.pdf nicht verteilt: Zielordner gesperrt"));
+            Assert.DoesNotContain(messages, m => m.StartsWith("Medienverteilung fehlgeschlagen", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_ScannedOrDatelessShaftProtocolsDoNotDisappear()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Result = new ImportMediaDistributionResult(0, 0, 0, []) },
+                kanalDistributor: new RecordingKanalDistributor { SuccessResult = new KanalImportDistributor.Result(0, 0, 0, []) },
+                exportDetector: new FixedWinCanDetector(),
+                shaftDistribution: new RecordingShaftDistributor(() => { }, new ShaftDistributionResult(
+                [
+                    new(false, "Parse failed: PDF enthält keine lesbare Textebene", "scan.pdf", null, null, null),
+                    new(false, "Parse failed: Datum nicht gefunden", "ohne_datum.pdf", null, null, null),
+                    new(false, "Parse failed: Schachtnummer und Datum nicht gefunden", "fremd.pdf", null, null, null)
+                ], false)))
+                .Import(sourceDir, projectDir, new Project());
+
+            var messages = result.Messages.ToList();
+            // Scan: Hinweis im Bericht, kein Fehler (kann auch ein gescanntes Haltungsprotokoll sein).
+            Assert.Contains(messages, m => m.Contains("scan.pdf", StringComparison.Ordinal) && m.Contains("prüfen", StringComparison.Ordinal));
+            // Schachtnummer erkannt, Datum fehlt: echter Fehler.
+            Assert.Contains("Schachtprotokoll ohne_datum.pdf nicht verteilt: Parse failed: Datum nicht gefunden", messages);
+            var schacht = Assert.Single(result.Fehlerbilanz.Schritte, step => step.Schritt == "Schachtprotokolle");
+            Assert.Equal(1, schacht.Anzahl);
+            // Weder Nummer noch Datum: kein Schachtprotokoll, bleibt still.
+            Assert.DoesNotContain(messages, m => m.Contains("fremd.pdf", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_DichtheitFehler_stehen_in_der_Fehlerbilanz()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Result = new ImportMediaDistributionResult(0, 0, 0, []) },
+                kanalDistributor: new RecordingKanalDistributor { SuccessResult = new KanalImportDistributor.Result(0, 0, 0, []) },
+                exportDetector: new FixedWinCanDetector(),
+                dichtheitDistributor: new RecordingDichtheitDistributor
+                {
+                    Result = new DichtheitImportDistributor.Result(
+                        1, 0, 0, [], ["DP H67.pdf nicht lesbar, nicht verteilt: gesperrt"])
+                })
+                .Import(sourceDir, projectDir, new Project());
+
+            var schritt = Assert.Single(result.Fehlerbilanz.Schritte, step => step.Schritt == "Dichtheitsverteilung");
+            Assert.Equal(1, schritt.Anzahl);
+            Assert.Contains(result.Messages, m => m.Contains("1 Fehler", StringComparison.Ordinal)
+                                                  && m.StartsWith("Dichtheitspruefung:", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_ShaftFailureIsReported_WithoutStoppingTheSummary()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Result = new ImportMediaDistributionResult(0, 0, 0, []) },
+                kanalDistributor: new RecordingKanalDistributor { SuccessResult = new KanalImportDistributor.Result(0, 0, 0, []) },
+                exportDetector: new FixedWinCanDetector(),
+                shaftDistribution: new RecordingShaftDistributor(
+                    () => throw new IOException("Archiv gesperrt"),
+                    new ShaftDistributionResult([], false)))
+                .Import(sourceDir, projectDir, new Project());
+
+            var messages = result.Messages.ToList();
+            Assert.Contains("Schachtprotokolle nicht verteilt: Archiv gesperrt", messages);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step => step.Schritt == "Schachtprotokolle" && step.Anzahl == 1);
+            Assert.Contains("Verteilung: 0 Fotos/Dateien, 0 Videos, 0 Original-Protokolle, 1 Fehler.", messages);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Import_MediaPhase_KeepsPdfFallbackCount_WhenALaterStepThrows()
+    {
+        var (sourceDir, projectDir) = CreateEmptyWinCanFixture();
+        try
+        {
+            var project = new Project();
+            var result = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new CapturingWinCanImporter(),
+                mediaDistributor: new RecordingMediaDistributor { Result = new ImportMediaDistributionResult(0, 0, 0, []) },
+                kanalDistributor: new RecordingKanalDistributor
+                {
+                    SuccessResult = new KanalImportDistributor.Result(0, 0, 0, []),
+                    AddHaltungOnSuccess = true
+                },
+                dichtheitDistributor: new RecordingDichtheitDistributor
+                {
+                    OnDistribute = () => throw new IOException("DP-Ordner gesperrt")
+                },
+                exportDetector: new FixedWinCanDetector())
+                .Import(sourceDir, projectDir, project);
+
+            // Die bereits angelegte Haltung zaehlt, obwohl die Phase danach abbricht.
+            Assert.Equal(3, result.Found);
+            Assert.Equal(2, result.Created);
+            Assert.Contains("PDF-Fallback: 1 Haltungen aus Original-Protokollen angelegt.", result.Messages);
+            Assert.Contains(result.Fehlerbilanz.Schritte, step =>
+                step.Schritt == "Medienverteilung"
+                && step.Gruende.Contains("Medienverteilung fehlgeschlagen: DP-Ordner gesperrt"));
+            Assert.DoesNotContain(result.Messages, m => m.StartsWith("Verteilung: ", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true);
+        }
+    }
+
+    private sealed class RecordingShaftDistributor(Action onDistribute, ShaftDistributionResult result)
+        : IShaftDistributionService
+    {
+        public ShaftDistributionResult Distribute(ShaftDistributionRequest request)
+        {
+            onDistribute();
+            return result;
+        }
+    }
+
+    private sealed class RecordingMediaDistributor : IImportMediaDistributionService
+    {
+        public bool Fail { get; init; }
+        public bool Cancel { get; init; }
+        public Action? OnDistribute { get; init; }
+        public ImportMediaDistributionResult? Result { get; init; }
+        public ImportMediaDistributionRequest? Request { get; private set; }
+
+        public ImportMediaDistributionResult Distribute(ImportMediaDistributionRequest request)
+        {
+            Request = request;
+            OnDistribute?.Invoke();
+            if (Cancel)
+                throw new OperationCanceledException("Testabbruch");
+            if (Fail)
+                throw new IOException("Testmedienfehler");
+            return Result ?? new ImportMediaDistributionResult(0, 0, 1, ["Fotofehler"]);
+        }
+    }
+
+    private sealed class RecordingKanalDistributor : IKanalImportDistributor
+    {
+        public int CallCount { get; private set; }
+        public Action? OnDistribute { get; init; }
+        public string FailureMessage { get; init; } = "Kanalverteilung darf nach Fotofehler nicht laufen.";
+
+        // F26-005: optionaler Erfolgs-Rueckgabewert, damit nachfolgende Phasen (z. B. die
+        // Dichtheitsprotokollverteilung) in einem Test erreicht werden koennen. Ohne gesetzten
+        // Wert wirft dieser Fake weiterhin wie bisher — bestehende Tests bleiben unveraendert.
+        public KanalImportDistributor.Result? SuccessResult { get; init; }
+
+        // F26-006: simuliert den PDF-Fallback (Kanalverteilung legt aus dem Original-Protokoll
+        // eine neue Haltung an), damit die Faellezaehlung des Orchestrators geprueft werden kann.
+        public bool AddHaltungOnSuccess { get; init; }
+
+        public KanalImportDistributor.Result Distribute(
+            Project project,
+            string projectFolder,
+            string archivedPdfDir,
+            string sourceVideoDir,
+            bool splitPdf = true,
+            string? primaryProtocolPdf = null)
+        {
+            CallCount++;
+            OnDistribute?.Invoke();
+            if (SuccessResult is not null)
+            {
+                if (AddHaltungOnSuccess)
+                    project.Data.Add(new HaltungRecord());
+                return SuccessResult;
+            }
+            throw new InvalidOperationException(FailureMessage);
+        }
+    }
+
+    private sealed class RecordingDichtheitDistributor : IDichtheitImportDistributor
+    {
+        public Action? OnDistribute { get; init; }
+        public DichtheitImportDistributor.Result Result { get; init; } =
+            new DichtheitImportDistributor.Result(0, 0, 0, []);
+
+        public DichtheitImportDistributor.Result Distribute(
+            Project project,
+            string projectFolder,
+            string sourceFolder,
+            PdfKiSchiedsrichter? ki = null)
+        {
+            OnDistribute?.Invoke();
+            return Result;
+        }
+    }
+
+    private sealed class RecordingProtocolDistributor(
+        Action onDistribute, ProtocolDistributionReport? report = null) : INameBasedProtocolDistributor
+    {
+        public ProtocolDistributionReport Distribute(
+            Project project, string projectFolder, string sourceFolder, object? collectionLock = null)
+        {
+            onDistribute();
+            return report ?? new ProtocolDistributionReport(0, 0, 0, [], []);
+        }
+    }
+
+    private sealed class ThrowingDetector : IKanalExportDetectionService
+    {
+        public KanalExportDetection Detect(string sourceFolder) =>
+            throw new IOException("Testdetektorfehler");
+    }
+
+    private sealed class FixedWinCanDetector : IKanalExportDetectionService
+    {
+        public KanalExportDetection Detect(string sourceFolder) =>
+            new(KanalExportFormat.WinCan, null, null, null, "synthetischer WinCan-Test");
+    }
+
+    private sealed class CapturingWinCanImporter : IWinCanDbImportService
+    {
+        public bool Fail { get; init; }
+        public bool Cancel { get; init; }
+        public int CallCount { get; private set; }
+        public string? SourceFolder { get; private set; }
+        public Project? Project { get; private set; }
+
+        public Result<ImportStats> ImportWinCanExport(
+            string exportRoot,
+            Project project,
+            ImportRunContext? ctx = null)
+        {
+            CallCount++;
+            SourceFolder = exportRoot;
+            Project = project;
+            if (Cancel)
+                throw new OperationCanceledException("Testabbruch");
+            if (Fail)
+                return Result<ImportStats>.Fail("TEST_FAILURE", "Testfehler");
+            return Result<ImportStats>.Success(new ImportStats(
+                Found: 2,
+                Created: 1,
+                Updated: 1,
+                Errors: 0,
+                Uncertain: 0,
+                Messages: ["WinCan-Testimport"]));
+        }
+    }
+
+    private sealed class RecordingSourceArchiver : IImportSourceArchiver
+    {
+        public bool Fail { get; init; }
+        public bool Cancel { get; init; }
+        public string? SourceFolder { get; private set; }
+        public string? ProjectFolder { get; private set; }
+
+        public ArchiveResult Archive(string sourceFolder, string projectFolder)
+        {
+            SourceFolder = sourceFolder;
+            ProjectFolder = projectFolder;
+            if (Cancel)
+                throw new OperationCanceledException("Testabbruch");
+            if (Fail)
+                throw new IOException("Testarchivfehler");
+            return new ArchiveResult(2, 1, ["Archivhinweis"]);
+        }
+    }
+
+    private sealed class RecordingPlanPdfImporter : IPlanPdfImporter
+    {
+        public string? ArchivedPdfDir { get; private set; }
+        public string? ProjectFolder { get; private set; }
+
+        public PlanPdfImportResult ImportFromArchivedPdfFolder(string archivedPdfDir, string projectFolder)
+        {
+            ArchivedPdfDir = archivedPdfDir;
+            ProjectFolder = projectFolder;
+            return new PlanPdfImportResult(1, 0, 0, 1, ["Planfehler"]);
+        }
+    }
+
+    [Fact]
+    public void Import_meldet_sieben_Anzeigeschritte_und_Medienzaehler()
+    {
+        var (sourceDir, projectDir) = ErstelleMiniIkasFixture();
+        try
+        {
+            var messages = new System.Collections.Generic.List<ImportProgress>();
+            var context = new ImportRunContext(default, new SofortFortschritt(messages.Add), new ImportRunLog());
+            new ProjectImportOrchestrator(new XtfImportServiceAdapter(), new WinCanDbImportService())
+                .Import(sourceDir, projectDir, new Project(), context);
+
+            Assert.Equal(new[] { "Vorbereiten", "Archivieren", "Quelldaten", "Medien", "Haltungsprotokolle", "Schachtprotokolle", "Abschliessen" }
+                .Select((name, index) => ImportFortschrittText.Phase(index + 1, name)), messages.Select(p => p.Phase).Distinct());
+            Assert.Contains(messages, p => p.Phase == ImportFortschrittText.Phase(4, "Medien") && p.Total == 1 && p.Current == 1);
+            Assert.Equal(0, messages[^1].Total);
+        }
+        finally { Directory.Delete(Path.GetDirectoryName(sourceDir)!, true); }
+    }
+
+    private sealed class SofortFortschritt(Action<ImportProgress> melden) : IProgress<ImportProgress>
+    {
+        public void Report(ImportProgress value) => melden(value);
+    }
+
+    [JunctionFact]
+    public void DatenquellenSignal_BetrittKeineUntergeordneteVerknuepfung()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"orch-signal-{Guid.NewGuid():N}");
+        var source = Path.Combine(root, "Quelle");
+        var external = Path.Combine(root, "Fremd");
+        var link = Path.Combine(source, "Verknuepft");
+        Directory.CreateDirectory(source);
+        Directory.CreateDirectory(external);
+        File.WriteAllText(Path.Combine(external, "Daten.txt"), "fremd");
+        JunctionTestSupport.CreateDirectoryLink(link, external);
+
+        try
+        {
+            var method = typeof(ProjectImportOrchestrator).GetMethod(
+                "AnyFile",
+                BindingFlags.Static | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("AnyFile fehlt.");
+
+            var found = Assert.IsType<bool>(method.Invoke(null, [source, "Daten.txt"]));
+
+            Assert.False(found);
+        }
+        finally
+        {
+            if (Directory.Exists(link))
+                Directory.Delete(link);
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Hilfsmethode: Mini-IKAS-Fixture anlegen
     // -----------------------------------------------------------------------

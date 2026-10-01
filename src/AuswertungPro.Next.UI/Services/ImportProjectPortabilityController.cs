@@ -60,10 +60,10 @@ internal sealed class ImportProjectPortabilityController
         var summary = $"Projekt portabel gemacht ({count} Haltungen):"
             + $"\n  {result.RelinkedPaths} Pfade relativ verlinkt"
             + $"\n  {result.FotosCopied} Fotos ins Projekt kopiert"
-            + $"\n  {result.Unresolved} nicht aufloesbar";
+            + $"\n  {result.Unresolved} nicht auflösbar";
         if (!saved)
         {
-            summary += "\n\nAenderungen uebernommen, aber nicht gespeichert. Bitte erneut speichern."
+            summary += "\n\nÄnderungen übernommen, aber nicht gespeichert. Bitte erneut speichern."
                 + ProjectSaveAttempt.ErrorDetails(saveError);
         }
 

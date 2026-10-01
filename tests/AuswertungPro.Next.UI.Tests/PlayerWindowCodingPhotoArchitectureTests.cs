@@ -16,7 +16,7 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
         var captureServicesOwnerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingPhotoCaptureServicesOwner.cs");
         var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "Coding", "CodingSnapshotTargetPolicy.cs");
 
-        Assert.True(File.Exists(policyPath), "Snapshot-Zielpfad fuer Coding-Fotos muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(policyPath), "Snapshot-Zielpfad für Coding-Fotos muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(captureServicePath), "Snapshot-Datei-Capture und Warten muss ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(captureServicesPath), "Snapshot-Service-Erzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(captureServicesOwnerPath), "Snapshot-Service-Besitz soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -104,9 +104,9 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
         Assert.True(File.Exists(commandWorkflowPath), "Fotoanzeige-Auswahlentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(displayWorkflowPath), "Fotoanzeige-Serviceaufruf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(viewerWorkflowPath), "Fotoanzeige-Workflow soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(viewerWorkflowFactoryPath), "Fotoanzeige-Workflow soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(viewerWorkflowFactoryPath), "Fotoanzeige-Workflow soll über Factory verdrahtet werden.");
         Assert.True(File.Exists(viewerServicePath), "Fotoanzeige-Fensteraufbau soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(viewerServiceFactoryPath), "Fotoanzeige-Fensteraufbau soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(viewerServiceFactoryPath), "Fotoanzeige-Fensteraufbau soll über Factory verdrahtet werden.");
 
         var photos = File.ReadAllText(photosPath);
         var policy = File.ReadAllText(policyPath);
@@ -226,7 +226,7 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
             "CodingEventPhotoTimestampScope.Apply");
         Assert.True(
             orchestrationOffenders.Length == 0,
-            "PlayerWindow-Partials duerfen die Foto-Orchestrierung nicht wieder direkt uebernehmen:\n"
+            "PlayerWindow-Partials dürfen die Foto-Orchestrierung nicht wieder direkt übernehmen:\n"
             + string.Join("\n", orchestrationOffenders));
         Assert.Contains("public static CodingPhotoSlotUpdate Apply", policy);
         Assert.Contains("photoPaths.Count >= 2", policy);

@@ -1,6 +1,8 @@
 using System.Windows.Input;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Coding;
+using AuswertungPro.Next.UI.Controls;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -9,11 +11,20 @@ public partial class PlayerWindow
 {
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // Waehrend einer Texteingabe bleibt die Tastatur dem Feld vorbehalten.
+        // Einzige Ausnahme ist F1: die Tastenuebersicht schreibt kein Zeichen.
+        var textInputFocused = KeyboardTextInputFocusGuard.IsTextInputFocused();
+        if (textInputFocused && !PlayerKeyboardShortcutPolicy.IsAllowedDuringTextInput(e.Key))
+            return;
+
         var overlayOutcome = _shortcutOverlayController.HandleKey(e.Key);
         if (overlayOutcome == PlayerShortcutOverlayKeyOutcome.Handled)
             e.Handled = true;
 
         if (overlayOutcome != PlayerShortcutOverlayKeyOutcome.Continue)
+            return;
+
+        if (textInputFocused)
             return;
 
         var keyboardActions = _keyboardActionControllerOwner.Ensure(
@@ -47,6 +58,15 @@ public partial class PlayerWindow
         e.Handled = true;
         _shortcutOverlayController.Hide();
     }
+
+    private void Close_Click(object sender, System.Windows.RoutedEventArgs e) => Close();
+
+    // StaysOpen="False" schliesst den Aufklapper schon beim Klick auf diesen Knopf; ohne die
+    // Zeitregel oeffnete ihn derselbe Klick sofort wieder (PopupToggle).
+    private PopupToggle? _weitereToggle;
+
+    private void WeitereDropdown_Click(object sender, System.Windows.RoutedEventArgs e)
+        => (_weitereToggle ??= new PopupToggle(WeiterePopup)).Umschalten();
 
     private void ShortcutOverlayCard_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         => e.Handled = true;

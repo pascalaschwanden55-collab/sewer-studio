@@ -115,9 +115,16 @@ public sealed class OllamaClient : IDisposable
 
     public sealed record ChatMessage(string Role, string Content, IReadOnlyList<string>? ImagesBase64 = null);
 
-    public async Task<string> ChatAsync(
+    public Task<string> ChatAsync(
         string model,
         IReadOnlyList<ChatMessage> messages,
+        CancellationToken ct) =>
+        ChatWithOptionsAsync(model, messages, options: null, ct);
+
+    public async Task<string> ChatWithOptionsAsync(
+        string model,
+        IReadOnlyList<ChatMessage> messages,
+        IReadOnlyDictionary<string, object>? options,
         CancellationToken ct)
     {
         var msgList = BuildMessageList(messages);
@@ -128,6 +135,9 @@ public sealed class OllamaClient : IDisposable
             ["stream"] = false,
             ["keep_alive"] = _keepAlive
         };
+
+        if (options is { Count: > 0 })
+            payload["options"] = new Dictionary<string, object>(options);
 
         ApplyNumCtx(payload);
 
@@ -223,7 +233,9 @@ public sealed class OllamaClient : IDisposable
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("Structured JSON konnte nicht geparst werden: " + ex.Message + "\nRaw:\n" + content);
+            // Rohtext der Modellantwort bleibt fuer die Diagnose in der Meldung; UserError schneidet
+            // ab dem eingebetteten Fremdtext der inneren Ausnahme ab (Aufgabe 10c2, Fix-Runde 1).
+            throw new InvalidOperationException("Die strukturierte JSON-Antwort des Modells konnte nicht gelesen werden: " + ex.Message + "\nRaw:\n" + content, ex);
         }
     }
 

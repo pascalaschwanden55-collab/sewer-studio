@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
@@ -10,8 +11,12 @@ using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Map;
+using AuswertungPro.Next.Application.UseCases.Import;
+using AuswertungPro.Next.Application.UseCases.Verteilung;
+using AuswertungPro.Next.Application.UseCases.Xtf;
 using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
+using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Mapping;
@@ -21,11 +26,18 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class ExportPageViewModel : ObservableObject
+public sealed partial class ExportPageViewModel : ObservableObject, IConfirmLeave, IDisposable
 {
     private readonly ShellViewModel _shell;
     private readonly AppSettings _settings;
     private readonly IDialogService _dialogs;
+    private readonly AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService _xtfRevisionExport;
+    private readonly AuswertungPro.Next.Application.Xtf.IXtfNeuExportService _xtfNeuExport;
+    private readonly AuswertungPro.Next.Application.UseCases.Xtf.IXtfPaketAblage _xtfPaketAblage;
+    private readonly IExplorerRevealService _explorerReveal;
+    private readonly IXtfExportVorschauDialog _xtfVorschau;
+    private XtfExportAuswahl _xtfAuswahl = XtfExportAuswahl.Aus([]);
+    private string? _letzterXtfOrdner;
     private readonly IExcelExportService _excelExport;
     private readonly IToastService _toasts;
     private readonly IDerivedCostFieldSynchronizer _costFieldSync;
@@ -35,6 +47,15 @@ public sealed partial class ExportPageViewModel : ObservableObject
     private readonly IDistributionDirectoryTreeResolver _directoryTreeResolver;
     private readonly IKatasterXtfPathResolver _katasterXtfPaths;
     private readonly IHaltungCadastreIndexProvider _haltungCadastreIndexes;
+    private readonly IShaftDistributionService _shaftDistribution;
+    private readonly Application.Export.IDistributionReconciliationService _distributionReconciliation;
+    private readonly IImportFileStagingService? _importFileStaging;
+    private readonly IImportTransactionJournal? _importTransactionJournal;
+    private readonly ExportPageShellOperationGuard _shellOperationGuard = new();
+    private readonly Func<bool> _saveProjectForActiveDistribution;
+    private bool _isShaftDistributionActive;
+    private CancellationTokenSource? _excelExportCancellation;
+    private bool _disposed;
 
     [ObservableProperty] private string _lastResult = "";
     [ObservableProperty] private string _distributionProgress = "";
@@ -49,12 +70,25 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     public IAsyncRelayCommand ExportCommand { get; }
     public IAsyncRelayCommand ExportSchaechteCommand { get; }
+    public IRelayCommand CancelExcelExportCommand { get; }
     public IAsyncRelayCommand DistributeHoldingsNormalCommand { get; }
     public IAsyncRelayCommand DistributeHoldingsSanierungCommand { get; }
     public IAsyncRelayCommand DistributeShaftsNormalCommand { get; }
     public IAsyncRelayCommand DistributeShaftsSanierungCommand { get; }
     public IAsyncRelayCommand DistributeDichtheitCommand { get; }
+    /// <summary>Raeumt aus den Verteilordnern, was im Projekt kein Gegenstueck hat.</summary>
+    public IAsyncRelayCommand AbgleichenCommand { get; }
     public IRelayCommand BrowseExcelExportRootCommand { get; }
+
+    /// <summary>Erzeugt aus dem aktuellen Projektstand revidierte XTF-Dateien.</summary>
+    public IRelayCommand ErzeugeXtfRevisionCommand { get; }
+    public IRelayCommand ErzeugeXtfNeuCommand { get; }
+    /// <summary>Erzeugt beide Fassungen als fertiges Paket fuer den Kataster-Empfaenger.</summary>
+    public IRelayCommand ErzeugeXtfPaketCommand { get; }
+    public IRelayCommand LieferungBearbeitenCommand { get; private set; } = new RelayCommand(() => { }, () => false);
+
+    /// <summary>Direkt ins WebGIS (Anmelden, Pruefen und Schreiben, Holen); ohne ServiceProvider inaktiv.</summary>
+    public ExportWebGisBereich WebGis { get; private set; } = ExportWebGisBereich.Inaktiv();
 
     /// <summary>Verzeichnisbaum-Karten fuer Haltungen, Schaechte und Dichtheitspruefungen.</summary>
     public IReadOnlyList<DistributionTargetConfigViewModel> DistributionTargets { get; }
@@ -72,8 +106,23 @@ public sealed partial class ExportPageViewModel : ObservableObject
             patternResolver: sp.DistributionPatterns,
             directoryTreeResolver: sp.DistributionDirectoryTree,
             katasterXtfPaths: sp.KatasterXtfPaths,
-            haltungCadastreIndexes: sp.HaltungCadastreIndexes)
+            haltungCadastreIndexes: sp.HaltungCadastreIndexes,
+            shaftDistribution: sp.ShaftDistribution,
+            importFileStaging: sp.ImportFileStaging,
+            importTransactionJournal: sp.ImportTransactionJournal,
+            explorerReveal: sp.ExplorerReveal,
+            xtfVorschau: sp.XtfExportVorschau,
+            xtfPaketAblage: sp.XtfPaketAblage,
+            verteilberichte: sp.Verteilberichte,
+            verteilenDialog: sp.VerteilenDialog)
     {
+        LieferungBearbeitenCommand = new RelayCommand(() => XtfLieferungDialog.Zeige(sp.XtfLieferungen, sp.Dialogs));
+        WebGis = new ExportWebGisBereich(new ExportWebGisBereich.Dienste(
+            shell, sp.Settings, sp.Dialogs, sp.Toasts, sp.WebGisAnmeldung,
+            () => sp.WebGisZugang, zugang => sp.WebGisZugang = zugang,
+            () => sp.WebGisExport, sp.WebGisHolen,
+            () => TryBeginProjectOperation(allowsInternalProjectSave: false), EndProjectOperation,
+            ergebnis => LastResult = ergebnis));
     }
 
     [Obsolete("Uebergangskonstruktor. Neue Aufrufer sollen den Kosten-Speicher injizieren.")]
@@ -143,8 +192,23 @@ public sealed partial class ExportPageViewModel : ObservableObject
         IDistributionPatternResolver? patternResolver,
         IDistributionDirectoryTreeResolver? directoryTreeResolver,
         IKatasterXtfPathResolver? katasterXtfPaths,
-        IHaltungCadastreIndexProvider? haltungCadastreIndexes)
+        IHaltungCadastreIndexProvider? haltungCadastreIndexes,
+        AuswertungPro.Next.Application.Xtf.IXtfRevisionExportService? xtfRevisionExport = null,
+        AuswertungPro.Next.Application.Xtf.IXtfNeuExportService? xtfNeuExport = null,
+        IShaftDistributionService? shaftDistribution = null,
+        Application.Export.IDistributionReconciliationService? distributionReconciliation = null,
+        IImportFileStagingService? importFileStaging = null,
+        IImportTransactionJournal? importTransactionJournal = null,
+        IExplorerRevealService? explorerReveal = null,
+        IXtfExportVorschauDialog? xtfVorschau = null,
+        AuswertungPro.Next.Application.Projects.IObjektaktenPaketService? objektaktenPakete = null,
+        AuswertungPro.Next.Application.UseCases.Xtf.IXtfPaketAblage? xtfPaketAblage = null,
+        AuswertungPro.Next.Application.UseCases.Verteilung.IVerteilberichtAblage? verteilberichte = null,
+        IVerteilenDialog? verteilenDialog = null)
     {
+        _verteilberichte = verteilberichte;
+        _verteilenDialog = verteilenDialog
+            ?? new VerteilenDialogService(new VerteilVorschauService(), () => dialogs!);
         _shell = shell ?? throw new ArgumentNullException(nameof(shell));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
@@ -153,21 +217,57 @@ public sealed partial class ExportPageViewModel : ObservableObject
         _costFieldSync = costFieldSync ?? throw new ArgumentNullException(nameof(costFieldSync));
         _projectCosts = projectCosts ?? throw new ArgumentNullException(nameof(projectCosts));
         _storedImportFiles = storedImportFiles ?? throw new ArgumentNullException(nameof(storedImportFiles));
-        ExportCommand = new AsyncRelayCommand(ExportAsync, CanRunProjectExportCommands);
-        ExportSchaechteCommand = new AsyncRelayCommand(ExportSchaechteAsync, CanRunProjectExportCommands);
-        DistributeHoldingsNormalCommand = new AsyncRelayCommand(() => DistributeHoldingsAsync(DistributionVariant.Normal), CanRunDistributeCommands);
-        DistributeHoldingsSanierungCommand = new AsyncRelayCommand(() => DistributeHoldingsAsync(DistributionVariant.Sanierung), CanRunDistributeCommands);
-        DistributeShaftsNormalCommand = new AsyncRelayCommand(() => DistributeShaftsAsync(DistributionVariant.Normal), CanRunDistributeCommands);
-        DistributeShaftsSanierungCommand = new AsyncRelayCommand(() => DistributeShaftsAsync(DistributionVariant.Sanierung), CanRunDistributeCommands);
-        DistributeDichtheitCommand = new AsyncRelayCommand(DistributeDichtheitAsync, CanRunDistributeCommands);
+        ExportCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(ExportAsync), CanRunProjectExportCommands);
+        ExportSchaechteCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(ExportSchaechteAsync), CanRunProjectExportCommands);
+        CancelExcelExportCommand = new RelayCommand(
+            CancelExcelExport,
+            () => _excelExportCancellation is { IsCancellationRequested: false });
+        // Alle fuenf Menuepunkte oeffnen das Fenster «Verteilen» mit vorgewaehlter Art und Ablage.
+        DistributeHoldingsNormalCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => VerteilenAsync(VerteilArt.Haltungen, DistributionVariant.Normal)), CanRunDistributeCommands);
+        DistributeHoldingsSanierungCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => VerteilenAsync(VerteilArt.Haltungen, DistributionVariant.Sanierung)), CanRunDistributeCommands);
+        DistributeShaftsNormalCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => VerteilenAsync(VerteilArt.Schaechte, DistributionVariant.Normal)), CanRunDistributeCommands);
+        DistributeShaftsSanierungCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => VerteilenAsync(VerteilArt.Schaechte, DistributionVariant.Sanierung)), CanRunDistributeCommands);
+        DistributeDichtheitCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(() => VerteilenAsync(VerteilArt.Dichtheit, DistributionVariant.Normal)), CanRunDistributeCommands);
+        AbgleichenCommand = new AsyncRelayCommand(() => RunWithProjectOperationAsync(AbgleichenAsync), CanRunDistributeCommands);
         BrowseExcelExportRootCommand = new RelayCommand(BrowseExcelExportRoot);
+        _xtfRevisionExport = xtfRevisionExport
+            ?? new AuswertungPro.Next.Infrastructure.Import.Xtf.XtfRevisionExportService();
+        _xtfNeuExport = xtfNeuExport
+            ?? new AuswertungPro.Next.Infrastructure.Import.Xtf.XtfNeuExportService(
+                new AuswertungPro.Next.Infrastructure.Lookup.QgisGpkgVerlaufLeser(
+                    () => settings?.QgisHaltungenGpkgPath));
+        ErzeugeXtfRevisionCommand = new RelayCommand(RunXtfRevisionWithProjectOperation, CanRunProjectExportCommands);
+        ErzeugeXtfNeuCommand = new RelayCommand(RunXtfNeuWithProjectOperation, CanRunProjectExportCommands);
+        ErzeugeXtfPaketCommand = new RelayCommand(RunXtfPaketWithProjectOperation, CanRunProjectExportCommands);
+        _xtfPaketAblage = xtfPaketAblage ?? new AuswertungPro.Next.Infrastructure.Import.Xtf.XtfPaketAblage();
+        _explorerReveal = explorerReveal ?? new Infrastructure.Common.ExplorerRevealLauncher();
+        _xtfVorschau = xtfVorschau ?? new XtfExportVorschauDialogService();
+        _objektaktenPakete = objektaktenPakete ?? new Infrastructure.Projects.ObjektaktenPaketService();
+        OeffneXtfOrdnerCommand = new RelayCommand(OeffneXtfOrdner, () => HatXtfOrdner);
         _patternResolver = patternResolver ?? new DistributionPatternResolver();
         _directoryTreeResolver = directoryTreeResolver ?? new DistributionDirectoryTreeResolver(_patternResolver);
         _katasterXtfPaths = katasterXtfPaths ?? KatasterXtfPathResolver.CompatibilityService;
         _haltungCadastreIndexes = haltungCadastreIndexes ?? HaltungCadastreIndex.CurrentProvider;
+        _shaftDistribution = shaftDistribution ?? new ShaftDistributionService();
+        _distributionReconciliation = distributionReconciliation
+            ?? new Infrastructure.Export.DistributionReconciliationService();
+        _importFileStaging = importFileStaging;
+        _importTransactionJournal = importTransactionJournal;
         _settings.MigrateLegacyExcelExportRoot();
+        AktualisiereXtfAuswahl();
         _excelExportRoot = _settings.ExcelExportRoot;
         DistributionTargets = BuildDistributionTargets(_patternResolver);
+        _shell.RegisterShellOperationGuard(_shellOperationGuard);
+        try
+        {
+            _saveProjectForActiveDistribution =
+                _shell.CreateActiveProjectOperationSaveDelegate(_shellOperationGuard);
+        }
+        catch
+        {
+            _shell.UnregisterShellOperationGuard(_shellOperationGuard);
+            throw;
+        }
     }
 
     /// <summary>
@@ -247,9 +347,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
         {
             _settings.Save();
         }
-        string? BrowseRoot() => _dialogs.SelectFolder("Ziel-Wurzel waehlen");
+        string? BrowseRoot() => _dialogs.SelectFolder("Hauptordner für die Verteilung wählen");
 
-        const string haltungHinweis = "Der letzte Haltungsordner und die Dateinamen bleiben fuer die sichere Video-Zuordnung fest.";
+        const string haltungHinweis = "Der letzte Haltungsordner und die Dateinamen bleiben für die sichere Video-Zuordnung fest.";
         const string schachtHinweis = "Der letzte Schachtordner und der Dateiname bleiben fest.";
         const string dichtheitHinweis = "DP wird sicher je Haltung abgelegt; Objektordner und Dateiname bleiben fest.";
         return new[]
@@ -282,7 +382,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private void BrowseExcelExportRoot()
     {
-        var selected = _dialogs.SelectFolder("Gemeinsamen Excel-Zielordner waehlen");
+        var selected = _dialogs.SelectFolder("Gemeinsamen Excel-Zielordner wählen");
         if (!string.IsNullOrWhiteSpace(selected))
             ExcelExportRoot = selected;
     }
@@ -301,15 +401,15 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     /// <summary>Excel-Export braucht geladenes Projekt.</summary>
     private bool CanRunProjectExportCommands()
-        => !IsPageBusy && _shell.Project is not null;
+        => !_disposed && !IsPageBusy && _shell.Project is not null;
 
     /// <summary>Verteilung funktioniert auch ohne Projekt (Ordner-/PDF-basiert).</summary>
     private bool CanRunDistributeCommands()
-        => !IsPageBusy;
+        => !_disposed && !IsPageBusy;
 
     partial void OnIsPageBusyChanged(bool value)
     {
-        _ = value;
+        _shellOperationGuard.Update(value, _isShaftDistributionActive);
         NotifyAllCommandsCanExecuteChanged();
     }
 
@@ -326,187 +426,75 @@ public sealed partial class ExportPageViewModel : ObservableObject
         DistributeShaftsNormalCommand.NotifyCanExecuteChanged();
         DistributeShaftsSanierungCommand.NotifyCanExecuteChanged();
         DistributeDichtheitCommand.NotifyCanExecuteChanged();
+        ErzeugeXtfRevisionCommand.NotifyCanExecuteChanged();
+        ErzeugeXtfNeuCommand.NotifyCanExecuteChanged();
+        ErzeugeXtfPaketCommand.NotifyCanExecuteChanged();
+        OeffneXtfOrdnerCommand.NotifyCanExecuteChanged();
+        AktualisiereXtfAuswahl();
     }
 
-    private async Task ExportAsync()
+    public bool ConfirmLeave()
     {
-        var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Haltungen.xlsx");
-        try
-        {
-            if (!TryLoadCostsForHoldingExport(out var costStore))
-                return;
-
-            // Ein gemeinsamer Zielordner, fester Dateiname; ohne Zielordner den Dialog wie bisher.
-            var outPath = ResolveConfiguredExcelPath("Haltungen")
-                ?? _dialogs.SaveFile("Export (Haltungen.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
-            if (outPath is null)
-                return;
-
-            IsPageBusy = true;
-            using var busy = Busy.Enter("Haltungen werden exportiert …");
-
-            // Vor dem Export die abgeleiteten Kostenfelder auf den aktuellen Stand ziehen
-            // (Sanieren=Nein/leer -> geleert, damit nur echte Sanierungen exportiert werden).
-            // Gesperrte costs.json (loadError) -> NICHT syncen, um keinen leeren Stand zu schreiben.
-            var projectPath = _settings.LastProjectPath ?? "";
-            if (!string.IsNullOrWhiteSpace(projectPath))
-                _costFieldSync.Sync(_shell.Project, costStore);
-
-            var res = await Task.Run(() =>
-                _excelExport.ExportToTemplate(_shell.Project, templatePath, outPath, headerRow: 11, startRow: 12));
-            LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
-            _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
-            if (res.Ok)
-                _toasts.Success($"Haltungen exportiert: {Path.GetFileName(outPath)}");
-            else
-                _toasts.Error(res.ErrorMessage ?? "Haltungs-Export fehlgeschlagen.");
-        }
-        catch (Exception ex)
-        {
-            var userMessage = UserError.DescribeAndReport(ex, "Haltungs-Excel-Export");
-            LastResult = $"Fehler: {userMessage}";
-            _shell.SetStatus("Export fehlgeschlagen");
-            _toasts.Error($"Haltungs-Export fehlgeschlagen: {userMessage}");
-        }
-        finally
-        {
-            IsPageBusy = false;
-        }
-    }
-
-    private bool TryLoadCostsForHoldingExport(out ProjectCostStore store)
-    {
-        store = new ProjectCostStore();
-        var projectPath = _settings.LastProjectPath ?? "";
-        if (string.IsNullOrWhiteSpace(projectPath))
+        if (!IsPageBusy)
             return true;
 
-        store = _projectCosts.Load(projectPath, out var loadError);
-        if (string.IsNullOrWhiteSpace(loadError))
-            return true;
-
-        LastResult = $"Kostendaten konnten nicht geladen werden: {loadError}";
-        _shell.SetStatus("Haltungs-Export gesperrt: Kostendaten nicht lesbar");
-        _toasts.Error("Kostendaten sind nicht lesbar. Der Haltungs-Export wurde abgebrochen.");
-        _dialogs.Error(
-            $"Der Haltungs-Export wurde abgebrochen, weil die Kostendaten nicht lesbar sind:\n{loadError}\n\n" +
-            "Bitte costs.json pruefen und den Export danach erneut starten.",
-            "Haltungs-Export");
+        _shell.SetStatus(
+            "Seiten- oder Projektwechsel ist während eines Exports oder einer Verteilung gesperrt. " +
+            "Bitte den laufenden Vorgang zuerst abschliessen.");
         return false;
     }
 
-    private async Task ExportSchaechteAsync()
+    public void Dispose()
     {
-        var templatePath = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage", "Schächte.xlsx");
-        try
-        {
-            var outPath = ResolveConfiguredExcelPath("Schaechte")
-                ?? _dialogs.SaveFile("Export (Schaechte.xlsx)", "Excel (*.xlsx)|*.xlsx", ".xlsx");
-            if (outPath is null)
-                return;
+        if (_disposed)
+            return;
 
-            if (!File.Exists(templatePath))
-            {
-                LastResult = $"Fehler: Vorlage nicht gefunden ({templatePath})";
-                _shell.SetStatus("Export fehlgeschlagen");
-                return;
-            }
+        _disposed = true;
+        _excelExportCancellation?.Cancel();
+        _shell.UnregisterShellOperationGuard(_shellOperationGuard);
+        GC.SuppressFinalize(this);
+    }
 
-            IsPageBusy = true;
-            using var busy = Busy.Enter("Schächte werden exportiert …");
-            var res = await Task.Run(() =>
-                _excelExport.ExportSchaechteToTemplate(_shell.Project, templatePath, outPath, headerRow: 12, startRow: 13));
-            LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
-            _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
-            if (res.Ok)
-                _toasts.Success($"Schächte exportiert: {Path.GetFileName(outPath)}");
-            else
-                _toasts.Error(res.ErrorMessage ?? "Schacht-Export fehlgeschlagen.");
-        }
-        catch (Exception ex)
-        {
-            var userMessage = UserError.DescribeAndReport(ex, "Schacht-Excel-Export");
-            LastResult = $"Fehler: {userMessage}";
-            _shell.SetStatus("Export fehlgeschlagen");
-            _toasts.Error($"Schacht-Export fehlgeschlagen: {userMessage}");
-        }
-        finally
-        {
-            IsPageBusy = false;
-        }
+    private void SetShaftDistributionActive(bool value)
+    {
+        if (_isShaftDistributionActive == value)
+            return;
+
+        _isShaftDistributionActive = value;
+        _shellOperationGuard.Update(IsPageBusy, value);
     }
 
     // ─── Distribution: Haltungen ───────────────────────────────────────────
 
-    private async Task DistributeHoldingsAsync(DistributionVariant variant)
+    /// <summary>
+    /// Verteilt Haltungen mit genau der Quelle, die im Fenster «Verteilen» bestätigt wurde.
+    /// Ablauf, Schutz und Bericht sind dieselben wie vor dem Fenster.
+    /// </summary>
+    private async Task DistributeHoldingsAsync(VerteilAuftrag auftrag)
     {
-        var sourceMode = _dialogs.ConfirmCancel(
-            "Quelle:\nJa = PDF-Import verteilen\nNein = TXT-Import verteilen (z.B. kiDVDaten.txt)",
-            "Haltungen verteilen");
-        if (sourceMode == DialogConfirm.Cancel)
+        var variant = auftrag.Ablage;
+        var useTxtImport = auftrag.Quelle.IstTxt;
+        var pdfFolder = auftrag.Quelle.Art == VerteilQuellenArt.PdfOrdner ? auftrag.Quelle.Ordner : null;
+        var selectedPdfFiles = auftrag.Quelle.Art == VerteilQuellenArt.PdfDateien ? auftrag.Quelle.Dateien.ToArray() : Array.Empty<string>();
+        var txtFolder = auftrag.Quelle.Art == VerteilQuellenArt.TxtOrdner ? auftrag.Quelle.Ordner : null;
+        var selectedTxtFiles = auftrag.Quelle.Art == VerteilQuellenArt.TxtDateien ? auftrag.Quelle.Dateien.ToArray() : Array.Empty<string>();
+        if (!auftrag.Quelle.IstGewaehlt)
             return;
 
-        var useTxtImport = sourceMode == DialogConfirm.No;
-
-        string? pdfFolder = null;
-        string[] selectedPdfFiles = Array.Empty<string>();
-        string? txtFolder = null;
-        string[] selectedTxtFiles = Array.Empty<string>();
-
-        if (!useTxtImport)
-        {
-            var mode = _dialogs.ConfirmCancel(
-                "PDF-Auswahl:\nJa = einzelne PDF-Protokolle auswaehlen\nNein = ganzen PDF-Ordner verwenden",
-                "Haltungen verteilen (PDF)");
-            if (mode == DialogConfirm.Cancel)
-                return;
-
-            if (mode == DialogConfirm.Yes)
-            {
-                selectedPdfFiles = _dialogs.OpenFiles("PDF-Protokolle auswaehlen", "PDF (*.pdf)|*.pdf");
-                if (selectedPdfFiles.Length == 0)
-                    return;
-            }
-            else
-            {
-                pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Protokollen waehlen");
-                if (string.IsNullOrWhiteSpace(pdfFolder))
-                    return;
-            }
-        }
-        else
-        {
-            var mode = _dialogs.ConfirmCancel(
-                "TXT-Auswahl:\nJa = einzelne TXT-Dateien auswaehlen\nNein = ganzen TXT-Ordner verwenden",
-                "Haltungen verteilen (TXT)");
-            if (mode == DialogConfirm.Cancel)
-                return;
-
-            if (mode == DialogConfirm.Yes)
-            {
-                selectedTxtFiles = _dialogs.OpenFiles("TXT-Dateien auswaehlen", "TXT (*.txt)|*.txt");
-                if (selectedTxtFiles.Length == 0)
-                    return;
-            }
-            else
-            {
-                txtFolder = _dialogs.SelectFolder("TXT-Ordner waehlen (z.B. mit kiDVDaten.txt)");
-                if (string.IsNullOrWhiteSpace(txtFolder))
-                    return;
-            }
-        }
-
-        var videoFolder = _dialogs.SelectFolder("Video-Ordner mit Rohvideos waehlen");
+        var videoFolder = auftrag.FilmOrdner;
         if (string.IsNullOrWhiteSpace(videoFolder)) return;
 
         var destFolder = ResolveConfiguredDistributionRoot(_settings.HaltungDistribution)
             ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
+        if (!VerteilzielErreichbar(destFolder)) return;
         var directoryConfig = SnapshotDistributionTree(_settings.HaltungDistribution);
+        var projectContext = new ProjectOperationContext(
+            _shell.Project,
+            _settings.LastProjectPath);
 
         try
         {
-            IsPageBusy = true;
             IsDistributionInProgress = true;
             IsDistributionIndeterminate = true;
             DistributionPercent = 0;
@@ -533,7 +521,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     directoryConfig: directoryConfig,
                     variant: variant));
@@ -548,7 +536,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     directoryConfig: directoryConfig,
                     variant: variant));
@@ -563,7 +551,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     directoryConfig: directoryConfig));
             }
@@ -577,19 +565,28 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     overwrite: false,
                     recursiveVideoSearch: true,
                     unmatchedFolderName: "__UNMATCHED",
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     directoryConfig: directoryConfig));
+            }
+
+            if (!ProjectIsStillCurrent(
+                    projectContext,
+                    "Haltungs-Verteilung",
+                    filesMayRemain: results.Any(static result => result.Success)))
+            {
+                return;
             }
 
             // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
             LastResult = DistributionSummaryBuilder.BuildHoldingDistributionSummary(results, useTxtImport);
             _shell.SetStatus(useTxtImport ? "Haltungsdaten (TXT) verteilt" : "Haltungsdaten verteilt");
+            MeldeVerteilung("Haltungen", LastResult, results.Count(static r => !r.Success));
 
             if (!useTxtImport && selectedPdfFiles.Length > 0)
-                StorePdfFiles(selectedPdfFiles);
+                StorePdfFiles(selectedPdfFiles, projectContext);
             if (useTxtImport && selectedTxtFiles.Length > 0)
-                StoreTxtFiles(selectedTxtFiles);
+                StoreTxtFiles(selectedTxtFiles, projectContext);
 
             _settings.LastVideoSourceFolder = videoFolder;
             _settings.LastDistributionTargetFolder = destFolder;
@@ -602,138 +599,30 @@ public sealed partial class ExportPageViewModel : ObservableObject
             IsDistributionIndeterminate = false;
             DistributionProgress = "";
             DistributionPercent = 0;
-            IsPageBusy = false;
-        }
-    }
-
-    // ─── Distribution: Schaechte ───────────────────────────────────────────
-
-    private async Task DistributeShaftsAsync(DistributionVariant variant)
-    {
-        var mode = _dialogs.ConfirmCancel(
-            "PDF-Auswahl:\nJa = einzelne Schacht-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
-            "Schaechte verteilen");
-        if (mode == DialogConfirm.Cancel)
-            return;
-
-        string? pdfFolder = null;
-        string[] selectedPdfFiles = Array.Empty<string>();
-        if (mode == DialogConfirm.Yes)
-        {
-            selectedPdfFiles = _dialogs.OpenFiles("Schacht-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
-            if (selectedPdfFiles.Length == 0)
-                return;
-        }
-        else
-        {
-            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Schachtprotokollen waehlen");
-            if (string.IsNullOrWhiteSpace(pdfFolder))
-                return;
-        }
-
-        var destFolder = ResolveConfiguredDistributionRoot(_settings.SchachtDistribution)
-            ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.SchaechteVerteilt);
-        if (string.IsNullOrWhiteSpace(destFolder)) return;
-        var directoryConfig = SnapshotDistributionTree(_settings.SchachtDistribution);
-
-        try
-        {
-            IsPageBusy = true;
-            IsDistributionInProgress = true;
-            IsDistributionIndeterminate = true;
-            DistributionPercent = 0;
-            DistributionProgress = "Schacht-Verteilung gestartet...";
-            _shell.SetStatus(DistributionProgress);
-
-            var progress = new Progress<HoldingFolderDistributor.DistributionProgress>(p =>
-            {
-                IsDistributionIndeterminate = p.Total <= 0;
-                DistributionPercent = p.Total > 0 ? (p.Processed * 100.0 / p.Total) : 0;
-                var name = string.IsNullOrWhiteSpace(p.CurrentFile) ? "" : $" ({Path.GetFileName(p.CurrentFile)})";
-                DistributionProgress = $"Verteilung: {p.Processed}/{p.Total}{name}";
-                _shell.SetStatus(DistributionProgress);
-            });
-
-            IReadOnlyList<HoldingFolderDistributor.DistributionResult> results;
-            if (selectedPdfFiles.Length > 0)
-            {
-                results = await Task.Run(() => HoldingFolderDistributor.DistributeShaftFiles(
-                    pdfFiles: selectedPdfFiles,
-                    destGemeindeFolder: destFolder,
-                    moveInsteadOfCopy: false,
-                    overwrite: false,
-                    project: _shell.Project,
-                    progress: progress,
-                    directoryConfig: directoryConfig,
-                    variant: variant));
-            }
-            else
-            {
-                results = await Task.Run(() => HoldingFolderDistributor.DistributeShafts(
-                    pdfSourceFolder: pdfFolder!,
-                    destGemeindeFolder: destFolder,
-                    moveInsteadOfCopy: false,
-                    overwrite: false,
-                    project: _shell.Project,
-                    progress: progress,
-                    directoryConfig: directoryConfig,
-                    variant: variant));
-            }
-
-            // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
-            var summary = DistributionSummaryBuilder.BuildShaftDistributionSummary(results);
-            var pdfUpdated = ApplyPdfPathsToSchachtRecords(results);
-            LastResult = pdfUpdated > 0
-                ? summary + $"PDF-Pfade aktualisiert: {pdfUpdated}{Environment.NewLine}"
-                : summary;
-            _shell.SetStatus("Schachtprotokolle verteilt");
-
-            if (selectedPdfFiles.Length > 0)
-                StorePdfFiles(selectedPdfFiles);
-        }
-        finally
-        {
-            IsDistributionInProgress = false;
-            IsDistributionIndeterminate = false;
-            DistributionProgress = "";
-            DistributionPercent = 0;
-            IsPageBusy = false;
         }
     }
 
     // ─── Distribution: Dichtheitspruefung ──────────────────────────────────
 
-    private async Task DistributeDichtheitAsync()
+    private async Task DistributeDichtheitAsync(VerteilAuftrag auftrag)
     {
-        var mode = _dialogs.ConfirmCancel(
-            "PDF-Auswahl:\nJa = einzelne DP-PDFs auswaehlen\nNein = ganzen PDF-Ordner verwenden",
-            "Dichtheitsprüfung verteilen");
-        if (mode == DialogConfirm.Cancel)
+        if (auftrag.Quelle.IstTxt || !auftrag.Quelle.IstGewaehlt)
             return;
 
-        string? pdfFolder = null;
-        string[] selectedPdfFiles = Array.Empty<string>();
-        if (mode == DialogConfirm.Yes)
-        {
-            selectedPdfFiles = _dialogs.OpenFiles("Dichtheitsprüfungs-PDFs auswaehlen", "PDF (*.pdf)|*.pdf");
-            if (selectedPdfFiles.Length == 0)
-                return;
-        }
-        else
-        {
-            pdfFolder = _dialogs.SelectFolder("PDF-Ordner mit Dichtheitsprüfungsprotokollen waehlen");
-            if (string.IsNullOrWhiteSpace(pdfFolder))
-                return;
-        }
+        var pdfFolder = auftrag.Quelle.IstEinzeldateien ? null : auftrag.Quelle.Ordner;
+        var selectedPdfFiles = auftrag.Quelle.IstEinzeldateien ? auftrag.Quelle.Dateien.ToArray() : Array.Empty<string>();
 
         var destFolder = ResolveConfiguredDistributionRoot(_settings.DichtheitDistribution)
             ?? ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
+        if (!VerteilzielErreichbar(destFolder)) return;
         var directoryConfig = SnapshotDistributionTree(_settings.DichtheitDistribution);
+        var projectContext = new ProjectOperationContext(
+            _shell.Project,
+            _settings.LastProjectPath);
 
         try
         {
-            IsPageBusy = true;
             IsDistributionInProgress = true;
             IsDistributionIndeterminate = true;
             DistributionPercent = 0;
@@ -752,6 +641,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
             // Amtlichen Kataster laden (einmaliger Tabellen-Bau, danach gecached im SewerStudio-Ordner).
             // Fehlt die Datei, bleibt cadastre null -> Verteilung wie bisher.
             IHaltungCadastreResolver? cadastre = null;
+            string? cadastreWarning = null;
             try
             {
                 var katasterPfad = _katasterXtfPaths.Resolve(
@@ -760,9 +650,20 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 if (!string.IsNullOrWhiteSpace(katasterPfad))
                     cadastre = await Task.Run(() => _haltungCadastreIndexes.EnsureAndLoad(katasterPfad));
             }
-            catch
+            catch (Exception ex)
             {
-                // Kataster optional: ohne ihn laeuft die Verteilung wie bisher.
+                var safeCause = UserError.DescribeAndReport(ex, "Dichtheitsverteilung Katasterabgleich");
+                cadastreWarning =
+                    "Der amtliche Kataster konnte nicht geladen werden. Die Verteilung lief ohne " +
+                    $"Katasterabgleich weiter; Ergebnis bitte prüfen. Ursache: {safeCause}";
+            }
+
+            if (!ProjectIsStillCurrent(
+                    projectContext,
+                    "Dichtheitsprüfungs-Verteilung",
+                    filesMayRemain: false))
+            {
+                return;
             }
 
             IReadOnlyList<HoldingFolderDistributor.DistributionResult> results;
@@ -773,7 +674,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     destGemeindeFolder: destFolder,
                     moveInsteadOfCopy: false,
                     overwrite: false,
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     cadastre: cadastre,
                     directoryConfig: directoryConfig));
@@ -785,18 +686,39 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     destGemeindeFolder: destFolder,
                     moveInsteadOfCopy: false,
                     overwrite: false,
-                    project: _shell.Project,
+                    project: projectContext.Project,
                     progress: progress,
                     cadastre: cadastre,
                     directoryConfig: directoryConfig));
             }
 
+            if (!ProjectIsStillCurrent(
+                    projectContext,
+                    "Dichtheitsprüfungs-Verteilung",
+                    filesMayRemain: results.Any(static result => result.Success)))
+            {
+                return;
+            }
+
             // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
             LastResult = DistributionSummaryBuilder.BuildDichtheitDistributionSummary(results);
-            _shell.SetStatus("Dichtheitsprüfungsprotokolle verteilt");
+            if (cadastreWarning is not null)
+            {
+                LastResult += $"\n\nWARNUNG: {cadastreWarning}";
+                _shell.SetStatus("Dichtheitsprüfungen verteilt – Katasterabgleich fehlgeschlagen");
+            }
+            else
+            {
+                _shell.SetStatus("Dichtheitsprüfungsprotokolle verteilt");
+            }
+
+            MeldeVerteilung(
+                "Dichtheitsprüfungen",
+                LastResult,
+                results.Count(static r => !r.Success) + (cadastreWarning is null ? 0 : 1));
 
             if (selectedPdfFiles.Length > 0)
-                StorePdfFiles(selectedPdfFiles);
+                StorePdfFiles(selectedPdfFiles, projectContext);
         }
         finally
         {
@@ -804,44 +726,10 @@ public sealed partial class ExportPageViewModel : ObservableObject
             IsDistributionIndeterminate = false;
             DistributionProgress = "";
             DistributionPercent = 0;
-            IsPageBusy = false;
         }
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────
-
-    private int ApplyPdfPathsToSchachtRecords(IReadOnlyList<HoldingFolderDistributor.DistributionResult> results)
-    {
-        var updated = 0;
-        foreach (var r in results)
-        {
-            if (!r.Success || string.IsNullOrWhiteSpace(r.DestPdfPath) || string.IsNullOrWhiteSpace(r.HoldingFolder))
-                continue;
-
-            var folderName = Path.GetFileName(r.HoldingFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            if (string.IsNullOrWhiteSpace(folderName))
-                continue;
-
-            var record = _shell.Project.SchaechteData.FirstOrDefault(x =>
-                string.Equals(SanitizePathSegment((x.GetFieldValue("Schachtnummer") ?? "").Trim()), folderName, StringComparison.OrdinalIgnoreCase));
-            if (record is null)
-                continue;
-
-            record.SetFieldValue("PDF_Path", r.DestPdfPath);
-            updated++;
-        }
-
-        if (updated > 0)
-        {
-            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-            _shell.Project.Dirty = true;
-        }
-
-        return updated;
-    }
-
-    private static string SanitizePathSegment(string value)
-        => AuswertungPro.Next.Application.Common.ProjectPathResolver.SanitizePathSegment(value);
 
     private string? ResolveDistributionTargetFolder()
     {
@@ -849,7 +737,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         // im Projekt landen. Ohne gespeichertes Projekt bleibt der Ordnerdialog als Rueckfall.
         return Services.DistributionTargetFolderPolicy.Resolve(
             _shell.GetProjectFolder(),
-            () => _dialogs.SelectFolder("Zielordner (Gemeinde) waehlen"));
+            () => _dialogs.SelectFolder("Zielordner (Gemeinde) wählen"));
     }
 
     // Zielordner + strukturierter Unterordner (Haltungen_Verteilt\ / Schächte_Verteilt\), damit manuelle
@@ -888,6 +776,23 @@ public sealed partial class ExportPageViewModel : ObservableObject
         => string.IsNullOrWhiteSpace(cfg.Root) ? null : cfg.Root;
 
     /// <summary>
+    /// Prueft die Verteilwurzel, BEVOR der Lauf startet. Fehlt das Laufwerk, meldete frueher
+    /// jede einzelne Datei nur "Could not find a part of the path" (18.09.2026, acht PDFs).
+    /// true = weitermachen.
+    /// </summary>
+    private bool VerteilzielErreichbar(string? wurzel)
+    {
+        var pruefung = VerteilzielPruefung.Pruefe(wurzel, Directory.Exists);
+        if (pruefung.Erreichbar)
+            return true;
+
+        LastResult = pruefung.Meldung!;
+        _shell.SetStatus("Verteilordner nicht erreichbar");
+        _dialogs.Warn(pruefung.Meldung!, "Verteilordner nicht erreichbar");
+        return false;
+    }
+
+    /// <summary>
     /// Excel-Zielpfad aus dem gemeinsamen Zielordner und dem festen Dateinamen; legt den Zielordner an.
     /// Null -> keine Wurzel gesetzt -> Aufrufer nutzt den Speichern-Dialog.
     /// </summary>
@@ -903,20 +808,21 @@ public sealed partial class ExportPageViewModel : ObservableObject
         return ziel;
     }
 
-    private void StorePdfFiles(string[] paths)
-        => StoreImportFiles(paths, "PDF", "PDF-Dateien");
+    private void StorePdfFiles(string[] paths, ProjectOperationContext projectContext)
+        => StoreImportFiles(paths, "PDF", "PDF-Dateien", projectContext);
 
-    private void StoreTxtFiles(string[] paths)
-        => StoreImportFiles(paths, "TXT", "TXT-Dateien");
+    private void StoreTxtFiles(string[] paths, ProjectOperationContext projectContext)
+        => StoreImportFiles(paths, "TXT", "TXT-Dateien", projectContext);
 
     private void StoreImportFiles(
         IReadOnlyCollection<string> paths,
         string importKind,
-        string displayName)
+        string displayName,
+        ProjectOperationContext projectContext)
     {
         var result = _storedImportFiles.Store(
-            _settings.LastProjectPath,
-            _shell.Project.Metadata,
+            projectContext.ProjectPath,
+            projectContext.Project.Metadata,
             importKind,
             paths);
 
@@ -930,4 +836,31 @@ public sealed partial class ExportPageViewModel : ObservableObject
             LastResult += $"{Environment.NewLine}Hinweis: {result.Errors.Count} {displayName} konnten nicht im Projekt abgelegt werden.";
         }
     }
+
+    private bool ProjectIsStillCurrent(
+        ProjectOperationContext projectContext,
+        string operation,
+        bool filesMayRemain,
+        bool projectDataChanged = false)
+    {
+        if (ActiveProjectGuard.IsCurrent(
+                projectContext,
+                _shell.Project,
+                _settings.LastProjectPath))
+        {
+            return true;
+        }
+
+        LastResult = projectDataChanged
+            ? $"{operation}: Das aktive Projekt wurde gewechselt. " +
+              "Dateien und PDF-Pfade wurden im gestarteten Projekt übernommen, " +
+              "aber nicht gespeichert."
+            : filesMayRemain
+            ? $"{operation} beendet, aber nicht in Projektdaten übernommen: " +
+              "Das aktive Projekt wurde gewechselt. Bereits kopierte Dateien bleiben im Zielordner."
+            : $"{operation} abgebrochen: Das aktive Projekt wurde gewechselt.";
+        _shell.SetStatus(LastResult);
+        return false;
+    }
+
 }

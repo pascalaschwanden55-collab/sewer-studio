@@ -87,8 +87,13 @@ public sealed class CodingSessionServiceTests
             var aiRejected = service.AddEvent(Entry("BAF", ProtocolEntrySource.Ai));
             aiRejected.AiContext = new CodingEventAiContext { Decision = CodingUserDecision.Rejected };
 
+            // Selbst codiert und noch nicht ausdruecklich bestaetigt: gehoert trotzdem
+            // ins Fachprotokoll. Nur ein ausdrueckliches Ablehnen haelt es zurueck.
             var manualOpen = service.AddEvent(Entry("BCA", ProtocolEntrySource.Manual));
             manualOpen.ReviewContext = new CodingEventReviewContext { Decision = CodingUserDecision.Ignored };
+
+            var manualRejected = service.AddEvent(Entry("BAA", ProtocolEntrySource.Manual));
+            manualRejected.ReviewContext = new CodingEventReviewContext { Decision = CodingUserDecision.Rejected };
 
             var manualAccepted = service.AddEvent(Entry("BDD", ProtocolEntrySource.Manual));
             manualAccepted.ReviewContext = new CodingEventReviewContext { Decision = CodingUserDecision.Accepted };
@@ -101,8 +106,9 @@ public sealed class CodingSessionServiceTests
             Assert.Contains("BAB", codes);
             Assert.Contains("BDD", codes);
             Assert.Contains("BDA", codes);
+            Assert.Contains("BCA", codes);
             Assert.DoesNotContain("BAF", codes);
-            Assert.DoesNotContain("BCA", codes);
+            Assert.DoesNotContain("BAA", codes);
 
             var acceptedEntry = Assert.Single(document.Current.Entries, e => e.Code == "BAB");
             var audit = acceptedEntry.Ai!.CentralDecision!;

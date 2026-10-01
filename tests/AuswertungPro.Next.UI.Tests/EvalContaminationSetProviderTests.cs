@@ -15,7 +15,7 @@ public sealed class EvalContaminationSetProviderTests
 
         var sets = EvalContaminationSetProvider.Load(settings);
 
-        Assert.Contains("abc123", sets.ImageHashes);
+        Assert.Contains(new string('a', 64), sets.ImageHashes);
         Assert.Contains("287425-81162", sets.HaltungKeys);
     }
 
@@ -49,6 +49,100 @@ public sealed class EvalContaminationSetProviderTests
         Assert.Contains("_manifest.json", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Load_invalid_sha256_fails_loud()
+    {
+        using var temp = new TempEvalSet();
+        File.WriteAllText(
+            Path.Combine(temp.Root, "_manifest.json"),
+            """
+            {
+              "hashes": {
+                "images/frame.png": { "sha256": "abc123" }
+              }
+            }
+            """);
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => EvalContaminationSetProvider.Load(temp.Root));
+
+        Assert.Contains("SHA-256", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Load_non_text_sha256_fails_loud_instead_of_using_fallback()
+    {
+        using var temp = new TempEvalSet();
+        File.WriteAllText(
+            Path.Combine(temp.Root, "_manifest.json"),
+            """
+            {
+              "hashes": {
+                "images/frame.png": { "sha256": 12345 }
+              }
+            }
+            """);
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => EvalContaminationSetProvider.Load(temp.Root));
+
+        Assert.Contains("SHA-256", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Load_invalid_haltung_key_fails_loud()
+    {
+        using var temp = new TempEvalSet();
+        File.WriteAllText(
+            Path.Combine(temp.Root, "_candidates.json"),
+            """
+            [
+              { "haltung_key": "keine-haltung" }
+            ]
+            """);
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => EvalContaminationSetProvider.Load(temp.Root));
+
+        Assert.Contains("Haltungskennung", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Load_non_text_haltung_key_fails_loud()
+    {
+        using var temp = new TempEvalSet();
+        File.WriteAllText(
+            Path.Combine(temp.Root, "_candidates.json"),
+            """
+            [
+              { "haltung_key": 12345 }
+            ]
+            """);
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => EvalContaminationSetProvider.Load(temp.Root));
+
+        Assert.Contains("Haltungskennung", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Load_normalizes_area_prefixes_in_haltung_keys()
+    {
+        using var temp = new TempEvalSet();
+        File.WriteAllText(
+            Path.Combine(temp.Root, "_candidates.json"),
+            """
+            [
+              { "haltung_key": "07.638910-1367" }
+            ]
+            """);
+
+        var sets = EvalContaminationSetProvider.Load(temp.Root);
+
+        Assert.Contains("638910-1367", sets.HaltungKeys);
+        Assert.DoesNotContain("07.638910-1367", sets.HaltungKeys);
+    }
+
     private sealed class TempEvalSet : IDisposable
     {
         public TempEvalSet()
@@ -58,7 +152,7 @@ public sealed class EvalContaminationSetProviderTests
             File.WriteAllText(Path.Combine(Root, "_manifest.json"), """
                 {
                   "hashes": {
-                    "images/frame.png": { "sha256": " abc123 " },
+                    "images/frame.png": { "sha256": " aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " },
                     "notes/readme.txt": { "sha256": "ignored" }
                   }
                 }

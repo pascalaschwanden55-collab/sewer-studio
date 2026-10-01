@@ -1,23 +1,52 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Common;
+using FileContentComparer = AuswertungPro.Next.Application.Common.FileContentComparer;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
 
+/// <summary>Welche Art Begleitprotokoll der Sanierung eine Quell-PDF ist.</summary>
+internal enum SanierungsprotokollArt
+{
+    Dichtheitspruefung,
+    Aushaertung
+}
+
+/// <summary>Eine erkannte Quell-PDF samt dem Text, der die Erkennung belegt.</summary>
+internal sealed record Sanierungsprotokoll(string Pfad, SanierungsprotokollArt Art, string? Text)
+{
+    /// <summary>Kuerzel im Zieldateinamen: <c>20260817_60248-60247_DP.pdf</c>.</summary>
+    internal string Kuerzel => Art == SanierungsprotokollArt.Dichtheitspruefung ? "DP" : "AH";
+
+    internal string Bezeichnung => Art == SanierungsprotokollArt.Dichtheitspruefung
+        ? "Dichtheitspruefung"
+        : "Aushaerteprotokoll";
+}
+
 /// <summary>
-/// Verteilt beim Ein-Knopf-Import Dichtheitspruefungsprotokolle (DP) aus der
-/// Quelle in die Haltungsordner — Dateiname &lt;JJJJMMTT&gt;_&lt;Haltung&gt;_DP.pdf.
-/// Kandidaten sind PDFs, deren Inhalt deterministisch als Dichtheitspruefung
-/// erkannt wird. Die KI-Zweitmeinung bleibt auf DP-/Dichtheits-Ordner
-/// begrenzt, damit normale Dokumentenordner nicht breit geraten werden.
-/// Die Haltungszuordnung uebernimmt die bestehende Logik
-/// <see cref="HoldingFolderDistributor.DistributeDichtheitFiles"/> (liest die
-/// Schaechte aus dem PDF-Inhalt). Kanalfernseh- und DP-Protokolle liegen damit
-/// gemeinsam im Haltungen_Verteilt-Ordner.
+/// Verteilt beim Ein-Knopf-Import die Begleitprotokolle der Sanierung aus der Quelle in
+/// die Haltungsordner — Dateiname &lt;JJJJMMTT&gt;_&lt;Haltung&gt;_DP.pdf beziehungsweise
+/// _AH.pdf. Kandidaten sind PDFs, deren Inhalt deterministisch als Dichtheitspruefung
+/// oder Aushaerteprotokoll erkannt wird; bei einem reinen Scan liefert
+/// <see cref="PdfDokumenttext"/> den Text per OCR. Die KI-Zweitmeinung bleibt auf
+/// DP-/Dichtheits-Ordner begrenzt, damit normale Dokumentenordner nicht breit geraten
+/// werden.
+///
+/// Zugeordnet wird zuerst ueber die Haltungsbezeichnung, die das Dokument selbst nennt
+/// (<see cref="SanierungsprotokollZuordnung"/>) — nur dieser Weg trifft eine
+/// Sammelpruefung ueber mehrere Haltungen und ein Aushaerteprotokoll ohne Schachtangabe.
+/// Bleibt eine Dichtheitspruefung offen, folgt unveraendert der bestehende Weg ueber das
+/// Schachtpaar im Inhalt
+/// (<see cref="HoldingFolderDistributor.DistributeDichtheitFiles"/>).
+///
+/// Kanalfernseh-, DP- und Aushaerteprotokolle liegen damit gemeinsam im
+/// Haltungen_Verteilt-Ordner.
 /// </summary>
 public sealed class DichtheitImportDistributionService : IDichtheitImportDistributor
 {
@@ -27,14 +56,39 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         @"(^|[_\-\s])DP($|[_\-\s])|Dichtheit",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+    /// <summary>Zieldateien, die dieser Verteiler selbst angelegt hat.</summary>
+    private static readonly string[] ZieldateiMuster = ["*_DP*.pdf", "*_AH*.pdf"];
+
     public DichtheitImportDistributor.Result Distribute(
         Project project,
         string projectFolder,
         string sourceFolder,
         PdfKiSchiedsrichter? ki = null)
+        => Distribute(project, projectFolder, sourceFolder, ki, fileStaging: null);
+
+    public DichtheitImportDistributor.Result Distribute(
+        Project project,
+        string projectFolder,
+        string sourceFolder,
+        PdfKiSchiedsrichter? ki,
+        IImportFileStagingSession? fileStaging)
     {
+        if (fileStaging is not null
+            && !Path.GetFullPath(fileStaging.ProjectRoot)
+                .Equals(Path.GetFullPath(projectFolder), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Datei-Staging und Dichtheits-Verteilung gehören nicht zum selben Projekt.");
+        }
+
         var messages = new List<string>();
-        var kandidaten = new List<string>(FindeKandidaten(sourceFolder));
+        var kandidaten = new List<Sanierungsprotokoll>(
+            FindeKandidaten(sourceFolder, out var namensHinweise, out var lesefehler));
+        messages.AddRange(namensHinweise);
+        // Was nicht gelesen oder nicht abgelegt werden konnte, ist ein Fehler — getrennt von
+        // «nicht zugeordnet», damit der Import es in seiner Fehlerbilanz zaehlt.
+        var fehler = new List<string>(lesefehler);
+        messages.AddRange(lesefehler);
 
         // R4: KI-Zweitmeinung fuer DP-Ordner-PDFs, die die deterministische
         // Typ-Erkennung NICHT sicher zuordnen konnte (nur Vorschlag, im Report gekennzeichnet).
@@ -45,48 +99,92 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
                 var klassifikation = FrageKi(ki, unsicher);
                 if (klassifikation?.Typ == PdfDokumentTyp.Dichtheitspruefung)
                 {
-                    kandidaten.Add(unsicher);
+                    kandidaten.Add(new Sanierungsprotokoll(
+                        unsicher,
+                        SanierungsprotokollArt.Dichtheitspruefung,
+                        PdfDokumenttext.LiesKopf(unsicher, maxPages: 6)));
                     messages.Add($"Per KI als Dichtheitspruefung klassifiziert: {Path.GetFileName(unsicher)}");
                 }
             }
         }
 
         if (kandidaten.Count == 0)
-            return new DichtheitImportDistributor.Result(0, 0, 0, messages);
+            return new DichtheitImportDistributor.Result(0, namensHinweise.Count, 0, messages, fehler);
 
         var zielRoot = Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt);
 
-        // Idempotenz-Guard: bereits verteilte DP-Protokolle (gleiche Dateigroesse)
+        // Idempotenz-Guard: bereits verteilte, bytegleiche DP-Protokolle
         // nicht erneut kopieren — DistributeDichtheitFiles wuerde sonst bei jedem
         // Lauf _01-Duplikate anlegen.
-        var vorhandeneGroessen = LeseVorhandeneDpGroessen(zielRoot);
-        var neue = new List<string>();
+        // Gleiche Dateigroesse allein ist kein Inhaltsbeweis.
+        var vorhandeneHashes = LeseVorhandeneDpHashes(zielRoot, fileStaging);
+        var neue = new List<Sanierungsprotokoll>();
         var uebersprungen = 0;
         foreach (var kandidat in kandidaten)
         {
-            long groesse;
+            string hash;
             try
             {
-                groesse = new FileInfo(kandidat).Length;
+                hash = VerifiedImportFileCopy.ComputeSha256(kandidat.Pfad);
             }
             catch (Exception ex)
             {
                 // Best effort: eine unlesbare Datei darf die restlichen DP-Kandidaten nicht blockieren.
                 AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
-                    $"[DichtheitImport] Kandidat uebersprungen, Groesse nicht lesbar: {kandidat}: {ex.Message}");
+                    $"[DichtheitImport] Kandidat uebersprungen, SHA-256 nicht lesbar: {kandidat.Pfad}: {ex.Message}");
+                var meldung = $"{Path.GetFileName(kandidat.Pfad)} nicht lesbar, nicht verteilt: {ex.Message}";
+                fehler.Add(meldung);
+                messages.Add(meldung);
                 continue;
             }
 
-            if (vorhandeneGroessen.Contains(groesse))
+            if (vorhandeneHashes.Contains(hash))
                 uebersprungen++;
             else
                 neue.Add(kandidat);
         }
 
         if (neue.Count == 0)
-            return new DichtheitImportDistributor.Result(0, 0, uebersprungen, messages);
+            return new DichtheitImportDistributor.Result(0, namensHinweise.Count, uebersprungen, messages, fehler);
 
-        var results = HoldingFolderDistributor.DistributeDichtheitFiles(neue, zielRoot, project: project);
+        // Zuerst der genaue Weg ueber die Haltungsbezeichnung des Dokuments. Er ist der
+        // einzige, der eine Sammelpruefung ueber mehrere Haltungen richtig ablegt und
+        // der ein Aushaerteprotokoll ueberhaupt zuordnen kann — dort steht kein Schacht.
+        var (perBezeichnung, offen, offeneGruende) = VerteileUeberBezeichnung(
+            neue, project, projectFolder, zielRoot, fileStaging, messages, fehler);
+
+        if (offen.Count == 0)
+        {
+            return new DichtheitImportDistributor.Result(
+                perBezeichnung, namensHinweise.Count, uebersprungen, messages, fehler);
+        }
+
+        // Rueckfall: der bestehende Weg ueber das Schachtpaar im Dokument (KIT-Bauinspekt
+        // und andere Pruefberichte). Ein Aushaerteprotokoll kennt er nicht.
+        var (fuerSchachtpaar, ohneWeg) = TeileNachWeg(offen);
+        foreach (var protokoll in ohneWeg)
+        {
+            messages.Add(
+                $"{protokoll.Bezeichnung} nicht zugeordnet: {Path.GetFileName(protokoll.Pfad)} — "
+                + "das Dokument nennt keine Haltung dieses Projekts.");
+
+            // Der genaue Grund gehoert dazu: "H73 steht nur im Dateinamen, nicht im
+            // Dokument" sagt Pascal, wo er nachsehen muss.
+            if (offeneGruende.TryGetValue(protokoll.Pfad, out var gruende))
+                messages.AddRange(gruende);
+        }
+
+        if (fuerSchachtpaar.Count == 0)
+        {
+            return new DichtheitImportDistributor.Result(
+                perBezeichnung, ohneWeg.Count + namensHinweise.Count, uebersprungen, messages, fehler);
+        }
+
+        var results = DistributeCandidates(
+            fuerSchachtpaar.Select(p => p.Pfad).ToList(),
+            zielRoot,
+            project,
+            fileStaging);
 
         var verteilt = results.Count(r => r.Success);
         var nichtZugeordnet = 0;
@@ -95,7 +193,13 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
             // R4: Wenn der Inhalt-Parser das Schachtpaar nicht fand, darf die KI
             // einen Vorschlag machen — Zuordnung wird im Report als "per KI" gekennzeichnet.
             if (ki is not null && !string.IsNullOrWhiteSpace(r.SourcePdfPath)
-                && VerteilePerKi(ki, r.SourcePdfPath!, zielRoot, messages))
+                && VerteilePerKi(
+                    ki,
+                    r.SourcePdfPath!,
+                    projectFolder,
+                    zielRoot,
+                    messages,
+                    fileStaging))
             {
                 verteilt++;
                 continue;
@@ -106,10 +210,218 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         }
 
         return new DichtheitImportDistributor.Result(
-            verteilt,
-            nichtZugeordnet,
+            verteilt + perBezeichnung,
+            nichtZugeordnet + ohneWeg.Count + namensHinweise.Count,
             uebersprungen,
-            messages);
+            messages,
+            fehler);
+    }
+
+    /// <summary>
+    /// Legt jedes Protokoll in die Haltungsordner, die sein Dokument selbst nennt.
+    /// Liefert die Zahl der abgelegten Dateien und alles, was ueber diesen Weg offen blieb.
+    /// </summary>
+    private static (int Verteilt,
+                    IReadOnlyList<Sanierungsprotokoll> Offen,
+                    IReadOnlyDictionary<string, IReadOnlyList<string>> Gruende)
+        VerteileUeberBezeichnung(
+        IReadOnlyList<Sanierungsprotokoll> protokolle,
+        Project project,
+        string projectFolder,
+        string zielRoot,
+        IImportFileStagingSession? fileStaging,
+        List<string> messages,
+        List<string> fehler)
+    {
+        var haltungen = project.Data
+            .Select(r => new SanierungsprotokollHaltung(
+                r.GetFieldValue(FieldKeys.HoldingName)?.Trim() ?? "",
+                r.ImportBezeichnung))
+            .Where(h => !string.IsNullOrWhiteSpace(h.Haltung))
+            .ToList();
+
+        var verteilt = 0;
+        var offen = new List<Sanierungsprotokoll>();
+        var gruende = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var protokoll in protokolle)
+        {
+            var befund = SanierungsprotokollZuordnung.Ordne(protokoll.Pfad, protokoll.Text, haltungen);
+            if (befund.Ziele.Count == 0)
+            {
+                offen.Add(protokoll);
+                gruende[protokoll.Pfad] = befund.Hinweise;
+                continue;
+            }
+
+            // Ein Stolperstein bei einer Haltung darf die uebrigen nicht mitreissen.
+            messages.AddRange(befund.Hinweise);
+
+            var stamp = Datumsstempel(protokoll.Text);
+            var abgelegt = new List<string>();
+            foreach (var ziel in befund.Ziele)
+            {
+                var pfad = LegeInHaltungsordner(
+                    protokoll, ziel.Haltung, stamp, projectFolder, zielRoot, fileStaging, messages, fehler);
+                if (pfad is null)
+                    continue;
+
+                verteilt++;
+                abgelegt.Add(ziel.Haltung);
+            }
+
+            if (abgelegt.Count == 0)
+            {
+                offen.Add(protokoll);
+                gruende[protokoll.Pfad] = befund.Hinweise;
+                continue;
+            }
+
+            messages.Add(abgelegt.Count == 1
+                ? $"{protokoll.Bezeichnung} {Path.GetFileName(protokoll.Pfad)} → {abgelegt[0]}"
+                : $"{protokoll.Bezeichnung} {Path.GetFileName(protokoll.Pfad)} deckt "
+                  + $"{abgelegt.Count} Haltungen ab → {string.Join(", ", abgelegt)}");
+        }
+
+        return (verteilt, offen, gruende);
+    }
+
+    /// <summary>
+    /// Nur eine Dichtheitspruefung kann ueber das Schachtpaar im Dokument gehen. Ein
+    /// Aushaerteprotokoll nennt keinen Schacht — dort wuerde der alte Weg aus einer
+    /// beliebigen Nummer einen Ordner bauen (in Buerglen aus der Chargen-Nr. des Liners).
+    /// </summary>
+    private static (IReadOnlyList<Sanierungsprotokoll> Schachtpaar, IReadOnlyList<Sanierungsprotokoll> Ohne)
+        TeileNachWeg(IReadOnlyList<Sanierungsprotokoll> offen)
+    {
+        var schachtpaar = offen
+            .Where(p => p.Art == SanierungsprotokollArt.Dichtheitspruefung)
+            .ToList();
+        var ohne = offen
+            .Where(p => p.Art != SanierungsprotokollArt.Dichtheitspruefung)
+            .ToList();
+        return (schachtpaar, ohne);
+    }
+
+    private static string Datumsstempel(string? text)
+        => HoldingDistribution.HoldingTextParser.TryFindInspectionDate(text ?? "")
+               ?.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture)
+           ?? "00000000";
+
+    /// <summary>
+    /// Legt eine Quelldatei als <c>&lt;JJJJMMTT&gt;_&lt;Haltung&gt;_&lt;DP|AH&gt;.pdf</c> im
+    /// Haltungsordner ab. Liegt dort bereits eine inhaltsgleiche Datei, wird sie
+    /// wiederverwendet statt ein zweites Mal kopiert; ein abweichender Bestand bekommt
+    /// einen freien Namen. Kundenoriginale werden nur gelesen.
+    /// </summary>
+    private static string? LegeInHaltungsordner(
+        Sanierungsprotokoll protokoll,
+        string haltung,
+        string stamp,
+        string projectFolder,
+        string zielRoot,
+        IImportFileStagingSession? fileStaging,
+        List<string> messages,
+        List<string> fehler)
+    {
+        try
+        {
+            var san = AuswertungPro.Next.Application.Common.ProjectPathResolver
+                .SanitizePathSegment(haltung);
+            var dir = Path.Combine(zielRoot, san);
+            var zielname = $"{stamp}_{san}_{protokoll.Kuerzel}.pdf";
+
+            var vorhanden = FindeGleicheDatei(dir, protokoll.Pfad, fileStaging);
+            if (vorhanden is not null)
+                return vorhanden;
+
+            if (fileStaging is not null)
+                return fileStaging.StageCopyAs(protokoll.Pfad, dir, zielname);
+
+            var writePaths = new ProjectWritePathGuard(projectFolder);
+            dir = writePaths.EnsureSafeDirectoryTarget(dir);
+            Directory.CreateDirectory(dir);
+            var ziel = writePaths.EnsureSafeFileTarget(
+                KanalImportDistributor.UniquePath(Path.Combine(dir, zielname)));
+            writePaths.EnsureSafeFileTarget(ziel);
+            File.Copy(protokoll.Pfad, ziel, overwrite: false);
+            return ziel;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            var meldung =
+                $"{protokoll.Bezeichnung} {Path.GetFileName(protokoll.Pfad)} → {haltung} nicht abgelegt: {ex.Message}";
+            messages.Add(meldung);
+            fehler.Add(meldung);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Sucht im Haltungsordner eine inhaltsgleiche PDF. Byteweiser Vergleich; Name,
+    /// Groesse oder Zeitstempel allein sind kein Beleg fuer Gleichheit. Jeder Lesefehler
+    /// ergibt <c>null</c> — dann wird kopiert.
+    /// </summary>
+    private static string? FindeGleicheDatei(
+        string zielOrdner,
+        string quelle,
+        IImportFileStagingSession? fileStaging)
+    {
+        try
+        {
+            IEnumerable<(string Ziel, string Lesepfad)> kandidaten =
+                fileStaging is null
+                    ? (Directory.Exists(zielOrdner)
+                        ? Directory.EnumerateFiles(zielOrdner, "*.pdf").Select(p => (p, p))
+                        : Array.Empty<(string, string)>())
+                    : fileStaging
+                        .EnumerateReadableFiles(zielOrdner, "*.pdf", SearchOption.TopDirectoryOnly)
+                        .Select(f => (f.TargetPath, f.ReadPath));
+
+            foreach (var (ziel, lesepfad) in kandidaten.OrderBy(k => k.Ziel, StringComparer.OrdinalIgnoreCase))
+            {
+                if (File.Exists(lesepfad) && FileContentComparer.FilesEqual(lesepfad, quelle))
+                    return ziel;
+            }
+        }
+        catch (Exception ex)
+        {
+            AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
+                $"[DichtheitImport] Dublettenpruefung im Zielordner uebersprungen: {zielOrdner}: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<HoldingFolderDistributor.DistributionResult> DistributeCandidates(
+        IReadOnlyList<string> candidates,
+        string logicalDestinationRoot,
+        Project project,
+        IImportFileStagingSession? fileStaging)
+    {
+        if (fileStaging is null)
+        {
+            return HoldingFolderDistributor.DistributeDichtheitFiles(
+                candidates,
+                logicalDestinationRoot,
+                project: project);
+        }
+
+        using var output = new StagedDistributionOutput();
+        var temporaryResults = HoldingFolderDistributor.DistributeDichtheitFiles(
+            candidates,
+            output.OutputRoot,
+            project: project);
+        output.StageAll(fileStaging, logicalDestinationRoot);
+        return temporaryResults
+            .Select(result => result with
+            {
+                DestPdfPath = output.MapPath(result.DestPdfPath, logicalDestinationRoot),
+                DestVideoPath = output.MapPath(result.DestVideoPath, logicalDestinationRoot),
+                InfoPath = output.MapPath(result.InfoPath, logicalDestinationRoot),
+                HoldingFolder = output.MapPath(result.HoldingFolder, logicalDestinationRoot)
+            })
+            .ToList();
     }
 
     /// <summary>
@@ -137,7 +449,13 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
     }
 
     /// <summary>Legt ein per KI zugeordnetes DP-Protokoll unter dem erkannten Schachtpaar ab.</summary>
-    private static bool VerteilePerKi(PdfKiSchiedsrichter ki, string pdfPath, string zielRoot, List<string> messages)
+    private static bool VerteilePerKi(
+        PdfKiSchiedsrichter ki,
+        string pdfPath,
+        string projectFolder,
+        string zielRoot,
+        List<string> messages,
+        IImportFileStagingSession? fileStaging)
     {
         var k = FrageKi(ki, pdfPath);
         if (k is null
@@ -156,12 +474,32 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
                 stamp = datum.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
 
             var dir = Path.Combine(zielRoot, haltung);
-            Directory.CreateDirectory(dir);
             var ziel = Path.Combine(dir, $"{stamp}_{haltung}_DP.pdf");
-            if (!(File.Exists(ziel) && new FileInfo(ziel).Length == new FileInfo(pdfPath).Length))
+            if (fileStaging is not null)
             {
-                ziel = KanalImportDistributor.UniquePath(ziel);
-                File.Copy(pdfPath, ziel, overwrite: false);
+                ziel = fileStaging.StageCopyAs(
+                    pdfPath,
+                    dir,
+                    Path.GetFileName(ziel));
+            }
+            else
+            {
+                var writePaths = new ProjectWritePathGuard(projectFolder);
+                writePaths.EnsureSafeDirectoryTarget(projectFolder);
+                zielRoot = writePaths.EnsureSafeDirectoryTarget(zielRoot);
+                dir = writePaths.EnsureSafeDirectoryTarget(dir);
+                ziel = writePaths.EnsureSafeFileTarget(ziel);
+
+                if (!(File.Exists(ziel) && FileContentComparer.FilesEqual(ziel, pdfPath)))
+                {
+                    ziel = writePaths.EnsureSafeFileTarget(
+                        KanalImportDistributor.UniquePath(ziel));
+                    Directory.CreateDirectory(dir);
+                    dir = writePaths.EnsureSafeDirectoryTarget(dir);
+                    writePaths.EnsureSafeDirectoryTarget(dir);
+                    writePaths.EnsureSafeFileTarget(ziel);
+                    File.Copy(pdfPath, ziel, overwrite: false);
+                }
             }
 
             messages.Add($"DP per KI zugeordnet: {Path.GetFileName(pdfPath)} → {haltung}");
@@ -175,6 +513,21 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
     }
 
     /// <summary>DP-Ordner-PDFs, deren Typ die deterministische Erkennung NICHT bestimmen konnte.</summary>
+    /// <summary>Eine unlesbare Datei faellt nur fuer sich aus der KI-Zweitmeinung.</summary>
+    private static bool IstUnbekannterTyp(string pfad)
+    {
+        try
+        {
+            return PdfDokumentTypErkennung.ErkenneDatei(pfad) == PdfDokumentTyp.Unbekannt;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
+                $"[DichtheitImport] Kandidat uebersprungen, Typ nicht lesbar: {pfad}: {ex.Message}");
+            return false;
+        }
+    }
+
     internal IReadOnlyList<string> FindeUnsichereKandidaten(string sourceFolder)
     {
         if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
@@ -184,7 +537,7 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         {
             return SafeFileEnumeration.EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
                 .Where(p => LiegtInDpOrdner(p, sourceFolder))
-                .Where(p => PdfDokumentTypErkennung.ErkenneDatei(p) == PdfDokumentTyp.Unbekannt)
+                .Where(IstUnbekannterTyp)
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
@@ -194,38 +547,115 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         }
     }
 
-    /// <summary>Sicher erkannte Dichtheitspruefungs-PDFs der Quelle (rekursiv).</summary>
-    internal IReadOnlyList<string> FindeKandidaten(string sourceFolder)
-    {
-        if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
-            return Array.Empty<string>();
+    /// <summary>Sicher erkannte Begleitprotokolle der Quelle (rekursiv).</summary>
+    internal IReadOnlyList<Sanierungsprotokoll> FindeKandidaten(string sourceFolder)
+        => FindeKandidaten(sourceFolder, out _);
 
+    /// <param name="hinweise">
+    /// Dateien, deren Name auf ein Begleitprotokoll hinweist, deren Inhalt das aber nicht
+    /// bestaetigt. Sie gehoeren in den Importbericht.
+    /// </param>
+    internal IReadOnlyList<Sanierungsprotokoll> FindeKandidaten(
+        string sourceFolder, out IReadOnlyList<string> hinweise)
+        => FindeKandidaten(sourceFolder, out hinweise, out _);
+
+    /// <param name="fehler">
+    /// Dateien, die nicht gelesen werden konnten, und ein gescheitertes Durchsuchen. Frueher
+    /// umschloss ein einziges stilles catch die ganze Schleife: eine unlesbare PDF liess alle
+    /// Begleitprotokolle wegfallen, ohne eine Zeile im Bericht.
+    /// </param>
+    internal IReadOnlyList<Sanierungsprotokoll> FindeKandidaten(
+        string sourceFolder, out IReadOnlyList<string> hinweise, out IReadOnlyList<string> fehler)
+    {
+        hinweise = Array.Empty<string>();
+        fehler = Array.Empty<string>();
+        if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
+            return Array.Empty<Sanierungsprotokoll>();
+
+        var gefunden = new List<Sanierungsprotokoll>();
+        var gemeldet = new List<string>();
+        var fehlgeschlagen = new List<string>();
         try
         {
-            return SafeFileEnumeration.EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
-                .Where(p => IstDichtheitsKandidat(p, sourceFolder))
-                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            foreach (var pfad in SafeFileEnumeration
+                         .EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
+                         .OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    // Die Textlesung verschluckt Lesefehler; eine gesperrte Datei muss aber im
+                    // Bericht stehen, statt als «Name passt, Inhalt nicht» zu enden.
+                    using (File.Open(pfad, FileMode.Open, FileAccess.Read, FileShare.Read)) { }
+
+                    var protokoll = Beurteile(pfad, sourceFolder, out var hinweis);
+                    if (protokoll is not null)
+                        gefunden.Add(protokoll);
+                    else if (hinweis is not null)
+                        gemeldet.Add(hinweis);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    fehlgeschlagen.Add($"{Path.GetFileName(pfad)} nicht lesbar, nicht geprüft: {ex.Message}");
+                }
+            }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Array.Empty<string>();
+            fehlgeschlagen.Add($"Begleitprotokolle in {sourceFolder} nicht vollständig durchsucht: {ex.Message}");
         }
+
+        hinweise = gemeldet;
+        fehler = fehlgeschlagen;
+        return gefunden;
     }
 
     private static bool IstDichtheitsKandidat(string pdfPath, string sourceFolder)
+        => Beurteile(pdfPath, sourceFolder) is not null;
+
+    /// <summary>
+    /// Beurteilt eine Quell-PDF: Ist sie ein Begleitprotokoll der Sanierung, und welcher
+    /// Text belegt das?
+    ///
+    /// Der Text kommt aus <see cref="PdfDokumenttext"/> — bei einem reinen Scan also per
+    /// OCR. Bis 2026-09-09 wurde nur die Textebene gelesen; die zehn eingescannten
+    /// Dichtheitspruefungen aus Buerglen wurden deshalb nie als Kandidat erkannt.
+    /// </summary>
+    private static Sanierungsprotokoll? Beurteile(string pdfPath, string sourceFolder)
+        => Beurteile(pdfPath, sourceFolder, out _);
+
+    private static Sanierungsprotokoll? Beurteile(
+        string pdfPath, string sourceFolder, out string? hinweis)
     {
-        var text = PdfDokumentTypErkennung.ReadPdfTextPrefix(pdfPath, maxPages: 6);
+        hinweis = null;
+        var text = PdfDokumenttext.LiesKopf(pdfPath, maxPages: 6);
         var typMitDateiname = PdfDokumentTypErkennung.ErkenneText(text, Path.GetFileName(pdfPath));
-        if (typMitDateiname != PdfDokumentTyp.Dichtheitspruefung)
-            return false;
+
+        var art = typMitDateiname switch
+        {
+            PdfDokumentTyp.Dichtheitspruefung => SanierungsprotokollArt.Dichtheitspruefung,
+            PdfDokumentTyp.Aushaerteprotokoll => SanierungsprotokollArt.Aushaertung,
+            _ => (SanierungsprotokollArt?)null
+        };
+
+        if (art is null)
+            return null;
 
         if (LiegtInDpOrdner(pdfPath, sourceFolder))
-            return true;
+            return new Sanierungsprotokoll(pdfPath, art.Value, text);
 
-        // In neutralen Ordnern wie "Dokumente" reicht ein Dateiname mit "dicht"
-        // nicht aus; der Inhalt muss selbst eine Dichtheitspruefung belegen.
-        return PdfDokumentTypErkennung.ErkenneText(text, fileName: null) == PdfDokumentTyp.Dichtheitspruefung;
+        // In neutralen Ordnern wie "Dokumente" reicht der Dateiname nicht aus;
+        // der Inhalt muss die Art selbst belegen.
+        var typOhneDateiname = PdfDokumentTypErkennung.ErkenneText(text, fileName: null);
+        if (typMitDateiname == typOhneDateiname)
+            return new Sanierungsprotokoll(pdfPath, art.Value, text);
+
+        // Der Name sagt das eine, der Inhalt bestaetigt es nicht. Das darf nicht still
+        // enden: In Buerglen verlas das OCR die Titelzeile dreier Aushaerteprotokolle,
+        // und sie verschwanden ohne eine einzige Zeile im Bericht.
+        hinweis =
+            $"{Path.GetFileName(pdfPath)}: Der Dateiname weist auf ein Begleitprotokoll hin, "
+            + "der lesbare Inhalt bestätigt das aber nicht — nicht verteilt.";
+        return null;
     }
 
     private static bool LiegtInDpOrdner(string pdfPath, string sourceFolder)
@@ -243,25 +673,43 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         return false;
     }
 
-    private static HashSet<long> LeseVorhandeneDpGroessen(string zielRoot)
+    private static HashSet<string> LeseVorhandeneDpHashes(
+        string zielRoot,
+        IImportFileStagingSession? fileStaging)
     {
-        var groessen = new HashSet<long>();
-        if (!Directory.Exists(zielRoot))
-            return groessen;
+        var hashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         try
         {
-            foreach (var pfad in SafeFileEnumeration.EnumerateFilesSafe(zielRoot, "*_DP*.pdf", recursive: true))
+            // Beide Kuerzel: eine bereits abgelegte Aushaertung darf beim naechsten Lauf
+            // ebenso wenig ein zweites Mal kopiert werden wie eine Dichtheitspruefung.
+            var files = ZieldateiMuster
+                .SelectMany(muster => fileStaging is null
+                    ? Directory.Exists(zielRoot)
+                        ? SafeFileEnumeration.EnumerateFilesSafe(
+                            zielRoot,
+                            muster,
+                            recursive: true)
+                            .Select(path => new ImportReadableFile(path, path))
+                            .ToList()
+                        : []
+                    : fileStaging.EnumerateReadableFiles(
+                        zielRoot,
+                        muster,
+                        SearchOption.AllDirectories))
+                .DistinctBy(f => f.TargetPath, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            foreach (var file in files)
             {
                 try
                 {
-                    groessen.Add(new FileInfo(pfad).Length);
+                    hashes.Add(VerifiedImportFileCopy.ComputeSha256(file.ReadPath));
                 }
                 catch (Exception ex)
                 {
                     // Best effort: defekte Ziel-Dateien verhindern nur die Duplikat-Erkennung fuer diese Datei.
                     AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
-                        $"[DichtheitImport] Vorhandenes DP-Protokoll ohne Groesse ignoriert: {pfad}: {ex.Message}");
+                        $"[DichtheitImport] Vorhandenes DP-Protokoll ohne lesbare SHA-256 ignoriert: {file.TargetPath}: {ex.Message}");
                 }
             }
         }
@@ -269,9 +717,9 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         {
             // Best effort: wenn der Zielbaum nicht lesbar ist, laeuft der Import ohne Idempotenz-Guard weiter.
             AuswertungPro.Next.Application.Common.BestEffort.ReportWarning(
-                $"[DichtheitImport] Vorhandene DP-Groessen konnten nicht gelesen werden: {zielRoot}: {ex.Message}");
+                $"[DichtheitImport] Vorhandene DP-Pruefsummen konnten nicht gelesen werden: {zielRoot}: {ex.Message}");
         }
 
-        return groessen;
+        return hashes;
     }
 }

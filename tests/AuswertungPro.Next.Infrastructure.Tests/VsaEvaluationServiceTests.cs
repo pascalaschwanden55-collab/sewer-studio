@@ -13,7 +13,7 @@ public sealed class VsaEvaluationServiceTests
 {
     private static VsaEvaluationService CreateService()
     {
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
         var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
         return new VsaEvaluationService(channelsTable, manholesTable);
@@ -21,7 +21,7 @@ public sealed class VsaEvaluationServiceTests
 
     private static VsaEvaluationService CreateLegacyService()
     {
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
         var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
         return new VsaEvaluationService(channelsTable, manholesTable, useV2Engine: false);
@@ -331,7 +331,7 @@ public sealed class VsaEvaluationServiceTests
     [Fact]
     public void Evaluate_ShadowMode_LogsExpectedDriftWithoutChangingProductiveResult()
     {
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
         var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
         var tempDir = Path.Combine(Path.GetTempPath(), "sewer-vsa-shadow-tests", Guid.NewGuid().ToString("N"));
@@ -392,7 +392,7 @@ public sealed class VsaEvaluationServiceTests
     [Fact]
     public void Evaluate_ShadowMode_Verwendet_Injizierten_Schreiber()
     {
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
         var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
         var writer = new RecordingShadowTelemetryWriter();
@@ -429,7 +429,7 @@ public sealed class VsaEvaluationServiceTests
     [Fact]
     public void Evaluate_ShadowMode_DoesNotLogWhenV2MatchesLegacy()
     {
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
         var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
         var tempDir = Path.Combine(Path.GetTempPath(), "sewer-vsa-shadow-tests", Guid.NewGuid().ToString("N"));
@@ -539,7 +539,7 @@ public sealed class VsaEvaluationServiceTests
     [Fact]
     public void Evaluate_ShadowMode_LogsV2DiagnosticReason_WhenV2CannotClassify()
     {
-        var root = TestPaths.FindSolutionRoot();
+        var root = TestRepoPaths.RepoRoot();
         var channelsTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_channels.json");
         var manholesTable = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Data", "classification_manholes.json");
         var tempDir = Path.Combine(Path.GetTempPath(), "sewer-vsa-shadow-tests", Guid.NewGuid().ToString("N"));

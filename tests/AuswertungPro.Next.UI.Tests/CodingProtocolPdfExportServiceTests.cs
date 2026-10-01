@@ -98,7 +98,9 @@ public sealed class CodingProtocolPdfExportServiceTests
         var exported = service.TryOfferPdfExport(new HaltungRecord(), BuildProtocolDocument(entryCount: 1), "");
 
         Assert.False(exported);
-        Assert.Equal(["boom"], failures);
+        Assert.Equal(
+            ["Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog."],
+            failures);
     }
 
     [Fact]

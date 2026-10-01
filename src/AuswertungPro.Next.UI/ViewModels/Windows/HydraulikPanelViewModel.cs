@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Hydraulik;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
@@ -224,9 +225,10 @@ public sealed partial class HydraulikPanelViewModel : ObservableObject
             if (mat is not null)
                 _selectedMaterial = mat;
         }
-        catch
+        catch (Exception ex)
         {
-            // ignore corrupt settings
+            BestEffort.ReportWarning(
+                $"[Hydraulik] Gespeicherte Eingaben konnten nicht geladen werden: {ex.Message}");
         }
         finally
         {
@@ -255,9 +257,10 @@ public sealed partial class HydraulikPanelViewModel : ObservableObject
             s.Temperatur = Temperatur;
             settings.Save();
         }
-        catch
+        catch (Exception ex)
         {
-            // ignore save errors
+            BestEffort.ReportWarning(
+                $"[Hydraulik] Eingaben konnten nicht gespeichert werden: {ex.Message}");
         }
     }
 

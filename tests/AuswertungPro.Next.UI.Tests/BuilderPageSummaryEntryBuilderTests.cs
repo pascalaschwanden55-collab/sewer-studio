@@ -25,7 +25,11 @@ public sealed class BuilderPageSummaryEntryBuilderTests
                 Assert.Equal("H-1", first.Holding);
                 Assert.Equal("Gemeinde", first.Owner);
                 Assert.Equal("Kanalsanierer", first.ExecutedBy);
-                Assert.Same(detailedCost, first.Cost);
+                // Detailkosten werden inhaltlich uebernommen. Seit der MWST-Ergaenzung
+                // ist es bewusst eine Kopie und nicht mehr dieselbe Instanz.
+                Assert.Equal(detailedCost.Holding, first.Cost.Holding);
+                Assert.Equal(123m, first.Cost.Total);
+                Assert.Same(detailedCost.Measures, first.Cost.Measures);
             },
             second =>
             {
@@ -49,6 +53,28 @@ public sealed class BuilderPageSummaryEntryBuilderTests
         Assert.Equal("H-1", entry.Holding);
         Assert.Equal(50m, entry.Cost.Total);
         Assert.Equal(0.50m, entry.Cost.MwstAmount);
+    }
+
+    /// <summary>
+    /// Der Schacht-Massnahmen-Dialog speicherte die MWST-Felder nie (Fehler vom
+    /// 2026-08-20). Solche Detailkosten erschienen im Druckcenter-Ausdruck ohne
+    /// MWST. Beim Bauen der PDF-Eintraege wird sie jetzt aus dem Projektsatz
+    /// ergaenzt — die gespeicherte Datei bleibt unveraendert.
+    /// </summary>
+    [Fact]
+    public void Build_ergaenzt_fehlende_Mwst_an_gespeicherten_Detailkosten()
+    {
+        var schachtOhneMwst = new HoldingCost { Holding = "80551", Total = 1100m };
+        var rows = new[] { Row("80551", hasDetailedCost: true, storedCost: schachtOhneMwst, netCost: 0m) };
+
+        var entry = Assert.Single(BuilderPageSummaryEntryBuilder.Build(rows, vatRate: 0.081m));
+
+        Assert.Equal(0.081m, entry.Cost.MwstRate);
+        Assert.Equal(89.10m, entry.Cost.MwstAmount);
+        Assert.Equal(1189.10m, entry.Cost.TotalInclMwst);
+
+        // Die gespeicherte Kostenquelle darf dabei nicht veraendert werden.
+        Assert.Equal(0m, schachtOhneMwst.MwstAmount);
     }
 
     private static DruckcenterRowVm Row(

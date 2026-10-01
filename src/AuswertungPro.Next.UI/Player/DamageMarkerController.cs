@@ -131,10 +131,10 @@ public sealed class DamageMarkerController
             Text = string.IsNullOrWhiteSpace(info.Code) ? "?" : info.Code.Trim(),
             FontSize = 9,
             FontWeight = FontWeights.SemiBold,
-            FontFamily = new FontFamily("Consolas"),
             Foreground = accentBrush,
             IsHitTestVisible = false
         };
+        label.SetResourceReference(TextBlock.FontFamilyProperty, "FontMono");
         Canvas.SetTop(label, -19);
         container.Children.Add(label);
 
@@ -179,10 +179,10 @@ public sealed class DamageMarkerController
             Text = string.IsNullOrWhiteSpace(info.Code) ? "?" : info.Code.Trim(),
             FontSize = 9,
             FontWeight = FontWeights.SemiBold,
-            FontFamily = new FontFamily("Consolas"),
             Foreground = accentBrush,
             IsHitTestVisible = false
         };
+        label.SetResourceReference(TextBlock.FontFamilyProperty, "FontMono");
         Canvas.SetTop(label, -19);
         container.Children.Add(label);
 

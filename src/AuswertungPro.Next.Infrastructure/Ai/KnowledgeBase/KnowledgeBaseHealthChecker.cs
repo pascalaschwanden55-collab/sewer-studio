@@ -18,8 +18,8 @@ public static class KnowledgeBaseHealthChecker
     [Obsolete("Globaler Austausch wurde entfernt. Den Dienst per Konstruktor uebergeben.")]
     public static void Use(IKnowledgeBaseHealthInspector inspector)
         => throw new NotSupportedException(
-            "Die globale Wissensdatenbank-Pruefung kann nicht mehr ausgetauscht werden. " +
-            "IKnowledgeBaseHealthInspector bitte per Konstruktor uebergeben.");
+            "Die globale Wissensdatenbank-Prüfung kann nicht mehr ausgetauscht werden. " +
+            "IKnowledgeBaseHealthInspector bitte per Konstruktor übergeben.");
 
     public static KnowledgeBaseHealthResult Check(string dbPath)
     {

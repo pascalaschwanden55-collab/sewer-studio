@@ -1,9 +1,12 @@
 import json
+import os
 import sys
+import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest import mock
 
 
 QGIS_ROOT = Path(__file__).resolve().parents[1]
@@ -11,16 +14,27 @@ sys.path.insert(0, str(QGIS_ROOT))
 
 from sewerstudio_bridge.bridge_http import (  # noqa: E402
     ACCEPT_HEADER,
+    APPDATA_ENV_VAR,
+    TOKEN_ENV_VAR,
+    TOKEN_FILE_NAME,
+    TOKEN_HEADER,
     fetch_bridge_bytes,
     fetch_bridge_json,
+    read_bridge_token,
 )
 
 
 class _BridgeHandler(BaseHTTPRequestHandler):
     last_accept = None
+    last_token = None
 
     def do_GET(self):
         type(self).last_accept = self.headers.get("Accept")
+        type(self).last_token = self.headers.get(TOKEN_HEADER)
+        if self.path == "/unauthorized":
+            self.send_response(401)
+            self.end_headers()
+            return
         if self.path == "/qgis/status.json":
             body = json.dumps({"ok": True, "app": "SewerStudio"}).encode("utf-8")
             self.send_response(200)
@@ -110,6 +124,58 @@ class BridgeHttpTests(unittest.TestCase):
                 result = fetch_bridge_bytes(url, "/qgis/status.json")
                 self.assertIsNone(result.value)
                 self.assertIn("lokale HTTP-Adresse", result.warning)
+
+
+class BridgeTokenTests(unittest.TestCase):
+    """Anmeldung an der Bruecke (SewerStudio-Gesamtaudit 2026-08-14, P1-3)."""
+
+    def test_token_kommt_aus_der_umgebungsvariable(self):
+        with mock.patch.dict(os.environ, {TOKEN_ENV_VAR: "  abc123  "}, clear=False):
+            self.assertEqual("abc123", read_bridge_token())
+
+    def test_token_kommt_aus_der_datei_im_appdata_ordner(self):
+        with tempfile.TemporaryDirectory() as ordner:
+            (Path(ordner) / TOKEN_FILE_NAME).write_text("dateitoken\n", encoding="utf-8")
+            umgebung = {APPDATA_ENV_VAR: ordner}
+            with mock.patch.dict(os.environ, umgebung, clear=False):
+                os.environ.pop(TOKEN_ENV_VAR, None)
+                self.assertEqual("dateitoken", read_bridge_token())
+
+    def test_ohne_token_wird_none_geliefert(self):
+        with tempfile.TemporaryDirectory() as ordner:
+            with mock.patch.dict(os.environ, {APPDATA_ENV_VAR: ordner}, clear=False):
+                os.environ.pop(TOKEN_ENV_VAR, None)
+                self.assertIsNone(read_bridge_token())
+
+
+class BridgeTokenRequestTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), _BridgeHandler)
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.base_url = f"http://127.0.0.1:{cls.server.server_port}"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join(timeout=5)
+
+    def test_vorhandener_token_wird_mitgesendet(self):
+        with mock.patch.dict(os.environ, {TOKEN_ENV_VAR: "geheim-42"}, clear=False):
+            result = fetch_bridge_json(self.base_url, "/qgis/status.json")
+
+        self.assertIsNone(result.warning)
+        self.assertEqual("geheim-42", _BridgeHandler.last_token)
+
+    def test_401_wird_verstaendlich_gemeldet(self):
+        with mock.patch.dict(os.environ, {TOKEN_ENV_VAR: "falsch"}, clear=False):
+            result = fetch_bridge_bytes(self.base_url, "/unauthorized")
+
+        self.assertIsNone(result.value)
+        self.assertIn("Anmeldung fehlgeschlagen", result.warning)
+        self.assertIn(TOKEN_FILE_NAME, result.warning)
 
 
 if __name__ == "__main__":

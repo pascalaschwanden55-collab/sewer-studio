@@ -21,11 +21,11 @@ public sealed class TrainingExportSidecarRequestBuilder : ITrainingExportSidecar
         ArgumentNullException.ThrowIfNull(bundle);
         TrainingExportPlanValidator.Validate(bundle.Plan);
         if (bundle.Plan.Images.Count == 0)
-            throw new TrainingExportPlanException("Der Exportplan enthaelt keine auszugebenden Bilder.");
+            throw new TrainingExportPlanException("Der Exportplan enthält keine auszugebenden Bilder.");
         if (bundle.Plan.Images.Count > MaximumImagesPerRequest)
         {
             throw new TrainingExportPlanException(
-                $"Der Sidecar verarbeitet hoechstens {MaximumImagesPerRequest} Planbilder pro Request.");
+                $"Der Sidecar verarbeitet höchstens {MaximumImagesPerRequest} Planbilder pro Request.");
         }
 
         var samples = new List<TrainingExportPlanSampleDto>(bundle.Plan.Images.Count);
@@ -33,7 +33,7 @@ public sealed class TrainingExportSidecarRequestBuilder : ITrainingExportSidecar
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!bundle.SourcePathsByImageSha256.TryGetValue(image.ImageSha256, out var sourcePath))
-                throw new TrainingExportPlanException($"Originalpfad fuer Bild {image.ImageSha256} fehlt.");
+                throw new TrainingExportPlanException($"Originalpfad für Bild {image.ImageSha256} fehlt.");
             var bytes = await ReadStableVerifiedImageAsync(
                     sourcePath,
                     image.ImageSha256,
@@ -76,13 +76,13 @@ public sealed class TrainingExportSidecarRequestBuilder : ITrainingExportSidecar
         {
             var reparsePoint = TrainingInventoryPaths.FindReparsePoint(path);
             if (reparsePoint is not null)
-                throw new TrainingExportPlanException($"Bildpfad enthaelt eine Verknuepfung: {reparsePoint}");
+                throw new TrainingExportPlanException($"Bildpfad enthält eine Verknüpfung: {reparsePoint}");
             var before = new FileInfo(path);
             before.Refresh();
             if (!before.Exists)
                 throw new TrainingExportPlanException($"Geplantes Originalbild fehlt: {path}");
             if (before.Length > MaximumImageBytes)
-                throw new TrainingExportPlanException($"Geplantes Originalbild ist groesser als 25 MiB: {path}");
+                throw new TrainingExportPlanException($"Geplantes Originalbild ist grösser als 25 MiB: {path}");
 
             byte[] bytes;
             await using (var stream = new FileStream(
@@ -110,11 +110,11 @@ public sealed class TrainingExportSidecarRequestBuilder : ITrainingExportSidecar
             if (!actualHash.Equals(expectedSha256, StringComparison.OrdinalIgnoreCase))
             {
                 throw new TrainingExportPlanException(
-                    $"Originalbild wurde nach dem Live-Inventar veraendert: {path}");
+                    $"Originalbild wurde nach dem Live-Inventar verändert: {path}");
             }
             return bytes;
         }
 
-        throw new TrainingExportPlanException($"Originalbild wurde waehrend des Lesens veraendert: {path}");
+        throw new TrainingExportPlanException($"Originalbild wurde während des Lesens verändert: {path}");
     }
 }

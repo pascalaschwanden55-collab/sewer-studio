@@ -19,6 +19,7 @@ internal sealed record PlayerWindowCodingModeExitControls(
     FrameworkElement CodingSidePanel,
     ColumnDefinition CodingSidePanelColumn,
     FrameworkElement CodingToolbar,
+    FrameworkElement CodierModusChip,
     FrameworkElement CodingTimelinePanel,
     FrameworkElement CodingCalibrationHint,
     FrameworkElement CodingMeasurementPanel,
@@ -32,7 +33,8 @@ internal sealed record PlayerWindowCodingModeExitControls(
 internal sealed record PlayerWindowCodingModeExitActions(
     Func<double, bool> CloseOpenStreckenschaeden,
     Action HideInlineDefectDetail,
-    Action ResetFrameReadiness);
+    Action ResetFrameReadiness,
+    Action CancelSuggestionScan);
 
 internal sealed record PlayerWindowCodingModeExitControllerDependencies(
     CodingRuntimeStateControllerSet RuntimeStates,
@@ -112,8 +114,13 @@ internal static class PlayerWindowCodingModeExitControllerFactory
             // Beim Fenster-Schliessen wird ueber ExitCodingMode ebenfalls dieser Teardown ausgefuehrt.
             DisposeAnalysisCancellation:
                 dependencies.AiStates.RuntimeOwner.Controller.Dispose,
-            ClearImportReferenceEvents: () => CodingImportReferenceStateResetter.ClearEvents(
-                dependencies.ProtocolStates.ImportReferenceEvents.Events),
+            ClearImportReferenceEvents: () =>
+            {
+                // KI-Vorschlaege gehoeren wie die Import-Referenz zur Sitzung: beim Verlassen weg.
+                dependencies.Actions.CancelSuggestionScan();
+                CodingImportReferenceStateResetter.ClearEvents(
+                    dependencies.ProtocolStates.ImportReferenceEvents.Events);
+            },
             ResetProtocolMatchState: () =>
             {
                 dependencies.ProtocolStates.ProtocolMatchState.Reset();
@@ -132,15 +139,19 @@ internal static class PlayerWindowCodingModeExitControllerFactory
                 controls.DetectionCanvas,
                 controls.DetectionOverlay,
                 hideOverlay),
-            HideCodingSurface: () => CodingModeChromeControls.HideCodingSurface(
-                controls.CodingOverlayPopup,
-                controls.CodingOverlayCanvas,
-                controls.CodingSidePanel,
-                controls.CodingSidePanelColumn,
-                controls.CodingToolbar,
-                controls.CodingTimelinePanel,
-                controls.CodingCalibrationHint,
-                controls.CodingMeasurementPanel),
+            HideCodingSurface: () =>
+            {
+                CodingModeChromeControls.HideCodingSurface(
+                    controls.CodingOverlayPopup,
+                    controls.CodingOverlayCanvas,
+                    controls.CodingSidePanel,
+                    controls.CodingSidePanelColumn,
+                    controls.CodingToolbar,
+                    controls.CodingTimelinePanel,
+                    controls.CodingCalibrationHint,
+                    controls.CodingMeasurementPanel);
+                controls.CodierModusChip.Visibility = Visibility.Collapsed;
+            },
             HideInlineDefectDetail: dependencies.Actions.HideInlineDefectDetail,
             HideOsdBadge: () => CodingOsdBadgeControls.Hide(controls.OsdMeterBadge),
             ShowLiveDetectionEntry: isDetecting => CodingModeChromeControls.ShowLiveDetectionEntry(
@@ -205,6 +216,7 @@ internal static class PlayerWindowCodingModeExitControllerFactory
         ArgumentNullException.ThrowIfNull(controls.CodingSidePanel);
         ArgumentNullException.ThrowIfNull(controls.CodingSidePanelColumn);
         ArgumentNullException.ThrowIfNull(controls.CodingToolbar);
+        ArgumentNullException.ThrowIfNull(controls.CodierModusChip);
         ArgumentNullException.ThrowIfNull(controls.CodingTimelinePanel);
         ArgumentNullException.ThrowIfNull(controls.CodingCalibrationHint);
         ArgumentNullException.ThrowIfNull(controls.CodingMeasurementPanel);

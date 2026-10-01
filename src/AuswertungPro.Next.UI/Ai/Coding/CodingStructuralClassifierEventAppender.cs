@@ -15,6 +15,12 @@ public static class CodingStructuralClassifierEventAppender
         ArgumentNullException.ThrowIfNull(codingSessionService);
 
         var ev = codingSessionService.AddEvent(draft.Entry);
+        if (ev.AiContext is not null || ev.ReviewContext is not null || ev.Overlay is not null)
+        {
+            ev.AiContext ??= draft.AiContext;
+            CodingPointFollowUpPolicy.MarkHumanTouched(ev);
+            return ev;
+        }
         ev.MeterAtCapture = meter;
         ev.VideoTimestamp = videoTime;
         ev.AiContext = draft.AiContext;

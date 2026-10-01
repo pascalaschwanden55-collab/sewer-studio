@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Controls;
@@ -36,14 +37,22 @@ public partial class ToastHost : UserControl
 
     /// <summary>Meldung anzeigen. Threadsicher — marshalt bei Bedarf auf den UI-Thread.</summary>
     public void Enqueue(string message, ToastSeverity severity)
+        => Enqueue(message, severity, null, null);
+
+    /// <summary>Meldung mit optionalem Link anzeigen.</summary>
+    public void Enqueue(
+        string message,
+        ToastSeverity severity,
+        string? aktionText,
+        Action? aktion)
     {
         if (!Dispatcher.CheckAccess())
         {
-            Dispatcher.BeginInvoke(new Action(() => Enqueue(message, severity)));
+            Dispatcher.BeginInvoke(new Action(() => Enqueue(message, severity, aktionText, aktion)));
             return;
         }
 
-        _logic.Show(message, severity, NowMs());
+        _logic.Show(message, severity, NowMs(), aktionText, aktion);
         Sync();
         if (!_timer.IsEnabled)
             _timer.Start();
@@ -170,5 +179,25 @@ public partial class ToastHost : UserControl
             _logic.Dismiss(item.Id, NowMs());
             Sync();
         }
+    }
+
+    /// <summary>Fuehrt die angebotene Aktion aus und schliesst danach den Toast.</summary>
+    private void ToastAktion_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: ToastItem item })
+            return;
+
+        e.Handled = true;
+        try
+        {
+            item.Aktion?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            BestEffort.ReportWarning($"[Toast] Aktion '{item.AktionText}' fehlgeschlagen: {ex.Message}");
+        }
+
+        _logic.Dismiss(item.Id, NowMs());
+        Sync();
     }
 }

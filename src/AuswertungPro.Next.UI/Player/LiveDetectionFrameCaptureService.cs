@@ -75,7 +75,7 @@ public sealed class LiveDetectionFrameCaptureService
                     if (_fileExists(tempPath))
                         _deleteFile(tempPath);
                 },
-                "Snapshot: Temp loeschen");
+                "Snapshot: Temp löschen");
         }
     }
 

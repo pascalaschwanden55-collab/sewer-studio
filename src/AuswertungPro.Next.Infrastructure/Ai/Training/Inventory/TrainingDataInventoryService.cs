@@ -121,7 +121,7 @@ public sealed class TrainingDataInventoryService : ITrainingDataInventoryService
             if (index % ProgressReportInterval == 0)
             {
                 progress?.Report(new TrainingDataInventoryProgress(
-                    "Teacher-Daten pruefen",
+                    "Teacher-Daten prüfen",
                     index,
                     teacherAnnotations.Count));
             }
@@ -206,7 +206,7 @@ public sealed class TrainingDataInventoryService : ITrainingDataInventoryService
             cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(expected.Key) || string.IsNullOrWhiteSpace(expected.Value))
             {
-                discoveryErrors.Add("Exportregister enthaelt eine leere Schutz-Set-ID oder einen leeren Pfad.");
+                discoveryErrors.Add("Exportregister enthält eine leere Schutz-Set-ID oder einen leeren Pfad.");
                 continue;
             }
 

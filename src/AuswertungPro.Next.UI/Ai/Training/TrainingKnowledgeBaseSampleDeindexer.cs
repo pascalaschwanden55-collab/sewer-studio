@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Common;
 using System.Net.Http;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
@@ -12,23 +13,33 @@ public sealed record TrainingKnowledgeBaseSampleDeindexRequest(
     Action<HttpClient> SetCachedHttpClient,
     Action<HttpClient, OllamaConfig, string> DeindexSample);
 
+/// <summary>
+/// Ergebnis der KB-Entfernung. <c>Removed=false</c> heisst: Der abgeleitete
+/// Wissensdatenbank-Eintrag besteht moeglicherweise weiter und kann als
+/// Vergleichswissen dienen (Auditbefund 16).
+/// </summary>
+public sealed record TrainingKnowledgeBaseDeindexResult(bool Removed, string? Error)
+{
+    public static TrainingKnowledgeBaseDeindexResult Ok() => new(true, null);
+    public static TrainingKnowledgeBaseDeindexResult Failed(string error) => new(false, error);
+}
+
 public static class TrainingKnowledgeBaseSampleDeindexer
 {
-    public static void TryDeindexWithDefaults(
+    public static TrainingKnowledgeBaseDeindexResult TryDeindexWithDefaults(
         string sampleId,
         Func<HttpClient?> getCachedHttpClient,
         Action<HttpClient> setCachedHttpClient)
-    {
-        TryDeindex(
+        => TryDeindex(
             new TrainingKnowledgeBaseSampleDeindexRequest(
                 sampleId,
                 () => new AppSettingsAiSettingsProvider().Load().ToOllamaConfig(),
                 getCachedHttpClient,
                 setCachedHttpClient,
                 DeindexWithDefaultInfrastructure));
-    }
 
-    public static void TryDeindex(TrainingKnowledgeBaseSampleDeindexRequest request)
+    public static TrainingKnowledgeBaseDeindexResult TryDeindex(
+        TrainingKnowledgeBaseSampleDeindexRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -43,10 +54,15 @@ public static class TrainingKnowledgeBaseSampleDeindexer
             }
 
             request.DeindexSample(httpClient, ollamaConfig, request.SampleId);
+            return TrainingKnowledgeBaseDeindexResult.Ok();
         }
-        catch
+        catch (Exception ex)
         {
-            // KB evtl. nicht erreichbar - Status-Aenderung bleibt persistiert.
+            // Die persoenliche Entscheidung bleibt gespeichert — sie soll nicht an einer
+            // gesperrten oder nicht erreichbaren KB scheitern. Der Fehler darf aber nicht
+            // mehr spurlos verschwinden: Der freigegebene Eintrag kann sonst weiter als
+            // Vergleichswissen dienen, waehrend die Oberflaeche Vollzug meldet.
+            return TrainingKnowledgeBaseDeindexResult.Failed(UserError.DescribeAndReport(ex, "KB-Eintrag entfernen"));
         }
     }
 

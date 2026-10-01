@@ -433,6 +433,90 @@ public sealed class ProtocolPdfEntryResolverTests
     }
 
     [Fact]
+    public void ResolveEntriesForExport_verwechselt_alten_WinCan_Meterwert_nicht_mit_Uhrlage()
+    {
+        var record = new HaltungRecord();
+        record.VsaFindings.Add(new VsaFinding
+        {
+            KanalSchadencode = "BCAAA",
+            MeterStart = 2.62136,
+            MeterEnd = 2.62136,
+            SchadenlageAnfang = 2.62136,
+            SchadenlageEnde = 2.62136,
+            Raw = "Anschluss mit Formstueck, offen, bei 9 Uhr"
+        });
+
+        var existing = new ProtocolEntry
+        {
+            Code = "BCAAA",
+            MeterStart = 2.62136,
+            Beschreibung = "Anschluss mit Formstueck, offen, bei 9 Uhr",
+            Source = ProtocolEntrySource.Imported,
+            CodeMeta = new ProtocolEntryCodeMeta
+            {
+                Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["ClockPos1"] = "9"
+                }
+            }
+        };
+        var doc = new ProtocolDocument
+        {
+            Current = new ProtocolRevision
+            {
+                Entries = { existing }
+            }
+        };
+
+        var entry = Assert.Single(ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc));
+
+        Assert.Equal(9, ProtocolTextHelpers.ExtractClockHour(entry));
+        Assert.False(entry.CodeMeta!.Parameters.ContainsKey("vsa.uhr.von"));
+        Assert.False(entry.CodeMeta.Parameters.ContainsKey("vsa.uhr.bis"));
+    }
+
+    [Fact]
+    public void ResolveEntriesForExport_ueberschreibt_korrekte_Uhrlage_nicht_mit_altem_Finding()
+    {
+        var record = new HaltungRecord();
+        record.VsaFindings.Add(new VsaFinding
+        {
+            KanalSchadencode = "BCAAA",
+            MeterStart = 3,
+            SchadenlageAnfang = 3,
+            Raw = "Anschluss mit Formstueck, offen, bei 9 Uhr"
+        });
+
+        var existing = new ProtocolEntry
+        {
+            Code = "BCAAA",
+            MeterStart = 3,
+            Beschreibung = "Anschluss mit Formstueck, offen, bei 9 Uhr",
+            Source = ProtocolEntrySource.Imported,
+            CodeMeta = new ProtocolEntryCodeMeta
+            {
+                Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["ClockPos1"] = "9"
+                }
+            }
+        };
+        var doc = new ProtocolDocument
+        {
+            Current = new ProtocolRevision
+            {
+                Entries = { existing }
+            }
+        };
+
+        var entry = Assert.Single(ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc));
+
+        Assert.Equal(9, ProtocolTextHelpers.ExtractClockHour(entry));
+        Assert.Equal("9", entry.CodeMeta!.Parameters["ClockPos1"]);
+        Assert.False(entry.CodeMeta.Parameters.ContainsKey("vsa.uhr.von"));
+    }
+
+    [Fact]
     public void ResolveHoldingLength_prefers_record_length_before_entry_maximum()
     {
         var record = new HaltungRecord();

@@ -81,8 +81,7 @@ public static class SettingsProgramCleanupRequestFactory
             TryNormalizeDirectory(settings.LastVideoSourceFolder),
             TryNormalizeDirectory(settings.LastVideoFolder),
             TryNormalizeDirectory(settings.LastDistributionTargetFolder),
-            TryNormalizeDirectory(settings.KantonUriXtfDirectory),
-            TryNormalizeDirectory(settings.OfflineBasemapPath)
+            TryNormalizeDirectory(settings.KantonUriXtfDirectory)
         };
 
         var paths = new List<string?> { settings.LastProjectPath };

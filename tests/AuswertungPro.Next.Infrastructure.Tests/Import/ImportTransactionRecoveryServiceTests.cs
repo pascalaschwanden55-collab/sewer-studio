@@ -1,7 +1,8 @@
-using System.IO;
+﻿using System.IO;
 using System.Security.Cryptography;
 using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Infrastructure.Import;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 using Xunit;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
@@ -20,6 +21,31 @@ public sealed class ImportTransactionRecoveryServiceTests
         public void Clear(string projectRoot)
         {
             // Simuliert einen Marker, der wegen eines Datei-/Rechtefehlers liegen bleibt.
+        }
+    }
+
+    private sealed class ReplacingJournal(
+        ImportTransactionMarker initialMarker,
+        ImportTransactionMarker replacementMarker) : IImportTransactionJournal
+    {
+        private ImportTransactionMarker _currentMarker = initialMarker;
+
+        public string? ExpectedClearTxId { get; private set; }
+
+        public void Begin(string projectRoot, ImportTransactionMarker newMarker)
+        {
+        }
+
+        public ImportTransactionMarker? TryRead(string projectRoot) => _currentMarker;
+
+        public void Clear(string projectRoot)
+            => throw new InvalidOperationException("Clear ohne Besitzpruefung darf nicht laufen.");
+
+        public bool ClearIfOwned(string projectRoot, string expectedTxId)
+        {
+            ExpectedClearTxId = expectedTxId;
+            _currentMarker = replacementMarker;
+            return false;
         }
     }
 
@@ -105,7 +131,7 @@ public sealed class ImportTransactionRecoveryServiceTests
         Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
         Assert.True(File.Exists(published));   // bleibt wegen SHA-Abweichung
         Assert.NotNull(journal.TryRead(dir.Path));
-        Assert.Contains("unvollstaendig", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unvollständig", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -223,7 +249,152 @@ public sealed class ImportTransactionRecoveryServiceTests
     }
 
     [Fact]
-    public void Rollback_nimmt_gueltige_ziele_mit_und_sperrt_nur_die_ausbrueche()
+    public void Rollback_sperrt_markerpfad_mit_nullzeichen_ohne_mutation()
+    {
+        using var projectDir = new TempDir();
+        var legitRelative = "Bilder/neu.jpg";
+        var legitFull = Path.Combine(
+            projectDir.Path,
+            legitRelative.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(legitFull)!);
+        File.WriteAllText(legitFull, "importierter-inhalt");
+
+        var journal = ArrangeMarker(
+            projectDir.Path,
+            "tx-nullzeichen",
+            new PublishedFileInfo("Bilder/ungueltig\0.jpg", new string('0', 64)),
+            new PublishedFileInfo(legitRelative, Sha256Hex(legitFull)));
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.False(result.ProjectFolderModified);
+        Assert.True(File.Exists(legitFull));
+        Assert.Contains("nicht angefasst", result.Message, StringComparison.Ordinal);
+        Assert.NotNull(journal.TryRead(projectDir.Path));
+    }
+
+    [JunctionFact]
+    public void Rollback_sperrt_datei_symlink_und_behaelt_link_ziel_und_marker()
+    {
+        using var outsideDir = new TempDir();
+        using var projectDir = new TempDir();
+        var outsideFile = Path.Combine(outsideDir.Path, "kundenoriginal.txt");
+        File.WriteAllText(outsideFile, "unveraendertes-kundenoriginal");
+
+        var relativeLink = "Bilder/import-link.txt";
+        var linkPath = Path.Combine(
+            projectDir.Path,
+            relativeLink.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(linkPath)!);
+        File.CreateSymbolicLink(linkPath, outsideFile);
+
+        var journal = ArrangeMarker(
+            projectDir.Path,
+            "tx-datei-symlink",
+            new PublishedFileInfo(relativeLink, Sha256Hex(linkPath)));
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.False(result.ProjectFolderModified);
+        Assert.True(File.Exists(linkPath));
+        Assert.True(File.Exists(outsideFile));
+        Assert.Equal("unveraendertes-kundenoriginal", File.ReadAllText(outsideFile));
+        Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(journal.TryRead(projectDir.Path));
+    }
+
+    [Fact]
+    public void Preflight_sperrt_zwei_ziele_wenn_das_zweite_schreibgeschuetzt_ist()
+    {
+        using var projectDir = new TempDir();
+        var firstRelative = "Bilder/erstes.jpg";
+        var secondRelative = "Bilder/zweites.jpg";
+        var firstPath = Path.Combine(projectDir.Path, firstRelative);
+        var secondPath = Path.Combine(projectDir.Path, secondRelative);
+        Directory.CreateDirectory(Path.GetDirectoryName(firstPath)!);
+        File.WriteAllText(firstPath, "erstes-importziel");
+        File.WriteAllText(secondPath, "zweites-importziel");
+        File.SetAttributes(secondPath, File.GetAttributes(secondPath) | FileAttributes.ReadOnly);
+
+        var journal = ArrangeMarker(
+            projectDir.Path,
+            "tx-readonly",
+            new PublishedFileInfo(firstRelative, Sha256Hex(firstPath)),
+            new PublishedFileInfo(secondRelative, Sha256Hex(secondPath)));
+        var service = new ImportTransactionRecoveryService(journal);
+
+        try
+        {
+            var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
+
+            Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+            Assert.False(result.ProjectFolderModified);
+            Assert.Equal("erstes-importziel", File.ReadAllText(firstPath));
+            Assert.Equal("zweites-importziel", File.ReadAllText(secondPath));
+            Assert.Contains("schreibgeschützt", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.NotNull(journal.TryRead(projectDir.Path));
+        }
+        finally
+        {
+            if (File.Exists(secondPath))
+            {
+                File.SetAttributes(
+                    secondPath,
+                    File.GetAttributes(secondPath) & ~FileAttributes.ReadOnly);
+            }
+        }
+    }
+
+    [Fact]
+    public void Preflight_sperrt_zwei_ziele_wenn_das_zweite_nicht_exklusiv_geoeffnet_werden_kann()
+    {
+        using var projectDir = new TempDir();
+        var firstRelative = "Bilder/erstes.jpg";
+        var secondRelative = "Bilder/zweites.jpg";
+        var firstPath = Path.Combine(projectDir.Path, firstRelative);
+        var secondPath = Path.Combine(projectDir.Path, secondRelative);
+        Directory.CreateDirectory(Path.GetDirectoryName(firstPath)!);
+        File.WriteAllText(firstPath, "erstes-importziel");
+        File.WriteAllText(secondPath, "zweites-importziel");
+
+        var journal = ArrangeMarker(
+            projectDir.Path,
+            "tx-delete-gesperrt",
+            new PublishedFileInfo(firstRelative, Sha256Hex(firstPath)),
+            new PublishedFileInfo(secondRelative, Sha256Hex(secondPath)));
+        var service = new ImportTransactionRecoveryService(journal);
+        using var deleteSperre = new FileStream(
+            secondPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read);
+
+        var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.False(result.ProjectFolderModified);
+        Assert.Equal("erstes-importziel", File.ReadAllText(firstPath));
+        Assert.Equal("zweites-importziel", File.ReadAllText(secondPath));
+        Assert.Contains("verwendet", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(journal.TryRead(projectDir.Path));
+    }
+
+    /// <summary>
+    /// Frueher hiess dieser Fall "nimmt gueltige Ziele mit und sperrt nur die Ausbrueche":
+    /// die sicheren Ziele wurden sofort geloescht und erst danach fiel auf, dass der
+    /// Rollback unvollstaendig bleibt. Der Benutzer bekam dann eine Box, die im selben
+    /// Atemzug "3 Datei(en) zurueckgenommen" UND "nicht veraendert" sagte.
+    ///
+    /// Eine Ruecknahme ist alles oder nichts: Ein No-op kann man wiederholen, eine
+    /// Loeschung nicht. Steht ein einziges Ziel im Weg, bleibt der Projektordner
+    /// unangetastet und der Marker liegen.
+    /// </summary>
+    [Fact]
+    public void Rollback_loescht_nichts_wenn_ein_einziges_ziel_unsicher_ist()
     {
         using var projectDir = new TempDir();
         using var outsideDir = new TempDir();
@@ -243,11 +414,282 @@ public sealed class ImportTransactionRecoveryServiceTests
         var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
 
         Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
-        Assert.False(File.Exists(legitFull));    // gueltiges Ziel normal zurueckgerollt
-        Assert.True(File.Exists(outsideFile));   // Ausbruch gesperrt
-        Assert.Contains("1 Datei(en)", result.Message);
-        Assert.Contains("nicht angefasst", result.Message);
+        Assert.True(File.Exists(legitFull));     // NICHTS geloescht, auch nicht das gueltige Ziel
+        Assert.True(File.Exists(outsideFile));   // Ausbruch ohnehin gesperrt
+        Assert.False(result.ProjectFolderModified);
         Assert.NotNull(journal.TryRead(projectDir.Path));
+    }
+
+    [Fact]
+    public void Gesperrte_ruecknahme_nennt_die_blockierende_datei_und_den_weg_hinaus()
+    {
+        using var projectDir = new TempDir();
+        var (journal, published) = Arrange(projectDir.Path, "tx-hinweis");
+
+        // Der Benutzer hat die Datei nach dem Import bearbeitet -> Hash passt nicht mehr.
+        File.WriteAllText(published, "vom benutzer geaendert");
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(File.Exists(published));
+        Assert.False(result.ProjectFolderModified);
+        // Ohne Namen und ohne Ausweg steht der Benutzer vor einem Projekt, das nicht
+        // mehr aufgeht: beide Oeffnen-Wege enden bei Blocked.
+        Assert.Contains(Path.GetFileName(published), result.Message);
+        Assert.Contains(FileImportTransactionJournal.MarkerFileName, result.Message);
+        Assert.DoesNotContain("nichts veraendert", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("nicht veraendert", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Vollstaendig_moegliche_ruecknahme_laeuft_weiterhin_durch()
+    {
+        using var projectDir = new TempDir();
+        var (journal, published) = Arrange(projectDir.Path, "tx-sauber");
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(projectDir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.RolledBack, result.Outcome);
+        Assert.False(File.Exists(published));
+        Assert.True(result.ProjectFolderModified);
+    }
+
+    /// <summary>
+    /// Der Arbeitsordner gehoert in denselben Preflight wie die Zieldateien. Sonst
+    /// werden erst alle Ziele geloescht und danach faellt auf, dass ".import-staging"
+    /// eine Datei oder eine Junction ist - genau der Teilzustand, den der Preflight
+    /// verhindern soll.
+    /// </summary>
+    [Fact]
+    public void Unsicherer_arbeitsordner_verhindert_jede_loeschung()
+    {
+        using var dir = new TempDir();
+        var (journal, published) = Arrange(dir.Path, "tx-staging");
+
+        var service = new ImportTransactionRecoveryService(
+            journal,
+            inspectStaging: (_, _) => "Am erwarteten Arbeitsordnerpfad liegt eine Datei.",
+            cleanupStaging: (_, _) => null);
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(File.Exists(published));   // kein einziges Ziel angefasst
+        Assert.False(result.ProjectFolderModified);
+        Assert.DoesNotContain("Im Weg: .", result.Message, StringComparison.Ordinal);
+        Assert.Contains(
+            "Am erwarteten Arbeitsordnerpfad liegt eine Datei.",
+            result.Message,
+            StringComparison.Ordinal);
+        Assert.NotNull(journal.TryRead(dir.Path));
+    }
+
+    [Fact]
+    public void Staging_preflight_sperrt_vor_jeder_loeschung_wenn_kinddatei_verwendet_wird()
+    {
+        using var dir = new TempDir();
+        var (journal, published) = Arrange(dir.Path, "tx-staging-gesperrt", "behalten.stage");
+        var stagingRoot = Path.Combine(dir.Path, ".import-staging");
+        var nestedRoot = Path.Combine(stagingRoot, "tiefer");
+        Directory.CreateDirectory(nestedRoot);
+        var lockedStagingFile = Path.Combine(nestedRoot, "gesperrt.stage");
+        File.WriteAllText(lockedStagingFile, "gesperrter-rest");
+        var service = new ImportTransactionRecoveryService(journal);
+        using var deleteSperre = new FileStream(
+            lockedStagingFile,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read);
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.False(result.ProjectFolderModified);
+        Assert.Equal("importierter-inhalt", File.ReadAllText(published));
+        Assert.Equal("rest", File.ReadAllText(Path.Combine(stagingRoot, "behalten.stage")));
+        Assert.Equal("gesperrter-rest", File.ReadAllText(lockedStagingFile));
+        Assert.Contains("verwendet", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(journal.TryRead(dir.Path));
+    }
+
+    [Fact]
+    public void Staging_preflight_sperrt_vor_jeder_loeschung_bei_schreibgeschuetztem_kind()
+    {
+        using var dir = new TempDir();
+        var (journal, published) = Arrange(dir.Path, "tx-staging-readonly", "behalten.stage");
+        var stagingRoot = Path.Combine(dir.Path, ".import-staging");
+        var readOnlyStagingFile = Path.Combine(stagingRoot, "schreibgeschuetzt.stage");
+        File.WriteAllText(readOnlyStagingFile, "schreibgeschuetzter-rest");
+        File.SetAttributes(
+            readOnlyStagingFile,
+            File.GetAttributes(readOnlyStagingFile) | FileAttributes.ReadOnly);
+        var service = new ImportTransactionRecoveryService(journal);
+
+        try
+        {
+            var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
+
+            Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+            Assert.False(result.ProjectFolderModified);
+            Assert.Equal("importierter-inhalt", File.ReadAllText(published));
+            Assert.Equal("rest", File.ReadAllText(Path.Combine(stagingRoot, "behalten.stage")));
+            Assert.Equal("schreibgeschuetzter-rest", File.ReadAllText(readOnlyStagingFile));
+            Assert.Contains("schreibgeschützt", result.Message, StringComparison.Ordinal); // 10c2: Meldungstext, nicht Dateiname
+            Assert.NotNull(journal.TryRead(dir.Path));
+        }
+        finally
+        {
+            if (File.Exists(readOnlyStagingFile))
+            {
+                File.SetAttributes(
+                    readOnlyStagingFile,
+                    File.GetAttributes(readOnlyStagingFile) & ~FileAttributes.ReadOnly);
+            }
+        }
+    }
+
+    [JunctionFact]
+    public void Staging_preflight_sperrt_verknuepftes_kind_ohne_link_oder_ziel_anzufassen()
+    {
+        using var dir = new TempDir();
+        using var outsideDir = new TempDir();
+        var (journal, published) = Arrange(dir.Path, "tx-staging-link", "behalten.stage");
+        var outsideFile = Path.Combine(outsideDir.Path, "kundenoriginal.txt");
+        File.WriteAllText(outsideFile, "unveraendertes-kundenoriginal");
+        var stagingRoot = Path.Combine(dir.Path, ".import-staging");
+        var linkPath = Path.Combine(stagingRoot, "original-link.txt");
+        File.CreateSymbolicLink(linkPath, outsideFile);
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.False(result.ProjectFolderModified);
+        Assert.Equal("importierter-inhalt", File.ReadAllText(published));
+        Assert.Equal("rest", File.ReadAllText(Path.Combine(stagingRoot, "behalten.stage")));
+        Assert.True(File.Exists(linkPath));
+        Assert.Equal("unveraendertes-kundenoriginal", File.ReadAllText(outsideFile));
+        Assert.Contains("Verknüpfung", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(journal.TryRead(dir.Path));
+    }
+
+    [Fact]
+    public void Fehlender_externer_stagingpfad_ist_nicht_automatisch_sicher()
+    {
+        using var dir = new TempDir();
+        using var outsideDir = new TempDir();
+        var publishedRelative = "Bilder/neu.jpg";
+        var published = Path.Combine(dir.Path, publishedRelative);
+        Directory.CreateDirectory(Path.GetDirectoryName(published)!);
+        File.WriteAllText(published, "importierter-inhalt");
+        var externalStaging = Path.Combine(outsideDir.Path, "erscheint-vielleicht-spaeter");
+        var journal = new FileImportTransactionJournal();
+        journal.Begin(dir.Path, new ImportTransactionMarker(
+            TxId: "tx-staging-extern-fehlt",
+            StartedUtc: new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc),
+            Label: "PDF",
+            StagingRoot: externalStaging,
+            PublishedTargets: [new PublishedFileInfo(publishedRelative, Sha256Hex(published))],
+            RestorePointPath: null));
+        var service = new ImportTransactionRecoveryService(journal);
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.False(result.ProjectFolderModified);
+        Assert.Equal("importierter-inhalt", File.ReadAllText(published));
+        Assert.False(Directory.Exists(externalStaging));
+        Assert.Contains("erlaubten Projektort", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(journal.TryRead(dir.Path));
+    }
+
+    [Fact]
+    public void Teilweise_gescheitertes_staging_cleanup_meldet_projektordner_als_veraendert()
+    {
+        using var dir = new TempDir();
+        var stagingRoot = Path.Combine(dir.Path, ".import-staging");
+        Directory.CreateDirectory(stagingRoot);
+        var bereitsEntfernterRest = Path.Combine(stagingRoot, "bereits-entfernt.stage");
+        var gebliebenerRest = Path.Combine(stagingRoot, "geblieben.stage");
+        File.WriteAllText(bereitsEntfernterRest, "rest-a");
+        File.WriteAllText(gebliebenerRest, "rest-b");
+        var journal = ArrangeMarker(dir.Path, "tx-staging-teilweise");
+
+        var service = new ImportTransactionRecoveryService(
+            journal,
+            inspectStaging: (_, _) => null,
+            cleanupStaging: (_, _) =>
+            {
+                File.Delete(bereitsEntfernterRest);
+                return "Der Arbeitsordner konnte nur teilweise entfernt werden.";
+            });
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: null);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(result.ProjectFolderModified);
+        Assert.False(File.Exists(bereitsEntfernterRest));
+        Assert.True(File.Exists(gebliebenerRest));
+        Assert.NotNull(journal.TryRead(dir.Path));
+    }
+
+    /// <summary>
+    /// Gespeicherter Import: Der Arbeitsordner verschwindet erfolgreich, danach
+    /// scheitert das Loeschen des Markers. Der Projektordner IST damit veraendert -
+    /// die Oberflaeche darf hier nicht "nicht veraendert" melden.
+    /// </summary>
+    [Fact]
+    public void Committed_cleanup_meldet_den_projektordner_als_veraendert()
+    {
+        using var dir = new TempDir();
+        var (_, published) = Arrange(dir.Path, "tx-committed");
+        var marker = new ImportTransactionMarker(
+            "tx-committed",
+            DateTime.UtcNow,
+            "Test",
+            Path.Combine(dir.Path, ".import-staging"),
+            new[] { new PublishedFileInfo("egal.txt", "00") },
+            RestorePointPath: null);
+
+        var service = new ImportTransactionRecoveryService(
+            new UnclearableJournal(marker),
+            inspectStaging: (_, _) => null,
+            cleanupStaging: (_, _) => null);
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: "tx-committed");
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.True(result.ProjectFolderModified);
+        Assert.True(File.Exists(published));
+    }
+
+    [Fact]
+    public void Recovery_loescht_keinen_zwischenzeitlich_ersetzten_marker()
+    {
+        using var dir = new TempDir();
+        var stagingRoot = Path.Combine(dir.Path, ".import-staging");
+        var eigenerMarker = new ImportTransactionMarker(
+            "tx-eigen",
+            new DateTime(2026, 8, 20, 9, 0, 0, DateTimeKind.Utc),
+            "Test",
+            stagingRoot,
+            [],
+            RestorePointPath: null);
+        var fremderMarker = eigenerMarker with { TxId = "tx-fremd" };
+        var journal = new ReplacingJournal(eigenerMarker, fremderMarker);
+        var service = new ImportTransactionRecoveryService(
+            journal,
+            inspectStaging: (_, _) => null,
+            cleanupStaging: (_, _) => null);
+
+        var result = service.RecoverIfNeeded(dir.Path, committedImportTxId: eigenerMarker.TxId);
+
+        Assert.Equal(ImportRecoveryOutcome.Blocked, result.Outcome);
+        Assert.Equal(eigenerMarker.TxId, journal.ExpectedClearTxId);
+        Assert.Same(fremderMarker, journal.TryRead(dir.Path));
     }
 
     [Fact]

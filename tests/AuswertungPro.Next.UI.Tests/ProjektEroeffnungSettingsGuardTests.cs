@@ -119,7 +119,7 @@ public sealed class ProjektEroeffnungSettingsGuardTests
         var vm = Vm();
 
         Assert.Contains("SettingsFullBackupWorkflow.RunAsync", vm);
-        Assert.DoesNotContain("Zielordner fuer die Datensicherung waehlen", vm);
+        Assert.DoesNotContain("Zielordner für die Datensicherung wählen", vm);
         Assert.DoesNotContain("_sp.FullBackup.AnalyzeAsync", vm);
         Assert.DoesNotContain("_sp.FullBackup.RunAsync", vm);
         Assert.DoesNotContain("BackupPlanBuilder.TargetFolderName", vm);
@@ -159,9 +159,9 @@ public sealed class ProjektEroeffnungSettingsGuardTests
         Assert.Contains("SettingsPathWorkflow", vm);
         Assert.DoesNotContain("Directory.CreateDirectory", vm);
         Assert.DoesNotContain("SafeShellOpen.TryOpen", vm);
-        Assert.DoesNotContain("pdftotext.exe waehlen", vm);
-        Assert.DoesNotContain("Projektpfad waehlen", vm);
-        Assert.DoesNotContain("XTF-Ordner Kanton Uri waehlen", vm);
+        Assert.DoesNotContain("pdftotext.exe wählen", vm);
+        Assert.DoesNotContain("Projektpfad wählen", vm);
+        Assert.DoesNotContain("XTF-Ordner Kanton Uri wählen", vm);
     }
 
     [Fact]
@@ -181,11 +181,17 @@ public sealed class ProjektEroeffnungSettingsGuardTests
     [Fact]
     public void SettingsPageViewModel_delegates_theme_workflow()
     {
+        // Aufgabe 13 (Windows-Integration, 28.09.2026): Die Design-Wahl ist von einem
+        // Hell/Dunkel-Umschalter mit eigenem "Anwenden"-Knopf auf drei Radioknoepfe
+        // (Hell/Dunkel/"Wie Windows") umgestellt, die sofort anwenden UND speichern.
+        // Der bisherige zweigleisige Abgleich SyncUiThemeChanged/SyncIsDarkThemeChanged
+        // (fuer den entfallenen bi-state IsDarkTheme-Umschalter) gibt es deshalb nicht mehr;
+        // OnUiThemeChanged ruft SettingsThemeWorkflow.ApplyTheme direkt.
         var vm = Vm();
 
-        Assert.Contains("SettingsThemeWorkflow.SyncUiThemeChanged", vm);
-        Assert.Contains("SettingsThemeWorkflow.SyncIsDarkThemeChanged", vm);
         Assert.Contains("SettingsThemeWorkflow.ApplyTheme", vm);
+        Assert.DoesNotContain("SettingsThemeWorkflow.SyncUiThemeChanged", vm);
+        Assert.DoesNotContain("SettingsThemeWorkflow.SyncIsDarkThemeChanged", vm);
         Assert.DoesNotContain("_sp.Settings.UiTheme =", vm);
         Assert.DoesNotContain("System.Windows.Application.Current", vm);
         Assert.DoesNotContain("ThemeManager.ApplyTheme", vm);

@@ -40,7 +40,7 @@ internal static class SchachtSanierungPflichtfeldValidator
         }
 
         if (string.IsNullOrWhiteSpace(ResolveValue(record, AusgefuehrtDurchAliases)))
-            missing.Add("Ausgefuehrt durch");
+            missing.Add("Ausgeführt durch");
 
         return missing;
     }

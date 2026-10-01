@@ -57,13 +57,13 @@ internal static class TrainingYoloClassMapJsonReader
             ?? throw new TrainingYoloClassMapException($"Die Detect-Klassenkarte ist leer: {path}");
 
         if (document.Version <= 0)
-            throw new TrainingYoloClassMapException("Der Klassenkarte fehlt eine gueltige 'version'.");
+            throw new TrainingYoloClassMapException("Der Klassenkarte fehlt eine gültige 'version'.");
         if (string.IsNullOrWhiteSpace(document.VsaManifestHash)
             || document.VsaManifestHash.Length != 64
             || !document.VsaManifestHash.All(Uri.IsHexDigit))
         {
             throw new TrainingYoloClassMapException(
-                "Der Klassenkarte fehlt ein gueltiger 'vsa_manifest_hash'.");
+                "Der Klassenkarte fehlt ein gültiger 'vsa_manifest_hash'.");
         }
         if (document.Classes is null || document.Classes.Count == 0)
             throw new TrainingYoloClassMapException("Der Klassenkarte fehlen die 'classes'.");
@@ -72,7 +72,7 @@ internal static class TrainingYoloClassMapJsonReader
         foreach (var key in document.Classes.Keys)
         {
             if (!classKeys.Add(key))
-                throw new TrainingYoloClassMapException($"Doppelter Klassenschluessel '{key}'.");
+                throw new TrainingYoloClassMapException($"Doppelter Klassenschlüssel '{key}'.");
         }
 
         ValidateIds(document.Classes);
@@ -90,7 +90,7 @@ internal static class TrainingYoloClassMapJsonReader
             ?? throw new TrainingYoloClassMapException($"Die Detect-Migrationstabelle ist leer: {path}");
 
         if (document.Version <= 0 || document.TargetClassMapVersion <= 0)
-            throw new TrainingYoloClassMapException("Die Migrationstabelle hat keine gueltige Version.");
+            throw new TrainingYoloClassMapException("Die Migrationstabelle hat keine gültige Version.");
         if (string.IsNullOrWhiteSpace(document.TargetClassMap))
             throw new TrainingYoloClassMapException("Der Migrationstabelle fehlt 'target_class_map'.");
         if (string.IsNullOrWhiteSpace(document.VsaManifestHash)
@@ -98,15 +98,18 @@ internal static class TrainingYoloClassMapJsonReader
             || !document.VsaManifestHash.All(Uri.IsHexDigit))
         {
             throw new TrainingYoloClassMapException(
-                "Der Migrationstabelle fehlt ein gueltiger 'vsa_manifest_hash'.");
+                "Der Migrationstabelle fehlt ein gültiger 'vsa_manifest_hash'.");
         }
         if (document.GeneratedUtc is null)
             throw new TrainingYoloClassMapException("Der Migrationstabelle fehlt 'generated_utc'.");
         if (document.Entries is null || document.Entries.Count == 0)
-            throw new TrainingYoloClassMapException("Die Migrationstabelle enthaelt keine Eintraege.");
+            throw new TrainingYoloClassMapException("Die Migrationstabelle enthält keine Einträge.");
 
         var manifestHash = document.VsaManifestHash.Trim().ToLowerInvariant();
         var sourceHashes = ValidateSourceHashes(document.SourceHashes, manifestHash);
+        var personalGoldCodes = ValidatePersonalGoldApproval(
+            document.PersonalGoldApproval,
+            sourceHashes);
         ValidateOrderedValues(document.SortOrder, RequiredSortOrder, "sort_order");
         ValidateOrderedValues(
             document.ResolutionOrder,
@@ -133,7 +136,7 @@ internal static class TrainingYoloClassMapJsonReader
             if (entry.ObservedCount is < 0)
             {
                 throw new TrainingYoloClassMapException(
-                    $"'observed_count' fuer '{entry.SourceKey}' darf nicht negativ sein.");
+                    $"'observed_count' für '{entry.SourceKey}' darf nicht negativ sein.");
             }
             var isAnnotationOverride = string.Equals(
                 sourceKind,
@@ -146,12 +149,12 @@ internal static class TrainingYoloClassMapJsonReader
             if (isAnnotationOverride && string.IsNullOrWhiteSpace(entry.SourceId))
             {
                 throw new TrainingYoloClassMapException(
-                    $"Einzelpruefung '{entry.SourceKey}' braucht eine 'source_id'.");
+                    $"Einzelprüfung '{entry.SourceKey}' braucht eine 'source_id'.");
             }
             if (!isAnnotationOverride && !string.IsNullOrWhiteSpace(entry.SourceId))
             {
                 throw new TrainingYoloClassMapException(
-                    $"Nur eine Einzelpruefung darf eine 'source_id' tragen: '{entry.SourceKey}'.");
+                    $"Nur eine Einzelprüfung darf eine 'source_id' tragen: '{entry.SourceKey}'.");
             }
             if ((isAnnotationOverride || isTeacherCode) && entry.ObservedCount is not > 0)
             {
@@ -166,7 +169,7 @@ internal static class TrainingYoloClassMapJsonReader
             if (string.IsNullOrWhiteSpace(entry.Reason))
             {
                 throw new TrainingYoloClassMapException(
-                    $"Migrationszeile '{entry.SourceKey}' braucht eine Begruendung.");
+                    $"Migrationszeile '{entry.SourceKey}' braucht eine Begründung.");
             }
 
             var rowKey = $"{sourceKind}\u001f{entry.SourceKey.Trim()}\u001f{entry.SourceId?.Trim()}";
@@ -187,6 +190,7 @@ internal static class TrainingYoloClassMapJsonReader
         }
 
         ValidateEntryCounts(document.EntryCounts, document.Entries);
+        ValidatePersonalGoldDecisions(personalGoldCodes, mappings);
 
         return new TrainingYoloClassMigrationFileDocument(
             document.Version,
@@ -198,7 +202,7 @@ internal static class TrainingYoloClassMapJsonReader
             mappings);
     }
 
-    private static IReadOnlyDictionary<string, string> ValidateSourceHashes(
+    private static Dictionary<string, string> ValidateSourceHashes(
         IReadOnlyDictionary<string, string>? sourceHashes,
         string manifestHash)
     {
@@ -217,7 +221,7 @@ internal static class TrainingYoloClassMapJsonReader
             if (!IsSha256(value))
             {
                 throw new TrainingYoloClassMapException(
-                    $"Quell-Hash '{key}' ist kein gueltiger SHA-256-Wert.");
+                    $"Quell-Hash '{key}' ist kein gültiger SHA-256-Wert.");
             }
 
             normalized.Add(key, value!.ToLowerInvariant());
@@ -229,10 +233,80 @@ internal static class TrainingYoloClassMapJsonReader
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new TrainingYoloClassMapException(
-                "Der VSA-Hash in 'source_hashes' stimmt nicht mit 'vsa_manifest_hash' ueberein.");
+                "Der VSA-Hash in 'source_hashes' stimmt nicht mit 'vsa_manifest_hash' überein.");
         }
 
         return normalized;
+    }
+
+    private static IReadOnlyList<string> ValidatePersonalGoldApproval(
+        PersonalGoldApprovalJson? approval,
+        IDictionary<string, string> sourceHashes)
+    {
+        if (approval is null)
+            return [];
+        if (!string.Equals(approval.SchemaVersion, "1.0", StringComparison.Ordinal))
+            throw new TrainingYoloClassMapException(
+                "'personal_gold_approval.schema_version' muss 1.0 sein.");
+        if (string.IsNullOrWhiteSpace(approval.ApprovedBy))
+            throw new TrainingYoloClassMapException(
+                "'personal_gold_approval.approved_by' fehlt.");
+        if (approval.ApprovedUtc is null || approval.ApprovedUtc.Value.Offset != TimeSpan.Zero)
+            throw new TrainingYoloClassMapException(
+                "'personal_gold_approval.approved_utc' braucht einen UTC-Zeitpunkt.");
+
+        var auditHash = approval.GoldAuditSha256?.Trim().ToLowerInvariant();
+        var samplesHash = approval.TrainingSamplesSha256?.Trim().ToLowerInvariant();
+        if (!IsSha256(auditHash) || !IsSha256(samplesHash))
+            throw new TrainingYoloClassMapException(
+                "Der persönliche Goldbeleg braucht gültige Audit- und Sample-SHA-256.");
+        if (approval.SourceCodes is null || approval.SourceCodes.Count == 0)
+            throw new TrainingYoloClassMapException(
+                "Der persönliche Goldbeleg enthält keine freigegebenen Quellcodes.");
+
+        if (approval.SourceCodes.Any(string.IsNullOrWhiteSpace))
+            throw new TrainingYoloClassMapException(
+                "Die Quellcodes im persönlichen Goldbeleg dürfen nicht leer sein.");
+        var codes = approval.SourceCodes
+            .Select(code => code!.Trim().ToUpperInvariant())
+            .ToArray();
+        if (codes.Distinct(StringComparer.Ordinal).Count() != codes.Length
+            || !codes.SequenceEqual(codes.OrderBy(code => code, StringComparer.Ordinal)))
+        {
+            throw new TrainingYoloClassMapException(
+                "Die Quellcodes im persönlichen Goldbeleg müssen eindeutig und sortiert sein.");
+        }
+
+        sourceHashes.Add("personal_gold_audit", auditHash!);
+        sourceHashes.Add("personal_gold_samples", samplesHash!);
+        return codes;
+    }
+
+    private static void ValidatePersonalGoldDecisions(
+        IReadOnlyList<string> sourceCodes,
+        IReadOnlyList<TrainingYoloClassMapping> mappings)
+    {
+        foreach (var sourceCode in sourceCodes)
+        {
+            var decisions = mappings
+                .Where(mapping =>
+                    string.Equals(
+                        mapping.SourceKind,
+                        TrainingYoloClassSourceKinds.TeacherVsaCode,
+                        StringComparison.Ordinal)
+                    && string.Equals(
+                        mapping.SourceKey,
+                        sourceCode,
+                        StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (decisions.Length != 1
+                || decisions[0].ApprovalStatus != TrainingYoloClassApprovalStatus.Approved
+                || decisions[0].Action == TrainingYoloClassAction.Review)
+            {
+                throw new TrainingYoloClassMapException(
+                    $"Persönlicher Goldcode '{sourceCode}' hat keine eindeutige freigegebene map-/discard-Entscheidung.");
+            }
+        }
     }
 
     private static void ValidateOrderedValues(
@@ -270,7 +344,7 @@ internal static class TrainingYoloClassMapJsonReader
                 || declaredCount != actualCounts.GetValueOrDefault(kind)))
         {
             throw new TrainingYoloClassMapException(
-                "'entry_counts.by_source_kind' stimmt nicht mit den Migrationszeilen ueberein.");
+                "'entry_counts.by_source_kind' stimmt nicht mit den Migrationszeilen überein.");
         }
 
         var observedTeacherTotal = entries
@@ -300,21 +374,21 @@ internal static class TrainingYoloClassMapJsonReader
         if (action == TrainingYoloClassAction.Discard && !string.IsNullOrWhiteSpace(entry.ProposedTarget))
         {
             throw new TrainingYoloClassMapException(
-                $"Eintrag '{entry.SourceKey}' darf fuer Aktion '{entry.ProposedAction}' keine Zielklasse tragen.");
+                $"Eintrag '{entry.SourceKey}' darf für Aktion '{entry.ProposedAction}' keine Zielklasse tragen.");
         }
 
         if (approval == TrainingYoloClassApprovalStatus.Approved
             && (string.IsNullOrWhiteSpace(entry.ApprovedBy) || entry.ApprovedUtc is null))
         {
             throw new TrainingYoloClassMapException(
-                $"Freigabe fuer '{entry.SourceKey}' braucht Person und UTC-Zeitpunkt.");
+                $"Freigabe für '{entry.SourceKey}' braucht Person und UTC-Zeitpunkt.");
         }
 
         if (action == TrainingYoloClassAction.Review
             && approval == TrainingYoloClassApprovalStatus.Approved)
         {
             throw new TrainingYoloClassMapException(
-                $"Prueffall '{entry.SourceKey}' braucht zuerst eine eindeutige map-/discard-Entscheidung.");
+                $"Prüffall '{entry.SourceKey}' braucht zuerst eine eindeutige map-/discard-Entscheidung.");
         }
     }
 
@@ -325,7 +399,7 @@ internal static class TrainingYoloClassMapJsonReader
             "discard" => TrainingYoloClassAction.Discard,
             "review" => TrainingYoloClassAction.Review,
             _ => throw new TrainingYoloClassMapException(
-                $"Unbekannte Aktion '{value}' fuer '{sourceKey}'.")
+                $"Unbekannte Aktion '{value}' für '{sourceKey}'.")
         };
 
     private static TrainingYoloClassApprovalStatus ParseApproval(string? value, string sourceKey)
@@ -335,7 +409,7 @@ internal static class TrainingYoloClassMapJsonReader
             "approved" => TrainingYoloClassApprovalStatus.Approved,
             "rejected" => TrainingYoloClassApprovalStatus.Rejected,
             _ => throw new TrainingYoloClassMapException(
-                $"Unbekannter Freigabestatus '{value}' fuer '{sourceKey}'.")
+                $"Unbekannter Freigabestatus '{value}' für '{sourceKey}'.")
         };
 
     private static string ReadRequiredText(string path, string label)
@@ -351,16 +425,16 @@ internal static class TrainingYoloClassMapJsonReader
     private static void ValidateIds(IReadOnlyDictionary<string, int> classes)
     {
         if (classes.Keys.Any(string.IsNullOrWhiteSpace))
-            throw new TrainingYoloClassMapException("Die Klassenkarte enthaelt einen leeren Klassennamen.");
+            throw new TrainingYoloClassMapException("Die Klassenkarte enthält einen leeren Klassennamen.");
         if (classes.Values.Any(id => id < 0))
-            throw new TrainingYoloClassMapException("Klassen-IDs duerfen nicht negativ sein.");
+            throw new TrainingYoloClassMapException("Klassen-IDs dürfen nicht negativ sein.");
 
         var ordered = classes.Values.OrderBy(id => id).ToArray();
         var expected = Enumerable.Range(0, ordered.Length).ToArray();
         if (!ordered.SequenceEqual(expected))
         {
             throw new TrainingYoloClassMapException(
-                "Klassen-IDs muessen eindeutig und lueckenlos bei 0 beginnen.");
+                "Klassen-IDs müssen eindeutig und lückenlos bei 0 beginnen.");
         }
     }
 
@@ -402,10 +476,19 @@ internal static class TrainingYoloClassMapJsonReader
         [property: JsonPropertyName("generated_utc")] DateTimeOffset? GeneratedUtc,
         [property: JsonPropertyName("vsa_manifest_hash")] string? VsaManifestHash,
         [property: JsonPropertyName("source_hashes")] Dictionary<string, string>? SourceHashes,
+        [property: JsonPropertyName("personal_gold_approval")] PersonalGoldApprovalJson? PersonalGoldApproval,
         [property: JsonPropertyName("sort_order")] List<string>? SortOrder,
         [property: JsonPropertyName("resolution_order")] List<string>? ResolutionOrder,
         [property: JsonPropertyName("entry_counts")] MigrationEntryCountsJson? EntryCounts,
         [property: JsonPropertyName("entries")] List<MigrationEntryJson>? Entries);
+
+    private sealed record PersonalGoldApprovalJson(
+        [property: JsonPropertyName("schema_version")] string? SchemaVersion,
+        [property: JsonPropertyName("gold_audit_sha256")] string? GoldAuditSha256,
+        [property: JsonPropertyName("training_samples_sha256")] string? TrainingSamplesSha256,
+        [property: JsonPropertyName("approved_by")] string? ApprovedBy,
+        [property: JsonPropertyName("approved_utc")] DateTimeOffset? ApprovedUtc,
+        [property: JsonPropertyName("source_codes")] List<string?>? SourceCodes);
 
     private sealed record MigrationEntryCountsJson(
         [property: JsonPropertyName("total")] int Total,

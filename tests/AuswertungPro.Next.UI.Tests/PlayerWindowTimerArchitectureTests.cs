@@ -64,7 +64,7 @@ public sealed class PlayerWindowTimerArchitectureTests
 
         Assert.True(
             stateOffenders.Length == 0,
-            "PlayerWindow-Partials sollen Playback-/Scrub-Timerzustand und Timer-Erzeugung ueber PlayerWindowTimerController/Factories kapseln:\n"
+            "PlayerWindow-Partials sollen Playback-/Scrub-Timerzustand und Timer-Erzeugung über PlayerWindowTimerController/Factories kapseln:\n"
             + string.Join("\n", stateOffenders));
 
         var wiringOffenders = FindFileTokenOffenders(
@@ -146,7 +146,7 @@ public sealed class PlayerWindowTimerArchitectureTests
 
         Assert.True(
             offenders.Length == 0,
-            "Timer-Shutdown soll ueber PlayerWindowTimerStopper und Controller-APIs laufen, nicht ueber direkte Timerfelder:\n"
+            "Timer-Shutdown soll über PlayerWindowTimerStopper und Controller-APIs laufen, nicht über direkte Timerfelder:\n"
             + string.Join("\n", offenders));
     }
 

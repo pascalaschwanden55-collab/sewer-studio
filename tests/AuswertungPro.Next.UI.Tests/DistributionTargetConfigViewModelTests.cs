@@ -60,7 +60,7 @@ public sealed class DistributionTargetConfigViewModelTests
     {
         var vm = CreateExcel(new DistributionTargetConfig { DateiPattern = "Haltungen" });
 
-        Assert.Contains("Ziel-Wurzel", vm.Vorschau);
+        Assert.Contains("Hauptordner", vm.Vorschau);
     }
 
     [Fact]

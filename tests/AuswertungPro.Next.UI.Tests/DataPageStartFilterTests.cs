@@ -70,4 +70,17 @@ public sealed class DataPageStartFilterTests
         Assert.True(DataPageStartFilter.FromDashboardSchaden("BCA").Matches(record));
         Assert.False(DataPageStartFilter.FromDashboardSchaden("BBB").Matches(record));
     }
+
+    [Theory]
+    [InlineData("Zustandsklasse", "2", "Zustandsklasse 2")]
+    [InlineData("Zustandsklasse", "ohne", "ohne Zustandsklasse")]
+    [InlineData("DN_mm", "300", "DN 300")]
+    [InlineData("Primaere_Schaeden", "BAB", "Schaden BAB")]
+    public void DisplayText_beschreibt_dashboardfilter_verstaendlich(
+        string fieldName,
+        string value,
+        string expected)
+    {
+        Assert.Equal(expected, new DataPageStartFilter(fieldName, value).DisplayText);
+    }
 }

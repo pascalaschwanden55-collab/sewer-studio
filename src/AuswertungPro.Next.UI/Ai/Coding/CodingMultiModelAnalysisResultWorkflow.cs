@@ -1,4 +1,6 @@
 using System.Windows.Media;
+using AuswertungPro.Next.Application.UseCases.CodingClassifierHint;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Player;
 
@@ -48,12 +50,28 @@ public static class CodingMultiModelAnalysisResultWorkflow
                 VisibleFindingCount: 0);
         }
 
-        if ((!result.IsRelevant || !result.HasDetections) && result.Degraded)
+        var classifierHint = CodingClassifierImageHint.Create(
+            result.ClassifierCode,
+            result.ClassifierConfidence,
+            VsaCodeResolver.LookupLabel(result.ClassifierCode ?? ""));
+
+        // Erst am abschliessenden Ergebnis anzeigen: Ein Hinweis nach dem
+        // Struktur-Workflow wuerde durch die folgende DINO/SAM-Anzeige verschwinden.
+        void SetAiState(string status, Color color, string? detail, bool pulse)
+            => actions.SetAiState(
+                !pulse && classifierHint != null ? classifierHint.BuildStatus(status) : status,
+                !pulse && classifierHint != null ? PlayerStatusColors.Warning : color,
+                !pulse && classifierHint != null ? classifierHint.AppendToDetail(detail) : detail,
+                pulse);
+
+        if ((!result.IsRelevant || !result.HasDetections) && (result.Degraded || classifierHint != null))
         {
-            actions.SetAiState(
-                "KI-Ergebnis unvollstaendig – manuell pruefen",
+            SetAiState(
+                result.Degraded ? "KI-Ergebnis unvollständig – manuell prüfen" : "Befund nicht lokalisiert",
                 PlayerStatusColors.Warning,
-                result.DegradedReason ?? "Ein KI-Modell ist nicht qualifiziert oder ausgefallen.",
+                result.Degraded
+                    ? result.DegradedReason ?? "Ein KI-Modell ist nicht qualifiziert oder ausgefallen."
+                    : null,
                 false);
             actions.ClearMasks();
             return new CodingMultiModelAnalysisResultWorkflowResult(
@@ -63,7 +81,7 @@ public static class CodingMultiModelAnalysisResultWorkflow
 
         if (!result.IsRelevant || !result.HasDetections)
         {
-            actions.SetAiState(
+            SetAiState(
                 "Kein Schaden erkannt",
                 PlayerStatusColors.Success,
                 $"YOLO {result.YoloTimeMs:F0}ms | {result.DinoDetections.Count} Detektionen",
@@ -74,7 +92,7 @@ public static class CodingMultiModelAnalysisResultWorkflow
                 VisibleFindingCount: 0);
         }
 
-        actions.SetAiState(
+        SetAiState(
             request.ActivityText,
             PlayerStatusColors.Warning,
             $"Schritt 3 von 4: SAM-Masken ({result.DinoDetections.Count} Befunde)",
@@ -87,7 +105,7 @@ public static class CodingMultiModelAnalysisResultWorkflow
 
         if (findingSummary.HasNoSegmentedFindings)
         {
-            actions.SetAiState(
+            SetAiState(
                 "SAM ohne Maske - Befund nicht segmentiert",
                 PlayerStatusColors.Warning,
                 result.SamResponse?.Degraded == true
@@ -101,8 +119,8 @@ public static class CodingMultiModelAnalysisResultWorkflow
 
         if (findingSummary.HasOnlyAheadFindings)
         {
-            actions.SetAiState(
-                "Ereignis voraus erkannt - naeher heranfahren",
+            SetAiState(
+                "Ereignis voraus erkannt - näher heranfahren",
                 PlayerStatusColors.Warning,
                 $"{findingSummary.VorausCount} voraus",
                 false);
@@ -111,9 +129,9 @@ public static class CodingMultiModelAnalysisResultWorkflow
                 VisibleFindingCount: 0);
         }
 
-        actions.SetAiState(
+        SetAiState(
             result.Degraded
-                ? findingSummary.DetectedStatusText + " – manuell pruefen"
+                ? findingSummary.DetectedStatusText + " – manuell prüfen"
                 : findingSummary.DetectedStatusText,
             result.Degraded ? PlayerStatusColors.Warning : PlayerStatusColors.Success,
             result.Degraded

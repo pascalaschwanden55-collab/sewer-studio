@@ -39,7 +39,7 @@ public sealed class PdfOcrExtractionService : IPdfOcrExtractor
         }
 
         if (pageNumber <= 0)
-            return new PdfOcrPageExtractionResult(false, null, "Ungueltige Seitennummer.");
+            return new PdfOcrPageExtractionResult(false, null, "Ungültige Seitennummer.");
 
         var pdftoppm = FindPdfToPpmPath();
         if (string.IsNullOrWhiteSpace(pdftoppm))
@@ -115,7 +115,7 @@ public sealed class PdfOcrExtractionService : IPdfOcrExtractor
         {
             return new PdfOcrDocumentExtractionResult(
                 Array.Empty<string>(),
-                "Keine Seiten fuer OCR erkannt.");
+                "Keine Seiten für OCR erkannt.");
         }
 
         var pages = new List<string>();

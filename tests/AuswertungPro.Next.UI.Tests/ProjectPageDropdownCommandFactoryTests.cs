@@ -183,7 +183,7 @@ public sealed class ProjectPageDropdownCommandFactoryTests
         Assert.Equal(
             [
                 ("Nein\nJa", "Sanieren-Liste"),
-                ("Gemeinde\nPrivat", "Eigentuemer-Liste")
+                ("Gemeinde\nPrivat", "Eigentümer-Liste")
             ],
             messages);
     }

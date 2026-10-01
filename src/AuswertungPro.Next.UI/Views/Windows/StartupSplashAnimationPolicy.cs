@@ -1,3 +1,4 @@
+using System;
 using System.Windows.Media;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -70,6 +71,24 @@ internal static class StartupSplashAnimationPolicy
     {
         t = Clamp01(t);
         return t * t * t;
+    }
+
+    /// <summary>
+    /// Massstab der Kugel aus der verfuegbaren Canvas-Flaeche: Die kuerzere Kante
+    /// wird auf das Entwurfsmass bezogen, damit die Kugel auf jedem Bildschirm
+    /// vollstaendig sichtbar bleibt. Nach oben ist der Faktor begrenzt, nach unten
+    /// nie kleiner als ein Viertel, damit ein winziges Fenster nichts Ungueltiges liefert.
+    /// </summary>
+    public static double SphereScale(double canvasWidth, double canvasHeight, double designEdge, double maxScale)
+    {
+        if (designEdge <= 0 || double.IsNaN(designEdge))
+            return 1.0;
+        var edge = Math.Min(canvasWidth, canvasHeight);
+        if (edge <= 0 || double.IsNaN(edge) || double.IsInfinity(edge))
+            return 1.0;
+        var scale = edge / designEdge;
+        var upper = maxScale > 0 ? maxScale : 1.0;
+        return Math.Clamp(scale, 0.25, upper);
     }
 }
 

@@ -27,7 +27,9 @@ public sealed record SettingsSaveValues(
     bool StartAiOnProgramStart,
     double PipelineYoloConfidence,
     double PipelineDinoBoxThreshold,
-    double PipelineDinoTextThreshold);
+    double PipelineDinoTextThreshold,
+    string? SearchChApiKey = null,
+    bool CodingSuggestionsEnabled = true);
 
 public sealed record SettingsSaveWorkflowRequest(
     AppSettings Settings,
@@ -68,11 +70,20 @@ public static class SettingsSaveWorkflow
         settings.VideoNetworkCachingMs = ClampCaching(values.VideoNetworkCachingMs);
         settings.VideoCodecThreads = ClampCodecThreads(values.VideoCodecThreads);
         settings.VideoOutput = NormalizeVideoOutput(values.VideoOutput);
-        settings.UiTheme = ThemeManager.NormalizeTheme(values.UiTheme);
+        // NormalizePreference statt NormalizeTheme: "Speichern" darf die Design-Wahl "Wie
+        // Windows" nicht auf Hell zurueckstellen.
+        settings.UiTheme = ThemeManager.NormalizePreference(values.UiTheme);
         settings.AiStartOnProgramStart = values.StartAiOnProgramStart;
+        settings.CodingSuggestionsEnabled = values.CodingSuggestionsEnabled;
         settings.PipelineYoloConfidence = ClampThreshold(values.PipelineYoloConfidence);
         settings.PipelineDinoBoxThreshold = ClampThreshold(values.PipelineDinoBoxThreshold);
         settings.PipelineDinoTextThreshold = ClampThreshold(values.PipelineDinoTextThreshold);
+
+        // Leer heisst: keine Telefonsuche. Ein Schluessel mit Leerzeichen
+        // ringsum wuerde die Abfrage lautlos scheitern lassen.
+        settings.SearchChApiKey = string.IsNullOrWhiteSpace(values.SearchChApiKey)
+            ? null
+            : values.SearchChApiKey.Trim();
         request.SaveSettings();
 
         request.Diagnostics.EnableDiagnostics = values.EnableDiagnostics;

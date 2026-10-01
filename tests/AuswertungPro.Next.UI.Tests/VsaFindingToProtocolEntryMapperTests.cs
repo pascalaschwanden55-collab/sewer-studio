@@ -42,13 +42,14 @@ public sealed class VsaFindingToProtocolEntryMapperTests
     }
 
     [Fact]
-    public void BuildEntries_nutzt_schadenlage_nicht_als_meter()
+    public void BuildEntries_schreibt_alten_meter_spiegel_nicht_als_uhr()
     {
         var finding = new VsaFinding
         {
             KanalSchadencode = "BAB",
             Raw = "Riss",
             MeterStart = 2.0,
+            MeterEnd = 8.0,
             SchadenlageAnfang = 2.0,
             SchadenlageEnde = 8.0
         };
@@ -56,10 +57,76 @@ public sealed class VsaFindingToProtocolEntryMapperTests
         var entry = Single(VsaFindingToProtocolEntryMapper.BuildEntries(new[] { finding }, NoTitle));
 
         Assert.Equal(2.0, entry.MeterStart);
-        Assert.Null(entry.MeterEnd);
-        Assert.False(entry.IsStreckenschaden);
-        Assert.Equal("2", entry.CodeMeta!.Parameters["vsa.uhr.von"]);
+        Assert.Equal(8.0, entry.MeterEnd);
+        Assert.True(entry.IsStreckenschaden);
+        Assert.Null(entry.CodeMeta);
+    }
+
+    [Fact]
+    public void BuildEntries_verwirft_nicht_ganzzahlige_schadenlage()
+    {
+        var finding = new VsaFinding
+        {
+            KanalSchadencode = "BAB",
+            Raw = "Riss",
+            MeterStart = 7,
+            SchadenlageAnfang = 2.62136
+        };
+
+        var entry = Single(VsaFindingToProtocolEntryMapper.BuildEntries(new[] { finding }, NoTitle));
+
+        Assert.Null(entry.CodeMeta);
+    }
+
+    [Fact]
+    public void BuildEntries_rettet_uhrlage_aus_explizitem_befundtext()
+    {
+        var finding = new VsaFinding
+        {
+            KanalSchadencode = "BAB",
+            Raw = "Riss von 4 Uhr bis 8 Uhr",
+            MeterStart = 2.62136,
+            SchadenlageAnfang = 2.62136
+        };
+
+        var entry = Single(VsaFindingToProtocolEntryMapper.BuildEntries(new[] { finding }, NoTitle));
+
+        Assert.Equal("4", entry.CodeMeta!.Parameters["vsa.uhr.von"]);
         Assert.Equal("8", entry.CodeMeta.Parameters["vsa.uhr.bis"]);
+    }
+
+    [Theory]
+    [InlineData("BCE")]
+    [InlineData("BCD")]
+    public void BuildEntries_leitet_beim_rohrende_keine_uhr_aus_text_ab(string code)
+    {
+        var finding = new VsaFinding
+        {
+            KanalSchadencode = code,
+            Raw = "Rohrende mit Anschluss bei 9 Uhr"
+        };
+
+        var entry = Single(VsaFindingToProtocolEntryMapper.BuildEntries(new[] { finding }, NoTitle));
+
+        Assert.Null(entry.CodeMeta);
+    }
+
+    [Fact]
+    public void BuildEntries_verwendet_quantifizierung_nicht_als_uhrlage()
+    {
+        var finding = new VsaFinding
+        {
+            KanalSchadencode = "BAB",
+            Raw = "Riss",
+            Quantifizierung1 = "9",
+            Quantifizierung2 = "3"
+        };
+
+        var entry = Single(VsaFindingToProtocolEntryMapper.BuildEntries(new[] { finding }, NoTitle));
+
+        Assert.NotNull(entry.CodeMeta);
+        Assert.False(entry.CodeMeta!.Parameters.ContainsKey("vsa.uhr.von"));
+        Assert.False(entry.CodeMeta.Parameters.ContainsKey("vsa.uhr.bis"));
     }
 
     [Fact]

@@ -4,6 +4,8 @@ using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
+using SelfTrainingHarness;
+using System.Diagnostics;
 
 // Lokaler, geboundeter Headless-Beweis: faehrt den ECHTEN Self-Training-Orchestrator
 // (mit echtem Qwen) ueber ein paar eligible Faelle und beweist:
@@ -11,7 +13,8 @@ using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 //   - nichts wird in die KB indexiert (KbIndexState=None)
 //   - TrainingEligible spiegelt das (jetzt aufgeloeste) Datum
 //   - keine YOLO-Dummy-Box (Orchestrator exportiert nie)
-// Non-destruktiv: der training_samples.json-Store wird vorher gesichert und nachher wiederhergestellt.
+// Non-destruktiv: Der Store wird vorher gesichert und nur ohne App-/Hash-Konflikt
+// wiederhergestellt. Bei einem Konflikt bleiben aktueller Stand und Sicherung erhalten.
 
 var root = args.Length > 0 ? args[0] : @"D:\Haltungen";
 var maxCases = args.Length > 1 && int.TryParse(args[1], out var m) ? m : 5;
@@ -20,6 +23,13 @@ var model = args.Length > 3 ? args[3] : "qwen3-vl:8b-q8";
 
 Console.WriteLine("=== Self-Training Headless-Harness (gebounded, non-destruktiv) ===");
 Console.WriteLine($"Root: {root} | maxCases: {maxCases} | Ollama: {ollamaUri} | Modell: {model}");
+
+if (IsSewerStudioRunning())
+{
+    Console.Error.WriteLine("GESPERRT: SewerStudio laeuft. Der Harness wurde nicht gestartet.");
+    Environment.ExitCode = 2;
+    return;
+}
 
 // 1. Scan + eligible filtern (Datum>=2022 UND PDF-Protokoll vorhanden)
 var import = new TrainingCenterImportService();
@@ -39,19 +49,22 @@ foreach (var c in eligible)
 // 2. Store-Snapshot + KB-Zustand vorher
 var storePath = KnowledgeBasePaths.GetTrainingSamplesPath();
 var dbPath = KnowledgeBasePaths.GetKnowledgeDbPath();
-var storeExisted = File.Exists(storePath);
-string? backup = null;
-if (storeExisted)
+if (IsSewerStudioRunning())
 {
-    backup = storePath + ".harness-bak";
-    File.Copy(storePath, backup, overwrite: true);
+    Console.Error.WriteLine("GESPERRT: SewerStudio wurde waehrend des Scans gestartet.");
+    Environment.ExitCode = 2;
+    return;
 }
-var idsBefore = (await TrainingSamplesStore.LoadAsync()).Select(s => s.SampleId).ToHashSet();
-var dbBefore = DbState(dbPath);
 
-var results = new List<SelfTrainingResult>();
+var sewerStudioObservedDuringRun = false;
+var storeSnapshot = GuardedStoreSnapshot.Create(storePath);
+storeSnapshot.MarkHarnessWritesComplete();
 try
 {
+    var idsBefore = (await TrainingSamplesStore.LoadAsync()).Select(s => s.SampleId).ToHashSet();
+    var dbBefore = DbState(dbPath);
+    var results = new List<SelfTrainingResult>();
+
     // 3. Services (catalog=null und retrieval=null halten den Harness UI-/KB-frei;
     //    beides aendert die Auto-Accept-Entscheidung unter RequireHumanReview nicht.)
     var settings = await TrainingCenterSettingsStore.LoadAsync();
@@ -75,6 +88,13 @@ try
     using var cts = new CancellationTokenSource();
     foreach (var c in eligible)
     {
+        if (IsSewerStudioRunning())
+        {
+            sewerStudioObservedDuringRun = true;
+            Console.Error.WriteLine("SewerStudio wurde waehrend des Harness-Laufs gestartet.");
+            break;
+        }
+
         Console.WriteLine($"\n--- Lauf: {c.CaseId} ({c.InspectionDate:yyyy-MM-dd}) ---");
         try
         {
@@ -86,12 +106,21 @@ try
         {
             Console.WriteLine($"  FEHLER: {ex.GetType().Name}: {ex.Message}");
         }
+        finally
+        {
+            sewerStudioObservedDuringRun |= IsSewerStudioRunning();
+            storeSnapshot.MarkHarnessWritesComplete();
+        }
+
+        if (sewerStudioObservedDuringRun)
+            break;
     }
 
     // 4. Neu erzeugte Samples aus dem Store herausfiltern und pruefen
     var after = await TrainingSamplesStore.LoadAsync();
     var caseIds = eligible.Select(c => c.CaseId).ToHashSet();
     var newSamples = after.Where(s => !idsBefore.Contains(s.SampleId) && caseIds.Contains(s.CaseId)).ToList();
+    storeSnapshot.MarkHarnessWritesComplete();
 
     Console.WriteLine($"\n=== BEWEIS (ueber {newSamples.Count} neu erzeugte Samples) ===");
     int approved = newSamples.Count(s => s.Status == TrainingSampleStatus.Approved);
@@ -127,17 +156,33 @@ try
 }
 finally
 {
-    // 5. Store wiederherstellen (non-destruktiv)
-    if (storeExisted && backup is not null)
+    // 5. Nur wiederherstellen, wenn weder die App laeuft noch der Store nach dem
+    // letzten Harness-Schreibstand veraendert wurde. Bei Zweifel bleibt die
+    // Sicherung fuer eine manuelle Entscheidung erhalten.
+    try
     {
-        File.Copy(backup, storePath, overwrite: true);
-        File.Delete(backup);
-        Console.WriteLine("\nStore wiederhergestellt (kein Sample dauerhaft persistiert).");
+        if (storeSnapshot.TryRestore(
+                () => sewerStudioObservedDuringRun || IsSewerStudioRunning(),
+                out var restoreReason))
+        {
+            Console.WriteLine("\nStore wiederhergestellt (kein Sample dauerhaft persistiert).");
+        }
+        else
+        {
+            Console.Error.WriteLine($"\nGESPERRT: {restoreReason}");
+            if (storeSnapshot.BackupPath is not null)
+                Console.Error.WriteLine($"Original-Sicherung behalten: {storeSnapshot.BackupPath}");
+            Environment.ExitCode = 2;
+        }
     }
-    else if (!storeExisted && File.Exists(storePath))
+    catch (Exception ex)
     {
-        File.Delete(storePath);
-        Console.WriteLine("\nWaehrend des Laufs angelegter Store wieder entfernt (non-destruktiv).");
+        Console.Error.WriteLine(
+            $"\nGESPERRT: Store-Wiederherstellung nicht sicher moeglich: " +
+            $"{ex.GetType().Name}: {ex.Message}");
+        if (storeSnapshot.BackupPath is not null)
+            Console.Error.WriteLine($"Original-Sicherung behalten: {storeSnapshot.BackupPath}");
+        Environment.ExitCode = 2;
     }
 }
 
@@ -145,6 +190,30 @@ return;
 
 static string DbState(string p)
     => File.Exists(p) ? $"{new FileInfo(p).Length} B @ {File.GetLastWriteTimeUtc(p):yyyy-MM-dd HH:mm:ss}" : "(keine Datei)";
+
+static bool IsSewerStudioRunning()
+{
+    try
+    {
+        var processes = Process.GetProcessesByName("SewerStudio");
+        try
+        {
+            return processes.Length > 0;
+        }
+        finally
+        {
+            foreach (var process in processes)
+                process.Dispose();
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine(
+            $"SewerStudio-Prozessstatus konnte nicht sicher geprueft werden: " +
+            $"{ex.GetType().Name}: {ex.Message}");
+        return true;
+    }
+}
 
 // Neutraler Technik-Stub: Aufnahmetechnik fliesst NICHT in die Auto-Accept-Entscheidung ein
 // (die haengt nur an MatchLevel + RequireHumanReview + KbCheck). So bleibt der Harness UI-frei.

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -9,6 +10,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Application.UseCases.PhotoAnnotations;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Ai.Vsa;
@@ -25,6 +28,10 @@ public partial class VsaCodeExplorerWindow : Window
     private readonly string? _videoPath;
     private readonly TimeSpan? _currentVideoTime;
     private readonly ICodeUsageTracker _codeUsage;
+    private readonly IPhotoAnnotationUseCase? _photoAnnotations;
+    private readonly Dictionary<int, PhotoAnnotationDraft> _pendingPhotoAnnotations = new();
+    private bool _photoAnnotationSaveInProgress;
+    private CancellationTokenSource? _photoAnnotationSaveCancellation;
 
     /// <summary>
     /// Optionaler Callback: Liefert einen Snapshot vom aktuellen VLC-Player-Frame.
@@ -44,6 +51,7 @@ public partial class VsaCodeExplorerWindow : Window
     private Color _colorSuccess;
     private Color _colorBorderLight;
     private Color _colorDanger;
+    private FontFamily? _fontMono;
 
     /// <summary>Ergebnis-Entry nach erfolgreichem Uebernehmen.</summary>
     public ProtocolEntry? SelectedEntry { get; private set; }
@@ -62,10 +70,19 @@ public partial class VsaCodeExplorerWindow : Window
         _videoPath = videoPath;
         _currentVideoTime = currentVideoTime;
         _codeUsage = codeUsage ?? CodeUsageTrackers.Current;
+        _photoAnnotations = null;
 
         // Buttons
-        BtnApply.Click += (_, _) => ApplyAndClose();
+        BtnApply.Click += (_, _) => StartApplyAndClose();
         BtnCancel.Click += (_, _) => { DialogResult = false; Close(); };
+        Closing += (_, e) =>
+        {
+            if (_photoAnnotationSaveInProgress)
+            {
+                _photoAnnotationSaveCancellation?.Cancel();
+                e.Cancel = true;
+            }
+        };
         ResetButton.Click += (_, _) => _vm.ResetToMainCodes();
 
         // Foto 1 / Foto 2 Buttons
@@ -205,6 +222,16 @@ public partial class VsaCodeExplorerWindow : Window
         ContentRendered += OnContentRendered;
     }
 
+    public VsaCodeExplorerWindow(VsaCodeExplorerViewModel vm,
+                                  string? videoPath,
+                                  TimeSpan? currentVideoTime,
+                                  ICodeUsageTracker? codeUsage,
+                                  IPhotoAnnotationUseCase? photoAnnotations)
+        : this(vm, videoPath, currentVideoTime, codeUsage)
+    {
+        _photoAnnotations = photoAnnotations;
+    }
+
     private void ApplyStreckenschadenChange(VsaCodeExplorerStreckenschadenChange change)
     {
         _vm.IsStreckenschaden = change.IsStreckenschaden;
@@ -256,6 +283,7 @@ public partial class VsaCodeExplorerWindow : Window
         _colorSuccess = (Color)FindResource("ColorSuccess");
         _colorBorderLight = (Color)FindResource("ColorBorderLight");
         _colorDanger = (Color)FindResource("ColorDanger");
+        _fontMono = (FontFamily)FindResource("FontMono");
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -352,10 +380,9 @@ public partial class VsaCodeExplorerWindow : Window
         // und Padding=16,8 — beides bricht das Alignment der Farbbalken.
     }
 
-    // Gecachte Styles und Consolas-Font
+    // Gecachte Styles
     private Style? _toolbarButtonStyle;
     private Style? _tileButtonStyle;
-    private static readonly FontFamily ConsolasFont = new("Consolas");
 
     // Cache fuer GroupColor-Brushes (vermeidet wiederholtes ColorConverter.ConvertFromString)
     private readonly System.Collections.Generic.Dictionary<string, SolidColorBrush> _groupColorCache = new();
@@ -494,7 +521,8 @@ public partial class VsaCodeExplorerWindow : Window
                 BadgeQ1Pflicht,
                 Q2Panel,
                 TxtQ2Label,
-                TxtQ2Unit),
+                TxtQ2Unit,
+                TxtQ2Range),
             new VsaCodeExplorerQuantPanelRenderBrushes(
                 _colorDanger,
                 _dangerBrush ?? Brushes.Red));
@@ -540,7 +568,7 @@ public partial class VsaCodeExplorerWindow : Window
                 new VsaCodeExplorerBreadcrumbRenderBrushes(
                     _textBrush ?? Brushes.Black,
                     _mutedBrush ?? Brushes.Gray),
-                ConsolasFont,
+                _fontMono ?? new FontFamily("Consolas"),
                 _vm.NavigateToBreadcrumb));
     }
 
@@ -551,7 +579,9 @@ public partial class VsaCodeExplorerWindow : Window
     /// <summary>PhotoAssistant oeffnen fuer Foto 1 oder 2.</summary>
     private void OpenPhotoAssistant(int photoIndex)
     {
-        var decision = VsaCodeExplorerPhotoAssistantOpenPolicy.Resolve(_vm.FotoPaths, photoIndex);
+        var decision = VsaCodeExplorerPhotoAssistantOpenPolicy.Resolve(
+            _vm.OriginalFotoPaths,
+            photoIndex);
         if (!decision.CanOpen || decision.PhotoPath is null)
         {
             DialogHost.Current.Info(
@@ -560,13 +590,32 @@ public partial class VsaCodeExplorerWindow : Window
             return;
         }
 
-        var win = new PhotoMeasurementWindow(decision.PhotoPath, PipeCalibration)
+        var annotationContext = _photoAnnotations is not null
+                                && _vm.PhotoAnnotationContext is not null
+            ? new PhotoAnnotationCaptureContext(
+                _vm.PhotoAnnotationContext,
+                _vm.FinalCode,
+                _videoPath)
+            : null;
+        var win = new PhotoMeasurementWindow(
+            decision.PhotoPath,
+            PipeCalibration,
+            overlayService: null,
+            photoAnnotationUseCase: _photoAnnotations,
+            photoAnnotationContext: annotationContext)
         {
             Owner = this
         };
 
         if (win.ShowDialog() == true && win.Result.Confirmed)
+        {
+            if (win.AnnotationDraft is not null)
+                _pendingPhotoAnnotations[photoIndex] = win.AnnotationDraft;
+            else
+                _pendingPhotoAnnotations.Remove(photoIndex);
+
             ApplyPhotoResult(win.Result, photoIndex);
+        }
     }
 
     /// <summary>PhotoAssistant-Ergebnis uebernehmen.</summary>
@@ -603,6 +652,7 @@ public partial class VsaCodeExplorerWindow : Window
             var result = await VsaCodeExplorerPhotoCaptureWorkflow.CaptureWithDefaultsAsync(
                 fotoIndex,
                 _vm.FotoPaths,
+                _vm.OriginalFotoPaths,
                 LiveSnapshotProvider,
                 _videoPath,
                 _currentVideoTime,
@@ -621,6 +671,7 @@ public partial class VsaCodeExplorerWindow : Window
                 return;
             }
 
+            _pendingPhotoAnnotations.Remove(fotoIndex);
             UpdateFotoImages();
         }
         finally
@@ -659,23 +710,6 @@ public partial class VsaCodeExplorerWindow : Window
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // Apply / Close
-    // ═══════════════════════════════════════════════════════════════
-
-    private void ApplyAndClose()
-    {
-        if (!_vm.CanConfirm) return;
-
-        SelectedEntry = _vm.BuildProtocolEntry();
-
-        // Nutzung zaehlen -> naechstes Mal als Favoriten-Chip verfuegbar.
-        _codeUsage.Erfasse(_vm.FinalCode);
-
-        DialogResult = true;
-        Close();
-    }
-
-    // ═══════════════════════════════════════════════════════════════
     // Favoriten-Chips (haeufigste Codes ueberspringen die Kaskade)
     // ═══════════════════════════════════════════════════════════════
 
@@ -690,6 +724,14 @@ public partial class VsaCodeExplorerWindow : Window
         foreach (var eintrag in top)
         {
             var badge = ViewModels.Protocol.CodeGroupBadgePolicy.Resolve(eintrag.Code);
+            var presentation = VsaCodeExplorerFavoriteChipPresenter.BuildSelectable(
+                eintrag.Code,
+                eintrag.Anzahl,
+                _vm.LookupCodeLabel(eintrag.Code),
+                badge.Kurzlabel);
+            if (presentation is null)
+                continue;
+
             var chip = new Button
             {
                 Margin = new Thickness(0, 0, 6, 0),
@@ -699,11 +741,10 @@ public partial class VsaCodeExplorerWindow : Window
                 Foreground = TryFindResource(badge.BrushKey) as Brush ?? (_textBrush ?? Brushes.Black),
                 BorderBrush = TryFindResource(badge.BrushKey) as Brush ?? Brushes.Gray,
                 BorderThickness = new Thickness(1),
-                FontFamily = new FontFamily("Consolas"),
                 FontSize = 11,
                 FontWeight = FontWeights.SemiBold,
-                Content = $"{eintrag.Code}  ·{eintrag.Anzahl}",
-                ToolTip = $"{badge.Kurzlabel} — {eintrag.Anzahl}× verwendet. Klick springt zum Hauptcode."
+                Content = presentation.Content,
+                ToolTip = presentation.ToolTip
             };
             // Runde Chip-Form ueber Template-freien Weg: eigene Border-Optik.
             chip.Resources.Add(typeof(Border), new Style(typeof(Border))
@@ -718,8 +759,11 @@ public partial class VsaCodeExplorerWindow : Window
             chips.Add(chip);
         }
 
-        FavoritenReihe.Visibility = Visibility.Visible;
-        Anim.EntranceStagger.PlayForElements(chips);
+        FavoritenReihe.Visibility = chips.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        if (chips.Count > 0)
+            Anim.EntranceStagger.PlayForElements(chips);
     }
 
     /// <summary>Kaskade bis zum Hauptcode durchlaufen (Char1/Char2 bleiben Fall-Entscheidung).</summary>
@@ -767,7 +811,7 @@ public partial class VsaCodeExplorerWindow : Window
         }
 
         if (action == VsaCodeExplorerKeyboardNavigationAction.ApplyAndClose)
-            ApplyAndClose();
+            StartApplyAndClose();
     }
 
     private void OnWindowClosed(object? sender, EventArgs e)

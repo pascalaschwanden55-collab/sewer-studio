@@ -5,6 +5,7 @@ using System.Runtime.Versioning;
 using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 using AuswertungPro.Next.Infrastructure.Common;
 using Xunit;
 
@@ -18,6 +19,77 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 [SupportedOSPlatform("windows")]
 public sealed class SafeFileEnumerationTests
 {
+    [JunctionFact]
+    public void EnumerateFilesSafe_BetrittKeineVerzeichnisVerknuepfung_UndMeldetSieAlsUebersprungen()
+    {
+        var testRoot = Path.Combine(Path.GetTempPath(), "sfe_link_" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(testRoot, "root");
+        var normal = Path.Combine(root, "a-normal");
+        var external = Path.Combine(testRoot, "external");
+        var link = Path.Combine(root, "b-link");
+        var cycleLink = Path.Combine(normal, "cycle-to-root");
+        var fileLink = Path.Combine(root, "c-file-link.txt");
+
+        try
+        {
+            Directory.CreateDirectory(normal);
+            Directory.CreateDirectory(external);
+            File.WriteAllText(Path.Combine(root, "root.txt"), "root");
+            File.WriteAllText(Path.Combine(normal, "normal.txt"), "normal");
+            File.WriteAllText(Path.Combine(external, "fremd.txt"), "fremd");
+            JunctionTestSupport.CreateDirectoryLink(link, external);
+            JunctionTestSupport.CreateDirectoryLink(cycleLink, root);
+            File.CreateSymbolicLink(fileLink, Path.Combine(external, "fremd.txt"));
+
+            var skipped = new List<string>();
+
+            var files = SafeFileEnumeration
+                .EnumerateFilesSafe(root, "*.txt", recursive: true, skippedDirectories: skipped)
+                .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
+                .ToList();
+            var directories = SafeFileEnumeration
+                .EnumerateDirectoriesSafe(root)
+                .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
+                .ToList();
+            var explicitlySelectedLinkRootFiles = SafeFileEnumeration
+                .EnumerateFilesSafe(link, "*.txt", recursive: true)
+                .Select(Path.GetFileName)
+                .ToList();
+
+            Assert.Equal(new[] { "root.txt", "a-normal/normal.txt" }, files);
+            Assert.Equal(new[] { ".", "a-normal" }, directories);
+            Assert.Equal(new[] { "fremd.txt" }, explicitlySelectedLinkRootFiles);
+            Assert.Contains(link, skipped, StringComparer.OrdinalIgnoreCase);
+            Assert.Contains(cycleLink, skipped, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(cycleLink))
+                    Directory.Delete(cycleLink);
+                if (Directory.Exists(link))
+                    Directory.Delete(link);
+                if (File.Exists(fileLink))
+                    File.Delete(fileLink);
+            }
+            catch
+            {
+                // best-effort cleanup
+            }
+
+            try
+            {
+                if (Directory.Exists(testRoot))
+                    Directory.Delete(testRoot, recursive: true);
+            }
+            catch
+            {
+                // best-effort cleanup
+            }
+        }
+    }
+
     [Fact]
     public void EnumerateFilesSafe_UeberspringtGesperrtenUnterordner_OhneAbbruch()
     {

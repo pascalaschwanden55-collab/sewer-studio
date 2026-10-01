@@ -26,7 +26,13 @@ internal static class PhotoMeasurementToolPresentationPolicy
     {
         var isLevel = tool is PhotoTool.LevelWater or PhotoTool.LevelDeposit or PhotoTool.LevelObstacle;
         var isAngle = tool is PhotoTool.Lateral or PhotoTool.Bend;
-        var needsCalibration = tool is PhotoTool.Ruler or PhotoTool.Connection;
+        // Der Querschnitt gehoert dazu, obwohl er Prozente liefert: Sein Wert
+        // bezieht sich auf die ROHRFLAECHE, und die ist ohne Referenzlinie
+        // unbekannt. Die Verformung dagegen NICHT — sie vergleicht zwei
+        // gemessene Achsen miteinander und braucht keinen Massstab.
+        var needsCalibration = tool is PhotoTool.Ruler
+            or PhotoTool.Connection
+            or PhotoTool.CrossSection;
 
         var levelMode = tool switch
         {
@@ -54,12 +60,12 @@ internal static class PhotoMeasurementToolPresentationPolicy
         PhotoTool.None => "Werkzeug wählen, um mit der Messung zu beginnen.",
         PhotoTool.Calibration => "Referenzlinie über sichtbaren Rohrdurchmesser ziehen.",
         PhotoTool.MarkRect => "Rechteck um Schaden/Beobachtung ziehen (für KI-Training).",
-        PhotoTool.LevelWater => "Wasserstand: Slider links | Mausrad: Kreis-Größe | Drag: Position",
-        PhotoTool.LevelDeposit => "Ablagerung: Slider links | Mausrad: Kreis-Größe | Drag: Position",
-        PhotoTool.LevelObstacle => "Hindernis: Slider links | Mausrad: Kreis-Größe | Drag: Position",
+        PhotoTool.LevelWater => "Wasserstand: Slider links | Mausrad: Kreis-Grösse | Drag: Position",
+        PhotoTool.LevelDeposit => "Ablagerung: Slider links | Mausrad: Kreis-Grösse | Drag: Position",
+        PhotoTool.LevelObstacle => "Hindernis: Slider links | Mausrad: Kreis-Grösse | Drag: Position",
         PhotoTool.Deformation => "4 Punkte auf Rohrwand klicken: Oben → Unten → Links → Rechts",
         PhotoTool.Ruler => "Linie ziehen für Distanzmessung (Kalibrierung nötig).",
-        PhotoTool.CrossSection => "Polygon-Punkte klicken, Doppelklick = schließen.",
+        PhotoTool.CrossSection => "Polygon-Punkte klicken, Doppelklick = schliessen.",
         PhotoTool.Lateral => "Position + Winkel per Slider einstellen.",
         PhotoTool.Bend => "Position + Winkel per Slider einstellen.",
         PhotoTool.Connection => "Massstab-Linie auf Rohroberfläche ziehen.",

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -17,18 +17,22 @@ using System.IO;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Behaviors;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
 public partial class DataPage : System.Windows.Controls.UserControl
 {
     private DataPageViewModel Vm => DataContext as DataPageViewModel
-        ?? throw new InvalidOperationException("DataPage benoetigt DataPageViewModel als DataContext.");
+        ?? throw new InvalidOperationException("DataPage benötigt DataPageViewModel als DataContext.");
     private IDialogService Dialogs => Vm.Dialogs;
+    private IToastService Toasts => Vm.Toasts;
     private AppSettings Settings => Vm.Settings;
     private AuswertungPro.Next.Application.Vsa.IVsaEvaluationService Vsa => Vm.Vsa;
     private AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog => Vm.CodeCatalog;
     private bool _columnsBuilt;
+    /// <summary>Feldwert beim Oeffnen der Zelle; erkennt beim Schliessen eine echte Aenderung.</summary>
+    private string? _wertBeimOeffnen;
     private System.Windows.Point _dragStartPoint;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DataGridColumnLayoutController _columnLayoutController = new();
@@ -37,8 +41,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private readonly DataPageRecordDetailsDialogController _recordDetailsDialogController;
     private readonly DataPageBeobachtungenController _beobachtungenController;
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
-    private bool _isUndocking;
     private bool _startFilterApplied;
+    private DataPageCombinedFilter _combinedFilter = DataPageCombinedFilter.Aus;
 
     public DataPage()
     {
@@ -50,9 +54,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 ? ProjectFileLocator.ProjectRootFromFile(vm.Settings.LastProjectPath)
                 : null);
         FilterChips.FilterGeaendert += WendeChipFilterAn;
+        FilterChips.StartFilterZurueckgesetzt += EntferneStartFilter;
         _haltungDetailItemFactory = new DataPageDetailItemFactory(
             ResolveManagedComboSpec,
-            CommitHaltungDetailField);
+            CommitHaltungDetailFieldMitVerlauf,
+            BaueNachschlagBefehl,
+            BaueStrassenBefehl,
+            MeldeFormularKonflikt);
         _recordDetailsDialogController = new DataPageRecordDetailsDialogController(
             BuildHaltungRecordDetails,
             CreateSuggestMeasuresCommand);
@@ -70,12 +78,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         HaltungsansichtView.DetailBuilder = BuildHaltungRecordDetailsForAnsicht;
         HaltungsansichtView.ActionRequested = RouteHaltungsansichtAction;
 
-        // Standardansicht beim Oeffnen der Haltungen-Seite: Haltungsansicht (Liste + Detail)
-        // statt der Tabelle. IsChecked loest HaltungsansichtToggle_Changed; die Sichtbarkeiten
-        // werden zusaetzlich explizit gesetzt (robust gegen Event-Timing).
-        HaltungsansichtToggle.IsChecked = true;
-        HaltungsansichtView.Visibility = Visibility.Visible;
-        Grid.Visibility = Visibility.Collapsed;
+        // Standardansicht beim Oeffnen der Haltungen-Seite: Nova-Arbeitsflaeche (Liste, Uebersicht
+        // rechts, Eingabefelder unten). Die Einstellung ShowHaltungenNovaLayout wird beim
+        // DataContext-Wechsel in InitNovaWorkspace angewendet; hier nur der robuste Grundzustand.
+        HaltungsansichtToggle.IsChecked = false;
 
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
         _searchDebounceTimer.Tick += (_, __) =>
@@ -106,6 +112,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         Loaded += (_, __) =>
         {
             ApplyHaltungsansichtSettings();
+            // Nach einem Unloaded sind Controller und Abo abgemeldet; WPF kann dieselbe Seite
+            // wieder laden. Beide Aufrufe sind mehrfach sicher.
+            _aufklappListe?.Verdrahte();
+            VerbindeAnzeigeAuftrag(true);
             EnsureColumns();
             ApplyStartFilter();
             _columnAlignmentToolbar.UpdateButtons();
@@ -115,12 +125,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
             _searchDebounceTimer.Stop();
             _layoutSaveDebounceTimer.Stop();
             SaveLayoutToSettings();
-            // Wenn die Seite gewechselt wird, Grid zurueck docken
-            // NICHT waehrend des Abdock-Vorgangs ausfuehren!
-            if (_floatingGridWindow is not null && !_isUndocking)
-                DockGridBack();
+            _docking?.BeimVerlassen();
+            _aufklappListe?.Dispose();
+            VerbindeAnzeigeAuftrag(false);
         };
         DataContextChanged += DataPage_DataContextChanged;
+        SizeChanged += (_, __) => ApplyDrawerHeight();
+        VerdrahteNovaWorkspace();
+        VerdrahteAufklappListe();
     }
 
     private void DataPage_DataContextChanged(object? sender, DependencyPropertyChangedEventArgs e)
@@ -128,37 +140,60 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (e.OldValue is DataPageViewModel oldVm)
         {
             oldVm.RecordsOrderChanged -= ResetSort;
+            oldVm.FelderExternErgaenzt -= HaltungsansichtView.AktualisiereDetail;
+            oldVm.FelderExternErgaenzt -= AktualisiereFelderDrawer;
+            oldVm.HaltungAnzeigen -= ZeigeHaltungInListe;
             oldVm.PropertyChanged -= ViewModel_PropertyChanged;
         }
         if (e.NewValue is DataPageViewModel newVm)
         {
             newVm.RecordsOrderChanged += ResetSort;
+            newVm.FelderExternErgaenzt += HaltungsansichtView.AktualisiereDetail;
+            newVm.FelderExternErgaenzt += AktualisiereFelderDrawer;
+            newVm.HaltungAnzeigen += ZeigeHaltungInListe;
             newVm.PropertyChanged += ViewModel_PropertyChanged;
-            ApplyHaltungsansichtSettings(newVm);
+            ApplyHaltungsansichtSettings();
+            InitNovaWorkspace(newVm);
+            _combinedFilter = new DataPageCombinedFilter(
+                newVm.SearchText,
+                FilterChips.CurrentFilter,
+                newVm.StartFilter);
+            _startFilterApplied = false;
+            FilterChips.SetStartFilter(_combinedFilter.StartFilter);
+
+            if (IsLoaded)
+                ApplyStartFilter();
         }
     }
 
     private void ApplyHaltungsansichtSettings()
     {
         if (DataContext is DataPageViewModel vm)
-            ApplyHaltungsansichtSettings(vm);
+            HaltungsansichtView.Settings = vm.Settings;
     }
-
-    private void ApplyHaltungsansichtSettings(DataPageViewModel vm)
-        => HaltungsansichtView.Settings = vm.Settings;
 
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         _ = sender;
         // Aussen gewaehlte Haltung (z.B. Klick auf der Karte) in der Liste sichtbar scrollen.
-        if (e.PropertyName == nameof(ViewModels.Pages.DataPageViewModel.Selected)
-            && DataContext is ViewModels.Pages.DataPageViewModel vm
-            && vm.Selected is { } selected)
+        if (e.PropertyName == nameof(ViewModels.Pages.DataPageViewModel.Selected))
         {
-            Dispatcher.InvokeAsync(
-                () => Grid.ScrollIntoView(selected),
-                System.Windows.Threading.DispatcherPriority.Background);
+            AktualisiereFelderDrawer();
+            AktualisiereAufklappListe();
+            if (DataContext is ViewModels.Pages.DataPageViewModel vm && vm.Selected is { } selected)
+            {
+                Dispatcher.InvokeAsync(
+                    () => Grid.ScrollIntoView(selected),
+                    System.Windows.Threading.DispatcherPriority.Background);
+            }
         }
+
+        // Nova-Fixwelle 2b, Runde 2: Der Regler "Zeilenhoehe" veraendert die Mindesthoehe der
+        // Tabelle. In einer einzeiligen Nova-Ansicht gilt dort die kompakte Hoehe als
+        // Obergrenze — das muss auch beim Verstellen greifen und nicht erst beim naechsten
+        // Aufbau der Seite.
+        if (e.PropertyName == nameof(ViewModels.Pages.DataPageViewModel.GridMinRowHeight))
+            WendeZeilenhoeheAn(AktiveSpaltenansicht);
     }
 
     private void EnsureColumns()
@@ -170,26 +205,24 @@ public partial class DataPage : System.Windows.Controls.UserControl
         _columnLayoutController.Clear();
         _columnAlignmentToolbar.ClearActiveColumn();
 
-        foreach (var field in FieldCatalog.ColumnOrder)
+        var spalten = DataPageHaltungColumnBuilder.Baue(
+            NovaLayoutAktiv,
+            ComboBox_LostKeyboardFocusMitVerlauf,
+            ComboBox_SelectionChangedMitVerlauf);
+
+        foreach (var spalte in spalten)
         {
-            var def = FieldCatalog.Get(field);
-            var col = DataPageColumnFactory.Create(
-                field,
-                def.Label,
-                ComboBox_LostKeyboardFocus,
-                ComboBox_SelectionChanged);
-
-            var setup = DataPageColumnSetup.Apply(col, field);
-            Grid.Columns.Add(col);
-
+            Grid.Columns.Add(spalte.Column);
+            _columnFields[spalte.Column] = spalte.Feld;
             _columnAlignmentToolbar.SetAlignment(
-                col,
-                setup.DefaultHorizontalAlignment,
-                setup.DefaultVerticalAlignment);
+                spalte.Column,
+                spalte.Setup.DefaultHorizontalAlignment,
+                spalte.Setup.DefaultVerticalAlignment);
         }
 
         Grid.FrozenColumnCount = 2;
         RestoreLayoutFromSettings();
+        InitColumnViews();
         ResetSort();
     }
 
@@ -215,6 +248,15 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void Grid_PreparingCellForEdit(object sender, DataGridPreparingCellForEditEventArgs e)
     {
+        // Fix-Runde 1 (F2): Den Wert beim Oeffnen merken. Nur so laesst sich beim Schliessen
+        // sagen, ob wirklich etwas geaendert wurde — bei einer Vorlagenspalte (Zustandsklasse)
+        // liefert der Textleser kein Ergebnis, und ohne diesen Vergleich galt jedes blosse
+        // Anklicken als Handeingabe.
+        _wertBeimOeffnen = e.Row?.Item is HaltungRecord record
+            && e.Column.GetValue(FrameworkElement.TagProperty) is string feld
+                ? record.GetFieldValue(feld)
+                : null;
+
         if (e.EditingElement is TextBox tb)
         {
             tb.SelectAll();
@@ -241,7 +283,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         switch (result.Action)
         {
             case DataPageRightClickAction.ClearColumn:
-                ClearColumn(result.FieldName!, result.DisplayName!);
+                ClearColumnMitVerlauf(result.FieldName!, result.DisplayName!);
                 e.Handled = true;
                 break;
             case DataPageRightClickAction.SelectRow:
@@ -263,10 +305,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         }
 
         if (!Dialogs.ConfirmWarn(
-            $"ACHTUNG: Alle Werte in Spalte \"{displayName}\" werden geloescht.\n\n" +
+            $"ACHTUNG: Alle Werte in Spalte \"{displayName}\" werden gelöscht.\n\n" +
             $"Betroffen: {plan.AffectedCount} von {plan.TotalCount} Haltungen.\n" +
-            "Auch manuell bearbeitete Werte gehen verloren und koennen nicht rueckgaengig gemacht werden.\n\n" +
-            "Wirklich loeschen?",
+            "Auch manuell bearbeitete Werte werden gelöscht (Rückgängig mit Strg+Z).\n\n" +
+            "Wirklich löschen?",
             "Spalte leeren"))
             return;
 
@@ -432,7 +474,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private void DeleteSelectedRows()
     {
         if (DataContext is not DataPageViewModel vm) return;
-        vm.RemoveRecords(Grid.SelectedItems.OfType<HaltungRecord>().ToList());
+        vm.RemoveRecords(_ansicht?.MarkierteZeilen(vm.Selected) ?? []);
     }
 
     // ── Haltung Record Details ──────────────────────────────────────────
@@ -462,16 +504,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
             case "delete": DeleteSelectedRows(); break;
             default: System.Diagnostics.Debug.Fail($"Unbekannter actionKey: {actionKey}"); break;
         }
-    }
-
-    // Umschalter Tabelle <-> Haltungsansicht: beide Sichten teilen Selected/Records
-    private void HaltungsansichtToggle_Changed(object sender, RoutedEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-        var showAnsicht = HaltungsansichtToggle.IsChecked == true;
-        HaltungsansichtView.Visibility = showAnsicht ? Visibility.Visible : Visibility.Collapsed;
-        Grid.Visibility = showAnsicht ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void ShowHaltungRecordDetails(HaltungRecord record)
@@ -560,6 +592,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 vm.EditReferenzpruefungOptionsCommand,
                 vm.PreviewReferenzpruefungOptionsCommand,
                 vm.ResetReferenzpruefungOptionsCommand),
+            "Rohrmaterial" => new DataPageManagedComboSpec(
+                vm.RohrmaterialOptions,
+                spec.AllowFreeText,
+                vm.EditRohrmaterialOptionsCommand,
+                vm.PreviewRohrmaterialOptionsCommand,
+                vm.ResetRohrmaterialOptionsCommand,
+                vm.AddRohrmaterialOptionCommand,
+                vm.RemoveRohrmaterialOptionCommand),
             _ => null
         };
     }
@@ -576,6 +616,18 @@ public partial class DataPage : System.Windows.Controls.UserControl
             var oldValue = record.GetFieldValue("Haltungsname");
             if (!ApplyHoldingNameChange(record, oldValue, next, vm))
                 return;   // Rename fehlgeschlagen -> Name nicht aendern
+        }
+        else if (fieldName is DataPageCellEditController.SchachtObenFeld
+                     or DataPageCellEditController.SchachtUntenFeld
+                 && vm is not null)
+        {
+            // Besteht der Haltungsname aus den beiden Schachtnummern, zieht er mit.
+            // Dieselbe Regel wie im Tabellen-Edit — sie darf nicht zweimal dastehen.
+            DataPageCellEditController.ApplySchachtChange(
+                record,
+                fieldName,
+                next,
+                (item, oldValue, newValue) => ApplyHoldingNameChange(item, oldValue, newValue, vm));
         }
         else
         {
@@ -659,7 +711,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         if (!Vm.ShellOpen.TryOpen(plan.ResolvedPath!, out var error))
         {
-            Dialogs.Error($"Foto konnte nicht geoeffnet werden:\n{error}", "Foto");
+            Dialogs.Error($"Foto konnte nicht geöffnet werden:\n{error}", "Foto");
         }
     }
 
@@ -671,7 +723,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = vm.Selected;
         if (record is null)
         {
-            Dialogs.Info("Bitte zuerst eine Haltung waehlen.", "Video");
+            Dialogs.Info("Bitte zuerst eine Haltung wählen.", "Video");
             return;
         }
 
@@ -725,6 +777,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
+        var wertBeimOeffnen = _wertBeimOeffnen;
+        _wertBeimOeffnen = null;
+
         if (e.EditAction != DataGridEditAction.Commit)
             return;
         if (e.Column.GetValue(FrameworkElement.TagProperty) is not string fieldName)
@@ -741,7 +796,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
             editedValue,
             (message, title) => Dialogs.ConfirmWarn(message, title, defaultNo: true),
             vm.EnsureOptionForField,
-            (item, oldValue, newValue) => ApplyHoldingNameChange(item, oldValue, newValue, vm));
+            (item, oldValue, newValue) => ApplyHoldingNameChange(item, oldValue, newValue, vm),
+            wertBeimOeffnen);
         if (!shouldSave)
             return;
 
@@ -776,13 +832,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        DataGridSearchFilterController.Apply(
-            CollectionViewSource.GetDefaultView(Grid.ItemsSource),
-            vm.Records,
-            getSearchText: () => vm.SearchText,
-            matches: vm.MatchesSearch,
-            updateSearchResultInfo: vm.UpdateSearchResultInfo,
-            deferRefresh: action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
+        _combinedFilter = _combinedFilter.WithSearchText(vm.SearchText);
+        ApplyCombinedFilter(vm);
     }
 
     private void ShowTextPreview(string title, string content)

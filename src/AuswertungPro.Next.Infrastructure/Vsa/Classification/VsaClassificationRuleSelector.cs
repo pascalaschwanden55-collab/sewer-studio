@@ -68,7 +68,7 @@ public sealed class VsaClassificationRuleSelector
         if (codeMatches.Count == 0)
         {
             diagnostics.Add(new VsaRuleDiagnostic(normalizedCode, requirement, "rule-not-found",
-                "Keine VSA-v2-Regel fuer Code und Anforderung gefunden."));
+                "Keine VSA-v2-Regel für Code und Anforderung gefunden."));
             return null;
         }
 
@@ -144,7 +144,7 @@ public sealed class VsaClassificationRuleSelector
         if (string.IsNullOrWhiteSpace(value))
         {
             return new VsaRuleDiagnostic(code, requirement, $"{field}-missing",
-                $"{field.ToUpperInvariant()} fehlt fuer die VSA-v2-Regel.");
+                $"{field.ToUpperInvariant()} fehlt für die VSA-v2-Regel.");
         }
 
         return new VsaRuleDiagnostic(code, requirement, $"{field}-unmatched",
@@ -178,7 +178,7 @@ public sealed class VsaClassificationRuleSelector
             if (string.IsNullOrWhiteSpace(request.Area))
             {
                 diagnostics.Add(new VsaRuleDiagnostic(rule.Code, rule.Requirement ?? "", "area-missing",
-                    "Schachtbereich fehlt fuer bereichsspezifische Regel."));
+                    "Schachtbereich fehlt für bereichsspezifische Regel."));
                 return null;
             }
 

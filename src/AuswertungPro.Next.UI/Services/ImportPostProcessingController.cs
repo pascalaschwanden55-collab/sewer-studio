@@ -147,7 +147,7 @@ internal static class ImportPostProcessingController
         var holdingCount = request.Project.Data.Count;
         if (holdingCount == 0)
         {
-            actions.AppendDetailsText($"\n{request.SourceLabel}: Keine Haltungen im Projekt - Medienverteilung uebersprungen.");
+            actions.AppendDetailsText($"\n{request.SourceLabel}: Keine Haltungen im Projekt - Medienverteilung übersprungen.");
             return;
         }
 
@@ -175,7 +175,7 @@ internal static class ImportPostProcessingController
                     FileStaging: request.Context?.FileStaging)));
 
         actions.AppendSummaryText(
-            $"\nMedien-Verteilung ({holdingCount} Haltungen):\n  {distribution.FilesCopied} Dateien kopiert\n  {distribution.FilesSkipped} uebersprungen\n  {distribution.Errors} Fehler");
+            $"\nMedien-Verteilung ({holdingCount} Haltungen):\n  {distribution.FilesCopied} Dateien kopiert\n  {distribution.FilesSkipped} übersprungen\n  {distribution.Errors} Fehler");
         if (distribution.Messages.Count > 0)
         {
             actions.AppendDetailsText(

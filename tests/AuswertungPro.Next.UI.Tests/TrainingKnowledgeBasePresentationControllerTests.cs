@@ -8,7 +8,7 @@ public sealed class TrainingKnowledgeBasePresentationControllerTests
     [Fact]
     public void ApplyStatus_setzt_alle_status_felder()
     {
-        var brush = new SolidColorBrush(Color.FromRgb(1, 2, 3));
+        var fallback = Color.FromRgb(1, 2, 3);
         var presentation = new TrainingKnowledgeBaseStatusPresentation(
             SampleCount: 42,
             ErrorCount: 2,
@@ -17,7 +17,8 @@ public sealed class TrainingKnowledgeBasePresentationControllerTests
             CodesCovered: 7,
             LastUpdateText: "30.06.2026 08:15",
             ReadinessLabel: "Bereit",
-            ReadinessBrush: brush,
+            ReadinessBrushKey: "SuccessBrush",
+            ReadinessFallbackColor: fallback,
             TopCodesText: "BAA: 4 Samples");
         var calls = new List<string>();
         Brush? appliedBrush = null;
@@ -47,7 +48,11 @@ public sealed class TrainingKnowledgeBasePresentationControllerTests
                 "top:BAA: 4 Samples"
             ],
             calls);
-        Assert.Same(brush, appliedBrush);
+        // Kein Application.Current im Testprozess -> ApplyStatus loest den Token nicht auf und
+        // greift auf den mitgegebenen Rueckfallwert zurueck (genau das prueft dieser Test: die
+        // Aufloesung passiert erst hier, nicht mehr im Builder).
+        var resolved = Assert.IsType<SolidColorBrush>(appliedBrush);
+        Assert.Equal(fallback, resolved.Color);
     }
 
     [Fact]

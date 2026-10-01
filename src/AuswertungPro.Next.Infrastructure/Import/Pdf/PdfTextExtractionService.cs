@@ -8,6 +8,9 @@ namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 /// <summary>Fuehrt die begrenzte PDF-Textextraktion und den externen pdftotext-Aufruf aus.</summary>
 public sealed class PdfTextExtractionService : IPdfTextExtractor
 {
+    /// <summary>Urteil je pdftotext-Pfad, damit nicht jede PDF einen Versionsaufruf startet.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, PdfLeserUrteil> Urteile = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly IPdfFileSafetyChecker _fileSafety;
 
     public PdfTextExtractionService()
@@ -82,18 +85,83 @@ public sealed class PdfTextExtractionService : IPdfTextExtractor
             throw new FileNotFoundException($"PDF nicht gefunden: {pdfPath}");
 
         _fileSafety.ThrowIfFileTooLarge(pdfPath);
+
+        // Welches pdftotext auf diesem Rechner gefunden wird, entscheidet sonst der Zufall
+        // (tools-Ordner, PATH, WinGet). Ein ungeeignetes Programm liefert die Anschlusstabelle
+        // zeilenverschoben und damit FALSCHE Messwerte, ohne Fehlermeldung. Deshalb wird nur
+        // ein geprueftes Programm verwendet; sonst der mitgelieferte eingebaute Leser.
+        var urteil = BeurteileGefundenesPdfToText(explicitPdfToTextPath, out var pfad);
+        if (urteil.Geeignet && pfad is not null)
+        {
+            try
+            {
+                return ExtractPagesWithPdfToText(pdfPath, pfad);
+            }
+            catch (InvalidDataException)
+            {
+                throw;
+            }
+            catch
+            {
+                // Der eingebaute Leser haelt den Import auch bei einem Prozessfehler funktionsfaehig.
+                return ExtractPagesWithPdfPig(pdfPath, "pdftotext konnte nicht ausgeführt werden.");
+            }
+        }
+
+        return ExtractPagesWithPdfPig(pdfPath, urteil.Grund);
+    }
+
+    /// <summary>
+    /// Sucht pdftotext und beurteilt es. Das Urteil wird je Programmpfad einmal ermittelt,
+    /// weil ein Import hunderte PDFs liest und jeder Aufruf sonst einen Prozess startet.
+    /// </summary>
+    internal PdfLeserUrteil BeurteileGefundenesPdfToText(string? explicitPath, out string? pfad)
+    {
+        pfad = null;
         try
         {
-            return ExtractPagesWithPdfToText(pdfPath, explicitPdfToTextPath);
+            pfad = FindPdfToTextPath(explicitPath);
         }
-        catch (InvalidDataException)
+        catch (FileNotFoundException)
         {
-            throw;
+            return new PdfLeserUrteil(false, "fehlt", 0,
+                "Es wurde kein pdftotext gefunden. Es wird der eingebaute Leser verwendet.");
+        }
+
+        var schluessel = pfad;
+        try
+        {
+            schluessel = Path.GetFullPath(pfad);
         }
         catch
         {
-            // Der eingebaute Leser haelt den Import auch ohne pdftotext funktionsfaehig.
-            return ExtractPagesWithPdfPig(pdfPath);
+            // Ein nicht normalisierbarer Pfad bleibt sein eigener Schluessel.
+        }
+
+        return Urteile.GetOrAdd(schluessel, ErmittleUrteil);
+    }
+
+    private static PdfLeserUrteil ErmittleUrteil(string pdftotextPfad)
+    {
+        try
+        {
+            // pdftotext -v schreibt die Version auf stderr und endet mit einem Code ungleich 0.
+            // Deshalb zaehlt hier der Text, nicht der Erfolg des Prozesses.
+            var lauf = ExternalProcessRunner.RunAsync(
+                pdftotextPfad,
+                ["-v"],
+                TimeSpan.FromSeconds(15),
+                Encoding.UTF8,
+                Encoding.UTF8).GetAwaiter().GetResult();
+
+            var ausgabe = string.Join('\n', new[] { lauf.StdErr, lauf.StdOut }
+                .Where(text => !string.IsNullOrWhiteSpace(text)));
+            return PdfLeserEignung.Beurteile(ausgabe);
+        }
+        catch
+        {
+            return new PdfLeserUrteil(false, "unbekannt", 0,
+                "Die Version von pdftotext konnte nicht ermittelt werden. Es wird der eingebaute Leser verwendet.");
         }
     }
 
@@ -124,14 +192,14 @@ public sealed class PdfTextExtractionService : IPdfTextExtractor
             var content = PdfExtractedTextBudget.ReadUtf8AtMost(tempOut);
             content = (content ?? "").Replace("\r\n", "\n");
             if (string.IsNullOrWhiteSpace(content))
-                return new PdfTextExtractionResult(Array.Empty<string>(), "");
+                return new PdfTextExtractionResult(Array.Empty<string>(), "", PdfLeserArt.PdfToText);
 
             var pages = content.Split('\f')
                 .Select(page => page.Trim())
                 .Where(page => !string.IsNullOrWhiteSpace(page))
                 .ToList();
 
-            return new PdfTextExtractionResult(pages, content);
+            return new PdfTextExtractionResult(pages, content, PdfLeserArt.PdfToText);
         }
         finally
         {
@@ -145,6 +213,12 @@ public sealed class PdfTextExtractionService : IPdfTextExtractor
                 // Eine gesperrte Temp-Datei darf das bereits gelesene Ergebnis nicht verwerfen.
             }
         }
+    }
+
+    private static PdfTextExtractionResult ExtractPagesWithPdfPig(string pdfPath, string hinweis)
+    {
+        var ergebnis = ExtractPagesWithPdfPig(pdfPath);
+        return ergebnis with { Leser = PdfLeserArt.Eingebaut, LeserHinweis = hinweis };
     }
 
     private static PdfTextExtractionResult ExtractPagesWithPdfPig(string pdfPath)
@@ -166,7 +240,7 @@ public sealed class PdfTextExtractionService : IPdfTextExtractor
         }
 
         var fullText = string.Join("\f", pages);
-        return new PdfTextExtractionResult(pages, fullText);
+        return new PdfTextExtractionResult(pages, fullText, PdfLeserArt.Eingebaut);
     }
 
     private static string ExtractPageWithLayout(UglyToad.PdfPig.Content.Page page)

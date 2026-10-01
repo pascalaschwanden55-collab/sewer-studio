@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="e7dbc0d2-9a96-47c6-8058-c869a8077834" name="Besitzer@PCW11X01 2026-09-06 11:09:01" runUser="PCW11X01\Besitzer" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-06T11:09:01.9420217+02:00" queuing="2026-09-06T11:09:01.9420218+02:00" start="2026-09-06T11:09:00.3337921+02:00" finish="2026-09-06T11:09:01.9468793+02:00" />
+  <TestSettings name="default" id="e35e63e7-21ee-4c1f-b859-cf6f68785dc9">
+    <Deployment runDeploymentRoot="Besitzer_PCW11X01_2026-09-06_11_09_01" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="03ab939d-72ca-420b-9636-a08e32e32da8" testId="af3eb0bd-d468-38ed-2426-88ab7c81ddab" testName="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.ShaftRename_FremdesPdf_ErreichtDenSchreibdienstNicht" computerName="PCW11X01" duration="00:00:00.0012655" startTime="2026-09-06T11:09:01.8450667+02:00" endTime="2026-09-06T11:09:01.8450667+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="03ab939d-72ca-420b-9636-a08e32e32da8">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.False() Failure&#xD;
+Expected: False&#xD;
+Actual:   True</Message>
+          <StackTrace>   at AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.ShaftRename_FremdesPdf_ErreichtDenSchreibdienstNicht() in C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\SchaechteRecordDetailsBuilderTests.cs:line 234&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="243b3511-83a0-45ba-848a-7198f92f0f1f" testId="69932839-97b9-73f3-4398-bee0f81135bc" testName="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.Build_KonsolidiertEncodingVariantenUndUebergibtAlleSchluesselBeimCommit" computerName="PCW11X01" duration="00:00:00.0051813" startTime="2026-09-06T11:09:01.8427947+02:00" endTime="2026-09-06T11:09:01.8427949+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="243b3511-83a0-45ba-848a-7198f92f0f1f" />
+    <UnitTestResult executionId="2c9a32b8-d87a-4e71-9c19-3a41bfdba8e3" testId="d415a6c9-3779-fd57-e2af-cf656870c7de" testName="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.CollectPdfPaths_ArchivkopieIstKeineBeschreibbareArbeitskopie" computerName="PCW11X01" duration="00:00:00.0024359" startTime="2026-09-06T11:09:01.8407859+02:00" endTime="2026-09-06T11:09:01.8407860+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2c9a32b8-d87a-4e71-9c19-3a41bfdba8e3">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.ThrowsAny() Failure: No exception was thrown&#xD;
+Expected: typeof(System.Exception)</Message>
+          <StackTrace>   at AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.CollectPdfPaths_ArchivkopieIstKeineBeschreibbareArbeitskopie() in C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\SchaechteRecordDetailsBuilderTests.cs:line 254&#xD;
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="37dd2bfa-ad27-4ac3-b979-310da76c54c5" testId="8b0cc707-81a2-838d-8174-d5c6cbc6849d" testName="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.CollectPdfPaths_NimmtPdfFelderAufUndDedupliziert" computerName="PCW11X01" duration="00:00:00.0014667" startTime="2026-09-06T11:09:01.8314751+02:00" endTime="2026-09-06T11:09:01.8314752+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="37dd2bfa-ad27-4ac3-b979-310da76c54c5" />
+    <UnitTestResult executionId="0b1f265d-c89b-4f52-b0d4-337338e8296a" testId="1af7c9a6-cf8b-930e-f2ee-67f6dd2ccabc" testName="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.Build_OhneViewModel_laesstDropdownFeldWieBisherAlsTextfeld" computerName="PCW11X01" duration="00:00:00.0002053" startTime="2026-09-06T11:09:01.8433861+02:00" endTime="2026-09-06T11:09:01.8433862+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0b1f265d-c89b-4f52-b0d4-337338e8296a" />
+    <UnitTestResult executionId="8c3d8c47-263a-41e4-8fc4-b7c1e6fae105" testId="141e44ed-c55a-f0ef-0c3d-2b891b8de486" testName="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.Build_GruppiertFelderUndSchaltetSanierungsdetailsLive" computerName="PCW11X01" duration="00:00:00.0216885" startTime="2026-09-06T11:09:01.8702279+02:00" endTime="2026-09-06T11:09:01.8702282+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8c3d8c47-263a-41e4-8fc4-b7c1e6fae105" />
+    <UnitTestResult executionId="a64d2bb1-e32f-4f28-8353-51286e1639ae" testId="75716588-8a31-c04c-7bb0-18020243dcdc" testName="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.ShaftRename_RuftBatchdienstMitDedupliziertenPdfPfadenAuf" computerName="PCW11X01" duration="00:00:00.0695357" startTime="2026-09-06T11:09:01.8297950+02:00" endTime="2026-09-06T11:09:01.8298098+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a64d2bb1-e32f-4f28-8353-51286e1639ae" />
+    <UnitTestResult executionId="8670d417-e72b-4c40-8072-81f296625718" testId="738e43bf-9204-f2be-afe5-24c3a9da57d5" testName="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.ShaftRename_AktualisiertRecordUndProjektmetadatenOhneDateipfade" computerName="PCW11X01" duration="00:00:00.0036481" startTime="2026-09-06T11:09:01.8484754+02:00" endTime="2026-09-06T11:09:01.8484755+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8670d417-e72b-4c40-8072-81f296625718" />
+    <UnitTestResult executionId="9b0bba5c-36b2-4740-bebe-fa27d2d978a0" testId="ea16e246-56f0-d34e-7fde-2afa110201cf" testName="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.ShaftRename_RenameFehlerStartetKeinePdfKorrektur" computerName="PCW11X01" duration="00:00:00.0002887" startTime="2026-09-06T11:09:01.8431261+02:00" endTime="2026-09-06T11:09:01.8431261+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9b0bba5c-36b2-4740-bebe-fa27d2d978a0" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.ShaftRename_RuftBatchdienstMitDedupliziertenPdfPfadenAuf" storage="c:\sewer-studio_ki_4.5\.tmp\paket1-2026-09-06\artifacts\bin\auswertungpro.next.ui.tests\release\auswertungpro.next.ui.tests.dll" id="75716588-8a31-c04c-7bb0-18020243dcdc">
+      <Execution id="a64d2bb1-e32f-4f28-8353-51286e1639ae" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\.tmp\paket1-2026-09-06\artifacts\bin\AuswertungPro.Next.UI.Tests\release\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests" name="ShaftRename_RuftBatchdienstMitDedupliziertenPdfPfadenAuf" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.CollectPdfPaths_NimmtPdfFelderAufUndDedupliziert" storage="c:\sewer-studio_ki_4.5\.tmp\paket1-2026-09-06\artifacts\bin\auswertungpro.next.ui.tests\release\auswertungpro.next.ui.tests.dll" id="8b0cc707-81a2-838d-8174-d5c6cbc6849d">
+      <Execution id="37dd2bfa-ad27-4ac3-b979-310da76c54c5" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\.tmp\paket1-2026-09-06\artifacts\bin\AuswertungPro.Next.UI.Tests\release\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests" name="CollectPdfPaths_NimmtPdfFelderAufUndDedupliziert" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.CollectPdfPaths_ArchivkopieIstKeineBeschreibbareArbeitskopie" storage="c:\sewer-studio_ki_4.5\.tmp\paket1-2026-09-06\artifacts\bin\auswertungpro.next.ui.tests\release\auswertungpro.next.ui.tests.dll" id="d415a6c9-3779-fd57-e2af-cf656870c7de">
+      <Execution id="2c9a32b8-d87a-4e71-9c19-3a41bfdba8e3" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\.tmp\paket1-2026-09-06\artifacts\bin\AuswertungPro.Next.UI.Tests\release\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests" name="CollectPdfPaths_ArchivkopieIstKeineBeschreibbareArbeitskopie" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.ShaftRename_FremdesPdf_ErreichtDenSchreibdienstNicht" storage="c:\sewer-studio_ki_4.5\.tmp\paket1-2026-09-06\artifacts\bin\auswertungpro.next.ui.tests\release\auswertungpro.next.ui.tests.dll" id="af3eb0bd-d468-38ed-2426-88ab7c81ddab">
+      <Execution id="03ab939d-72ca-420b-9636-a08e32e32da8" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\.tmp\paket1-2026-09-06\artifacts\bin\AuswertungPro.Next.UI.Tests\release\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests" name="ShaftRename_FremdesPdf_ErreichtDenSchreibdienstNicht" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.ShaftRename_RenameFehlerStartetKeinePdfKorrektur" storage="c:\sewer-studio_ki_4.5\.tmp\paket1-2026-09-06\artifacts\bin\auswertungpro.next.ui.tests\release\auswertungpro.next.ui.tests.dll" id="ea16e246-56f0-d34e-7fde-2afa110201cf">
+      <Execution id="9b0bba5c-36b2-4740-bebe-fa27d2d978a0" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\.tmp\paket1-2026-09-06\artifacts\bin\AuswertungPro.Next.UI.Tests\release\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests" name="ShaftRename_RenameFehlerStartetKeinePdfKorrektur" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.ShaftRename_AktualisiertRecordUndProjektmetadatenOhneDateipfade" storage="c:\sewer-studio_ki_4.5\.tmp\paket1-2026-09-06\artifacts\bin\auswertungpro.next.ui.tests\release\auswertungpro.next.ui.tests.dll" id="738e43bf-9204-f2be-afe5-24c3a9da57d5">
+      <Execution id="8670d417-e72b-4c40-8072-81f296625718" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\.tmp\paket1-2026-09-06\artifacts\bin\AuswertungPro.Next.UI.Tests\release\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests" name="ShaftRename_AktualisiertRecordUndProjektmetadatenOhneDateipfade" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.Build_GruppiertFelderUndSchaltetSanierungsdetailsLive" storage="c:\sewer-studio_ki_4.5\.tmp\paket1-2026-09-06\artifacts\bin\auswertungpro.next.ui.tests\release\auswertungpro.next.ui.tests.dll" id="141e44ed-c55a-f0ef-0c3d-2b891b8de486">
+      <Execution id="8c3d8c47-263a-41e4-8fc4-b7c1e6fae105" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\.tmp\paket1-2026-09-06\artifacts\bin\AuswertungPro.Next.UI.Tests\release\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests" name="Build_GruppiertFelderUndSchaltetSanierungsdetailsLive" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.Build_KonsolidiertEncodingVariantenUndUebergibtAlleSchluesselBeimCommit" storage="c:\sewer-studio_ki_4.5\.tmp\paket1-2026-09-06\artifacts\bin\auswertungpro.next.ui.tests\release\auswertungpro.next.ui.tests.dll" id="69932839-97b9-73f3-4398-bee0f81135bc">
+      <Execution id="243b3511-83a0-45ba-848a-7198f92f0f1f" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\.tmp\paket1-2026-09-06\artifacts\bin\AuswertungPro.Next.UI.Tests\release\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests" name="Build_KonsolidiertEncodingVariantenUndUebergibtAlleSchluesselBeimCommit" />
+    </UnitTest>
+    <UnitTest name="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.Build_OhneViewModel_laesstDropdownFeldWieBisherAlsTextfeld" storage="c:\sewer-studio_ki_4.5\.tmp\paket1-2026-09-06\artifacts\bin\auswertungpro.next.ui.tests\release\auswertungpro.next.ui.tests.dll" id="1af7c9a6-cf8b-930e-f2ee-67f6dd2ccabc">
+      <Execution id="0b1f265d-c89b-4f52-b0d4-337338e8296a" />
+      <TestMethod codeBase="C:\Sewer-Studio_KI_4.5\.tmp\paket1-2026-09-06\artifacts\bin\AuswertungPro.Next.UI.Tests\release\AuswertungPro.Next.UI.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests" name="Build_OhneViewModel_laesstDropdownFeldWieBisherAlsTextfeld" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="af3eb0bd-d468-38ed-2426-88ab7c81ddab" executionId="03ab939d-72ca-420b-9636-a08e32e32da8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="69932839-97b9-73f3-4398-bee0f81135bc" executionId="243b3511-83a0-45ba-848a-7198f92f0f1f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d415a6c9-3779-fd57-e2af-cf656870c7de" executionId="2c9a32b8-d87a-4e71-9c19-3a41bfdba8e3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8b0cc707-81a2-838d-8174-d5c6cbc6849d" executionId="37dd2bfa-ad27-4ac3-b979-310da76c54c5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1af7c9a6-cf8b-930e-f2ee-67f6dd2ccabc" executionId="0b1f265d-c89b-4f52-b0d4-337338e8296a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="141e44ed-c55a-f0ef-0c3d-2b891b8de486" executionId="8c3d8c47-263a-41e4-8fc4-b7c1e6fae105" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="75716588-8a31-c04c-7bb0-18020243dcdc" executionId="a64d2bb1-e32f-4f28-8353-51286e1639ae" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="738e43bf-9204-f2be-afe5-24c3a9da57d5" executionId="8670d417-e72b-4c40-8072-81f296625718" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ea16e246-56f0-d34e-7fde-2afa110201cf" executionId="9b0bba5c-36b2-4740-bebe-fa27d2d978a0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Ergebnisse nicht in einer Liste" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Alle geladenen Ergebnisse" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="9" executed="9" passed="7" failed="2" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 10.0.11)&#xD;
+[xUnit.net 00:00:00.73]   Discovering: AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:00:01.03]   Discovered:  AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:00:01.03]   Starting:    AuswertungPro.Next.UI.Tests&#xD;
+[xUnit.net 00:00:01.14]       Assert.ThrowsAny() Failure: No exception was thrown&#xD;
+[xUnit.net 00:00:01.14]       Expected: typeof(System.Exception)&#xD;
+[xUnit.net 00:00:01.14]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.14]         C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\SchaechteRecordDetailsBuilderTests.cs(254,0): at AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.CollectPdfPaths_ArchivkopieIstKeineBeschreibbareArbeitskopie()&#xD;
+[xUnit.net 00:00:01.14]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:01.14]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.14]       Assert.False() Failure&#xD;
+[xUnit.net 00:00:01.14]       Expected: False&#xD;
+[xUnit.net 00:00:01.14]       Actual:   True&#xD;
+[xUnit.net 00:00:01.14]       Stack Trace:&#xD;
+[xUnit.net 00:00:01.14]         C:\Sewer-Studio_KI_4.5\tests\AuswertungPro.Next.UI.Tests\SchaechteRecordDetailsBuilderTests.cs(234,0): at AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.ShaftRename_FremdesPdf_ErreichtDenSchreibdienstNicht()&#xD;
+[xUnit.net 00:00:01.14]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)&#xD;
+[xUnit.net 00:00:01.14]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)&#xD;
+[xUnit.net 00:00:01.17]   Finished:    AuswertungPro.Next.UI.Tests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="PCW11X01" outcome="Error" timestamp="2026-09-06T11:09:01.8395918+02:00">
+        <Text>[xUnit.net 00:00:01.13]     AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.CollectPdfPaths_ArchivkopieIstKeineBeschreibbareArbeitskopie [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="PCW11X01" outcome="Error" timestamp="2026-09-06T11:09:01.8450357+02:00">
+        <Text>[xUnit.net 00:00:01.14]     AuswertungPro.Next.UI.Tests.SchaechteRecordDetailsBuilderTests.ShaftRename_FremdesPdf_ErreichtDenSchreibdienstNicht [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

@@ -1,5 +1,7 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
+using AuswertungPro.Next.Application.Costs;
+using AuswertungPro.Next.Infrastructure.Export.Excel;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -20,15 +22,13 @@ public static class ProjectPreviewPdfBuilder
     private const string SoftBackground = "#F8FAFC";
 
     private static readonly IReadOnlyDictionary<string, string> ZustandColors =
-        new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["0"] = "#EF0000",
-            ["1"] = "#FF6B00",
-            ["2"] = "#FFF200",
-            ["3"] = "#A9B42D",
-            ["4"] = "#8FD14F",
-            ["ohne"] = "#9CA3AF"
-        };
+        ExcelReportStyle.Zustandsklassen
+            .ToDictionary(
+                rule => rule.Wert,
+                rule => $"#{rule.Farbe[2..]}",
+                StringComparer.Ordinal)
+            .Append(new KeyValuePair<string, string>("ohne", "#9CA3AF"))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
 
     private static readonly string[] AccentPalette =
     [
@@ -105,7 +105,102 @@ public static class ProjectPreviewPdfBuilder
 
             col.Item().Element(c => ComposeDamageCard(c, stats.TopSchaeden));
             col.Item().Element(c => ComposeDnCostCard(c, stats.HaltungDnCosts));
+
+            // Kosten und Verfahren nebeneinander: spart die halbe Hoehe und haelt den
+            // Ausdruck bei zwei Seiten. ShowEntire verhindert, dass ein Block mitten
+            // durchbricht (der Kostenblock stand sonst zerrissen auf zwei Seiten).
+            col.Item().ShowEntire().Row(row =>
+            {
+                row.RelativeItem().Element(c => ComposeKostenCard(c, stats));
+
+                if (stats.HasVerfahren)
+                {
+                    row.ConstantItem(8);
+                    row.RelativeItem().Element(c => ComposeVerfahrenCard(c, stats.Sanierungsverfahren));
+                }
+            });
         });
+    }
+
+    /// <summary>
+    /// Sanierungskosten gegliedert nach Haltungen und Schaechten. Alle Betraege sind
+    /// Nettobetraege — die MWST kommt erst in der Kostenzusammenstellung dazu.
+    /// Deshalb steht "ohne MWST" ausdruecklich in der Ueberschrift.
+    /// </summary>
+    private static void ComposeKostenCard(IContainer container, DashboardStatistics stats)
+    {
+        container
+            .Border(0.7f)
+            .BorderColor(Border)
+            .Background(CardBackground)
+            .Padding(13)
+            .Column(col =>
+            {
+                col.Spacing(6);
+                col.Item().Text("Sanierungskosten (ohne MWST)").FontSize(11).SemiBold().FontColor(TextColor);
+
+                col.Item().Element(c => ComposeKostenZeile(c, "Haltungen", stats.HaltungSanierungsKosten, false));
+                col.Item().Element(c => ComposeKostenZeile(c, "Schächte", stats.SchachtSanierungsKosten, false));
+
+                col.Item().PaddingTop(3).BorderTop(0.7f).BorderColor(Border).PaddingTop(5)
+                    .Element(c => ComposeKostenZeile(c, "Total", stats.TotalCost, true));
+            });
+    }
+
+    private static void ComposeKostenZeile(IContainer container, string label, decimal betrag, bool hervorheben)
+    {
+        container.Row(row =>
+        {
+            var textStyle = row.RelativeItem().AlignMiddle().Text(label).FontSize(9);
+            if (hervorheben)
+                textStyle.SemiBold().FontColor(TextColor);
+            else
+                textStyle.FontColor(MutedText);
+
+            var betragStyle = row.ConstantItem(95).AlignRight().AlignMiddle()
+                .Text(FormatCurrency(betrag)).FontSize(9);
+            if (hervorheben)
+                betragStyle.Bold().FontColor(TextColor);
+            else
+                betragStyle.FontColor(TextColor);
+        });
+    }
+
+    /// <summary>
+    /// Mengen der Sanierungsverfahren (Liner, Kurzliner, Manschetten) aus den
+    /// ausgewaehlten Kostenzeilen der Haltungen. Schachtpositionen sind bewusst
+    /// nicht enthalten — sonst stuenden Rohrmeter und Schachtstueck in einer Zeile.
+    /// </summary>
+    private static void ComposeVerfahrenCard(
+        IContainer container,
+        IReadOnlyList<RehabilitationQuantity> verfahren)
+    {
+        container
+            .Border(0.7f)
+            .BorderColor(Border)
+            .Background(CardBackground)
+            .Padding(13)
+            .Column(col =>
+            {
+                col.Spacing(6);
+                col.Item().Text("Sanierungsverfahren").FontSize(11).SemiBold().FontColor(TextColor);
+
+                foreach (var eintrag in verfahren)
+                {
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeItem().AlignMiddle().Text(eintrag.Label).FontSize(8.5f).FontColor(TextColor);
+                        row.ConstantItem(80).AlignRight().AlignMiddle()
+                            .Text(eintrag.QtyText).FontSize(8.5f).SemiBold().FontColor(TextColor);
+                        row.ConstantItem(70).AlignRight().AlignMiddle()
+                            .Text(eintrag.NetText).FontSize(8.5f).FontColor(MutedText);
+                    });
+                }
+
+                col.Item().PaddingTop(2)
+                    .Text("Mengen aus den ausgewählten Kostenzeilen der Haltungen (CHF ohne MWST).")
+                    .FontSize(7).FontColor(SubtleText);
+            });
     }
 
     private static void ComposeSchaechtePage(IContainer container, ProjectPreview preview)
@@ -124,9 +219,17 @@ public static class ProjectPreviewPdfBuilder
             {
                 row.RelativeItem().Element(c => ComposeMetricCard(c, FormatNumber(stats.SchachtCount), "Schächte", TextColor));
                 row.ConstantItem(8);
-                row.RelativeItem().Element(c => ComposeMetricCard(c, FormatNumber(stats.SchaechteMitMassnahmen), "Schächte mit Massnahmen", TextColor));
+                row.RelativeItem().Element(c => ComposeMetricCard(
+                    c,
+                    $"{FormatNumber(stats.SchaechteSanierenJa)} / {FormatNumber(stats.SchaechteGesamt)}",
+                    "Schächte sanieren",
+                    TextColor));
                 row.ConstantItem(8);
-                row.RelativeItem().Element(c => ComposeMetricCard(c, FormatCurrency(stats.TotalCost), "Sanierungskosten gesamt", TextColor));
+                row.RelativeItem().Element(c => ComposeMetricCard(
+                    c,
+                    FormatCurrency(stats.SchachtSanierungsKosten),
+                    "Kosten Schachtsanierung (ohne MWST)",
+                    TextColor));
             });
 
             col.Item().Element(c => ComposeConditionCard(
@@ -141,13 +244,15 @@ public static class ProjectPreviewPdfBuilder
                 stats.SchachtCount,
                 schachtDringend,
                 schachtUnbekannt,
-                stats.SchaechteMitMassnahmen));
+                stats.SchaechteSanierenJa));
 
             col.Item().Row(row =>
             {
                 row.RelativeItem().Element(c => ComposeMetricCard(c, FormatNumber(schachtDringend), "Dringend Schächte (Z0/Z1)", "#EF0000"));
                 row.ConstantItem(8);
                 row.RelativeItem().Element(c => ComposeMetricCard(c, FormatNumber(schachtUnbekannt), "Zustand unbekannt (ZU)", "#475569"));
+                row.ConstantItem(8);
+                row.RelativeItem().Element(c => ComposeMetricCard(c, FormatCurrency(stats.TotalCost), "Sanierungskosten gesamt (ohne MWST)", TextColor));
             });
         });
     }
@@ -358,7 +463,7 @@ public static class ProjectPreviewPdfBuilder
             .Column(col =>
             {
                 col.Spacing(8);
-                col.Item().Text("Haltungskosten nach DN").FontSize(11).SemiBold().FontColor(TextColor);
+                col.Item().Text("Haltungskosten nach DN (ohne MWST)").FontSize(11).SemiBold().FontColor(TextColor);
 
                 if (buckets.Count == 0)
                 {
@@ -407,14 +512,14 @@ public static class ProjectPreviewPdfBuilder
         int schachtCount,
         int schachtDringend,
         int schachtUnbekannt,
-        int schaechteMitMassnahmen)
+        int schaechteSanierenJa)
     {
         var rows = new[]
         {
             (Label: "Dringend (Z0/Z1)", Value: schachtDringend, Color: "#EF0000"),
             (Label: "Zustand unbekannt (ZU)", Value: schachtUnbekannt, Color: "#9CA3AF"),
-            (Label: "Mit Massnahmen", Value: schaechteMitMassnahmen, Color: Brand),
-            (Label: "Ohne Massnahmen", Value: Math.Max(0, schachtCount - schaechteMitMassnahmen), Color: "#64748B")
+            (Label: "Sanieren: Ja", Value: schaechteSanierenJa, Color: Brand),
+            (Label: "Sanieren: Nein", Value: Math.Max(0, schachtCount - schaechteSanierenJa), Color: "#64748B")
         };
 
         container

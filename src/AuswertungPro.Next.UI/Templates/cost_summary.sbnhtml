@@ -41,6 +41,49 @@
       letter-spacing: 0.04em;
     }
     .info-card .content { white-space: pre-line; }
+
+    /* Kennzahlenstreifen Seite 1 — Hausfarbe wie Titel und Abschnittsleisten. */
+    .kpi-row { display: flex; gap: 10px; margin: 0 0 16px; }
+    .kpi {
+      flex: 1;
+      border: 1px solid #d4d8dc;
+      border-top: 3px solid #0b5e7a;
+      border-radius: 6px;
+      background: #fafbfc;
+      padding: 8px 12px;
+      text-align: right;
+    }
+    .kpi-label {
+      font-size: 8.5pt;
+      color: #5a6a72;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 2px;
+    }
+    .kpi-value { font-size: 13pt; font-weight: 700; color: #0b5e7a; white-space: nowrap; }
+    .kpi-value.kpi-small { font-size: 9.5pt; font-weight: 600; color: #2a4b59; }
+    .kpi.kpi-accent { background: #0b5e7a; border-color: #0b5e7a; }
+    .kpi.kpi-accent .kpi-label { color: #cfe6ee; }
+    .kpi.kpi-accent .kpi-value { color: #ffffff; }
+
+    /* Detailliste: Bauteil-Kopfzeile hervorgehoben, Massnahmen eingerückt darunter. */
+    table.detail tr.detail-head td {
+      font-weight: 700;
+      border-top: 1px solid #0b5e7a;
+      padding-top: 6px;
+    }
+    table.detail tr.detail-measure td {
+      color: #33474f;
+      border-top: none;
+      padding-top: 1px;
+      padding-bottom: 1px;
+    }
+    table.detail tr.detail-measure td:first-child { padding-left: 18px; }
+    table.detail tr.detail-subtotal td {
+      font-weight: 700;
+      background: #eef4f7;
+      border-top: 2px solid #0b5e7a;
+    }
     .filter-chip {
       margin: 0 0 10px;
       border-left: 4px solid #0b5e7a;
@@ -61,7 +104,7 @@
     table { width: 100%; border-collapse: collapse; margin-top: 4px; }
     th, td { padding: 7px 8px; vertical-align: top; }
     thead { display: table-header-group; }
-    tr, .chart-row, .info-card, .textblocks .tb, .totals { break-inside: avoid; page-break-inside: avoid; }
+    tr, .chart-row, .info-card, .kpi-row, .kpi, .textblocks .tb, .totals { break-inside: avoid; page-break-inside: avoid; }
     thead th {
       background: #0b5e7a;
       color: #fff;
@@ -182,6 +225,63 @@
       <div class="content">{{ ObjectBlock }}</div>
     </div>
   </div>
+
+  <!-- Kennzahlenstreifen: die vier Zahlen, wegen denen der Ausdruck gemacht wird,
+       gleich auf Seite 1 statt am Ende der Tabellen. -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">{{ Totals.EntryCountLabel }}</div>
+      <div class="kpi-value">{{ Totals.EntryCount }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Netto</div>
+      <div class="kpi-value">{{ Totals.NetText }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">MwSt.</div>
+      <div class="kpi-value kpi-small">{{ Totals.VatText }}</div>
+    </div>
+    <div class="kpi kpi-accent">
+      <div class="kpi-label">Total inkl. MwSt.</div>
+      <div class="kpi-value">{{ Totals.GrossText }}</div>
+    </div>
+  </div>
+
+  {{ for grp in DetailGroups }}
+    <h2 class="section">Detailliste{{ if grp.Title != "" }} {{ grp.Title }}{{ end }} ({{ grp.EntryCountText }})</h2>
+    <table class="detail">
+      <thead>
+        <tr>
+          <th style="width: 38%;">Bauteil / Massnahme</th>
+          <th style="width: 32%;">Eigentuemer / Lage</th>
+          <th class="right" style="width: 13%;">Menge</th>
+          <th class="right" style="width: 17%;">Netto</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ for e in grp.Entries }}
+          <tr class="detail-head">
+            <td>{{ e.Name }}</td>
+            <td>{{ e.Owner }}{{ if e.Street != "" }} · {{ e.Street }}{{ end }}</td>
+            <td></td>
+            <td class="right">{{ e.TotalText }}</td>
+          </tr>
+          {{ for m in e.Measures }}
+            <tr class="detail-measure">
+              <td>{{ m.Name }}</td>
+              <td></td>
+              <td class="right">{{ m.QtyText }}</td>
+              <td class="right">{{ m.TotalText }}</td>
+            </tr>
+          {{ end }}
+        {{ end }}
+        <tr class="detail-subtotal">
+          <td colspan="3">Zwischentotal {{ grp.Title }}</td>
+          <td class="right">{{ grp.SubtotalText }}</td>
+        </tr>
+      </tbody>
+    </table>
+  {{ end }}
 
   {{ if HoldingDataLines.size > 0 }}
     <h2 class="section">Datenuebersicht (gefilterte Haltungen)</h2>

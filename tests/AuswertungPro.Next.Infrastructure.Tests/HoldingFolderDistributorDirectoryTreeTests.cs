@@ -193,6 +193,112 @@ public sealed class HoldingFolderDistributorDirectoryTreeTests
             destinationRoot, "Altdorf", "2026", "7001-7002", "20260712_7001-7002_DP.pdf")));
     }
 
+    // ── Wiederholung legt keine zweite Datei an (Pruefung 28.09.2026) ─────────
+
+    [Fact]
+    public void DistributeShaftFiles_Zweimal_LegtDasProtokollNurEinmalAb()
+    {
+        using var temp = new TempDirectory();
+        var sourcePdf = Path.Combine(Directory.CreateDirectory(Path.Combine(temp.Path, "Quelle")).FullName, "Schachtprotokoll.pdf");
+        var destinationRoot = Directory.CreateDirectory(Path.Combine(temp.Path, "Ziel")).FullName;
+        WriteShaftPdf(sourcePdf, "74467", new DateTime(2026, 7, 12));
+        var project = CreateProject("Altdorf");
+
+        var erster = Assert.Single(HoldingFolderDistributor.DistributeShaftFiles([sourcePdf], destinationRoot, project: project));
+        var zweiter = Assert.Single(HoldingFolderDistributor.DistributeShaftFiles([sourcePdf], destinationRoot, project: project));
+
+        Assert.True(zweiter.Success, zweiter.Message);
+        Assert.Equal(erster.DestPdfPath, zweiter.DestPdfPath);
+        Assert.Single(Directory.GetFiles(erster.HoldingFolder!, "*.pdf"));
+    }
+
+    [Fact]
+    public void DistributeShaftFiles_Sammel_PDF_meldet_Schachtseiten_vor_dem_ersten_Treffer()
+    {
+        // Eine Schachtseite ohne lesbares Datum vor dem ersten erkannten Protokoll fiel bisher
+        // still weg: Sie gehoerte zu keinem Abschnitt und erschien in keinem Ergebnis.
+        using var temp = new TempDirectory();
+        var sourcePdf = Path.Combine(Directory.CreateDirectory(Path.Combine(temp.Path, "Quelle")).FullName, "Schaechte.pdf");
+        var destinationRoot = Directory.CreateDirectory(Path.Combine(temp.Path, "Ziel")).FullName;
+        using (var builder = new PdfDocumentBuilder())
+        {
+            var font = builder.AddStandard14Font(Standard14Font.Helvetica);
+            var ohneDatum = builder.AddPage(PageSize.A4);
+            ohneDatum.AddText("Schachtprotokoll Schacht Nr. 74467", 18, new PdfPoint(40, 740), font);
+            var mitDatum = builder.AddPage(PageSize.A4);
+            mitDatum.AddText("Projekt: Test Datum: 12.07.2026", 12, new PdfPoint(40, 780), font);
+            mitDatum.AddText("Schachtprotokoll Schacht Nr. 74468", 18, new PdfPoint(40, 740), font);
+            File.WriteAllBytes(sourcePdf, builder.Build());
+        }
+
+        var ergebnisse = HoldingFolderDistributor.DistributeShaftFiles([sourcePdf], destinationRoot, project: CreateProject("Altdorf"));
+
+        Assert.Contains(ergebnisse, r => r.Success);
+        var verloren = Assert.Single(ergebnisse, r => !r.Success);
+        Assert.Contains("Datum nicht gefunden", verloren.Message, StringComparison.Ordinal);
+        Assert.Contains("Seite 1", verloren.Message, StringComparison.Ordinal);
+        Assert.Contains("74467", verloren.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DistributeShaftFiles_Sammel_PDF_Deckblatt_bleibt_still()
+    {
+        using var temp = new TempDirectory();
+        var sourcePdf = Path.Combine(Directory.CreateDirectory(Path.Combine(temp.Path, "Quelle")).FullName, "Schaechte.pdf");
+        var destinationRoot = Directory.CreateDirectory(Path.Combine(temp.Path, "Ziel")).FullName;
+        using (var builder = new PdfDocumentBuilder())
+        {
+            var font = builder.AddStandard14Font(Standard14Font.Helvetica);
+            var deckblatt = builder.AddPage(PageSize.A4);
+            deckblatt.AddText("Inhaltsverzeichnis", 18, new PdfPoint(40, 740), font);
+            var mitDatum = builder.AddPage(PageSize.A4);
+            mitDatum.AddText("Projekt: Test Datum: 12.07.2026", 12, new PdfPoint(40, 780), font);
+            mitDatum.AddText("Schachtprotokoll Schacht Nr. 74468", 18, new PdfPoint(40, 740), font);
+            File.WriteAllBytes(sourcePdf, builder.Build());
+        }
+
+        var ergebnisse = HoldingFolderDistributor.DistributeShaftFiles([sourcePdf], destinationRoot, project: CreateProject("Altdorf"));
+
+        Assert.All(ergebnisse, r => Assert.True(r.Success, r.Message));
+    }
+
+    [Fact]
+    public void DistributeDichtheitFiles_Zweimal_LegtDasProtokollNurEinmalAb()
+    {
+        using var temp = new TempDirectory();
+        var sourcePdf = Path.Combine(Directory.CreateDirectory(Path.Combine(temp.Path, "Quelle")).FullName, "Dichtheit.pdf");
+        var destinationRoot = Directory.CreateDirectory(Path.Combine(temp.Path, "Ziel")).FullName;
+        WriteDichtheitPdf(sourcePdf);
+        var project = CreateProject("Altdorf");
+        AddHolding(project, "6927-6928");
+
+        var erster = Assert.Single(HoldingFolderDistributor.DistributeDichtheitFiles([sourcePdf], destinationRoot, project: project));
+        var zweiter = Assert.Single(HoldingFolderDistributor.DistributeDichtheitFiles([sourcePdf], destinationRoot, project: project));
+
+        Assert.True(zweiter.Success, zweiter.Message);
+        Assert.Equal(erster.DestPdfPath, zweiter.DestPdfPath);
+        Assert.Single(Directory.GetFiles(erster.HoldingFolder!, "*.pdf"));
+    }
+
+    [Fact]
+    public void DistributeDichtheitFiles_SammelberichtZweimal_LegtJedeHaltungNurEinmalAb()
+    {
+        using var temp = new TempDirectory();
+        var sourcePdf = Path.Combine(Directory.CreateDirectory(Path.Combine(temp.Path, "Quelle")).FullName, "Dichtheit_Mehrere.pdf");
+        var destinationRoot = Directory.CreateDirectory(Path.Combine(temp.Path, "Ziel")).FullName;
+        WriteMultiDichtheitPdf(sourcePdf, ("6928", "6927"), ("7002", "7001"));
+        var project = CreateProject("Altdorf");
+        AddHolding(project, "6927-6928");
+        AddHolding(project, "7001-7002");
+
+        HoldingFolderDistributor.DistributeDichtheitFiles([sourcePdf], destinationRoot, project: project);
+        var zweiter = HoldingFolderDistributor.DistributeDichtheitFiles([sourcePdf], destinationRoot, project: project);
+
+        Assert.All(zweiter, result => Assert.True(result.Success, result.Message));
+        Assert.Single(Directory.GetFiles(Path.Combine(destinationRoot, "6927-6928"), "*.pdf"));
+        Assert.Single(Directory.GetFiles(Path.Combine(destinationRoot, "7001-7002"), "*.pdf"));
+    }
+
     private static (string TxtPath, string VideoFolder, string DestinationRoot) CreateTxtFixture(
         string tempRoot)
     {

@@ -1,4 +1,8 @@
+import base64
+import io
 from types import SimpleNamespace
+
+from PIL import Image
 
 from sidecar.routes import warmup
 
@@ -20,6 +24,17 @@ def _qualification(*, qualified: bool) -> dict:
 
 def test_warmup_loads_all_sidecar_models_including_classifier(monkeypatch):
     calls: list[str] = []
+
+    def dino_with_real_proposal_requirement(image_base64, prompts, box_threshold, text_threshold):
+        image = Image.open(io.BytesIO(base64.b64decode(image_base64)))
+        # Swin-B: vier Feature-Stufen (Stride 8/16/32/64), 900 Queries.
+        # torch.topk kann nur arbeiten, wenn mindestens so viele Positionen bestehen.
+        width, height = image.size
+        positions = sum(((width + stride - 1) // stride) * ((height + stride - 1) // stride)
+                        for stride in (8, 16, 32, 64))
+        if positions < 900:
+            raise RuntimeError("selected index k out of range")
+        calls.append("dino")
 
     monkeypatch.setattr(
         warmup.detector_qualification,
@@ -44,7 +59,7 @@ def test_warmup_loads_all_sidecar_models_including_classifier(monkeypatch):
     monkeypatch.setattr(
         warmup.dino_wrapper,
         "detect",
-        lambda image_base64, prompts, box_threshold, text_threshold: calls.append("dino"),
+        dino_with_real_proposal_requirement,
     )
     monkeypatch.setattr(warmup.sam_wrapper, "_resolve_device", lambda: "cpu")
     monkeypatch.setattr(
@@ -69,6 +84,7 @@ def test_warmup_loads_all_sidecar_models_including_classifier(monkeypatch):
         "reason": None,
     }
     assert result["warmup"]["classifier"] == "ok"
+    assert result["warmup"]["dino"] == "ok"
     assert "classifier" in result["loaded"]
 
 
@@ -94,6 +110,37 @@ def test_warmup_does_not_mark_classifier_loaded_when_no_classifier_model(monkeyp
 
     assert result["warmup"]["classifier"].startswith("fehler:")
     assert "classifier" not in result["loaded"]
+
+
+def test_warmup_does_not_mark_degraded_dino_as_loaded(monkeypatch):
+    monkeypatch.setattr(
+        warmup.detector_qualification,
+        "evaluate_active_detector",
+        lambda: _qualification(qualified=True),
+    )
+    monkeypatch.setattr(warmup.yolo_wrapper, "detect", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(warmup.yolo_wrapper, "classify", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(warmup.yolo_wrapper, "get_classifier_status", lambda: {"loaded": True})
+    monkeypatch.setattr(
+        warmup.dino_wrapper,
+        "detect",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            degraded=True,
+            error="Gewichte fehlen",
+        ),
+    )
+    monkeypatch.setattr(warmup.sam_wrapper, "_resolve_device", lambda: "cpu")
+    monkeypatch.setattr(warmup.sam_wrapper, "_load_sam_on", lambda _device: (object(), None))
+    monkeypatch.setattr(
+        warmup.gpu_manager,
+        "ensure_loaded",
+        lambda _slot, _device, loader: SimpleNamespace(model=loader()[0], processor=None),
+    )
+
+    result = warmup.warmup()
+
+    assert result["warmup"]["dino"].startswith("fehler:")
+    assert "dino" not in result["loaded"]
 
 
 def test_warmup_skips_unqualified_yolo_but_warms_other_models(monkeypatch):

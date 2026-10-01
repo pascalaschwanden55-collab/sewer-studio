@@ -39,7 +39,7 @@ public static class VsaCodeExplorerBreadcrumbRenderer
         return new TextBlock
         {
             Text = element.Text,
-            FontSize = 10,
+            FontSize = 11,
             Foreground = targets.Brushes.MutedBrush,
             Margin = new Thickness(4, 0, 4, 0),
             VerticalAlignment = VerticalAlignment.Center

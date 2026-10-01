@@ -20,7 +20,14 @@ public sealed partial class ServiceProvider
         => _fullBackupComposition.ManifestIntegrity;
 
     public IFullBackupSourcesProvider BackupSources { get; }
+    public IBackupAdditionalFolders BackupAdditionalFolders { get; }
 
     public IFullBackupService FullBackup
         => _fullBackupComposition.FullBackup;
+
+    private static (IBackupAdditionalFolders, IFullBackupSourcesProvider) CreateBackupSources(IRepositoryRootLocator locator)
+    {
+        var folders = new BackupAdditionalFoldersStore(AppSettings.AppDataDir);
+        return (folders, new FullBackupSourcesProvider(locator, getAdditionalRoots: folders.Load));
+    }
 }

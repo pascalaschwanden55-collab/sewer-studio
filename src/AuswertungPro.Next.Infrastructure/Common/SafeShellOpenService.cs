@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Infrastructure.Media;
 
 namespace AuswertungPro.Next.Infrastructure.Common;
 
@@ -8,7 +9,6 @@ public sealed class SafeShellOpenService : ISafeShellOpenService
     private static readonly HashSet<string> AllowedFileExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".webp", ".tif", ".tiff",
-        ".mp4", ".mpg", ".mpeg", ".avi", ".mov", ".mkv",
         ".xlsx", ".csv", ".txt", ".json"
     };
 
@@ -42,14 +42,18 @@ public sealed class SafeShellOpenService : ISafeShellOpenService
         }
 
         var extension = Path.GetExtension(fullPath);
-        if (!AllowedFileExtensions.Contains(extension))
+        if (!IsAllowedFileExtension(extension))
         {
-            error = $"Dateityp nicht zum direkten Oeffnen freigegeben: {extension}";
+            error = $"Dateityp nicht zum direkten Öffnen freigegeben: {extension}";
             return false;
         }
 
         return Start(fullPath, out error);
     }
+
+    internal static bool IsAllowedFileExtension(string? extension)
+        => AllowedFileExtensions.Contains(extension ?? string.Empty)
+           || MediaFileTypes.HasVideoExtension(extension);
 
     private static bool Start(string fullPath, out string? error)
     {

@@ -37,7 +37,6 @@ public sealed partial class MeasureBlockVm : ObservableObject
     public IRelayCommand<CostLineVm> RemoveLineCommand { get; }
     public IRelayCommand<CostLineVm> MoveLineUpCommand { get; }
     public IRelayCommand<CostLineVm> MoveLineDownCommand { get; }
-    public IRelayCommand SortLinesCommand { get; }
 
     public event Action? BlockChanged;
 
@@ -53,7 +52,6 @@ public sealed partial class MeasureBlockVm : ObservableObject
         RemoveLineCommand = new RelayCommand<CostLineVm>(RemoveLine);
         MoveLineUpCommand = new RelayCommand<CostLineVm>(MoveLineUp);
         MoveLineDownCommand = new RelayCommand<CostLineVm>(MoveLineDown);
-        SortLinesCommand = new RelayCommand(SortLines);
 
         if (template is not null)
         {
@@ -116,7 +114,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
         if (invalidLine is not null)
         {
             throw new InvalidOperationException(
-                $"Die ausgewaehlte Kostenposition '{invalidLine.Text}' enthaelt eine negative Menge oder einen negativen Preis.");
+                $"Die ausgewählte Kostenposition '{invalidLine.Text}' enthält eine negative Menge oder einen negativen Preis.");
         }
 
         var lines = Lines.Select(l => new CostLine
@@ -386,7 +384,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
         var missing = Lines.Where(l => l.Selected && l.PriceMissing).Select(l => l.Text).Distinct().ToList();
         PriceHint = missing.Count == 0
             ? ""
-            : "Preis nicht gefunden fuer: " + string.Join(", ", missing);
+            : "Preis nicht gefunden für: " + string.Join(", ", missing);
     }
 
     private CostLineVm CreateLine(MeasureLineTemplate templateLine)

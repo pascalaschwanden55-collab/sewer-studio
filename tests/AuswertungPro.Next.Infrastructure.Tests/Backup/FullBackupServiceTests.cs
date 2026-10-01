@@ -175,15 +175,17 @@ public sealed class FullBackupServiceTests : IDisposable
         Assert.False(File.Exists(Path.Combine(backupRoot, "verwaist.txt")));
         Assert.True(File.Exists(Path.Combine(backupRoot, "manifest.json.bak")));
 
-        // Verwaistes ist nicht weg, sondern im datierten Versions-Stand gelandet.
+        // Nur der aktuelle Stand: Verwaistes wird nicht als alter Versionsstand aufbewahrt.
         var versionsRoot = Path.Combine(backupRoot, BackupVersionRetention.VersionsFolderName);
-        var versioniert = Directory.EnumerateFiles(versionsRoot, "verwaist.txt", SearchOption.AllDirectories).Single();
-        Assert.Equal("weg", File.ReadAllText(versioniert));
+        Assert.Empty(Directory.EnumerateFiles(versionsRoot, "verwaist.txt", SearchOption.AllDirectories));
+        Assert.DoesNotContain(
+            Directory.EnumerateDirectories(versionsRoot),
+            dir => BackupVersionRetention.IsStandName(Path.GetFileName(dir)));
 
-        // Dritter Lauf: _Versionen bleibt erhalten (wird nicht als verwaist abgeraeumt).
+        // Dritter Lauf bleibt erfolgreich und legt ebenfalls keinen Altstand an.
         var third = await service.RunAsync(targetParent);
         Assert.True(third.Success, third.Error);
-        Assert.True(File.Exists(versioniert));
+        Assert.Empty(Directory.EnumerateFiles(versionsRoot, "verwaist.txt", SearchOption.AllDirectories));
     }
 
     private sealed class RecordingGitCommitResolver(string commit) : IGitCommitResolver
@@ -358,10 +360,8 @@ public sealed class FullBackupServiceTests : IDisposable
             .Where(n => BackupVersionRetention.IsStandName(n!))
             .OrderBy(n => n, StringComparer.Ordinal)
             .ToArray();
-        Assert.Equal(BackupVersionRetention.MaxStaende, staende.Length);
-        // Die aeltesten Staende sind entfernt, die neuesten geblieben.
-        Assert.DoesNotContain("2026-01-01_000000", staende);
-        Assert.Contains("2026-01-01_001200", staende);
+        // Nur der aktuelle Stand wird gesichert: kein alter Versionsstand bleibt.
+        Assert.Empty(staende);
         // Fremde Ordner ohne Stand-Muster werden nie geloescht (sichere Richtung).
         Assert.True(File.Exists(Path.Combine(fremd, "fremd.txt")));
     }
@@ -464,7 +464,7 @@ public sealed class FullBackupServiceTests : IDisposable
         var result = await service.RunAsync(targetParent);
 
         Assert.False(result.Success);
-        Assert.Contains("Verknuepfung", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verknüpfung", result.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(Directory.EnumerateFileSystemEntries(foreign));
     }
 
@@ -514,6 +514,27 @@ public sealed class FullBackupServiceTests : IDisposable
         Assert.False(result.Success);
         Assert.Contains("Marker wurde", result.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(2, guard.Calls);
+    }
+
+    [Fact]
+    public async Task Erneute_Sicherung_repariert_Beschaedigung_bei_gleicher_Groesse_und_Zeit()
+    {
+        var sources = CreateSourceTree();
+        var parent = Path.Combine(_root, "repair-corruption");
+        var service = new FullBackupService(() => sources);
+        Assert.True((await service.RunAsync(parent)).Success);
+        var root = Path.Combine(parent, BackupPlanBuilder.TargetFolderName);
+        var file = Path.Combine(root, "Programm", "src", "app.cs");
+        var stamp = File.GetLastWriteTimeUtc(file);
+        File.WriteAllText(file, "evil");
+        File.SetLastWriteTimeUtc(file, stamp);
+        Assert.False((await BackupManifestIntegrity.VerifyAsync(root)).IsValid);
+
+        var repaired = await service.RunAsync(parent);
+
+        Assert.True(repaired.Success, repaired.Error);
+        Assert.Equal("code", File.ReadAllText(file));
+        Assert.True((await BackupManifestIntegrity.VerifyAsync(root)).IsValid);
     }
 
     private FullBackupSources CreateSourceTree()

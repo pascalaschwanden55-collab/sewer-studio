@@ -153,12 +153,12 @@ internal static class WpfIsolatedTestProcess
     public static void MarkChildScenarioCompleted()
     {
         if (!IsChildProcess)
-            throw new InvalidOperationException("Die WPF-Bestaetigung darf nur der Kindprozess schreiben.");
+            throw new InvalidOperationException("Die WPF-Bestätigung darf nur der Kindprozess schreiben.");
 
         var receiptPath = Environment.GetEnvironmentVariable(ChildReceiptPathVariable);
         var receiptToken = Environment.GetEnvironmentVariable(ChildReceiptTokenVariable);
         if (string.IsNullOrWhiteSpace(receiptPath) || string.IsNullOrWhiteSpace(receiptToken))
-            throw new InvalidOperationException("Die WPF-Bestaetigung des Kindprozesses ist unvollstaendig.");
+            throw new InvalidOperationException("Die WPF-Bestätigung des Kindprozesses ist unvollständig.");
 
         using var stream = new FileStream(
             receiptPath,
@@ -228,8 +228,8 @@ internal static class WpfIsolatedTestProcess
                 TaskContinuationOptions.OnlyOnFaulted,
                 TaskScheduler.Default);
             return (
-                "Ausgabe konnte nicht vollstaendig gelesen werden.",
-                "Fehlerausgabe konnte nicht vollstaendig gelesen werden.");
+                "Ausgabe konnte nicht vollständig gelesen werden.",
+                "Fehlerausgabe konnte nicht vollständig gelesen werden.");
         }
 
         try
@@ -240,8 +240,8 @@ internal static class WpfIsolatedTestProcess
         catch (Exception ex) when (ex is OperationCanceledException or IOException or ObjectDisposedException)
         {
             return (
-                "Ausgabe konnte nicht vollstaendig gelesen werden.",
-                $"Fehlerausgabe konnte nicht vollstaendig gelesen werden: {ex.Message}");
+                "Ausgabe konnte nicht vollständig gelesen werden.",
+                $"Fehlerausgabe konnte nicht vollständig gelesen werden: {ex.Message}");
         }
     }
 
@@ -277,8 +277,8 @@ internal sealed record WpfIsolatedTestProcessResult(
             ? "Zeitlimit ueberschritten"
             : $"Exit-Code {ExitCode?.ToString() ?? "unbekannt"}";
         var receipt = ChildScenarioCompleted
-            ? "Szenario-Bestaetigung vorhanden"
-            : "Szenario-Bestaetigung fehlt";
+            ? "Szenario-Bestätigung vorhanden"
+            : "Szenario-Bestätigung fehlt";
         return $"Isolierter WPF-Test fehlgeschlagen ({status}; {receipt}).\n\nstdout:\n{StandardOutput}\n\nstderr:\n{StandardError}";
     }
 }

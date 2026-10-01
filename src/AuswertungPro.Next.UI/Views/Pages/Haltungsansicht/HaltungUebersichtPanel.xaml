@@ -1,0 +1,208 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.Haltungsansicht.HaltungUebersichtPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
+             xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
+             xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
+             x:Name="Root">
+    <UserControl.Resources>
+        <local:SchadenMeterConverter x:Key="SchadenMeterConv"/>
+        <local:SchadenKlartextConverter x:Key="SchadenKlartextConv"/>
+        <local:SchadenCodeConverter x:Key="SchadenCodeConv"/>
+        <local:SchadenStufeQuelleConverter x:Key="SchadenStufeQuelleConv"/>
+        <local:ZustandsklasseBrushConverter x:Key="ZkBrushConv"/>
+        <local:ZahlSichtbarConverter x:Key="ZahlSichtbar"/>
+        <local:FaktWertConverter x:Key="FaktWert"/>
+        <local:FaktZusammenConverter x:Key="FaktZusammen"/>
+        <dp:ZustandsklasseInkConverter x:Key="ZkInkConv"/>
+        <dp:ZustandsklasseChipTextConverter x:Key="ZkChipTextConv"/>
+        <Style x:Key="FaktLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource TextXS}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+        </Style>
+        <Style x:Key="FaktWertStil" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontFamily" Value="{DynamicResource FontMono}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+    </UserControl.Resources>
+    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1" CornerRadius="{DynamicResource RadiusL}" Padding="12">
+        <Grid>
+            <!-- Die Grafik erhaelt die freie Hoehe. Eckdaten und Schadenliste bleiben
+                 in einem eigenen, bei Bedarf aufklappbaren Bildlauf erreichbar. -->
+            <Grid x:Name="Inhalt"
+                          DataContext="{Binding Record, ElementName=Root}">
+                <!-- Task 6: Ohne gewaehlte Haltung bleibt der ganze Inhalt weg. Sonst stehen leere
+                     Beschriftungen da, und eine Feldbindung ohne Datensatz zeigt den Fehltext
+                     "{DependencyProperty.UnsetValue}". -->
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Kopf: Titel, Haltungsname, Zustandsklasse als Chip mit lesbarer Tinte -->
+                    <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                        <Border DockPanel.Dock="Right" HorizontalAlignment="Right" MinWidth="34" Height="22" Padding="6,0"
+                                CornerRadius="{DynamicResource RadiusS}"
+                                Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}"
+                                ToolTip="Zustandsklasse">
+                            <!-- Nova-Fixwelle 2b (C1): Derselbe Konverter wie in der Tabellenmarke.
+                                 Mit StringFormat stand bei einer leeren oder unbekannten Klasse ein
+                                 nacktes "Z" da; jetzt ist es der Gedankenstrich "nicht berechnet". -->
+                            <TextBlock Text="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkChipTextConv}}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       FontSize="{DynamicResource TextS}" FontWeight="SemiBold"
+                                       Foreground="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkInkConv}}"/>
+                        </Border>
+                        <TextBlock Text="Übersicht" FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Fields[Haltungsname]}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+
+                    <!-- Die Meterachse nutzt die freie Hoehe; Klartexte bleiben in Bildschirmgroesse.
+                         Bei vielen Beobachtungen scrollt die ganze Grafik ohne verkleinerte Schrift. -->
+                    <local:HaltungsgrafikControl Grid.Row="1" Margin="0,0,0,8"
+                                                 NurRohr="True" MitKlartext="True" MinHeight="240"
+                                                 FotoOeffnen="{Binding FotoOeffnen, ElementName=Root}"
+                                                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                                 Record="{Binding Record, ElementName=Root}"
+                                                 Entries="{Binding Entries, ElementName=Root}"
+                                                 Catalog="{Binding Catalog, ElementName=Root}"/>
+                    <Expander Grid.Row="2" Header="Eckdaten und primäre Schäden" IsExpanded="False">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="300">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                    <!-- Eckdaten; ein leeres Feld zeigt einen Gedankenstrich statt einer nackten Einheit -->
+                    <UniformGrid Grid.Row="0" Columns="2" Margin="0,0,0,8">
+                        <StackPanel Margin="0,0,8,6"><TextBlock Text="Schacht oben" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Schacht_oben], Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                        <StackPanel Margin="0,0,0,6"><TextBlock Text="Schacht unten" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Schacht_unten], Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                        <StackPanel Margin="0,0,8,6"><TextBlock Text="Material" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Rohrmaterial], Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                        <StackPanel Margin="0,0,0,6"><TextBlock Text="DN / Profil" Style="{StaticResource FaktLabel}"/>
+                            <TextBlock Style="{StaticResource FaktWertStil}">
+                                <TextBlock.Text>
+                                    <MultiBinding Converter="{StaticResource FaktZusammen}">
+                                        <Binding Path="Fields[DN_mm]" Mode="OneWay"/>
+                                        <Binding Path="Fields[Profiltyp]" Mode="OneWay"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,8,6"><TextBlock Text="Länge" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Haltungslaenge_m], Converter={StaticResource FaktWert}, ConverterParameter=m}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                        <StackPanel Margin="0,0,0,6"><TextBlock Text="Inspektion" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding Fields[Datum_Jahr], Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                        <StackPanel Margin="0,0,8,6"><TextBlock Text="Prüfung" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding PruefungText, ElementName=Root, Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                        <StackPanel Margin="0,0,0,6"><TextBlock Text="Video" Style="{StaticResource FaktLabel}"/><TextBlock Text="{Binding VideoText, ElementName=Root, Converter={StaticResource FaktWert}}" Style="{StaticResource FaktWertStil}"/></StackPanel>
+                    </UniformGrid>
+
+                    <TextBlock Grid.Row="1" Text="Primäre Schäden" FontSize="{DynamicResource TextM}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}" Margin="0,4,0,6"/>
+
+                    <!-- Schadensliste: nur BA-/BB-Schaeden, schwerste zuerst.
+                         Doppelklick oeffnet die Beobachtungen wie in der Haltungsansicht. -->
+                    <ListBox Grid.Row="2" ItemsSource="{Binding Schaeden, ElementName=Root}" BorderThickness="0" Background="Transparent"
+                             MouseDoubleClick="Schaden_MouseDoubleClick" AutomationProperties.Name="Primäre Schäden"
+                             ToolTip="Doppelklick öffnet die Beobachtungen"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,2">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="{DynamicResource RadiusS}"
+                                                Padding="6,2" Margin="0,0,8,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Converter={StaticResource SchadenCodeConv}}" FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold"
+                                                       FontSize="{DynamicResource TextS}" Foreground="{DynamicResource TextBrush}"/>
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{Binding Converter={StaticResource SchadenKlartextConv}}"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Converter={StaticResource SchadenMeterConv}}"
+                                                   FontFamily="{DynamicResource FontMono}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <!-- Zweite Zeile: Stufe, Quelle (fachlich/KI) und Freigabestatus -->
+                                    <TextBlock Text="{Binding Converter={StaticResource SchadenStufeQuelleConv}}"
+                                               FontSize="{DynamicResource TextXS}" Foreground="{DynamicResource MutedBrush}"
+                                               Margin="34,0,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <uc:EmptyStateControl Grid.Row="3"
+                                          IsHitTestVisible="False"
+                                          Icon="&#xE73E;"
+                                          Title="Keine Schäden"
+                                          Message="Keine baulichen oder betrieblichen Schäden erfasst.">
+                        <uc:EmptyStateControl.Style>
+                            <Style TargetType="uc:EmptyStateControl">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Schaeden.Count, ElementName=Root}" Value="0">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </uc:EmptyStateControl.Style>
+                    </uc:EmptyStateControl>
+
+                    <!-- KI-Hinweis: nur sichtbar, solange die Auswahl offene KI-Vorschlaege hat -->
+                    <Border Grid.Row="4" Background="{DynamicResource KiSubtleBrush}" CornerRadius="{DynamicResource RadiusM}" Padding="10,8" Margin="0,8,0,0"
+                            Visibility="{Binding OffeneKiBefunde, ElementName=Root, Converter={StaticResource ZahlSichtbar}}">
+                        <StackPanel>
+                            <TextBlock Text="KI-Vorschläge warten auf fachliche Bestätigung" TextWrapping="Wrap"
+                                       FontWeight="SemiBold" Foreground="{DynamicResource KiTextBrush}"/>
+                            <TextBlock Text="{Binding OffeneKiBefunde, ElementName=Root, StringFormat={}{0} offen. Die Ampel wird erst grün\, wenn zwei unabhängige Belegquellen vorliegen und du bestätigt hast.}" TextWrapping="Wrap" FontSize="{DynamicResource TextS}" Foreground="{DynamicResource KiTextBrush}"/>
+                            <Button Content="Im Player prüfen" Click="ImPlayer_Click" Style="{StaticResource ToolbarButtonAccent}" HorizontalAlignment="Left" Margin="0,6,0,0" ToolTip="Video dieser Haltung im Player öffnen"/>
+                        </StackPanel>
+                    </Border>
+                            </Grid>
+                        </ScrollViewer>
+                    </Expander>
+                </Grid>
+            </Grid>
+
+            <uc:EmptyStateControl x:Name="Leerzustand"
+                                  IsHitTestVisible="False"
+                                  Icon="&#xE8A5;"
+                                  Title="Keine Haltung gewählt"
+                                  Message="Links eine Zeile wählen.">
+                <uc:EmptyStateControl.Style>
+                    <Style TargetType="uc:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Record, ElementName=Root}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </uc:EmptyStateControl.Style>
+            </uc:EmptyStateControl>
+        </Grid>
+    </Border>
+</UserControl>

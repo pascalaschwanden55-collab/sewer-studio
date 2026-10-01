@@ -14,7 +14,7 @@ public sealed class OverviewProjectStatusPolicyTests
     public void Build_UngespeicherteAenderungen_WennDirty()
     {
         Assert.Equal(
-            "Ungespeicherte Aenderungen",
+            "Ungespeicherte Änderungen",
             OverviewProjectStatusPolicy.Build(isDirty: true, hasPersistedProject: true));
     }
 
@@ -22,7 +22,7 @@ public sealed class OverviewProjectStatusPolicyTests
     public void Build_UngespeicherteAenderungen_HatVorrangVorNichtGespeichert()
     {
         Assert.Equal(
-            "Ungespeicherte Aenderungen",
+            "Ungespeicherte Änderungen",
             OverviewProjectStatusPolicy.Build(isDirty: true, hasPersistedProject: false));
     }
 

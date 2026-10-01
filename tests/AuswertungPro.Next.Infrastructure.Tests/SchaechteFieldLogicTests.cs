@@ -104,6 +104,62 @@ public sealed class SchaechteFieldLogicTests
         Assert.Null(result);
     }
 
+    // Echte Datenfelder wie "Innen-Nr" duerfen beim Durchnummerieren nicht
+    // mit 1, 2, 3 ueberschrieben werden: Die echte Nummernspalte gewinnt.
+    [Fact]
+    public void ResolveNrColumnName_bevorzugt_die_echte_Nummernspalte_vor_einem_Namensfetzen()
+    {
+        var cols = new List<string> { "Innen-Nr", "Strasse", "NR." };
+
+        var result = SchaechteFieldLogic.ResolveNrColumnName(cols, System.Array.Empty<SchachtRecord>());
+
+        Assert.Equal("NR.", result);
+    }
+
+    [Theory]
+    [InlineData("NR")]
+    [InlineData("NR.")]
+    [InlineData("Nr.")]
+    [InlineData(" nr ")]
+    public void ResolveNrColumnName_erkennt_die_gaengigen_Schreibweisen(string spalte)
+    {
+        var result = SchaechteFieldLogic.ResolveNrColumnName(
+            new List<string> { "Strasse", spalte },
+            System.Array.Empty<SchachtRecord>());
+
+        Assert.Equal(spalte, result);
+    }
+
+    [Fact]
+    public void ResolveNrColumnName_waehlt_bei_zwei_Schreibweisen_die_grossgeschriebene()
+    {
+        var cols = new List<string> { "Nr.", "NR." };
+
+        var result = SchaechteFieldLogic.ResolveNrColumnName(cols, System.Array.Empty<SchachtRecord>());
+
+        Assert.Equal("NR.", result);
+    }
+
+    [Fact]
+    public void ResolveNrColumnName_bevorzugt_die_Spaltenliste_vor_den_Recordfeldern()
+    {
+        var record = RecordWith(("Innen-Nr", "74466"), ("NR.", "1"));
+
+        var result = SchaechteFieldLogic.ResolveNrColumnName(new List<string> { "NR." }, new[] { record });
+
+        Assert.Equal("NR.", result);
+    }
+
+    [Fact]
+    public void ResolveNrColumnName_nimmt_aus_den_Recordfeldern_ebenfalls_die_echte_Spalte()
+    {
+        var record = RecordWith(("Innen-Nr", "74466"), ("NR.", "1"));
+
+        var result = SchaechteFieldLogic.ResolveNrColumnName(System.Array.Empty<string>(), new[] { record });
+
+        Assert.Equal("NR.", result);
+    }
+
     // -----------------------------------------------------------------------
     // MatchesSearch
     // -----------------------------------------------------------------------

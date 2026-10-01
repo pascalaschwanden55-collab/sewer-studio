@@ -19,9 +19,14 @@ public sealed class ImportArchitectureGuardTests
 
         Assert.Contains("public IKanalImportDistributor KanalImportDistributor", provider);
         Assert.Contains("KanalImportDistributor = new KanalImportDistributionService()", provider);
-        Assert.Contains("private readonly IKanalImportDistributor _kanalDistributor;", orchestrator);
-        Assert.Contains("_kanalDistributor.Distribute(", orchestrator);
+        // Die Medienphase des Imports verteilt; auch sie nur ueber den injizierten Dienst.
+        var mediaPhase = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "ImportMediaPhase.cs"));
+        Assert.Contains("new ImportMediaPhase(", orchestrator);
+        Assert.Contains("private readonly IKanalImportDistributor _kanalDistributor;", mediaPhase);
+        Assert.Contains("_kanalDistributor.Distribute(", mediaPhase);
         Assert.DoesNotContain("KanalImportDistributor.Distribute(", orchestrator);
+        Assert.DoesNotContain("KanalImportDistributor.Distribute(", mediaPhase);
         Assert.Contains("private static readonly KanalImportDistributionService DefaultService", facade);
         Assert.DoesNotContain("File.Copy", facade);
         Assert.Contains("public sealed class KanalImportDistributionService : IKanalImportDistributor", service);
@@ -42,9 +47,13 @@ public sealed class ImportArchitectureGuardTests
 
         Assert.Contains("public IDichtheitImportDistributor DichtheitImportDistributor", provider);
         Assert.Contains("DichtheitImportDistributor = new DichtheitImportDistributionService()", provider);
-        Assert.Contains("private readonly IDichtheitImportDistributor _dichtheitDistributor;", orchestrator);
-        Assert.Contains("_dichtheitDistributor.Distribute(", orchestrator);
+        var mediaPhase = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.Infrastructure", "Import", "ImportMediaPhase.cs"));
+        Assert.Contains("new ImportMediaPhase(", orchestrator);
+        Assert.Contains("private readonly IDichtheitImportDistributor _dichtheitDistributor;", mediaPhase);
+        Assert.Contains("_dichtheitDistributor.Distribute(", mediaPhase);
         Assert.DoesNotContain("DichtheitImportDistributor.Distribute(", orchestrator);
+        Assert.DoesNotContain("DichtheitImportDistributor.Distribute(", mediaPhase);
         Assert.Contains("private static readonly DichtheitImportDistributionService DefaultService", facade);
         Assert.DoesNotContain("File.Copy", facade);
         Assert.Contains("public sealed class DichtheitImportDistributionService : IDichtheitImportDistributor", service);
@@ -80,7 +89,8 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("public IImportSourceArchiver ImportSourceArchiver", provider);
         Assert.Contains("ImportSourceArchiver = new ImportSourceArchiveService()", provider);
         Assert.Contains("private readonly IImportSourceArchiver _sourceArchiver;", orchestrator);
-        Assert.Contains("_sourceArchiver.Archive(sourceFolder, projectFolder)", orchestrator);
+        Assert.Contains("_sourceArchiver.Archive(", orchestrator);
+        Assert.Contains("ctx?.FileStaging", orchestrator);
         Assert.DoesNotContain("ImportSourceArchiver.Archive(sourceFolder, projectFolder)", orchestrator);
         Assert.Contains("private static readonly IImportSourceArchiver DefaultService", facade);
         Assert.DoesNotContain("File.Copy", facade);
@@ -133,12 +143,12 @@ public sealed class ImportArchitectureGuardTests
         var providerPath = RepoFile("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
         var registrationPath = RepoFile("src", "AuswertungPro.Next.UI", "ServiceProviderRegistrationMap.cs");
 
-        Assert.True(File.Exists(registryPath), "Stored Import-Dateien muessen ausserhalb der ImportPageViewModel registriert werden.");
+        Assert.True(File.Exists(registryPath), "Stored Import-Dateien müssen ausserhalb der ImportPageViewModel registriert werden.");
         Assert.True(File.Exists(contractPath), "Stored Import-Dateien brauchen einen Application-Vertrag.");
-        Assert.True(File.Exists(servicePath), "Stored Import-Dateien muessen in Infrastructure geschrieben werden.");
+        Assert.True(File.Exists(servicePath), "Stored Import-Dateien müssen in Infrastructure geschrieben werden.");
         Assert.True(File.Exists(compatibilityPath), "Die bisherige oeffentliche Importdatei-Fassade muss kompatibel bleiben.");
-        Assert.True(File.Exists(stagingContractPath), "Importkopien brauchen einen Application-Vertrag fuer Staging und Ruecknahme.");
-        Assert.True(File.Exists(stagingServicePath), "Importkopien muessen in Infrastructure vorbereitet werden.");
+        Assert.True(File.Exists(stagingContractPath), "Importkopien brauchen einen Application-Vertrag für Staging und Ruecknahme.");
+        Assert.True(File.Exists(stagingServicePath), "Importkopien müssen in Infrastructure vorbereitet werden.");
         Assert.True(File.Exists(mediaContractPath), "Medienverteilung braucht einen Application-Vertrag.");
 
         Assert.True(File.Exists(manualControllerPath), "Die manuellen Importwege brauchen einen eigenen kleinen Controller.");
@@ -235,7 +245,7 @@ public sealed class ImportArchitectureGuardTests
         var manualControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Services", "ImportManualWorkflowController.cs");
 
         Assert.True(File.Exists(controllerPath), "Import-Lauf-Orchestrierung muss ausserhalb der ImportPageViewModel liegen.");
-        Assert.True(File.Exists(manualControllerPath), "Die manuellen Importwege muessen ausserhalb der ImportPageViewModel liegen.");
+        Assert.True(File.Exists(manualControllerPath), "Die manuellen Importwege müssen ausserhalb der ImportPageViewModel liegen.");
 
         var viewModel = File.ReadAllText(viewModelPath);
         var manualController = File.ReadAllText(manualControllerPath);
@@ -358,8 +368,11 @@ public sealed class ImportArchitectureGuardTests
         Assert.Contains("KanalExportDetection,", provider);
         Assert.Contains("KinsDvdTextEnrichment,", provider);
         Assert.Contains("KinsDbfWhitelistEnrichment,", provider);
-        Assert.Contains("KinsGesamtprotokolle);", provider);
-        Assert.Contains("var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter)", provider);
+        Assert.Contains("KinsGesamtprotokolle,", provider);
+        Assert.Contains("ImportMediaDistribution);", provider);
+        // Optikanalyse 28.09.2026, Aufgabe 15: BerichtsMarke ist die gemeinsame Quelle fuer
+        // das Logo (statt eines fest eingetragenen Pfads) und wird seither mitgegeben.
+        Assert.Contains("var protocolRegeneration = new ProtocolRegenerationAdapter(ProtocolPdfExporter, BerichtsMarke)", provider);
         Assert.Contains("ProtocolRegeneration = protocolRegeneration", provider);
         Assert.Contains("ProtocolSingleRegeneration = protocolRegeneration", provider);
         Assert.Contains("_importAiHttp", provider);

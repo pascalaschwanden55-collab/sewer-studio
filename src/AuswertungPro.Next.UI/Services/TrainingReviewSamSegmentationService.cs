@@ -97,11 +97,57 @@ public sealed class TrainingReviewSamSegmentationService : ITrainingReviewSamSeg
     {
         var request = CreateSamRequest(imageBytes, imageWidth, imageHeight, box, code, pipeDiameterMm);
         var response = await _client.SegmentSamAsync(request, ct).ConfigureAwait(false);
+        ValidateResponse(response, imageWidth, imageHeight);
         var quantified = MaskQuantificationService.QuantifyAll(
             response,
             pipeDiameterMm.GetValueOrDefault(DefaultPipeDiameterMm));
 
         return new TrainingReviewSamResult(response, quantified);
+    }
+
+    private static void ValidateResponse(
+        SamResponse response,
+        int sourceImageWidth,
+        int sourceImageHeight)
+    {
+        if (response.ImageWidth != sourceImageWidth
+            || response.ImageHeight != sourceImageHeight)
+        {
+            throw new InvalidDataException(
+                "SAM-Antwort passt nicht zu den Pixelmassen des Originalbilds "
+                + $"({response.ImageWidth}x{response.ImageHeight} statt "
+                + $"{sourceImageWidth}x{sourceImageHeight}).");
+        }
+
+        var expectedImageArea = checked(sourceImageWidth * sourceImageHeight);
+        foreach (var mask in response.Masks.Where(mask =>
+                     !string.IsNullOrWhiteSpace(mask.MaskRle)))
+        {
+            if (!SamMaskFormatValidator.TryGetForegroundPixelCount(
+                    mask.MaskRle,
+                    response.ImageWidth,
+                    response.ImageHeight,
+                    out var foregroundPixels,
+                    out var reason))
+            {
+                throw new InvalidDataException(
+                    $"SAM lieferte eine ungültige Maske: {reason}");
+            }
+
+            if (mask.ImageAreaPixels != expectedImageArea)
+            {
+                throw new InvalidDataException(
+                    "SAM-Bildfläche passt nicht zum Originalbild "
+                    + $"({mask.ImageAreaPixels} statt {expectedImageArea} Pixel).");
+            }
+
+            if (mask.MaskAreaPixels != foregroundPixels)
+            {
+                throw new InvalidDataException(
+                    "SAM-Maskenfläche passt nicht zur RLE "
+                    + $"({mask.MaskAreaPixels} statt {foregroundPixels} Pixel).");
+            }
+        }
     }
 
     public static SamRequest CreateSamRequest(
@@ -113,9 +159,9 @@ public sealed class TrainingReviewSamSegmentationService : ITrainingReviewSamSeg
         int? pipeDiameterMm)
     {
         if (imageBytes.Length == 0)
-            throw new ArgumentException("Bilddaten duerfen nicht leer sein.", nameof(imageBytes));
+            throw new ArgumentException("Bilddaten dürfen nicht leer sein.", nameof(imageBytes));
         if (imageWidth <= 0 || imageHeight <= 0)
-            throw new ArgumentOutOfRangeException(nameof(imageWidth), "Bildbreite/-hoehe muessen positiv sein.");
+            throw new ArgumentOutOfRangeException(nameof(imageWidth), "Bildbreite/-höhe müssen positiv sein.");
 
         var x1 = ClampPixel((box.XCenter - box.Width / 2.0) * imageWidth, 0, imageWidth);
         var y1 = ClampPixel((box.YCenter - box.Height / 2.0) * imageHeight, 0, imageHeight);

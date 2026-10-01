@@ -6,9 +6,9 @@ namespace AuswertungPro.Next.UI.DataPage;
 public static class DataPageRecordCommandRouter
 {
     public const string MissingSelectionMessage =
-        "Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.";
+        "Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswählen.";
     public const string MissingPositionSelectionMessage =
-        "Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.";
+        "Keine Zeile erkannt. Bitte zuerst eine Haltung auswählen.";
 
     public static bool TryExecute(
         HaltungRecord? record,

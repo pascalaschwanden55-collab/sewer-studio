@@ -1,39 +1,53 @@
+using System;
 using AuswertungPro.Next.Application.Protocol;
+using Xunit;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
 
 public sealed class ProtocolTimeParserTests
 {
+    [Theory]
+    [InlineData("01:23:45", 1, 23, 45)]
+    [InlineData("23:45", 0, 23, 45)]
+    [InlineData("0:05:09", 0, 5, 9)]
+    public void Liest_die_bekannten_Formate(string roh, int h, int m, int s)
+        => Assert.Equal(new TimeSpan(h, m, s), ProtocolTimeParser.ParseMpegTime(roh));
+
+    /// <summary>
+    /// So liefern die VSA-KEK-XTF den Videozaehlerstand: vier Teile mit
+    /// Einzelbildern am Schluss. Real gesehen in
+    /// Altdorf_Feldliweg_41649_0626.xtf, dort in allen 263 Befunden.
+    /// </summary>
+    [Theory]
+    [InlineData("00:00:15:00", 0, 0, 15)]
+    [InlineData("00:01:38:00", 0, 1, 38)]
+    [InlineData("01:02:03:24", 1, 2, 3)]
+    public void Liest_den_vierteiligen_Zaehlerstand_und_verwirft_die_Einzelbilder(
+        string roh, int h, int m, int s)
+        => Assert.Equal(new TimeSpan(h, m, s), ProtocolTimeParser.ParseMpegTime(roh));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("kein Zeitwert")]
+    [InlineData("00:00:15:xx")]        // vierter Teil keine Zahl
+    [InlineData("00:00:15:00:00")]     // fuenf Teile
+    public void Unklares_bleibt_null_statt_geraten(string roh)
+        => Assert.Null(ProtocolTimeParser.ParseMpegTime(roh));
+
+    /// <summary>
+    /// .NET liest "00:00:15:00" von sich aus als d:hh:mm:ss und macht daraus
+    /// 15 MINUTEN. Genau das darf hier nie wieder passieren.
+    /// </summary>
     [Fact]
-    public void ParseMpegTime_verarbeitet_bisherige_Kurz_Lang_und_Millisekundenformate()
+    public void Der_Zaehlerstand_wird_nicht_als_Tage_gelesen()
     {
-        Assert.Equal(new TimeSpan(0, 2, 3), ProtocolTimeParser.ParseMpegTime(" 02:03 "));
-        Assert.Equal(new TimeSpan(0, 2, 3), ProtocolTimeParser.ParseMpegTime("2:03"));
-        Assert.Equal(new TimeSpan(1, 2, 3), ProtocolTimeParser.ParseMpegTime("1:02:03"));
-        Assert.Equal(
-            new TimeSpan(0, 1, 2, 3, 456),
-            ProtocolTimeParser.ParseMpegTime("01:02:03.456"));
-        Assert.Equal(
-            new TimeSpan(0, 0, 2, 3, 456),
-            ProtocolTimeParser.ParseMpegTime("02:03.456"));
+        var wert = ProtocolTimeParser.ParseMpegTime("00:00:15:00");
+        Assert.Equal(TimeSpan.FromSeconds(15), wert);
+        Assert.NotEqual(TimeSpan.FromMinutes(15), wert);
     }
 
     [Fact]
-    public void ParseMpegTime_behaelt_TimeSpan_Fallback_und_ungueltige_Werte()
-    {
-        Assert.Equal(
-            new TimeSpan(days: 1, hours: 2, minutes: 3, seconds: 4),
-            ProtocolTimeParser.ParseMpegTime("1.02:03:04"));
-        Assert.Null(ProtocolTimeParser.ParseMpegTime(null));
-        Assert.Null(ProtocolTimeParser.ParseMpegTime("   "));
-        Assert.Null(ProtocolTimeParser.ParseMpegTime("99:99:99"));
-        Assert.Null(ProtocolTimeParser.ParseMpegTime("ungueltig"));
-    }
-
-    [Fact]
-    public void ParseMpegTime_behaelt_auch_ueberraschende_TimeSpan_Fallbacks()
-    {
-        Assert.Equal(TimeSpan.FromDays(24), ProtocolTimeParser.ParseMpegTime("24:00:00"));
-        Assert.Equal(new TimeSpan(1, 2, 0), ProtocolTimeParser.ParseMpegTime("1:2"));
-    }
+    public void Null_bleibt_null()
+        => Assert.Null(ProtocolTimeParser.ParseMpegTime(null));
 }

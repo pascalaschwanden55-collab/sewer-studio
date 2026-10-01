@@ -148,7 +148,7 @@ public class SamMaskDecoderTests
     }
 
     [Fact]
-    public void Downsample_HalbeGroesse_NearestNeighbour()
+    public void Downsample_HalbeGroesse_GesetzterBlockBleibtGesetzt()
     {
         // 4x4 Quelle, alle true in oberer linker 2x2
         var src = new bool[4, 4];
@@ -158,6 +158,24 @@ public class SamMaskDecoderTests
         Assert.Equal(2, dst.GetLength(0));
         Assert.Equal(2, dst.GetLength(1));
         Assert.True(dst[0, 0]);
+    }
+
+    [Fact]
+    public void Downsample_DuenneLinieZwischenDenStichprobenBleibtErhalten()
+    {
+        // B04 (Audit 23.09.2026): Eine 1 Pixel breite Linie auf Spalte 1 lag bei der
+        // Halbierung genau zwischen den Stichproben (Spalten 0, 2, 4 ...) und verschwand.
+        var src = new bool[8, 8];
+        for (var r = 0; r < 8; r++)
+            src[r, 1] = true;
+
+        var dst = SamMaskDecoder.Downsample(src, 8, 8, 4, 4);
+
+        for (var r = 0; r < 4; r++)
+        {
+            Assert.True(dst[r, 0]);
+            Assert.False(dst[r, 1]);
+        }
     }
 
     // ── HasOverlap ───────────────────────────────────────────────────

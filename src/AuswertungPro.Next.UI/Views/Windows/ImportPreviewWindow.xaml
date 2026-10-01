@@ -3,7 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
         ui:WindowFx.Entrance="True"
-        Title="Import-Vorschau" Width="900" Height="620"
+        xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
+        Title="SewerStudio — Import-Vorschau" Width="900" Height="620"
+        MinWidth="630" MinHeight="430"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgLightBrush}">
 
@@ -16,33 +18,43 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,12">
-            <StackPanel>
-                <TextBlock x:Name="HeaderText" FontSize="15" FontWeight="SemiBold"
-                           Foreground="{StaticResource TextBrush}"/>
-                <TextBlock x:Name="SubHeaderText" FontSize="12"
-                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
-            </StackPanel>
-        </Border>
+        <controls:NovaDialogHeader x:Name="Kopf" Grid.Row="0"/>
 
         <!-- Changes DataGrid -->
-        <DataGrid Grid.Row="1" x:Name="ChangesGrid"
-                  AutoGenerateColumns="False" IsReadOnly="True"
-                  CanUserSortColumns="True" CanUserReorderColumns="False"
-                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                  BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
-                  Background="{StaticResource CardBrush}"
-                  RowBackground="{StaticResource CardBrush}"
-                  AlternatingRowBackground="{DynamicResource BgLightBrush}"
-                  Foreground="{StaticResource TextBrush}">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Haltung" Binding="{Binding RecordKey}" Width="180"/>
-                <DataGridTextColumn Header="Aktion" Binding="{Binding Action}" Width="80"/>
-                <DataGridTextColumn Header="Feld" Binding="{Binding Field}" Width="160"/>
-                <DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
+        <Grid Grid.Row="1">
+            <DataGrid x:Name="ChangesGrid"
+                      AutoGenerateColumns="False" IsReadOnly="True"
+                      CanUserSortColumns="True" CanUserReorderColumns="False"
+                      HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                      BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                      Background="{DynamicResource CardBrush}"
+                      RowBackground="{DynamicResource CardBrush}"
+                      AlternatingRowBackground="{DynamicResource BgLightBrush}"
+                      Foreground="{DynamicResource TextBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Haltung" Binding="{Binding RecordKey}" Width="180"/>
+                    <DataGridTextColumn Header="Aktion" Binding="{Binding Action}" Width="80"/>
+                    <DataGridTextColumn Header="Feld" Binding="{Binding Field}" Width="160"/>
+                    <DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <controls:EmptyStateControl IsHitTestVisible="False"
+                                        Icon="&#xE8A5;"
+                                        Title="Keine Änderungen"
+                                        Message="Diese Quelle enthält nichts, was am Projekt geändert würde.">
+                <controls:EmptyStateControl.Style>
+                    <Style TargetType="controls:EmptyStateControl">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasItems, ElementName=ChangesGrid}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </controls:EmptyStateControl.Style>
+            </controls:EmptyStateControl>
+        </Grid>
 
         <!-- Conflicts Expander -->
         <Expander Grid.Row="2" Header="Konflikte" Margin="0,8,0,0" x:Name="ConflictsExpander">
@@ -51,11 +63,11 @@
                       MaxHeight="200"
                       CanUserSortColumns="True" CanUserReorderColumns="False"
                       HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                      BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
-                      Background="{StaticResource CardBrush}"
-                      RowBackground="{StaticResource CardBrush}"
+                      BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                      Background="{DynamicResource CardBrush}"
+                      RowBackground="{DynamicResource CardBrush}"
                       AlternatingRowBackground="{DynamicResource BgLightBrush}"
-                      Foreground="{StaticResource TextBrush}">
+                      Foreground="{DynamicResource TextBrush}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Haltung" Binding="{Binding RecordKey}" Width="180"/>
                     <DataGridTextColumn Header="Feld" Binding="{Binding Field}" Width="160"/>
@@ -65,11 +77,13 @@
         </Expander>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="Schließen" Click="CloseButton_Click" Padding="16,6" Margin="0,0,8,0"
-                    Style="{StaticResource ToolbarButton}"/>
-            <Button Content="Import ausführen" Click="ExecuteButton_Click" Padding="16,6"
-                    Style="{StaticResource ToolbarButtonAccent}"/>
-        </StackPanel>
+        <Border Grid.Row="3" Style="{StaticResource DialogButtonBar}" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Schliessen" Click="CloseButton_Click" Padding="16,6" Margin="0,0,8,0"
+                        Style="{StaticResource SecondaryButton}" IsCancel="True"/>
+                <Button Content="Import ausführen" Click="ExecuteButton_Click" Padding="16,6"
+                        Style="{StaticResource PrimaryButton}" IsDefault="True"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

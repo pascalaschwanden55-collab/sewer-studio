@@ -1,4 +1,6 @@
+using AuswertungPro.Next.UI.Dossiers;
 using AuswertungPro.Next.UI.QgisBridge;
+using AuswertungPro.Next.UI.ViewModels.Pages;
 using Xunit;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -22,6 +24,29 @@ public sealed class QgisBridgeSelectionTests : IDisposable
         QgisBridgeSelection.Set("A-B");
 
         Assert.Equal("A-B", QgisBridgeSelection.CurrentFor(projectId));
+    }
+
+    [Fact]
+    public void Dossier_Haltungszeile_meldet_die_sichtbare_Haltung_an_Qgis()
+    {
+        var projectId = Guid.NewGuid();
+        var row = new DossierHoldingRow(
+            Guid.NewGuid(), "  77467-77463  ", "3.60 m", "Z2", "", "");
+
+        DossierQgisSelectionReporter.Report(row);
+
+        Assert.Equal("77467-77463", QgisBridgeSelection.CurrentFor(projectId));
+    }
+
+    [Fact]
+    public void Dossier_Schachtzeile_meldet_den_sichtbaren_Schacht_an_Qgis()
+    {
+        var projectId = Guid.NewGuid();
+        var row = new DossierShaftRow(Guid.NewGuid(), "  77467  ", "Kontrollschacht", "", "");
+
+        DossierQgisSelectionReporter.Report(row);
+
+        Assert.Equal("77467", QgisBridgeSelection.CurrentSchachtFor(projectId));
     }
 
     [Fact]

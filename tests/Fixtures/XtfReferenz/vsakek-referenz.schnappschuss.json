@@ -1,0 +1,1634 @@
+{
+  "projekt": {
+    "AppVersion": "<laufabhaengig>",
+    "Conflicts": [],
+    "CreatedAtUtc": "<laufabhaengig>",
+    "Data": [
+      {
+        "CreatedAtUtc": "<laufabhaengig>",
+        "FieldMeta": {
+          "Aktualisierungsdatum": {
+            "Conflict": null,
+            "FieldName": "Aktualisierungsdatum",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Anschluesse_verpressen": {
+            "Conflict": null,
+            "FieldName": "Anschluesse_verpressen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Ausgefuehrt_durch": {
+            "Conflict": null,
+            "FieldName": "Ausgefuehrt_durch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Baujahr": {
+            "Conflict": null,
+            "FieldName": "Baujahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bemerkungen": {
+            "Conflict": null,
+            "FieldName": "Bemerkungen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Bettung_Umhuellung": {
+            "Conflict": null,
+            "FieldName": "Bettung_Umhuellung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bruttokosten": {
+            "Conflict": null,
+            "FieldName": "Bruttokosten",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "DN_mm": {
+            "Conflict": null,
+            "FieldName": "DN_mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Datenherr": {
+            "Conflict": null,
+            "FieldName": "Datenherr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Datenlieferant": {
+            "Conflict": null,
+            "FieldName": "Datenlieferant",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Datum_Jahr": {
+            "Conflict": null,
+            "FieldName": "Datum_Jahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Eigentuemer": {
+            "Conflict": null,
+            "FieldName": "Eigentuemer",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Empfohlene_Sanierungsmassnahmen": {
+            "Conflict": null,
+            "FieldName": "Empfohlene_Sanierungsmassnahmen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Erneuerung_Neubau_m": {
+            "Conflict": null,
+            "FieldName": "Erneuerung_Neubau_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "FunktionHierarchisch": {
+            "Conflict": null,
+            "FieldName": "FunktionHierarchisch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "FunktionHydraulisch": {
+            "Conflict": null,
+            "FieldName": "FunktionHydraulisch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "GEONIS_Kennung": {
+            "Conflict": null,
+            "FieldName": "GEONIS_Kennung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Gewaesserschutz": {
+            "Conflict": null,
+            "FieldName": "Gewaesserschutz",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Grundwasserspiegel": {
+            "Conflict": null,
+            "FieldName": "Grundwasserspiegel",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Haltungslaenge_m": {
+            "Conflict": null,
+            "FieldName": "Haltungslaenge_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Haltungsname": {
+            "Conflict": null,
+            "FieldName": "Haltungsname",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Inspektionsrichtung": {
+            "Conflict": null,
+            "FieldName": "Inspektionsrichtung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Kosten": {
+            "Conflict": null,
+            "FieldName": "Kosten",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Lagebestimmung": {
+            "Conflict": null,
+            "FieldName": "Lagebestimmung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Letzte_Aenderung": {
+            "Conflict": null,
+            "FieldName": "Letzte_Aenderung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Lichte_Breite_mm": {
+            "Conflict": null,
+            "FieldName": "Lichte_Breite_mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Linerendmanschette_LEM": {
+            "Conflict": null,
+            "FieldName": "Linerendmanschette_LEM",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Link": {
+            "Conflict": null,
+            "FieldName": "Link",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Link_G": {
+            "Conflict": null,
+            "FieldName": "Link_G",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "NR": {
+            "Conflict": null,
+            "FieldName": "NR",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Nutzungsart": {
+            "Conflict": null,
+            "FieldName": "Nutzungsart",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Objekt_ID": {
+            "Conflict": null,
+            "FieldName": "Objekt_ID",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Offen_abgeschlossen": {
+            "Conflict": null,
+            "FieldName": "Offen_abgeschlossen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Organisation": {
+            "Conflict": null,
+            "FieldName": "Organisation",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Primaere_Schaeden": {
+            "Conflict": null,
+            "FieldName": "Primaere_Schaeden",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Profiltyp": {
+            "Conflict": null,
+            "FieldName": "Profiltyp",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Pruefungsresultat": {
+            "Conflict": null,
+            "FieldName": "Pruefungsresultat",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Referenzpruefung": {
+            "Conflict": null,
+            "FieldName": "Referenzpruefung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Renovierung_Inliner_Stk": {
+            "Conflict": null,
+            "FieldName": "Renovierung_Inliner_Stk",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Renovierung_Inliner_m": {
+            "Conflict": null,
+            "FieldName": "Renovierung_Inliner_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Reparatur_Kurzliner": {
+            "Conflict": null,
+            "FieldName": "Reparatur_Kurzliner",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Reparatur_Manschette": {
+            "Conflict": null,
+            "FieldName": "Reparatur_Manschette",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Rohrmaterial": {
+            "Conflict": null,
+            "FieldName": "Rohrmaterial",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Sanieren_JaNein": {
+            "Conflict": null,
+            "FieldName": "Sanieren_JaNein",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Sanierungsbedarf": {
+            "Conflict": null,
+            "FieldName": "Sanierungsbedarf",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Schacht_oben": {
+            "Conflict": null,
+            "FieldName": "Schacht_oben",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Schacht_unten": {
+            "Conflict": null,
+            "FieldName": "Schacht_unten",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Status": {
+            "Conflict": null,
+            "FieldName": "Status",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Strasse": {
+            "Conflict": null,
+            "FieldName": "Strasse",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Geschaetzt": {
+            "Conflict": null,
+            "FieldName": "VSA_Geschaetzt",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_B": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_B",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_D": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_D",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_S": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_S",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Verbindungsart": {
+            "Conflict": null,
+            "FieldName": "Verbindungsart",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Zustandsklasse": {
+            "Conflict": null,
+            "FieldName": "Zustandsklasse",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          }
+        },
+        "Fields": {
+          "Aktualisierungsdatum": "",
+          "Anschluesse_verpressen": "",
+          "Ausgefuehrt_durch": "",
+          "Baujahr": "",
+          "Bemerkungen": "Erfassung: Kanalfernsehen, Grund: Zustandserfassung, Witterung: trocken, Ausfuehrender: Kanal-TV Muster AG, Fahrzeug: TV-3, Geraet: Kamera 2",
+          "Bettung_Umhuellung": "",
+          "Bruttokosten": "",
+          "DN_mm": "",
+          "Datenherr": "",
+          "Datenlieferant": "",
+          "Datum_Jahr": "12.03.2025",
+          "Eigentuemer": "",
+          "Empfohlene_Sanierungsmassnahmen": "",
+          "Erneuerung_Neubau_m": "",
+          "FunktionHierarchisch": "",
+          "FunktionHydraulisch": "",
+          "GEONIS_Kennung": "",
+          "Gewaesserschutz": "",
+          "Grundwasserspiegel": "",
+          "Haltungslaenge_m": "38.40",
+          "Haltungsname": "200-201",
+          "Inspektionsrichtung": "In Fliessrichtung",
+          "Kosten": "",
+          "Lagebestimmung": "",
+          "Letzte_Aenderung": "",
+          "Lichte_Breite_mm": "",
+          "Linerendmanschette_LEM": "",
+          "Link": "<lauf>/Film/200-201.mpg",
+          "Link_G": "<lauf>/Film/200-201_gegen.mp4",
+          "NR": "",
+          "Nutzungsart": "",
+          "Objekt_ID": "",
+          "Offen_abgeschlossen": "",
+          "Organisation": "",
+          "Primaere_Schaeden": "0.00m BCD Rohranfang\n12.30m BABBA (Querriss) Q1=2\n20.00m BBAA Q1=5.5 Q2=10\n38.40m BCE Rohrende",
+          "Profiltyp": "",
+          "Pruefungsresultat": "",
+          "Referenzpruefung": "",
+          "Renovierung_Inliner_Stk": "",
+          "Renovierung_Inliner_m": "",
+          "Reparatur_Kurzliner": "",
+          "Reparatur_Manschette": "",
+          "Rohrmaterial": "",
+          "Sanieren_JaNein": "",
+          "Sanierungsbedarf": "",
+          "Schacht_oben": "200",
+          "Schacht_unten": "201",
+          "Status": "",
+          "Strasse": "",
+          "VSA_Geschaetzt": "",
+          "VSA_Zustandsnote_B": "",
+          "VSA_Zustandsnote_D": "",
+          "VSA_Zustandsnote_S": "",
+          "Verbindungsart": "",
+          "Zustandsklasse": ""
+        },
+        "Geonis": null,
+        "Id": "<laufabhaengig>",
+        "ModifiedAtUtc": "<laufabhaengig>",
+        "Protocol": {
+          "Current": {
+            "BasedOnRevisionId": null,
+            "Changes": [],
+            "Comment": "Arbeitskopie",
+            "CreatedAt": "<zeitpunkt>",
+            "CreatedBy": null,
+            "Entries": [
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "BCD",
+                "CodeMeta": null,
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 0,
+                "Mpeg": "00:00:04",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:00:04"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "Querriss",
+                "Code": "BABBA",
+                "CodeMeta": {
+                  "Code": "BABBA",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung1": "2",
+                    "Quantifizierung2": "",
+                    "vsa.uhr.von": "3"
+                  },
+                  "Severity": null,
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [
+                  "<lauf>/Fotos/foto_schaden2.jpg"
+                ],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 12.3,
+                "Mpeg": "00:02:11",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:02:11"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "BBAA",
+                "CodeMeta": {
+                  "Code": "BBAA",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung1": "5.5",
+                    "Quantifizierung2": "10",
+                    "vsa.uhr.bis": "3",
+                    "vsa.uhr.von": "9"
+                  },
+                  "Severity": null,
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [
+                  "<lauf>/Fotos/foto_schaden3.jpg"
+                ],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 20,
+                "Mpeg": "00:03:40",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:03:40"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "BCE",
+                "CodeMeta": null,
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 38.4,
+                "Mpeg": "00:06:02",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:06:02"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "bce",
+                "CodeMeta": null,
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 38.4,
+                "Mpeg": null,
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": null
+              }
+            ],
+            "RevisionId": "<guid>"
+          },
+          "HaltungId": "200-201",
+          "History": [
+            {
+              "BasedOnRevisionId": null,
+              "Changes": [],
+              "Comment": "Weitere VSA-KEK-Untersuchung vom 15.03.2025 (TID refUNTERS2)",
+              "CreatedAt": "<zeitpunkt>",
+              "CreatedBy": null,
+              "Entries": [
+                {
+                  "Ai": null,
+                  "Beschreibung": "",
+                  "Code": "BCD",
+                  "CodeMeta": null,
+                  "EntryId": "<guid>",
+                  "FotoPaths": [],
+                  "IsDeleted": false,
+                  "IsStreckenschaden": false,
+                  "MeterEnd": null,
+                  "MeterStart": 0,
+                  "Mpeg": "00:00:03",
+                  "OriginalFotoPaths": [],
+                  "Source": 0,
+                  "Training": null,
+                  "Zeit": "00:00:03"
+                },
+                {
+                  "Ai": null,
+                  "Beschreibung": "Abbruch Gegenbefahrung",
+                  "Code": "BDC",
+                  "CodeMeta": null,
+                  "EntryId": "<guid>",
+                  "FotoPaths": [],
+                  "IsDeleted": false,
+                  "IsStreckenschaden": false,
+                  "MeterEnd": null,
+                  "MeterStart": 12,
+                  "Mpeg": "00:01:50",
+                  "OriginalFotoPaths": [],
+                  "Source": 0,
+                  "Training": null,
+                  "Zeit": "00:01:50"
+                }
+              ],
+              "ImportFingerprint": "2B4BE85B0897D6BB264B0D538D270455BBA22E221561137E980F3C94C8CBA513",
+              "ImportVideoPaths": [
+                "<lauf>/Film/200-201_gegen.mp4"
+              ],
+              "RevisionId": "<guid>"
+            }
+          ],
+          "Original": {
+            "BasedOnRevisionId": null,
+            "Changes": [],
+            "Comment": "Import (Original)",
+            "CreatedAt": "<zeitpunkt>",
+            "CreatedBy": null,
+            "Entries": [
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "BCD",
+                "CodeMeta": null,
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 0,
+                "Mpeg": "00:00:04",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:00:04"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "Querriss",
+                "Code": "BABBA",
+                "CodeMeta": {
+                  "Code": "BABBA",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung1": "2",
+                    "Quantifizierung2": "",
+                    "vsa.uhr.von": "3"
+                  },
+                  "Severity": null,
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [
+                  "<lauf>/Fotos/foto_schaden2.jpg"
+                ],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 12.3,
+                "Mpeg": "00:02:11",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:02:11"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "BBAA",
+                "CodeMeta": {
+                  "Code": "BBAA",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung1": "5.5",
+                    "Quantifizierung2": "10",
+                    "vsa.uhr.bis": "3",
+                    "vsa.uhr.von": "9"
+                  },
+                  "Severity": null,
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [
+                  "<lauf>/Fotos/foto_schaden3.jpg"
+                ],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 20,
+                "Mpeg": "00:03:40",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:03:40"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "BCE",
+                "CodeMeta": null,
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 38.4,
+                "Mpeg": "00:06:02",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": "00:06:02"
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "bce",
+                "CodeMeta": null,
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": null,
+                "MeterStart": 38.4,
+                "Mpeg": null,
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": null
+              }
+            ],
+            "RevisionId": "<guid>"
+          }
+        },
+        "ProtocolEntry": null,
+        "VsaFindings": [
+          {
+            "EZB": null,
+            "EZD": null,
+            "EZS": null,
+            "FotoPath": null,
+            "KanalSchadencode": "BCD",
+            "KanalschadenTid": "refSCHADEN1",
+            "LL": 0,
+            "MPEG": "00:00:04",
+            "MeterEnd": null,
+            "MeterStart": 0,
+            "Quantifizierung1": null,
+            "Quantifizierung2": null,
+            "Raw": null,
+            "SchadenlageAnfang": null,
+            "SchadenlageEnde": null,
+            "Timestamp": null,
+            "UntersuchungTid": "refUNTERS1"
+          },
+          {
+            "EZB": 3,
+            "EZD": 3,
+            "EZS": 3,
+            "FotoPath": "<lauf>/Fotos/foto_schaden2.jpg",
+            "KanalSchadencode": "BABBA",
+            "KanalschadenTid": "refSCHADEN2",
+            "LL": 0,
+            "MPEG": "00:02:11",
+            "MeterEnd": null,
+            "MeterStart": 12.3,
+            "Quantifizierung1": "2",
+            "Quantifizierung2": null,
+            "Raw": "Querriss",
+            "SchadenlageAnfang": 3,
+            "SchadenlageEnde": null,
+            "Timestamp": null,
+            "UntersuchungTid": "refUNTERS1"
+          },
+          {
+            "EZB": 4,
+            "EZD": 4,
+            "EZS": 4,
+            "FotoPath": "<lauf>/Fotos/foto_schaden3.jpg",
+            "KanalSchadencode": "BBAA",
+            "KanalschadenTid": "refSCHADEN3",
+            "LL": 5.5,
+            "MPEG": "00:03:40",
+            "MeterEnd": null,
+            "MeterStart": 20,
+            "Quantifizierung1": "5.5",
+            "Quantifizierung2": "10",
+            "Raw": null,
+            "SchadenlageAnfang": 9,
+            "SchadenlageEnde": 3,
+            "Timestamp": null,
+            "UntersuchungTid": "refUNTERS1"
+          },
+          {
+            "EZB": null,
+            "EZD": null,
+            "EZS": null,
+            "FotoPath": null,
+            "KanalSchadencode": "BCE",
+            "KanalschadenTid": "refSCHADEN4",
+            "LL": 0,
+            "MPEG": "00:06:02",
+            "MeterEnd": null,
+            "MeterStart": 38.4,
+            "Quantifizierung1": null,
+            "Quantifizierung2": null,
+            "Raw": null,
+            "SchadenlageAnfang": null,
+            "SchadenlageEnde": null,
+            "Timestamp": null,
+            "UntersuchungTid": "refUNTERS1"
+          },
+          {
+            "EZB": null,
+            "EZD": null,
+            "EZS": null,
+            "FotoPath": null,
+            "KanalSchadencode": "bce",
+            "KanalschadenTid": "refSCHADEN4DOPPELT",
+            "LL": 0,
+            "MPEG": null,
+            "MeterEnd": null,
+            "MeterStart": 38.4,
+            "Quantifizierung1": null,
+            "Quantifizierung2": null,
+            "Raw": null,
+            "SchadenlageAnfang": null,
+            "SchadenlageEnde": null,
+            "Timestamp": null,
+            "UntersuchungTid": "refUNTERS1"
+          }
+        ],
+        "XtfHerkunft": {
+          "Datei": "vsakek-referenz.xtf",
+          "Modell": "VSA_KEK_2020_LV95",
+          "UntersuchungTid": "refUNTERS1"
+        }
+      },
+      {
+        "CreatedAtUtc": "<laufabhaengig>",
+        "FieldMeta": {
+          "Aktualisierungsdatum": {
+            "Conflict": null,
+            "FieldName": "Aktualisierungsdatum",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Anschluesse_verpressen": {
+            "Conflict": null,
+            "FieldName": "Anschluesse_verpressen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Ausgefuehrt_durch": {
+            "Conflict": null,
+            "FieldName": "Ausgefuehrt_durch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Baujahr": {
+            "Conflict": null,
+            "FieldName": "Baujahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bemerkungen": {
+            "Conflict": null,
+            "FieldName": "Bemerkungen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bettung_Umhuellung": {
+            "Conflict": null,
+            "FieldName": "Bettung_Umhuellung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Bruttokosten": {
+            "Conflict": null,
+            "FieldName": "Bruttokosten",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "DN_mm": {
+            "Conflict": null,
+            "FieldName": "DN_mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Datenherr": {
+            "Conflict": null,
+            "FieldName": "Datenherr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Datenlieferant": {
+            "Conflict": null,
+            "FieldName": "Datenlieferant",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Datum_Jahr": {
+            "Conflict": null,
+            "FieldName": "Datum_Jahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Eigentuemer": {
+            "Conflict": null,
+            "FieldName": "Eigentuemer",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Empfohlene_Sanierungsmassnahmen": {
+            "Conflict": null,
+            "FieldName": "Empfohlene_Sanierungsmassnahmen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Erneuerung_Neubau_m": {
+            "Conflict": null,
+            "FieldName": "Erneuerung_Neubau_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "FunktionHierarchisch": {
+            "Conflict": null,
+            "FieldName": "FunktionHierarchisch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "FunktionHydraulisch": {
+            "Conflict": null,
+            "FieldName": "FunktionHydraulisch",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "GEONIS_Kennung": {
+            "Conflict": null,
+            "FieldName": "GEONIS_Kennung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Gewaesserschutz": {
+            "Conflict": null,
+            "FieldName": "Gewaesserschutz",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Grundwasserspiegel": {
+            "Conflict": null,
+            "FieldName": "Grundwasserspiegel",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Haltungslaenge_m": {
+            "Conflict": null,
+            "FieldName": "Haltungslaenge_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Haltungsname": {
+            "Conflict": null,
+            "FieldName": "Haltungsname",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Inspektionsrichtung": {
+            "Conflict": null,
+            "FieldName": "Inspektionsrichtung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Kosten": {
+            "Conflict": null,
+            "FieldName": "Kosten",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Lagebestimmung": {
+            "Conflict": null,
+            "FieldName": "Lagebestimmung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Letzte_Aenderung": {
+            "Conflict": null,
+            "FieldName": "Letzte_Aenderung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Lichte_Breite_mm": {
+            "Conflict": null,
+            "FieldName": "Lichte_Breite_mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Linerendmanschette_LEM": {
+            "Conflict": null,
+            "FieldName": "Linerendmanschette_LEM",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Link": {
+            "Conflict": null,
+            "FieldName": "Link",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "NR": {
+            "Conflict": null,
+            "FieldName": "NR",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Nutzungsart": {
+            "Conflict": null,
+            "FieldName": "Nutzungsart",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Objekt_ID": {
+            "Conflict": null,
+            "FieldName": "Objekt_ID",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Offen_abgeschlossen": {
+            "Conflict": null,
+            "FieldName": "Offen_abgeschlossen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Organisation": {
+            "Conflict": null,
+            "FieldName": "Organisation",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Primaere_Schaeden": {
+            "Conflict": null,
+            "FieldName": "Primaere_Schaeden",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Profiltyp": {
+            "Conflict": null,
+            "FieldName": "Profiltyp",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Pruefungsresultat": {
+            "Conflict": null,
+            "FieldName": "Pruefungsresultat",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Referenzpruefung": {
+            "Conflict": null,
+            "FieldName": "Referenzpruefung",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Renovierung_Inliner_Stk": {
+            "Conflict": null,
+            "FieldName": "Renovierung_Inliner_Stk",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Renovierung_Inliner_m": {
+            "Conflict": null,
+            "FieldName": "Renovierung_Inliner_m",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Reparatur_Kurzliner": {
+            "Conflict": null,
+            "FieldName": "Reparatur_Kurzliner",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Reparatur_Manschette": {
+            "Conflict": null,
+            "FieldName": "Reparatur_Manschette",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Rohrmaterial": {
+            "Conflict": null,
+            "FieldName": "Rohrmaterial",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Sanieren_JaNein": {
+            "Conflict": null,
+            "FieldName": "Sanieren_JaNein",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Sanierungsbedarf": {
+            "Conflict": null,
+            "FieldName": "Sanierungsbedarf",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Status": {
+            "Conflict": null,
+            "FieldName": "Status",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Strasse": {
+            "Conflict": null,
+            "FieldName": "Strasse",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Geschaetzt": {
+            "Conflict": null,
+            "FieldName": "VSA_Geschaetzt",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_B": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_B",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_D": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_D",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "VSA_Zustandsnote_S": {
+            "Conflict": null,
+            "FieldName": "VSA_Zustandsnote_S",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Verbindungsart": {
+            "Conflict": null,
+            "FieldName": "Verbindungsart",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          },
+          "Zustandsklasse": {
+            "Conflict": null,
+            "FieldName": "Zustandsklasse",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Manual",
+            "UserEdited": false
+          }
+        },
+        "Fields": {
+          "Aktualisierungsdatum": "",
+          "Anschluesse_verpressen": "",
+          "Ausgefuehrt_durch": "",
+          "Baujahr": "",
+          "Bemerkungen": "",
+          "Bettung_Umhuellung": "",
+          "Bruttokosten": "",
+          "DN_mm": "",
+          "Datenherr": "",
+          "Datenlieferant": "",
+          "Datum_Jahr": "17.03.2025",
+          "Eigentuemer": "",
+          "Empfohlene_Sanierungsmassnahmen": "",
+          "Erneuerung_Neubau_m": "",
+          "FunktionHierarchisch": "",
+          "FunktionHydraulisch": "",
+          "GEONIS_Kennung": "",
+          "Gewaesserschutz": "",
+          "Grundwasserspiegel": "",
+          "Haltungslaenge_m": "",
+          "Haltungsname": "700-701",
+          "Inspektionsrichtung": "",
+          "Kosten": "",
+          "Lagebestimmung": "",
+          "Letzte_Aenderung": "",
+          "Lichte_Breite_mm": "",
+          "Linerendmanschette_LEM": "",
+          "Link": "",
+          "NR": "",
+          "Nutzungsart": "",
+          "Objekt_ID": "",
+          "Offen_abgeschlossen": "",
+          "Organisation": "",
+          "Primaere_Schaeden": "",
+          "Profiltyp": "",
+          "Pruefungsresultat": "",
+          "Referenzpruefung": "",
+          "Renovierung_Inliner_Stk": "",
+          "Renovierung_Inliner_m": "",
+          "Reparatur_Kurzliner": "",
+          "Reparatur_Manschette": "",
+          "Rohrmaterial": "",
+          "Sanieren_JaNein": "",
+          "Sanierungsbedarf": "",
+          "Status": "",
+          "Strasse": "",
+          "VSA_Geschaetzt": "",
+          "VSA_Zustandsnote_B": "",
+          "VSA_Zustandsnote_D": "",
+          "VSA_Zustandsnote_S": "",
+          "Verbindungsart": "",
+          "Zustandsklasse": ""
+        },
+        "Geonis": null,
+        "Id": "<laufabhaengig>",
+        "ModifiedAtUtc": "<laufabhaengig>",
+        "Protocol": null,
+        "ProtocolEntry": null,
+        "VsaFindings": [],
+        "XtfHerkunft": {
+          "Datei": "vsakek-referenz.xtf",
+          "Modell": "VSA_KEK_2020_LV95",
+          "UntersuchungTid": "refUNTERS6"
+        }
+      }
+    ],
+    "Description": "",
+    "Id": "<laufabhaengig>",
+    "ImportHistory": [
+      {
+        "count": 2,
+        "file": "vsakek-referenz.xtf",
+        "schaechte": 2,
+        "timestampUtc": "<laufabhaengig>",
+        "type": "xtf"
+      }
+    ],
+    "LastCommittedImportTxId": null,
+    "Metadata": {
+      "AuftragNr": "",
+      "Auftraggeber": "",
+      "Bearbeiter": "",
+      "Eigentuemer": "Privat",
+      "FirmaAdresse": "",
+      "FirmaEmail": "",
+      "FirmaName": "",
+      "FirmaTelefon": "",
+      "Gemeinde": "",
+      "InspektionsDatum": "",
+      "Sanieren": "Nein",
+      "Strasse": "",
+      "Zone": ""
+    },
+    "ModifiedAtUtc": "<laufabhaengig>",
+    "Name": "Neues Projekt",
+    "Objektakten": [],
+    "SchaechteData": [
+      {
+        "CreatedAtUtc": "<laufabhaengig>",
+        "FieldMeta": {
+          "Bauwerksart": {
+            "Conflict": null,
+            "FieldName": "Bauwerksart",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Bemerkungen": {
+            "Conflict": null,
+            "FieldName": "Bemerkungen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Datum_Jahr": {
+            "Conflict": null,
+            "FieldName": "Datum_Jahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Dimension 1 mm": {
+            "Conflict": null,
+            "FieldName": "Dimension 1 mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Dimension 2 mm": {
+            "Conflict": null,
+            "FieldName": "Dimension 2 mm",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Funktion": {
+            "Conflict": null,
+            "FieldName": "Funktion",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Objekt_ID": {
+            "Conflict": null,
+            "FieldName": "Objekt_ID",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf405",
+            "UserEdited": false
+          },
+          "Schachtnummer": {
+            "Conflict": null,
+            "FieldName": "Schachtnummer",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          }
+        },
+        "Fields": {
+          "Bauwerksart": "Normschacht",
+          "Bemerkungen": "Erfassung: Begehung",
+          "Datum_Jahr": "18.03.2025",
+          "Dimension 1 mm": "800",
+          "Dimension 2 mm": "800",
+          "Funktion": "Kontrollschacht",
+          "Objekt_ID": "refSCHACHT800",
+          "Schachtnummer": "800"
+        },
+        "Geonis": null,
+        "Id": "<laufabhaengig>",
+        "ModifiedAtUtc": "<laufabhaengig>",
+        "Protocol": null
+      },
+      {
+        "CreatedAtUtc": "<laufabhaengig>",
+        "FieldMeta": {
+          "Bemerkungen": {
+            "Conflict": null,
+            "FieldName": "Bemerkungen",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Datum_Jahr": {
+            "Conflict": null,
+            "FieldName": "Datum_Jahr",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          },
+          "Schachtnummer": {
+            "Conflict": null,
+            "FieldName": "Schachtnummer",
+            "LastUpdatedUtc": "<laufabhaengig>",
+            "Source": "Xtf",
+            "UserEdited": false
+          }
+        },
+        "Fields": {
+          "Bemerkungen": "Erfassung: Begehung, Operateur: M. Muster",
+          "Datum_Jahr": "13.03.2025",
+          "Schachtnummer": "300"
+        },
+        "Geonis": null,
+        "Id": "<laufabhaengig>",
+        "ModifiedAtUtc": "<laufabhaengig>",
+        "Protocol": {
+          "Current": {
+            "BasedOnRevisionId": null,
+            "Changes": [],
+            "Comment": "Arbeitskopie",
+            "CreatedAt": "<zeitpunkt>",
+            "CreatedBy": null,
+            "Entries": [
+              {
+                "Ai": null,
+                "Beschreibung": "Riss im Konus",
+                "Code": "DAGB",
+                "CodeMeta": {
+                  "Code": "DAGB",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung1": "3",
+                    "Schachtbereich": "B"
+                  },
+                  "Severity": "2",
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": 1.2,
+                "MeterStart": 1.2,
+                "Mpeg": "00:00:42",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": null
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "DCA",
+                "CodeMeta": {
+                  "Code": "DCA",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung2": "50"
+                  },
+                  "Severity": null,
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": 2.5,
+                "MeterStart": 2.5,
+                "Mpeg": null,
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": null
+              }
+            ],
+            "ImportFingerprint": "AFF08A6486677C920A397B2B91A40628DDF36D03D35D04B0330BAB9420214A22",
+            "RevisionId": "<guid>"
+          },
+          "HaltungId": "300",
+          "History": [],
+          "Original": {
+            "BasedOnRevisionId": null,
+            "Changes": [],
+            "Comment": "Import aus VSA-KEK-XTF (Schachtbegehung vom 13.03.2025)",
+            "CreatedAt": "<zeitpunkt>",
+            "CreatedBy": null,
+            "Entries": [
+              {
+                "Ai": null,
+                "Beschreibung": "Riss im Konus",
+                "Code": "DAGB",
+                "CodeMeta": {
+                  "Code": "DAGB",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung1": "3",
+                    "Schachtbereich": "B"
+                  },
+                  "Severity": "2",
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": 1.2,
+                "MeterStart": 1.2,
+                "Mpeg": "00:00:42",
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": null
+              },
+              {
+                "Ai": null,
+                "Beschreibung": "",
+                "Code": "DCA",
+                "CodeMeta": {
+                  "Code": "DCA",
+                  "Count": null,
+                  "Notes": null,
+                  "Parameters": {
+                    "Quantifizierung2": "50"
+                  },
+                  "Severity": null,
+                  "UpdatedAt": "<zeitpunkt>"
+                },
+                "EntryId": "<guid>",
+                "FotoPaths": [],
+                "IsDeleted": false,
+                "IsStreckenschaden": false,
+                "MeterEnd": 2.5,
+                "MeterStart": 2.5,
+                "Mpeg": null,
+                "OriginalFotoPaths": [],
+                "Source": 0,
+                "Training": null,
+                "Zeit": null
+              }
+            ],
+            "ImportFingerprint": "AFF08A6486677C920A397B2B91A40628DDF36D03D35D04B0330BAB9420214A22",
+            "RevisionId": "<guid>"
+          }
+        }
+      }
+    ],
+    "Version": 2
+  },
+  "statistik": {
+    "ConflictDetails": [],
+    "Conflicts": 0,
+    "CreatedRecords": 4,
+    "Errors": 0,
+    "Found": 2,
+    "Messages": [
+      {
+        "Context": "XTF405",
+        "Level": "Info",
+        "Message": "Importiert 1 Schaechte aus vsakek-referenz.xtf"
+      },
+      {
+        "Context": "XTF",
+        "Level": "Info",
+        "Message": "SIA405-Header erkannt, aber keine SIA405-Daten. Fallback auf VSA_KEK."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Info",
+        "Message": "vsakek-referenz.xtf: 8 Untersuchungen gelesen — 2 Haltung(en), 2 Schaecht(e), 2 ungeklärt."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "Untersuchung \"400-401\" nicht zugeordnet: widersprüchliche Belege: 1 Kanalschaden/-schaeden, 1 Normschachtschaden/-schaeden, Erfassungsart Kanalfernsehen"
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "Untersuchung \"500\" nicht zugeordnet: kein Beleg: weder Bauwerksverweis noch Schaeden, Punkte oder bekannte Erfassungsart"
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "Untersuchung ohne Bezeichnung (TID refUNTERS8) nicht übernommen: Sie lässt sich keiner Haltung und keinem Schacht zuordnen."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "Kanalschaden (TID refSCHADENVERWAIST, Code BAB) nicht übernommen: Untersuchungsverweis refUNTERSFEHLT zeigt ins Leere."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "Kanalschaden (TID refSCHADENOHNEREF, Code BAB) nicht übernommen: Untersuchungsverweis fehlt."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "Normschachtschaden (TID refSCHSCHADENVERWAIST, Code DAB) nicht übernommen: Untersuchungsverweis refUNTERSFEHLT zeigt ins Leere."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "Datei \"foto_verwaist.jpg\" (TID refDATEI4) nicht übernommen: Kanalschadenverweis refSCHADENFEHLT zeigt ins Leere."
+      },
+      {
+        "Context": "XTF",
+        "Level": "Warn",
+        "Message": "Haltung \"200-201\": Datei führt weitere Untersuchungen. Haupt-Untersuchung: 12.03.2025 (TID refUNTERS1) mit 5 Befunden; zusätzliche Protokollfassung: 15.03.2025 (TID refUNTERS2) mit 2 Befunden abgelegt. Ihr Video steht als Gegenbefahrung in Link_G."
+      }
+    ],
+    "Uncertain": 3,
+    "UpdatedFields": 10,
+    "UpdatedRecords": 0
+  }
+}

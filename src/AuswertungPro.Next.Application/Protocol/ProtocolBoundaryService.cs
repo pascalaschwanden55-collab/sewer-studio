@@ -20,6 +20,25 @@ public static class ProtocolBoundaryService
     public const string AbortPrefix = "BDC";
 
     /// <summary>
+    /// Rechenungenauigkeit beim Vergleich zweier Meterwerte. Meter werden auf zwei
+    /// Stellen gerundet; ein halber Zentimeter trennt sicher gleich von groesser.
+    /// </summary>
+    private const double MeterEpsilon = 0.005;
+
+    /// <summary>
+    /// Kennzeichen einer selbst ergaenzten Rohrgrenze.
+    ///
+    /// ACHTUNG, geprueft und verworfen: Dieses Kennzeichen taugt NICHT dazu, solche
+    /// Eintraege beim Abgleich mit der Ereignisliste vor dem Loeschen zu schuetzen.
+    /// Beim erneuten Oeffnen des Codiermodus laedt
+    /// <c>CodingSessionService.LoadExistingObservations</c> jeden Protokolleintrag als
+    /// Ereignis - auch BCD und BCE. Eine dort vom Menschen geloeschte Zeile ist danach
+    /// von einer nie eingetragenen nicht mehr zu unterscheiden. Ein solcher Schutz
+    /// macht ein falsches Rohrende ueber den Codiermodus unloeschbar.
+    /// </summary>
+    public const string AutoBoundaryFlag = "auto_boundary";
+
+    /// <summary>
     /// Ergaenzt fehlende Rohranfang/Rohrende-Eintraege und setzt Foto-Flags.
     /// Gibt Inspektionslänge zurueck (oder null wenn kein Endpunkt vorhanden).
     /// </summary>
@@ -59,7 +78,11 @@ public static class ProtocolBoundaryService
             string.Equals(e.Code, CodeRohrende, StringComparison.OrdinalIgnoreCase)
             || (e.Code?.StartsWith(AbortPrefix, StringComparison.OrdinalIgnoreCase) ?? false));
 
-        if (endEntry is null && haltungslaengeM > 0)
+        // Dieselbe Grenze wie in PlanBoundaries: Ein Rohrende liegt hinter jeder
+        // Beobachtung. Eine ersatzweise aus dem hoechsten Protokollmeter
+        // abgeleitete "Haltungslaenge" wuerde es sonst auf den letzten Befund
+        // setzen. Zwei Fassungen derselben Regel duerfen nicht auseinanderlaufen.
+        if (endEntry is null && IstPlausiblesRohrende(haltungslaengeM, LetzteBeobachtung(active)))
         {
             // Standard: Rohrende am Ende der Haltung einfuegen
             endEntry = CreateBoundaryEntry(CodeRohrende, "Rohrende", haltungslaengeM);
@@ -83,6 +106,94 @@ public static class ProtocolBoundaryService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Meldet schreibfrei, welche Rohrgrenze fehlt. Der Codiermodus ergaenzt daraufhin
+    /// den Rohranfang still (0.00 m stimmt immer), fragt beim Rohrende aber nach:
+    /// Ein automatisch gesetztes BCE wuerde behaupten, die ganze Haltung sei befahren
+    /// worden - bei einem Abbruch waere das falsch.
+    /// Ein vom Menschen gesetzter Rohranfang wird hier NICHT auf 0.00 m verschoben.
+    /// </summary>
+    public static ProtocolBoundaryPlan PlanBoundaries(
+        IReadOnlyList<ProtocolEntry> entries,
+        double? haltungslaengeM)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        var active = entries.Where(e => !e.IsDeleted).ToList();
+
+        var hasStart = active.Any(e =>
+            string.Equals(e.Code, CodeRohranfang, StringComparison.OrdinalIgnoreCase));
+
+        var hasEnd = active.Any(e =>
+            string.Equals(e.Code, CodeRohrende, StringComparison.OrdinalIgnoreCase)
+            || (e.Code?.StartsWith(AbortPrefix, StringComparison.OrdinalIgnoreCase) ?? false));
+
+        // Ein Rohrende liegt hinter jeder Beobachtung. Fehlt in den Stammdaten
+        // jede Laenge, traegt der Codiermodus beim Einstieg ersatzweise den
+        // hoechsten Protokollmeter als "Haltungslaenge_m" nach - und der ist,
+        // wenn zugleich das Rohrende fehlt, genau der letzte Befund. Ein daraus
+        // gebauter Vorschlag saesse auf dem Schaden und wuerde dem Benutzer als
+        // "Haltungslaenge" angeboten. Lieber kein Vorschlag als ein erfundener:
+        // dann setzt der Mensch das Rohrende von Hand.
+        var gerundet = haltungslaengeM is > 0
+            ? Math.Round(haltungslaengeM.Value, 2)
+            : (double?)null;
+
+        var letzteBeobachtung = LetzteBeobachtung(active);
+        var taugt = gerundet is { } wert && IstPlausiblesRohrende(wert, letzteBeobachtung);
+        var proposal = taugt ? gerundet : null;
+
+        return new ProtocolBoundaryPlan(
+            PipeStartMissing: !hasStart,
+            PipeEndMissing: !hasEnd,
+            PipeEndProposalMeter: hasEnd ? null : proposal,
+            // Eine bekannte, aber unbrauchbare Laenge geht mit: nur so kann der
+            // Dialog den Unterschied zwischen "keine Laenge" und "diese Laenge
+            // taugt nicht als Rohrende" benennen.
+            RejectedLengthM: hasEnd || taugt ? null : gerundet,
+            LastObservationM: letzteBeobachtung);
+    }
+
+    /// <summary>
+    /// Der hoechste Meter, an dem im Protokoll etwas beobachtet wurde - Anfang
+    /// oder Ende eines Eintrags. Ohne Eintraege 0.
+    /// </summary>
+    private static double LetzteBeobachtung(IReadOnlyList<ProtocolEntry> active)
+        => active
+            .SelectMany(e => new[] { e.MeterStart, e.MeterEnd })
+            .Where(meter => meter.HasValue)
+            .Select(meter => meter!.Value)
+            .DefaultIfEmpty(0)
+            .Max();
+
+    /// <summary>
+    /// Taugt dieser Meter als Rohrende? Nur, wenn er hinter jeder Beobachtung
+    /// liegt. Ein Wert auf oder vor dem letzten Befund ist keine Haltungslaenge,
+    /// sondern aus dem Protokoll zurueckgerechnet.
+    /// </summary>
+    private static bool IstPlausiblesRohrende(double haltungslaengeM, double letzteBeobachtung)
+        => haltungslaengeM > 0 && haltungslaengeM > letzteBeobachtung + MeterEpsilon;
+
+    /// <summary>Fuegt den Rohranfang (BCD) bei 0.00 m vorne ein und gibt ihn zurueck.</summary>
+    public static ProtocolEntry InsertPipeStart(List<ProtocolEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        var entry = CreateBoundaryEntry(CodeRohranfang, "Rohranfang", 0.0);
+        entries.Insert(0, entry);
+        return entry;
+    }
+
+    /// <summary>Haengt das Rohrende (BCE) am gegebenen Meter an und gibt es zurueck.</summary>
+    public static ProtocolEntry AppendPipeEnd(List<ProtocolEntry> entries, double meter)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        var entry = CreateBoundaryEntry(CodeRohrende, "Rohrende", Math.Round(meter, 2));
+        entries.Add(entry);
+        return entry;
     }
 
     /// <summary>
@@ -143,11 +254,33 @@ public static class ProtocolBoundaryService
             Source = ProtocolEntrySource.Manual,
             Ai = new ProtocolEntryAiMeta
             {
-                Flags = new List<string> { "foto_required", "auto_boundary" }
+                Flags = new List<string> { "foto_required", AutoBoundaryFlag }
+            },
+            Training = new ProtocolEntryTrainingMeta
+            {
+                SkipAutomaticPersistence = true,
+                SkipReason = "Automatisch ergaenzte Rohrgrenze"
             }
         };
     }
 }
+
+/// <summary>Welche Rohrgrenze fehlt, und welcher Meter waere fuer das Rohrende plausibel.</summary>
+public sealed record ProtocolBoundaryPlan(
+    bool PipeStartMissing,
+    bool PipeEndMissing,
+    double? PipeEndProposalMeter,
+
+    /// <summary>
+    /// Eine bekannte Haltungslaenge, die als Rohrende NICHT taugt, weil sie nicht
+    /// hinter der letzten Beobachtung liegt. <c>null</c> heisst: entweder gibt es
+    /// gar keine Laenge, oder sie wurde als Vorschlag angenommen. Der Unterschied
+    /// entscheidet, was der Benutzer zu lesen bekommt.
+    /// </summary>
+    double? RejectedLengthM = null,
+
+    /// <summary>Hoechster Meter, an dem im Protokoll etwas beobachtet wurde.</summary>
+    double LastObservationM = 0);
 
 public sealed class ProtocolBoundaryResult
 {

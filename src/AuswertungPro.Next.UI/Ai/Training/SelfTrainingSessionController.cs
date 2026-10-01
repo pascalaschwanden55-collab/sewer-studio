@@ -111,8 +111,13 @@ public static class SelfTrainingSessionController
         var pdfExtractor = new PdfProtocolExtractor();
 
         var kbContext = new KnowledgeBaseContext();
-        var retrieval = new RetrievalService(kbContext, new EmbeddingService(kbHttpClient, retrievalConfig));
         var evalHaltungen = EvalContaminationSetProvider.Load(appSettings).HaltungKeys;
+        // Auditbefund 11: Die Sperrliste war hier schon geladen, ging aber nicht an die
+        // Suche. Reservierte Pruefhaltungen durften so als Vergleichswissen einfliessen.
+        var retrieval = GuardedRetrievalFactory.Create(
+            kbContext,
+            new EmbeddingService(kbHttpClient, retrievalConfig),
+            evalHaltungen);
 
         var orchestrator = new SelfTrainingOrchestrator(
             vision,

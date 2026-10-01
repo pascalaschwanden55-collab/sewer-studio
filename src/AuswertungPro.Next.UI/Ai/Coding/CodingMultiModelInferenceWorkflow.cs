@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Windows.Media;
+using AuswertungPro.Next.Application.UseCases.CodingEinzelbild;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Player;
 
@@ -33,6 +34,10 @@ public sealed record CodingMultiModelInferenceWorkflowActions(
 public sealed record CodingMultiModelInferenceWorkflowResult(
     CodingMultiModelInferenceWorkflowOutcome Outcome);
 
+/// <summary>
+/// Einstieg des CodingReplay-Messhosts ohne Aufnahmebeleg. Der Player nutzt
+/// <see cref="CodingEinzelbildAnalyseUseCase.ExecuteAsync"/>; Verteilung und Fehlerregel liegen dort.
+/// </summary>
 public static class CodingMultiModelInferenceWorkflow
 {
     public static async Task<CodingMultiModelInferenceWorkflowResult> ExecuteAsync(
@@ -51,42 +56,33 @@ public static class CodingMultiModelInferenceWorkflow
             currentMeterForClassifier,
             request.EndMeter);
 
-        var result = await actions.AnalyzeFrameAsync(
+        var result = await CodingEinzelbildAnalyseUseCase.AuswertenAsync(
             request.FrameBytes,
             classifierInput,
-            request.CancellationToken);
+            request.CancellationToken,
+            new CodingEinzelbildAuswertung<SingleFrameResult>(
+                actions.AnalyzeFrameAsync,
+                FehlerLesen: analysis => analysis.Error,
+                Melden: meldung => CodingEinzelbildStatusAnzeige.Zeigen(
+                    meldung,
+                    request.ActivityText,
+                    actions.SetCodingAiState),
+                GrenzeBehandelnAsync: analysis => actions.TryHandleBoundaryClassifierResultAsync(
+                    analysis,
+                    request.CaptureTimestampSeconds,
+                    request.FrameOsdMeter),
+                StrukturBehandeln: analysis => actions.TryHandleStructuralClassifierResult(
+                    analysis,
+                    request.CaptureTimestampSeconds,
+                    request.FrameOsdMeter),
+                ErgebnisBehandeln: analysis => actions.HandleAnalysisResult(analysis)));
 
-        if (result.Error != null)
+        return new CodingMultiModelInferenceWorkflowResult(result.Ausgang switch
         {
-            actions.SetCodingAiState(
-                $"Fehler: {result.Error}",
-                PlayerStatusColors.Error,
-                "Multi-Model",
-                false);
-            return new CodingMultiModelInferenceWorkflowResult(
-                CodingMultiModelInferenceWorkflowOutcome.Error);
-        }
-
-        if (await actions.TryHandleBoundaryClassifierResultAsync(
-                result,
-                request.CaptureTimestampSeconds,
-                request.FrameOsdMeter))
-        {
-            return new CodingMultiModelInferenceWorkflowResult(
-                CodingMultiModelInferenceWorkflowOutcome.BoundaryHandled);
-        }
-
-        if (actions.TryHandleStructuralClassifierResult(
-                result,
-                request.CaptureTimestampSeconds,
-                request.FrameOsdMeter))
-        {
-            return new CodingMultiModelInferenceWorkflowResult(
-                CodingMultiModelInferenceWorkflowOutcome.StructuralHandled);
-        }
-
-        actions.HandleAnalysisResult(result);
-        return new CodingMultiModelInferenceWorkflowResult(
-            CodingMultiModelInferenceWorkflowOutcome.ResultHandled);
+            CodingEinzelbildAusgang.Modellfehler => CodingMultiModelInferenceWorkflowOutcome.Error,
+            CodingEinzelbildAusgang.GrenzeBehandelt => CodingMultiModelInferenceWorkflowOutcome.BoundaryHandled,
+            CodingEinzelbildAusgang.StrukturBehandelt => CodingMultiModelInferenceWorkflowOutcome.StructuralHandled,
+            _ => CodingMultiModelInferenceWorkflowOutcome.ResultHandled
+        });
     }
 }

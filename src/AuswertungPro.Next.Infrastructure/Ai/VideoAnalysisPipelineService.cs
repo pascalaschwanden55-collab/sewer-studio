@@ -130,6 +130,15 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
         // â”€â”€ Decide: Multi-Model or Ollama-Only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var (useMultiModel, pipelineCfg, fallbackReason) = await ShouldUseMultiModelAsync(ct).ConfigureAwait(false);
+        pipelineCfg = pipelineCfg with { PipeDiameterMm = request.PipeDiameterMm };
+        var measurementWarnings = useMultiModel
+            ? PipelinePipeDiameterPolicy.Warnings(pipelineCfg)
+            : Array.Empty<string>();
+        foreach (var warning in measurementWarnings)
+        {
+            _logger.LogWarning("Videoanalyse-Messung: {Warning}", warning);
+            progress?.Report(new PipelineProgress(PipelinePhase.MultiModelDetection, 0, "WARNUNG: " + warning));
+        }
 
         // Unerwarteten Fallback klar sichtbar machen (sonst sieht Ollama-Only wie Normalbetrieb aus).
         if (fallbackReason is not null)
@@ -229,7 +238,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         {
             _logger.LogWarning("Videoanalyse abgebrochen (ffmpeg-Haenger): {Reason}", ex.Message);
             return PipelineResult.Failed(
-                $"Video-Frame-Extraktion haengt (ffmpeg): {ex.Message}");
+                $"Video-Frame-Extraktion hängt (ffmpeg): {ex.Message}");
         }
 
         if (!videoResult.IsSuccess)
@@ -241,7 +250,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         {
             _logger.LogWarning("Videoanalyse degradiert: {Reason}", videoResult.DegradedReason);
             progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
-                "WARNUNG: " + (videoResult.DegradedReason ?? "Analyse unvollstaendig (Sidecar-Ausfall)."),
+                "WARNUNG: " + (videoResult.DegradedReason ?? "Analyse unvollständig (Sidecar-Ausfall)."),
                 FramesDone: videoResult.FramesAnalyzed, FramesTotal: videoResult.FramesAnalyzed));
         }
 
@@ -253,22 +262,21 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                 "Videoanalyse ohne qualitaetsgesicherten Detektor: {Reason}",
                 videoResult.DetectorQualificationReason ?? "Altmodell nicht qualifiziert.");
             progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
-                "WARNUNG: YOLO nicht freigegeben – DINO/SAM laufen weiter; Ergebnis manuell pruefen.",
+                "WARNUNG: YOLO nicht freigegeben – DINO/SAM laufen weiter; Ergebnis manuell prüfen.",
                 FramesDone: videoResult.FramesAnalyzed, FramesTotal: videoResult.FramesAnalyzed));
         }
 
-        // Unvollstaendigkeits-Hinweis (Skip-Quote > 10 %): ueber denselben WARNUNG-Pfad
-        // wie der Degraded-Hinweis ausspielen — Ergebnis ist nutzbar, aber lueckenhaft.
+        // Auch ein vorzeitig beendeter Lauf kann ohne erhoehte Skip-Quote unvollstaendig sein.
         if (videoResult.Incomplete)
         {
-            _logger.LogWarning("Videoanalyse unvollstaendig: mehr als 10 % der Frames fehlerbedingt uebersprungen.");
+            _logger.LogWarning("Videoanalyse unvollständig: Das Video wurde nicht vollständig ausgewertet.");
             progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
-                "WARNUNG: Mehr als 10 % der Frames wurden fehlerbedingt uebersprungen – Ergebnis unvollstaendig.",
+                "WARNUNG: Das Video wurde nicht vollständig ausgewertet. Ergebnis unvollständig.",
                 FramesDone: videoResult.FramesAnalyzed, FramesTotal: videoResult.FramesAnalyzed));
         }
 
         progress?.Report(new PipelineProgress(PipelinePhase.VideoAnalysis, 100,
-            $"{videoResult.Detections.Count} SchÃ¤den erkannt in {videoResult.FramesAnalyzed} Frames.",
+            $"{videoResult.Detections.Count} Schäden erkannt in {videoResult.FramesAnalyzed} Frames.",
             FramesDone: videoResult.FramesAnalyzed,
             FramesTotal: videoResult.FramesAnalyzed));
 
@@ -301,21 +309,21 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             return PipelineResult.Failed($"Code-Mapping fehlgeschlagen: {genResult.Error}");
 
         var resultWarnings = genResult.Warnings.ToList();
+        resultWarnings.AddRange(measurementWarnings);
         if (videoResult.Degraded)
         {
             resultWarnings.Add(
-                "Manuelle Pruefung erforderlich: "
-                + (videoResult.DegradedReason ?? "Die Videoanalyse war eingeschraenkt."));
+                "Manuelle Prüfung erforderlich: "
+                + (videoResult.DegradedReason ?? "Die Videoanalyse war eingeschränkt."));
         }
         if (videoResult.Incomplete)
         {
             resultWarnings.Add(
-                "Ergebnis unvollstaendig: mehr als 10 % der Frames wurden fehlerbedingt "
-                + "uebersprungen (Sidecar-/Modellfehler). Manuelle Pruefung empfohlen.");
+                "Ergebnis unvollständig: Das Video wurde nicht vollständig ausgewertet. Manuelle Prüfung erforderlich.");
         }
 
         progress?.Report(new PipelineProgress(PipelinePhase.CodeMapping, 100,
-            $"{genResult.MappedEntries.Count(e => e.SuggestedCode != null)} EintrÃ¤ge gemappt.",
+            $"{genResult.MappedEntries.Count(e => e.SuggestedCode != null)} Einträge gemappt.",
             ItemsDone: genResult.MappedEntries.Count,
             ItemsTotal: genResult.MappedEntries.Count));
 
@@ -323,9 +331,9 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             PipelinePhase.Done,
             100,
             videoResult.Degraded
-                ? "Fertig – Ergebnis ist eingeschraenkt und muss manuell geprueft werden."
+                ? "Fertig – Ergebnis ist eingeschränkt und muss manuell geprüft werden."
                 : videoResult.Incomplete
-                    ? "Fertig – Ergebnis ist unvollstaendig (>10 % der Frames uebersprungen); manuelle Pruefung empfohlen."
+                    ? "Fertig – Ergebnis ist unvollständig; manuelle Prüfung erforderlich."
                     : "Fertig."));
 
         return new PipelineResult(
@@ -377,7 +385,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                     throw new InvalidOperationException(
                         $"{notReadyReason}, aber PipelineMode=MultiModel erzwungen.");
                 return (false, pipelineCfg,
-                    $"{notReadyReason} - Analyse laeuft im schwaecheren Ollama-Only-Modus.");
+                    $"{notReadyReason} - Analyse läuft im schwächeren Ollama-Only-Modus.");
             }
 
             // Klassifikator fehlt -> Warnung statt Blocker: Multi-Model laeuft weiter,
@@ -393,7 +401,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
                     + (string.IsNullOrWhiteSpace(detectorQualification?.Reason)
                         ? ": Qualifikationsstatus fehlt oder ist unlesbar"
                         : $": {detectorQualification?.Reason}")
-                    + " - DINO/SAM laufen ohne YOLO-Filter; Ergebnis muss manuell geprueft werden.");
+                    + " - DINO/SAM laufen ohne YOLO-Filter; Ergebnis muss manuell geprüft werden.");
 
             return (true, pipelineCfg, null);
         }
@@ -403,7 +411,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             if (pipelineCfg.Mode == PipelineMode.MultiModel)
                 throw;
             return (false, pipelineCfg,
-                $"Sidecar-Fehler ({ex.Message}) - Analyse laeuft im schwaecheren Ollama-Only-Modus.");
+                $"Sidecar-Fehler ({ex.Message}) - Analyse läuft im schwächeren Ollama-Only-Modus.");
         }
     }
 
@@ -412,7 +420,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
         if (!check.IsReachable)
             return $"Sidecar nicht erreichbar ({sidecarUrl})";
         if (!check.IsAuthorized)
-            return $"Sidecar-Token ungueltig oder fehlt ({sidecarUrl})";
+            return $"Sidecar-Token ungültig oder fehlt ({sidecarUrl})";
         if (check.Health is null)
             return $"Sidecar-Health fehlgeschlagen: {check.Error ?? "keine gueltige Antwort"}";
         if (!string.IsNullOrWhiteSpace(check.Error))
@@ -420,7 +428,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
 
         var health = check.Health;
         if (!health.HasRequiredModels)
-            return $"Sidecar unvollstaendig: {health.MissingRequiredModelsText}-Gewichte fehlen";
+            return $"Sidecar unvollständig: {health.MissingRequiredModelsText}-Gewichte fehlen";
 
         // Fehlender Klassifikator ist kein Blocker: die Warnung gibt der Aufrufer aus,
         // hier darf das "degraded" des Sidecars nicht als hartes Nicht-bereit zaehlen.

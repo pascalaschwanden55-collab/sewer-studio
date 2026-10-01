@@ -43,6 +43,10 @@ public sealed partial class VideoAnalysisPipelineViewModel : ObservableObject
     [ObservableProperty] private bool _isDone;
     [ObservableProperty] private bool _hasError;
     [ObservableProperty] private string _errorText = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResultWarnings))]
+    private string _resultWarningText = "";
+    public bool HasResultWarnings => !string.IsNullOrWhiteSpace(ResultWarningText);
 
     // Multi-Model Pipeline
     [ObservableProperty] private bool _isMultiModelActive;
@@ -79,6 +83,7 @@ public sealed partial class VideoAnalysisPipelineViewModel : ObservableObject
         IsDone = false;
         HasError = false;
         ErrorText = "";
+        ResultWarningText = "";
         IsMultiModelActive = false;
         YoloSkippedFrames = 0;
         TelemetryText = "";
@@ -148,9 +153,11 @@ public sealed class DetectionItem
     // QualityGate Traffic Light — Farbe aus dem zentralen Statusfarben-Dienst (theme-abhaengig).
     public TrafficLight TrafficLight { get; init; } = TrafficLight.Yellow;
     public Color TrafficLightColor => Theme.StatusColors.Current.Ampel(TrafficLight);
+    // "Sicher" versprach mehr als die Ampel hergibt (Gesamtaudit 2026-08-14, P1-4):
+    // Gruen heisst nur, dass die KI-Kriterien erfuellt sind — geprueft werden muss trotzdem.
     public string TrafficLightLabel => TrafficLight switch
     {
-        TrafficLight.Green => "Sicher",
+        TrafficLight.Green => "KI-Kriterien erfüllt – prüfen",
         TrafficLight.Yellow => "Prüfen",
         TrafficLight.Red => "Unsicher",
         _ => "?"

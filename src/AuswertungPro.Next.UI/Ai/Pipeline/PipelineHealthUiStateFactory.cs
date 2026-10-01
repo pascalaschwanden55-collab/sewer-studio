@@ -40,7 +40,7 @@ public static class PipelineHealthUiStateFactory
     private static PipelineHealthDetailsUiState CreateDetails(PipelineHealthStatus status)
     {
         static string OkBad(bool ok) => ok ? "OK" : "fehlt";
-        static string Loaded(bool ok) => ok ? "geladen" : "laedt bei Bedarf";
+        static string Loaded(bool ok) => ok ? "geladen" : "lädt bei Bedarf";
 
         var sidecar = status.SidecarReachable
             ? status.SidecarHealthy ? "OK" : "antwortet, ungesund"

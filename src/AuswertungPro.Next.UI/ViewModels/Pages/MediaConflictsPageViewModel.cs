@@ -48,7 +48,7 @@ public sealed partial class MediaConflictRowViewModel : ObservableObject
     public string TypeText => Conflict.Type == MediaConflictCenterService.ConflictType.Ambiguous ? "Mehrdeutig" : "Fehlend";
 
     public string TypeHint => Conflict.Type == MediaConflictCenterService.ConflictType.Ambiguous
-        ? "Mehrere moegliche Videos wurden gefunden. Bitte waehle den richtigen Treffer aus."
+        ? "Mehrere mögliche Videos wurden gefunden. Bitte wähle den richtigen Treffer aus."
         : "Es wurde kein passendes Video gefunden. Bitte weise ein Video manuell zu.";
 
     public string HoldingText => string.IsNullOrWhiteSpace(Conflict.HoldingRaw) ? Conflict.HoldingFolderName : Conflict.HoldingRaw!;
@@ -213,7 +213,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             OpenConflictCount = 0;
             MissingConflictCount = 0;
             AmbiguousConflictCount = 0;
-            SummaryText = "Projektordner nicht verfuegbar. Bitte Projekt zuerst speichern.";
+            SummaryText = "Projektordner nicht verfügbar. Bitte Projekt zuerst speichern.";
             LearnedMappingCount = _service.GetMappingCount(project);
             LastResult = "";
             ConflictsError = SummaryText;
@@ -221,8 +221,21 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             return;
         }
 
-        var conflicts = _service.Scan(projectFolder);
-        foreach (var conflict in conflicts)
+        var scan = _service.ScanWithResult(projectFolder);
+        if (!scan.Success)
+        {
+            OpenConflictCount = 0;
+            MissingConflictCount = 0;
+            AmbiguousConflictCount = 0;
+            LearnedMappingCount = _service.GetMappingCount(project);
+            SummaryText = "Konflikte konnten nicht geprüft werden.";
+            LastResult = "";
+            ConflictsError = scan.Error ?? SummaryText;
+            ConflictsState = StatusHostState.Error;
+            return;
+        }
+
+        foreach (var conflict in scan.Cases)
         {
             var row = new MediaConflictRowViewModel(conflict)
             {
@@ -238,7 +251,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         SelectedConflict = Conflicts.FirstOrDefault();
         LearnedMappingCount = _service.GetMappingCount(project);
         UpdateSummary();
-        LastResult = $"Konfliktcenter aktualisiert: {Conflicts.Count} offene Faelle";
+        LastResult = $"Konfliktcenter aktualisiert: {Conflicts.Count} offene Fälle";
     }
 
     private void ResolveFromCandidate()
@@ -249,7 +262,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         var source = SelectedConflict.SelectedCandidatePath;
         if (string.IsNullOrWhiteSpace(source))
         {
-            _dialogs.Info("Bitte zuerst einen Kandidaten auswaehlen.", "Konfliktcenter");
+            _dialogs.Info("Bitte zuerst einen Kandidaten auswählen.", "Konfliktcenter");
             return;
         }
 
@@ -267,7 +280,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             : SelectedConflict.Conflict.HoldingFolder;
 
         var source = _dialogs.OpenFile(
-            "Video fuer Konflikt auswaehlen",
+            "Video für Konflikt auswählen",
             MediaFileTypes.VideoDialogFilter,
             initial);
 
@@ -290,7 +303,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(SelectedConflict.SuggestedSourcePath))
         {
-            _dialogs.Info("Keine gelernte Quelle fuer diese Position vorhanden.", "Konfliktcenter");
+            _dialogs.Info("Keine gelernte Quelle für diese Position vorhanden.", "Konfliktcenter");
             return;
         }
 
@@ -303,7 +316,13 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             return;
 
         var project = _getProject();
-        var result = _service.ResolveConflict(project, SelectedConflict.Conflict, sourcePath, setUserEdited);
+        var projectFolder = _getProjectFolder();
+        var result = _service.ResolveConflict(
+            project,
+            projectFolder,
+            SelectedConflict.Conflict,
+            sourcePath,
+            setUserEdited);
         if (!result.Success)
         {
             LastResult = $"Fehler: {result.Message}";
@@ -333,7 +352,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         var projectFolder = _getProjectFolder();
         if (string.IsNullOrWhiteSpace(projectFolder) || !Directory.Exists(projectFolder))
         {
-            _dialogs.Warn("Projektordner nicht verfuegbar.", "Konfliktcenter");
+            _dialogs.Warn("Projektordner nicht verfügbar.", "Konfliktcenter");
             return;
         }
 
@@ -344,7 +363,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             setUserEdited: false);
 
         Refresh();
-        LastResult = $"Auto-Resolve: {result.Resolved}/{result.TotalConflicts} aufgeloest, {result.Failed} Fehler, {result.Unresolved} offen";
+        LastResult = $"Gelernte Zuordnungen übernommen: {result.Resolved}/{result.TotalConflicts} aufgelöst, {result.Failed} Fehler, {result.Unresolved} offen";
     }
 
     private void ClearLearnedMappings()
@@ -352,8 +371,8 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         var count = _service.ClearMappings(_getProject());
         Refresh();
         LastResult = count > 0
-            ? $"Gelernte Mappings geloescht: {count}"
-            : "Keine gelernten Mappings vorhanden.";
+            ? $"Gelernte Zuordnungen gelöscht: {count}"
+            : "Keine gelernten Zuordnungen vorhanden.";
     }
 
     private void OpenInfo()

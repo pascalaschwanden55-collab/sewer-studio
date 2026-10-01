@@ -8,7 +8,7 @@ public sealed class SettingsMigrationArchitectureTests
     [Fact]
     public void SettingsMigrationUsesStartupInstanceAndKeepsStaticFacadeThin()
     {
-        var root = FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var app = Read(root, "src", "AuswertungPro.Next.UI", "App.xaml.cs");
         var appSettings = Read(root, "src", "AuswertungPro.Next.UI", "AppSettings.cs");
         var provider = Read(root, "src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
@@ -31,20 +31,4 @@ public sealed class SettingsMigrationArchitectureTests
     private static string Read(string root, params string[] segments)
         => File.ReadAllText(Path.Combine([root, .. segments]));
 
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (Directory.Exists(Path.Combine(directory.FullName, "src")) &&
-                Directory.Exists(Path.Combine(directory.FullName, "tests")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
-    }
 }

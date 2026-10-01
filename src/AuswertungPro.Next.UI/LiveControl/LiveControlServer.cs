@@ -35,6 +35,9 @@ public sealed class LiveControlServer : IDisposable
     private readonly int _port;
     private readonly string? _token;
     private readonly QgisBridgeRequestProcessor? _qgisProcessor;
+    // Eigener Token fuer die QGIS-Endpunkte: das Plugin kennt den
+    // Live-Control-Token nicht, braucht aber trotzdem eine Anmeldung.
+    private readonly string? _qgisToken;
     private readonly BoundedBackgroundTaskRunner _clientTasks;
     private readonly CancellationTokenSource _cts = new();
     private TcpListener? _listener;
@@ -54,6 +57,7 @@ public sealed class LiveControlServer : IDisposable
         _port = port;
         _token = string.IsNullOrWhiteSpace(token) ? null : token;
         _qgisProcessor = qgisProcessor;
+        _qgisToken = qgisProcessor is null ? null : QgisBridgeToken.ResolveOrCreate(logger);
         _clientTasks = new BoundedBackgroundTaskRunner(MaxConcurrentClients, logger);
     }
 
@@ -178,7 +182,7 @@ public sealed class LiveControlServer : IDisposable
         }
         catch (OperationCanceledException)
         {
-            TryLogWarning(null, "Live-Control Request wegen Zeitueberschreitung beendet.");
+            TryLogWarning(null, "Live-Control Request wegen Zeitüberschreitung beendet.");
         }
         catch (Exception ex)
         {
@@ -189,18 +193,28 @@ public sealed class LiveControlServer : IDisposable
     private async Task<LiveHttpRequest?> ReadRequestAsync(NetworkStream stream, CancellationToken cancellationToken)
     {
         using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true);
-        var requestLine = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(requestLine))
+        // Feste Grenzen fuer Anfragezeile und Kopfteil: Die Anmeldung wird erst danach
+        // geprueft, also darf hier noch niemand beliebig viel Speicher binden.
+        var begrenzt = new BoundedHttpRequestReader(reader);
+        var requestLine = await begrenzt.ReadRequestLineAsync(cancellationToken).ConfigureAwait(false);
+        if (requestLine is null)
             return null;
 
         var parts = requestLine.Split(' ', 3);
         if (parts.Length < 2)
             return null;
 
+        var headerLines = await begrenzt.ReadHeaderLinesAsync(cancellationToken).ConfigureAwait(false);
+        if (headerLines is null)
+        {
+            _logger.LogWarning("Live-Control Request abgelehnt: Kopfteil über der Grenze.");
+            return null;
+        }
+
         var contentLength = 0;
         string? token = null;
-        string? line;
-        while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false)))
+        string? qgisToken = null;
+        foreach (var line in headerLines)
         {
             var separator = line.IndexOf(':');
             if (separator <= 0)
@@ -212,6 +226,8 @@ public sealed class LiveControlServer : IDisposable
                 _ = int.TryParse(value, out contentLength);
             else if (string.Equals(name, "X-Live-Control-Token", StringComparison.OrdinalIgnoreCase))
                 token = value;
+            else if (string.Equals(name, QgisBridgeToken.HeaderName, StringComparison.OrdinalIgnoreCase))
+                qgisToken = value;
         }
 
         // Body-Limit: schuetzt vor Speicher-Missbrauch durch riesige Content-Length.
@@ -221,36 +237,48 @@ public sealed class LiveControlServer : IDisposable
             return null;
         }
 
-        var body = "";
-        if (contentLength > 0)
+        // Content-Length zaehlt BYTES, ReadAsync liefert ZEICHEN. Eine eigene Schleife
+        // gegen die Bytezahl wartete bei Umlauten auf Zeichen, die es nie gab
+        // (Auditbefund 18). Der gemeinsame Rumpfleser rechnet richtig.
+        var body = await begrenzt.ReadBodyAsync(contentLength, MaxBodyBytes, cancellationToken)
+            .ConfigureAwait(false);
+        if (body is null)
         {
-            var buffer = new char[contentLength];
-            var read = 0;
-            while (read < contentLength)
-            {
-                var count = await reader.ReadAsync(buffer.AsMemory(read, contentLength - read), cancellationToken)
-                    .ConfigureAwait(false);
-                if (count == 0)
-                    break;
-                read += count;
-            }
-
-            body = new string(buffer, 0, read);
+            _logger.LogWarning("Live-Control Request abgelehnt: Body zu gross ({Len} Bytes).", contentLength);
+            return null;
         }
 
-        return new LiveHttpRequest(parts[0].ToUpperInvariant(), parts[1], body, token);
+        return new LiveHttpRequest(parts[0].ToUpperInvariant(), parts[1], body, token, qgisToken);
     }
 
     private async Task<LiveHttpResponse> DispatchAsync(LiveHttpRequest request)
     {
-        // QGIS-Bridge: rein lesende GET-Endpunkte OHNE Token, damit das QGIS-Plugin
-        // (kennt keinen Token) seine Layer auch dann bekommt, wenn Live-Control
-        // denselben Port haelt. Die Steuer-Endpunkte darunter bleiben Token-geschuetzt.
+        // QGIS-Bridge: lesende GET-Endpunkte fuer die Layer des Plugins und der eine
+        // schreibende POST-Weg (/qgis/seek, Klick in der Karte laesst das Video
+        // springen) — damit beides auch dann geht, wenn Live-Control denselben Port
+        // haelt. Seit dem Gesamtaudit 2026-08-14 ist auch hier eine Anmeldung Pflicht;
+        // vorher war dieser Weg der offene Nebeneingang zu denselben Projekt- und
+        // Geodaten. Gueltig ist das QGIS-Bridge-Token oder das Live-Control-Token.
         if (_qgisProcessor is not null
-            && request.Method == "GET"
+            && request.Method is "GET" or "POST"
             && QgisBridgeRequestProcessor.IsBridgePath(request.Path))
         {
-            var bridge = await _qgisProcessor.HandleAsync(request.Path).ConfigureAwait(false);
+            var qgisErlaubt = QgisBridgeToken.Matches(_qgisToken, request.QgisToken)
+                              || QgisBridgeToken.Matches(_token, request.Token);
+            if (!qgisErlaubt)
+                return new LiveHttpResponse(
+                    401,
+                    new
+                    {
+                        ok = false,
+                        error = "QGIS-Bridge-Token fehlt oder ist falsch.",
+                        hinweis = $"Token aus der Datei {QgisBridgeToken.FileName} im SewerStudio-AppData-Ordner "
+                                  + $"im Header {QgisBridgeToken.HeaderName} senden."
+                    });
+
+            var bridge = request.Method == "POST"
+                ? await _qgisProcessor.HandlePostAsync(request.Path, request.Body).ConfigureAwait(false)
+                : await _qgisProcessor.HandleAsync(request.Path).ConfigureAwait(false);
             return new LiveHttpResponse(bridge.StatusCode, Payload: null, RawBody: bridge.Body, ContentType: bridge.ContentType);
         }
 
@@ -304,9 +332,9 @@ public sealed class LiveControlServer : IDisposable
     private object ApplyResourceBrush(SetResourceBrushRequest command)
     {
         if (!LiveControlRequestValidator.IsSafeResourceKey(command.Key))
-            return new { ok = false, error = "Resource-Key ist ungueltig oder unsicher." };
+            return new { ok = false, error = "Resource-Key ist ungültig oder unsicher." };
         if (!LiveControlColorParser.TryParse(command.Color, out var color))
-            return new { ok = false, error = "Farbe ist ungueltig. Nutze z.B. gelb, yellow, #F59E0B." };
+            return new { ok = false, error = "Farbe ist ungültig. Nutze z.B. gelb, yellow, #F59E0B." };
 
         var dictionary = FindDictionaryWithKey(_app.Resources, command.Key!);
         if (dictionary is null)
@@ -327,7 +355,7 @@ public sealed class LiveControlServer : IDisposable
     private object ApplyButtonBackground(SetButtonBackgroundRequest command)
     {
         if (!LiveControlColorParser.TryParse(command.Color, out var color))
-            return new { ok = false, error = "Farbe ist ungueltig. Nutze z.B. gelb, yellow, #F59E0B." };
+            return new { ok = false, error = "Farbe ist ungültig. Nutze z.B. gelb, yellow, #F59E0B." };
 
         var maxMatches = command.MaxMatches is > 0 and <= 500 ? command.MaxMatches.Value : 50;
         var target = command.Target?.Trim();
@@ -440,9 +468,12 @@ public sealed class LiveControlServer : IDisposable
     public void Dispose()
     {
         _cts.Cancel();
-        try { _listener?.Stop(); } catch { }
-        try { _loopTask?.Wait(TimeSpan.FromSeconds(1)); } catch { }
-        try { _clientTasks.WaitForIdleAsync().Wait(TimeSpan.FromSeconds(1)); } catch { }
+        try { _listener?.Stop(); }
+        catch (Exception ex) { TryLogWarning(ex, "Live-Control-Listener konnte beim Beenden nicht gestoppt werden."); }
+        try { _loopTask?.Wait(TimeSpan.FromSeconds(1)); }
+        catch (Exception ex) { TryLogWarning(ex, "Live-Control-Serverloop konnte beim Beenden nicht abgewartet werden."); }
+        try { _clientTasks.WaitForIdleAsync().Wait(TimeSpan.FromSeconds(1)); }
+        catch (Exception ex) { TryLogWarning(ex, "Live-Control-Clients konnten beim Beenden nicht abgewartet werden."); }
         _cts.Dispose();
     }
 
@@ -455,7 +486,8 @@ public sealed class LiveControlServer : IDisposable
         }
     }
 
-    private readonly record struct LiveHttpRequest(string Method, string Path, string Body, string? Token);
+    private readonly record struct LiveHttpRequest(
+        string Method, string Path, string Body, string? Token, string? QgisToken = null);
     private readonly record struct LiveHttpResponse(
         int StatusCode,
         object? Payload,

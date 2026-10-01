@@ -244,11 +244,16 @@ public sealed class ProtocolEntryFromVsaSelectionBuilderTests
         {
             FinalCode = "BAA",
             MeterStart = "0",
-            FotoPaths = new[] { "/a/b.png", "/c/d.png" }
+            FotoPaths = new[] { "/anzeige/overlay.png", "/anzeige/foto2.png" },
+            OriginalFotoPaths = new[] { "/original/frame.png", "/original/frame2.png" }
         };
+
         var entry = ProtocolEntryFromVsaSelectionBuilder.Build(input);
+
         Assert.Equal(2, entry.FotoPaths.Count);
-        Assert.Equal("/a/b.png", entry.FotoPaths[0]);
+        Assert.Equal("/anzeige/overlay.png", entry.FotoPaths[0]);
+        Assert.Equal(2, entry.OriginalFotoPaths.Count);
+        Assert.Equal("/original/frame.png", entry.OriginalFotoPaths[0]);
     }
 
     // ── Build: Existing Entry aktualisieren ───────────────────────────
@@ -272,16 +277,20 @@ public sealed class ProtocolEntryFromVsaSelectionBuilderTests
     {
         var existing = new ProtocolEntry();
         existing.FotoPaths.Add("/alt.png");
+        existing.OriginalFotoPaths.Add("/alt-original.png");
 
         var input = new VsaSelectionInput
         {
             FinalCode = "BAA",
             MeterStart = "0",
-            FotoPaths = new[] { "/neu.png" }
+            FotoPaths = new[] { "/neu-overlay.png" },
+            OriginalFotoPaths = new[] { "/neu-original.png" }
         };
         var result = ProtocolEntryFromVsaSelectionBuilder.Build(input, existing);
 
         Assert.Single(result.FotoPaths);
-        Assert.Equal("/neu.png", result.FotoPaths[0]);
+        Assert.Equal("/neu-overlay.png", result.FotoPaths[0]);
+        Assert.Single(result.OriginalFotoPaths);
+        Assert.Equal("/neu-original.png", result.OriginalFotoPaths[0]);
     }
 }

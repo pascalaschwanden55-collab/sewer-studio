@@ -9,7 +9,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_batch_cancel_an_run_control_controller()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -42,7 +42,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_batch_import_run_preparation_an_workflow()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -79,7 +79,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     [Fact]
     public void TrainingCenterViewModel_delegiert_batch_import_run_verdrahtung_an_command_factory()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
             repoRoot,
             "src",
@@ -137,14 +137,14 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingBatchImportWorkflow_setzt_batch_import_startzustand()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportWorkflow.cs"));
         var controllerPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -165,14 +165,14 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingCenterViewModel_delegiert_batch_import_auto_approve_bestaetigung_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
         var factorySource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -195,14 +195,14 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingBatchImportWorkflow_setzt_batch_import_fehlerbehandlung()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportWorkflow.cs"));
         var controllerPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -211,33 +211,33 @@ public sealed class TrainingCenterBatchImportArchitectureTests
         var workflowSource = source;
 
         Assert.False(File.Exists(controllerPath), "Triviale Batch-Import-Fehlerbehandlung soll inline in der VM stehen.");
-        Assert.Contains("runtimeSetup.RunSummary.RecordError(ex.Message);", workflowSource, StringComparison.Ordinal);
+        Assert.Contains("runtimeSetup.RunSummary.RecordError(UserError.DescribeAndReport(ex, \"Trainings-Stapelimport\"));", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.BatchUi.Log($\"  FEHLER: {ex.Message}\");", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.BatchUi.Log(\"Batch-Import abgebrochen durch Benutzer.\");", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.BatchUi.SetStatusText(\"Batch-Import abgebrochen.\");", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.BatchUi.Log($\"FATALER FEHLER: {ex.Message}\");", workflowSource, StringComparison.Ordinal);
-        Assert.Contains("request.BatchUi.SetStatusText($\"Fehler beim Batch-Import: {ex.Message}\");", workflowSource, StringComparison.Ordinal);
+        Assert.Contains("request.BatchUi.SetStatusText($\"Fehler beim Batch-Import: {UserError.Describe(ex)}\");", workflowSource, StringComparison.Ordinal);
     }
 
     [Fact]
     public void TrainingCenterViewModel_delegiert_batch_import_abschluss_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportWorkflow.cs"));
         var viewModelSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
         var factorySource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -260,7 +260,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingCenterViewModel_setzt_trivialen_batch_import_final_state_inline()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -276,7 +276,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingCenterViewModel_delegiert_batch_import_scan_workflow_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -296,7 +296,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingCenterViewModel_delegiert_batch_import_runtime_setup_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -316,7 +316,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     [Fact]
     public void TrainingBatchImportRuntimeSetupController_setzt_existing_sample_snapshot_inline()
     {
-        var repoRoot = FindRepoRoot();
+        var repoRoot = FindRepositoryRoot();
         var snapshotControllerPath = Path.Combine(
             repoRoot,
             "src",
@@ -344,21 +344,21 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingCenterViewModel_delegiert_batch_import_generated_case_ui_an_controller()
     {
         var workflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportWorkflow.cs"));
         var candidateWorkflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportCaseCandidateWorkflowController.cs"));
         var caseWorkflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -379,28 +379,28 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingBatchImportCaseWorkflowController_buendelt_case_ui_delegates_in_sink()
     {
         var caseWorkflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportCaseWorkflowController.cs"));
         var candidateWorkflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportCaseCandidateWorkflowController.cs"));
         var generatedCaseUiSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportGeneratedCaseUiController.cs"));
         var persistenceWorkflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -430,14 +430,14 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingBatchImportGeneratedCaseController_setzt_triviale_sample_log_zeilen_inline()
     {
         var generatedCaseControllerPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportGeneratedCaseController.cs");
         var sampleLogBuilderPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -454,14 +454,14 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingBatchImportGeneratedCaseController_setzt_triviale_skip_case_ui_planung_inline()
     {
         var generatedCaseControllerPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportGeneratedCaseController.cs");
         var skippedCaseUiPlanBuilderPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -479,14 +479,14 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingBatchImportWorkflow_setzt_trivialen_batch_import_case_progress_inline()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportWorkflow.cs"));
         var controllerPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -505,7 +505,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingCenterViewModel_delegiert_batch_import_case_loop_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
@@ -524,35 +524,35 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     public void TrainingCenterViewModel_delegiert_batch_import_case_persistenz_an_controller()
     {
         var workflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportWorkflow.cs"));
         var caseWorkflowSource = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportCaseWorkflowController.cs"));
         var persistenceWorkflowPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportCasePersistenceWorkflowController.cs");
         var stateSaveControllerPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
             "TrainingBatchImportCaseStateSaveController.cs");
         var persistenceUiControllerPath = Path.Combine(
-            FindRepoRoot(),
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",

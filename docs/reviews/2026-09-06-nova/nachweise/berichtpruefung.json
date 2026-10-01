@@ -1,0 +1,34 @@
+{
+  "base": {
+    "title": "SewerStudio Nova · Prüfung und nächste Schritte",
+    "charset": "UTF-8",
+    "mode": "CSS1Compat",
+    "lang": "de",
+    "cards": 10,
+    "hasOverflow": false,
+    "promptLength": 6183,
+    "localLinks": [
+      "nachweise/nova-haltungen-falsche-details.png",
+      "nachweise/nova-haltungen-1366.png",
+      "nachweise/nova-training.png",
+      "nachweise/nova-uebersicht-dunkel.png",
+      "CLAUDE-PROMPT.md",
+      "BEWERTUNG.md",
+      "nachweise/browserpruefung.json",
+      "nachweise/originaldateien.json"
+    ]
+  },
+  "firstCount": 5,
+  "secondCount": 5,
+  "copyStatus": "Prompt kopiert. Du kannst ihn jetzt bei Claude einfügen.",
+  "narrow": {
+    "viewport": 390,
+    "documentWidth": 390
+  },
+  "errors": [],
+  "dateipruefung": {
+    "interne_links_ok": true,
+    "prompt_identisch": true,
+    "originale_unveraendert": true
+  }
+}

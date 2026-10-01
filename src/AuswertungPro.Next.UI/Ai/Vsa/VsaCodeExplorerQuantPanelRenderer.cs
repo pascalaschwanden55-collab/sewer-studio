@@ -13,7 +13,8 @@ public sealed record VsaCodeExplorerQuantPanelRenderTargets(
     Border Q1RequiredBadge,
     UIElement Q2Panel,
     TextBlock Q2Label,
-    TextBlock Q2Unit);
+    TextBlock Q2Unit,
+    TextBlock Q2Range);
 
 public sealed record VsaCodeExplorerQuantPanelRenderBrushes(
     Color DangerColor,
@@ -40,7 +41,7 @@ public static class VsaCodeExplorerQuantPanelRenderer
             targets.Q2Panel,
             targets.Q2Label,
             targets.Q2Unit,
-            rangeTextBlock: null,
+            targets.Q2Range,
             requiredBadge: null,
             brushes);
     }

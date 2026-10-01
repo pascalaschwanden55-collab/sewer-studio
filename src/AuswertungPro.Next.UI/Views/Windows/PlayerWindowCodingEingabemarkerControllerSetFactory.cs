@@ -122,7 +122,7 @@ internal static class PlayerWindowCodingEingabemarkerControllerSetFactory
                     dependencies.Dispatcher,
                     () => PlayerFocusControls.FocusElement(controls.InputText)),
                 ShowInputStatus: () => dependencies.StatusController.SetCodingAiState(
-                    "Beschreibung eingeben oder Stichwort wÃ¤hlen, dann Enter",
+                    "Beschreibung eingeben oder Stichwort wählen, dann Enter",
                     PlayerStatusColors.Info,
                     "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"")));
     }

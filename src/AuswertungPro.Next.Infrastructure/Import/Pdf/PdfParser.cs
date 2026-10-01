@@ -13,6 +13,21 @@ public sealed class PdfParser
         _allRegexes = _mapping.Values.SelectMany(v => v.Regexes).Distinct().ToList();
     }
 
+    /// <summary>
+    /// Liest die Schadenszeilen strukturiert — mit Videozaehlerstand.
+    ///
+    /// Additiv neben <see cref="ParseFields"/>: Das Textfeld "Primaere_Schaeden"
+    /// bleibt unveraendert, damit der Codierungs-Hash und seine Leser nicht
+    /// beruehrt werden. Wer die Zeit braucht, nimmt diesen Weg.
+    /// </summary>
+    internal IReadOnlyList<PrimaryDamageRowParser.PrimaryDamageRow> ParseDamageRows(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return [];
+
+        return PrimaryDamageRowParser.ExtractRows(text.Replace("\r\n", "\n").Split('\n'));
+    }
+
     public Dictionary<string, string> ParseFields(string text)
     {
         var result = new Dictionary<string, string>(StringComparer.Ordinal);

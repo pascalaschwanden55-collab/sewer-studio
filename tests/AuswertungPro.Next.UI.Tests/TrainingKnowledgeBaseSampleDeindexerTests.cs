@@ -1,3 +1,4 @@
+using System;
 using System.Net.Http;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai.Training;
@@ -50,12 +51,18 @@ public sealed class TrainingKnowledgeBaseSampleDeindexerTests
         Assert.Equal(["deindex:True:sample-1"], calls);
     }
 
+    /// <summary>
+    /// Auditbefund 16 (18.09.2026): Der Fehler darf den Ablauf weiterhin nicht abbrechen —
+    /// die persoenliche Entscheidung bleibt gespeichert. Er darf aber nicht mehr spurlos
+    /// verschwinden: Sonst meldet die Oberflaeche eine vollstaendige Entfernung, waehrend
+    /// der freigegebene KB-Eintrag weiter als Vergleichswissen dient.
+    /// </summary>
     [Fact]
-    public void TryDeindex_schluckt_deindex_fehler()
+    public void TryDeindex_bricht_bei_einem_Fehler_nicht_ab_meldet_ihn_aber()
     {
         var calls = new List<string>();
 
-        TrainingKnowledgeBaseSampleDeindexer.TryDeindex(
+        var ergebnis = TrainingKnowledgeBaseSampleDeindexer.TryDeindex(
             new TrainingKnowledgeBaseSampleDeindexRequest(
                 SampleId: "sample-1",
                 LoadConfig: Config,
@@ -64,6 +71,23 @@ public sealed class TrainingKnowledgeBaseSampleDeindexerTests
                 DeindexSample: (_, _, _) => throw new InvalidOperationException("kaputt")));
 
         Assert.Equal(["set-client"], calls);
+        Assert.False(ergebnis.Removed);
+        Assert.Contains("Programmlog", ergebnis.Error ?? "", StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TryDeindex_meldet_die_erfolgreiche_Entfernung()
+    {
+        var ergebnis = TrainingKnowledgeBaseSampleDeindexer.TryDeindex(
+            new TrainingKnowledgeBaseSampleDeindexRequest(
+                SampleId: "sample-1",
+                LoadConfig: Config,
+                GetCachedHttpClient: () => null,
+                SetCachedHttpClient: _ => { },
+                DeindexSample: (_, _, _) => { }));
+
+        Assert.True(ergebnis.Removed);
+        Assert.Null(ergebnis.Error);
     }
 
     private static OllamaConfig Config()

@@ -9,7 +9,7 @@ public sealed class ProjektmanagerReconcileGuardTests
     [Fact]
     public void Manueller_Import_verwendet_MediaDistribution_ohne_Videokopie()
     {
-        var src = ReadRepoFile("src", "AuswertungPro.Next.UI", "Services", "ImportPostProcessingController.cs");
+        var src = TestRepoPaths.RepoText("src", "AuswertungPro.Next.UI", "Services", "ImportPostProcessingController.cs");
 
         Assert.Contains("IncludeVideos: false", src);
         Assert.Contains("Fotos/PDFs", src);
@@ -18,7 +18,7 @@ public sealed class ProjektmanagerReconcileGuardTests
     [Fact]
     public void Export_Verteilung_nimmt_standardmaessig_den_Projektordner()
     {
-        var src = ReadRepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "ExportPageViewModel.cs");
+        var src = TestRepoPaths.RepoText("src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "ExportPageViewModel.cs");
 
         Assert.Contains("DistributionTargetFolderPolicy.Resolve", src);
         Assert.Contains("_shell.GetProjectFolder()", src);
@@ -27,14 +27,14 @@ public sealed class ProjektmanagerReconcileGuardTests
     [Fact]
     public void Shell_Projekterzeugung_nutzt_neue_Struktur_und_ProjectFileLocator()
     {
-        var shell = ReadRepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "ShellViewModel.cs");
-        var provider = ReadRepoFile("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
-        var orchestrator = ReadRepoFile(
+        var shell = TestRepoPaths.RepoText("src", "AuswertungPro.Next.UI", "ViewModels", "ShellViewModel.cs");
+        var provider = TestRepoPaths.RepoText("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
+        var orchestrator = TestRepoPaths.RepoText(
             "src",
             "AuswertungPro.Next.Infrastructure",
             "Import",
             "ProjectImportOrchestrator.cs");
-        var facade = ReadRepoFile(
+        var facade = TestRepoPaths.RepoText(
             "src",
             "AuswertungPro.Next.Infrastructure",
             "Import",
@@ -53,8 +53,8 @@ public sealed class ProjektmanagerReconcileGuardTests
     [Fact]
     public void Ein_Knopf_Import_nutzt_zentrale_Kanalexport_Erkennung()
     {
-        var provider = ReadRepoFile("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
-        var orchestrator = ReadRepoFile(
+        var provider = TestRepoPaths.RepoText("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
+        var orchestrator = TestRepoPaths.RepoText(
             "src",
             "AuswertungPro.Next.Infrastructure",
             "Import",
@@ -71,8 +71,8 @@ public sealed class ProjektmanagerReconcileGuardTests
     [Fact]
     public void Schachtseite_nutzt_zentralen_Excel_Vorlagenleser()
     {
-        var provider = ReadRepoFile("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
-        var viewModel = ReadRepoFile(
+        var provider = TestRepoPaths.RepoText("src", "AuswertungPro.Next.UI", "ServiceProvider.cs");
+        var viewModel = TestRepoPaths.RepoText(
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -85,17 +85,4 @@ public sealed class ProjektmanagerReconcileGuardTests
         Assert.Contains("_templateColumnReader.LoadFromExportDirectory", viewModel);
     }
 
-    private static string ReadRepoFile(params string[] parts)
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(new[] { dir.FullName }.Concat(parts).ToArray());
-            if (File.Exists(candidate))
-                return File.ReadAllText(candidate);
-            dir = dir.Parent;
-        }
-
-        throw new FileNotFoundException("Repo-Datei nicht gefunden.", Path.Combine(parts));
-    }
 }

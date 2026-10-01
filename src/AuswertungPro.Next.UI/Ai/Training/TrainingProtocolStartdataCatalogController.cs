@@ -5,7 +5,7 @@ namespace AuswertungPro.Next.UI.Ai.Training;
 
 public static class TrainingProtocolStartdataCatalogController
 {
-    public const string MissingCatalogStatusText = "Kein Code-Katalog verfuegbar.";
+    public const string MissingCatalogStatusText = "Kein Code-Katalog verfügbar.";
 
     public static ICodeCatalogProvider? Resolve(
         ICodeCatalogProvider? injectedCatalog,

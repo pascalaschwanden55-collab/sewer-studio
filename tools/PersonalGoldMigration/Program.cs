@@ -3,7 +3,9 @@ using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 var knowledgeRoot = @"C:\KI_BRAIN";
 var confirmedBy = Environment.UserName;
-var dryRun = false;
+// Standard ist der schreibfreie Prueflauf: Das Werkzeug schreibt erst mit
+// ausdruecklichem --execute. Ein vergessener Schalter darf keine Migration ausloesen.
+var dryRun = true;
 for (var index = 0; index < args.Length; index++)
 {
     switch (args[index])
@@ -16,6 +18,9 @@ for (var index = 0; index < args.Length; index++)
             break;
         case "--dry-run":
             dryRun = true;
+            break;
+        case "--execute":
+            dryRun = false;
             break;
         default:
             Console.Error.WriteLine($"Unbekannte oder unvollstaendige Option: {args[index]}");
@@ -34,6 +39,8 @@ var request = new PersonalGoldFrameMigrationRequest(
 var result = await new PersonalGoldFrameMigrationService().MigrateAsync(request);
 
 Console.WriteLine($"Modus: {(result.DryRun ? "PRUEFLAUF" : "MIGRATION")}");
+if (result.DryRun)
+    Console.WriteLine("Es wurde nichts geschrieben. Fuer die echte Migration: --execute");
 Console.WriteLine($"Persoenliche Samples: {result.SelectedSamples}");
 Console.WriteLine($"Uebernommen: {result.MigratedSamples}");
 Console.WriteLine($"Eindeutige Goldbilder: {result.UniqueGoldFrames}");

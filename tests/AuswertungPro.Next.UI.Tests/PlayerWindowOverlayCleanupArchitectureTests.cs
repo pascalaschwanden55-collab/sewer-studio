@@ -22,8 +22,8 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
 
         Assert.True(File.Exists(policyPath), "Transient-Overlay-Cleanup muss den zentralen Tag-Vertrag verwenden.");
         Assert.True(File.Exists(cleanerPath), "Transient-Overlay-Cleanup der Canvas-Elemente muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(controllerPath), "Coding-Overlay-Cleanup soll ueber einen Player-Controller laufen.");
-        Assert.True(File.Exists(surfacePath), "Transient-Overlay-Cleanup soll ueber die Overlay-Surface laufen.");
+        Assert.True(File.Exists(controllerPath), "Coding-Overlay-Cleanup soll über einen Player-Controller laufen.");
+        Assert.True(File.Exists(surfacePath), "Transient-Overlay-Cleanup soll über die Overlay-Surface laufen.");
         Assert.True(File.Exists(lifecycleWorkflowPath), "AI-Overlay-Auto-Hide/Fade-Out-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(autoHideTimerOwnerPath), "AI-Overlay-Auto-Hide-Timerbesitz soll ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -89,7 +89,7 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         var lifecycleWorkflowPath = Path.Combine(uiRoot, "Ai", "Coding", "CodingAiOverlayLifecycleWorkflow.cs");
 
         Assert.True(File.Exists(cleanerPath), "Detection-Overlay-Cleanup muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(controllerPath), "Detection-Overlay-Cleanup soll ueber einen Player-Controller laufen.");
+        Assert.True(File.Exists(controllerPath), "Detection-Overlay-Cleanup soll über einen Player-Controller laufen.");
         Assert.True(File.Exists(lifecycleWorkflowPath), "Detection-Overlay-Auto-Hide-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);

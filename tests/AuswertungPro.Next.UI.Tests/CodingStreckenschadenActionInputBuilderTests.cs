@@ -27,6 +27,57 @@ public sealed class CodingStreckenschadenActionInputBuilderTests
         Assert.Same(openWithoutStart, entries[1].Reference);
     }
 
+    /// <summary>
+    /// Die beim Schliessen erzeugte Endmarke traegt selbst IsStreckenschaden=true
+    /// und kein MeterEnd - sie sieht also wie ein offener Anfang aus. Der Tracker
+    /// wuerde sie sonst als offene Strecke behandeln: entweder einen neuen Anfang
+    /// unterdruecken oder der Endmarke ein MeterEnd verpassen, womit im Protokoll
+    /// eine zweite, erfundene Strecke steht.
+    /// </summary>
+    [Fact]
+    public void BuildOpenEntries_haelt_die_Endmarke_eines_Streckenschadens_heraus()
+    {
+        var start = Event("BBA", isStretch: true, meterStart: 4.82, meterEnd: 9.88, capturedAt: 4.82);
+        start.Entry.Beschreibung = "Wurzeln";
+
+        // Genau so entsteht sie in CodingStreckenschadenEventFactory.CloseStart.
+        var endMarker = CodingStreckenschadenEventFactory.CloseStart(start.Entry, 9.88);
+        var endEvent = new CodingEvent
+        {
+            MeterAtCapture = 9.88,
+            Entry = endMarker
+        };
+
+        var entries = CodingStreckenschadenActionInputBuilder.BuildOpenEntries(
+            new[] { start, endEvent });
+
+        Assert.Empty(entries);
+    }
+
+    /// <summary>
+    /// Ein wirklich offener Anfang muss weiterhin durchkommen - auch wenn im
+    /// selben Lauf eine fremde Endmarke danebensteht.
+    /// </summary>
+    [Fact]
+    public void BuildOpenEntries_behaelt_den_offenen_Anfang_neben_einer_Endmarke()
+    {
+        var geschlossen = Event("BBA", isStretch: true, meterStart: 4.82, meterEnd: 9.88, capturedAt: 4.82);
+        geschlossen.Entry.Beschreibung = "Wurzeln";
+        var endEvent = new CodingEvent
+        {
+            MeterAtCapture = 9.88,
+            Entry = CodingStreckenschadenEventFactory.CloseStart(geschlossen.Entry, 9.88)
+        };
+        var offen = Event("BBC", isStretch: true, meterStart: 14.5, meterEnd: null, capturedAt: 14.5);
+
+        var entries = CodingStreckenschadenActionInputBuilder.BuildOpenEntries(
+            new[] { geschlossen, endEvent, offen });
+
+        var einziger = Assert.Single(entries);
+        Assert.Equal("BBC", einziger.MainCode);
+        Assert.Same(offen, einziger.Reference);
+    }
+
     private static CodingEvent Event(
         string code,
         bool isStretch,

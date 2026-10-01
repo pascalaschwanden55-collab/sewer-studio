@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Protocol;
 
+using AuswertungPro.Next.Domain.Models;
+
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 /// <summary>
@@ -50,6 +52,25 @@ internal static class XtfValueNormalizer
     /// </summary>
     public static string NormalizeSiaMaterial(string material)
     {
+        // Zuerst das Vokabular: es kennt die Normwerte zeichengenau und haelt die
+        // Betonarten und Gussarten auseinander.
+        var ausVokabular = MaterialVokabular.Normalisieren(material);
+        if (MaterialVokabular.NachNorm(ausVokabular) is not null)
+            return ausVokabular;
+
+        // Danach die alte, tolerante Regel. Sie deckt Schreibweisen ab, die im
+        // Kanton Uri nicht vorkommen, in anderen Katastern und IKAS-Exporten aber
+        // schon ("Beton_Stahlbeton", "Gusseisen", Kurzcodes). Ohne sie waere das
+        // Vokabular enger als der bisherige Stand.
+        return NormalizeSiaMaterialLegacy(material);
+    }
+
+    /// <summary>
+    /// Die tolerante Wortteil-Regel von frueher. Sie greift nur noch fuer Werte, die
+    /// das <see cref="MaterialVokabular"/> nicht kennt.
+    /// </summary>
+    internal static string NormalizeSiaMaterialLegacy(string material)
+    {
         material ??= "";
         if (string.IsNullOrWhiteSpace(material)) return "";
 
@@ -59,7 +80,11 @@ internal static class XtfValueNormalizer
         if (Regex.IsMatch(material, "(?i)polypropylen")) return "Polypropylen";
         if (Regex.IsMatch(material, "(?i)epoxydharz")) return "Epoxydharz";
         if (Regex.IsMatch(material, "(?i)glasfaser|(?:^|[_ ])GFK(?:[_ ]|$)")) return "GFK";
-        // Faserzement vor Zement: sonst schluckt die Zement-Regel den Sonderfall.
+        // Asbestzement und Faserzement vor Zement: sonst schluckt die Zement-Regel
+        // beide Sonderfaelle. Asbestzement ist ein eigener Werkstoff - im
+        // AWU-Kantonsexport 247 Haltungen -, mit anderer Sanierung und anderem
+        // Arbeitsschutz. "Zement" waere dort schlicht falsch.
+        if (Regex.IsMatch(material, "(?i)asbestzement|(?:^|[_ ])AZ(?:[_ ]|$)")) return "Asbestzement";
         if (Regex.IsMatch(material, "(?i)faserzement")) return "Faserzement";
         if (Regex.IsMatch(material, "(?i)zement")) return "Zement";
         if (Regex.IsMatch(material, "(?i)beton")) return "Beton";
@@ -76,13 +101,7 @@ internal static class XtfValueNormalizer
     /// Normalisiert den SIA405-Nutzungsart-Wert auf den deutschen Bezeichner.
     /// </summary>
     public static string NormalizeNutzungsart(string v)
-    {
-        v ??= "";
-        if (Regex.IsMatch(v, "(?i)Schmutzabwasser")) return "Schmutzwasser";
-        if (Regex.IsMatch(v, "(?i)Regenabwasser")) return "Regenwasser";
-        if (Regex.IsMatch(v, "(?i)Mischabwasser")) return "Mischabwasser";
-        return v.Trim();
-    }
+        => NutzungsartVokabular.Normalisieren(v);
 
     /// <summary>
     /// Wandelt ein Datum im Format yyyymmdd in dd.MM.yyyy um.
@@ -94,6 +113,26 @@ internal static class XtfValueNormalizer
         var m = Regex.Match(yyyymmdd.Trim(), @"^(\d{4})(\d{2})(\d{2})$");
         if (!m.Success) return yyyymmdd.Trim();
         return $"{m.Groups[3].Value}.{m.Groups[2].Value}.{m.Groups[1].Value}";
+    }
+
+    /// <summary>
+    /// Wandelt ein Datum im Format yyyymmdd ODER im ISO-Format von INTERLIS
+    /// (<c>2025-10-06</c>, auch mit Uhrzeit wie <c>2025-10-06T14:30:00</c>) in dd.MM.yyyy um.
+    /// Die Uhrzeit faellt weg. Unlesbares und ungueltige Daten kommen unveraendert
+    /// (getrimmt) zurueck, wie bei <see cref="NormalizeDate_yyyymmdd"/>.
+    /// </summary>
+    public static string NormalizeDate(string? datum)
+    {
+        var text = (datum ?? "").Trim();
+        var iso = Regex.Match(text,
+            @"^(\d{4})-(\d{2})-(\d{2})(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$");
+        if (!iso.Success)
+            return NormalizeDate_yyyymmdd(text);
+
+        return DateTime.TryParseExact($"{iso.Groups[1].Value}{iso.Groups[2].Value}{iso.Groups[3].Value}", "yyyyMMdd",
+                   CultureInfo.InvariantCulture, DateTimeStyles.None, out var tag)
+            ? tag.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)
+            : text;
     }
 
     /// <summary>

@@ -80,7 +80,7 @@ public static class CodingAiResultWorkflow
         {
             actions.StorePendingWarmupResult(result);
             actions.SetAiState(
-                "Dateneinblendung erkannt - uebersprungen",
+                "Dateneinblendung erkannt - übersprungen",
                 PlayerStatusColors.Muted,
                 $"Warte auf Videobild... (Bild {actions.GetSkippedFrames()} von 3)");
             actions.ClearFindingsAndCanvas();

@@ -28,7 +28,7 @@ Danach QGIS neu starten und unter `Erweiterungen > Erweiterungen verwalten`
 `SewerStudio Bridge` aktivieren.
 
 Jede Installation sichert das Plugin zusaetzlich ins zentrale Plugin-Archiv
-`D:\QGIS_V4.03\AWU_Plugins` (entpackter Ordner + versioniertes ZIP, gleiche
+`D:\QGIS_V4.2\AWU_Plugins` (entpackter Ordner + versioniertes ZIP, gleiche
 Konvention wie die uebrigen AWU-Plugins). Anderer Ort: `-BackupDir <Pfad>`.
 
 ## Nutzung
@@ -68,14 +68,23 @@ HTTP-Bridge (liefert SewerStudio ab Version 4.5 live auf `http://127.0.0.1:8765`
 - `GET /qgis/schaechte.geojson` — alle Kataster-Schächte mit Projektbezug
 - `GET /qgis/current_schacht.geojson` — aktuell gewählter Schacht
 - `GET /qgis/schacht_sanierungstyp.geojson` — Schächte nach `Ausgefuehrt durch`
+- `GET /qgis/video_position.json` — Live-Position der Videowiedergabe (Haltung, Meter,
+  Zeit, Länge, `meterQuelle`). Läuft kein Video oder ist der Meterstand nicht
+  bestimmbar: `404`, das Plugin bleibt dann still.
+- `POST /qgis/seek` — Rückweg: `{"haltung": "...", "meter": 12.4}` springt im
+  **offenen** Video an diese Stelle. Gesprungen wird nur in der Haltung, die gerade
+  läuft; ein Klick auf eine andere Haltung ergibt `409`.
+
+Einzelheiten zu beiden Wegen: `sewerstudio_bridge/video_position_endpunkt.md`.
 
 Hinweise zum Bridge-Server:
 
 - Laeuft automatisch mit der App; abschaltbar mit `SEWERSTUDIO_QGIS_BRIDGE=0`,
   Port aenderbar mit `SEWERSTUDIO_QGIS_BRIDGE_PORT`.
 - Ist Live-Control aktiv (`SEWERSTUDIO_LIVE_CONTROL=1`), teilt sich die Bridge den
-  Port 8765 mit Live-Control: die `/qgis`-Endpunkte sind dort ohne Token lesbar,
-  die Steuer-Endpunkte bleiben Token-geschuetzt.
+  Port 8765 mit Live-Control: die `/qgis`-Endpunkte verlangen dort dasselbe
+  QGIS-Bridge-Token (das Live-Control-Token wird ebenfalls akzeptiert), die
+  Steuer-Endpunkte bleiben wie bisher Token-geschuetzt.
 - Die "aktuelle Haltung" folgt der Auswahl auf der Haltungen-Seite und in der Karte
   (auch im separaten Kartenfenster) und bleibt beim Seitenwechsel erhalten.
 - Auch das QGIS-Plugin akzeptiert als Bridge-Ziel nur lokale HTTP-Adressen
@@ -84,13 +93,34 @@ Hinweise zum Bridge-Server:
 ### Sicherheitsgrenze
 
 Die Live-Bridge ist bewusst fuer einen Windows-Einzelplatz ausgelegt. Sie bindet nur an
-`127.0.0.1`, akzeptiert ausschliesslich `GET`/`HEAD` und liefert nur Projekt- und
-Geometriedaten zum Lesen. Sie besitzt deshalb kein Token; ein Prozess auf demselben PC
-koennte die Daten ebenfalls lesen, aber weder das Projekt noch die App damit veraendern.
+`127.0.0.1` und akzeptiert `GET`/`HEAD` sowie `POST` auf genau einem Pfad.
 
-Auf einem Mehrbenutzer- oder Terminalserver gilt diese Annahme nicht. Dort die Bridge mit
-`SEWERSTUDIO_QGIS_BRIDGE=0` deaktivieren. Vor einer spaeteren Freigabe fuer solche Systeme
-muss ein gemeinsamer Token fuer SewerStudio und das QGIS-Plugin eingefuehrt werden.
+Alle Lesewege liefern nur Projekt- und Geometriedaten. Der einzige schreibende Weg ist
+`POST /qgis/seek`, und er kann genau eines: im bereits offenen Video an eine andere
+Stelle springen. Er oeffnet kein Video, wechselt keine Haltung, waehlt nichts aus und
+veraendert keine Daten. Sein Rumpf ist auf 8 KiB begrenzt, jeder andere Pfad ergibt
+auch per `POST` ein `404`.
+
+Zusaetzlich ist seit dem Gesamtaudit vom 2026-08-14 ein Token Pflicht. Vorher genuegte
+Loopback allein — damit konnte jedes andere Programm auf demselben PC Projekt- und
+Geodaten abrufen. Ein Token ist jetzt immer aktiv; es gibt keinen anmeldefreien Weg.
+
+Woher der Token kommt:
+
+1. Umgebungsvariable `SEWERSTUDIO_QGIS_BRIDGE_TOKEN` (hat Vorrang), sonst
+2. Datei `.qgis_bridge_token` im SewerStudio-AppData-Ordner
+   (`%LOCALAPPDATA%\SewerStudio\.qgis_bridge_token`, oder unter
+   `SEWERSTUDIO_APPDATA_DIR`, falls gesetzt).
+
+SewerStudio erzeugt die Datei beim Start selbst. Das Plugin liest sie automatisch und
+sendet den Wert im Kopfzeilenfeld `X-QGIS-Bridge-Token`. Normalerweise ist also nichts
+einzurichten. Fehlt der Token, antwortet die Bridge mit `401` und das Plugin zeigt einen
+Klartexthinweis. Fehlermeldungen der Bridge nennen nach aussen keine internen Pfade oder
+Bauteilnamen mehr; Einzelheiten stehen nur im SewerStudio-Protokoll.
+
+Auf einem Mehrbenutzer- oder Terminalserver bleibt die vorsichtige Empfehlung: Bridge mit
+`SEWERSTUDIO_QGIS_BRIDGE=0` deaktivieren. Der Token schuetzt vor fremden Programmen, aber
+die Bridge ist weiterhin fuer genau einen angemeldeten Benutzer gedacht.
 
 Bestehende Shapefile-Exporte werden ebenfalls erkannt. Das Plugin sucht im
 Datenordner den neuesten Unterordner mit `*.shp` und laedt u. a. `Haltungen*`,

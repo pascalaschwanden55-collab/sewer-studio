@@ -19,7 +19,11 @@ public sealed record SchachtProtocolParseResult(
     string? Status,
     string? Link,
     IReadOnlyList<(string Bauteil, string Schaden)> Schaeden,
-    string? Lesehinweis = null);
+    string? Lesehinweis = null)
+{
+    /// <summary>Anschlusstabelle, Medium, Materialien, Deckel, Steighilfe — additiv, null bei altem Aufrufer.</summary>
+    public SchachtProtocolZusatz? Zusatz { get; init; }
+}
 
 /// <summary>
 /// Liest ein einzelnes Schacht-Protokoll-PDF und wendet es auf einen Schacht an
@@ -40,6 +44,18 @@ public interface ISchachtProtocolImportService
 
     /// <summary>Kopiert die PDF ins Projekt und gibt den relativen Projektpfad zurueck.</summary>
     string DistributePdf(string projektOrdner, string schachtnummer, string pdfQuelle);
+}
+
+/// <summary>
+/// Optionale, additive Erweiterung fuer das ausdrueckliche Aktualisieren EINES bereits
+/// verknuepften Schachts. Das frisch gelesene Protokoll gilt dabei als alleinige
+/// Wahrheit: Felder, die im PDF jetzt fehlen, werden geleert, und das Beobachtungs-
+/// Protokoll wird auch dann ersetzt, wenn im PDF keine Beobachtung mehr steht.
+/// <see cref="ISchachtProtocolImportService.Apply"/> bleibt der ergaenzende Importweg.
+/// </summary>
+public interface ISchachtProtocolRebuildService
+{
+    void Rebuild(SchachtRecord ziel, SchachtProtocolParseResult ergebnis, string pdfPfadFuerFeld);
 }
 
 /// <summary>

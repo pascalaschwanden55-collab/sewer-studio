@@ -42,7 +42,6 @@ public sealed class InspectionProtocolFileLocatorDependencyTests
     [InlineData(typeof(DataPageViewModel), "_inspectionProtocolFiles")]
     [InlineData(typeof(DataPagePrintController), "_inspectionProtocolFiles")]
     [InlineData(typeof(BuilderPageViewModel), "_inspectionProtocolFiles")]
-    [InlineData(typeof(KarteViewModel), "_inspectionProtocolFiles")]
     public void Produktive_Aufrufer_halten_den_Application_Vertrag(Type type, string fieldName)
     {
         var field = type.GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);

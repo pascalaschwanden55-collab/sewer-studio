@@ -245,7 +245,7 @@ public sealed class PlayerWindowCodingStateArchitectureTests
         var visualControllerStartIndex = exit.IndexOf(visualControllerStart, StringComparison.Ordinal);
         Assert.True(visualControllerStartIndex >= 0, "Der Listen-Controller wird im PlayerWindow nicht aufgebaut.");
         var visualControllerEndIndex = exit.IndexOf(");", visualControllerStartIndex, StringComparison.Ordinal);
-        Assert.True(visualControllerEndIndex > visualControllerStartIndex, "Der Aufbau des Listen-Controllers ist unvollstaendig.");
+        Assert.True(visualControllerEndIndex > visualControllerStartIndex, "Der Aufbau des Listen-Controllers ist unvollständig.");
         var visualControllerConstruction = exit[
             visualControllerStartIndex..(visualControllerEndIndex + 2)];
         Assert.Equal(

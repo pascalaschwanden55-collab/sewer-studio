@@ -74,8 +74,26 @@ public sealed class OverlayGeometry
     public double? EllipseRadiusXMm { get; set; }  // Horizontaler Radius in mm (Ellipse-Tool)
     public double? EllipseRadiusYMm { get; set; }  // Vertikaler Radius in mm (Ellipse-Tool)
 
+    // Echte SAM-Maske der manuell gezogenen Box. Sie gehoert zur Geometrie und
+    // nicht zum KI-Vorschlag, damit eine Handcodierung eine Handcodierung bleibt.
+    public OverlaySamMask? SamMask { get; set; }
+
     // Referenz zum Snapshot-Bild (PNG mit Overlay eingebrannt)
     public string? SnapshotPath { get; set; }
+}
+
+/// <summary>
+/// Aufloesungsgebundene SAM-Segmentierung einer manuellen Overlay-Geometrie.
+/// Die formale RLE-Pruefung erfolgt beim Mapping in den Trainingsbestand.
+/// </summary>
+public sealed class OverlaySamMask
+{
+    public string MaskRle { get; set; } = string.Empty;
+    public int ImageWidth { get; set; }
+    public int ImageHeight { get; set; }
+    public int MaskAreaPixels { get; set; }
+    public double Confidence { get; set; }
+    public string? Label { get; set; }
 }
 
 /// <summary>
@@ -127,8 +145,26 @@ public sealed class CodingEvent
 /// </summary>
 public sealed class CodingEventAiContext
 {
+    /// <summary>Explizite menschliche Beruehrung, auch wenn Decision weiterhin Ignored ist.</summary>
+    public DateTimeOffset? HumanTouchedAtUtc { get; set; }
+    /// <summary>Technischer Fehler beim beobachteten Bild; Kandidatenstatus allein setzt dies nicht.</summary>
+    public bool ObservationHasTechnicalFailure { get; set; }
+
+    /// <summary>Unveraenderte fruehere Bild-/Meter-/Modellbelege einer Vorschlagskorrektur.</summary>
+    public List<CodingProposalEvidenceSnapshot> PreviousEvidence { get; set; } = [];
+
     public string? SuggestedCode { get; set; }
     public double Confidence { get; set; }
+
+    /// <summary>
+    /// Gepinnte Kennung des Modells, das diesen Vorschlag erzeugt hat. Ohne sie
+    /// laesst sich spaeter nicht sagen, welches Modell welche Daten beeinflusst
+    /// hat. Null = unbekannt (Altbestand).
+    /// </summary>
+    public string? SuggestedByModelId { get; set; }
+
+    /// <summary>SHA-256 des vorschlagenden Gewichts, bindet an genau ein Artefakt.</summary>
+    public string? SuggestedByModelSha256 { get; set; }
     public string? Reason { get; set; }
     public CodingUserDecision Decision { get; set; } = CodingUserDecision.Ignored;
 

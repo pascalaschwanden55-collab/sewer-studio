@@ -5,6 +5,51 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageProtocolWindowControllerTests
 {
+    [Theory]
+    [InlineData("Projektwechsel")]
+    [InlineData("Loeschen")]
+    [InlineData("Videowechsel")]
+    [InlineData("Eintrag_loeschen")]
+    public async Task OpenAsync_verwirft_veraltetes_Ziel_nach_der_Pfadauflosung(string fall)
+    {
+        var p = new Project();
+        var h = Record("video.mp4");
+        var eintrag = new AuswertungPro.Next.Domain.Protocol.ProtocolEntry();
+        h.Protocol = new() { Current = new() { Entries = [eintrag] } };
+        p.Data.Add(h);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var release = new ManualResetEventSlim();
+        var shown = 0;
+        var controller = new DataPageProtocolWindowController(() => p, () => "C:/eins/projekt.json",
+            path => { started.TrySetResult(); release.Wait(TimeSpan.FromSeconds(5)); return path; },
+            _ => shown++, () => { }, _ => { }, _ => { });
+        var task = controller.OpenAsync(h, eintrag.EntryId);
+        try
+        {
+            await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            switch (fall)
+            {
+                case "Projektwechsel": p = new Project(); break;
+                case "Loeschen": p.Data.Remove(h); break;
+                case "Videowechsel": h.SetFieldValue("Link", "neu.mp4", FieldSource.Manual, true); break;
+                case "Eintrag_loeschen": eintrag.IsDeleted = true; break;
+            }
+        }
+        finally { release.Set(); }
+        Assert.False(await task.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Equal(0, shown);
+    }
+
+    [Fact]
+    public void Open_uebergibt_das_genaue_Sprungziel_an_das_Protokollfenster()
+    {
+        var id = Guid.NewGuid();
+        DataPageProtocolWindowRequest? request = null;
+        var controller = CreateController(showProtocolWindow: r => request = r);
+        controller.Open(new HaltungRecord(), id);
+        Assert.Equal(id, request!.EintragId);
+    }
+
     [Fact]
     public void Open_ignoriert_null_record()
     {

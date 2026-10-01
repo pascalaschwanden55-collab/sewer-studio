@@ -1,0 +1,135 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Optikanalyse 28.09.2026, Aufgabe 13 (Windows-Integration): Hochkontrast-Ueberlagerung.
+
+        Ist SystemParameters.HighContrast wahr, haengt ThemeManager DIESES Woerterbuch zusaetzlich
+        VOR das normale Hell-/Dunkel-Theme (Theme.xaml/ThemeLight.xaml bleiben darunter geladen).
+        Es ersetzt NUR die hier genannten Kern-Tokens (Text, Hintergrund, Karte, Kopf, Rand,
+        Akzent, Auswahl, Erfolgs-/Warn-/Fehlertext) durch SystemColors - alles, was hier NICHT
+        aufgefuehrt ist, faellt automatisch auf den darunterliegenden Wert des normalen Themes
+        zurueck (WPF-Ressourcensuche geht die MergedDictionaries-Liste durch, bis ein Schluessel
+        gefunden wird). So kann kein fehlender Schluessel je einen Absturz ausloesen, und diese
+        Liste muss NICHT jeden der rund 150 Tokens des normalen Themes duplizieren.
+
+        Color="{DynamicResource {x:Static SystemColors.XyzColorKey}}" statt x:Static direkt auf
+        die Brush: WPF haelt SystemColors-Farben selbst dynamisch aktuell und tauscht sie beim
+        naechsten Systemfarbwechsel aus - ein einmal mit x:Static eingefrorener Wert wuerde das
+        NICHT mehr mitbekommen.
+
+        Erfolgs-/Warn-/Fehlertext bekommen bewusst KEINE eigene Farbe (kein rot/gelb/gruen aus
+        SystemColors - die gibt es dort nicht, und ein geratener Schluessel koennte zufaellig mit
+        Highlight/Accent kollidieren und dadurch irrefuehrend wirken). Sie fallen auf denselben
+        Fenstertext wie der Rest; die Unterscheidung traegt in Hochkontrast bewusst der Text
+        selbst (Beschriftung/Symbol), nicht die Farbe allein - das deckt sich mit der Windows-
+        eigenen Hochkontrast-Praxis, sich nie allein auf Farbe zu verlassen.
+    -->
+
+    <!-- Text -->
+    <SolidColorBrush x:Key="TextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+    <SolidColorBrush x:Key="HeaderTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
+    <SolidColorBrush x:Key="FaintBrush" Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
+
+    <!-- Hintergrund / Karte / Kopf -->
+    <!-- BgBrush ist im normalen Theme ein LinearGradientBrush (das ganze Fenster). Ein
+         Farbverlauf widerspricht Hochkontrast (flache, eindeutige Flaechen); hier bewusst eine
+         flache SolidColorBrush auf WindowColor statt eines nachgebauten Verlaufs. -->
+    <SolidColorBrush x:Key="BgBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="BgLightBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="CardBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="CardGlassBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="HeaderBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="NavPanelBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="OverlayBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="HoverBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="RowHoverBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+
+    <!-- Eingabefelder (Fix-Runde 2, IMPORTANT 2): TextBrush wird oben auf WindowTextColor gezwungen,
+         diese beiden Hintergruende blieben in Runde 1 faelschlich auf ihrer normalen warmen
+         Themefarbe stehen (WarmTextBox/VsaInputHighlightBrush-Felder, z. B.
+         ProtocolEntryEditorDialog.xaml/ObservationCatalogWindow.xaml) - potenziell unlesbar.
+         WindowColor ist die von Windows selbst fuer Texteingabefelder vorgesehene Hochkontrast-
+         Flaeche (dieselbe Kombination wie eine normale TextBox). -->
+    <SolidColorBrush x:Key="InputWarmBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="VsaInputHighlightBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+
+    <!-- Rand -->
+    <SolidColorBrush x:Key="BorderBrush" Color="{DynamicResource {x:Static SystemColors.WindowFrameColorKey}}"/>
+    <SolidColorBrush x:Key="BorderLightBrush" Color="{DynamicResource {x:Static SystemColors.ActiveBorderColorKey}}"/>
+    <SolidColorBrush x:Key="InputBorderBrush" Color="{DynamicResource {x:Static SystemColors.WindowFrameColorKey}}"/>
+    <SolidColorBrush x:Key="GlassBorderBrush" Color="{DynamicResource {x:Static SystemColors.WindowFrameColorKey}}"/>
+
+    <!-- Akzent -->
+    <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <!-- Fix-Runde 3: derselbe Pressed-Zustand wie AccentBrush/AccentHoverBrush - ohne diese Zeile
+         bliebe ToolbarButtonAccent beim Druecken auf der normalen Theme-Farbe #FF3570C6 stehen,
+         waehrend Ruhe-/Hover-Zustand schon Highlight zeigen (inkonsistent zwischen den drei
+         Zustaenden desselben Knopfs). -->
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <!-- Fix-Runde 2: von ControlColor auf WindowColor umgestellt - dieselbe "subtile Statusflaeche
+         wird neutral" Regel wie bei Success-/Warning-/DangerSubtleBrush unten (SchachtUebersichtPanel.xaml
+         legt z. B. normalen TextBrush-Text direkt auf diese Flaeche). -->
+    <SolidColorBrush x:Key="AccentSubtleBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <!-- Fix-Runde 4: war HighlightTextColor - das ist die Schrift AUF Highlight, AccentTextBrush ist
+         aber akzentfarbige Schrift auf NORMALEN Flaechen (Card/AccentSubtle/Window): dort war sie in
+         Schemata wie "Nachthimmel" (#2B2B2B auf #000000) unlesbar. HotTrack ist die Hyperlink-Farbe
+         der Hochkontrast-Schemata, von Windows fuer Schrift auf Window vorgesehen. -->
+    <SolidColorBrush x:Key="AccentTextBrush" Color="{DynamicResource {x:Static SystemColors.HotTrackColorKey}}"/>
+    <!-- Fix-Runde 3: dieselbe Regel wie AccentSubtleBrush - Hover-/Druck-Toenung des Basis-Buttons
+         und von ActionCardButton traegt normalen TextBrush-Text (WindowText unter Hochkontrast). -->
+    <SolidColorBrush x:Key="AccentHoverTintBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="AccentPressedTintBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <!-- Fix-Runde 3 (IMPORTANT): Text/Symbole DIREKT auf einer akzentgefuellten Flaeche (PrimaryButton,
+         ToolbarButtonAccent, CheckBox-Haken, Slider-Griffring) - siehe OnAccentBrush-Kommentar in
+         Theme.xaml. HighlightTextColor ist die von Windows selbst fuer Text auf Highlight vorgesehene
+         Farbe. -->
+    <SolidColorBrush x:Key="OnAccentBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
+    <!-- MainWindow.xaml's Hauptnavigation faerbt den ausgewaehlten Eintrag mit AccentBrush und
+         seine Schrift mit diesem eigenen, dediziert benannten Text-Token (nicht mit dem generischen
+         OnAccentBrush) - beide sind derselbe Weiss-auf-Highlight-Fall, deshalb dieselbe Zuordnung. -->
+    <SolidColorBrush x:Key="NavSelectedTextBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
+    <!-- Fix-Runde 4: die gefuellten Knoepfe mit Schrift OnAccentBrush - Ruheflaeche von
+         ToolbarButtonAccent (normal: Verlauf bzw. Akzent) und die drei SuccessButton-Zustaende. Auf
+         Highlight, damit Flaeche und Schrift (HighlightText) in jedem Zustand ein Windows-Paar bilden. -->
+    <SolidColorBrush x:Key="ToolbarAccentFillBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="SuccessFillBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="SuccessFillHoverBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="SuccessFillPressedBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <!-- Fix-Runde 4 (Befund D): Auswahlrahmen nur unter Hochkontrast (normal transparent) - die
+         Auswahlfuellung AccentSubtleBrush faellt hier auf Window, der Rahmen macht die Auswahl sichtbar. -->
+    <SolidColorBrush x:Key="HcAuswahlRahmenBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="ChipZaehlerAktivBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
+
+    <!-- Auswahl -->
+    <SolidColorBrush x:Key="SelectionBackgroundBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+    <SolidColorBrush x:Key="SelectionTextBrush" Color="{DynamicResource {x:Static SystemColors.HighlightTextColorKey}}"/>
+    <SolidColorBrush x:Key="SelectionBorderBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}"/>
+
+    <!-- Erfolg/Warnung/Fehler (Text) -->
+    <SolidColorBrush x:Key="SuccessTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+    <SolidColorBrush x:Key="WarningTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+    <SolidColorBrush x:Key="DangerTextBrush" Color="{DynamicResource {x:Static SystemColors.WindowTextColorKey}}"/>
+
+    <!-- Subtile Status-Abzeichen (Fix-Runde 2, IMPORTANT 2): Genau weil SuccessTextBrush/
+         WarningTextBrush/DangerTextBrush oben schon auf WindowText gezwungen werden, darf ihr
+         Hintergrund NICHT laenger die normale gruene/gelbe/rote Theme-Toenung behalten - das war
+         der eigentliche Fehler in Runde 1 (diese vier Schluessel standen faelschlich in
+         BewusstAusgenommen, als traegen sie eine eigene, unangetastete Bedeutung wie KiSubtleBrush;
+         tatsaechlich verliert ihr Text die Farbe bereits oben). Bedeutung bleibt ueber Rand/Symbol
+         erhalten (BorderBrush="{DynamicResource SuccessBrush}" o. Ae. daneben, SuccessBrush selbst
+         bleibt unten bewusst unveraendert). -->
+    <SolidColorBrush x:Key="SuccessSubtleBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="WarningSubtleBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <SolidColorBrush x:Key="DangerSubtleBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+    <!-- Ersetzt die fruehere rohe "ColorWarning"-Color-Referenz im VSA-Explorer (Q2-„OPTIONAL"-
+         Badge; siehe Theme.xaml-Kommentar bei WarningTintBrush, warum ein roher Color-Schluessel
+         hier technisch nicht ueberlagerbar war). Dieselbe Regel wie bei den drei SubtleBrush oben:
+         Text (WarningBrush, hier bewusst unten NICHT ueberschrieben) bekommt eine neutrale statt
+         einer gelb getoenten Flaeche. -->
+    <SolidColorBrush x:Key="WarningTintBrush" Color="{DynamicResource {x:Static SystemColors.WindowColorKey}}"/>
+</ResourceDictionary>

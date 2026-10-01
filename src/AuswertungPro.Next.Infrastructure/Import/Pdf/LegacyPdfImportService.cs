@@ -85,7 +85,14 @@ public sealed class LegacyPdfImportService
 
             if (LooksLikeSchachtProtokoll(fullText))
             {
-                ImportSchachtPdfPages(pdfPath, effectivePages, fullText, project, stats, ctx);
+                ImportSchachtPdfPages(
+                    pdfPath,
+                    effectivePages,
+                    fullText,
+                    project,
+                    stats,
+                    fillMissingOnly,
+                    ctx);
                 return stats;
             }
 
@@ -107,7 +114,7 @@ public sealed class LegacyPdfImportService
                     {
                         Level = "Info",
                         Context = "PDF",
-                        Message = $"OCR-Fallback fuer Haltungszuordnung aktiviert: {Path.GetFileName(pdfPath)} | OCR-Seiten={ocrFallback.Pages.Count}.{ocrDetail}"
+                        Message = $"OCR-Fallback für Haltungszuordnung aktiviert: {Path.GetFileName(pdfPath)} | OCR-Seiten={ocrFallback.Pages.Count}.{ocrDetail}"
                     });
                 }
             }
@@ -121,6 +128,8 @@ public sealed class LegacyPdfImportService
                 try
                 {
                     var fields = _parser.ParseFields(chunk.Text ?? string.Empty);
+                    // Dieselben Zeilen strukturiert — nur so ueberlebt der Videozaehlerstand.
+                    var damageRows = _parser.ParseDamageRows(chunk.Text ?? string.Empty);
                     var parsedPage = HoldingFolderDistributor.ParsePdfPage(chunk.Text ?? "", pdfPath);
                     if (parsedPage.Success)
                     {
@@ -157,7 +166,7 @@ public sealed class LegacyPdfImportService
                             {
                                 Level = "Info",
                                 Context = "PDF",
-                                Message = $"Chunk {chunk.Index} (Seiten {chunk.PageRange}) ohne Haltungsdaten uebersprungen."
+                                Message = $"Chunk {chunk.Index} (Seiten {chunk.PageRange}) ohne Haltungsdaten übersprungen."
                             });
                             continue;
                         }
@@ -211,7 +220,7 @@ public sealed class LegacyPdfImportService
                     }
 
                     var mergeStats = MergeEngine.MergeRecord(target, source, FieldSource.Pdf, fillMissingOnly, ctx);
-                    PdfPrimaryDamageStructureSynchronizer.Sync(target);
+                    PdfPrimaryDamageStructureSynchronizer.Sync(target, damageRows);
 
                     // Original-PDF verknuepfen
                     var existingPdfPath = target.GetFieldValue("PDF_Path")?.Trim();
@@ -464,7 +473,13 @@ public sealed class LegacyPdfImportService
         return text.Contains("Schachtprotokoll", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void ImportSchachtPdf(string pdfPath, string fullText, Project project, ImportStats stats, ImportRunContext? ctx = null)
+    private static void ImportSchachtPdf(
+        string pdfPath,
+        string fullText,
+        Project project,
+        ImportStats stats,
+        bool fillMissingOnly,
+        ImportRunContext? ctx = null)
     {
         var parsed = ParseSchachtFields(fullText);
         stats.Found++;
@@ -497,7 +512,19 @@ public sealed class LegacyPdfImportService
         }
 
         var damageEntries = ParseSchachtDamageEntries(fullText);
-        var imported = SchachtProtocolApplier.Apply(target, key, parsed, damageEntries, pdfPath);
+        var imported = SchachtProtocolApplier.Apply(
+            target,
+            key,
+            parsed,
+            damageEntries,
+            pdfPath,
+            fillMissingOnly: fillMissingOnly).ToList();
+
+        // Anschlusstabelle, Medium, Materialien, Deckel, Steighilfe: dieselbe Textebene, bisher liegen gelassen.
+        var zusatz = SchachtProtocolZusatzParser.Parse(fullText);
+        SchachtProtocolApplier.ApplyZusatz(target, zusatz, rebuildFromProtocol: false, onlyMissing: fillMissingOnly);
+        if (zusatz.Anschluesse.Count > 0)
+            imported.Add($"Anschlüsse ({zusatz.Anschluesse.Count})");
 
         project.ModifiedAtUtc = DateTime.UtcNow;
         project.Dirty = true;
@@ -519,17 +546,18 @@ public sealed class LegacyPdfImportService
         string fullText,
         Project project,
         ImportStats stats,
+        bool fillMissingOnly,
         ImportRunContext? ctx)
     {
         var chunks = SplitSchachtPdfPages(pages);
         if (chunks.Count == 0)
         {
-            ImportSchachtPdf(pdfPath, fullText, project, stats, ctx);
+            ImportSchachtPdf(pdfPath, fullText, project, stats, fillMissingOnly, ctx);
             return;
         }
 
         foreach (var chunk in chunks)
-            ImportSchachtPdf(pdfPath, chunk.Text, project, stats, ctx);
+            ImportSchachtPdf(pdfPath, chunk.Text, project, stats, fillMissingOnly, ctx);
     }
 
     private sealed record SchachtPdfTextChunk(string Text);

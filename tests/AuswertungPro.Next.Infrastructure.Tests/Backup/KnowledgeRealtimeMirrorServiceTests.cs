@@ -182,6 +182,26 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
     }
 
     [JunctionFact]
+    public async Task SynchronizeNowAsync_ordner_der_zur_verknuepfung_wird_behaelt_seine_spiegelkopie()
+    {
+        // Audit A01 (23.09.2026): Im KI-Spiegel geschah dasselbe wie in der Vollsicherung, nur ohne Warnung.
+        var source = Path.Combine(_root, "source");
+        var target = Path.Combine(_root, "target");
+        var foreign = Path.Combine(_root, "ausgelagert");
+        Directory.CreateDirectory(Path.Combine(source, "gold_frames"));
+        await File.WriteAllTextAsync(Path.Combine(source, "gold_frames", "gold_1.jpg"), "gold");
+
+        using var service = CreateService(source, target);
+        await service.SynchronizeNowAsync();
+        Directory.Move(Path.Combine(source, "gold_frames"), foreign);
+        CreateDirectoryLinkOrSkip(Path.Combine(source, "gold_frames"), foreign);
+
+        await service.SynchronizeNowAsync();
+
+        Assert.True(File.Exists(Path.Combine(target, "gold_frames", "gold_1.jpg")));
+    }
+
+    [JunctionFact]
     public async Task SynchronizeNowAsync_Zielroot_als_Junction_schreibt_nichts_nach_aussen()
     {
         var source = Path.Combine(_root, "source");
@@ -196,7 +216,7 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
 
         var error = await Assert.ThrowsAsync<InvalidDataException>(
             () => service.SynchronizeNowAsync());
-        Assert.Contains("Verknuepfung", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(Directory.EnumerateFileSystemEntries(foreign));
     }
 
@@ -255,7 +275,7 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
                 Path.Combine(_root, "gesperrt.txt"),
                 _ => throw new UnauthorizedAccessException("gesperrt")));
 
-        Assert.Contains("nicht sicher geprueft", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nicht sicher geprüft", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [JunctionFact]
@@ -285,11 +305,11 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
         await File.WriteAllTextAsync(sourceFile, "quelle-neu-und-laenger");
 
         await WaitUntilAsync(() =>
-            logger.Contains("erneut versucht")
+            Blockiert(logger)
             || File.ReadAllText(foreignFile) == "quelle-neu-und-laenger");
 
         Assert.Equal("fremd", await File.ReadAllTextAsync(foreignFile));
-        Assert.True(logger.Contains("erneut versucht"));
+        Assert.True(Blockiert(logger));
     }
 
     [JunctionFact]
@@ -319,13 +339,30 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
         File.Delete(sourceFile);
 
         await WaitUntilAsync(() =>
-            logger.Contains("erneut versucht")
+            Blockiert(logger)
             || !File.Exists(foreignFile));
 
         Assert.True(File.Exists(foreignFile));
         Assert.Equal("fremd", await File.ReadAllTextAsync(foreignFile));
-        Assert.True(logger.Contains("erneut versucht"));
+        Assert.True(Blockiert(logger));
     }
+
+    /// <summary>
+    /// Der Wächter hat die Verknüpfung gemeldet — auf einem von zwei Wegen.
+    ///
+    /// Eine Änderung an der Quelldatei meldet Windows manchmal als Ereignis am
+    /// enthaltenden Ordner. Dann verlangt der Dienst einen Vollabgleich
+    /// (<c>QueuePath</c>), und dieser scheitert an der Verknüpfung. Sonst greift der
+    /// inkrementelle Weg. Gemessen über acht Läufe: 7x Vollabgleich, 1x inkrementell —
+    /// und in allen acht blieb die fremde Datei unberührt.
+    ///
+    /// Beide Meldungen belegen dasselbe: Es wurde nichts nach aussen geschrieben, und
+    /// der Dienst hat es gesagt. Nur einen der beiden Wege zu erwarten, machte den Test
+    /// unzuverlässig, ohne mehr zu prüfen.
+    /// </summary>
+    private static bool Blockiert(RecordingLogger logger)
+        => logger.Contains("erneut versucht")
+           || logger.Contains("Vollabgleich fehlgeschlagen");
 
     [Fact]
     public async Task Start_Elements_zuerst_fehlt_holt_nach_Wiederanschliessen_Alles_nach()

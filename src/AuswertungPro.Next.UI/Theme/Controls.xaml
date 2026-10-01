@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:ui="clr-namespace:AuswertungPro.Next.UI"
                     xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Controls"
                     xmlns:vc="clr-namespace:AuswertungPro.Next.UI.Views.Controls">
@@ -24,6 +25,23 @@
     <CornerRadius x:Key="RadiusM">6</CornerRadius>
     <CornerRadius x:Key="RadiusL">8</CornerRadius>
     <CornerRadius x:Key="RadiusXL">10</CornerRadius>
+    <CornerRadius x:Key="RadiusXXL">14</CornerRadius>
+    <!-- Kapselformen. WPF teilt den Eckenradius getrennt auf Breite UND Hoehe auf: Ein
+         zu grosser Wert (frueher 999) ergibt auf einer breiten, flachen Flaeche keine Kapsel,
+         sondern eine Ellipse mit spitzen Enden. Deshalb traegt jede Kapsel den Radius ihrer
+         halben ECHTEN Hoehe. -->
+    <!-- Bedienelemente mit MinHeight 30: ToolbarButton, ToolbarButtonAccent, CompactToggleButton, Suchfeld. -->
+    <CornerRadius x:Key="RadiusPill">15</CornerRadius>
+    <!-- Abzeichen und Chips mit rund 22 px Hoehe (Text 12 px plus 2-3 px Innenabstand). -->
+    <CornerRadius x:Key="RadiusChip">11</CornerRadius>
+    <!-- Fortschritts- und Anteilsbalken mit 10 px Hoehe. -->
+    <CornerRadius x:Key="RadiusBar">5</CornerRadius>
+    <sys:Double x:Key="ImportPulseSize">14</sys:Double>
+    <Thickness x:Key="ImportCardPadding">12</Thickness>
+    <Thickness x:Key="ImportRowGap">0,0,0,8</Thickness>
+    <Thickness x:Key="ImportItemGap">8,0,0,0</Thickness>
+    <!-- Die 72-px-Kreisflaeche des Leerzustands. -->
+    <CornerRadius x:Key="RadiusCircle">36</CornerRadius>
 
     <!-- ═══ ELEVATION (Tiefen-Hierarchie statt dicker Rahmen) ═══ -->
     <!-- S=Karten/Chips, M=Popups/Toasts, L=Dialoge/Overlays.
@@ -43,12 +61,43 @@
 
     <!-- Die Titel-Unterstreichung NeuralUnderlineBrush liegt je Theme in ThemeLight.xaml und
          Theme.xaml: GradientStops koennen keine DynamicResource aufnehmen, also braucht jedes
-         Theme eigene Stops — und der PageTitle-Style dort erreicht sie nur im eigenen Woerterbuch. -->
+         Theme eigene Stops. Der PageTitle-Stil (unten in diesem Woerterbuch) liest sie per
+         DynamicResource und folgt damit dem Designwechsel. -->
 
+    <!-- Schriftskala (Design-Audit 2026-09-03, M1): sieben Stufen, TextXS = 11 ist die Untergrenze
+         im ganzen Programm (Entscheid Pascal 2026-09-03). Oberflaechen lesen nur diese Tokens;
+         XS = Nebenangaben/Chips, S = Tabellen und Beschriftungen, M = Fliesstext, L = Abschnittstitel,
+         XL = Fenstertitel/Kennzahlen, Title = Seitentitel, Display = grosse Kennzahl. -->
+    <sys:Double x:Key="TextXS">11</sys:Double>
+    <sys:Double x:Key="TextS">12</sys:Double>
+    <sys:Double x:Key="TextM">13</sys:Double>
+    <sys:Double x:Key="TextL">15</sys:Double>
+    <sys:Double x:Key="TextXL">18</sys:Double>
+    <sys:Double x:Key="TextTitle">22</sys:Double>
+    <sys:Double x:Key="TextDisplay">28</sys:Double>
     <!-- Schrift-Token: Monospace fuer technische Werte (Code, Meterstand, DN) -->
     <FontFamily x:Key="FontMono">Cascadia Mono, Consolas, Courier New</FontFamily>
     <!-- Einheitliche Icon-Schrift: Fluent unter Windows 11, MDL2 als Fallback. -->
     <FontFamily x:Key="FontIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+    <!-- Grosses Leerzustand-Glyph (EmptyState, leere Seiten): ein Symbol, keine Schriftstufe. -->
+    <sys:Double x:Key="IconHero">36</sys:Double>
+    <!-- Nova-Etappe 2b (Inventar 4.3): einzeilige Tabellenzeile in Kompakt, Stammdaten,
+         Sanierung und Kosten. "Alle Spalten" und "Bewertung" bleiben auf Auto. -->
+    <!-- Nova-Fixwelle 2b (P2): 34 statt 36 — gemessen im Pruefhost, damit bei 1920x1080 mit
+         offenen Eingabefeldern zwoelf Zeilen ganz sichtbar sind. -->
+    <sys:Double x:Key="RowHeightCompact">34</sys:Double>
+    <!-- Masse der Zustandsklassen-Marke in Haltungs- und Schachtliste (Prototyp v2). -->
+    <sys:Double x:Key="ZustandsklasseChipBreite">34</sys:Double>
+    <sys:Double x:Key="ZustandsklasseChipHoehe">22</sys:Double>
+    <!-- Video-Flaechen: ueber laufendem Bild ist der Grund immer dunkel, unabhaengig vom Hell-/Dunkel-Design.
+         Scrim = abdunkelnde Overlay-Flaeche (Bedienleisten, Hinweise); Black = neutrales Schwarz ohne Blaustich. -->
+    <SolidColorBrush x:Key="VideoBackgroundBrush" Color="#FF000000"/>
+    <SolidColorBrush x:Key="VideoScrimBrush" Color="#DD111318"/>
+    <SolidColorBrush x:Key="VideoScrimStrongBrush" Color="#EE111318"/>
+    <SolidColorBrush x:Key="VideoScrimSoftBrush" Color="#CC111318"/>
+    <SolidColorBrush x:Key="VideoScrimBlackBrush" Color="#CC000000"/>
+    <SolidColorBrush x:Key="VideoScrimBlackStrongBrush" Color="#DD000000"/>
+    <SolidColorBrush x:Key="VideoScrimBlackSoftBrush" Color="#B8000000"/>
     <!-- Eine gemeinsame, ruhige Chevron-Form fuer ComboBox, Expander und TreeView. -->
     <StreamGeometry x:Key="ChevronGeometry">M 1,1 L 5,5 L 1,9</StreamGeometry>
     <!-- Zell-Style fuer technische Grid-Spalten (einmal definiert, keine Inline-Duplikation). -->
@@ -56,13 +105,449 @@
         <Setter Property="FontFamily" Value="{StaticResource FontMono}"/>
     </Style>
 
+    <!-- ═══════════════════════════════════════════════════════════
+         GEMEINSAME STILE (Wartbarkeit Q3, 30.09.2026): Diese Stile waren zeichengleich in
+         Theme.xaml UND ThemeLight.xaml gepflegt und stehen jetzt genau einmal hier. Alles, was je
+         Theme anders aussieht, kommt ueber DynamicResource-Tokens aus dem jeweiligen Theme;
+         Stil- und Vorlagenverweise (BasedOn, Template) duerfen StaticResource bleiben. Basis vor
+         Ableitung. Bewusst NICHT hier: ToolbarButton (feste Hover-/Druckfarben je Theme) samt
+         ToolbarButtonDanger (BasedOn ToolbarButton), Card, IconButton, NavItemStyle.
+         Waechter: DesignAuditThemeStileEinmalTests.
+         ═══════════════════════════════════════════════════════════ -->
+
+    <Style x:Key="PageTitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <!-- Akzentlinie unter dem Titel: als TextDecoration, damit jede Seite sie automatisch
+             bekommt — auch kuenftige. PenOffset haelt Abstand zur Grundlinie, sonst wirkt es
+             wie ein Link statt wie eine Linie.
+             NeuralUnderlineBrush hat je Theme andere GradientStops (in Theme.xaml und
+             ThemeLight.xaml) und wird deshalb per DynamicResource gelesen: Dieser Stil liegt
+             theme-unabhaengig in Controls.xaml und wird beim Designwechsel nicht ausgetauscht. -->
+        <Setter Property="TextDecorations">
+            <Setter.Value>
+                <TextDecorationCollection>
+                    <TextDecoration Location="Underline" PenOffset="7" PenThicknessUnit="Pixel">
+                        <TextDecoration.Pen>
+                            <Pen Thickness="2" Brush="{DynamicResource NeuralUnderlineBrush}"/>
+                        </TextDecoration.Pen>
+                    </TextDecoration>
+                </TextDecorationCollection>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SectionTitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+    </Style>
+
+    <Style x:Key="Body" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+    </Style>
+
+    <Style x:Key="Caption" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+    </Style>
+
+    <Style x:Key="KeyboardFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-3"
+                            BorderBrush="{DynamicResource InfoTextBrush}"
+                            BorderThickness="2"
+                            CornerRadius="7"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Fix-Runde 4 (Aufgabe 13, Befund A): Vorlage fuer GEFUELLTE Knoepfe (PrimaryButton,
+         SuccessButton, SeverityXButton). Dieselbe Form wie die Vorlage des impliziten Button-Stils,
+         aber OHNE deren Hover-/Druck-Toenung: die stellte "MainBorder" per TargetName auf eine 4 %
+         (hell) bzw. 8 % (dunkel) Akzent-Toenung um - bei weisser Schrift war ein gefuellter Knopf
+         unter der Maus im hellen Theme praktisch unlesbar, unter Hochkontrast (Toenung = Window,
+         Schrift = HighlightText) ebenso. Hier bleibt die Flaeche immer die Knopffarbe
+         (TemplateBinding); den Hover-/Druckton setzt der jeweilige Style ueber Style.Triggers auf
+         seine eigene VOLLE Farbe, die Rangfolge ist dabei Style-Trigger vor Style-Setter. -->
+    <ControlTemplate x:Key="FilledButtonTemplate" TargetType="Button">
+        <Border Name="MainBorder"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="6"
+                Padding="{TemplateBinding Padding}"
+                RenderTransformOrigin="0.5,0.5"
+                SnapsToDevicePixels="True">
+            <Border.RenderTransform>
+                <ScaleTransform x:Name="MainScale"/>
+            </Border.RenderTransform>
+            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              RecognizesAccessKey="True">
+                <!-- B7: Text-Inhalt (Content als String) bekommt sonst den impliziten TextBlock-Stil
+                     (TextBrush) statt der Knopfschrift. Eigene TextBlocks im Inhalt erreicht dieser
+                     Block NICHT (zur Laufzeit belegt, Fix-Runde 4) - dafuer tragen die gefuellten
+                     Stile denselben Stil zusaetzlich in ihren Style.Resources. -->
+                <ContentPresenter.Resources>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Style>
+                </ContentPresenter.Resources>
+            </ContentPresenter>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleX" To="1.03" Duration="0:0:0.12"/>
+                            <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleY" To="1.03" Duration="0:0:0.12"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.12"/>
+                            <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:0:0.12"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleX" To="0.98" Duration="0:0:0.12"/>
+                            <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleY" To="0.98" Duration="0:0:0.12"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleX" To="1.03" Duration="0:0:0.12"/>
+                            <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleY" To="1.03" Duration="0:0:0.12"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.45"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <!-- Fix-Runde 4 (Aufgabe 13, Befund A): impliziter TextBlock-Stil fuer den INHALT gefuellter
+         Knoepfe. Ein eigener TextBlock im Knopfinhalt (<StackPanel><FluentIcon/><TextBlock/>) sucht
+         seinen impliziten Stil im logischen Baum (Knopf, Fenster, App) - der B7-Block im
+         ContentPresenter liegt nur im visuellen Baum und erreicht ihn nicht. Zur Laufzeit belegt:
+         ohne diesen Stil war solche Beschriftung TextBrush (dunkles Marineblau auf Akzentblau im
+         hellen Theme). Ueber Style.Resources gilt er fuer den Inhalt jedes Knopfs mit diesem Stil,
+         auch ueber BasedOn. -->
+    <Style x:Key="FilledButtonInhaltTextBlock" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+    </Style>
+
+    <!-- Primary Button — Blue filled -->
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Style.Resources>
+            <Style TargetType="TextBlock" BasedOn="{StaticResource FilledButtonInhaltTextBlock}"/>
+        </Style.Resources>
+        <!-- Fix-Runde 2 (Aufgabe 13, MINOR): war "SolidColorBrush Color=StaticResource ColorAccent"
+             - ColorAccent hat je Theme einen anderen Wert, ein StaticResource-Snapshot ueberlebte
+             einen Designwechsel zur Laufzeit deshalb nicht (der Knopf blieb bis zum Neuaufbau der
+             Vorlage auf der Farbe des Themes, in dem das Fenster geoeffnet wurde). AccentBrush ist
+             exakt derselbe Wert, aber ein normaler DynamicResource-Token wie ueberall sonst. -->
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): war hartcodiert "White" - AccentBrush faellt unter
+             Hochkontrast auf SystemColors.Highlight, das in manchen Hochkontrast-Schemata hell ist
+             (z. B. Cyan); hartes Weiss ergab dort ~1,3-1,5:1 statt lesbar. OnAccentBrush ist in
+             beiden normalen Themes Weiss (keine sichtbare Aenderung), unter Hochkontrast
+             HighlightTextColor. -->
+        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <!-- Fix-Runde 4 (Befund A): eigene Vorlage ohne Toenung, eigener Hover-/Druckton in voller
+             Akzentfarbe - Schrift OnAccentBrush bleibt damit in jedem Zustand auf einer Flaeche, die
+             unter Hochkontrast auf Highlight faellt. -->
+        <Setter Property="Template" Value="{StaticResource FilledButtonTemplate}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Success Button - gruene Bestaetigung -->
+    <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <!-- Fix-Runde 4 (Befund A): eigene Fuelltokens statt SuccessBrush. SuccessBrush bleibt unter
+             Hochkontrast bewusst gruen (Rand/Symbol-Bedeutung), die Schrift OnAccentBrush faellt dort
+             aber auf HighlightText - SuccessFillBrush faellt deshalb wie AccentBrush auf Highlight.
+             Normale Themes: gleicher Wert wie SuccessBrush, Hover/Druck neu in voller Farbe (vorher
+             erbte der Knopf die fast unsichtbare Akzent-Toenung, weisse Schrift darauf). -->
+        <Setter Property="Background" Value="{DynamicResource SuccessFillBrush}"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource SuccessFillHoverBrush}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{DynamicResource SuccessFillPressedBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Secondary Button - Subtle surface -->
+    <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+    </Style>
+
+    <!-- Toolbar Accent Button — Blue accent for primary actions -->
+    <Style x:Key="ToolbarButtonAccent" TargetType="Button">
+        <Style.Resources>
+            <Style TargetType="TextBlock" BasedOn="{StaticResource FilledButtonInhaltTextBlock}"/>
+        </Style.Resources>
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
+        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="Padding" Value="12,5"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): siehe PrimaryButton-Kommentar - AccentBrush faellt
+             unter Hochkontrast auf ein moeglicherweise helles Highlight, hartes Weiss war dort
+             potenziell unlesbar. Fix-Runde 4 (Befund C): Weiss -> OnAccentBrush (in beiden
+             Themes ebenfalls Weiss, unter Hochkontrast HighlightText passend zur dann
+             Highlight-farbenen Flaeche). -->
+        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <!-- Fix-Runde 3 (Aufgabe 13, MINOR): Background war ein
+                         "SolidColorBrush Color=StaticResource ColorAccent" direkt im
+                         Property-Element - ein Schnappschuss, der weder Designwechsel noch
+                         Hochkontrast folgte (AccentBrush wurde dabei gar nicht nachgeschlagen).
+                         Jetzt ein normales DynamicResource-Attribut wie ueberall sonst. -->
+                    <Border Name="bd"
+                            Background="{DynamicResource ToolbarAccentFillBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="15"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True">
+                        <!-- B7: Der implizite TextBlock-Stil setzt Foreground selbst und schlaegt
+                             damit die Vererbung. Ein Knopfinhalt aus eigenen TextBlocks bekaeme sonst
+                             die normale Textfarbe statt der Knopffarbe. Deshalb hier eine engere
+                             Fassung, die die Tinte vom Knopf uebernimmt. -->
+                        <ContentPresenter.Resources>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            </Style>
+                        </ContentPresenter.Resources>
+                    </ContentPresenter>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <!-- Fix-Runde 4 (Befund C): war ein ColorAccentHover-Schnappschuss (gleicher Wert). -->
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <!-- Fix-Runde 4 (Befund C): war hartcodiert #FF1E40AF (gleicher Wert). -->
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentPressedBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.35"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Action Card Button -->
+    <Style x:Key="ActionCardButton" TargetType="Button">
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Name="bd"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="6"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Fix-Runde 3 (Aufgabe 13, MINOR): beide Toenungen waren StaticResource-
+                             Schnappschuesse, siehe Kommentar bei AccentHoverTintBrush in Theme.xaml.
+                             Die Druck-Toenung wurde dabei mit der des Basis-Buttons harmonisiert
+                             (0,08 -> 0,1, kaum wahrnehmbar). -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentHoverTintBrush}"/>
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentPressedTintBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.35"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Optik und Bedienung professionell, 28.09.2026, Aufgabe 3: angeglichen an die bisherige
+         lokale Doppeldefinition in DataPage.xaml (dort entfernt) - kompakter Sekundaerknopf statt
+         der Toolbar-Pillenform. -->
+    <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
+    </Style>
+
+    <Style x:Key="CompactToggleButton" TargetType="ToggleButton">
+        <!-- Fix-Runde 4 (Aufgabe 13): eigene TextBlocks im Chip-Inhalt (Titel) suchen ihren impliziten
+             Stil im logischen Baum und bekamen TextBrush - auch im gewaehlten Zustand auf
+             SelectionBackgroundBrush (unter Hochkontrast WindowText auf Highlight). Gewaehlt jetzt
+             SelectionTextBrush (normal praktisch derselbe Ton wie TextBrush), sonst unveraendert TextBrush. -->
+        <Style.Resources>
+            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                        <Setter Property="Foreground" Value="{DynamicResource SelectionTextBrush}"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Style.Resources>
+        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="FontSize" Value="{DynamicResource TextS}"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="SelectionSurface" CornerRadius="15"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True">
+                        <!-- B7: Der implizite TextBlock-Stil setzt Foreground selbst und schlaegt
+                             damit die Vererbung. Ein Knopfinhalt aus eigenen TextBlocks bekaeme sonst
+                             die normale Textfarbe statt der Knopffarbe. Deshalb hier eine engere
+                             Fassung, die die Tinte vom Knopf uebernimmt. -->
+                        <ContentPresenter.Resources>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                            </Style>
+                        </ContentPresenter.Resources>
+                    </ContentPresenter>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource RowHoverBrush}"/>
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource SelectionBorderBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource SelectionBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource SelectionTextBrush}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource SelectionBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="2"/>
+                <Setter Property="Padding" Value="9,3"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.55"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+        <!-- Nova-Fixwelle 2b (P4): Die Ziehgriffe zwischen den Kopfzellen hatten
+             keine eigene Vorlage und trugen deshalb die Standardoptik von WPF —
+             im dunklen Theme fast weiss und damit kontrastreicher als der
+             Kopftext selbst. Jetzt zeichnet nur der rechte Griff eine 1 px
+             schmale Trennlinie in der Rahmenfarbe des Themes; der linke Griff
+             bleibt unsichtbar, sonst staende an jeder Grenze eine doppelte
+             Linie. Der Ziehbereich (6 px, Cursor) bleibt unveraendert. -->
+        <Style x:Key="KopfGriffOhneLinie" TargetType="{x:Type Thumb}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border Background="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="KopfGriffTrennlinie" TargetType="{x:Type Thumb}" BasedOn="{StaticResource KopfGriffOhneLinie}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border Background="Transparent">
+                            <Rectangle Width="1" HorizontalAlignment="Right"
+                                       Fill="{DynamicResource BorderBrush}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
     <!-- ═══ COMBOBOX ═══ -->
+    <!-- B5: WPF leitet SelectionBoxItemTemplate NICHT aus DisplayMemberPath ab. Ohne diesen
+         Auswaehler zeigt das geschlossene Feld ToString() des Optionsobjekts. -->
+    <controls:ComboBoxAnzeigeTemplateSelector x:Key="ComboBoxAnzeigeSelector"/>
+
     <Style TargetType="{x:Type ComboBox}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="MinHeight" Value="36"/>
         <Setter Property="Padding" Value="10,8"/>
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -109,6 +594,7 @@
                         <ContentPresenter x:Name="ContentSite"
                                         Content="{TemplateBinding SelectionBoxItem}"
                                         ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                        ContentTemplateSelector="{StaticResource ComboBoxAnzeigeSelector}"
                                         ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
                                         Margin="{TemplateBinding Padding}"
                                         VerticalAlignment="Center"
@@ -205,6 +691,7 @@
 
     <!-- ═══ CHECKBOX ═══ -->
     <Style TargetType="{x:Type CheckBox}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -218,10 +705,13 @@
                                 CornerRadius="4"
                                 Margin="0,0,8,0">
                             <!-- Der Haken springt beim Setzen kurz auf — gleiche Sprache wie der
-                                 Punkt im RadioButton darunter. -->
+                                 Punkt im RadioButton darunter. Fix-Runde 3 (Aufgabe 13, IMPORTANT):
+                                 CheckBorder wird bei IsChecked auf AccentBrush gesetzt (siehe unten)
+                                 - derselbe Weiss-auf-Highlight-Fall wie bei PrimaryButton, nur als
+                                 Symbol statt Text. -->
                             <Path x:Name="CheckMark"
                                 Data="M2,6 L6,10 L14,2"
-                                Stroke="White"
+                                Stroke="{DynamicResource OnAccentBrush}"
                                 StrokeThickness="2"
                                 Visibility="Collapsed"
                                 RenderTransformOrigin="0.5,0.5">
@@ -264,6 +754,7 @@
     </Style>
 
     <Style TargetType="{x:Type RadioButton}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -321,6 +812,7 @@
     </Style>
 
     <Style TargetType="{x:Type ToggleButton}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="MinHeight" Value="30"/>
         <Setter Property="Padding" Value="10,5"/>
         <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
@@ -362,6 +854,7 @@
     </Style>
 
     <Style TargetType="{x:Type Expander}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -455,6 +948,7 @@
     </Style>
 
     <Style TargetType="{x:Type TreeViewItem}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="IsExpanded" Value="False"/>
         <Setter Property="Template">
@@ -524,6 +1018,16 @@
                                 <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
+                        <!-- Fix-Runde 4 (Aufgabe 13, Befund D): Auswahlrahmen auf einer eigenen Ebene ueber
+                             ItemBorder - nimmt keinen Platz ein (nichts verschiebt sich), in den normalen
+                             Themes transparent (HcAuswahlRahmenBrush), nur unter Hochkontrast Highlight: dort
+                             faellt die Auswahlfuellung AccentSubtleBrush auf Window wie die Umgebung. -->
+                        <Border x:Name="HcAuswahlRahmen"
+                                Grid.Row="0"
+                                CornerRadius="6"
+                                BorderThickness="1"
+                                BorderBrush="Transparent"
+                                IsHitTestVisible="False"/>
                         <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Margin="18,2,0,0"/>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -535,6 +1039,7 @@
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                            <Setter TargetName="HcAuswahlRahmen" Property="BorderBrush" Value="{DynamicResource HcAuswahlRahmenBrush}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource HoverBrush}"/>
@@ -557,6 +1062,7 @@
     </Style>
 
     <Style TargetType="{x:Type GridViewColumnHeader}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
@@ -660,24 +1166,32 @@
         </Setter>
     </Style>
 
-    <!-- ProgressBar -->
-    <Style TargetType="{x:Type ProgressBar}">
-        <Setter Property="Height" Value="6"/>
+    <!-- Aufgabe 11 (Optikanalyse 28.09.2026), Fix-Runde 1: EINE gemeinsame Vorlage
+         (Spur + Indikator + Wanderstreif bei IsIndeterminate) fuer alle ProgressBar-Stile des
+         Programms — vorher stand dieselbe rund 70-zeilige ControlTemplate zweimal im Dokument
+         (einmal hier, einmal im impliziten Fallback direkt darunter). ProgressBarThin (4 px) und
+         ProgressBarStandard (8 px) sind fuer Werkzeugleisten-/Karten-Hinweise bzw. echte
+         Fortschrittsanzeigen (Import, Sicherung, Export, Batch-Laeufe) BasedOn diesem Basisstil.
+         Der Indikator bindet an TemplateBinding Foreground, damit einzelne Balken weiterhin eine
+         eigene Farbe setzen koennen (z. B. Zustandsklasse, Severity) — Standardwert AccentBarBrush.
+         RadiusBar (5) rundet jede der drei Hoehen (4/6/8) voll zur Kapsel. -->
+    <Style x:Key="ProgressBarBaseFuerZweiHoehen" TargetType="ProgressBar">
         <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBarBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ProgressBar">
                     <Border Background="{TemplateBinding Background}"
-                            CornerRadius="3"
+                            CornerRadius="{DynamicResource RadiusBar}"
                             SnapsToDevicePixels="True"
                             ClipToBounds="True">
                         <Grid>
                             <!-- Bestimmter Fortschritt: der Balken laeuft farblich von Blau nach Teal mit. -->
-                            <Border x:Name="PART_Track" CornerRadius="3">
+                            <Border x:Name="PART_Track" CornerRadius="{DynamicResource RadiusBar}">
                                 <Border x:Name="PART_Indicator"
-                                        Background="{DynamicResource AccentBarBrush}"
-                                        CornerRadius="3"
+                                        Background="{TemplateBinding Foreground}"
+                                        CornerRadius="{DynamicResource RadiusBar}"
                                         HorizontalAlignment="Left"/>
                             </Border>
                             <!-- Unbestimmtes Warten: ein Lichtstreif wandert durch den Balken.
@@ -687,7 +1201,7 @@
                                  Streif jeder Breite an, ohne dass Layout animiert wird.
                                  Farbe fest: GradientStops koennen keine DynamicResource aufnehmen —
                                  Blau ist auf hell wie dunkel lesbar. -->
-                            <Border x:Name="Sweep" CornerRadius="3" Visibility="Collapsed">
+                            <Border x:Name="Sweep" CornerRadius="{DynamicResource RadiusBar}" Visibility="Collapsed">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                         <GradientStop x:Name="SweepLead" Color="#002563EB" Offset="-0.4"/>
@@ -710,7 +1224,7 @@
                             <Setter TargetName="PART_Track" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="Sweep" Property="Visibility" Value="Visible"/>
                             <MultiTrigger.EnterActions>
-                                <BeginStoryboard x:Name="SweepRun">
+                                <BeginStoryboard x:Name="SweepRunZweiHoehen">
                                     <Storyboard RepeatBehavior="Forever">
                                         <DoubleAnimation Storyboard.TargetName="SweepLead"
                                                          Storyboard.TargetProperty="Offset"
@@ -725,13 +1239,32 @@
                                 </BeginStoryboard>
                             </MultiTrigger.EnterActions>
                             <MultiTrigger.ExitActions>
-                                <StopStoryboard BeginStoryboardName="SweepRun"/>
+                                <StopStoryboard BeginStoryboardName="SweepRunZweiHoehen"/>
                             </MultiTrigger.ExitActions>
                         </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <Style x:Key="ProgressBarThin" TargetType="ProgressBar" BasedOn="{StaticResource ProgressBarBaseFuerZweiHoehen}">
+        <Setter Property="Height" Value="4"/>
+    </Style>
+
+    <Style x:Key="ProgressBarStandard" TargetType="ProgressBar" BasedOn="{StaticResource ProgressBarBaseFuerZweiHoehen}">
+        <Setter Property="Height" Value="8"/>
+    </Style>
+
+    <!-- ProgressBar (impliziter Fallback fuer den seltenen Fall, dass ein ProgressBar-Element
+         keinen der zwei benannten Stile traegt; Aufgabe 11 verlangt aber ausdruecklich einen
+         benannten Stil an jedem Balken, siehe ProgressBarThin/ProgressBarStandard oben). Fix-Runde 1:
+         BasedOn derselben Vorlage statt einer zweiten Kopie — nur die abweichende Hoehe (6 statt 4/8)
+         bleibt als eigener Setter. Visuell unveraendert: Radius {RadiusBar}=5 rundet 6 px genauso
+         voll zur Kapsel wie zuvor der hart kodierte Radius 3, und die geerbte Foreground=AccentBarBrush
+         ergibt denselben Indikatorton wie vorher der fest verdrahtete Wert. -->
+    <Style TargetType="{x:Type ProgressBar}" BasedOn="{StaticResource ProgressBarBaseFuerZweiHoehen}">
+        <Setter Property="Height" Value="6"/>
     </Style>
 
     <!-- ═══ MENU / CONTEXTMENU ═══ -->
@@ -869,10 +1402,9 @@
                                       ContentSource="Icon"
                                       VerticalAlignment="Center"
                                       HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="Glyph"
+                    <ui:FluentIcon x:Name="Glyph"
                                Grid.Column="0"
-                               Text="&#xE73E;"
-                               FontFamily="{DynamicResource FontIcon}"
+                               Glyph="&#xE73E;"
                                Visibility="Collapsed"
                                Foreground="{DynamicResource AccentBrush}"
                                FontWeight="Bold"
@@ -882,10 +1414,9 @@
                                       ContentSource="Header"
                                       RecognizesAccessKey="True"
                                       VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="2"
-                               Text="&#xE76C;"
-                               FontFamily="{DynamicResource FontIcon}"
-                               FontSize="10"
+                    <ui:FluentIcon Grid.Column="2"
+                               Glyph="&#xE76C;"
+                               FontSize="11"
                                Foreground="{DynamicResource MutedBrush}"
                                VerticalAlignment="Center"
                                Margin="8,0,0,0"/>
@@ -1006,10 +1537,9 @@
                                       ContentSource="Icon"
                                       VerticalAlignment="Center"
                                       HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="Glyph"
+                    <ui:FluentIcon x:Name="Glyph"
                                Grid.Column="0"
-                               Text="&#xE73E;"
-                               FontFamily="{DynamicResource FontIcon}"
+                               Glyph="&#xE73E;"
                                Visibility="Collapsed"
                                Foreground="{DynamicResource AccentBrush}"
                                FontWeight="Bold"
@@ -1113,8 +1643,12 @@
                                               ShadowDepth="4"
                                               Direction="270"/>
                         </Border.Effect>
-                        <StackPanel IsItemsHost="True"
-                                    KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                        <ScrollViewer x:Name="MenuScrollViewer" CanContentScroll="True"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto"
+                                      Focusable="False">
+                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                        </ScrollViewer>
                         <Border.Triggers>
                             <EventTrigger RoutedEvent="Loaded">
                                 <BeginStoryboard>
@@ -1213,6 +1747,7 @@
     </Style>
 
     <Style TargetType="{x:Type TabItem}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
         <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="Padding" Value="16,10"/>
@@ -1248,6 +1783,7 @@
 
     <!-- ═══ SLIDER ═══ -->
     <Style TargetType="{x:Type Slider}">
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource KeyboardFocusVisual}"/>
         <Setter Property="Height" Value="24"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -1299,10 +1835,12 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
+                    <!-- Fix-Runde 3 (Aufgabe 13, IMPORTANT): siehe CheckMark-Kommentar oben - derselbe
+                         Weiss-auf-AccentBrush-Fall, hier als Griffring statt Symbol. -->
                     <Ellipse x:Name="Ellipse"
                            Width="16" Height="16"
                            Fill="{DynamicResource AccentBrush}"
-                           Stroke="White"
+                           Stroke="{DynamicResource OnAccentBrush}"
                            StrokeThickness="2">
                         <Ellipse.Effect>
                             <DropShadowEffect Color="#20000000" BlurRadius="4" ShadowDepth="1" Direction="270"/>
@@ -1484,9 +2022,8 @@
                 <ColumnDefinition Width="24"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0"
-                       Text="{Binding Icon}"
-                       FontFamily="{DynamicResource FontIcon}"
+            <ui:FluentIcon Grid.Column="0"
+                       Glyph="{Binding Icon}"
                        FontSize="15"
                        Foreground="{DynamicResource AccentBrush}"
                        VerticalAlignment="Top"
@@ -1509,8 +2046,8 @@
                             </Style>
                         </Border.Style>
                         <TextBlock Text="{Binding Shortcut}"
-                                   FontSize="10"
-                                   FontFamily="Consolas"
+                                   FontSize="11"
+                                   FontFamily="{DynamicResource FontMono}"
                                    Foreground="{DynamicResource AccentBrush}"/>
                     </Border>
                     <TextBlock Text="{Binding Title}"
@@ -1626,8 +2163,8 @@
                         <!-- Laedt -->
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="320"
                                     Visibility="{Binding State, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource StatusHostEnumToVisibility}, ConverterParameter=Loading}">
-                            <ProgressBar IsIndeterminate="True" Height="4" Width="180"
-                                         Background="Transparent" BorderThickness="0"
+                            <ProgressBar Style="{StaticResource ProgressBarThin}" IsIndeterminate="True" Width="180"
+                                         Background="Transparent"
                                          Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
                             <TextBlock Text="{TemplateBinding LoadingText}"
                                        HorizontalAlignment="Center" TextAlignment="Center"
@@ -1650,7 +2187,7 @@
                                     Background="{DynamicResource DangerSubtleBrush}"
                                     BorderBrush="{DynamicResource DangerBrush}" BorderThickness="1"
                                     HorizontalAlignment="Center" Margin="0,0,0,14">
-                                <TextBlock Text="&#xE783;" FontFamily="{DynamicResource FontIcon}"
+                                <ui:FluentIcon Glyph="&#xE783;"
                                            FontSize="30" Foreground="{DynamicResource DangerBrush}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
@@ -1674,4 +2211,146 @@
         </Setter>
     </Style>
 
+    <!-- Persoenlicher Bearbeitungsstand; hat keinen Bezug zum Sanierungsstatus. -->
+    <Style x:Key="BearbeitungErledigtKnopf" TargetType="Button" BasedOn="{StaticResource ToolbarButton}">
+        <Setter Property="ToolTip" Value="Bearbeitung als erledigt markieren"/>
+        <Setter Property="AutomationProperties.Name" Value="Bearbeitung als erledigt markieren"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Selected.BearbeitungErledigt}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource SuccessSubtleBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                <Setter Property="ToolTip" Value="Bearbeitung erledigt – erneut klicken, um die Markierung aufzuheben"/>
+                <Setter Property="AutomationProperties.Name" Value="Erledigt-Markierung aufheben"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="BearbeitungErledigtMarke" TargetType="ui:FluentIcon">
+        <Setter Property="Glyph" Value="&#xE73E;"/>
+        <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="ToolTip" Value="Bearbeitung erledigt"/>
+        <Setter Property="AutomationProperties.Name" Value="Bearbeitung erledigt"/>
+        <Setter Property="Visibility" Value="Collapsed"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding BearbeitungErledigt}" Value="True">
+                <Setter Property="Visibility" Value="Visible"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <DataTemplate x:Key="BearbeitungErledigtZeilenkopf">
+        <ui:FluentIcon Style="{StaticResource BearbeitungErledigtMarke}"
+                       DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=DataGridRow}}"/>
+    </DataTemplate>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         FENSTERKOPF UND KNOPFLEISTE (Optik und Bedienung professionell, 28.09.2026, Aufgabe 3):
+         EIN gemeinsamer Kopf und EINE gemeinsame Fussleiste fuer Dialoge/Zusatzfenster. Regel:
+         Seiten verwenden NovaPageHeader, Fenster (Window) verwenden NovaDialogHeader.
+         ═══════════════════════════════════════════════════════════ -->
+
+    <!-- NovaDialogHeader: Titel oben, darunter ein UMBRECHENDER Untertitel (der bisherige
+         Einleitungssatz), rechts optional ein Aktionsbereich. Kollabiert bei leerem Untertitel
+         wie NovaPageHeader - kein leerer Rand. -->
+    <Style TargetType="{x:Type controls:NovaDialogHeader}">
+        <Setter Property="Margin" Value="0,0,0,14"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:NovaDialogHeader}">
+                    <DockPanel LastChildFill="True">
+                        <ContentPresenter DockPanel.Dock="Right" Content="{TemplateBinding Aktionen}"
+                                          VerticalAlignment="Top" Margin="14,0,0,0"/>
+                        <StackPanel>
+                            <TextBlock x:Name="TitleText" Text="{TemplateBinding Title}"
+                                       FontSize="{DynamicResource TextL}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock x:Name="SubtitleText" Text="{TemplateBinding Subtitle}"
+                                       FontSize="{DynamicResource TextS}"
+                                       Foreground="{DynamicResource MutedBrush}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Subtitle" Value="">
+                            <Setter TargetName="SubtitleText" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- DialogButtonBar: Fussleiste eines Fensters. Trennlinie oben (BorderLightBrush), 16 px
+         Abstand zwischen Trennlinie und Knoepfen. Anwendung: ein Border mit diesem Stil um eine
+         rechtsbuendige, horizontale StackPanel mit den Knoepfen; jeder Knopf ausser dem letzten
+         (dem ganz rechten Hauptknopf) traegt Margin="0,0,8,0" fuer den einheitlichen 8-px-Abstand.
+         Das genaue XAML-Muster steht in docs/architektur/oberflaeche.md, Aufgabe 3. -->
+    <Style x:Key="DialogButtonBar" TargetType="Border">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
+        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="Padding" Value="0,16,0,0"/>
+    </Style>
+
+    <!-- DangerButton: destruktive Hauptaktion - Umriss/Text in DangerBrush statt Flaechenfuellung.
+         Optisch identisch mit dem bisherigen fensterlokalen NovaDialogDangerButton
+         (NovaDialogWindow.xaml, Aufgabe 1), hier programmweit als Theme-Stil verfuegbar, damit
+         neue Fenster nicht erneut eine eigene lokale Kopie anlegen. -->
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
+    </Style>
+
+    <!-- WarningButton: risikobehaftete, aber nicht destruktive Aktion (z. B. "Pause" waehrend
+         eines laufenden Selbsttrainings) - Umriss/Text in WarningBrush statt Flaechenfuellung,
+         genau nach dem Muster von DangerButton (Aufgabe 4b, Nachbesserung Fix-Runde 1). Beide
+         sind BasedOn SecondaryButton (Umriss, gleiche Sichtgewichtsklasse wie eine neutrale
+         Nebenaktion) und zaehlen deshalb NICHT als "Hauptknopf" im Sinn der Knopfregel/des
+         DesignAuditKnopfleistenTests-Waechters - anders als SuccessButton, das BasedOn
+         PrimaryButton eine gefuellte Flaeche traegt und optisch dieselbe Gewichtsklasse wie
+         PrimaryButton hat. Kontrast WarningTextBrush/CardBrush gemessen (siehe
+         DesignAuditContrastTests): 6,28:1 dunkel, 5,02:1 hell - beide ueber 4,5:1. -->
+    <Style x:Key="WarningButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
+    </Style>
+
+    <!-- SeverityXButton: die fuenf Schadensstufen-Knoepfe der Fachlichen Codierung
+         (TrainingStudioWindow, Aufgabe 4b Fix-Runde 1). Eine eigene Klasse statt Primary/
+         Secondary/Danger/Warning - eine 5-stufige Farbskala ist keine der vier semantischen
+         Aktionsklassen, sondern ein Stufen-Auswahlwidget. Gefuellte Flaeche bleibt (bestehende
+         Optik unveraendert, nur vom lokalen Background= in einen geteilten Theme-Stil
+         verschoben), zaehlt aber NICHT als "Hauptknopf" im Sinn von Knopfregel/
+         DesignAuditKnopfleistenTests (a) - nur PrimaryButton/SuccessButton zaehlen dort. -->
+    <Style x:Key="SeverityButtonBase" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="FontWeight" Value="Bold"/>
+        <!-- Fix-Runde 4 (Aufgabe 13): gefuellte Vorlage ohne die Hover-/Druck-Toenung des impliziten
+             Button-Stils - die legte eine 4-%/8-%-Akzenttoenung unter die weisse Schrift (unter der
+             Maus unlesbar). Die Flaeche bleibt die Stufenfarbe, Rueckmeldung gibt die Skalierung.
+             Die weisse Schrift steht deshalb erst an den Stufenstilen, wo auch die Flaeche steht. -->
+        <Setter Property="Template" Value="{DynamicResource FilledButtonTemplate}"/>
+    </Style>
+    <Style x:Key="Severity1Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity1Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style x:Key="Severity2Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity2Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style x:Key="Severity3Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity3Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style x:Key="Severity4Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity4Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
+    <Style x:Key="Severity5Button" TargetType="Button" BasedOn="{StaticResource SeverityButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource Severity5Brush}"/>
+        <Setter Property="Foreground" Value="White"/>
+    </Style>
 </ResourceDictionary>

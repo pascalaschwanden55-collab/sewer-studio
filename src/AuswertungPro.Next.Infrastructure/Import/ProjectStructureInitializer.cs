@@ -11,10 +11,21 @@ public sealed class ProjectStructureInitializer : IProjectStructureInitializer
 
     public void EnsureCreated(string projectFolder)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectFolder);
+
         lock (_sync)
         {
-            foreach (var directory in RequiredDirectories(projectFolder))
+            var writePaths = new ProjectWritePathGuard(projectFolder);
+            writePaths.EnsureSafeDirectoryTarget(projectFolder);
+            var directories = RequiredDirectories(projectFolder)
+                .Select(writePaths.EnsureSafeDirectoryTarget)
+                .ToArray();
+
+            foreach (var directory in directories)
+            {
+                writePaths.EnsureSafeDirectoryTarget(directory);
                 Directory.CreateDirectory(directory);
+            }
         }
     }
 

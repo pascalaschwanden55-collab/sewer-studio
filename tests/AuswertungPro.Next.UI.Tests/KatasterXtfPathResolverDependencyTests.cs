@@ -82,7 +82,6 @@ public sealed class KatasterXtfPathResolverDependencyTests
 
     [Theory]
     [InlineData(typeof(ExportPageViewModel), "_katasterXtfPaths")]
-    [InlineData(typeof(KarteViewModel), "_katasterXtfPaths")]
     [InlineData(typeof(SettingsPageViewModel), "_katasterXtfPaths")]
     [InlineData(typeof(QgisBridgeSnapshotBuilder), "_katasterXtfPaths")]
     public void Produktive_Aufrufer_halten_den_Application_Vertrag(Type type, string fieldName)

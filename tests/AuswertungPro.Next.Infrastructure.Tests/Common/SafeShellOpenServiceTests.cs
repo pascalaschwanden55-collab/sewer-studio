@@ -20,7 +20,16 @@ public sealed class SafeShellOpenServiceTests : IDisposable
         var success = service.TryOpen(path, out var error);
 
         Assert.False(success);
-        Assert.Equal("Dateityp nicht zum direkten Oeffnen freigegeben: .cmd", error);
+        Assert.Equal("Dateityp nicht zum direkten Öffnen freigegeben: .cmd", error);
+    }
+
+    [Theory]
+    [InlineData(".wmv")]
+    [InlineData(".mp2")]
+    [InlineData(".webm")]
+    public void Zentrale_Videoformate_sind_zum_Oeffnen_freigegeben(string extension)
+    {
+        Assert.True(SafeShellOpenService.IsAllowedFileExtension(extension));
     }
 
     public void Dispose()

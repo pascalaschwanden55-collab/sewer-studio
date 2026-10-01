@@ -36,6 +36,30 @@ public sealed class HaltungsgrafikLabelLayoutTests
     }
 
     [Fact]
+    public void BuildHaltungsgrafikLabels_mit_katalog_zeigt_primaertitel_und_bemerkung()
+    {
+        var entry = new ProtocolEntry
+        {
+            Code = "BCE",
+            MeterStart = 2.9,
+            Beschreibung = "Anschluss von 12 Uhr in Schmutzleitung"
+        };
+
+        var result = HaltungsgrafikLabelLayout.BuildHaltungsgrafikLabels(
+            new[] { entry },
+            2.9,
+            top: 10,
+            bottom: 400,
+            photoNumbers: null,
+            brand: "#006E9C",
+            catalog: VsaResolverTestCatalog.CreateDefault());
+
+        Assert.Equal(
+            "Rohrende, Anschluss von 12 Uhr in Schmutzleitung",
+            Assert.Single(result).ZustandText);
+    }
+
+    [Fact]
     public void BuildHaltungsgrafikLabels_targetY_ist_proportional_zur_laenge()
     {
         // Meter 25 in Haltung 50m => Mitte zwischen top und bottom

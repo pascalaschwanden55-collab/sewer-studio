@@ -67,4 +67,26 @@ public sealed class CodingStreckenschadenEventFactoryTests
         Assert.Equal(ProtocolEntrySource.Ai, endEntry.Source);
         Assert.Same(codeMeta, endEntry.CodeMeta);
     }
+
+    [Fact]
+    public void CloseStart_does_not_copy_training_skip_to_automatic_end_marker()
+    {
+        var start = new ProtocolEntry
+        {
+            Code = "BAJ",
+            Beschreibung = "Laengsriss",
+            MeterStart = 2.0,
+            Training = new ProtocolEntryTrainingMeta
+            {
+                SkipAutomaticPersistence = true,
+                SkipReason = "Fotoannotation bereits separat gespeichert",
+                PhotoAnnotationSampleIds = ["photo-sample-1"]
+            }
+        };
+
+        var endEntry = CodingStreckenschadenEventFactory.CloseStart(start, endMeter: 8.5);
+
+        Assert.NotNull(start.Training);
+        Assert.Null(endEntry.Training);
+    }
 }

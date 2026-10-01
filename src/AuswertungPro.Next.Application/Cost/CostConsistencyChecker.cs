@@ -45,7 +45,7 @@ public sealed class CostConsistencyChecker
                 {
                     RuleId = "KK14",
                     Severity = ConsistencyWarningSeverity.Warning,
-                    Message = "Gesamtkosten sind 0.00 CHF obwohl Massnahmen ausgewaehlt sind."
+                    Message = "Gesamtkosten sind 0.00 CHF obwohl Massnahmen ausgewählt sind."
                 });
             }
         }
@@ -168,7 +168,7 @@ public sealed class CostConsistencyChecker
                     Severity = ConsistencyWarningSeverity.Info,
                     MeasureId = block.MeasureId,
                     ItemKey = line.ItemKey,
-                    Message = $"Position '{Truncate(line.Text)}': Preis manuell ueberschrieben ({line.UnitPrice:N2} CHF)."
+                    Message = $"Position '{Truncate(line.Text)}': Preis manuell überschrieben ({line.UnitPrice:N2} CHF)."
                 });
             }
 
@@ -184,7 +184,7 @@ public sealed class CostConsistencyChecker
                     Severity = ConsistencyWarningSeverity.Warning,
                     MeasureId = block.MeasureId,
                     ItemKey = line.ItemKey,
-                    Message = $"Position '{Truncate(line.Text)}': Text enthaelt 'Kanalroboter' aber Einheit ist '{line.Unit}' statt 'Std/h'."
+                    Message = $"Position '{Truncate(line.Text)}': Text enthält 'Kanalroboter' aber Einheit ist '{line.Unit}' statt 'Std/h'."
                 });
             }
 
@@ -208,7 +208,7 @@ public sealed class CostConsistencyChecker
                 RuleId = "KK08",
                 Severity = ConsistencyWarningSeverity.Error,
                 MeasureId = block.MeasureId,
-                Message = $"Massnahme '{block.MeasureName}': DN fehlt, aber Positionen benoetigen DN fuer Preisermittlung."
+                Message = $"Massnahme '{block.MeasureName}': DN fehlt, aber Positionen benötigen DN für Preisermittlung."
             });
         }
 
@@ -220,7 +220,7 @@ public sealed class CostConsistencyChecker
                 RuleId = "KK09",
                 Severity = ConsistencyWarningSeverity.Error,
                 MeasureId = block.MeasureId,
-                Message = $"Massnahme '{block.MeasureName}': Laenge fehlt, aber Positionen haben Einheit 'm'."
+                Message = $"Massnahme '{block.MeasureName}': Länge fehlt, aber Positionen haben Einheit 'm'."
             });
         }
 
@@ -247,7 +247,7 @@ public sealed class CostConsistencyChecker
                     RuleId = "KK13",
                     Severity = ConsistencyWarningSeverity.Info,
                     MeasureId = block.MeasureId,
-                    Message = "Anschluss-Positionen sind deaktiviert (0 Anschluesse erkannt)."
+                    Message = "Anschluss-Positionen sind deaktiviert (0 Anschlüsse erkannt)."
                 });
             }
         }

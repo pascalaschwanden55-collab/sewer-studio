@@ -1,0 +1,701 @@
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
+
+using AuswertungPro.Next.Application.Dossiers;
+using AuswertungPro.Next.UI.Behaviors;
+using AuswertungPro.Next.Application.Dossiers.Preview;
+using AuswertungPro.Next.Domain.Models.Dossiers;
+
+namespace AuswertungPro.Next.UI.Views.Windows;
+
+/// <summary>
+/// Die Eingabeseite der Vorschau.
+///
+/// Gegliedert wie das Blatt daneben: zuerst die Seite, darin ihre Abschnitte,
+/// darin je Zeile eine eigene Karte. Wer wissen will, wo etwas hingehoert,
+/// soll es an der Gliederung ablesen und nicht an der Reihenfolge raten.
+///
+/// Bewusst getrennt vom Zeichnen: das Blatt wird bei jeder Eingabe neu gemalt,
+/// die Felder nur beim Seitenwechsel. Entstuenden auch sie neu, verloere das
+/// Textfeld bei jedem Tastendruck den Fokus.
+/// </summary>
+internal sealed partial class DossierPreviewFieldPanel
+{
+    private readonly HashSet<RichTextBox> _geladeneFormatfelder = new();
+
+    /// <summary>
+    /// Die Eingabestelle je Schluessel. Ohne sie wuesste ein Klick ins Blatt
+    /// zwar, WELCHES Feld gemeint ist, aber nicht, wohin er springen soll.
+    /// </summary>
+    private readonly Dictionary<DossierPreviewTarget, FrameworkElement> _feldStellen = new();
+
+    private sealed record ZeilenSpalte(
+        string Label,
+        string StyleKey,
+        Func<object, string> Read,
+        Action<object, string> Write);
+
+    private sealed record ZeilenTyp(
+        IList Liste,
+        Func<object> Neu,
+        IReadOnlyList<ZeilenSpalte> Spalten);
+
+    private static readonly SolidColorBrush Randfarbe = ErzeugeRandfarbe();
+
+    private static SolidColorBrush ErzeugeRandfarbe()
+    {
+        var farbe = new SolidColorBrush(Color.FromRgb(0xC8, 0xC8, 0xC8));
+        farbe.Freeze();
+        return farbe;
+    }
+
+    // ── Aufbau ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Baut die Eingaben zu allen Kapiteln, die auf dem gewaehlten Blatt
+    /// stehen. Es sind mehrere, sobald Word ein kurzes Kapitel mit dem
+    /// naechsten auf ein Blatt packt.
+    /// </summary>
+    private void BaueFelder(
+        IReadOnlyList<(DossierPreviewPage Seite, IReadOnlyList<DossierPreviewField> Felder)> seiten)
+    {
+        _textUndo.Reset();
+        _wirt.Children.Clear();
+        _feldStellen.Clear();
+        LeereAbschnitte();
+        BaueFokuszeile();
+
+        // Nur bei mehreren Kapiteln der Kapitelname vor dem Abschnitt; sonst
+        // stuende „Angaben" zweimal untereinander.
+        var mitKapitel = seiten.Count > 1;
+
+        foreach (var (seite, felder) in seiten)
+            HaengeSeiteAn(seite, felder, mitKapitel ? seite.Title : string.Empty);
+
+        ZeigeAlleFelder();
+
+        if (_wirt.Children.Count == 0)
+            ZeigeLeerhinweis();
+    }
+
+    private void HaengeSeiteAn(
+        DossierPreviewPage seite,
+        IReadOnlyList<DossierPreviewField> felder,
+        string kapitel)
+    {
+        string Titel(string name)
+            => kapitel.Length == 0 ? name : $"{kapitel} · {name}";
+
+        var angaben = felder.Where(f => f.Kind is not DossierPreviewFieldKind.Rows).ToList();
+
+        if (angaben.Count > 0)
+        {
+            var inhalt = new StackPanel();
+
+            foreach (var feld in angaben)
+            {
+                var karte = BaueAngabe(feld);
+                inhalt.Children.Add(karte);
+                MerkeStelle(DossierPreviewTarget.Field(feld.Key), karte);
+            }
+
+            _wirt.Children.Add(Abschnitt(Titel("Angaben"), inhalt, offen: true));
+        }
+
+        var feste = DossierPreviewTextInventory.Literals(seite);
+        var istVerzeichnis = seite.Blocks
+            .OfType<DossierPreviewParagraph>()
+            .Any(absatz => absatz.TocEntry is not null);
+
+        var verzeichnisFeld = istVerzeichnis
+            ? felder.FirstOrDefault(feld =>
+                feld.Kind is DossierPreviewFieldKind.Rows
+                && string.Equals(
+                    feld.Key,
+                    "Verzeichnis_Beilagen",
+                    StringComparison.OrdinalIgnoreCase))
+            : null;
+
+        // Die vorhandenen Kapitel und die zusaetzlichen Punkte sind eine
+        // einzige Aufgabe. In getrennten Abschnitten verschwand ausgerechnet
+        // "+ Punkt ergänzen", sobald man links einen vorhandenen Titel
+        // anklickte. Gemeinsam bleibt der Knopf immer am sichtbaren Ort.
+        if (istVerzeichnis && (feste.Count > 0 || verzeichnisFeld is not null))
+        {
+            var festeTitel = feste.Count > 0
+                ? BaueFesteTexte(
+                    feste,
+                    DossierTocChapterPageField.ChapterTitles(seite))
+                : null;
+            var inhalt = verzeichnisFeld is not null
+                ? BaueVerzeichnisEditor(verzeichnisFeld, festeTitel)
+                : festeTitel!;
+            var abschnitt = Abschnitt(
+                Titel("Inhaltsverzeichnis bearbeiten und ergänzen"),
+                inhalt,
+                offen: true);
+            _wirt.Children.Add(abschnitt);
+
+            if (verzeichnisFeld is not null)
+                MerkeStelle(DossierPreviewTarget.Field(verzeichnisFeld.Key), abschnitt);
+        }
+
+        // Jede Zeilenliste bekommt ihren eigenen Abschnitt mit ihrem Namen.
+        foreach (var feld in felder
+                     .Where(f => f.Kind is DossierPreviewFieldKind.Rows)
+                     .Where(f => !ReferenceEquals(f, verzeichnisFeld)))
+        {
+            var inhalt = feld.Key switch
+            {
+                "Themen" => BaueThemenEditor(feld),
+                "Verzeichnis_Beilagen" => BaueVerzeichnisEditor(feld),
+                _ => BaueZeilenEditor(feld)
+            };
+
+            var abschnitt = Abschnitt(Titel(feld.Label), inhalt, offen: true);
+            _wirt.Children.Add(abschnitt);
+            MerkeStelle(DossierPreviewTarget.Field(feld.Key), abschnitt);
+        }
+
+        if (!istVerzeichnis && feste.Count > 0)
+            _wirt.Children.Add(Abschnitt(
+                Titel("Beschriftungen und Überschriften"),
+                BaueFesteTexte(feste, []),
+                offen: false));
+
+    }
+
+    private void ZeigeLeerhinweis()
+    {
+        {
+            _wirt.Children.Add(new TextBlock
+            {
+                Text = "Auf dieser Seite gibt es nichts auszufüllen.",
+                TextWrapping = TextWrapping.Wrap
+            });
+        }
+    }
+
+    /// <summary>
+    /// Merkt sich, wo eine fachliche Zieladresse rechts zu finden ist. Wird
+    /// eine dynamische Tabelle neu aufgebaut, ersetzt das neue sichtbare Feld
+    /// die veraltete Control-Instanz derselben Adresse.
+    /// </summary>
+    private void MerkeStelle(DossierPreviewTarget target, UIElement stelle)
+    {
+        if (stelle is FrameworkElement element)
+            _feldStellen[target] = element;
+    }
+
+    /// <summary>
+    /// Entfernt vor dem Neuaufbau einer dynamischen Liste deren alte Zeilen-
+    /// und Zellenadressen. Sonst bliebe nach dem Loeschen einer Zeile ein
+    /// Klickziel auf ein bereits entferntes WPF-Element erhalten.
+    /// </summary>
+    private void EntferneAlteZeilenStellen(string fieldKey)
+    {
+        foreach (var target in _feldStellen.Keys
+                     .Where(target => target.Kind is DossierPreviewTargetKind.Row
+                         or DossierPreviewTargetKind.RowCell)
+                     .Where(target => string.Equals(
+                         target.Key,
+                         fieldKey,
+                         StringComparison.OrdinalIgnoreCase))
+                     .ToList())
+        {
+            _feldStellen.Remove(target);
+        }
+    }
+
+    /// <summary>
+    /// Springt zu der Stelle, die im Blatt angeklickt wurde: der Abschnitt wird
+    /// aufgeklappt, das Feld sichtbar gescrollt und bekommt den Schreibfokus.
+    ///
+    /// Ohne Feld passiert nichts — ein Klick, der scheinbar reagiert und dann
+    /// doch nirgends hinfuehrt, waere schlimmer als gar keiner.
+    /// </summary>
+    private bool SpringeZuFeld(DossierPreviewTarget target)
+    {
+        if (!_feldStellen.TryGetValue(target, out var stelle))
+            return false;
+
+        // Eine Tabellenzelle gehoert zu einer gemeinsamen Zeile. Beim Sprung
+        // bleibt deshalb die ganze Zeile sichtbar; sonst waeren leere
+        // Nachbarzellen nicht mehr erreichbar. Schreibfokus und Blinken gelten
+        // weiterhin nur fuer die genau angeklickte Zelle.
+        FrameworkElement? zeile = null;
+        if (target.Kind == DossierPreviewTargetKind.RowCell)
+        {
+            _feldStellen.TryGetValue(
+                DossierPreviewTarget.Row(target.Key, target.RowIndex), out zeile);
+        }
+        var sichtbareStelle = DossierFieldFocus.VisibleRoot(stelle, zeile);
+
+        ZeigeNurDieseStelle(sichtbareStelle);
+
+        // Sichtbar machen und den Schreibfokus setzen — erst nachdem WPF den
+        // gerade aufgeklappten Abschnitt wirklich dargestellt hat.
+        AktiviereEingabe(stelle, () => Betone(target));
+
+        // Auch rechts sichtbar machen, wo man gelandet ist: das Blatt blinkt
+        // schon, das Feld tat es bisher nicht.
+        LasseAufblinken(stelle);
+
+        return true;
+    }
+
+    private static IEnumerable<DependencyObject> Vorfahren(DependencyObject start)
+    {
+        var aktuell = VisualTreeSafe.GetParentSafe(start);
+        while (aktuell is not null)
+        {
+            yield return aktuell;
+            aktuell = VisualTreeSafe.GetParentSafe(aktuell);
+        }
+    }
+
+    /// <summary>Das erste beschreibbare Feld innerhalb einer Karte.</summary>
+    private static Control? ErsteEingabe(DependencyObject wurzel)
+    {
+        if (wurzel is TextBox or RichTextBox)
+            return (Control)wurzel;
+
+        var anzahl = System.Windows.Media.VisualTreeHelper.GetChildrenCount(wurzel);
+        for (var i = 0; i < anzahl; i++)
+        {
+            var treffer = ErsteEingabe(
+                System.Windows.Media.VisualTreeHelper.GetChild(wurzel, i));
+
+            if (treffer is not null)
+                return treffer;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Ein Abschnitt der Eingabeseite: Ueberschrift und Inhalt, immer offen.
+    ///
+    /// Vorher war das ein Aufklapper. Pascal wollte das Klappen weg — und mit
+    /// dem Klick im Blatt braucht es das auch nicht: Rechts steht ohnehin nur
+    /// noch das angeklickte Feld, und der Weg dorthin fuehrt nicht mehr ueber
+    /// das Suchen in einer langen Liste.
+    ///
+    /// Der <paramref name="offen"/>-Wert bleibt in der Signatur, damit die
+    /// Aufrufer unveraendert lesbar bleiben; er sagt jetzt nur noch, was der
+    /// Aufbau fuer wichtig haelt.
+    /// </summary>
+    private FrameworkElement Abschnitt(string titel, UIElement inhalt, bool offen)
+    {
+        _ = offen;
+
+        var kopf = new TextBlock
+        {
+            Text = titel + Anzahl(inhalt),
+            Foreground = (Brush)_ressource("TextBrush"),
+            FontSize = 13,
+            FontWeight = FontWeights.SemiBold,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+
+        var rahmen = new Border
+        {
+            BorderBrush = Randfarbe,
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Padding = new Thickness(0, 8, 0, 2),
+            Child = inhalt
+        };
+
+        // Ohne dieses Zuruecksetzen erbt jede Beschriftung darin die halbfette
+        // Schrift der Ueberschrift; dann sieht alles gleich wichtig aus.
+        TextElement.SetFontWeight(rahmen, FontWeights.Normal);
+        TextElement.SetFontSize(rahmen, 12);
+
+        var abschnitt = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
+        abschnitt.Children.Add(kopf);
+        abschnitt.Children.Add(rahmen);
+
+        MerkeAbschnitt(abschnitt);
+        return abschnitt;
+    }
+
+    /// <summary>
+    /// Wie viele Eingaben in diesem Abschnitt stecken. Damit sieht man am
+    /// zugeklappten Kopf, ob sich das Aufklappen lohnt.
+    /// </summary>
+    private static string Anzahl(UIElement inhalt)
+    {
+        if (inhalt is not DependencyObject wurzel)
+            return string.Empty;
+
+        var eingaben = Eingaben(wurzel);
+        return eingaben == 0 ? string.Empty : $"  ({eingaben})";
+    }
+
+    private static int Eingaben(DependencyObject wurzel)
+    {
+        if (wurzel is TextBox or RichTextBox)
+            return 1;
+
+        var summe = 0;
+        foreach (var kind in LogicalTreeHelper.GetChildren(wurzel).OfType<DependencyObject>())
+            summe += Eingaben(kind);
+
+        return summe;
+    }
+
+    private UIElement BaueAngabe(DossierPreviewField feld)
+    {
+        var block = new StackPanel
+        {
+            Margin = new Thickness(0, 0, 0, 9),
+            Focusable = true
+        };
+
+        block.Children.Add(new TextBlock
+        {
+            Text = feld.Label,
+            Margin = new Thickness(0, 0, 0, 2),
+            FontSize = 11,
+            Foreground = (Brush)_ressource("TextSecondaryBrush"),
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        switch (feld.Kind)
+        {
+            case DossierPreviewFieldKind.File:
+                block.Children.Add(BaueDateifeld(feld));
+                break;
+
+            case DossierPreviewFieldKind.Derived:
+                block.Children.Add(new TextBlock
+                {
+                    Text = feld.Hint.Length > 0 ? feld.Hint : "Wird berechnet.",
+                    FontStyle = FontStyles.Italic,
+                    TextWrapping = TextWrapping.Wrap
+                });
+                break;
+
+            default:
+                var box = BaueTextfeld(feld);
+                block.Children.Add(box);
+
+                var werkzeuge = DossierTextFormattingToolbar.Create(box, () =>
+                {
+                    SpeichereFormatiertesFeld(feld, box);
+                    _zeichneBlatt();
+                    Betone(feld.Key);
+                });
+
+                ZeigeWerkzeugeNurAmAktivenFeld(block, werkzeuge);
+                block.Children.Add(werkzeuge);
+
+                if (feld.CanReset)
+                    block.Children.Add(BaueRueckweg(feld, box));
+
+                break;
+        }
+
+        return block;
+    }
+
+    // ── Einzelne Angabe ───────────────────────────────────────────────────
+
+    private RichTextBox BaueTextfeld(DossierPreviewField feld)
+    {
+        var mehrzeilig = feld.Kind == DossierPreviewFieldKind.MultiLine;
+        var text = feld.Read();
+        var row = new DossierTopicRow
+        {
+            Text = text,
+            StyleRanges = Feldformat(feld.FormattingKey, text)
+        };
+        var box = DossierTopicRichTextEditor.Create(row);
+        box.AcceptsReturn = mehrzeilig;
+        box.MinHeight = mehrzeilig ? 68 : 34;
+        box.MaxHeight = mehrzeilig ? double.PositiveInfinity : 34;
+        box.VerticalScrollBarVisibility = mehrzeilig
+            ? ScrollBarVisibility.Auto
+            : ScrollBarVisibility.Disabled;
+
+        box.GotKeyboardFocus += (_, _) => Betone(feld.Key);
+
+        box.TextChanged += (_, _) =>
+        {
+            if (_geladeneFormatfelder.Contains(box))
+                return;
+
+            SpeichereFormatiertesFeld(feld, box);
+            _zeichneBlatt();
+        };
+
+        return box;
+    }
+
+    /// <summary>
+    /// Der Rueckweg zur berechneten Angabe. Ohne ihn waere jede von Hand
+    /// gesetzte Stelle eine Einbahnstrasse: das Erstellungsdatum bliebe fuer
+    /// immer stehen, auch wenn es laengst das falsche ist.
+    /// </summary>
+    private UIElement BaueRueckweg(DossierPreviewField feld, RichTextBox box)
+    {
+        var zeile = new DockPanel { Margin = new Thickness(0, 4, 0, 0) };
+
+        var knopf = Kleiner("Zurücksetzen", "Wieder den berechneten Wert nehmen", () =>
+        {
+            feld.Reset?.Invoke();
+            _dossier.FieldStyles?.Remove(feld.FormattingKey);
+
+            _geladeneFormatfelder.Add(box);
+            try
+            {
+                DossierTopicRichTextEditor.SetValue(box, new DossierTopicRow { Text = feld.Read() });
+            }
+            finally
+            {
+                _geladeneFormatfelder.Remove(box);
+            }
+
+            _zeichneBlatt();
+            Betone(feld.Key);
+        });
+
+        DockPanel.SetDock(knopf, Dock.Right);
+
+        zeile.Children.Add(knopf);
+        zeile.Children.Add(new TextBlock
+        {
+            Text = "Von Hand gesetzt.",
+            FontStyle = FontStyles.Italic,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+
+        void Aktualisiere()
+            => zeile.Visibility = feld.Overridden ? Visibility.Visible : Visibility.Collapsed;
+
+        box.TextChanged += (_, _) => Aktualisiere();
+        Aktualisiere();
+
+        return zeile;
+    }
+
+    private List<DossierTextStyleRange> Feldformat(string key, string text)
+    {
+        _dossier.FieldStyles ??= new();
+        return _dossier.FieldStyles.TryGetValue(key, out var ranges)
+            ? DossierTopicTextFormatting.Normalize(text, ranges)
+            : new List<DossierTextStyleRange>();
+    }
+
+    private void SpeichereFormatiertesFeld(DossierPreviewField feld, RichTextBox box)
+    {
+        var value = DossierTopicRichTextEditor.Read(box);
+        feld.Write?.Invoke(value.Text);
+
+        _dossier.FieldStyles ??= new();
+        if (value.StyleRanges.Count == 0)
+            _dossier.FieldStyles.Remove(feld.FormattingKey);
+        else
+            _dossier.FieldStyles[feld.FormattingKey] = value.StyleRanges.ToList();
+    }
+
+    private UIElement BaueDateifeld(DossierPreviewField feld)
+    {
+        var block = new StackPanel();
+
+        var anzeige = new TextBlock
+        {
+            Text = feld.Read().Length == 0 ? "— keine Datei —" : feld.Read(),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 5)
+        };
+
+        block.Children.Add(anzeige);
+
+        var leiste = new WrapPanel();
+
+        block.Children.Add(new TextBlock
+        {
+            Text = "JPG, PNG oder PDF wählen. Das Bild wird in die originale Planfläche eingesetzt; die Quelldatei bleibt unverändert.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 11,
+            Margin = new Thickness(0, 0, 0, 5)
+        });
+
+        leiste.Children.Add(Kleiner("JPG / Plan wählen…", "Werkleitungsplan als JPG, PNG oder PDF wählen",
+            async () => await WaehlePlanAsync(feld, anzeige)));
+
+        leiste.Children.Add(Kleiner(string.Empty, "90° nach links", () => Drehe(feld, anzeige, 270)).MitGlyph("\uE7AD", gespiegelt: true));
+        leiste.Children.Add(Kleiner(string.Empty, "90° nach rechts", () => Drehe(feld, anzeige, 90)).MitGlyph("\uE7AD"));
+        leiste.Children.Add(Kleiner("180°", "Auf den Kopf stellen", () => Drehe(feld, anzeige, 180)));
+
+        leiste.Children.Add(Kleiner("Zuschneiden…",
+            "Ausschnitt wählen, drehen und die Breite im Dossier festlegen",
+            () => BearbeitePlan(feld, anzeige)));
+
+        leiste.Children.Add(Kleiner("Entfernen", "Ohne Plan ausgeben", () =>
+        {
+            feld.Write?.Invoke(string.Empty);
+            anzeige.Text = "— keine Datei —";
+            _zeichneBlatt();
+            Betone(feld.Key);
+        }));
+
+        block.Children.Add(leiste);
+        return block;
+    }
+
+    private async System.Threading.Tasks.Task WaehlePlanAsync(
+        DossierPreviewField feld, TextBlock anzeige)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Werkleitungsplan wählen",
+            Filter = "Werkleitungsplan (JPG, PNG oder PDF)|*.jpg;*.jpeg;*.png;*.pdf"
+                + "|JPG-Foto|*.jpg;*.jpeg|PNG-Bild|*.png|PDF|*.pdf"
+        };
+
+        if (dialog.ShowDialog(_fenster()) != true)
+            return;
+
+        var pfad = dialog.FileName;
+
+        // Jede Auswahl wird als eigene, gepruefte Bildkopie in den temporaeren
+        // Arbeitsordner uebernommen. Vorschau, Word und PDF verwenden sofort
+        // diese Datei; erst "Uebernehmen" veroeffentlicht sie im Dossierordner.
+        // Das Foto selbst bleibt unveraendert.
+        if (_planImages.NeedsConversion(pfad))
+        {
+            _status("Werkleitungsplan wird übernommen…");
+            var ergebnis = await _planImages.ConvertAsync(pfad, _planWorkFolder);
+
+            if (!ergebnis.Success)
+            {
+                _status(ergebnis.Error ?? "Die Umwandlung ist fehlgeschlagen.");
+                return;
+            }
+
+            pfad = ergebnis.ImagePath!;
+            _status(ergebnis.Error ?? "Plan übernommen.");
+        }
+
+        UebernimmPlan(feld, anzeige, pfad);
+    }
+
+    private void Drehe(DossierPreviewField feld, TextBlock anzeige, int grad)
+    {
+        var ergebnis = _planAdjuster.Rotate(feld.Read(), _planWorkFolder, grad);
+
+        if (!ergebnis.Success)
+        {
+            _status(ergebnis.Error ?? "Der Plan konnte nicht gedreht werden.");
+            return;
+        }
+
+        _status("Plan gedreht.");
+        UebernimmPlan(feld, anzeige, ergebnis.ImagePath!);
+    }
+
+    /// <summary>
+    /// Ausschnitt, Drehung und Breite im Dossier — alles am selben Bild, das
+    /// die Vorschau daneben zeigt. Geschrieben wird nur in eine temporaere
+    /// Kopie; das Kundenoriginal bleibt unangetastet.
+    /// </summary>
+    private void BearbeitePlan(DossierPreviewField feld, TextBlock anzeige)
+    {
+        var ergebnis = DossierPlanWindow.ShowFor(
+            _planAdjuster, feld.Read(), _planWorkFolder, _dossier.OverviewPlanWidthCm);
+
+        if (ergebnis is null)
+            return;
+
+        _dossier.OverviewPlanWidthCm = ergebnis.WidthCm;
+        _status("Plan übernommen.");
+        UebernimmPlan(feld, anzeige, ergebnis.ImagePath);
+    }
+
+    private void UebernimmPlan(DossierPreviewField feld, TextBlock anzeige, string pfad)
+    {
+        feld.Write?.Invoke(pfad);
+        anzeige.Text = pfad.Length == 0 ? "— keine Datei —" : pfad;
+        _zeichneBlatt();
+        Betone(feld.Key);
+    }
+
+    // ── Werkzeuge ─────────────────────────────────────────────────────────
+
+    /// <summary>Ein kleiner Knopf — alle Werkzeuge sehen gleich aus.</summary>
+    private static Button Kleiner(string beschriftung, string hinweis, Action tue)
+    {
+        var knopf = new Button
+        {
+            Content = beschriftung,
+            MinWidth = 30,
+            Height = 25,
+            Padding = new Thickness(9, 0, 9, 0),
+            Margin = new Thickness(0, 0, 6, 5),
+            FontSize = 11,
+            ToolTip = hinweis
+        };
+
+        knopf.Click += (_, _) => tue();
+        return knopf;
+    }
+
+    private ZeilenTyp? ZeilenTypFuer(string key) => key switch
+    {
+        "Eigentuemer" => new ZeilenTyp(
+            _dossier.Owners,
+            () => new DossierOwnerRow(),
+            new[]
+            {
+                new ZeilenSpalte("Haus-Nr.", "HouseNumber",
+                    z => ((DossierOwnerRow)z).HouseNumber,
+                    (z, w) => ((DossierOwnerRow)z).HouseNumber = w),
+                new ZeilenSpalte("Parzelle", "ParcelNumber",
+                    z => ((DossierOwnerRow)z).ParcelNumber,
+                    (z, w) => ((DossierOwnerRow)z).ParcelNumber = w),
+                new ZeilenSpalte("Name", "Name",
+                    z => ((DossierOwnerRow)z).Name,
+                    (z, w) => ((DossierOwnerRow)z).Name = w),
+                new ZeilenSpalte("Telefon", "Phone",
+                    z => ((DossierOwnerRow)z).Phone,
+                    (z, w) => ((DossierOwnerRow)z).Phone = w),
+                new ZeilenSpalte("Mail", "Mail",
+                    z => ((DossierOwnerRow)z).Mail,
+                    (z, w) => ((DossierOwnerRow)z).Mail = w),
+                new ZeilenSpalte("Objektbewohner", "Occupancy",
+                    z => ((DossierOwnerRow)z).Occupancy,
+                    (z, w) => ((DossierOwnerRow)z).Occupancy = w)
+            }),
+
+        "Aenderungen" => new ZeilenTyp(
+            _dossier.Changes,
+            () => new DossierChangeRow(),
+            new[]
+            {
+                new ZeilenSpalte("Version", "Version",
+                    z => ((DossierChangeRow)z).Version,
+                    (z, w) => ((DossierChangeRow)z).Version = w),
+                new ZeilenSpalte("Datum", "Date",
+                    z => ((DossierChangeRow)z).Date,
+                    (z, w) => ((DossierChangeRow)z).Date = w),
+                new ZeilenSpalte("Visum", "Visum",
+                    z => ((DossierChangeRow)z).Visum,
+                    (z, w) => ((DossierChangeRow)z).Visum = w),
+                new ZeilenSpalte("Art der Änderung", "Change",
+                    z => ((DossierChangeRow)z).Change,
+                    (z, w) => ((DossierChangeRow)z).Change = w)
+            }),
+
+        _ => null
+    };
+}

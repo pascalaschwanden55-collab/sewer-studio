@@ -1,0 +1,1502 @@
+[
+  {
+    "file": "training/vsa_classifier/zoom_preview.py",
+    "sha256": "5fc724ae1a4013b03be517c103d757a73a515d52e5dc96cd7a729bef2ca83418",
+    "lines": 62
+  },
+  {
+    "file": "training/vsa_classifier/visual_evidence_filter.py",
+    "sha256": "d9a4fa5d169512fd2120ac4ece14acf3bf554eec8580a4a7bcf49879af17292c",
+    "lines": 146
+  },
+  {
+    "file": "training/vsa_classifier/train_cls.py",
+    "sha256": "ba1c70d8d8e60b7e79cfb6cbdc4ad4807633aea32d32cfcf3fd31f94895b842c",
+    "lines": 63
+  },
+  {
+    "file": "training/vsa_classifier/train_autopilot.py",
+    "sha256": "9ba2b25ec3398d8b0b6fe18993de08d9f3c7741e110a2c63e4bca0d687e54ad8",
+    "lines": 262
+  },
+  {
+    "file": "training/vsa_classifier/threshold_select.py",
+    "sha256": "87efdfa2af0eeade02709b7fc25918077215594df457a6f86afc66e8ec16798c",
+    "lines": 149
+  },
+  {
+    "file": "training/vsa_classifier/score_frames.py",
+    "sha256": "499fdc07bb94585ddafd8f021b6cfe806c7e3d7350fb896016a3c6387ff7e2da",
+    "lines": 96
+  },
+  {
+    "file": "training/vsa_classifier/repo_paths.py",
+    "sha256": "dd36eabf77e8b8a8fad8f21aea456d79e7523f247c5c971849b2418113771a86",
+    "lines": 10
+  },
+  {
+    "file": "training/vsa_classifier/nocrop_patch.py",
+    "sha256": "f7df0f85bc900d4d826e595e100f42d4b7ab54ab898f42e3bc2fb59ad751b1a8",
+    "lines": 70
+  },
+  {
+    "file": "training/vsa_classifier/make_review_html.py",
+    "sha256": "7e727ca3654577c9e4618c0fb30c8fee7d11ef3b3145c1013d602125b9889979",
+    "lines": 203
+  },
+  {
+    "file": "training/vsa_classifier/label_audit.py",
+    "sha256": "1a6e94abd574070143ffb2c3447c835e038707d044bc21a7059876e18ebc3d9e",
+    "lines": 110
+  },
+  {
+    "file": "training/vsa_classifier/balance_patch.py",
+    "sha256": "00250df1d3f4014532944aca89981f7f74164f1d456b055d666a7643627a52bc",
+    "lines": 75
+  },
+  {
+    "file": "training/vsa_classifier/audit_montage.py",
+    "sha256": "165a3c3569d90d5692307fea993370704246c01246f871a605bf49b63ba81159",
+    "lines": 96
+  },
+  {
+    "file": "integrations/qgis/tests/test_bridge_http.py",
+    "sha256": "76fa30ee8eab27daa3ae10e16563176c3b2266e36bbf1aee0a54845f0bb95595",
+    "lines": 182
+  },
+  {
+    "file": "training/vsa_classifier/eval_threshold.py",
+    "sha256": "5068fbb23cb76a1c7084248db80a30803df40cd6bc2acc0a5404d558016fae6c",
+    "lines": 88
+  },
+  {
+    "file": "training/vsa_classifier/eval_cls.py",
+    "sha256": "983bf2d1d7061c891c2a93a11be0cc07e56581d522bdd9f4a52f7aa8a51d3321",
+    "lines": 139
+  },
+  {
+    "file": "training/vsa_classifier/enhance_preview.py",
+    "sha256": "a076df13fd93ac40987828f8f3d7699f12d2a53b2dd8f749d5ba4194e215193e",
+    "lines": 135
+  },
+  {
+    "file": "training/vsa_classifier/enhance_dataset.py",
+    "sha256": "24334a86dfee144ca515ac5bfff3db07490d85e5c47c56ac9cb3aac4c5e2704d",
+    "lines": 78
+  },
+  {
+    "file": "integrations/qgis/sewerstudio_bridge/bridge_http.py",
+    "sha256": "af06eb1cb8960bd54a2e7a0e950aedc64e1703aae5ec7ea6270ceae05d5ff79d",
+    "lines": 132
+  },
+  {
+    "file": "integrations/qgis/sewerstudio_bridge/sewerstudio_bridge.py",
+    "sha256": "49943aed3f0999e0b24777734ef297a68c48f3c74d4df8ea75cde6255af624b1",
+    "lines": 997
+  },
+  {
+    "file": "integrations/qgis/sewerstudio_bridge/__init__.py",
+    "sha256": "ae798b2e433bfc9ab8a98d7c0ebbaa05c527f68b00364f0fba34f61bf9314022",
+    "lines": 6
+  },
+  {
+    "file": "sidecar/_gpu_check.py",
+    "sha256": "2c9eedaff10e5c21a13ef40ec131eb243a1d478de2f8b52df0628629a855aad3",
+    "lines": 12
+  },
+  {
+    "file": "training/vsa_classifier/clean_dataset.py",
+    "sha256": "7a1e9983bb93681ebe83c8f1125daa778f9dea7cb5707ab1a9b54599f5ad9897",
+    "lines": 155
+  },
+  {
+    "file": "tools/kb_audit/kb_material_cleanup.py",
+    "sha256": "e7bdf4a773800763653a7235ff0683a21ba62e22fdef66b3b6972fafda85273e",
+    "lines": 137
+  },
+  {
+    "file": "tools/kb_audit/kb_context_run_full.py",
+    "sha256": "588981f69c34d03d36c72b0452d9795fbbe82acb776f2fc6c6db5b415f0042e0",
+    "lines": 103
+  },
+  {
+    "file": "tools/kb_audit/kb_context_dryrun.py",
+    "sha256": "e6ce2ee76f4252791faea075f2a7c3ad713145e6d0e3722ddb4bfabd9d1c5e80",
+    "lines": 544
+  },
+  {
+    "file": "tools/kb_audit/kb_context_apply.py",
+    "sha256": "db650bb25c62e9065e980c0644595ee21e7ec565aebfb9d500853ed97a6ddfe1",
+    "lines": 623
+  },
+  {
+    "file": "tools/kb_audit/kb_audit_dryrun.py",
+    "sha256": "f44bf52ee570f4e0054627005ac939c7478c4668c3ae72c5670f9caa589f4777",
+    "lines": 509
+  },
+  {
+    "file": "training/scripts/lernstufe_fehler_einbauen.py",
+    "sha256": "cf0497f255ec81a35e14afcc409dd1658d143a976713b0c6b51826f435c916bd",
+    "lines": 121
+  },
+  {
+    "file": "training/scripts/import_gold_labels.py",
+    "sha256": "8419b25538a84a93b77d111e4351df54ded4b3438c486af20efe25ca4e51e8ab",
+    "lines": 375
+  },
+  {
+    "file": "training/scripts/haltung_vorbereiten.py",
+    "sha256": "04a94b6f1f0a05f47057a20e80e0b1c20452ecb819b8cb6465c8d7a2599c3fa5",
+    "lines": 150
+  },
+  {
+    "file": "training/scripts/gold_stock_audit.py",
+    "sha256": "cb4d34b2da66649e4215a840ded9a7988116f1f4cadce50887fdca3fc9ebba5c",
+    "lines": 2917
+  },
+  {
+    "file": "training/scripts/freeze_osd_validation_set.py",
+    "sha256": "20ba1db0193f811c3d348d0d0c4911acd6fa6718e059a5fd8257aa01f959ad45",
+    "lines": 170
+  },
+  {
+    "file": "training/scripts/evaluate_detect_release_holdout.py",
+    "sha256": "f80fc2b385d2292eaaf19aab89121580c64b5be283f9900741f871903cd4b941",
+    "lines": 706
+  },
+  {
+    "file": "training/scripts/evaluate_detect_gold_holdout.py",
+    "sha256": "e36a92741e40fc229d751811bf748d22c81e4ee6a7330272e59068b250525469",
+    "lines": 918
+  },
+  {
+    "file": "training/scripts/evaluate_bcc_release_holdout.py",
+    "sha256": "92682d3c5d7214dde73b223086384b8b3541918974bc05cf8e0c4b8724366605",
+    "lines": 1895
+  },
+  {
+    "file": "training/scripts/detect_release_holdout_status.py",
+    "sha256": "2b34ff57000542791f2e500371b0352098f7809476de0fa25db4604e5b4fc7d4",
+    "lines": 336
+  },
+  {
+    "file": "training/scripts/detect_lernkurve.py",
+    "sha256": "99d6469be95fc0187be67daa0b02ef986d1056bd507302fbf50c04d6c45ea9d3",
+    "lines": 127
+  },
+  {
+    "file": "training/scripts/detect_klassenbreite_messung.py",
+    "sha256": "2d0a646a43854b40c413d893f3756f4fe73af503fc2e0841b5a007733bbb25e8",
+    "lines": 523
+  },
+  {
+    "file": "training/scripts/detect_klassenbreite.py",
+    "sha256": "c34e6b960963834762b5b4ffd639aa592545fce17a4634bea1d80b3df752291b",
+    "lines": 560
+  },
+  {
+    "file": "training/scripts/detect_gold_holdout_scoring.py",
+    "sha256": "7df3ff523e97659a05091bc0cd8e5b5136e87068cbd0b4271f44fbf02f4c330e",
+    "lines": 414
+  },
+  {
+    "file": "training/scripts/detect_gold_holdout_provenance.py",
+    "sha256": "76e10baf941d861c19de2ebe4fbafc6c603a8d8793062043e5052f3a2a016c6a",
+    "lines": 746
+  },
+  {
+    "file": "training/scripts/detect_gold_error_review.py",
+    "sha256": "70ef817f5230fcdeccee354e62db2d9d0034be04783c81887913d1f43e035063",
+    "lines": 955
+  },
+  {
+    "file": "training/scripts/derive_negative_set_for_gold_audit.py",
+    "sha256": "fdad669a56054649cd138cac3c8f19980e3bd2cc23e1bbadc30e14fe318b23fc",
+    "lines": 745
+  },
+  {
+    "file": "training/scripts/collect_class_candidates.py",
+    "sha256": "0ae5bdeb2571fd8ad343add37a9c5085183428ae4ffa2c01f347af4eb19909e2",
+    "lines": 384
+  },
+  {
+    "file": "training/scripts/bcc_video_messung_vergleich.py",
+    "sha256": "78d834bc2c2b43b6ed79f519f6e938f7275ee9da16b294d68875c708d0ba5729",
+    "lines": 150
+  },
+  {
+    "file": "training/scripts/bcc_video_messung.py",
+    "sha256": "ae927c5f10a9db57cfd9a7b9195ae3e6d4e526a1058bc3f3645cf1a7b2b72eb6",
+    "lines": 334
+  },
+  {
+    "file": "training/scripts/bcc_video_fehlalarm_queue.py",
+    "sha256": "4fd82b3270965c06fe64ea3a2516bf8753bf20ccf9fc2a2ff3b6cdb9212764a9",
+    "lines": 196
+  },
+  {
+    "file": "training/scripts/bcc_schwellenkurve.py",
+    "sha256": "26f945b3e5c6eb1fe931dd375096faa62eb99e87fc7a47349bab90145ca0d906",
+    "lines": 161
+  },
+  {
+    "file": "training/scripts/bcc_release_holdout.py",
+    "sha256": "259cb0975fd0db7af63bb813609b7c40988a80d7786b060f308badc9c821b046",
+    "lines": 2832
+  },
+  {
+    "file": "training/scripts/bcc_pdf_recall_messung.py",
+    "sha256": "ed04bb4e4d56d5dfcc6d95b2e5693f777c091393d1c5715bef969c0a608bae9a",
+    "lines": 298
+  },
+  {
+    "file": "training/scripts/bcc_pdf_recall_bericht.py",
+    "sha256": "867198f13cc1fa9c93d8b193dc6e5ef3599457dee8306b92c5449c8500aa7ecd",
+    "lines": 191
+  },
+  {
+    "file": "training/scripts/bcc_pdf_precision_queue.py",
+    "sha256": "fc37304713c4a70b53fe1f1a30682ef9b5d2d8f1576f11c67df62381bbcb865d",
+    "lines": 186
+  },
+  {
+    "file": "training/scripts/bcc_pdf_precision_bericht.py",
+    "sha256": "428abfa5bebfee503ac3ffcaaa74964649d94658733b5d69c160fd0eb0130444",
+    "lines": 99
+  },
+  {
+    "file": "training/scripts/bcc_pdf_messreserve.py",
+    "sha256": "e941a52e7352127e4b18f626815f607951eec5882909bd6e0bd18b464365a990",
+    "lines": 143
+  },
+  {
+    "file": "training/scripts/bcc_lernstufe_aus_protokoll.py",
+    "sha256": "22f8f4613aa22ce37311c17bf3a16214b06d2443c920a5c7c352bcd39b7da07a",
+    "lines": 525
+  },
+  {
+    "file": "training/scripts/bcc_hard_negative_review.py",
+    "sha256": "892744ee6d4bdd60328d8e5d95f35b173a8ffeb181fef18fd934a730e6bcba5d",
+    "lines": 1463
+  },
+  {
+    "file": "training/scripts/bcc_copilot_durchlauf.py",
+    "sha256": "ca96f6b1a9d69dacef9cd9aabf820a4b344b5f11ed79173dab4528d1fc289b64",
+    "lines": 338
+  },
+  {
+    "file": "sidecar/tests/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lines": 0
+  },
+  {
+    "file": "sidecar/tests/test_yolo_test_slot_switch.py",
+    "sha256": "7ef34f971d01449ab9c5cf053c9387ac87978819cde6474d1449535f5e18788d",
+    "lines": 119
+  },
+  {
+    "file": "sidecar/tests/test_yolo_telemetry_cache.py",
+    "sha256": "48b27708ee0303e2bc9705346f0ec31d47522fe1b63ba046776dd5404f6b579c",
+    "lines": 22
+  },
+  {
+    "file": "sidecar/tests/test_yolo_runtime.py",
+    "sha256": "c190796fa559e58792c3ddc225a867cf330077ec53dad739bec34ac55a4bc8be",
+    "lines": 125
+  },
+  {
+    "file": "sidecar/tests/test_yolo_qualification_route.py",
+    "sha256": "b90794df78e5ef6526d2378e721e247adea08e1b4b573dadc643f249723e0aba",
+    "lines": 115
+  },
+  {
+    "file": "sidecar/tests/test_yolo_color_order.py",
+    "sha256": "b36c478a2069c5b095b57ab26401be07217725da8ed7936286f3fc04e831a130",
+    "lines": 18
+  },
+  {
+    "file": "sidecar/tests/test_yolo.py",
+    "sha256": "0121b3f9736b7954ae84bbce90fdcfd3e22ef73b8c938c99f0f4e4dd395a2245",
+    "lines": 76
+  },
+  {
+    "file": "sidecar/tests/test_warmup.py",
+    "sha256": "7b1776be571970ea766d5cfbd5bf1947c436526fb4d0fa22357e67f1156a89e7",
+    "lines": 183
+  },
+  {
+    "file": "sidecar/tests/test_vram_inflight_reservation.py",
+    "sha256": "f0255cd2f691e9ceff026fd5ff481b1d07afa83fe2487104bab86808a96e7214",
+    "lines": 151
+  },
+  {
+    "file": "sidecar/tests/test_vram_admission.py",
+    "sha256": "262e7cadd85fb64bb3f557eba59587a488c706b7252f29e56717e6bba2f30480",
+    "lines": 187
+  },
+  {
+    "file": "sidecar/tests/test_train_osd_zeichen.py",
+    "sha256": "a4353da8f6d835370aa408f602a238cc3f44b8c6ac6fa2a4133635240bf89638",
+    "lines": 346
+  },
+  {
+    "file": "sidecar/tests/test_training_security.py",
+    "sha256": "6d0e8c34a5b244657860167b60e13e1f55765845635dbbdebbbe8950a1659b05",
+    "lines": 565
+  },
+  {
+    "file": "sidecar/tests/test_training_export_golden.py",
+    "sha256": "883ef03e40399e36acc7dac9ed50bd913fc45dc2c8196b0eb8671bf0aed9acd1",
+    "lines": 93
+  },
+  {
+    "file": "sidecar/tests/test_telemetry.py",
+    "sha256": "780fe987985b64f87613ef987a8fcbfd823431be85ced7935f4810ba47086063",
+    "lines": 105
+  },
+  {
+    "file": "sidecar/tests/test_sam.py",
+    "sha256": "24c8282cb722f6fb6d7a8d8a59d8aaee7795b6856719ac88ad386119ce27a78a",
+    "lines": 39
+  },
+  {
+    "file": "sidecar/tests/test_request_haertung.py",
+    "sha256": "7926fd1103d8ea3f15cc11a6be13b3928ce17d8059db8673a40f3401911f75a2",
+    "lines": 147
+  },
+  {
+    "file": "sidecar/tests/test_pipeline.py",
+    "sha256": "8d773f35d3f65ea4cdc441f3e122bc0ac711900efbd3a31b8559d2ddcdefbe45",
+    "lines": 112
+  },
+  {
+    "file": "sidecar/tests/test_pdf_protocol_train_cls.py",
+    "sha256": "9f86ff6ff4bb1243ca0b1805a3b7559e56c2c580fb216fa34725831450e497c8",
+    "lines": 27
+  },
+  {
+    "file": "sidecar/tests/test_osd_schwelle.py",
+    "sha256": "e82c16d9ae6da1c55faa9248b69437f88cf0db14004d133fec40fc553bf3be36",
+    "lines": 368
+  },
+  {
+    "file": "sidecar/tests/test_osd_schutz.py",
+    "sha256": "671f1ee9cee34d5031c88a99d47c90010ceb640b1caf77d64cfd3dc21a8e8e05",
+    "lines": 278
+  },
+  {
+    "file": "sidecar/tests/test_osd_model_wrapper.py",
+    "sha256": "22de8f3447968b30438dd869b25e453906311e1650468ae70065599d67d6a4ba",
+    "lines": 115
+  },
+  {
+    "file": "sidecar/tests/test_osd_modell_leser.py",
+    "sha256": "3252f8cb5a5d7b4e2cbb25bc903191c15e4e0649d3817cf774670daf2a076fd9",
+    "lines": 153
+  },
+  {
+    "file": "sidecar/tests/test_osd_modell_goldmessung.py",
+    "sha256": "d7014b9bce25b4ec0c2f4c650c8f64e48bc55eca2dc6d39d721d595481a6634d",
+    "lines": 467
+  },
+  {
+    "file": "sidecar/tests/test_osd_modell.py",
+    "sha256": "b54108b707a9f7027bc48ff8c91113a0f73e392fe7bb011913b7b15c68fd3b97",
+    "lines": 214
+  },
+  {
+    "file": "sidecar/tests/test_osd_meter.py",
+    "sha256": "9b8744d5efce2beea8bbdb3a8c6e2f5eb02733a66ced8d2b546b6346d135c2ae",
+    "lines": 578
+  },
+  {
+    "file": "sidecar/tests/test_osd_kunstbilder.py",
+    "sha256": "54cf79e531e7a0dff863e2241acf21a704395eba4a43cd4ba44f3db5468eaabc",
+    "lines": 251
+  },
+  {
+    "file": "sidecar/tests/test_osd_kettenmessung.py",
+    "sha256": "21feb42efe0fdaa6f1fa8505987353de794ebd6ca329a56a324be0ddfe7229a5",
+    "lines": 93
+  },
+  {
+    "file": "sidecar/tests/test_osd_handlabel.py",
+    "sha256": "9ff16f34a596edd4b3fe3e8296f0085e62e3b8e0de9a64758f92aa042f93434c",
+    "lines": 613
+  },
+  {
+    "file": "sidecar/tests/test_osd_goldsatz.py",
+    "sha256": "63b92d8acbb4a30bc164d4fa274fe8b2ca09efc3082c39fd1162b838ab5cb483",
+    "lines": 348
+  },
+  {
+    "file": "sidecar/tests/test_osd_frames_ziehen.py",
+    "sha256": "11b929b03d6b8d7d1442373ddda1000dd86e0a6412fdf56dbfc87a7413c52ec0",
+    "lines": 140
+  },
+  {
+    "file": "sidecar/tests/test_osd_ernte.py",
+    "sha256": "185a20e57e18e0a6966a9b0f7d16380a0c32db31ed26738245325edd80ec8ac2",
+    "lines": 349
+  },
+  {
+    "file": "sidecar/tests/test_osd_datensatz.py",
+    "sha256": "8f27c4be3d701f51380259dfc0803cb4add79f43836ea36b001a1ca8e068f603",
+    "lines": 477
+  },
+  {
+    "file": "sidecar/tests/test_osd_crop.py",
+    "sha256": "46402b565b6f381aad24667d67ba66044b77d109af32f92fc2cf8b8e397bd4de",
+    "lines": 104
+  },
+  {
+    "file": "sidecar/tests/test_nocrop_compat_sync.py",
+    "sha256": "eff8f14754f97b4a92b33a97338e5da02e878c6c7a646f30abcca9c4f5123771",
+    "lines": 38
+  },
+  {
+    "file": "sidecar/tests/test_model_cpu_smoke.py",
+    "sha256": "04a752ccf54f5fe592337381ac0ad89b7f98068d6c252c5f40f3bfa7b8bc3cbf",
+    "lines": 90
+  },
+  {
+    "file": "sidecar/tests/test_model_backend_selection.py",
+    "sha256": "593f47008add4806e21313c5e53d4f385fed7b0a023d813f2e8b56aa93d8894e",
+    "lines": 87
+  },
+  {
+    "file": "sidecar/tests/test_loopback_security.py",
+    "sha256": "f2dd01486a7d0b90328549b0e14ea6e8353c26df2fa509efabc3d4d0276ebee5",
+    "lines": 48
+  },
+  {
+    "file": "sidecar/tests/test_lock_audit.py",
+    "sha256": "5836ef9d94b43e5afee90eae04c4d1a3907c6e08938c06d00b323d71e1e649eb",
+    "lines": 92
+  },
+  {
+    "file": "sidecar/tests/test_lernstufe_wrapper.py",
+    "sha256": "ec55df93a3eff3e448df4ab631a2a7713a8c9568fad5b469dabaf2c117ab9bf6",
+    "lines": 196
+  },
+  {
+    "file": "sidecar/tests/test_inference_watchdog.py",
+    "sha256": "62ae785b945e96843976d905f9b363d857ab4b9650fa138eafe648ea7f1d78bf",
+    "lines": 146
+  },
+  {
+    "file": "sidecar/tests/test_image_decode.py",
+    "sha256": "fb8eb1326c148ec6b34b89086c6a6147a96e4b1243e4edbbb1e75eb4535ed75e",
+    "lines": 81
+  },
+  {
+    "file": "sidecar/tests/test_honesty.py",
+    "sha256": "765d5636ff2de19f54c7e2e10311f991c44e91e58d7d0b81a1ce5d776b4596fe",
+    "lines": 244
+  },
+  {
+    "file": "sidecar/tests/test_health_busy.py",
+    "sha256": "709931402182932d8ea77de128f089d22197f4e523655351165cf50d49c0dc54",
+    "lines": 42
+  },
+  {
+    "file": "sidecar/tests/test_health.py",
+    "sha256": "b54806f9cac7cb25351c8d4d917b0dcb0897681d850dd05745695f43073d2954",
+    "lines": 204
+  },
+  {
+    "file": "sidecar/tests/test_gpu_manager_evict.py",
+    "sha256": "c087f2539ed2a26252cc519552dd6b9233fb04f77fa412571d703273881df031",
+    "lines": 28
+  },
+  {
+    "file": "sidecar/tests/test_gpu_manager.py",
+    "sha256": "31f92ed48709ba06879c8fbbc8eb0762abf64951a635502e797e11b815cd580e",
+    "lines": 44
+  },
+  {
+    "file": "sidecar/tests/test_frame_quality.py",
+    "sha256": "7ce23546592de1bedf8258365559e871e88fd40a2f20b5cea18b13bb64ed19e3",
+    "lines": 42
+  },
+  {
+    "file": "sidecar/tests/test_error_handling.py",
+    "sha256": "3875c38169f939181abaefa8460cbade2d10930b9e3d398f554f634723b45d3e",
+    "lines": 98
+  },
+  {
+    "file": "sidecar/tests/test_dino.py",
+    "sha256": "a89b5b372d281dca2f5fcd6989e8be125cb43465b12eb7303cd31f94ce9a26f8",
+    "lines": 114
+  },
+  {
+    "file": "sidecar/tests/test_detector_qualification.py",
+    "sha256": "c61635de29b05fcb03add5c5a51a0691c06ca7eff61428ce890cfecf086cbff2",
+    "lines": 198
+  },
+  {
+    "file": "sidecar/tests/test_cls_resolution.py",
+    "sha256": "d036c11cdfacd9702b6dbb26d630d2b4fa96ae7cba7910effb3234b7805d7e69",
+    "lines": 108
+  },
+  {
+    "file": "sidecar/tests/test_busy_lease_concurrency.py",
+    "sha256": "d089ce8014a7929225c4b99a597e2acd08029b0b4d9c8851b427eff880e8a46a",
+    "lines": 594
+  },
+  {
+    "file": "sidecar/tests/test_box_utils.py",
+    "sha256": "2ce12e431216850bdc6577d4a3a270946c78e3517811633b2915276e4e680258",
+    "lines": 25
+  },
+  {
+    "file": "sidecar/tests/test_bind_host_security.py",
+    "sha256": "2265861adddd66186b9b13629e71fba60e3c409634ee55898e86a5e9160516e4",
+    "lines": 44
+  },
+  {
+    "file": "sidecar/tests/test_bend_geometry_toggle.py",
+    "sha256": "504b57c712028f664487a1cd51fd6550be4003afd79a3f6b5f9c3e58a51c46b0",
+    "lines": 179
+  },
+  {
+    "file": "sidecar/tests/test_bend_geometry.py",
+    "sha256": "b9e424ec8efb41c3cbc888f35a844cbad66877b0fc1d3606470bde48d63272f4",
+    "lines": 56
+  },
+  {
+    "file": "sidecar/tests/test_bcc_test_candidate.py",
+    "sha256": "51e4b84a7a3c7d4cde594110e96c7859d7a2681812813231573c2efccdc24519",
+    "lines": 681
+  },
+  {
+    "file": "sidecar/tests/test_auth_token.py",
+    "sha256": "d8dcf759d4ad2b6c20154efde05deae5d62b125ea376de006aacf32f55e50d52",
+    "lines": 20
+  },
+  {
+    "file": "sidecar/tests/test_auth.py",
+    "sha256": "86f36503b563ffb63a1ef2dcb3d30adac733938a0a7b958d08e4c1f02d54b10b",
+    "lines": 95
+  },
+  {
+    "file": "sidecar/tests/conftest.py",
+    "sha256": "8a95bdc45ecbf9329c368d8a074b0ac595e518bdd9947bc791669a9b90f0b4a9",
+    "lines": 30
+  },
+  {
+    "file": "training/scripts/train_osd_zeichen.py",
+    "sha256": "e33874aef293499ef648e8ace51e4aad81cdec4d1395802ab6e4249ab4e01310",
+    "lines": 278
+  },
+  {
+    "file": "training/scripts/train_detect_gold.py",
+    "sha256": "48c5a5381b0b20b19b2cbe18c0b2c99c5318770f7a30da7e23368daad61e6965",
+    "lines": 1133
+  },
+  {
+    "file": "training/scripts/train_bcc_pilot.py",
+    "sha256": "0e7714be026222a332e249bf4e7a483b18fa2971d62bf80729a737106ec7ebbc",
+    "lines": 577
+  },
+  {
+    "file": "training/scripts/test_osd_hd_validierung_vorbereiten.py",
+    "sha256": "d43259e1219ad694d7c0b5d094db3898f1eadae0cc913cd6632e81f855b7b2bf",
+    "lines": 28
+  },
+  {
+    "file": "sidecar/spike_sam3_concept.py",
+    "sha256": "a70ce3b264c84a998283b38d1b253d2cbef05aa28e4c5e629b46eeacbe0ea06a",
+    "lines": 107
+  },
+  {
+    "file": "training/agent/training_ops_agent.py",
+    "sha256": "e98350065b02d082906db12158917c0dda762b99d343bc55b630c3141d130f52",
+    "lines": 156
+  },
+  {
+    "file": "training/agent/test_schicht1.py",
+    "sha256": "3f55078de7e9ac2c5a3241fee4fd7e9a4a1f865cc3267776aecfd57bed686e1d",
+    "lines": 26
+  },
+  {
+    "file": "training/agent/test_guardrails.py",
+    "sha256": "acc9096064d723d720b2cb884a18e4a31c05e77ed404893f2d9df1ab255509aa",
+    "lines": 63
+  },
+  {
+    "file": "training/agent/schicht1.py",
+    "sha256": "fc9698c2e8c8f7649a1ddb1da6fb33ee3bcab89801b9ba4fc4e10366b9dce6b1",
+    "lines": 68
+  },
+  {
+    "file": "training/agent/guardrails.py",
+    "sha256": "08569e5c5b51d221dbd210f16b38546113cc09d8ed8ada3155aa72af14d3560b",
+    "lines": 94
+  },
+  {
+    "file": "training/agent/config.py",
+    "sha256": "3a911ba5e71f51a17725854e5c39740d748cc2ec32415076d236237caaf12183",
+    "lines": 70
+  },
+  {
+    "file": "training/scripts/osd_sequenz_abdeckung.py",
+    "sha256": "19a3e86e0e1e31fb4e4b1553594ba6baba75b469b24b25a4895d02318e4d4090",
+    "lines": 160
+  },
+  {
+    "file": "training/scripts/osd_schwelle_kalibrieren.py",
+    "sha256": "3e636e00d6fbdb680cc2efb286e474d436603f8b14033ba4e40e61884cb036f3",
+    "lines": 338
+  },
+  {
+    "file": "training/scripts/osd_schutz.py",
+    "sha256": "3ac4648f12a934e23dbc1241866623ffcd880ada4c7e896528396f226b9e9bb6",
+    "lines": 191
+  },
+  {
+    "file": "training/scripts/osd_protokoll_qa_queue.py",
+    "sha256": "febecf216f4529675aa84c1bc833a13f040b0875bf3661e5f0ed06fb517ff7b2",
+    "lines": 116
+  },
+  {
+    "file": "training/scripts/osd_protokoll_qa_bericht.py",
+    "sha256": "92a3e77ae2bfbf3dcd199e24c446857c500b6a9b6ccb5277cb774f3e2de4dae6",
+    "lines": 107
+  },
+  {
+    "file": "training/scripts/osd_prefix_fallback_bericht.py",
+    "sha256": "7a163afed671432948a0abe8540446188c851478bb2e47284449c2231cc1baa0",
+    "lines": 151
+  },
+  {
+    "file": "training/scripts/osd_modell_leser.py",
+    "sha256": "2f2b341ff93998c875650d7c88f13cca5b76014ff79818dbf60a21af8a7bd771",
+    "lines": 241
+  },
+  {
+    "file": "training/scripts/osd_modell_goldmessung.py",
+    "sha256": "aa1063f4f6ef52b45ce0c04a2e5f046fee4b130cf1ba4acf4f727d0d7d8db7fd",
+    "lines": 187
+  },
+  {
+    "file": "training/scripts/osd_meter_leser.py",
+    "sha256": "c7f1d65de0991c7873cecf8fade07e7a815134b24259c41f79140667f6e648a7",
+    "lines": 75
+  },
+  {
+    "file": "training/scripts/osd_layout_review_queue.py",
+    "sha256": "acf5ce1313c62902df815a6f39b2adcc870b525e2904b65eea04f34e076bfeaf",
+    "lines": 118
+  },
+  {
+    "file": "training/scripts/osd_layout_review_bericht.py",
+    "sha256": "46be010abfb78414697437b6e3d3179582df922865730fdf4442cc1564a9817e",
+    "lines": 122
+  },
+  {
+    "file": "training/scripts/osd_kunstbilder.py",
+    "sha256": "683c2f9c0017f640609d4373ccfd5e898b1f12ff4d47ec4c7b563007e071914e",
+    "lines": 338
+  },
+  {
+    "file": "training/scripts/osd_kontrollexperiment.py",
+    "sha256": "429fda5909b9ed2219b06d67bc5fdd8439a8a9647c2e076c0fa6d9c7900b9b39",
+    "lines": 341
+  },
+  {
+    "file": "training/scripts/osd_kettenmessung.py",
+    "sha256": "16ec0f8f1c1aa4e8e5be89be20fb198c9d1b10cc70607e994d14e3a02bbee1d0",
+    "lines": 332
+  },
+  {
+    "file": "training/scripts/osd_hd_validierung_vorbereiten.py",
+    "sha256": "6e76cfa266cda1a6315ca8334854e4c70d253d10b6892150b064aa15bf0a89c1",
+    "lines": 189
+  },
+  {
+    "file": "training/scripts/osd_handlabel.py",
+    "sha256": "925814acf10e7581a5cc5d242b0589b628597ea5a27e7b97226f5f2ac118ae28",
+    "lines": 579
+  },
+  {
+    "file": "training/scripts/osd_goldsatz.py",
+    "sha256": "0a4164c5322277c3b062042f82e393ad107c027b471a0e18d0ac6ba62627697b",
+    "lines": 469
+  },
+  {
+    "file": "training/scripts/osd_goldmessung.py",
+    "sha256": "1d4d6d1c1a5fe75f9dafe09af24269099f4a54794fb59c2e97dc34b4f72812e1",
+    "lines": 217
+  },
+  {
+    "file": "training/scripts/osd_frames_ziehen.py",
+    "sha256": "880c822098d6b3c060b972914346251174737373e087a30a474dbce6b2220843",
+    "lines": 191
+  },
+  {
+    "file": "training/scripts/osd_ernte.py",
+    "sha256": "dc09e2ba56856c32e393a8e5b9125e51621a7838c8280e76079da2575c9f5906",
+    "lines": 371
+  },
+  {
+    "file": "training/scripts/osd_datensatz.py",
+    "sha256": "ca7d8ed50736f18b7bedc04c4149813f17156bd64a6302bbdad18f076d67e9fc",
+    "lines": 430
+  },
+  {
+    "file": "training/scripts/osd_crop.py",
+    "sha256": "52fcaa33c743f3adcc089348b76806ed3b1f7d6630df3a4d5710150bd27c8adc",
+    "lines": 53
+  },
+  {
+    "file": "training/scripts/osd_archiv_abdeckung_messung.py",
+    "sha256": "6f9962e250e52dc55e341be3f8437284b99f56b9e03ec6537a14225958e82219",
+    "lines": 183
+  },
+  {
+    "file": "training/scripts/model_collapse_check.py",
+    "sha256": "47dc6641e2112c59d247c00864aa10942b013f8dd296f1a9335fd18ef50078a0",
+    "lines": 929
+  },
+  {
+    "file": "training/scripts/lernstufe_wahrheit_queue.py",
+    "sha256": "df35051df113bb7558dfc773ace444aa84bce1b7027b1e5e29d7e88317b60a2d",
+    "lines": 143
+  },
+  {
+    "file": "training/scripts/lernstufe_vorschlagspruefung.py",
+    "sha256": "7a29d6e82b4179137a13aeb814c8e0aec091bfa412843c08f7e74ccb61ccad06",
+    "lines": 253
+  },
+  {
+    "file": "training/scripts/lernstufe_videolauf.py",
+    "sha256": "7a73727053f25bab77d59e5071e44fefbfd35cceb04dc9a81e9f101aa05f41cd",
+    "lines": 169
+  },
+  {
+    "file": "training/scripts/lernstufe_negativ_pruefung.py",
+    "sha256": "c837c7289afe31395ab33a4ba415806b9a11b00fd8dc8b320268b281e5b2b13a",
+    "lines": 177
+  },
+  {
+    "file": "training/scripts/lernstufe_mitte_ausblenden.py",
+    "sha256": "789bff5a957f9b98a51678d97924e4b29456624a127985973cf7862dc4a2a779",
+    "lines": 113
+  },
+  {
+    "file": "training/scripts/lernstufe_messen.py",
+    "sha256": "c24fc58a891fc0bf6eaba18bac41e77e6e26f2afbe0ac4abebf6331993f98178",
+    "lines": 150
+  },
+  {
+    "file": "training/scripts/lernstufe_freigabe.py",
+    "sha256": "4ce8c3aa756c8a33314d023d876d4a7130543b25bbbb2541e548bcc4eebb5909",
+    "lines": 193
+  },
+  {
+    "file": "training/scripts/lernstufe_fehler_einsammeln.py",
+    "sha256": "eacd230d183bad25e7aac442b05686b85cf227f6e7ab06aa07ff50d6ceafb723",
+    "lines": 225
+  },
+  {
+    "file": "training/scripts/tests/test_derive_negative_set_for_gold_audit.py",
+    "sha256": "a5ea882583cde23943c911675a28f7e38e624500a5ec07e08062ea104ba7475e",
+    "lines": 486
+  },
+  {
+    "file": "training/scripts/tests/test_collect_class_candidates.py",
+    "sha256": "394c2555a15ce6d0761000adac69914cb6749dfac05c649c42f230b5bcda0035",
+    "lines": 133
+  },
+  {
+    "file": "training/scripts/tests/test_bcc_schwellenkurve.py",
+    "sha256": "8d6dd0920fabc9f88d864229dd25a14477cd8fb09dd1f791ed9f6c3b05a07e05",
+    "lines": 203
+  },
+  {
+    "file": "training/scripts/tests/test_bcc_release_holdout.py",
+    "sha256": "5b7cf197691d330ffaea4c603337561837cdb4240e4c5a6142c4f3ee339aa284",
+    "lines": 1323
+  },
+  {
+    "file": "training/scripts/tests/test_bcc_pdf_recall_bericht.py",
+    "sha256": "12c4dd89d1089b85b0f5d212571dc7fcc8c22c3e4a27b377677c82ca8d594dc5",
+    "lines": 76
+  },
+  {
+    "file": "training/scripts/tests/test_bcc_pdf_precision.py",
+    "sha256": "2d36a9cf88d2bf207e31581715627aede5a3f7ab30e54e315b737624cab2129e",
+    "lines": 109
+  },
+  {
+    "file": "training/scripts/tests/test_bcc_pdf_messreserve.py",
+    "sha256": "d187c33cfbf18b7f53b04e2264777abdbbb6bdadf79f8b48939849cf4cfb2b9d",
+    "lines": 62
+  },
+  {
+    "file": "training/scripts/tests/test_bcc_hard_negative_review.py",
+    "sha256": "dd2b8301f6bb3660f36f65cc7100c7cda72bd7ba3d514235050b6a0136d5d940",
+    "lines": 502
+  },
+  {
+    "file": "training/scripts/repair_pdf_gold_holding_ids.py",
+    "sha256": "71960ce2c515d6a34a472ac56006aa49bfd6ec55b91e20d1ed96e309181438dd",
+    "lines": 861
+  },
+  {
+    "file": "training/scripts/repair_inbox_gold_holding_ids.py",
+    "sha256": "30db92671958e827287d50bc13dc9f0b3d9fc9d657d731437154255b174c3d99",
+    "lines": 376
+  },
+  {
+    "file": "training/scripts/repair_gold_holding_ids.py",
+    "sha256": "9af620a1018e53c78c4ad0a3b1cb2cf75a7963f3cc4661ddaedfc77c009e7869",
+    "lines": 564
+  },
+  {
+    "file": "training/scripts/remove_eval_contaminated_from_register.py",
+    "sha256": "b80d806ea5bb08276c373c56b8e3a5b7cd7cbc75ba4a53975af1254336ea2b72",
+    "lines": 225
+  },
+  {
+    "file": "training/scripts/publish_detect_gold_collection_plan.py",
+    "sha256": "e64d471d778e12982d5f3ee50ed249c162c4e6c73c0819b1ab4560fe4701545a",
+    "lines": 322
+  },
+  {
+    "file": "training/scripts/publish_bcc_copilot_candidate.py",
+    "sha256": "503b16c9536e91a4cb272350b52feadf3125bf4be47f263e24950fdd20ca2fcb",
+    "lines": 220
+  },
+  {
+    "file": "training/scripts/proto_hard_negative_review.py",
+    "sha256": "e0edae503e0ec8d2cb8275c24ec346f87d531da140a9e1b7956ac13c2611fd1c",
+    "lines": 841
+  },
+  {
+    "file": "training/scripts/prepare_detect_release_pdf_extraction.py",
+    "sha256": "4875da376fab64bd4bdd60aec49531f247cad7735fce3560a43c16eab2c464db",
+    "lines": 247
+  },
+  {
+    "file": "training/scripts/prepare_detect_release_holdout.py",
+    "sha256": "dcc97e323a44def8f8de90185c6f9adfef9741f6bc024ede86980c580575b77a",
+    "lines": 1229
+  },
+  {
+    "file": "training/scripts/prepare_detect_gold.py",
+    "sha256": "8db32aed2b3dacea8b96d129dde0164812d30faae2e7501509b898b5bd29b187",
+    "lines": 2205
+  },
+  {
+    "file": "training/scripts/prepare_bcc_pilot.py",
+    "sha256": "53727ffeb272791310fa0b51dae2a00f14db1e9c111eafef12fb5e3a1de74f41",
+    "lines": 1079
+  },
+  {
+    "file": "training/scripts/osd_wahrheit_aus_protokoll.py",
+    "sha256": "fcf22eacc3c99d11ec281ed41b7f6e118ea1660a168cf826f5d867196e81bdef",
+    "lines": 297
+  },
+  {
+    "file": "training/scripts/tests/test_gold_stock_audit.py",
+    "sha256": "7d9a266f58c625c33f43ac9acdaa1ff4c056c83b4a3125995657a5587734003f",
+    "lines": 1330
+  },
+  {
+    "file": "training/scripts/tests/test_evaluate_detect_release_holdout.py",
+    "sha256": "e21df561edf8dff0e7af6427ff45d16f6a90cda892c0fa7c5d4c2912f0cf5539",
+    "lines": 447
+  },
+  {
+    "file": "training/scripts/tests/test_evaluate_detect_gold_holdout_multiclass.py",
+    "sha256": "4f944e2a1bfab505f98ad3f6ad627c60c4a90bbfc76f8aa327c7749f07223b20",
+    "lines": 286
+  },
+  {
+    "file": "training/scripts/tests/test_evaluate_bcc_release_holdout.py",
+    "sha256": "c03ead552f5b70f5d4aeaebd3384c8dc7e7b43f559dc058cf2a6a62ccf49b744",
+    "lines": 458
+  },
+  {
+    "file": "training/scripts/tests/test_detect_release_holdout_status.py",
+    "sha256": "004b66b82d2d5026df732d17a0a4bb5c0d8f2d569d238f37ac0cae1c4cfe16bf",
+    "lines": 361
+  },
+  {
+    "file": "training/scripts/tests/test_detect_klassenbreite_messung.py",
+    "sha256": "529a0528e736d3afbddbb899b6b17913b5248728480f6b64665f421c46018ba9",
+    "lines": 463
+  },
+  {
+    "file": "training/scripts/tests/test_detect_klassenbreite.py",
+    "sha256": "fbebb5cbdac15e5ab36f3b4d8c9edf325eb075ea3e5375db44f396b5e34c0ff4",
+    "lines": 335
+  },
+  {
+    "file": "training/scripts/tests/test_detect_gold_holdout_scoring.py",
+    "sha256": "a8c48a7f27f7ac896505cfcc76fac4b480ec537c035fca48160cee5341b2a18b",
+    "lines": 122
+  },
+  {
+    "file": "training/scripts/tests/test_detect_gold_holdout_provenance.py",
+    "sha256": "e35d50ee30a47e3043a96b45cde3d71e19fb6e20518053035a01c49c46ff7711",
+    "lines": 84
+  },
+  {
+    "file": "training/scripts/tests/test_detect_gold_error_review.py",
+    "sha256": "63ce666b94f4e8a2c2aa47c7362839854b6fd9b07fc0fc485dc56262d624e7dc",
+    "lines": 461
+  },
+  {
+    "file": "training/scripts/tests/test_detect_gold_collection_plan.py",
+    "sha256": "a1918183795b3495053b41b948fccef470dd4696108f02dd8cb9785c38e71f74",
+    "lines": 290
+  },
+  {
+    "file": "training/scripts/tests/test_osd_layout_review_queue.py",
+    "sha256": "21fff211ac8793e258a120ea6f1841bee0cda162d63e18eabc5398ff3c38aaed",
+    "lines": 38
+  },
+  {
+    "file": "training/scripts/tests/test_osd_layout_review_bericht.py",
+    "sha256": "5109a1b562b86544cdc69286bb23d5abc17289b0f8ceaf53d3e81574a18e58bb",
+    "lines": 38
+  },
+  {
+    "file": "training/scripts/tests/test_osd_goldmessung.py",
+    "sha256": "3f448b4b71be4516173049c3705d2c89a0975d9a9fc588daa7ffac63f2d10474",
+    "lines": 106
+  },
+  {
+    "file": "training/scripts/tests/test_osd_archiv_abdeckung_messung.py",
+    "sha256": "72fb07baac6482381e866baeda5c8f3346738b38f77fbd23675fa27ead2fb7ab",
+    "lines": 83
+  },
+  {
+    "file": "training/scripts/tests/test_model_collapse_check.py",
+    "sha256": "e16e237cbe7b01a7c656006eb3079ec098ac378535a885372148d06dcef1ba7d",
+    "lines": 405
+  },
+  {
+    "file": "training/scripts/tests/test_osd_wahrheit_aus_protokoll.py",
+    "sha256": "9b3ca9e2ca0d386ec1e955b6b2a288768ad155d7fa450d2d819431aa908b7a3b",
+    "lines": 75
+  },
+  {
+    "file": "training/scripts/tests/test_osd_protokoll_qa.py",
+    "sha256": "54f8e3bbbc56d58f2eca721d4c48c65398b9a5fb88bb6bde859c6522f268df76",
+    "lines": 63
+  },
+  {
+    "file": "training/scripts/tests/test_osd_prefix_fallback_bericht.py",
+    "sha256": "519b1952114589e3dec024ddc2914440296e7b389a8a81b0bf98da6112144e27",
+    "lines": 41
+  },
+  {
+    "file": "training/scripts/tests/test_prepare_bcc_pilot.py",
+    "sha256": "65a741d5ef97f5e9dd54f3411a78a42da10c074eab0cb6ddfbadac047f478561",
+    "lines": 688
+  },
+  {
+    "file": "training/scripts/tests/test_prepare_detect_gold.py",
+    "sha256": "83e8434dfa01fdaca8011f5a5d81ce347911c2d8a9e160251be862375cc4c22a",
+    "lines": 1037
+  },
+  {
+    "file": "sidecar/sidecar/__init__.py",
+    "sha256": "5f7a4ea428e3ee83b65dfd2ffb2aeb4e4475faaf9a90b92ac6297be211ca9cdf",
+    "lines": 1
+  },
+  {
+    "file": "sidecar/sidecar/telemetry.py",
+    "sha256": "fd0d76209de71d5b5937fd5fd604e6b2638ce73586f92bfc022efbf435896925",
+    "lines": 110
+  },
+  {
+    "file": "training/scripts/tests/test_train_detect_gold.py",
+    "sha256": "d93b2d6552cb740162c003243c244b830a039ad7dc85220f7d11847caa869a5c",
+    "lines": 432
+  },
+  {
+    "file": "training/scripts/tests/test_train_bcc_pilot.py",
+    "sha256": "b40fdbe5adf6b9303dc4e442c88a27923392ff2f8aad4d0af98168185822524d",
+    "lines": 386
+  },
+  {
+    "file": "training/scripts/tests/test_subprocess_timeouts.py",
+    "sha256": "0f0e79da59f81aa4dc239d0fc4f522fc2ef283a8d2c7c6142a2831b87f74fd65",
+    "lines": 35
+  },
+  {
+    "file": "training/scripts/tests/test_repair_pdf_gold_holding_ids.py",
+    "sha256": "2a194779fcb8142227442a2f0ed280be3dc3f367d9a30c6496167c26405b8476",
+    "lines": 202
+  },
+  {
+    "file": "training/scripts/tests/test_repair_gold_holding_ids.py",
+    "sha256": "a2edecff0f68d58a2907aab428e3e806274a5afc2d77bcdd482348eee0ad3240",
+    "lines": 152
+  },
+  {
+    "file": "training/scripts/tests/test_publish_detect_gold_collection_plan.py",
+    "sha256": "aeb7b1591fcf3e052912bf5bd92621c091b2c24b2d03c2a317512adae6dc719d",
+    "lines": 316
+  },
+  {
+    "file": "training/scripts/tests/test_proto_hard_negative_review.py",
+    "sha256": "c90fb0499956cd9029d63b239bfa8698fc8cadc7da9bcb359311c6c54d552c45",
+    "lines": 302
+  },
+  {
+    "file": "training/scripts/tests/test_prepare_detect_release_pdf_extraction.py",
+    "sha256": "2743025856943b549685dfe3b92727922b41c1ee26ab36ad693daf5aa70b80bd",
+    "lines": 82
+  },
+  {
+    "file": "training/scripts/tests/test_prepare_detect_release_holdout.py",
+    "sha256": "86ad56dda4fad28687440374355046dcd586c6fd869de22c3d5468fc5cebebcb",
+    "lines": 548
+  },
+  {
+    "file": "sidecar/sidecar/schemas/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lines": 0
+  },
+  {
+    "file": "sidecar/sidecar/schemas/segmentation.py",
+    "sha256": "624352f25e398ccb33fbb9f9c9d50bd7864cc75a68c6266971116823cf5dc513",
+    "lines": 341
+  },
+  {
+    "file": "sidecar/sidecar/schemas/detection.py",
+    "sha256": "73722863e26c1745349eae90ada280fbd200c6504cb366695b3ee9b74d00e25e",
+    "lines": 231
+  },
+  {
+    "file": "sidecar/sidecar/routes/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lines": 0
+  },
+  {
+    "file": "sidecar/sidecar/routes/yolo.py",
+    "sha256": "111dc31223cfebfd4030bb19f447c0977db0d8c16cc5be734a52aad4f38d10f8",
+    "lines": 251
+  },
+  {
+    "file": "sidecar/sidecar/routes/warmup.py",
+    "sha256": "9a6300a1adceda2e9ad434120478dc96c012a860dcd91be3c5614cd198c9a857",
+    "lines": 119
+  },
+  {
+    "file": "sidecar/sidecar/routes/training.py",
+    "sha256": "53229423d9d6c506f487d0405716c04641c30ac123d0294f67614c278efe06dd",
+    "lines": 572
+  },
+  {
+    "file": "sidecar/sidecar/routes/sam.py",
+    "sha256": "7161f13e7a4680956671b2d682e758d32742cb4513af8aef741eb91d55e53cfd",
+    "lines": 32
+  },
+  {
+    "file": "sidecar/sidecar/routes/health.py",
+    "sha256": "0cb9f2d348ef5765ed40075518ef12835389666514a124a0cf8480550a7398d3",
+    "lines": 76
+  },
+  {
+    "file": "sidecar/sidecar/routes/dino.py",
+    "sha256": "7c5195cc5bbac731bb0b3f2cc1d6099809802d367ef98f33dd5d8e5b8881fc8a",
+    "lines": 33
+  },
+  {
+    "file": "sidecar/sidecar/osd_modell.py",
+    "sha256": "222f8cc3eed49f5c9e7f13f0ce249dfd76a189cd7dac0eb341c0d15f87325647",
+    "lines": 211
+  },
+  {
+    "file": "sidecar/sidecar/osd_meter.py",
+    "sha256": "e7fb3017def08893e1526adab753cf75250756387b29cb2490961e8aae3271bc",
+    "lines": 968
+  },
+  {
+    "file": "sidecar/sidecar/models/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lines": 0
+  },
+  {
+    "file": "sidecar/sidecar/models/yolo_wrapper.py",
+    "sha256": "42b8ce2b8cfdfd1886dac997b486244948261111682b673465ee5b6ef030e14a",
+    "lines": 815
+  },
+  {
+    "file": "sidecar/sidecar/models/yolo_test_slot.py",
+    "sha256": "5c11051b6d3723e5e245cc08dfcc2bbb5f14fc6e1be37e0453c927b5ed139fec",
+    "lines": 19
+  },
+  {
+    "file": "sidecar/sidecar/models/sam_wrapper.py",
+    "sha256": "adbdddfd341db6bfcbd60056ed22c6099668284f8de721275266b5613cbe982b",
+    "lines": 277
+  },
+  {
+    "file": "sidecar/sidecar/models/osd_model_wrapper.py",
+    "sha256": "ff92df784f88328c51dfd0accd3762b00be9776862441b299ba8eb6c199e3350",
+    "lines": 226
+  },
+  {
+    "file": "sidecar/sidecar/models/nocrop_compat.py",
+    "sha256": "2e53fbb1e30514c9b6616b2eedd3500371c60f1831e3ea21f5a48a09f507b3ee",
+    "lines": 54
+  },
+  {
+    "file": "sidecar/sidecar/models/lernstufe_wrapper.py",
+    "sha256": "4414025d10986a76505ee0c0280c82839184cf0e2dcd3d0b16354bedc9e26a07",
+    "lines": 267
+  },
+  {
+    "file": "sidecar/sidecar/models/image_decode.py",
+    "sha256": "bc2621c4eae7bc78aed093b4da0745c9dc84da6e9fc26f022b55cdfd9502b3d6",
+    "lines": 60
+  },
+  {
+    "file": "sidecar/sidecar/models/dino_wrapper.py",
+    "sha256": "0fb7bb064d7b262c5557bdeaf91fb473cc881806f9f7ae5e5e8b532c279f7cd3",
+    "lines": 203
+  },
+  {
+    "file": "sidecar/sidecar/models/detector_qualification.py",
+    "sha256": "bca7069ef4eced54e28a6ef10a29b963843b67b7bb5642efde76bdd3f4514c5b",
+    "lines": 353
+  },
+  {
+    "file": "sidecar/sidecar/models/box_utils.py",
+    "sha256": "1f173d32c112386d984806cc7a8b5109d0e0815de042fc99bc1663b1955f6eec",
+    "lines": 28
+  },
+  {
+    "file": "sidecar/sidecar/models/bend_geometry.py",
+    "sha256": "cb6e52d29ed78b69a9160682aa5058ac597dc452955210a31f2ae90f1edc9bd8",
+    "lines": 65
+  },
+  {
+    "file": "sidecar/sidecar/models/bcc_test_wrapper.py",
+    "sha256": "9f479ffe0de9d113ed29f3ea7cfe911147eebe500fccd7e23b35392b37f2a7ee",
+    "lines": 473
+  },
+  {
+    "file": "sidecar/sidecar/main.py",
+    "sha256": "702360938193e54c3e74e0293240994afee84f89a950fefd9db88c3dfcfd9fab",
+    "lines": 309
+  },
+  {
+    "file": "sidecar/sidecar/gpu_manager.py",
+    "sha256": "d9d924288a307cff18dded4cf7be58a06a8966698205cf9a856ef40e265d23ad",
+    "lines": 690
+  },
+  {
+    "file": "sidecar/sidecar/cuda_errors.py",
+    "sha256": "d7fbece6604dc840456b92cc99cfa2d16c9961973178523da4151b47cabaf9d8",
+    "lines": 40
+  },
+  {
+    "file": "sidecar/sidecar/config.py",
+    "sha256": "e2994abc6a02099589c77cf91f5ac1ab74bc51b0b3fc93b50858e6a91fd7d115",
+    "lines": 171
+  },
+  {
+    "file": "sidecar/sidecar/auth_token.py",
+    "sha256": "9feab76a0b038745301f70e6ccee7389799eff917faa77504b0038be1d240e51",
+    "lines": 44
+  },
+  {
+    "file": "sidecar/security/audit_lock.py",
+    "sha256": "553e7ba4b9903976fc3ebc2697e699f9e200ad440172ef95749e6415de8708f9",
+    "lines": 193
+  },
+  {
+    "file": "tools/PdfProtocolParser/parser.py",
+    "sha256": "7ccfefe8e6114275779781d0560b8e883420e26fa1ed26dd6cad02281467a17f",
+    "lines": 573
+  },
+  {
+    "file": "tools/OffertenKalibrierung/parse_offer.py",
+    "sha256": "ba61356d5dcb383b0879bc7fa84ab2a67195c54c771815d0d8daab0ca3c38f4c",
+    "lines": 64
+  },
+  {
+    "file": "tools/OffertenKalibrierung/extract_all.py",
+    "sha256": "16a369629571dc391fd44f94925476ad17f91940e42416f909f86569b056cc08",
+    "lines": 99
+  },
+  {
+    "file": "tools/PdfProtocolIngest/autobox_detect.py",
+    "sha256": "cefc21d3a8ef0c6505a7a3aaab2f4745d3c55373840b6e629774fd4e438da9e1",
+    "lines": 144
+  },
+  {
+    "file": "tools/PdfProtocolIngest/train_cls.py",
+    "sha256": "5b04f8a607119d66ae5e67f8c413b2830d09d5ac77aee87cca8673584178fc52",
+    "lines": 97
+  },
+  {
+    "file": "tools/PdfProtocolIngest/pdf_ingest.py",
+    "sha256": "e104323a779d345e2ba676c6a21e375e0e8ef8c759e06317e9466bac5ec0ab6b",
+    "lines": 204
+  },
+  {
+    "file": "tools/PdfProtocolIngest/enrich_vsa_dataset.py",
+    "sha256": "a2f937fc4c085d116ab449241b251a1f76f1054934e6dd4b9bc556b49f2b00a6",
+    "lines": 187
+  },
+  {
+    "file": "tools/PdfProtocolIngest/build_cls_dataset.py",
+    "sha256": "991ae96e9a43e951f280f231d4fa2dcbd0f6eecd8a7229fb7749cab1425c4f71",
+    "lines": 135
+  },
+  {
+    "file": "tools/PdfProtocolIngest/autobox_pilot.py",
+    "sha256": "49b4c26a7e4e3d3e2fcb30ae7e0c63d1ab0dc3a35f6fbf70f1494df9b9c79f66",
+    "lines": 108
+  },
+  {
+    "file": "sidecar/models/grounding_dino_swinb/GroundingDINO_SwinB_cfg.py",
+    "sha256": "6c6a3b89b6df23fd90d247b21211dceffca3ea82d96c23859fdc7f28958e985b",
+    "lines": 43
+  },
+  {
+    "file": "sidecar/models/grounding_dino_1.5/GroundingDINO_SwinT_OGC.cfg.py",
+    "sha256": "5d7093aaaeaafbf8eec07a1aef5bee976dff5615d54e0ca88293cd92e008a7c8",
+    "lines": 43
+  },
+  {
+    "file": "tools/ExcelVorlagenBauer/werkzeug.py",
+    "sha256": "3d97e039c41a81d749f80755e12b857a4f7c1d603e3fe0cd4b622898d9fe1e0d",
+    "lines": 510
+  },
+  {
+    "file": "tools/ExcelVorlagenBauer/vorlage.py",
+    "sha256": "396b078479b0ace518c47125dcbaeadff8169ea03884f03e42361ae0768078b7",
+    "lines": 452
+  },
+  {
+    "file": "tools/ExcelVorlagenBauer/stil.py",
+    "sha256": "24a41c0b236302ad4734d95e8733e55b3635e01e465630bf2cc7196272720078",
+    "lines": 155
+  },
+  {
+    "file": "tools/GroundTruthPipeScaleProbe/test_probe.py",
+    "sha256": "9283a51231116e6a4c4b9cc302e26e333adc183952cfad640a88efaf798208bc",
+    "lines": 31
+  },
+  {
+    "file": "tools/GroundTruthPipeScaleProbe/probe.py",
+    "sha256": "b85ebeeba73cb6ce74d4f6037157e9da6a6dcd1e3d27f5d03d168d03a584aea5",
+    "lines": 104
+  },
+  {
+    "file": "tools/EvalVisibilityReview/__init__.py",
+    "sha256": "b8f21ea7c32015dd5d82f0310fe59e429db73a030ef5f2fd28ef7a5d71ba7492",
+    "lines": 1
+  },
+  {
+    "file": "tools/EvalVisibilityReview/visibility_review_server.py",
+    "sha256": "21be2bd34d09bf1c4c987fc5eacf81b18d3730261f6830a6230516bab92790c0",
+    "lines": 503
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_visibility_review_server.py",
+    "sha256": "80f899ff39d022658cc4918bbf62cc980b501c9dd9e57e7de09761d955defc6b",
+    "lines": 126
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_review_server_security.py",
+    "sha256": "219ed417ec8453bb765fba7372b0bef4426df3c53632feaa00fcf5d12652b2ed",
+    "lines": 77
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_osd_wahrheit_server.py",
+    "sha256": "6c87aa388fe9ca6d2bca120e4c15c224c001edb4db0631831e2db808367cd76a",
+    "lines": 111
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_osd_layout_review_server.py",
+    "sha256": "463745d804cae2e4e387b4265337aea55455dec858d3fd1851bc2810cb4d579d",
+    "lines": 69
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_osd_handlabel_server.py",
+    "sha256": "cc7cdbf8f62f5add88fdc681e8e8b39af760569d6072313f63cd0d1d1c566d32",
+    "lines": 596
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_eval_metadata_review_server.py",
+    "sha256": "2b22256a63933bd13710730e1d7a1d928591539643c1e70736df2665b2392062",
+    "lines": 354
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_detect_release_holdout_review_server.py",
+    "sha256": "ff3cda6b4ab53988f55eae134dc0c26c16ba791d14c3af3c9f4bdcd2d8b3205a",
+    "lines": 523
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_detect_gold_error_review_server.py",
+    "sha256": "359ffcd4d8eca8baa9e9709189c5945a60db90629e8eb4a88168048ab78808b2",
+    "lines": 670
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_bcc_video_fehlalarm_review_server.py",
+    "sha256": "14d4aaba0ee0b00100db27b0e80552cac52c9fb5019df66d03785b1b73a9f4a1",
+    "lines": 157
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_bcc_release_holdout_review_server.py",
+    "sha256": "c47982294c5c9514c9826a596fc76350a017d527312357f7222231f2716d7969",
+    "lines": 648
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_bcc_negativ_review_server.py",
+    "sha256": "01a8025a48231d40611062b88a3a2357848dd19f4778e1e6e3ecb940424886a9",
+    "lines": 206
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_bcc_hard_negative_review_server.py",
+    "sha256": "9255f2dc7a1cada511bf7ce28f491e1122809d121e33faba76ed291af56fc82f",
+    "lines": 246
+  },
+  {
+    "file": "tools/EvalVisibilityReview/test_bcc_copilot_review_server.py",
+    "sha256": "0b446977f1beb899504fba8a9647a70eb9bda55d4bd8dd810880e20fe5b8ca90",
+    "lines": 160
+  },
+  {
+    "file": "tools/EvalVisibilityReview/review_server_security.py",
+    "sha256": "d14654a0ace90edcbcbf8a20f3ea762c2031e7674ded89d866153f2687e842b2",
+    "lines": 65
+  },
+  {
+    "file": "tools/EvalVisibilityReview/osd_wahrheit_server.py",
+    "sha256": "db13c463862459d2dc498460cd177e2ee03d662fbb6ae347d2ecac16fedd402a",
+    "lines": 293
+  },
+  {
+    "file": "tools/EvalVisibilityReview/osd_layout_review_server.py",
+    "sha256": "1f26a9a7df90a9fbd54a886db3678f944e0cda1fce52492975b037484a487915",
+    "lines": 249
+  },
+  {
+    "file": "tools/EvalVisibilityReview/osd_handlabel_server.py",
+    "sha256": "b7741a26145ce4530100077222a22deefa3e7f8ff01e8e909c9d89dcf1faf3ea",
+    "lines": 645
+  },
+  {
+    "file": "tools/EvalVisibilityReview/eval_metadata_review_server.py",
+    "sha256": "6764384f8077480e27d6cb154fde6d73567e7ed3c1cb76f1ef963b22b28342e8",
+    "lines": 992
+  },
+  {
+    "file": "tools/EvalVisibilityReview/detect_release_holdout_review_server.py",
+    "sha256": "be7e341d48920988b7021afb307ef8def87fbd6bb956a6c122a56408b8266ac5",
+    "lines": 1579
+  },
+  {
+    "file": "tools/EvalVisibilityReview/detect_gold_error_review_server.py",
+    "sha256": "4a000a58fd5916d90100c572e0f47a8a6564a66b0a0550235c6aae53979ffab2",
+    "lines": 873
+  },
+  {
+    "file": "tools/EvalVisibilityReview/bcc_video_fehlalarm_review_server.py",
+    "sha256": "693e1be38c205d22aa9a97a431d587df4f5f6021f2cae8c4c2fff3a0894db15e",
+    "lines": 289
+  },
+  {
+    "file": "tools/EvalVisibilityReview/bcc_release_holdout_review_server.py",
+    "sha256": "57954d604868442ab8758e3044d4a1b1a4661b3a7258ae379a28ae67ff155310",
+    "lines": 1996
+  },
+  {
+    "file": "tools/EvalVisibilityReview/bcc_negativ_review_server.py",
+    "sha256": "2fdf5e5ed949ddbcb38ff32062eaa9cef1b46bb4e38e4b26c2e71ea238290635",
+    "lines": 412
+  },
+  {
+    "file": "tools/EvalVisibilityReview/bcc_hard_negative_review_server.py",
+    "sha256": "67b02211dc54b8bc7f0031564d5e13a9ff584148a1841b45629524c5a8b0b1e6",
+    "lines": 83
+  },
+  {
+    "file": "tools/EvalVisibilityReview/bcc_copilot_review_server.py",
+    "sha256": "a06423bd65fd2bd69b22b8796ed82ca4f652efe0b2c605e3dba4e987171c492a",
+    "lines": 327
+  },
+  {
+    "file": "tools/skill-linter/test_skill_lint.py",
+    "sha256": "8a1a0d9a4ee33451358a17329c2ac6a525dec33593e89f426d4f29851a47e13f",
+    "lines": 80
+  },
+  {
+    "file": "tools/skill-linter/skill_lint.py",
+    "sha256": "b92067472cfe34dccd0a3cbcf62c0b884afcc5535321d94c6b0272d08218dde5",
+    "lines": 135
+  },
+  {
+    "file": "tools/SidecarModellNachweis/modell_nachweis.py",
+    "sha256": "b8db9a523fb9ad1c9977152ace5d2160a44728ea7c789214b4e65fc983c7c363",
+    "lines": 109
+  },
+  {
+    "file": "tools/check_m150_files.py",
+    "sha256": "f755f8e67e2c6800784986dcb1192028cdd395bde7208aea10e3a8ef4c6d1844",
+    "lines": 38
+  },
+  {
+    "file": "tools/video_ai/__main__.py",
+    "sha256": "92e2976b3d0e157e2c19425acbc6298fc837bbaed24be45ce73f00e509ab7aeb",
+    "lines": 221
+  },
+  {
+    "file": "tools/video_ai/__init__.py",
+    "sha256": "67e94d6a16e20899a1c406a174598d2d1665d6f9fabd38f96fe636c11ac80673",
+    "lines": 19
+  },
+  {
+    "file": "tools/video_ai/xtf_to_events.py",
+    "sha256": "403acc661eb90e20a4d2eacf8ba29603c29eab49fd97e40dcec4ca0806723830",
+    "lines": 257
+  },
+  {
+    "file": "tools/video_ai/train_baseline.py",
+    "sha256": "0c4f82043b0fc8511025fd4f0060a7c59c127cea2da7a2f958a18a693dcda2a7",
+    "lines": 177
+  },
+  {
+    "file": "tools/video_ai/ocr_chainage.py",
+    "sha256": "a07ccd7138395916d37c99538769fbd98ab008c19f5c7c4ec59f4d56a9234e7f",
+    "lines": 275
+  },
+  {
+    "file": "tools/video_ai/make_keyframes.py",
+    "sha256": "7603847d863e41286a6b13651afc5c12fe93cc6ca8a59bcee10d385fa4dac401",
+    "lines": 178
+  },
+  {
+    "file": "tools/video_ai/extract_frames.py",
+    "sha256": "fffee39f0005e7976c46f0535cd9e41903fbe48fc8e77194ba62a329825c767e",
+    "lines": 143
+  },
+  {
+    "file": "tools/video_ai/dataset_builder.py",
+    "sha256": "f01e442145085ca972687223d00898caccd4cccb2f5b2dc5bd76ab39066e03d5",
+    "lines": 302
+  },
+  {
+    "file": "tools/VideoLabelTool/test_server_selection.py",
+    "sha256": "0131e9d69580d800b75e4372ec8dde19a0b16b930207e3ce0aad1eea8710ddf2",
+    "lines": 146
+  },
+  {
+    "file": "tools/VideoLabelTool/server.py",
+    "sha256": "b0209b2057e5d048339e44d1b4eca2cfca7c33f94bb5ce56c21a263012575e1b",
+    "lines": 684
+  }
+]

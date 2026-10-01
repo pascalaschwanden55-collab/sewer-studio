@@ -37,7 +37,7 @@ public sealed class CodexArtifactCleanupServiceTests
             Assert.True(PathsEqual(eligible, item.Path));
             Assert.Equal(1_536, item.SizeBytes);
             Assert.Equal(2, item.FileCount);
-            Assert.Contains(report.ScanWarnings, warning => warning.Contains("Kuerzlich", StringComparison.Ordinal));
+            Assert.Contains(report.ScanWarnings, warning => warning.Contains("Kürzlich", StringComparison.Ordinal));
             Assert.Contains(report.ScanWarnings, warning => warning.Contains("unbekanntem Inhalt", StringComparison.Ordinal));
             Assert.Contains(report.ScanWarnings, warning => warning.Contains("Projektdateien", StringComparison.Ordinal));
         }

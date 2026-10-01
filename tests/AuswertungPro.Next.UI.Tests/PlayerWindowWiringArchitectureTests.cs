@@ -56,7 +56,7 @@ public sealed class PlayerWindowWiringArchitectureTests
         Assert.True(File.Exists(stateControlsPath), "WindowStateManager-Zugriff soll ausserhalb des PlayerWindow-Konstruktors liegen.");
         Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controllerSetFactoryPath), "PlayerWindow-Controller-Konstruktion soll ausserhalb des Konstruktors gebuendelt werden.");
-        Assert.True(File.Exists(controllerSetInitializerPath), "PlayerWindow-Control-Mapping fuer Controller soll ausserhalb des Konstruktors liegen.");
+        Assert.True(File.Exists(controllerSetInitializerPath), "PlayerWindow-Control-Mapping für Controller soll ausserhalb des Konstruktors liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var wiring = File.ReadAllText(wiringPath);

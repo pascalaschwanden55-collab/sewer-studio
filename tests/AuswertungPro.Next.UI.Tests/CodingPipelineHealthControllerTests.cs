@@ -88,6 +88,45 @@ public sealed class CodingPipelineHealthControllerTests
         Assert.False(runtimeController.AiEnabled);
     }
 
+    [Fact]
+    public async Task InitializeAsync_laeuft_je_Codiermodus_nur_einmal_auch_bei_gleichzeitigem_Aufruf()
+    {
+        // Codex-Review PR #24 (P1): Codiermodus-Start und Vorschlagslauf rufen beide auf. Ein
+        // zweiter Lauf erzeugte eine neue Runtime, entsorgte die erste mitten in der
+        // Initialisierung und liess ihren Zustandsmonitor ungestoppt zurueck.
+        var runtimeController = new CodingAiController();
+        var monitore = new List<FakePipelineHealthMonitor>();
+        var runtimes = 0;
+        var controller = new CodingPipelineHealthController(
+            runtimeController,
+            Actions(
+                createRuntime: () => { runtimes++; return EnabledRuntime(); },
+                createHealthMonitor: _ =>
+                {
+                    var monitor = new FakePipelineHealthMonitor { Gate = new() };
+                    monitore.Add(monitor);
+                    return monitor;
+                }));
+
+        var erster = controller.InitializeAsync();
+        var zweiter = controller.InitializeAsync();
+
+        Assert.Equal(1, runtimes);
+        Assert.Single(monitore);
+        monitore[0].Gate!.SetResult(DownStatus());
+        await Task.WhenAll(erster, zweiter);
+        await controller.InitializeAsync();
+        Assert.Equal(1, runtimes);
+
+        // Nach dem Verlassen des Codiermodus startet der naechste Eintritt neu.
+        controller.Stop();
+        Assert.True(monitore[0].Stopped);
+        var neu = controller.InitializeAsync();
+        Assert.Equal(2, runtimes);
+        monitore[1].Gate!.SetResult(DownStatus());
+        await neu;
+    }
+
     private static CodingPipelineHealthControllerActions Actions(
         Func<CodingAiRuntime>? createRuntime = null,
         Func<CodingAiRuntime, IPipelineHealthMonitor>? createHealthMonitor = null,
@@ -193,8 +232,11 @@ public sealed class CodingPipelineHealthControllerTests
             return Task.CompletedTask;
         }
 
+        /// <summary>Haelt die erste Zustandsabfrage an, damit eine Initialisierung "laeuft".</summary>
+        public TaskCompletionSource<PipelineHealthStatus>? Gate { get; init; }
+
         public Task<PipelineHealthStatus> RefreshOnceAsync(CancellationToken ct = default)
-            => Task.FromResult(CurrentStatus);
+            => Gate?.Task ?? Task.FromResult(CurrentStatus);
 
         public ValueTask DisposeAsync()
             => ValueTask.CompletedTask;
