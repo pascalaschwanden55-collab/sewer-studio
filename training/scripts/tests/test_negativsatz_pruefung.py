@@ -552,3 +552,54 @@ def test_negative_boxanzahl_ist_auch_ohne_bcc_ausloesung_ungueltig() -> None:
         NP.pruefe_bcc_queue_bilder([item], {"m", "n"}, _physisch)
     item["predictions"][0]["bcc_detection_count"] = 0
     assert len(NP.pruefe_bcc_queue_bilder([item], {"m", "n"}, _physisch)) == 1
+
+
+# ---------------------------------------------------------------------------
+# Eval-Schutz der Satzbilder (wie EvalContaminationGuard in C#, 01.10.2026)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("eingabe", "erwartet"),
+    [
+        ("06.24379-06.24377", "24379-24377"),
+        ("07.638910-1367", "638910-1367"),
+        ("634-581/2025_Saniert", "634-581"),
+        ("34738/34741", "34738-34741"),
+        ("Freitext", "Freitext"),
+        ("  Freitext  ", "Freitext"),
+        ("", None),
+        ("   ", None),
+        (None, None),
+    ],
+)
+def test_eval_haltungsschluessel_normalisiert_wie_csharp(eingabe, erwartet) -> None:
+    assert NP.eval_haltungsschluessel(eingabe) == erwartet
+
+
+def test_eval_haltung_trifft_beide_richtungen_ohne_gross_klein() -> None:
+    schluessel = {"100-200", "ABC"}
+    assert NP.ist_eval_haltung(schluessel, "100-200")
+    assert NP.ist_eval_haltung(schluessel, "200-100")
+    assert NP.ist_eval_haltung(schluessel, "06.200-06.100")
+    assert NP.ist_eval_haltung(schluessel, "abc")
+    assert not NP.ist_eval_haltung(schluessel, "100-300")
+    assert not NP.ist_eval_haltung(schluessel, "")
+    assert not NP.ist_eval_haltung(schluessel, None)
+    assert not NP.ist_eval_haltung(set(), "100-200")
+
+
+def test_negativbilder_gegen_eval_nennen_jedes_betroffene_bild() -> None:
+    bilder = [
+        {"path": "a/img_1.jpg", "holding_key": "100-200", "split": "train"},
+        {"path": "a/img_2.jpg", "holding_key": "300-400", "split": "validation"},
+        {"path": "a/img_3.jpg", "holding_key": "600-500", "split": "train"},
+    ]
+    NP.pruefe_negativbilder_gegen_eval(bilder, {"700-800"})
+    with pytest.raises(ValueError) as fehler:
+        NP.pruefe_negativbilder_gegen_eval(bilder, {"200-100", "500-600"})
+    text = str(fehler.value)
+    assert "a/img_1.jpg" in text and "100-200" in text and "train" in text
+    assert "a/img_3.jpg" in text and "600-500" in text
+    assert "a/img_2.jpg" not in text
+    assert "Eval-/Abnahme-Set" in text

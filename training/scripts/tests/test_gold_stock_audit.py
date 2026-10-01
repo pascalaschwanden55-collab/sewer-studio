@@ -51,6 +51,11 @@ def create_reviewed_negative_set(
     holding_override: str | None = None,
 ) -> Path:
     """Erzeugt einen kleinen, voll gebundenen Publisher-Satz fuer Tests."""
+    # Der Leser verlangt eine lesbare Eval-Schutzliste (wie der C#-Export, 01.10.2026).
+    eval_liste = root / "eval_set" / "subsets" / "fixture_schutz" / "_candidates.json"
+    if not eval_liste.exists():
+        eval_liste.parent.mkdir(parents=True, exist_ok=True)
+        _write_fixture_json(eval_liste, [{"haltung_key": "900000-900001"}])
     staging = (
         root
         / "training"

@@ -2160,5 +2160,108 @@ def test_satzordner_braucht_exakte_struktur(wurzel: Path, variante: str) -> None
 def test_gleiche_physische_haltung_in_zwei_saetzen_wird_abgelehnt(wurzel: Path) -> None:
     erster = baue_satz(wurzel, "bcc", ("100-200", "300-400"))
     zweiter = baue_satz(wurzel, "proto", ("200-100", "700-800"))
+    _eval_kandidaten(wurzel, "900-901")
     with pytest.raises(ValueError, match=r"^Physische Haltung ist ueber mehrere Negativsaetze doppelt: 100\|200 "):
         AUDIT.read_training_negative_sources(wurzel, wurzel / "kein_pool", (erster, zweiter))
+
+
+# ---------------------------------------------------------------------------
+# Eval-Schutz der Satzbilder im Leser (wie der C#-Export, 01.10.2026)
+# ---------------------------------------------------------------------------
+
+
+def _lese_saetze(wurzel: Path, *saetze: Path):
+    return AUDIT.read_training_negative_sources(wurzel, wurzel / "kein_pool", tuple(saetze))
+
+
+@pytest.mark.parametrize("variante", ["bcc", "proto"])
+@pytest.mark.parametrize("eval_haltung", ["100-200", "200-100", "06.200-06.100"])
+def test_leser_lehnt_satz_mit_bild_aus_eval_haltung_ab(wurzel: Path, variante: str, eval_haltung: str) -> None:
+    satz = baue_satz(wurzel, variante)
+    _eval_kandidaten(wurzel, eval_haltung)
+    with pytest.raises(ValueError) as fehler:
+        _lese_saetze(wurzel, satz)
+    text = str(fehler.value)
+    assert "Eval-/Abnahme-Set" in text
+    assert "100-200" in text
+    assert satz.name in text
+    assert "300-400" not in text and "500-600" not in text
+
+
+def test_leser_nennt_alle_betroffenen_bilder_sichtbar(wurzel: Path) -> None:
+    satz = baue_satz(wurzel, "bcc")
+    ordner = wurzel / "eval_set" / "subsets" / "fixture"
+    ordner.mkdir(parents=True)
+    _schreibe_json(ordner / "_candidates.json", {"candidates": [{"haltung_key": "100-200"}, {"haltung_key": "400-300"}]})
+    with pytest.raises(ValueError) as fehler:
+        _lese_saetze(wurzel, satz)
+    text = str(fehler.value)
+    assert "100-200" in text and "300-400" in text and "500-600" not in text
+
+
+@pytest.mark.parametrize("variante", ["bcc", "proto"])
+def test_leser_nimmt_satz_ohne_eval_haltung_an(wurzel: Path, variante: str) -> None:
+    satz = baue_satz(wurzel, variante)
+    _eval_kandidaten(wurzel, "900-901")
+    bilder, _ = _lese_saetze(wurzel, satz)
+    assert len(bilder) == 3
+
+
+def test_leser_wertet_nur_kandidatenlisten_nicht_dateinamen_aus(wurzel: Path) -> None:
+    # Wie in C#: Haltungsschluessel kommen aus _candidates.json (haltung_key).
+    satz = baue_satz(wurzel, "bcc")
+    _eval_kandidaten(wurzel, "900-901")
+    ordner = wurzel / "eval_set" / "subsets" / "fixture" / "images"
+    ordner.mkdir(parents=True)
+    (ordner / "100-200_12s_BCC_t+0.png").write_bytes(b"x")
+    bilder, _ = _lese_saetze(wurzel, satz)
+    assert len(bilder) == 3
+
+
+def _kaputte_eval_quelle(wurzel: Path, art: str) -> None:
+    ordner = wurzel / "eval_set" / "subsets" / "fixture"
+    ordner.mkdir(parents=True, exist_ok=True)
+    datei = ordner / "_candidates.json"
+    if art == "kein_eval_set":
+        shutil.rmtree(wurzel / "eval_set", ignore_errors=True)
+    elif art == "keine_kandidatenliste":
+        pass
+    elif art == "kein_json":
+        datei.write_text("{kaputt", encoding="utf-8")
+    elif art == "kein_array":
+        _schreibe_json(datei, {"candidates": "nein"})
+    elif art == "leere_liste":
+        _schreibe_json(datei, [])
+    elif art == "eintrag_kein_objekt":
+        _schreibe_json(datei, [{"haltung_key": "900-901"}, "x"])
+    elif art == "haltung_fehlt":
+        _schreibe_json(datei, [{"haltung_key": "900-901"}, {"frame_path": "a.png"}])
+    elif art == "haltung_leer":
+        _schreibe_json(datei, [{"haltung_key": "900-901"}, {"haltung_key": "  "}])
+    else:
+        raise AssertionError(art)
+
+
+@pytest.mark.parametrize(
+    "art",
+    [
+        "kein_eval_set",
+        "keine_kandidatenliste",
+        "kein_json",
+        "kein_array",
+        "leere_liste",
+        "eintrag_kein_objekt",
+        "haltung_fehlt",
+        "haltung_leer",
+    ],
+)
+def test_leser_stoppt_wenn_eval_schluesselquelle_unvollstaendig(wurzel: Path, art: str) -> None:
+    satz = baue_satz(wurzel, "bcc")
+    _kaputte_eval_quelle(wurzel, art)
+    with pytest.raises(ValueError, match=r"^Der Eval-Schutz ist nicht vollstaendig lesbar"):
+        _lese_saetze(wurzel, satz)
+
+
+def test_leser_braucht_ohne_negativsaetze_keine_eval_schluessel(wurzel: Path) -> None:
+    bilder, provenienz = _lese_saetze(wurzel)
+    assert bilder == () and provenienz == ()
