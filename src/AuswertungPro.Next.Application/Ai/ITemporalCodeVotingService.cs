@@ -12,7 +12,8 @@ public interface ITemporalCodeVotingService
     /// <summary>
     /// Registriert die Klassifikator-Entscheidung eines Frames (code=null fuer
     /// "keine Entscheidung") und liefert den bestaetigten Code oder null,
-    /// solange keine Mehrheit im Fenster besteht.
+    /// solange keine Mehrheit im Fenster besteht. Ein Frame mit eigenem, vom bestaetigten
+    /// abweichenden Code erhaelt nie den fremden bestaetigten Code (Entscheid 01.10.2026).
     /// </summary>
     string? RegisterAndVote(string? code, double meter);
 

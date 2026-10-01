@@ -32,6 +32,14 @@
   laufenden Meterstand unverändert und steht im Trace (`OsdMeterRejected`: «OSD-Meter
   unplausibel: x m nach y m in t s»). Nach einer Fortsetzung kommt der Anker aus dem Journal.
   Tests: `MultiModelOsdMeterPlausibilitaetTests`, `MultiModelQwenSchrittTests`.
+- **Kein fremder Code bei Widerspruch.** `TemporalCodeVotingService` gibt einem Bild mit
+  eigenem, vom bestätigten abweichenden Klassifikator-Vorschlag den bestätigten Code des
+  Nachbarbilds nicht mehr über die Hysterese. Die Befunde des Bildes bleiben unbestätigt
+  (bestehender Weg ohne bestätigten Code: Label-Code, Prüfung über das QualityGate). Ohne eigenen
+  Vorschlag (auch LEER) hält das Mehrheitsfenster wie bisher; gleicher Vorschlag wie bisher.
+  Gilt auch für den box-losen Grundgerüst-Befund (gleiche Stelle). Der Codiermodus-Einzelbildweg
+  (`SingleFrameMultiModelService`) hat kein Voting und ist nicht betroffen.
+  Tests: `TemporalCodeVotingServiceTests`, Schnappschuss `klassifikator_und_ausfall`.
 
 ## Grafik-Audit 23.09.2026: B01, B02, B04 behoben (24.09.2026)
 

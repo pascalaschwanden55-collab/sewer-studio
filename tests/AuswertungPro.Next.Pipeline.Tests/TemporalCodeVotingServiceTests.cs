@@ -120,10 +120,35 @@ public sealed class TemporalCodeVotingServiceTests
 
         voting.RegisterAndVote("BAJ", 0.42);
         Assert.Equal("BAJ", voting.RegisterAndVote("BAJ", 0.43));
-        // Erster BCC-Frame: noch keine Mehrheit -> BAJ haelt
-        Assert.Equal("BAJ", voting.RegisterAndVote("BCC", 0.45));
+        // Erster BCC-Frame: noch keine Mehrheit. Seit dem Entscheid 01.10.2026 haelt BAJ hier
+        // nicht mehr: Das Bild hat einen eigenen, abweichenden Vorschlag und bleibt unbestaetigt.
+        Assert.Null(voting.RegisterAndVote("BCC", 0.45));
         // Zweiter BCC-Frame: Mehrheit -> Wechsel
         Assert.Equal("BCC", voting.RegisterAndVote("BCC", 0.47));
+    }
+
+    // Entscheid Pascal 01.10.2026: Ein Bild mit eigenem, vom bestaetigten abweichenden Vorschlag
+    // uebernimmt keinen fremden bestaetigten Code (Befund 5 aus AP05: BBA erhielt BCD).
+    [Fact]
+    public void Eigener_abweichender_Vorschlag_uebernimmt_keinen_fremden_bestaetigten_Code()
+    {
+        var voting = new TemporalCodeVotingService(windowSize: 3, minAgreement: 2, meterRadius: 1.5);
+
+        voting.RegisterAndVote("BCD", 0.33);
+        Assert.Equal("BCD", voting.RegisterAndVote("BCD", 0.67));
+        Assert.Null(voting.RegisterAndVote("BBA", 1.0));          // eigener Vorschlag BBA: kein BCD
+    }
+
+    [Fact]
+    public void Ohne_eigenen_Vorschlag_gilt_das_Mehrheitsfenster_auch_nach_einem_Widerspruch()
+    {
+        var voting = new TemporalCodeVotingService(windowSize: 3, minAgreement: 2, meterRadius: 1.5);
+
+        voting.RegisterAndVote("BAJ", 0.42);
+        Assert.Equal("BAJ", voting.RegisterAndVote("BAJ", 0.43));
+        Assert.Null(voting.RegisterAndVote("BCC", 0.44));          // Widerspruch: unbestaetigt
+        Assert.Equal("BAJ", voting.RegisterAndVote(null, 0.45));  // kein Vorschlag: Fenster haelt BAJ
+        Assert.Equal("BAJ", voting.RegisterAndVote("baj", 0.46)); // gleicher Vorschlag: wie bisher
     }
 
     [Fact]
