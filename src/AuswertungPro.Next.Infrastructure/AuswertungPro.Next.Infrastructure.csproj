@@ -12,7 +12,7 @@
     <ProjectReference Include="..\AuswertungPro.Next.Application\AuswertungPro.Next.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
     <!-- Word-Ausgabe der Eigentuemerdossiers. Kein neues Paket: kommt bereits
          als Abhaengigkeit von ClosedXML mit und wird hier nur ausdruecklich
          festgehalten, damit ein spaeteres ClosedXML-Update es nicht wegnimmt. -->
