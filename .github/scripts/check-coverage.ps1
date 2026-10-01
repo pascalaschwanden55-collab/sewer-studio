@@ -88,22 +88,36 @@ if ([string]::IsNullOrWhiteSpace($ReferenceRef)) {
 }
 
 $baselinePathForGit = $BaselineFile.Replace('\', '/')
-$referenceLines = @(& git show "${ReferenceRef}:${baselinePathForGit}" 2>$null)
-$gitShowExitCode = $LASTEXITCODE
-$referenceText = $referenceLines -join [Environment]::NewLine
-if ($gitShowExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($referenceText)) {
-    Write-Host "FEHLER: Vergleichsgrenze aus $ReferenceRef konnte nicht gelesen werden."
+# Kennt der Vergleichsstand die Grenzdatei noch gar nicht (erste Einfuehrung, z. B. PR nach
+# master am 01.10.2026), gibt es nichts, was sinken koennte. ls-tree schreibt dabei nichts nach
+# stderr; ein unbekannter Vergleichsstand bleibt ein technischer Fehler.
+$referenceExists = @(& git rev-parse --verify --quiet "${ReferenceRef}^{commit}")
+if ($LASTEXITCODE -ne 0 -or $referenceExists.Count -eq 0) {
+    Write-Host "FEHLER: Vergleichsstand $ReferenceRef ist unbekannt."
     exit 2
 }
-try {
-    $referenceBaseline = $referenceText | ConvertFrom-Json
-    $referenceGrenze = [double]$referenceBaseline.minimumLinePercent
-} catch {
-    Write-Host "FEHLER: Vergleichsgrenze aus $ReferenceRef ist nicht lesbar: $($_.Exception.Message)"
-    exit 2
+$referenceListing = @(& git ls-tree --name-only $ReferenceRef -- $baselinePathForGit)
+$referenceGrenze = $null
+if ($referenceListing.Count -eq 0) {
+    Write-Host "Hinweis: $ReferenceRef hat noch keine Grenzdatei - kein Vergleich gegen eine fruehere Grenze."
+} else {
+    $referenceLines = @(& git show "${ReferenceRef}:${baselinePathForGit}" 2>$null)
+    $gitShowExitCode = $LASTEXITCODE
+    $referenceText = $referenceLines -join [Environment]::NewLine
+    if ($gitShowExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($referenceText)) {
+        Write-Host "FEHLER: Vergleichsgrenze aus $ReferenceRef konnte nicht gelesen werden."
+        exit 2
+    }
+    try {
+        $referenceBaseline = $referenceText | ConvertFrom-Json
+        $referenceGrenze = [double]$referenceBaseline.minimumLinePercent
+    } catch {
+        Write-Host "FEHLER: Vergleichsgrenze aus $ReferenceRef ist nicht lesbar: $($_.Exception.Message)"
+        exit 2
+    }
 }
 
-if ($grenze -lt $referenceGrenze) {
+if ($null -ne $referenceGrenze -and $grenze -lt $referenceGrenze) {
     Write-Host "ABDECKUNGSGRENZE DARF NICHT SINKEN: $grenze % statt bisher $referenceGrenze %."
     exit 1
 }
@@ -112,7 +126,11 @@ Write-Host "Berichte:   $($berichte.Count)"
 Write-Host "Zeilen:     $abgedeckt von $gesamt abgedeckt"
 Write-Host "Abdeckung:  $prozent %"
 Write-Host "Mindestens: $grenze %"
-Write-Host "Vorher:     $referenceGrenze % ($ReferenceRef)"
+if ($null -ne $referenceGrenze) {
+    Write-Host "Vorher:     $referenceGrenze % ($ReferenceRef)"
+} else {
+    Write-Host "Vorher:     keine Grenzdatei ($ReferenceRef)"
+}
 
 if ($prozent -lt $grenze) {
     Write-Host ""

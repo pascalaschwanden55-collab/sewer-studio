@@ -66,5 +66,8 @@ bleiben eine Kandidatenliste (Regel: bei jeder Berührung entscheiden).
   ableiten); die Python-Prüfung vergleicht Satzbilder nicht mit den Eval-Schlüsseln (der C#-Export stoppt es).
 - **WebGIS:** Breite/Höhe der Haltung am Eiprofil klären; drei früher als «falsch» bezeichnete refIds;
   Vergleichsliste und Übersicht zeigen/zählen nicht nachgeprüfte bzw. ungeklärte Massnahmen missverständlich.
-- **Nicht umgesetzt aus dem Plan:** `StaTestRunner`-Fix (bewusst geparkt, Zweig
-  `sicherung/statestrunner-fix-20260930`); Z11 Python-Hilfsfunktionen (bei Berührung ersetzen); Z12 Reste.
+- **Nicht umgesetzt aus dem Plan:** Z11 Python-Hilfsfunktionen (bei Berührung ersetzen); Z12 Reste.
+  Der `StaTestRunner`-Fix (Absturz 0xC0000602) ist seit 01.10.2026 eingecheckt, nachdem derselbe
+  Absturz die CI des PR nach `master` rot machte. Die CI ist seit dem 01.10.2026 wieder grün
+  (PR #45: Referenzschnappschuss ohne lokalen WinCan-Katalog, urllib3 2.8.0, Temp-Langpfad für die
+  Trainingsskripte, Objektakte-Spalten nach tatsächlicher Breite, Startzeiten für PowerShell).
