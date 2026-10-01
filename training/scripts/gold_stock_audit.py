@@ -965,6 +965,53 @@ def _proto_eval_schluessel(knowledge_root: Path) -> set[str]:
     return eval_keys
 
 
+def _eval_wurzel_von_bildordner(eval_images_dir: Path) -> Path:
+    """Eval-Wurzel zum konfigurierten Eval-Bildordner (``--eval-images``)."""
+    if eval_images_dir.name.casefold() == "images":
+        return eval_images_dir.parent
+    return eval_images_dir
+
+
+def _lade_eval_schutz_haltungen(eval_root: Path) -> set[str]:
+    """Eval-Haltungsschluessel wie C# (``TrainingInventoryEvalProtectionReader``), ohne Fallback.
+
+    Quelle sind die ``haltung_key`` aller ``_candidates.json`` unter ``eval_root``,
+    normalisiert wie ``EvalContaminationGuard.NormalizeHaltungKey``. Ist die
+    Quelle nicht vollstaendig lesbar, bricht der Leser ab: C# stoppt dann den
+    ganzen Export, statt mit einer unvollstaendigen Schutzliste weiterzulesen.
+    Nicht nachgebildet ist die Pruefung des Manifest-Hashs der Eval-Sets.
+    """
+    praefix = "Der Eval-Schutz ist nicht vollstaendig lesbar"
+    if not eval_root.is_dir():
+        raise ValueError(f"{praefix}: Der Eval-Ordner fehlt: {eval_root}")
+    listen = sorted(eval_root.rglob("_candidates.json"))
+    if not listen:
+        raise ValueError(f"{praefix}: Es gibt keine _candidates.json unter {eval_root}")
+    schluessel: set[str] = set()
+    for liste in listen:
+        try:
+            dokument = json.loads(liste.read_text(encoding="utf-8-sig"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as fehler:
+            raise ValueError(f"{praefix}: {liste} ist ungueltig oder nicht lesbar ({fehler})") from fehler
+        eintraege = dokument.get("candidates") if isinstance(dokument, dict) else dokument
+        if not isinstance(eintraege, list):
+            raise ValueError(f"{praefix}: {liste} muss ein Array oder ein candidates-Array enthalten")
+        if not eintraege:
+            # Wie C#: Jede leere Kandidatenliste macht die Quelle unvollstaendig.
+            raise ValueError(f"{praefix}: {liste} enthaelt keine Kandidaten")
+        for index, eintrag in enumerate(eintraege):
+            roh = eintrag.get("haltung_key") if isinstance(eintrag, dict) else None
+            normalisiert = negativsatz.eval_haltungsschluessel(roh) if isinstance(roh, str) else None
+            if not normalisiert:
+                raise ValueError(
+                    f"{praefix}: Kandidat {index} in {liste} hat keinen gueltigen haltung_key"
+                )
+            schluessel.add(normalisiert)
+    if not schluessel:
+        raise ValueError(f"{praefix}: Die Kandidatenlisten unter {eval_root} enthalten keine Haltung")
+    return schluessel
+
+
 def _gib_negativsatz_frei(
     knowledge_root: Path,
     set_root: Path,
@@ -1240,6 +1287,7 @@ def read_training_negative_sources(
     negative_sets: Sequence[Path] = (),
     *,
     minimum_legacy_bytes: int = 0,
+    eval_root: Path | None = None,
 ) -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:
     """Liest Legacy-Negative und streng veroeffentlichte Negativsaetze.
 
@@ -1254,6 +1302,7 @@ def read_training_negative_sources(
     seen_hashes: dict[str, str] = {}
     seen_set_ids: set[str] = set()
     seen_physical_holdings: dict[str, str] = {}
+    eval_haltungen: set[str] | None = None
 
     if legacy_root.is_dir():
         for path in sorted(legacy_root.iterdir(), key=lambda item: item.name.casefold()):
@@ -1278,6 +1327,12 @@ def read_training_negative_sources(
 
     for requested in negative_sets:
         set_images, provenance = _read_reviewed_negative_set(root, Path(requested))
+        # Wie der C#-Export: Bild aus einer Eval-Haltung stoppt den Satz (01.10.2026).
+        if eval_haltungen is None:
+            eval_haltungen = _lade_eval_schutz_haltungen(
+                Path(os.path.abspath(eval_root)) if eval_root is not None else root / "eval_set"
+            )
+        negativsatz.pruefe_negativbilder_gegen_eval(set_images, eval_haltungen)
         set_id = str(provenance["set_id"])
         if set_id in seen_set_ids:
             raise ValueError(f"Negativsatz wurde mehrfach angegeben: {set_id}")
@@ -1324,6 +1379,7 @@ def build_audit(
         negatives_dir,
         negative_set_paths,
         minimum_legacy_bytes=MIN_TRAINING_NEGATIVE_BYTES,
+        eval_root=_eval_wurzel_von_bildordner(eval_images_dir),
     )
     eval_physical_holdings = {
         _physical_holding_key(holding) for holding in eval_holding_keys

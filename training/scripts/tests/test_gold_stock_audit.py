@@ -51,6 +51,11 @@ def create_reviewed_negative_set(
     holding_override: str | None = None,
 ) -> Path:
     """Erzeugt einen kleinen, voll gebundenen Publisher-Satz fuer Tests."""
+    # Der Leser verlangt eine lesbare Eval-Schutzliste (wie der C#-Export, 01.10.2026).
+    eval_liste = root / "eval_set" / "subsets" / "fixture_schutz" / "_candidates.json"
+    if not eval_liste.exists():
+        eval_liste.parent.mkdir(parents=True, exist_ok=True)
+        _write_fixture_json(eval_liste, [{"haltung_key": "900000-900001"}])
     staging = (
         root
         / "training"
@@ -1347,6 +1352,26 @@ class GoldStockAuditTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 MODULE.resolve_approved_by(None, Path(temporary) / "fehlt.json")
 
+    def test_negativsatz_wird_gegen_konfigurierten_eval_pfad_geprueft(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            frames, _eval_images, negatives, registry = self._make_root(root)
+            frame = self._image(frames, "a.png")
+            negative_set = create_reviewed_negative_set(root, ("100-200", "300-400"))
+            anders = root / "anderes_eval"
+            (anders / "images").mkdir(parents=True)
+            _write_fixture_json(anders / "_candidates.json", [{"haltung_key": "200-100"}])
+            with self.assertRaisesRegex(ValueError, "Eval-/Abnahme-Set"):
+                self._audit(
+                    root,
+                    [self._sample("ok", frame)],
+                    anders / "images",
+                    negatives,
+                    registry,
+                    negative_sets=(negative_set,),
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
+

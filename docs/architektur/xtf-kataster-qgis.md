@@ -795,7 +795,26 @@ ein Wiederholungsimport bestehende Begehungen nicht mehr; Waechter:
   gebuendelte Zeile «n verwaiste …: a, b, … (+k weitere)». SIA405 und VSA-KEK in einer
   Datei: SIA405 gewinnt weiter, eine Warnung nennt die Zahl liegengebliebener
   Untersuchungen. `Letzte_Aenderung` im ISO-Format (`2025-10-06`, auch mit Uhrzeit) wird
-  ueber `XtfValueNormalizer.NormalizeDate` zu `dd.MM.yyyy`; der VSA-KEK-`Zeitpunkt` laeuft
-  unveraendert ueber `NormalizeDate_yyyymmdd`. Tests: `XtfSia405BezugsmeldungenTests`,
+  ueber `XtfValueNormalizer.NormalizeDate` zu `dd.MM.yyyy`. Tests: `XtfSia405BezugsmeldungenTests`,
   `XtfVsaKekLueckenmeldungenTests`, `XtfSia405MitVsaKekTests`, `XtfSia405LetzteAenderungTests`.
+- **Vier weitere stille Luecken (01.10.2026, zweite Runde).** Wieder nur Meldungen bzw. Lesart,
+  kein Wert, kein Zaehler. (1) SIA405-`Haltung` ohne TID: bleibt uebersprungen, Warnung mit
+  Bezeichnung (`Sia405Bestand.HaltungenOhneTid`). (2) Haltungspunkt vorhanden, aber sein
+  `AbwassernetzelementRef` trifft weder Abwasserknoten noch Haltung der Datei: Warnung mit
+  Haltung, TID, Punkt, Ende und Verweis; der Rueckfall auf Punkt- bzw. Haltungsnamen bleibt und
+  wird in der Meldung genannt. Ein Verweis auf eine Haltung (Anschluss an eine Leitung) ist kein
+  Leerverweis. (3) Organisationsverweise an Normschaechten (und den anderen Bauwerken des
+  Schachtlesers) nach derselben Regel wie bei Haltungen, gemeinsam in
+  `Sia405Organisationsverweise`: Organisation in der Datei ohne Bezeichnung = Warnung; Kennung
+  ausserhalb der Datei = ein Info-Hinweis je Datei, der Haltungen und Schaechte getrennt zaehlt
+  («Eigentümer refX (1 Schacht), Datenlieferant refY (2 Haltungen)», Reihenfolge des ersten
+  Auftretens, Schaechte werden zuerst gelesen). Ein nicht leerer Text hat Vorrang vor dem Verweis.
+  (4) VSA-KEK-`Zeitpunkt` liest sich wie `Letzte_Aenderung` (`NormalizeDate`): `Datum_Jahr`, Datum
+  der Schachtbegehung und Importbericht zeigen `dd.MM.yyyy` auch fuer `2025-03-12`, mit Uhrzeit,
+  Zone oder Versatz; `VsaKekUntersuchungsWahl.LiesZeitpunkt` liest erst die bisherigen Formate,
+  dann dieselbe Lesart, damit gelten Haupt-Untersuchungswahl und 30-Tage-Regel fuer `Link_G` auch
+  fuer ISO mit Zone. Unlesbares bleibt roh; ein Platzhalter (`2007-12-31`) erscheint wie bei
+  `20071231` als `31.12.2007`. Der `ImportFingerprint` rechnet weiter mit dem Rohwert (nie den
+  Rohwert in `VsaKekUntersuchung` normalisieren). Tests: `XtfSia405BezugsmeldungenTests`,
+  `XtfVsaKekZeitpunktIsoTests`, `XtfVsaKekFingerabdruckTests`.
 
