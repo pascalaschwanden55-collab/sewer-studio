@@ -133,15 +133,20 @@ public static class KatasterKennungPlanBuilder
             schaechte.Select(s =>
             {
                 var feld = SchachtFeldnamen.Feld(s, FieldKeys.CadastreObjectId);
-                var (quelle, handgesetzt) = LiesHerkunft(s.FieldMeta, feld);
+                var (quelle, _) = LiesHerkunft(s.FieldMeta, feld);
+                // Ueber alle Schreibweisen (Planer-Paket nach PR #81): Ist-Werte wie der Export, und
+                // ein Handwert in irgendeiner Schreibweise (auch bewusst leer) schuetzt wie im Schreibweg.
+                var anzeige = SchachtFeldnamen.Wert(s, FieldKeys.GeonisId);
+                var anzeigeHand = SchachtFeldnamen.HatHandwert(s, FieldKeys.GeonisId);
                 return new Bauteilsicht(
                     s.GetFieldValue(SchachtFeldnamen.Feld(s, "Schachtnummer")),
                     s.Geonis,
-                    string.IsNullOrWhiteSpace(s.GetFieldValue(SchachtFeldnamen.Feld(s, FieldKeys.GeonisId))),
-                    s.GetFieldValue(feld))
+                    string.IsNullOrWhiteSpace(anzeige) && !anzeigeHand,
+                    SchachtFeldnamen.Wert(s, FieldKeys.CadastreObjectId))
                 {
                     ObjektIdQuelle = quelle,
-                    ObjektIdHandgesetzt = handgesetzt
+                    ObjektIdHandgesetzt = SchachtFeldnamen.HatHandwert(s, FieldKeys.CadastreObjectId),
+                    AnzeigeHandwert = anzeigeHand ? anzeige : null
                 };
             }),
             bestand,
@@ -175,6 +180,12 @@ public static class KatasterKennungPlanBuilder
 
         /// <summary>Wurde <see cref="ObjektId"/> von Hand gesetzt oder bestaetigt?</summary>
         public bool ObjektIdHandgesetzt { get; init; }
+
+        /// <summary>
+        /// Der von Hand gesetzte Wert des Anzeigefelds (auch leer), sonst null. Nur am Schacht
+        /// belegt (Planer-Paket nach PR #81); die Haltung plant unveraendert.
+        /// </summary>
+        public string? AnzeigeHandwert { get; init; }
     }
 
     private static (FieldSource Quelle, bool Handgesetzt) LiesHerkunft(
@@ -223,6 +234,15 @@ public static class KatasterKennungPlanBuilder
 
                 hinweise.Add(new KatasterKennungHinweis(
                     name, gleich ? KatasterKennungGrund.BereitsVorhanden : KatasterKennungGrund.Abweichend));
+                continue;
+            }
+
+            // Ein Handwert im Anzeigefeld (auch bewusst leer) wird nicht ueberschrieben - der
+            // Schreibweg lehnte das ohnehin ab. Wie eine abweichende Kennung melden, nicht planen.
+            if (bauteil.AnzeigeHandwert is { } handwert
+                && !string.Equals(handwert.Trim(), kennung.Hauptkennung, StringComparison.Ordinal))
+            {
+                hinweise.Add(new KatasterKennungHinweis(name, KatasterKennungGrund.Abweichend));
                 continue;
             }
 

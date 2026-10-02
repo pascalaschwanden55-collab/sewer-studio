@@ -295,4 +295,44 @@ public sealed class KatasterKennungPlanBuilderTests
         record.SetFieldValue("Schachtnummer", nummer, FieldSource.Manual, true);
         return record;
     }
+
+    // Planer-Paket nach PR #81: Eine von Hand gesetzte Anzeige-Kennung (auch bewusst leer, in
+    // irgendeiner Schreibweise) wird nicht zum Fuellen geplant.
+    [Fact]
+    public void Bewusst_leere_Kennung_in_anderer_Schreibweise_wird_nicht_geplant()
+    {
+        var bestand = Bestand(BauteilArt.Schacht, KatasterKennung.FuerSchacht("78998", "Altdorf", KnotenId, null));
+        var record = Schacht("78998");
+        record.SetFieldValue("GEONIS Kennung", "", FieldSource.Manual, userEdited: true);
+
+        var plan = KatasterKennungPlanBuilder.BaueFuerSchaechte([record], bestand);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Equal(1, plan.Anzahl(KatasterKennungGrund.Abweichend));
+    }
+
+    [Fact]
+    public void Bewusst_leere_Anzeige_wird_bei_vorhandener_Kennung_nicht_nachgezogen()
+    {
+        var bestand = Bestand(BauteilArt.Schacht, KatasterKennung.FuerSchacht("78998", "Altdorf", KnotenId, null));
+        var record = Schacht("78998");
+        record.SetzeGeonisKennungen(new GeonisKennungen { Knoten = KnotenId });
+        record.SetFieldValue("GEONIS Kennung", "", FieldSource.Manual, userEdited: true);
+
+        var plan = KatasterKennungPlanBuilder.BaueFuerSchaechte([record], bestand);
+
+        Assert.DoesNotContain(plan.Positionen, p => p.NurAnzeige);
+    }
+
+    [Fact]
+    public void Ohne_Handwert_wird_die_Kennung_in_jeder_Schreibweise_geplant()
+    {
+        var bestand = Bestand(BauteilArt.Schacht, KatasterKennung.FuerSchacht("78998", "Altdorf", KnotenId, null));
+        var record = Schacht("78998");
+        record.SetFieldValue("GEONIS Kennung", "", FieldSource.Pdf, userEdited: false);
+
+        var plan = KatasterKennungPlanBuilder.BaueFuerSchaechte([record], bestand);
+
+        Assert.Single(plan.Positionen);
+    }
 }
