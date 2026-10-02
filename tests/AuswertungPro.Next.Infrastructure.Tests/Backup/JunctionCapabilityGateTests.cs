@@ -11,7 +11,8 @@ public sealed class JunctionCapabilityGateTests
     [Fact]
     public void Alle_Verknuepfungsschutztests_sind_registriert_und_ausfuehrbar()
     {
-        const int expectedJunctionFacts = 118; // Zusaetzlich sieben Schutzfaelle der Haltungsumbenennung;
+        const int expectedJunctionFacts = 123; // Zusaetzlich fuenf fuer Start-/Fehlerprotokollierung der Vollsicherung;
+                                              // sieben Schutzfaelle der Haltungsumbenennung;
                                               // zwei fuer «Ordner wird zur Verknuepfung» (Audit A01, 23.09.2026);
                                               // einer fuer die WebGIS-Berichtsablage (C3, 24.09.2026);
                                               // einer fuer den Papierkorb des Verteilabgleichs (GA02, 28.09.2026);

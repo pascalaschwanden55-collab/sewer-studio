@@ -23,10 +23,18 @@ public sealed class SettingsFullBackupPresentationBuilderTests
         Assert.Contains("- Programm:", text);
         Assert.Contains("- KI-Gehirn:", text);
         Assert.Contains("3 Dateien (Quelle nicht gefunden)", text);
-        Assert.Contains("Gesamt:", text);
+        Assert.Contains("Gesamter Datenbestand:", text);
+        Assert.Contains("Neue und geänderte Dateien werden kopiert.", text);
+        Assert.Contains("Unveränderte Dateien werden geprüft und weiterverwendet.", text);
+        Assert.Contains("Datenbanken werden als Schnappschüsse gesichert.", text);
+        Assert.Contains("Die Gesamtgrösse ist nicht der zusätzlich benötigte freie Speicherplatz.", text);
+        Assert.Contains("Für Änderungen und vorübergehende Vorherkopien wird zusätzlicher Platz benötigt.", text);
+        Assert.Contains("Hinzu kommen Datenbank-Schnappschüsse und eine Reserve.", text);
         Assert.Contains("5 Dateien", text);
         Assert.Contains(@"Ziel: D:\Backup\SewerStudio_Datensicherung", text);
         Assert.Contains("Gesichert wird nur der aktuelle Stand.", text);
+        Assert.Contains("Dateien sollen nach einem erfolgreichen Lauf entfernt werden.", text);
+        Assert.Contains("Bei blockierter Löschung können ältere Kopien bestehen bleiben.", text);
         Assert.Contains("Projekte enthalten: ja.", text);
         Assert.Contains("Videos enthalten: nein", text);
     }

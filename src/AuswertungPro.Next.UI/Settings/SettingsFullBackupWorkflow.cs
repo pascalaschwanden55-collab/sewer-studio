@@ -63,6 +63,8 @@ public static class SettingsFullBackupWorkflow
 
         try
         {
+            runToken.ThrowIfCancellationRequested();
+            targetFolder = ResolveTargetParentFolder(targetFolder);
             var report = await Task.Run(
                 () => request.FullBackup.AnalyzeAsync(progress: null, runToken),
                 runToken).ConfigureAwait(true);
@@ -187,6 +189,22 @@ public static class SettingsFullBackupWorkflow
         {
             request.Operation.Finish();
         }
+    }
+
+    private static string ResolveTargetParentFolder(string selectedFolder)
+    {
+        var fullPath = Path.GetFullPath(selectedFolder);
+        var folder = Path.TrimEndingDirectorySeparator(fullPath);
+        var root = Path.TrimEndingDirectorySeparator(Path.GetPathRoot(fullPath)!);
+        // Laufwerks- und Freigabewurzeln sind Elternziele, auch bei gleichem Freigabenamen.
+        if (string.Equals(folder, root, StringComparison.OrdinalIgnoreCase))
+            return fullPath;
+
+        // Der Dienst erwartet den Elternordner; sein Markerwaechter prueft den Zielbesitz.
+        return string.Equals(Path.GetFileName(folder), BackupPlanBuilder.TargetFolderName,
+            StringComparison.OrdinalIgnoreCase)
+            ? Path.GetDirectoryName(folder)!
+            : folder;
     }
 
     /// <summary>

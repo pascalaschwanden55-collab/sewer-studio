@@ -9,11 +9,44 @@
 
 ## Inhalt
 
+- Zielwahl und geschütztes Laufprotokoll (02.10.2026)
 - Gemeinsame Verknüpfungsprüfung (02.10.2026)
 - Auditkorrekturen: Originalschutz und stabile Sicherungen (18.09.2026)
 - Sicherung und Ausfallschutz (09.09.2026)
 - Audit Paket 1 — Dateischutz und Wiederherstellung (06.09.2026)
 - (Fortsetzung aus «Wichtige Klassen»)
+
+## Zielwahl und geschütztes Laufprotokoll (02.10.2026)
+
+`SettingsFullBackupWorkflow` normalisiert die Zielwahl vor der Analyse. Ein
+ausgewählter Unterordner namens `SewerStudio_Datensicherung` wird auf seinen
+Elternordner zurückgeführt; der Dienst hängt den Namen einmal an. Laufwerks-
+und UNC-Freigabewurzeln bleiben Elternziele, auch bei einer gleichnamigen
+Freigabe. Ein bereits angeforderter Abbruch hat Vorrang vor der Pfadnormalisierung.
+Erst ein erfolgreicher Lauf aktualisiert die zuletzt gespeicherten Einstellungen.
+Marker-, Quellenkonflikt- und Verknüpfungsprüfungen bleiben beim Sicherungsdienst.
+
+Die Bestätigung benennt den gesamten Datenbestand. Dieser entspricht nicht dem
+zusätzlichen freien Platz. Unveränderte gewöhnliche Dateien werden nach Inhaltsprüfung
+weiterverwendet; Datenbanken erhalten Schnappschüsse. Änderungen, vorübergehende
+Vorherkopien und die Reserve kosten zusätzlichen Platz. Die tatsächliche Platzprüfung
+erfolgt weiterhin im Dienst. `BackupVersionRetention.MaxStaende` bleibt **0**:
+Vorherkopien dienen dem Zurücksetzen und sollen nach Erfolg entfernt werden. Scheitert
+die Löschung an einer Sperre oder fehlenden Rechten, meldet der Dienst eine Warnung;
+ältere Kopien können dann trotz erfolgreichem Lauf liegen bleiben. Die Bestätigung
+nennt diese bestehende Ausnahme ausdrücklich.
+
+`FullBackupService.Protokolliere` löst den Protokollpfad vor jedem Append über
+`BackupTargetPathGuard.ResolveRelativePath` auf. Damit gelten die bestehende
+Prüfung der Elternkette und der Logdatei auch für Start- und Fehlerprotokollierung.
+Eine blockierte zusätzliche Protokollierung verändert keine verknüpfte Fremddatei
+und verdeckt nicht den eigentlichen Sicherungsfehler. Das Protokoll bleibt optional.
+Die bestehende Grenze einer nicht atomaren Pfadprüfung bleibt erhalten.
+
+Nachweise: `SettingsFullBackupWorkflowTests.TargetFolder`,
+`SettingsFullBackupPresentationBuilderTests`, `FullBackupProtokollPathSafetyTests`
+und bestehende `BackupAbschlussFortschrittTests`. Der Junction-Wächter zählt 123 Fälle.
+Keine neuen Pakete, Registrierungen, öffentlichen Schnittstellen oder gespeicherten Formate.
 
 ## Gemeinsame Verknüpfungsprüfung (02.10.2026)
 

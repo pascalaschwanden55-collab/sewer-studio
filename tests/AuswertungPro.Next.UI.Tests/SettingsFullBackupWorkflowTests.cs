@@ -5,7 +5,7 @@ using AuswertungPro.Next.UI.Settings;
 
 namespace AuswertungPro.Next.UI.Tests;
 
-public sealed class SettingsFullBackupWorkflowTests
+public sealed partial class SettingsFullBackupWorkflowTests
 {
     [Fact]
     public async Task RunAsync_success_updates_settings_progress_toast_and_skipped_warning()
@@ -423,6 +423,7 @@ public sealed class SettingsFullBackupWorkflowTests
         public string? SelectedFolder { get; set; }
         public bool ConfirmResult { get; set; }
         public string? SelectInitialPath { get; private set; }
+        public string? ConfirmText { get; private set; }
         public List<string> Errors { get; } = new();
         public List<string> Warnings { get; } = new();
 
@@ -446,7 +447,11 @@ public sealed class SettingsFullBackupWorkflowTests
             Errors.Add(message);
             GeteilteAufrufe?.Add("dialog:error");
         }
-        public bool Confirm(string message, string title = "Bestätigung") => ConfirmResult;
+        public bool Confirm(string message, string title = "Bestätigung")
+        {
+            ConfirmText = message;
+            return ConfirmResult;
+        }
         public bool ConfirmWarn(string message, string title = "Bestätigung", bool defaultNo = true) => false;
         public DialogConfirm ConfirmCancel(string message, string title = "Bestätigung") => DialogConfirm.Cancel;
     }

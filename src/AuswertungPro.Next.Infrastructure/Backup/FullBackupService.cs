@@ -361,11 +361,15 @@ public sealed class FullBackupService : IFullBackupService
     {
         try
         {
+            // Auch Start- und Fehlerzeilen liegen vor bzw. ausserhalb des Marker-
+            // Schutzes. Deshalb Logdatei samt Zielordner und Vorfahren hier pruefen.
+            var protokoll = BackupTargetPathGuard.ResolveRelativePath(targetFolder, ProtokollDateiName);
             File.AppendAllText(
-                Path.Combine(targetFolder, ProtokollDateiName),
+                protokoll,
                 $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}  {zeile}{Environment.NewLine}");
         }
-        catch (Exception ex) when (ex is IOException
+        catch (Exception ex) when (BackupTargetBoundary.Marks(ex)
+                                   || ex is IOException
                                    or UnauthorizedAccessException
                                    or PathTooLongException
                                    or NotSupportedException
