@@ -1,4 +1,5 @@
 using System.Security;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
 
@@ -74,19 +75,25 @@ internal static class ImportSourcePathGuard
             for (var index = 0; index < segments.Length; index++)
             {
                 current = Path.Combine(current, segments[index]);
-                FileAttributes attributes;
-                try
-                {
-                    attributes = File.GetAttributes(current);
-                }
-                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+                // Gemeinsame Verknuepfungspruefung (Deepscan A5); die Attribute braucht der
+                // Waechter zusaetzlich fuer die Ordner/Datei-Pruefung je Glied.
+                FileAttributes? gelesen = null;
+                var befund = VerknuepfungsSchutz.PruefeEintrag(
+                    current,
+                    VerknuepfungsRegel.Streng,
+                    pfad => gelesen = File.GetAttributes(pfad));
+                if (befund.Befund == VerknuepfungsBefund.Fehlt)
                 {
                     // Ein noch fehlender Rest kann momentan keine Verknuepfung enthalten.
                     // Der Aufrufer entscheidet anhand von exists, ob ein Fallback sinnvoll ist.
                     return true;
                 }
 
-                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                if (befund.Fehler is not null)
+                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(befund.Fehler);
+
+                var attributes = gelesen!.Value;
+                if (befund.Befund == VerknuepfungsBefund.Verknuepfung)
                 {
                     error = $"Quellenpfad enthält eine Verknüpfung: {current}";
                     safePath = string.Empty;
