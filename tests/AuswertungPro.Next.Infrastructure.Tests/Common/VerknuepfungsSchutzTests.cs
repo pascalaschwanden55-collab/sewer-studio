@@ -13,7 +13,7 @@ public sealed class VerknuepfungsSchutzTests
     private const string Wurzel = @"C:\vs\wurzel";
     private const string Tief = @"C:\vs\wurzel\a\b.txt";
 
-    private static Func<string, FileAttributes> Attribute(params (string Pfad, object Wert)[] eintraege)
+    private static Func<string, FileAttributes?> Attribute(params (string Pfad, object Wert)[] eintraege)
     {
         var karte = eintraege.ToDictionary(e => e.Pfad, e => e.Wert, StringComparer.OrdinalIgnoreCase);
         return pfad => karte.TryGetValue(pfad, out var wert)
@@ -53,6 +53,12 @@ public sealed class VerknuepfungsSchutzTests
         if (!fehlendErlaubt)
             Assert.IsType<FileNotFoundException>(befund.Fehler);
     }
+
+    [Theory]
+    [InlineData(true, VerknuepfungsBefund.Sicher)]
+    [InlineData(false, VerknuepfungsBefund.Fehlt)]
+    public void Eingespielter_Leser_meldet_einen_fehlenden_Eintrag_mit_null(bool fehlendErlaubt, VerknuepfungsBefund erwartet)
+        => Assert.Equal(erwartet, VerknuepfungsSchutz.PruefeEintrag(Tief, Streng with { FehlendErlaubt = fehlendErlaubt }, _ => null).Befund);
 
     [Theory]
     [InlineData(true, VerknuepfungsBefund.NichtPruefbar)]

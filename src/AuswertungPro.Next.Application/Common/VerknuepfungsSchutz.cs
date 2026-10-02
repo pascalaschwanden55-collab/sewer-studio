@@ -74,13 +74,16 @@ public static class VerknuepfungsSchutz
     public static VerknuepfungsPruefung PruefeEintrag(
         string pfad,
         VerknuepfungsRegel regel,
-        Func<string, FileAttributes>? leseAttribute = null)
+        Func<string, FileAttributes?>? leseAttribute = null)
     {
         ArgumentNullException.ThrowIfNull(regel);
-        var lesen = leseAttribute ?? File.GetAttributes;
+        var lesen = leseAttribute ?? (p => File.GetAttributes(p));
         try
         {
-            return (lesen(pfad) & FileAttributes.ReparsePoint) != 0
+            // Ein eingespielter Leser meldet einen fehlenden Eintrag mit null (wie ProjectMutationPathPolicy).
+            var attribute = lesen(pfad)
+                            ?? throw new FileNotFoundException($"Pfad fehlt: {pfad}", pfad);
+            return (attribute & FileAttributes.ReparsePoint) != 0
                 ? new VerknuepfungsPruefung(VerknuepfungsBefund.Verknuepfung, pfad, null)
                 : VerknuepfungsPruefung.Frei;
         }
@@ -106,7 +109,7 @@ public static class VerknuepfungsSchutz
     public static VerknuepfungsPruefung PruefePfadAbLaufwerk(
         string pfad,
         VerknuepfungsRegel regel,
-        Func<string, FileAttributes>? leseAttribute = null)
+        Func<string, FileAttributes?>? leseAttribute = null)
     {
         var voll = Path.GetFullPath(pfad);
         var laufwerk = Path.GetPathRoot(voll);
@@ -124,7 +127,7 @@ public static class VerknuepfungsSchutz
         string wurzel,
         string pfad,
         VerknuepfungsRegel regel,
-        Func<string, FileAttributes>? leseAttribute = null)
+        Func<string, FileAttributes?>? leseAttribute = null)
     {
         ArgumentNullException.ThrowIfNull(regel);
         var volleWurzel = Path.TrimEndingDirectorySeparator(Path.GetFullPath(wurzel));

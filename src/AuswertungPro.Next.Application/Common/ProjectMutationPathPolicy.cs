@@ -20,11 +20,12 @@ public static class ProjectMutationPathPolicy
             throw new IOException($"Dateipfad liegt ausserhalb des Projektordners: {path}");
 
         // Auch ein Alias oberhalb des Projektroots darf nicht zu fremden Dateien fuehren.
-        for (string? current = full; current is not null; current = Path.GetDirectoryName(current))
-        {
-            if (((readAttributes(current) ?? 0) & FileAttributes.ReparsePoint) != 0)
-                throw new IOException($"Projektpfad enthält eine Verknüpfung oder Junction: {current}");
-        }
+        // Gemeinsame Verknuepfungspruefung (Deepscan A5), Regel ProjektSchreibgrenze.
+        var befund = VerknuepfungsSchutz.PruefeKette(root, full, VerknuepfungsRegel.ProjektSchreibgrenze, readAttributes);
+        if (befund.Fehler is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(befund.Fehler);
+        if (befund.Befund == VerknuepfungsBefund.Verknuepfung)
+            throw new IOException($"Projektpfad enthält eine Verknüpfung oder Junction: {befund.Pfad}");
         return full;
     }
 
