@@ -171,4 +171,55 @@ public sealed class SchaechteFormularTabelleAbgleichTests
         Assert.Empty(konflikte);
         Assert.True(record.IstBewusstLeer(Feld));
     }
+
+    // Zeitstempel ausdruecklich, damit die Reihenfolge nicht an der Uhr haengt.
+    private static void Stempel(SchachtRecord record, string feld, int minute)
+        => record.FieldMeta[feld].LastUpdatedUtc = new DateTime(2026, 10, 2, 12, minute, 0, DateTimeKind.Utc);
+
+    [Fact]
+    public void Bewusst_geleerte_juengste_Schreibweise_ist_der_aktuelle_Stand()
+    {
+        // Review PR #75 (P1): Das Formular hat beide Schreibweisen gleich gesetzt, danach leert die
+        // Tabelle eine davon bewusst. Die andere traegt noch den Altwert. Massgebend ist die zuletzt
+        // geaenderte Schreibweise - sonst gilt die Formulareingabe nicht als Konflikt und
+        // ueberschreibt die Leer-Korrektur in beiden Schreibweisen.
+        var (builder, konflikte, commits) = Builder();
+        var record = RecordMit("Alt");
+        record.SetFieldValue("Ausführung", "Beton", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("Ausfuehrung", "Beton", FieldSource.Manual, userEdited: true);
+        Stempel(record, "Ausführung", 1);
+        Stempel(record, "Ausfuehrung", 1);
+        var item = Item(builder.Build(["Ausfuehrung", "Ausführung", Feld], record), "Ausfuehrung");
+        Assert.Equal("Beton", item.Value);
+
+        record.SetFieldValue("Ausführung", "", FieldSource.Manual, userEdited: true);
+        Stempel(record, "Ausführung", 2);
+        item.Value = "Beton + Zusatz";
+
+        Assert.Empty(commits);
+        Assert.Equal(("Ausfuehrung", "", "Beton + Zusatz"), Assert.Single(konflikte));
+        Assert.True(record.IstBewusstLeer("Ausführung"));
+        Assert.Equal("Beton", record.GetFieldValue("Ausfuehrung"));
+
+        // Neu aufgebaut zeigt das Formular den juengsten Stand: bewusst leer.
+        Assert.Equal("", Item(builder.Build(["Ausfuehrung", "Ausführung", Feld], record), "Ausfuehrung").Value);
+    }
+
+    [Fact]
+    public void Gleiche_Schreibweisen_mit_verschiedenen_Zeitstempeln_sind_kein_Konflikt()
+    {
+        var (builder, konflikte, _) = Builder();
+        var record = RecordMit("Alt");
+        record.SetFieldValue("Ausführung", "Beton", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("Ausfuehrung", "Beton", FieldSource.Manual, userEdited: true);
+        Stempel(record, "Ausführung", 1);
+        Stempel(record, "Ausfuehrung", 3);
+        var item = Item(builder.Build(["Ausführung", Feld], record), "Ausführung");
+
+        item.Value = "Kunststoff";
+
+        Assert.Empty(konflikte);
+        Assert.Equal("Kunststoff", record.GetFieldValue("Ausführung"));
+        Assert.Equal("Kunststoff", record.GetFieldValue("Ausfuehrung"));
+    }
 }

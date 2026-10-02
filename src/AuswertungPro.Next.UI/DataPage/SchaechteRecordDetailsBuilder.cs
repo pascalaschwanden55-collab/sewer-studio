@@ -61,7 +61,8 @@ internal sealed class SchaechteRecordDetailsBuilder
 
         var consolidated = SchachtDetailFeldKonsolidierer.Konsolidiere(
             templateColumns,
-            record.Fields);
+            record.Fields,
+            record.FieldMeta);
         RecordDetailItem? renovationSwitch = null;
         var renovationDependents = new List<RecordDetailItem>();
 
@@ -126,9 +127,9 @@ internal sealed class SchaechteRecordDetailsBuilder
         var highlightKind = RecordDetailHighlightPolicy.Resolve(field.AnzeigeName);
 
         // W01: derselbe Rueckschreibweg mit Konfliktschutz wie bei den Haltungen. Der Wert des
-        // Feldes ist die erste nicht-leere Schreibweise - genau das, was der Aufbau anzeigt.
+        // Feldes ist die zuletzt geaenderte Schreibweise - genau das, was der Aufbau anzeigt.
         RecordDetailItem? item = null;
-        string Datensatzwert() => SchachtDetailFeldKonsolidierer.AktuellerWert(record.Fields, field.AlleKeys);
+        string Datensatzwert() => SchachtDetailFeldKonsolidierer.AktuellerWert(record.Fields, field.AlleKeys, record.FieldMeta);
         void Commit(string? value) => FormularKonfliktschutz.Rueckschreiben(
             item,
             Datensatzwert,

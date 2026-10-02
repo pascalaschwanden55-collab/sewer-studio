@@ -71,6 +71,45 @@ public static class SchachtFeldnamen
     }
 
     /// <summary>
+    /// Der aktuelle Wert eines Feldes, das unter mehreren Schreibweisen steht (Vorlage
+    /// «Ausführung», Import «Ausfuehrung»): der Wert der zuletzt geaenderten Schreibweise
+    /// (<see cref="FieldMetadata.LastUpdatedUtc"/>). Mit zaehlen nur Schreibweisen mit Inhalt und
+    /// bewusst leere (von Hand geleert, E3) — eine leere Vorlagenspalte ist keine Aussage. Ohne
+    /// Zeitangabe oder bei gleicher Zeit gilt die Reihenfolge von <paramref name="schreibweisen"/>
+    /// (bisherige Regel: erste nicht-leere).
+    ///
+    /// Review PR #75: Mit «erste nicht-leere» ging eine bewusste Leer-Korrektur an einer
+    /// Schreibweise verloren, solange eine andere noch den Altwert trug — das Formular sah keinen
+    /// Konflikt und schrieb den Altwert-Zusatz in beide Schreibweisen.
+    /// </summary>
+    public static string AktuellerWert(
+        IReadOnlyDictionary<string, string>? felder,
+        IReadOnlyDictionary<string, FieldMetadata>? meta,
+        IEnumerable<string> schreibweisen)
+    {
+        string? bester = null;
+        var besteZeit = DateTime.MinValue;
+
+        foreach (var name in schreibweisen ?? Enumerable.Empty<string>())
+        {
+            var wert = felder is not null && felder.TryGetValue(name, out var w) ? w ?? "" : "";
+            FieldMetadata? herkunft = null;
+            meta?.TryGetValue(name, out herkunft);
+            if (string.IsNullOrWhiteSpace(wert) && herkunft is not { UserEdited: true })
+                continue;
+
+            var zeit = herkunft?.LastUpdatedUtc ?? DateTime.MinValue;
+            if (bester is null || zeit > besteZeit)
+            {
+                bester = wert;
+                besteZeit = zeit;
+            }
+        }
+
+        return bester ?? "";
+    }
+
+    /// <summary>
     /// Alle im Datensatz vorhandenen Feldnamen, deren gefaltete Form <paramref name="gesucht"/>
     /// entspricht. Gemeinsame Suchlogik fuer <see cref="Feld"/> und <see cref="Schreibweisen"/>.
     /// </summary>
