@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using AuswertungPro.Next.Application.Import;
+using UebersprungeneOrdner = AuswertungPro.Next.Application.Common.UebersprungeneOrdner;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Common;
 
@@ -72,19 +73,24 @@ internal static class ImportPostProcessingController
 
         var result = await Task.Run(() =>
         {
+            // R1 (02.10.2026): Ordner, die die Suche ausliess, zaehlen als Fehler und stehen im Text.
+            var uebersprungen = new List<string>();
             var pdfFiles = EnumerateProjectFiles(
                     request.SourceFolder,
                     PdfExtensions,
                     includeRoot: true,
-                    PdfDirectories)
+                    PdfDirectories,
+                    uebersprungen)
                 .ToArray();
+            var luecken = UebersprungeneOrdner.Meldungen(uebersprungen);
+            var lueckenText = string.Concat(luecken.Select(zeile => Environment.NewLine + zeile));
 
             if (pdfFiles.Length == 0)
-                return new PdfScanResult(0, 0, 0, "Keine PDF-Dateien im Quellordner gefunden.");
+                return new PdfScanResult(0, 0, 0, "Keine PDF-Dateien im Quellordner gefunden." + lueckenText);
 
             var found = 0;
             var updated = 0;
-            var errors = 0;
+            var errors = luecken.Count;
 
             for (var i = 0; i < pdfFiles.Length; i++)
             {
@@ -125,7 +131,8 @@ internal static class ImportPostProcessingController
                 }
             }
 
-            var message = $"PDF-Scan: {pdfFiles.Length} Dateien, {found} Haltungen zugeordnet, {updated} aktualisiert, {errors} Fehler";
+            var message = $"PDF-Scan: {pdfFiles.Length} Dateien, {found} Haltungen zugeordnet, {updated} aktualisiert, {errors} Fehler"
+                          + lueckenText;
             return new PdfScanResult(pdfFiles.Length, found, updated, message);
         });
 
@@ -189,7 +196,8 @@ internal static class ImportPostProcessingController
         string root,
         IReadOnlyCollection<string> extensions,
         bool includeRoot,
-        IReadOnlyCollection<string> includeDirs)
+        IReadOnlyCollection<string> includeDirs,
+        ICollection<string> uebersprungen)
     {
         var searched = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var yieldedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -211,7 +219,7 @@ internal static class ImportPostProcessingController
             IEnumerable<string> files;
             try
             {
-                files = SafeFileEnumeration.EnumerateFilesSafe(baseDir, "*.*", recursive: true);
+                files = SafeFileEnumeration.EnumerateFilesSafe(baseDir, "*.*", recursive: true, uebersprungen);
             }
             catch
             {

@@ -33,10 +33,10 @@ public sealed partial class WinCanDbImportService : IWinCanDbImportService
         // damit keines still liegen bleibt und die Medien-/PDF-Suche je Projekt getrennt
         // bleibt. Nur ein einzelnes Projekt behaelt den bisherigen Ablauf unveraendert.
         var projektWurzeln = FindWinCanProjektWurzeln(exportRoot);
-        if (projektWurzeln.Count > 1)
-            return ImportMehrereProjekte(projektWurzeln, project, ctx);
+        if (projektWurzeln.Count > 1) // R1: uebersprungene Ordner der Quelle zaehlen als Fehler.
+            return UebersprungeneOrdnerImport.Ergaenze(ImportMehrereProjekte(projektWurzeln, project, ctx), exportRoot);
 
-        return ImportEinzelnesProjekt(exportRoot, project, ctx, zonenName: null);
+        return UebersprungeneOrdnerImport.Ergaenze(ImportEinzelnesProjekt(exportRoot, project, ctx, zonenName: null), exportRoot);
     }
 
     private Result<ImportStats> ImportEinzelnesProjekt(

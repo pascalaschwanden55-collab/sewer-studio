@@ -106,12 +106,14 @@ public sealed class KinsImportService : IKinsImportService
         {
             var last = messages.LastOrDefault(m => m.StartsWith("Fehler:", StringComparison.OrdinalIgnoreCase))
                        ?? "Kein kompatibles KINS-Format erkannt.";
-            return Result<ImportStats>.Fail("KINS_IMPORT_FAILED", last);
+            return UebersprungeneOrdnerImport.Ergaenze(Result<ImportStats>.Fail("KINS_IMPORT_FAILED", last), exportRoot);
         }
 
         var dedupedMessages = Deduplicate(messages);
         var stats = new ImportStats(found, created, updated, errors, uncertain, dedupedMessages);
-        return Result<ImportStats>.Success(stats);
+        // R1 (02.10.2026): Ordner, die die Suche ausliess, zaehlen als Fehler. Hat ein Teilimport
+        // (WinCan, IBAK) denselben Ordner schon gemeldet, zaehlt er nicht doppelt.
+        return UebersprungeneOrdnerImport.Ergaenze(Result<ImportStats>.Success(stats), exportRoot);
     }
 
     private static Result<ImportStats> ImportKinsDvdText(string exportRoot, Project project, IProtocolService protocolService, ImportRunContext? ctx = null)
