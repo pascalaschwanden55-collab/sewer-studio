@@ -75,4 +75,18 @@ public sealed class SchachtFeldLeserHandwertTests
 
         Assert.Empty(SchachtProtokollQuelle.Kandidaten(record));
     }
+
+    [Fact]
+    public void Objektakte_liest_das_Stammfeld_wie_der_Export()
+    {
+        var record = Altbestand(FieldKeys.ShaftShape, "SCHACHTFORM", "Oval");
+        var projekt = new Project();
+        projekt.SchaechteData.Add(record);
+        var bearbeitung = new ObjektaktenBearbeitung(projekt, record.Id, "schacht");
+
+        var wert = bearbeitung.Lies(new ObjektAkte { Id = record.Id, Art = "schacht" },
+            FieldCatalog.Objektfelder.Feld("schacht.form"));
+
+        Assert.Equal("", wert);
+    }
 }

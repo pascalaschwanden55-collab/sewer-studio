@@ -78,7 +78,8 @@ public sealed class ObjektaktenBearbeitung(Project projekt, Guid wurzelId, strin
         {
             if (art == "haltung") return projekt.Data.Single(r => r.Id == wurzelId).GetFieldValue(key);
             var schacht = projekt.SchaechteData.Single(r => r.Id == wurzelId);
-            return schacht.GetFieldValue(SchachtFeldnamen.Feld(schacht, key));
+            // Ueber alle Schreibweisen wie der Export: Handwert (auch bewusst leer) vor Importwert.
+            return SchachtFeldnamen.Wert(schacht, key);
         }
         return akte.Werte.TryGetValue(feld.Id, out var wert) ? wert.Text : "";
     }
