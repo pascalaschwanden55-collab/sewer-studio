@@ -28,30 +28,28 @@ public sealed class TrainingSampleFileStoreTests : IDisposable
     [Fact]
     public async Task Ein_unlesbarer_Bestand_darf_nie_ueberschrieben_werden()
     {
-        // Hauptdatei und alle Sicherungskopien sind KURZ gesperrt — genau das
-        // tut eine voruebergehende Sperre durch Spiegeldienst, Virenscanner oder
-        // eine zweite Instanz. Nach 300 ms loest sie sich wieder: Der Lesevorgang
-        // scheitert, der Schreibvorgang waere danach moeglich. Genau dann darf
-        // nicht geschrieben werden.
+        // Die Sperren bleiben bis zum gemeldeten Lesefehler bestehen. Eine Freigabe
+        // nach fester Zeit koennte unter Last schon vor dem ersten Lesen erfolgen.
         var pfad = GolddateiMitEintraegen(5);
         var vorher = File.ReadAllBytes(pfad);
         var bakVorher = File.ReadAllBytes(pfad + ".bak");
-        Sperre(pfad);
-        Sperre(pfad + ".bak");
-        Sperre(pfad + ".bak.2");
-        Sperre(pfad + ".bak.3");
-        var freigabe = Task.Run(async () =>
+        var store = Speicher(pfad);
+        try
         {
-            await Task.Delay(300);
+            Sperre(pfad);
+            Sperre(pfad + ".bak");
+            Sperre(pfad + ".bak.2");
+            Sperre(pfad + ".bak.3");
+            var fehler = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => store.MergeOrUpdateAsync([NeuesSample("neu-1")]));
+            Assert.Contains("Trainingsdaten sind nicht lesbar", fehler.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
             foreach (var sperre in _sperren)
                 sperre.Dispose();
             _sperren.Clear();
-        });
-        var store = Speicher(pfad);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => store.MergeOrUpdateAsync([NeuesSample("neu-1")]));
-        await freigabe;
+        }
 
         // Der wichtigere Teil: Der Bestand ist byte-gleich geblieben.
         Assert.Equal(vorher, File.ReadAllBytes(pfad));

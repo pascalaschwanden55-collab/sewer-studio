@@ -1,3 +1,4 @@
+using System.Text;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
@@ -18,7 +19,6 @@ public sealed class PdfInhaltsKennungTests : IDisposable
         var quelle = Quelle();
 
         var a = Auszug(quelle, 2, "a.pdf");
-        Thread.Sleep(20);
         var b = Auszug(quelle, 2, "b.pdf");
         var c = Auszug(quelle, 1, "c.pdf");
 
@@ -27,6 +27,26 @@ public sealed class PdfInhaltsKennungTests : IDisposable
         using var gelesen = PdfDocument.Open(a);
         Assert.Equal(1, gelesen.NumberOfPages);
         Assert.Contains("Seite 2", gelesen.GetPage(1).Text);
+    }
+
+    [Fact]
+    public void Verschiedene_Trailerkennungen_werden_ohne_Wartezeit_vereinheitlicht()
+    {
+        // Die Kennungen unterscheiden sich garantiert, unabhaengig von Uhr und PDF-Baukasten.
+        var a = Encoding.ASCII.GetBytes("%PDF-1.4 Inhalt /ID [<11111111111111111111111111111111><22222222222222222222222222222222>]");
+        var b = Encoding.ASCII.GetBytes("%PDF-1.4 Inhalt /ID [<AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA><BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB>]");
+        var originalA = a.ToArray();
+        var originalB = b.ToArray();
+
+        var normalisiertA = AuswertungPro.Next.Infrastructure.HoldingDistribution.PdfInhaltsKennung.Festlegen(a);
+        var normalisiertB = AuswertungPro.Next.Infrastructure.HoldingDistribution.PdfInhaltsKennung.Festlegen(b);
+
+        Assert.NotEqual(a, b);
+        Assert.Equal(normalisiertA, normalisiertB);
+        Assert.NotEqual(originalA, normalisiertA);
+        Assert.Equal(a.Length, normalisiertA.Length);
+        Assert.Equal(originalA, a);
+        Assert.Equal(originalB, b);
     }
 
     [Fact]

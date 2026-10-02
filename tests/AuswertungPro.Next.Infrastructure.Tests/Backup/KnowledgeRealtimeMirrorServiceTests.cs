@@ -236,11 +236,11 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
         var targetFile = Path.Combine(target, "training_samples.json");
         await File.WriteAllTextAsync(sourceFile, "eins");
         await WaitUntilAsync(
-            () => File.Exists(targetFile) && File.ReadAllText(targetFile) == "eins");
+            () => LiestSich(targetFile) == "eins");
 
         await File.WriteAllTextAsync(sourceFile, "zwei-und-neu");
         await WaitUntilAsync(
-            () => File.Exists(targetFile) && File.ReadAllText(targetFile) == "zwei-und-neu");
+            () => LiestSich(targetFile) == "zwei-und-neu");
 
         File.Delete(sourceFile);
         await WaitUntilAsync(() => !File.Exists(targetFile));
