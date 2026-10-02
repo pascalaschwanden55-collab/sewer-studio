@@ -52,8 +52,8 @@ steht einmal** und beide Seiten rufen ihn; die Seiten liefern nur, was wirklich 
   Lehnt die Seite das Schreiben ab (laufender Protokollimport, abgelehnte Umbenennung), zeigt das
   Schachtformular danach wieder den Datensatzwert, wie das Haltungsformular. Schachtfelder lesen
   fuer Aufbau, Live-Abgleich und Vergleich denselben Wert ueber alle Schreibweisen
-  (`SchachtFeldnamen.AktuellerWert`, ueber `RecordDetailItem.LiesDatensatzwert`): die zuletzt
-  geaenderte Schreibweise (`LastUpdatedUtc`), mitgezaehlt nur mit Inhalt oder bewusst leer (E3);
+  (`SchachtFeldnamen.AktuellerWert`, ueber `RecordDetailItem.LiesDatensatzwert`): Handwerte
+  (auch bewusst leer) vor Importwerten (Review PR #78), darin die zuletzt geaenderte Schreibweise (`LastUpdatedUtc`), mitgezaehlt nur mit Inhalt oder bewusst leer (E3);
   ohne Zeitangabe die erste nicht-leere (Review PR #75: sonst ging eine Leer-Korrektur an einer
   Schreibweise verloren). Vorher leerte der Abgleich ein Feld, dessen Wert nur unter einer zweiten
   Schreibweise stand. Den Hinweis verteilt `SchaechteAnsichtUmschalter.MeldeKonflikt` (Liste oder

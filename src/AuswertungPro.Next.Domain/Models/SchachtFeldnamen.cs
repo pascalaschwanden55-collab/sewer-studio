@@ -72,11 +72,17 @@ public static class SchachtFeldnamen
 
     /// <summary>
     /// Der aktuelle Wert eines Feldes, das unter mehreren Schreibweisen steht (Vorlage
-    /// «Ausführung», Import «Ausfuehrung»): der Wert der zuletzt geaenderten Schreibweise
-    /// (<see cref="FieldMetadata.LastUpdatedUtc"/>). Mit zaehlen nur Schreibweisen mit Inhalt und
-    /// bewusst leere (von Hand geleert, E3) — eine leere Vorlagenspalte ist keine Aussage. Ohne
-    /// Zeitangabe oder bei gleicher Zeit gilt die Reihenfolge von <paramref name="schreibweisen"/>
-    /// (bisherige Regel: erste nicht-leere).
+    /// «Ausführung», Import «Ausfuehrung»). Mit zaehlen nur Schreibweisen mit Inhalt und
+    /// bewusst leere (von Hand geleert, E3) — eine leere Vorlagenspalte ist keine Aussage.
+    /// 1. Handwerte (<see cref="FieldMetadata.UserEdited"/>, auch bewusst leer) gehen jeder
+    ///    automatischen Quelle vor — die Projektregel «Handwerte ueberschreibt kein Import» gilt
+    ///    auch ueber Schreibweisen hinweg. Der PDF-Import (SchachtProtocolApplier) schreibt alle
+    ///    Schreibweisen; die handbearbeitete bleibt geschuetzt, eine andere bekommt den Importwert
+    ///    mit neuerem Zeitstempel. Der darf die Handkorrektur nicht verdecken (Review PR #78).
+    /// 2. Innerhalb derselben Klasse gewinnt die zuletzt geaenderte
+    ///    (<see cref="FieldMetadata.LastUpdatedUtc"/>).
+    /// 3. Ohne Zeitangabe oder bei gleicher Zeit gilt die Reihenfolge von
+    ///    <paramref name="schreibweisen"/> (bisherige Regel: erste nicht-leere).
     ///
     /// Review PR #75: Mit «erste nicht-leere» ging eine bewusste Leer-Korrektur an einer
     /// Schreibweise verloren, solange eine andere noch den Altwert trug — das Formular sah keinen
@@ -88,6 +94,7 @@ public static class SchachtFeldnamen
         IEnumerable<string> schreibweisen)
     {
         string? bester = null;
+        var besterIstHandwert = false;
         var besteZeit = DateTime.MinValue;
 
         foreach (var name in schreibweisen ?? Enumerable.Empty<string>())
@@ -98,10 +105,15 @@ public static class SchachtFeldnamen
             if (string.IsNullOrWhiteSpace(wert) && herkunft is not { UserEdited: true })
                 continue;
 
+            var handwert = herkunft is { UserEdited: true };
             var zeit = herkunft?.LastUpdatedUtc ?? DateTime.MinValue;
-            if (bester is null || zeit > besteZeit)
+            var gewinnt = bester is null
+                          || (handwert && !besterIstHandwert)
+                          || (handwert == besterIstHandwert && zeit > besteZeit);
+            if (gewinnt)
             {
                 bester = wert;
+                besterIstHandwert = handwert;
                 besteZeit = zeit;
             }
         }

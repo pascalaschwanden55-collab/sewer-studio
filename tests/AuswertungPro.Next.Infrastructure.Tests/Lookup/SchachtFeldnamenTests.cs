@@ -53,4 +53,64 @@ public sealed class SchachtFeldnamenTests
 
         Assert.Equal("Dimension1_mm", SchachtFeldnamen.Feld(record, "Dimension1_mm"));
     }
+
+    // Review PR #78: Innerhalb einer Schreibweisen-Gruppe gehen Handwerte (auch bewusst leer)
+    // automatischen Quellen vor; erst innerhalb derselben Klasse entscheidet die Zeit.
+    private const string A = "Primäre Schäden";
+    private const string B = "Primaere Schaeden";
+
+    private static void Schreibe(SchachtRecord record, string feld, string wert, bool hand, int minute)
+    {
+        record.SetFieldValue(feld, wert, hand ? FieldSource.Manual : FieldSource.Pdf, userEdited: hand);
+        record.FieldMeta[feld].LastUpdatedUtc = new DateTime(2026, 10, 2, 12, minute, 0, DateTimeKind.Utc);
+    }
+
+    private static string Aktuell(SchachtRecord record)
+        => SchachtFeldnamen.AktuellerWert(record.Fields, record.FieldMeta, [A, B]);
+
+    [Fact]
+    public void Handwert_gewinnt_gegen_spaeteren_Import_in_anderer_Schreibweise()
+    {
+        // Wie SchachtProtocolApplier: Der Import schreibt alle Schreibweisen; die handbearbeitete
+        // bleibt geschuetzt, die andere bekommt den Importwert und einen neueren Zeitstempel.
+        var record = new SchachtRecord();
+        Schreibe(record, A, "Handkorrektur", hand: true, minute: 1);
+        Schreibe(record, B, "Importwert", hand: false, minute: 2);
+
+        Assert.Equal("Handkorrektur", Aktuell(record));
+    }
+
+    [Fact]
+    public void Bewusst_leerer_Handwert_gewinnt_gegen_spaeteren_Import()
+    {
+        var record = new SchachtRecord();
+        Schreibe(record, A, "", hand: true, minute: 1);
+        Schreibe(record, B, "Importwert", hand: false, minute: 2);
+
+        Assert.Equal("", Aktuell(record));
+    }
+
+    [Fact]
+    public void Von_zwei_Handwerten_gewinnt_der_juengste()
+    {
+        var record = new SchachtRecord();
+        Schreibe(record, A, "eins", hand: true, minute: 2);
+        Schreibe(record, B, "zwei", hand: true, minute: 3);
+        Assert.Equal("zwei", Aktuell(record));
+
+        Schreibe(record, A, "drei", hand: true, minute: 4);
+        Assert.Equal("drei", Aktuell(record));
+    }
+
+    [Fact]
+    public void Ohne_Handwert_gewinnt_der_juengste_Importwert_und_ohne_Zeit_der_erste()
+    {
+        var record = new SchachtRecord();
+        Schreibe(record, A, "alt", hand: false, minute: 1);
+        Schreibe(record, B, "neu", hand: false, minute: 2);
+        Assert.Equal("neu", Aktuell(record));
+
+        var ohneZeit = new Dictionary<string, string> { [A] = "", [B] = "zweiter" };
+        Assert.Equal("zweiter", SchachtFeldnamen.AktuellerWert(ohneZeit, null, [A, B]));
+    }
 }
