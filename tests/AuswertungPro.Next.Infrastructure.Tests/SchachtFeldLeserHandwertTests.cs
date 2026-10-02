@@ -89,4 +89,13 @@ public sealed class SchachtFeldLeserHandwertTests
 
         Assert.Equal("", wert);
     }
+
+    [Fact]
+    public void Uebersicht_zaehlt_keine_alte_Zustandsklasse_neben_bewusst_leer()
+    {
+        var projekt = new Project();
+        projekt.SchaechteData.Add(Altbestand(FieldKeys.ConditionClass, "ZUSTANDSKLASSE", "0"));
+
+        Assert.Equal(0, ProjektUebersichtRechner.Berechne(projekt).DringendSchaechte);
+    }
 }

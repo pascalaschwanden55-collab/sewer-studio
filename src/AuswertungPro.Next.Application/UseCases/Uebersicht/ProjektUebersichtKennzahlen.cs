@@ -68,7 +68,7 @@ public static class ProjektUebersichtRechner
     /// <c>GetFieldValue</c> findet dann nichts und die Kennzahl zaehlt still null.
     /// </summary>
     private static string? SchachtWert(SchachtRecord record, string feld)
-        => record.GetFieldValue(SchachtFeldnamen.Feld(record, feld));
+        => SchachtFeldnamen.Wert(record, feld); // Handwert vor Importwert (Folgepaket PR #80)
 
     public static string HeroText(ProjektUebersichtKennzahlen k)
     {
