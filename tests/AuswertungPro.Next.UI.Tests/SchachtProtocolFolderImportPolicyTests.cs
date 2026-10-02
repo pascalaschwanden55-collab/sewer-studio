@@ -81,6 +81,31 @@ public sealed class SchachtProtocolFolderImportPolicyTests : IDisposable
         Assert.Contains(other, selected);
     }
 
+    // Deepscan A4: Das Protokolldatum wird nach der gemeinsamen Leseregel gelesen. "5.3.2026"
+    // fiel frueher auf den (aelteren) Dateinamenstempel zurueck.
+    [Fact]
+    public void SelectCurrentPerShaft_liest_das_Protokolldatum_nach_der_gemeinsamen_Leseregel()
+    {
+        var ungepolstert = Candidate("S-30", "5.3.2026", "20200101_S-30.pdf");
+        var aelter = Candidate("S-30", "10.01.2025", "20250110_S-30b.pdf");
+
+        var selected = SchachtProtocolFolderImportPolicy.SelectCurrentPerShaft(new[] { aelter, ungepolstert });
+
+        Assert.Equal(ungepolstert, Assert.Single(selected));
+    }
+
+    // Steht nur ein Jahr im Protokoll, bleibt der genauere Dateinamenstempel massgebend.
+    [Fact]
+    public void SelectCurrentPerShaft_bevorzugt_bei_reinem_Jahr_den_Dateinamenstempel()
+    {
+        var nurJahr = Candidate("S-31", "2026", "20260609_S-31.pdf");
+        var maerz = Candidate("S-31", "01.03.2026", "20260301_S-31b.pdf");
+
+        var selected = SchachtProtocolFolderImportPolicy.SelectCurrentPerShaft(new[] { maerz, nurJahr });
+
+        Assert.Equal(nurJahr, Assert.Single(selected));
+    }
+
     [Fact]
     public void BuildFolderImportSummary_preserves_base_line_order()
     {
