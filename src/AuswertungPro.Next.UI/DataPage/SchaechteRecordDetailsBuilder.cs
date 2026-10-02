@@ -18,14 +18,21 @@ internal sealed class SchaechteRecordDetailsBuilder
     private readonly Func<bool> _canResolveDropdowns;
     private readonly Func<SchachtRecord, string, ICommand?>? _resolveNachschlag;
     private readonly Func<SchachtRecord, string, ICommand?>? _resolveStrasse;
+    private readonly Action<string, string, string>? _konfliktGemeldet;
 
+    /// <param name="konfliktGemeldet">
+    /// Wird gerufen, wenn eine Formulareingabe NICHT geschrieben wurde, weil sich der Datensatz
+    /// seit der Anzeige geaendert hat: (Feldname, aktueller Datensatzwert, verworfene Eingabe).
+    /// Dieselbe Regel wie bei den Haltungen (<see cref="FormularKonfliktschutz"/>, W01).
+    /// </param>
     internal SchaechteRecordDetailsBuilder(
         Func<string, IEnumerable<string>> resolveOptions,
         Func<string, ICommand?> resolveCommand,
         Action<SchachtRecord, KonsolidiertesSchachtFeld, string?> commit,
         Func<bool>? canResolveDropdowns = null,
         Func<SchachtRecord, string, ICommand?>? resolveNachschlag = null,
-        Func<SchachtRecord, string, ICommand?>? resolveStrasse = null)
+        Func<SchachtRecord, string, ICommand?>? resolveStrasse = null,
+        Action<string, string, string>? konfliktGemeldet = null)
     {
         _resolveOptions = resolveOptions ?? throw new ArgumentNullException(nameof(resolveOptions));
         _resolveCommand = resolveCommand ?? throw new ArgumentNullException(nameof(resolveCommand));
@@ -33,6 +40,7 @@ internal sealed class SchaechteRecordDetailsBuilder
         _canResolveDropdowns = canResolveDropdowns ?? (() => true);
         _resolveNachschlag = resolveNachschlag;
         _resolveStrasse = resolveStrasse;
+        _konfliktGemeldet = konfliktGemeldet;
     }
 
     internal List<RecordDetailGroup> Build(
@@ -116,11 +124,21 @@ internal sealed class SchaechteRecordDetailsBuilder
         // keine amtliche Auskunft - deshalb ein eigener Menuepunkt.
         var strasse = _resolveStrasse?.Invoke(record, field.AnzeigeName);
         var highlightKind = RecordDetailHighlightPolicy.Resolve(field.AnzeigeName);
-        void Commit(string? value) => _commit(record, field, value);
+
+        // W01: derselbe Rueckschreibweg mit Konfliktschutz wie bei den Haltungen. Der Wert des
+        // Feldes ist die erste nicht-leere Schreibweise - genau das, was der Aufbau anzeigt.
+        RecordDetailItem? item = null;
+        string Datensatzwert() => SchachtDetailFeldKonsolidierer.AktuellerWert(record.Fields, field.AlleKeys);
+        void Commit(string? value) => FormularKonfliktschutz.Rueckschreiben(
+            item,
+            Datensatzwert,
+            value ?? string.Empty,
+            () => _commit(record, field, value),
+            (aktuell, eingabe) => _konfliktGemeldet?.Invoke(field.AnzeigeName, aktuell, eingabe));
 
         if (_canResolveDropdowns() && TryResolveDropdownColumnSpec(field.AnzeigeName, out var spec))
         {
-            return new RecordDetailItem(
+            return item = new RecordDetailItem(
                 label,
                 field.Wert,
                 commitValue: Commit,
@@ -135,7 +153,7 @@ internal sealed class SchaechteRecordDetailsBuilder
                 highlightKind: highlightKind,
                 nachschlagenCommand: nachschlagen,
                 strasseUebernehmenCommand: strasse)
-            { FieldName = field.AnzeigeName };
+            { FieldName = field.AnzeigeName, LiesDatensatzwert = Datensatzwert };
         }
 
         var normalized = Normalize(field.AnzeigeName);
@@ -143,7 +161,7 @@ internal sealed class SchaechteRecordDetailsBuilder
                           || normalized.Contains("bemerk", StringComparison.Ordinal);
         if (IsZustandsklasseColumn(field.AnzeigeName))
         {
-            return new RecordDetailItem(
+            return item = new RecordDetailItem(
                 label,
                 field.Wert,
                 commitValue: Commit,
@@ -153,7 +171,7 @@ internal sealed class SchaechteRecordDetailsBuilder
                 highlightKind: highlightKind,
                 nachschlagenCommand: nachschlagen,
                 strasseUebernehmenCommand: strasse)
-            { FieldName = field.AnzeigeName };
+            { FieldName = field.AnzeigeName, LiesDatensatzwert = Datensatzwert };
         }
 
         // Die GEONIS-Kennung ist nur Anzeige (Wahrheit: Geonis-Objekt, dort liest der Export).
@@ -162,7 +180,7 @@ internal sealed class SchaechteRecordDetailsBuilder
             SchachtFeldnamen.Falte(FieldKeys.GeonisId),
             StringComparison.Ordinal);
 
-        return new RecordDetailItem(
+        return item = new RecordDetailItem(
             label,
             field.Wert,
             commitValue: Commit,
@@ -173,6 +191,7 @@ internal sealed class SchaechteRecordDetailsBuilder
             strasseUebernehmenCommand: strasse)
         {
             FieldName = field.AnzeigeName,
+            LiesDatensatzwert = Datensatzwert,
             PruefeWert = SchachtFeldnamen.Falte(field.AnzeigeName) is "dimension1mm" or "dimension2mm"
                 ? SiaAbmessung.SchachtmassFehler : null
         };

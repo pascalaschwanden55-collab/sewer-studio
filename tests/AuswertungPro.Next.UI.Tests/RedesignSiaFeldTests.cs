@@ -67,7 +67,9 @@ public sealed class RedesignSiaFeldTests
     [Fact]
     public void Innenmass_Formular_meldet_den_Bereich_am_Feld()
     {
-        var builder = new SchaechteRecordDetailsBuilder(_ => [], _ => null, (_, _, _) => { });
+        // Wie die Seite: Der Wert landet im Datensatz (W01: das Formular zeigt danach den Datensatzwert).
+        var builder = new SchaechteRecordDetailsBuilder(_ => [], _ => null,
+            (record, feld, wert) => record.SetFieldValue(feld.PrimaerKey, wert ?? "", FieldSource.Manual, userEdited: true));
         var item = Assert.Single(builder.Build([FieldKeys.ShaftDimension1Mm], new SchachtRecord()).SelectMany(g => g.Items));
         item.Value = "4500";
         Assert.Contains("4000", item.Error);

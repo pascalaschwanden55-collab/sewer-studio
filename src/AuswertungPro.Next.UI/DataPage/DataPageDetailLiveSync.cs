@@ -68,7 +68,7 @@ public sealed class DataPageDetailLiveSync : IDisposable
         {
             // Sammelmeldung (RaiseAllFieldsChanged oder erster Teil jeder Feldaenderung).
             foreach (var (feld, item) in _items)
-                item.UebernehmeAusDatensatz(_wert(feld) ?? "");
+                item.UebernehmeAusDatensatz(Wert(feld, item));
             return;
         }
 
@@ -76,9 +76,13 @@ public sealed class DataPageDetailLiveSync : IDisposable
         {
             var feld = name[FeldPraefix.Length..^1];
             if (_items.TryGetValue(feld, out var item))
-                item.UebernehmeAusDatensatz(_wert(feld) ?? "");
+                item.UebernehmeAusDatensatz(Wert(feld, item));
         }
     }
+
+    // Ein Feld mit eigener Lesart (Schacht-Schreibweisen) liest dort, sonst unter seinem Namen.
+    private string Wert(string feld, RecordDetailItem item)
+        => item.LiesDatensatzwert?.Invoke() ?? _wert(feld) ?? "";
 
     public void Dispose()
     {
