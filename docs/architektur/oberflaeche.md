@@ -51,10 +51,15 @@ steht einmal** und beide Seiten rufen ihn; die Seiten liefern nur, was wirklich 
   und melden, sonst schreiben und den echten Datensatzwert uebernehmen). Folge der gleichen Regel:
   Lehnt die Seite das Schreiben ab (laufender Protokollimport, abgelehnte Umbenennung), zeigt das
   Schachtformular danach wieder den Datensatzwert, wie das Haltungsformular. Schachtfelder lesen
-  fuer Live-Abgleich und Vergleich die erste nicht-leere Schreibweise
-  (`SchachtDetailFeldKonsolidierer.AktuellerWert` ueber `RecordDetailItem.LiesDatensatzwert`) —
-  vorher leerte der Abgleich ein Feld, dessen Wert nur unter einer zweiten Schreibweise stand.
-  Den Hinweis verteilt `SchaechteAnsichtUmschalter.MeldeKonflikt` (Liste oder Schublade).
+  fuer Aufbau, Live-Abgleich und Vergleich denselben Wert ueber alle Schreibweisen
+  (`SchachtFeldnamen.AktuellerWert`, ueber `RecordDetailItem.LiesDatensatzwert`): die zuletzt
+  geaenderte Schreibweise (`LastUpdatedUtc`), mitgezaehlt nur mit Inhalt oder bewusst leer (E3);
+  ohne Zeitangabe die erste nicht-leere (Review PR #75: sonst ging eine Leer-Korrektur an einer
+  Schreibweise verloren). Vorher leerte der Abgleich ein Feld, dessen Wert nur unter einer zweiten
+  Schreibweise stand. Den Hinweis verteilt `SchaechteAnsichtUmschalter.MeldeKonflikt` (Liste oder
+  Schublade). Das Detailfenster (`RecordDetailsWindow`, Haltungen und Schaechte) zeigt einen
+  Konflikt aus seinen eigenen Feldern selbst unter dem Fensterkopf (`FormularKonfliktAnzeige`);
+  nur ohne angemeldetes Formular geht er an die Seite.
   Waechter: `SchaechteFormularTabelleAbgleichTests`, `SchaechteFormularKonfliktIsolatedTests`.
 - **Offen (Entscheid)**: Sprung von aussen (Dossier, Suche) klappt in der Schachtliste nicht auf
   wie bei den Haltungen (`ZeigeHaltung`).
