@@ -176,6 +176,32 @@ Temp-Ordner geleert; diese Befundfotos sind verloren.
 - Waechter: `VsaFotoAblagePolicyTests` (3), `VsaFotoAblageTests` (3, echte Dateien) und die
   zwei neuen Faelle in `VsaCodeExplorerPhotoCaptureWorkflowTests`.
 
+### Kein stiller Temp-Rueckfall mehr (02.10.2026, Deepscan R3)
+
+- **Eine Regel** fuer «liegt im Temp-Ordner»: `BefundfotoTempOrt` (Application/Media, reine
+  Pfadrechnung; `Path.GetTempPath()` und `%LOCALAPPDATA%\Temp`). Aufnahmewege und
+  Projektpruefung fragen nur diese Stelle.
+- **VSA-Codierfenster:** Der ehrliche Rueckfall von oben bleibt (Foto liegt schon im Temp,
+  loeschen waere schlimmer). Neu meldet `VsaCodeExplorerPhotoCaptureWorkflow` ihn mit
+  `NurVorlaeufig` und Grund aus `VsaFotoTempHinweis` (kein Video / Verschieben gescheitert /
+  Video liegt selbst im Temp); `VsaCodeExplorerWindow` zeigt ihn als Warnung.
+  `VsaFotoAblage` schreibt den technischen Grund zusaetzlich ins Log.
+- **Codiermodus:** Dort existiert vor der Aufnahme noch keine Datei, also geht nichts verloren,
+  wenn sie unterbleibt. Ohne Video legt `CodingFramePhotoFileStore` deshalb **kein** KI-Frame
+  mehr unter `%TEMP%\SewerStudio\coding_ai_frames` ab (frueher still, mit Pfad im Befund), und
+  `CodingSnapshotTargetPolicy` markiert ein Temp-Ziel (`LiegtImTemp`), das
+  `CodingSnapshotFileCaptureService` ablehnt. Der Aufrufer zeigt dann das bestehende
+  «Foto konnte nicht aufgenommen werden». Praktisch tritt der Fall nicht ein: Der Player oeffnet
+  nur mit vorhandenem Video (`PlayerVideoPathGuard`).
+- **Projektpruefung:** `ProjektPruefregeln` meldet Befundfotos (`FotoPaths` nicht geloeschter
+  Haltungsbefunde) im Temp-Ordner unter «Dateiverweise» am Befund; fehlt die Datei schon, nennt
+  die Meldung beides. Nur Temp-Fotos werden gelesen, nicht jedes Projektfoto.
+  `ProjektPruefdatenKopie` kopiert und vergleicht dafuer die `FotoPaths`.
+- Waechter: `BefundfotoTempOrtTests`, je ein neuer Fall in `CodingFramePhotoFileStoreTests`,
+  `CodingSnapshotFileCaptureServiceTests`, `CodingSnapshotTargetPolicyTests`, zwei in
+  `VsaCodeExplorerPhotoCaptureWorkflowTests`, zwei in `VsaFotoAblageTests`, drei in
+  `ProjektPruefungTests`, einer in `ProjektPruefdatenKopieTests`.
+
 ## (Fortsetzung aus «Wichtige Klassen»)
 
 Die gemeinsame Suche nach einer Schachtprotokoll-PDF liegt hinter

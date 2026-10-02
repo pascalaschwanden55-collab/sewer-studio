@@ -43,6 +43,14 @@ public sealed class CodingSnapshotFileCaptureService
 
     public string? CaptureSnapshot(CodingSnapshotTarget target, Action<string> takeSnapshot)
     {
+        if (target.LiegtImTemp)
+        {
+            // Deepscan 02.10.2026, R3: Ohne Video kein Foto in den Temp-Ordner. Der Aufrufer
+            // meldet die fehlende Aufnahme sichtbar («Foto konnte nicht aufgenommen werden»).
+            _log("Snapshot abgelehnt: kein Video bekannt, Befundfotos gehoeren nie in den Temp-Ordner.");
+            return null;
+        }
+
         try
         {
             _createDirectory(target.PhotoDirectory);

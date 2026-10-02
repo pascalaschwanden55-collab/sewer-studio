@@ -80,4 +80,30 @@ public sealed class CodingSnapshotFileCaptureServiceTests
         var log = Assert.Single(logs);
         Assert.Contains("kaputt", log);
     }
+
+    /// <summary>
+    /// Deepscan 02.10.2026, R3: Ohne Video zeigt das Ziel in den Temp-Ordner. Befundfotos
+    /// gehoeren nie dorthin; der Aufnahmeweg meldet dann «Foto konnte nicht aufgenommen werden».
+    /// </summary>
+    [Fact]
+    public void CaptureSnapshot_nimmt_kein_foto_in_den_temp_ordner_auf()
+    {
+        var logs = new List<string>();
+        var aufgenommen = 0;
+        var ordnerAngelegt = 0;
+        var target = new CodingSnapshotTarget("temp/Fotos", "temp/Fotos/frame.png", LiegtImTemp: true);
+        var service = new CodingSnapshotFileCaptureService(
+            _ => ordnerAngelegt++,
+            _ => true,
+            _ => 128,
+            _ => { },
+            logs.Add);
+
+        var result = service.CaptureSnapshot(target, _ => aufgenommen++);
+
+        Assert.Null(result);
+        Assert.Equal(0, aufgenommen);
+        Assert.Equal(0, ordnerAngelegt);
+        Assert.Contains("Temp-Ordner", Assert.Single(logs));
+    }
 }
