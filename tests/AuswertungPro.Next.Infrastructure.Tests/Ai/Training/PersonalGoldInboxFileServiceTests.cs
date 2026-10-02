@@ -54,6 +54,27 @@ public sealed class PersonalGoldInboxFileServiceTests : IDisposable
         Assert.True(Directory.Exists(Path.Combine(inbox, "BBD - Eindringender Boden")));
     }
 
+    // Deepscan A5: Ordner- und Dateipruefung laufen ueber den gemeinsamen VerknuepfungsSchutz.
+    [Backup.JunctionFact]
+    public async Task LoadAsync_ueberspringt_verknuepfte_Ordner_und_Dateien_mit_Hinweis()
+    {
+        var service = new PersonalGoldInboxFileService(_root, _ => null);
+        var inbox = service.EnsureFolders();
+        var fremd = Directory.CreateDirectory(Path.Combine(_root, "fremd")).FullName;
+        var fremdesBild = Path.Combine(fremd, "fremd.jpg");
+        await File.WriteAllBytesAsync(fremdesBild, [1, 2, 3]);
+        var ordnerLink = Path.Combine(inbox, "verknuepft");
+        Directory.CreateSymbolicLink(ordnerLink, fremd);
+        var dateiLink = Path.Combine(inbox, "_OHNE_ZUORDNUNG", "link.jpg");
+        File.CreateSymbolicLink(dateiLink, fremdesBild);
+
+        var result = await service.LoadAsync();
+
+        Assert.Empty(result.Images);
+        Assert.Contains(result.Issues, i => i.Contains("Verknüpfter Ordner wurde übersprungen", StringComparison.Ordinal) && i.Contains(ordnerLink, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Issues, i => i.Contains("Verknüpfte Datei wurde übersprungen", StringComparison.Ordinal) && i.Contains(dateiLink, StringComparison.OrdinalIgnoreCase));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

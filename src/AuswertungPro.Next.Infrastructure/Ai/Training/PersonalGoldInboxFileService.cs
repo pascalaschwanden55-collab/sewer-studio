@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
@@ -70,7 +71,7 @@ public sealed class PersonalGoldInboxFileService : IPersonalGoldInboxService
                     continue;
                 }
 
-                if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0)
+                if (IstVerknuepfung(directory))
                 {
                     issues.Add($"Verknüpfter Ordner wurde übersprungen: {directory}");
                     continue;
@@ -114,7 +115,7 @@ public sealed class PersonalGoldInboxFileService : IPersonalGoldInboxService
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!SupportedExtensions.Contains(Path.GetExtension(path)))
                     continue;
-                if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+                if (IstVerknuepfung(path))
                 {
                     issues.Add($"Verknüpfte Datei wurde übersprungen: {path}");
                     continue;
@@ -131,6 +132,15 @@ public sealed class PersonalGoldInboxFileService : IPersonalGoldInboxService
         {
             issues.Add($"Bilder konnten nicht gelesen werden: {folder} ({ex.Message})");
         }
+    }
+
+    // Gemeinsame Verknuepfungspruefung (Deepscan A5); Lesefehler werfen wie bisher und landen als Hinweis.
+    private static bool IstVerknuepfung(string path)
+    {
+        var befund = VerknuepfungsSchutz.PruefeEintrag(path, VerknuepfungsRegel.GoldSpeicher);
+        if (befund.Fehler is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(befund.Fehler);
+        return befund.Befund == VerknuepfungsBefund.Verknuepfung;
     }
 
     private static string BuildQueueId(string path)
