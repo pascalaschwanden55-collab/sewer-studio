@@ -299,6 +299,15 @@ def main() -> int:
                         help="Schreibt training_samples.json wirklich (mit Backup).")
     args = parser.parse_args()
 
+    # Stand der Golddatei festhalten; vor dem Schreiben wird er erneut verglichen,
+    # damit eine fremde Aenderung dazwischen nicht stillschweigend verloren geht.
+    samples_path = args.knowledge_root / "training_samples.json"
+    try:
+        gelesener_stand = samples_path.read_bytes()
+    except OSError as exc:
+        print(f"GESPERRT: training_samples.json nicht lesbar: {exc}", file=sys.stderr)
+        return 1
+
     stamp = _utc_stamp(datetime.now(timezone.utc))
     existing, created, skipped = build_samples(
         args.alt_root, args.knowledge_root, stamp, args.limit)
@@ -326,10 +335,21 @@ def main() -> int:
             file=sys.stderr)
         return 2
 
-    samples_path = args.knowledge_root / "training_samples.json"
+    try:
+        aktueller_stand = samples_path.read_bytes()
+    except OSError as exc:
+        print(f"GESPERRT: training_samples.json nicht lesbar: {exc}", file=sys.stderr)
+        return 1
+    if aktueller_stand != gelesener_stand:
+        print(
+            "GESPERRT: training_samples.json wurde waehrend des Imports geaendert. "
+            "Nichts geschrieben; bitte neu starten.",
+            file=sys.stderr)
+        return 1
+
     backup = samples_path.with_suffix(
         ".json.bak_vor_goldlabels_" + datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S"))
-    backup.write_bytes(samples_path.read_bytes())
+    backup.write_bytes(gelesener_stand)
     merged = existing + created
     _atomar_schreiben(
         samples_path,

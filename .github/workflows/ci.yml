@@ -15,6 +15,9 @@ on:
 jobs:
   dotnet:
     runs-on: windows-latest
+    # Heutige Laufzeit rund 20 Minuten; 45 Minuten lassen reichlich Puffer fuer einen
+    # langsamen Runner, brechen einen haengenden Lauf aber lange vor dem 6-h-Standard ab.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -37,16 +40,16 @@ jobs:
         run: dotnet build AuswertungPro.sln -c Release --no-restore
 
       - name: Tests Infrastructure
-        run: dotnet test tests/AuswertungPro.Next.Infrastructure.Tests/AuswertungPro.Next.Infrastructure.Tests.csproj -c Release --no-build --no-restore --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
+        run: dotnet test tests/AuswertungPro.Next.Infrastructure.Tests/AuswertungPro.Next.Infrastructure.Tests.csproj -c Release --no-build --no-restore --blame-hang --blame-hang-timeout 10m --blame-hang-dump-type none --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
 
       - name: Tests Pipeline
-        run: dotnet test tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj -c Release --no-build --no-restore --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
+        run: dotnet test tests/AuswertungPro.Next.Pipeline.Tests/AuswertungPro.Next.Pipeline.Tests.csproj -c Release --no-build --no-restore --blame-hang --blame-hang-timeout 10m --blame-hang-dump-type none --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
 
       - name: Tests UI
-        run: dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj -c Release --no-build --no-restore --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
+        run: dotnet test tests/AuswertungPro.Next.UI.Tests/AuswertungPro.Next.UI.Tests.csproj -c Release --no-build --no-restore --blame-hang --blame-hang-timeout 10m --blame-hang-dump-type none --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
 
       - name: Tests ProjectModernizer
-        run: dotnet test tests/ProjectModernizer.Tests/ProjectModernizer.Tests.csproj -c Release --no-build --no-restore --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
+        run: dotnet test tests/ProjectModernizer.Tests/ProjectModernizer.Tests.csproj -c Release --no-build --no-restore --blame-hang --blame-hang-timeout 10m --blame-hang-dump-type none --collect:"Code Coverage;Format=cobertura" --results-directory artifacts/coverage
 
       # Nur Produktcode (src/, ohne erzeugten Code, jede Zeile einmal). Vorerst reine Anzeige;
       # eine Grenze folgt erst nach echten CI-Messungen (Wartbarkeitsplan AP04).
@@ -60,6 +63,8 @@ jobs:
 
   python:
     runs-on: windows-latest
+    # Heutige Laufzeit rund 7 Minuten (Torch-Installation inklusive); 25 Minuten als Puffer.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -109,3 +114,15 @@ jobs:
           python -m venv .venv-training
           .venv-training/Scripts/python -m pip install -r training/scripts/tests/requirements-test.txt
           .venv-training/Scripts/python -m pytest training/scripts/tests -q -p no:cacheprovider
+
+      # Werkzeug-Tests (Deepscan 2026-10-02, T1): die Pruefserver schreiben Pruefurteile,
+      # ihre Host-/Pfad-Pruefungen (test_review_server_security.py) muessen in der CI laufen.
+      # Gleiche frische Umgebung; die vier Ordner decken alle 16 Testdateien unter tools/ ab.
+      - name: Werkzeug-Tests (tools/)
+        shell: bash
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          .venv-training/Scripts/python -m pytest tools/EvalVisibilityReview tools/VideoLabelTool tools/GroundTruthPipeScaleProbe tools/skill-linter -q -p no:cacheprovider
