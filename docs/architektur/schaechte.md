@@ -52,6 +52,12 @@ Nachtrag Review PR #80 (03.10.2026):
   Objektakte (Stammfelder), Uebersichtskennzahlen und die Funktionsauswahl (`SchachtNormoptionen`)
   lesen jetzt ueber `SchachtFeldnamen.Wert`. Schreiber holen ihr Ziel weiter ueber `Feld`;
   WebGIS-Leser sind bewusst noch nicht umgestellt (nur mit Pascal am PC).
+- **Planer fuer Schreiber (Planer-Paket nach PR #81, 03.10.2026).** GeoShop-Abgleich
+  (`GeoShopZiel.Fuer(SchachtRecord)`), «Leere Felder» aus QGIS (`LeereFelderPlanBuilder.BaueFuerSchaechte`)
+  und Kataster-Kennung (`KatasterKennungPlanBuilder.BaueFuerSchaechte`) lesen den Ist-Wert ueber
+  `SchachtFeldnamen.Wert` und planen kein Fuellen/Aendern, wenn irgendeine Schreibweise einen Handwert
+  traegt (`HatHandwert`, auch bewusst leer). Sie schlagen damit nichts mehr vor, was der Schreibweg
+  ablehnt. Die Kataster-Kennung meldet einen solchen Fall als «Abweichend». Das Schreibziel bleibt `Feld`.
 
 ## Der PDF-Textleser wird geprueft gewaehlt (19.09.2026)
 
