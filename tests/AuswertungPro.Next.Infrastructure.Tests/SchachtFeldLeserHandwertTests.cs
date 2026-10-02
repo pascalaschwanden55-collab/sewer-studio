@@ -39,4 +39,22 @@ public sealed class SchachtFeldLeserHandwertTests
 
         Assert.DoesNotContain(ergebnis.Punkte, p => p.Meldung.Contains("Unsinn", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void Xtf_Zusatzangaben_lesen_den_bewusst_leeren_Handwert()
+    {
+        var record = Altbestand(FieldKeys.RecommendedRehabilitationMeasures, "Empfohlene Sanierungsmassnahmen", "Ersatz");
+
+        Assert.Equal("", XtfZusatzangaben.SchachtfeldWert(record, FieldKeys.RecommendedRehabilitationMeasures));
+    }
+
+    [Fact]
+    public void Xtf_Zusatzangaben_lesen_ohne_Handwert_weiter_den_Ausweichnamen()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue(FieldKeys.RecommendedRehabilitationMeasures, "", FieldSource.Pdf, userEdited: false);
+        record.SetFieldValue("Massnahmen", "Ersatz", FieldSource.Pdf, userEdited: false);
+
+        Assert.Equal("Ersatz", XtfZusatzangaben.SchachtfeldWert(record, FieldKeys.RecommendedRehabilitationMeasures));
+    }
 }
