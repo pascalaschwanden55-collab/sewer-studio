@@ -182,7 +182,7 @@ internal static class ParsedShaftDistributionController
                 }
                 catch
                 {
-                    // Best-effort cleanup.
+                    // Die korrigierte Temp-PDF bleibt liegen, wenn sie gesperrt ist; die Original-PDF wurde schon abgelegt.
                 }
             }
         }

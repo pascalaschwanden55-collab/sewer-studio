@@ -9,7 +9,8 @@ public enum SchattenStatus
     OhneCodierung, // keine Findings und kein Primaere_Schaeden-Text -> nichts zu rechnen
     NurRegeln,     // Regelteil gerechnet, KI (noch) nicht gelaufen
     MitKi,         // Regelteil + KI-Empfehlung
-    KiFallback     // KI versucht, aber Fallback/Fehler -> Regelwerte gelten
+    KiFallback,    // KI versucht, aber Fallback/Fehler -> Regelwerte gelten
+    Fehler         // Regelteil abgestuerzt (Text in Fehler) -> kein Ergebnis, gilt immer als veraltet
 }
 
 /// <summary>
@@ -46,6 +47,9 @@ public sealed record SchattenHaltungErgebnis
     public IReadOnlyList<string> RisikoFlags { get; init; } = Array.Empty<string>();
     public bool IsFallback { get; init; }
     public string? KiFehler { get; init; }
+
+    /// <summary>Fehlertext, wenn der Regelteil (Bewertung/Massnahmen) abgestuerzt ist; sonst null.</summary>
+    public string? Fehler { get; init; }
 }
 
 /// <summary>Persistenzform (eigene Datei, Vorbild ProjectCostStore).</summary>

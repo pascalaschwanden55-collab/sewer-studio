@@ -325,7 +325,7 @@ public sealed class KinsImportService : IKinsImportService
                 if (hasDb3 && hasMdb && hasFdb && hasDatenTxt && hasKiDvDataTxt) break;
             }
         }
-        catch { /* ignore access errors */ }
+        catch { /* Unlesbarer Ordner: es gelten die bis dahin gefundenen Dateien, fehlende Marker bleiben false */ }
         return (hasDb3, hasMdb, hasFdb, hasDatenTxt, hasKiDvDataTxt);
     }
 

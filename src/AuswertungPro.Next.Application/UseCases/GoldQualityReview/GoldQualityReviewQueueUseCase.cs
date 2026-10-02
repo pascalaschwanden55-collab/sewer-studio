@@ -420,7 +420,7 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
         string expectedImageSha256,
         DateTimeOffset? expectedConfirmedAtUtc)
     {
-        var sourceSuggestion = BuildSourceSuggestion(sample);
+        var sourceSuggestion = WorkbenchSourceSuggestionFactory.Von(sample);
         var existingSegmentation = BuildExistingSegmentation(sample, dimensions);
         return new WorkbenchItem(
             sample.FramePath,
@@ -518,29 +518,6 @@ public sealed class GoldQualityReviewQueueUseCase : IGoldQualityReviewQueueUseCa
             areaPixels,
             sample.SamMaskConfidence,
             sample.SamMaskLabel);
-    }
-
-    private static WorkbenchSourceSuggestion? BuildSourceSuggestion(TrainingSample sample)
-    {
-        if (!string.Equals(sample.SourceType, SourceTypeNames.PdfPhoto, StringComparison.OrdinalIgnoreCase)
-            || !PdfGoldProvenancePolicy.TryParse(sample.Notes, out var provenance)
-            || string.IsNullOrWhiteSpace(sample.SourceReferenceCode)
-            || string.IsNullOrWhiteSpace(sample.SourceReferenceDescription))
-        {
-            return null;
-        }
-
-        return new WorkbenchSourceSuggestion(
-            sample.SourceReferenceCode,
-            sample.SourceReferenceDescription,
-            provenance.SourceDocumentName,
-            provenance.SourceDocumentSha256,
-            provenance.PageNumber,
-            provenance.PhotoId,
-            provenance.MatchKind)
-        {
-            InspectionDate = sample.InspectionDate,
-        };
     }
 
     private static bool IsCompleteGoldForFrame(

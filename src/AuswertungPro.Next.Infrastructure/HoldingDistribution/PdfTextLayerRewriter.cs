@@ -301,7 +301,7 @@ public sealed class PdfTextLayerRewriteService : IPdfTextLayerRewriter
         }
         catch
         {
-            // Best-effort cleanup.
+            // Eine gesperrte Temp-Datei bleibt liegen; der Aufrufer hat sein Ergebnis bereits.
         }
     }
 }

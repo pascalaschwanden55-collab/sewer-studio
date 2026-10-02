@@ -251,11 +251,7 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     /// </summary>
     public void StelleFeldzustandWiederHer(string fieldName, string? value, FieldMetadata? meta)
     {
-        VirtuelleSpalte.WeiseAb(fieldName, nameof(fieldName));
-        if (value is null) Fields.Remove(fieldName);
-        else Fields[fieldName] = value;
-        if (meta is null) FieldMeta.Remove(fieldName);
-        else FieldMeta[fieldName] = FieldMetadataKopie.Von(meta);
+        FeldzustandWiederherstellung.Anwende(Fields, FieldMeta, fieldName, value, meta);
         ModifiedAtUtc = DateTime.UtcNow;
         PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Fields)));
         PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs($"Fields[{fieldName}]"));

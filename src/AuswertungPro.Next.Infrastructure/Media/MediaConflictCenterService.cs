@@ -393,7 +393,7 @@ public sealed class MediaConflictCenterService
             }
             catch
             {
-                // Non-fatal.
+                // Die alte Info-Datei bleibt liegen, wenn sie gesperrt oder ausserhalb des Projekts ist; das Video ist schon verknuepft.
             }
 
             Learn(project, conflict, selectedVideoPath);
@@ -904,7 +904,7 @@ public sealed class MediaConflictCenterService
         }
         catch
         {
-            // Non-fatal.
+            // Ordner oder Datei nicht pruefbar: gilt als nicht vorhanden (Rueckgabe null), nie als gleich.
         }
 
         return null;
