@@ -170,6 +170,13 @@ zurueckgedreht werden:
   (`.github/scripts/check-dotnet-vulnerable.ps1`, wertet JSON aus — die Textmeldung ist
   uebersetzt und ein englischer Textvergleich fand nie etwas), Sperrdatei-Audit,
   Abdeckungsgrenze und auf Commit-Hashes gepinnte Actions.
+  Seit 02.10.2026 (Deepscan T1/T3): `timeout-minutes` je Job (dotnet 45, python 25),
+  `--blame-hang-timeout 10m` bei allen vier `dotnet test`-Schritten (Zeitgrenze je Test;
+  die WPF-Kindprozesse haben eigene 60-90-s-Grenzen) und der Schritt «Werkzeug-Tests
+  (tools/)»: alle 16 Python-Testdateien unter `tools/` (EvalVisibilityReview, VideoLabelTool,
+  GroundTruthPipeScaleProbe, skill-linter) laufen in der frischen Trainings-Umgebung
+  (`requirements-test.txt` genuegt, keine Skip-Regeln). Entfernt man die Host-Pruefung in
+  `review_server_security.py`, wird `test_review_server_security.py` rot (gemessen).
 - **Programm-Momentaufnahme:** Ein unlesbarer Ordner ist kein stiller Uebersprung mehr.
   `ProgramSnapshotFileCatalog.IsRequiredDirectory` (src, tests, tools, sidecar, .git)
   laesst die Sicherung fehlschlagen; alle anderen erscheinen in Ergebnis, Manifest und
