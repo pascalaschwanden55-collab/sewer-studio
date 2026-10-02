@@ -228,7 +228,7 @@ public partial class SanierungsmassnahmenWindow : Window
         }
         catch
         {
-            // Swallow layout exceptions
+            // Das Springen zum Block ist nur eine Bequemlichkeit; scheitert das Layout, bleibt die Ansicht an ihrer Stelle.
         }
     }
 

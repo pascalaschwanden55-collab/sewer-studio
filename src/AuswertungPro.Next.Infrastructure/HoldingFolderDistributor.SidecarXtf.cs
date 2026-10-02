@@ -333,7 +333,7 @@ public static partial class HoldingFolderDistributor
             }
             catch
             {
-                // Best effort only.
+                // Ein nicht lesbarer CD-Ordner liefert keine CDIndex-Zuordnung; die uebrigen Ordner werden weiter gelesen.
             }
         }
 
@@ -345,7 +345,7 @@ public static partial class HoldingFolderDistributor
             }
             catch
             {
-                // Best effort only.
+                // Eine defekte CDIndex.txt liefert keine Zuordnung; die uebrigen Dateien werden weiter gelesen.
             }
         }
 

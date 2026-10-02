@@ -179,7 +179,7 @@ public static class PdfChunking
                     return NormalizeMarkerId(first);
             }
         }
-        catch { /* ignore */ }
+        catch { /* Parser scheitert am Textabschnitt: Haltungsname fehlt, es folgen die Marker-Regexe darunter */ }
 
         foreach (var rx in MarkerRegexes)
         {

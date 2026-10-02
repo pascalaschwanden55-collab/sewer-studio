@@ -260,7 +260,7 @@ public sealed class HoldingRenameFileService : IHoldingRenameService
                         if (!string.IsNullOrWhiteSpace(found))
                             return found;
                     }
-                    catch { /* ignore search errors */ }
+                    catch { /* Wurzelordner nicht lesbar: kein Treffer dort, die uebrigen Wurzeln und Aliase werden weiter gesucht */ }
                 }
             }
         }
