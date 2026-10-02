@@ -40,7 +40,11 @@ public sealed class IbakExportImportService : IIbakImportService
         _protocolService = protocolService ?? new ProtocolService();
     }
 
+    // R1 (02.10.2026): Ordner, die die Dateisuche ausliess, stehen im Ergebnis und zaehlen als Fehler.
     public Result<ImportStats> ImportIbakExport(string exportRoot, Project project, ImportRunContext? ctx = null)
+        => UebersprungeneOrdnerImport.Ergaenze(ImportIbakExportOhneOrdnerpruefung(exportRoot, project, ctx), exportRoot);
+
+    private Result<ImportStats> ImportIbakExportOhneOrdnerpruefung(string exportRoot, Project project, ImportRunContext? ctx)
     {
         if (string.IsNullOrWhiteSpace(exportRoot) || !Directory.Exists(exportRoot))
             return Result<ImportStats>.Fail("IBAK_ROOT_MISSING", "IBAK Export-Ordner nicht gefunden.");

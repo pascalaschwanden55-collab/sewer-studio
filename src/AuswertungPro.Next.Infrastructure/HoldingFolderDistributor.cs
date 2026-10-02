@@ -45,14 +45,13 @@ public static partial class HoldingFolderDistributor
         if (!Directory.Exists(pdfSourceFolder))
             return new[] { new DistributionResult(false, $"PDF folder not found: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        var pdfFiles = Common.SafeFileEnumeration.EnumerateFilesSafe(pdfSourceFolder, "*.pdf", recursive: true)
-            .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var uebersprungen = new List<string>(); // R1: uebersprungene Quellordner werden Fehlerergebnisse.
+        var pdfFiles = HoldingDistribution.UebersprungeneQuellordner.FindePdfs(pdfSourceFolder, uebersprungen);
 
         if (pdfFiles.Count == 0)
-            return new[] { new DistributionResult(false, $"No PDF files found (recursive) in: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
+            return HoldingDistribution.UebersprungeneQuellordner.Ergaenze(new[] { new DistributionResult(false, $"No PDF files found (recursive) in: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) }, uebersprungen);
 
-        return DistributeCore(
+        return HoldingDistribution.UebersprungeneQuellordner.Ergaenze(DistributeCore(
             pdfFiles: pdfFiles,
             videoSourceFolder: videoSourceFolder,
             destGemeindeFolder: destGemeindeFolder,
@@ -64,7 +63,7 @@ public static partial class HoldingFolderDistributor
             progress: progress,
             xtfSourceFolder: xtfSourceFolder ?? pdfSourceFolder,
             directoryConfig: directoryConfig,
-            variant: variant);
+            variant: variant), uebersprungen, recursiveVideoSearch ? videoSourceFolder : null);
     }
 
     public static IReadOnlyList<DistributionResult> DistributeFiles(
@@ -95,7 +94,7 @@ public static partial class HoldingFolderDistributor
             if (string.IsNullOrWhiteSpace(derivedXtfFolder) && validPdfFiles.Count > 0)
                 derivedXtfFolder = Path.GetDirectoryName(validPdfFiles[0]);
 
-            return DistributeCore(
+            return HoldingDistribution.UebersprungeneQuellordner.Ergaenze(DistributeCore(
                 pdfFiles: validPdfFiles,
                 videoSourceFolder: videoSourceFolder,
                 destGemeindeFolder: destGemeindeFolder,
@@ -107,7 +106,7 @@ public static partial class HoldingFolderDistributor
                 progress: progress,
                 xtfSourceFolder: derivedXtfFolder,
                 directoryConfig: directoryConfig,
-                variant: variant);
+                variant: variant), [], recursiveVideoSearch ? videoSourceFolder : null);
         });
     }
 
@@ -137,18 +136,18 @@ public static partial class HoldingFolderDistributor
             };
         }
 
-        var txtFiles = Common.SafeFileEnumeration.EnumerateFilesSafe(txtSourceFolder, "kiDVDaten*.txt", recursive: true)
-            .ToList();
+        var uebersprungen = new List<string>(); // R1: uebersprungene Quellordner werden Fehlerergebnisse.
+        var txtFiles = Common.SafeFileEnumeration.EnumerateFilesSafe(txtSourceFolder, "kiDVDaten*.txt", true, uebersprungen).ToList();
 
         if (txtFiles.Count == 0)
         {
-            return new[]
+            return HoldingDistribution.UebersprungeneQuellordner.Ergaenze(new[]
             {
                 new DistributionResult(false, $"No TXT files found (recursive) in: {txtSourceFolder}", txtSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked)
-            };
+            }, uebersprungen);
         }
 
-        return DistributeTxtCore(
+        return HoldingDistribution.UebersprungeneQuellordner.Ergaenze(DistributeTxtCore(
             txtFiles: txtFiles,
             videoSourceFolder: videoSourceFolder,
             destGemeindeFolder: destGemeindeFolder,
@@ -158,7 +157,7 @@ public static partial class HoldingFolderDistributor
             unmatchedFolderName: unmatchedFolderName,
             project: project,
             progress: progress,
-            directoryConfig: directoryConfig);
+            directoryConfig: directoryConfig), uebersprungen, recursiveVideoSearch ? videoSourceFolder : null);
     }
 
     public static IReadOnlyList<DistributionResult> DistributeTxtFiles(
@@ -195,7 +194,7 @@ public static partial class HoldingFolderDistributor
             };
         }
 
-        return DistributeTxtCore(
+        return HoldingDistribution.UebersprungeneQuellordner.Ergaenze(DistributeTxtCore(
             txtFiles: validTxtFiles,
             videoSourceFolder: videoSourceFolder,
             destGemeindeFolder: destGemeindeFolder,
@@ -205,7 +204,7 @@ public static partial class HoldingFolderDistributor
             unmatchedFolderName: unmatchedFolderName,
             project: project,
             progress: progress,
-            directoryConfig: directoryConfig);
+            directoryConfig: directoryConfig), [], recursiveVideoSearch ? videoSourceFolder : null);
     }
 
     private static IReadOnlyList<DistributionResult> DistributeTxtCore(
@@ -603,14 +602,13 @@ public static partial class HoldingFolderDistributor
         if (!Directory.Exists(pdfSourceFolder))
             return new[] { new DistributionResult(false, $"PDF folder not found: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        var pdfFiles = Common.SafeFileEnumeration.EnumerateFilesSafe(pdfSourceFolder, "*.pdf", recursive: true)
-            .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var uebersprungen = new List<string>(); // R1: uebersprungene Quellordner werden Fehlerergebnisse.
+        var pdfFiles = HoldingDistribution.UebersprungeneQuellordner.FindePdfs(pdfSourceFolder, uebersprungen);
 
         if (pdfFiles.Count == 0)
-            return new[] { new DistributionResult(false, $"No PDF files found (recursive) in: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
+            return HoldingDistribution.UebersprungeneQuellordner.Ergaenze(new[] { new DistributionResult(false, $"No PDF files found (recursive) in: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) }, uebersprungen);
 
-        return DistributeShaftCore(pdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, directoryConfig, variant);
+        return HoldingDistribution.UebersprungeneQuellordner.Ergaenze(DistributeShaftCore(pdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, directoryConfig, variant), uebersprungen);
     }
 
     public static IReadOnlyList<DistributionResult> DistributeShaftFiles(
@@ -749,14 +747,13 @@ public static partial class HoldingFolderDistributor
         if (!Directory.Exists(pdfSourceFolder))
             return new[] { new DistributionResult(false, $"PDF folder not found: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        var pdfFiles = Common.SafeFileEnumeration.EnumerateFilesSafe(pdfSourceFolder, "*.pdf", recursive: true)
-            .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var uebersprungen = new List<string>(); // R1: uebersprungene Quellordner werden Fehlerergebnisse.
+        var pdfFiles = HoldingDistribution.UebersprungeneQuellordner.FindePdfs(pdfSourceFolder, uebersprungen);
 
         if (pdfFiles.Count == 0)
-            return new[] { new DistributionResult(false, $"No PDF files found in: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
+            return HoldingDistribution.UebersprungeneQuellordner.Ergaenze(new[] { new DistributionResult(false, $"No PDF files found in: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) }, uebersprungen);
 
-        return DistributeDichtheitCore(pdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, cadastre, directoryConfig);
+        return HoldingDistribution.UebersprungeneQuellordner.Ergaenze(DistributeDichtheitCore(pdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, cadastre, directoryConfig), uebersprungen);
     }
 
     /// <summary>
