@@ -134,6 +134,32 @@ public sealed class SammelprotokollVerteilungTests
         Assert.Equal(Versorge("a_eins.pdf", "b_zwei.pdf"), Versorge("b_zwei.pdf", "a_eins.pdf"));
     }
 
+    // Entscheid Pascal 02.10.2026 (E3): Ein von Hand geleerter Protokollverweis bleibt leer; ein
+    // normal leerer wird verknuepft. Die Verteilung schreibt ueber SetFieldValue(userEdited: false),
+    // dessen Handwert-Schutz auch den leeren Handwert haelt.
+    [Fact]
+    public void Bewusst_leerer_Protokollverweis_bleibt_leer()
+    {
+        MitOrdnern((archiv, projektOrdner) =>
+        {
+            SchreibeProtokoll(archiv, "sammel.pdf", ("1000-2000", "02.07.2020"), ("3000-4000", "02.07.2020"));
+            var projekt = NeuesProjekt();
+            var bewusstLeer = projekt.CreateNewRecord();
+            bewusstLeer.SetFieldValue(FieldKeys.HoldingName, "1000-2000", FieldSource.Manual, userEdited: false);
+            bewusstLeer.SetFieldValue(FieldKeys.PdfPath, "", FieldSource.Manual, userEdited: true);
+            projekt.Data.Add(bewusstLeer);
+            var normalLeer = projekt.CreateNewRecord();
+            normalLeer.SetFieldValue(FieldKeys.HoldingName, "3000-4000", FieldSource.Manual, userEdited: false);
+            projekt.Data.Add(normalLeer);
+
+            Verteile(projekt, projektOrdner, archiv);
+
+            Assert.Equal("", bewusstLeer.GetFieldValue(FieldKeys.PdfPath));
+            Assert.True(bewusstLeer.FieldMeta[FieldKeys.PdfPath].UserEdited);
+            Assert.Contains("3000-4000", normalLeer.GetFieldValue(FieldKeys.PdfPath), StringComparison.Ordinal);
+        });
+    }
+
     // ---------------------------------------------------------------------
 
     private static KanalImportDistributor.Result Verteile(

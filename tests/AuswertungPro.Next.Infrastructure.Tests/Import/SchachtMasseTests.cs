@@ -95,6 +95,35 @@ public sealed class SchachtMasseTests
         Assert.Equal("800", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
     }
 
+    // Entscheid Pascal 02.10.2026 (E3): Ein bewusst leeres Mass (von Hand geleert) fuellt kein
+    // Import. Weil ein halbes Paar eine falsche Aussage ueber die Form waere, bleibt dann
+    // auch das zweite, normal leere Feld leer: beide oder keines.
+    [Fact]
+    public void Ein_bewusst_leeres_Mass_haelt_das_ganze_Paar_leer()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue(FieldKeys.ShaftDimension1Mm, "", FieldSource.Manual, userEdited: true);
+
+        var geschrieben = SchachtMasse.Schreibe(record, ("600", "600"), FieldSource.Pdf, userEdited: false, nurLeere: true);
+
+        Assert.False(geschrieben);
+        Assert.Equal("", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
+        Assert.True(record.IsUserEdited(FieldKeys.ShaftDimension1Mm));
+    }
+
+    [Fact]
+    public void Zwei_normal_leere_Masse_werden_gefuellt()
+    {
+        var record = new SchachtRecord();
+
+        var geschrieben = SchachtMasse.Schreibe(record, ("1100", "900"), FieldSource.Pdf, userEdited: false, nurLeere: true);
+
+        Assert.True(geschrieben);
+        Assert.Equal("1100", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.Equal("900", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
+    }
+
     [Fact]
     public void Das_alte_Textfeld_wandert_in_die_zwei_Felder_und_verschwindet()
     {
@@ -144,7 +173,6 @@ public sealed class SchachtMasseTests
         var record = new SchachtRecord();
         record.SetFieldValue("Dimension", "1100 x 900 mm", FieldSource.Pdf, userEdited: false);
         record.SetFieldValue(FieldKeys.ShaftDimension1Mm, "1100", FieldSource.Manual, userEdited: true);
-        record.SetFieldValue(FieldKeys.ShaftDimension2Mm, "", FieldSource.Manual, userEdited: true);
 
         var geaendert = SchachtMasse.UebernimmAlteTextfelder(record);
 
@@ -155,6 +183,24 @@ public sealed class SchachtMasseTests
         Assert.Equal(FieldSource.Pdf, record.FieldMeta[FieldKeys.ShaftDimension2Mm].Source);
         Assert.False(record.FieldMeta[FieldKeys.ShaftDimension2Mm].UserEdited);
         Assert.False(record.Fields.ContainsKey("Dimension"));
+    }
+
+    // Entscheid Pascal 02.10.2026 (E3): Ein bewusst leeres Mass fuellt auch der importierte Alttext
+    // nicht. Der Alttext bleibt dann sichtbar stehen, bis jemand ihn deutet - wie bei einem Widerspruch.
+    [Fact]
+    public void Ein_bewusst_leeres_zweites_Zahlenfeld_bleibt_leer_und_der_Alttext_sichtbar()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Dimension", "1100 x 900 mm", FieldSource.Pdf, userEdited: false);
+        record.SetFieldValue(FieldKeys.ShaftDimension1Mm, "1100", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue(FieldKeys.ShaftDimension2Mm, "", FieldSource.Manual, userEdited: true);
+
+        var geaendert = SchachtMasse.UebernimmAlteTextfelder(record);
+
+        Assert.False(geaendert);
+        Assert.Equal("", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
+        Assert.True(record.FieldMeta[FieldKeys.ShaftDimension2Mm].UserEdited);
+        Assert.Equal("1100 x 900 mm", record.GetFieldValue("Dimension"));
     }
 
     [Fact]
