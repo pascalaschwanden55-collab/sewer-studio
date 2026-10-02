@@ -43,7 +43,12 @@ public static class CodingMeterResolver
            && cachedOsdTimestampSeconds.HasValue
            && Math.Abs(frameTimestampSeconds.Value - cachedOsdTimestampSeconds.Value) > OsdSeekResetGapSeconds;
 
-    private static double? ResolveRecentOsdMeter(
+    /// <summary>
+    /// Der gemerkte OSD-Meter, wenn er plausibel und hoechstens <see cref="RecentOsdMeterMaxAgeSeconds"/>
+    /// alt ist, sonst null. Ohne beide Zeitstempel ist das Alter unbekannt; dann gilt er nicht.
+    /// Die eine Stelle dieser Regel — Anzeige und Handeintrag (Entscheid Pascal 02.10.2026, E2).
+    /// </summary>
+    public static double? ResolveRecentOsdMeter(
         double? frameTimestampSeconds,
         double? cachedOsdMeter,
         double? cachedOsdTimestampSeconds)

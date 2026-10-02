@@ -104,6 +104,15 @@ Bericht `docs/audits/2026-09-23-code-grafik-plan/AUDIT-UND-PLAN.md`. Regeln, die
 - `CodingMeterResolution.Source` unterscheidet SameFrameOsd/RecentOsd/
   VideoEstimate/SessionFallback. RecentOsd bleibt OSD; Folgebelegersetzung
   erfordert separat SameFrameMeterEvidence. Kein erneutes Lesen nach Inferenz.
+- **Gemerkter OSD-Meter nur bis 1,5 s alt, auch beim Handeintrag** (Entscheid Pascal
+  02.10.2026, E2). `CodingCurrentMeterResolver.ResolveManualEntry` nimmt den gemerkten Wert
+  nur über `CodingMeterResolver.ResolveRecentOsdMeter` (Konstante
+  `RecentOsdMeterMaxAgeSeconds`, eine Stelle mit der Anzeige); Bildzeit ist die Playerzeit.
+  Ohne Zeitstempel gilt der gemerkte Wert nicht. Reihenfolge: frische Lesung, gemerkter Wert
+  (frisch), Videoposition, Sitzungswert. Tests `CodingCurrentMeterResolverTests`
+  (10 s alt, ohne Zeitstempel, Grenze). Offen nach Codex: `PlayerWindow.Coding.Events.cs`
+  übergibt `_codingOsdMeterController.LastTimestampSeconds` noch nicht; bis dahin gilt beim
+  Handeintrag nie ein gemerkter Wert (frische Lesung, sonst Videoposition).
 - BCD behaelt seine Referenzposition und kennzeichnet Fotozeit, Bild-SHA und
   Herkunft getrennt in CodeMeta. Boundary-/Structural-Appender bewahren
   menschliche EventAdded-Aenderungen. Alte API-Einstiege bleiben kompatibel.
