@@ -66,11 +66,12 @@ public static class SchachtMasse
         if (nurLeere)
         {
             // Beide oder keines: Ein halbes Paar waere eine falsche Aussage ueber die Form.
-            // Ein bewusst leeres Mass zaehlt wie ein Handwert (Entscheid Pascal 02.10.2026, E3).
+            // Ein bewusst leeres Mass zaehlt wie ein Handwert (Entscheid Pascal 02.10.2026, E3),
+            // in jeder Schreibweise des Feldes (SchachtFeldnamen.HatHandwert).
             if (!string.IsNullOrWhiteSpace(record.GetFieldValue(eins))
                 || !string.IsNullOrWhiteSpace(record.GetFieldValue(zwei))
-                || record.IstBewusstLeer(eins)
-                || record.IstBewusstLeer(zwei))
+                || SchachtFeldnamen.HatHandwert(record, eins)
+                || SchachtFeldnamen.HatHandwert(record, zwei))
             {
                 return false;
             }

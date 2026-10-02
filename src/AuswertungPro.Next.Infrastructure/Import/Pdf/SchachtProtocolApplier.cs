@@ -231,6 +231,9 @@ internal static class SchachtProtocolApplier
 
     private static void ClearSchachtField(SchachtRecord record, string logicalField)
     {
+        if (HatHandwert(record, logicalField))
+            return;
+
         foreach (var candidate in GetSchachtFieldAliases(logicalField))
         {
             // Nur wirklich vorhandene Spalten anfassen. Sonst entstuenden aus den
@@ -252,9 +255,18 @@ internal static class SchachtProtocolApplier
         if (fillMissingOnly && HasNonEmptySchachtField(record, logicalField))
             return;
 
+        // Ein Handwert (auch bewusst leer) in irgendeiner Schreibweise: keine Schreibweise
+        // bekommt den Importwert - auch die ungeschuetzten nicht (Entscheid E3, 02.10.2026).
+        if (HatHandwert(record, logicalField))
+            return;
+
         foreach (var candidate in GetSchachtFieldAliases(logicalField))
             record.SetFieldValue(candidate, value, FieldSource.Pdf, userEdited: false);
     }
+
+    // Die Alias-Liste kennt auch Mojibake-Schreibweisen, die die Faltung nicht zusammenfuehrt.
+    private static bool HatHandwert(SchachtRecord record, string logicalField)
+        => GetSchachtFieldAliases(logicalField).Any(alias => SchachtFeldnamen.HatHandwert(record, alias));
 
     private static bool HasNonEmptySchachtField(SchachtRecord record, string logicalField)
         => GetSchachtFieldAliases(logicalField)

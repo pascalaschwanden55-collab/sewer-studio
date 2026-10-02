@@ -141,8 +141,9 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
         // Schutz wie bei HaltungRecord: ein von Hand gesetzter Wert wird nie
         // ueberschrieben - auch nicht durch einen versehentlich wiederholten Import.
         // Wer bewusst eine Handeingabe setzt oder ersetzt (Umbenennen, Massnahme
-        // leeren), ruft die Ueberladung mit userEdited: true.
-        if (IsUserEdited(fieldName))
+        // leeren), ruft die Ueberladung mit userEdited: true. Seit 02.10.2026 gilt das fuer
+        // jede Schreibweise des Feldes (SchachtFeldnamen.HatHandwert, Entscheid E3).
+        if (SchachtFeldnamen.HatHandwert(this, fieldName))
             return FeldSchreibErgebnis.HandwertGeschuetzt;
 
         if (KatasterFeldschutz.Pruefe(fieldName, FieldMeta.GetValueOrDefault(fieldName), GetFieldValue(fieldName), value, FieldSource.Manual, false))
@@ -170,7 +171,9 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     public FeldSchreibErgebnis SetFieldValue(string fieldName, string? value, FieldSource source, bool userEdited)
     {
         value = AlsWebGisBegriff(fieldName, value);
-        if (!userEdited && IsUserEdited(fieldName))
+        // Ein Handwert (auch bewusst leer) in irgendeiner Schreibweise sperrt die ganze Gruppe
+        // fuer automatische Quellen (SchachtFeldnamen.HatHandwert, Entscheid E3, 02.10.2026).
+        if (!userEdited && SchachtFeldnamen.HatHandwert(this, fieldName))
             return FeldSchreibErgebnis.HandwertGeschuetzt;
 
         if (KatasterFeldschutz.Pruefe(fieldName, FieldMeta.GetValueOrDefault(fieldName), GetFieldValue(fieldName), value, source, userEdited))
@@ -199,8 +202,9 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
         if (!string.IsNullOrWhiteSpace(GetFieldValue(fieldName)))
             return false;
 
-        // Handwert, auch bewusst leer, hat Vorrang (Entscheid Pascal 02.10.2026, E3).
-        if (IstBewusstLeer(fieldName))
+        // Handwert, auch bewusst leer, hat Vorrang (Entscheid Pascal 02.10.2026, E3) - in jeder
+        // Schreibweise des Feldes, nicht nur unter diesem Namen.
+        if (SchachtFeldnamen.HatHandwert(this, fieldName))
             return false;
 
         if (string.IsNullOrWhiteSpace(value))

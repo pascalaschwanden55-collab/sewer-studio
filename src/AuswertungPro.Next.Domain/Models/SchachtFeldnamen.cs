@@ -122,6 +122,37 @@ public static class SchachtFeldnamen
     }
 
     /// <summary>
+    /// Traegt irgendeine Schreibweise dieses Feldes einen Handwert (<see cref="FieldMetadata.UserEdited"/>,
+    /// auch bewusst leer)? Dann darf keine automatische Quelle in irgendeine Schreibweise derselben
+    /// Gruppe schreiben — die Projektregel «Handwerte, auch bewusst leer, ueberschreibt kein Import»
+    /// (Entscheid E3, 02.10.2026) gilt fuer das Feld, nicht nur fuer den einen Namen. Vorher fuellte
+    /// ein Import die ungeschuetzten Schreibweisen (Nachtrag Review PR #78).
+    ///
+    /// Die eine Stelle fuer diese Regel; der Schreibweg des Datensatzes
+    /// (<see cref="SchachtRecord.SetFieldValue(string, string?, FieldSource, bool)"/>,
+    /// <see cref="SchachtRecord.FuelleLeeresFeld"/>) fragt hier.
+    /// </summary>
+    public static bool HatHandwert(SchachtRecord record, string gemeint)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+
+        string? gesucht = null;
+        foreach (var (name, meta) in record.FieldMeta)
+        {
+            if (meta is not { UserEdited: true })
+                continue;
+            if (string.Equals(name, gemeint, StringComparison.Ordinal))
+                return true;
+
+            gesucht ??= Falte(gemeint);
+            if (gesucht.Length > 0 && string.Equals(Falte(name), gesucht, StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Alle im Datensatz vorhandenen Feldnamen, deren gefaltete Form <paramref name="gesucht"/>
     /// entspricht. Gemeinsame Suchlogik fuer <see cref="Feld"/> und <see cref="Schreibweisen"/>.
     /// </summary>

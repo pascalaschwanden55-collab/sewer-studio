@@ -9,11 +9,29 @@
 
 ## Inhalt
 
+- Handwert sperrt alle Schreibweisen eines Schachtfelds (02.10.2026)
 - Der PDF-Textleser wird geprueft gewaehlt (19.09.2026)
 - SchachtPro-QR aus Bildern (19.09.2026)
 - SchachtPro-Archive bis Format 3 / Schema 23 (19.09.2026)
 - Schachtgrafik Stammkarte (19.09.2026)
 - Ausdrücklich ausgewählte Schacht-PDF (14.09.2026)
+
+## Handwert sperrt alle Schreibweisen eines Schachtfelds (02.10.2026)
+
+Projektregel «Handwerte, auch bewusst leer, ueberschreibt kein Import» und Entscheid E3:
+Traegt EINE Schreibweise eines Schachtfelds (zum Beispiel «Ausführung Datum/Jahr» neben
+«Ausfuehrung Datum/Jahr», «Eigentümer» neben «Eigentuemer») einen Handwert (`UserEdited`,
+auch bewusst leer), schreibt keine automatische Quelle in irgendeine Schreibweise dieser Gruppe.
+Vorher fuellten PDF-Import, SchachtPro, XTF, KINS und Kataster die ungeschuetzten
+Schreibweisen, und der Ergaenzungsmodus sah «bewusst leer» nur unter genau einem Namen.
+Die Regel steht an EINER Stelle, `SchachtFeldnamen.HatHandwert`; der Schreibweg des Datensatzes
+(`SchachtRecord.SetFieldValue` ohne Handmarke, `FuelleLeeresFeld`) fragt dort, deshalb gilt sie
+fuer jeden Import ohne eigene Kopie. Der PDF-Import (`SchachtProtocolApplier`) prueft zusaetzlich
+seine Alias-Liste, weil sie Mojibake-Schreibweisen enthaelt, die die Faltung nicht zusammenfuehrt;
+`SchachtMasse` laesst im Ergaenzungsmodus kein halbes Paar entstehen. Gemeldet wird wie beim
+bisherigen Handwertschutz (`HandwertGeschuetzt`, SchachtPro-Bericht «von Hand geändert»), keine
+neue Meldungsart. Waechter: `SchachtHandwertGruppeTests`, SchachtPro-Fall in
+`SchachtProImportServiceTests`.
 
 ## Der PDF-Textleser wird geprueft gewaehlt (19.09.2026)
 

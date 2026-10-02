@@ -71,11 +71,13 @@ public sealed class SchachtFeldnamenTests
     [Fact]
     public void Handwert_gewinnt_gegen_spaeteren_Import_in_anderer_Schreibweise()
     {
-        // Wie SchachtProtocolApplier: Der Import schreibt alle Schreibweisen; die handbearbeitete
-        // bleibt geschuetzt, die andere bekommt den Importwert und einen neueren Zeitstempel.
+        // Bestand aus der Zeit vor der Gruppensperre (SchachtFeldnamen.HatHandwert): Der Import
+        // schrieb alle Schreibweisen; die handbearbeitete blieb geschuetzt, die andere bekam den
+        // Importwert mit neuerem Zeitstempel. Heute sperrt der Schreibweg das, deshalb wird der
+        // Bestand hier in umgekehrter Reihenfolge angelegt und danach gestempelt.
         var record = new SchachtRecord();
-        Schreibe(record, A, "Handkorrektur", hand: true, minute: 1);
         Schreibe(record, B, "Importwert", hand: false, minute: 2);
+        Schreibe(record, A, "Handkorrektur", hand: true, minute: 1);
 
         Assert.Equal("Handkorrektur", Aktuell(record));
     }
@@ -84,8 +86,8 @@ public sealed class SchachtFeldnamenTests
     public void Bewusst_leerer_Handwert_gewinnt_gegen_spaeteren_Import()
     {
         var record = new SchachtRecord();
-        Schreibe(record, A, "", hand: true, minute: 1);
         Schreibe(record, B, "Importwert", hand: false, minute: 2);
+        Schreibe(record, A, "", hand: true, minute: 1);
 
         Assert.Equal("", Aktuell(record));
     }
