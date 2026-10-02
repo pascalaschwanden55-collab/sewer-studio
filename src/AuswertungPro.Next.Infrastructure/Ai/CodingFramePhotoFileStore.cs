@@ -27,9 +27,19 @@ public sealed class CodingFramePhotoFileStore : ICodingFramePhotoStore
             if (frameBytes is null || frameBytes.Length == 0)
                 return null;
 
+            var root = ResolvePhotoRoot(videoPath, photoRoot);
+            if (root is null)
+            {
+                // Deepscan 02.10.2026, R3: Frueher still nach %TEMP%\SewerStudio\coding_ai_frames,
+                // und der Pfad landete im Befund. Befundfotos gehoeren nie in den Temp-Ordner.
+                BestEffort.ReportWarning(
+                    "[CodingAiFramePhoto] Kein Video und kein Fotoordner bekannt: Frame nicht gespeichert, "
+                    + "weil Befundfotos nie in den Temp-Ordner gehoeren.");
+                return null;
+            }
+
             try
             {
-                var root = ResolvePhotoRoot(videoPath, photoRoot);
                 Directory.CreateDirectory(root);
 
                 var path = EnsureUniquePath(Path.Combine(root, BuildFileName(entry)));
@@ -46,7 +56,8 @@ public sealed class CodingFramePhotoFileStore : ICodingFramePhotoStore
         }
     }
 
-    private static string ResolvePhotoRoot(string? videoPath, string? photoRoot)
+    /// <summary>Fotoordner neben dem Video; <c>null</c>, wenn weder Video noch Fotoordner bekannt sind.</summary>
+    private static string? ResolvePhotoRoot(string? videoPath, string? photoRoot)
     {
         if (!string.IsNullOrWhiteSpace(photoRoot))
             return photoRoot;
@@ -57,7 +68,7 @@ public sealed class CodingFramePhotoFileStore : ICodingFramePhotoStore
 
         return !string.IsNullOrWhiteSpace(videoDir)
             ? Path.Combine(videoDir, "Fotos")
-            : Path.Combine(Path.GetTempPath(), "SewerStudio", "coding_ai_frames");
+            : null;
     }
 
     private static string BuildFileName(ProtocolEntry entry)

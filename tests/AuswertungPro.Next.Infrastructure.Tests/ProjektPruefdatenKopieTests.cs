@@ -70,6 +70,31 @@ public sealed class ProjektPruefdatenKopieTests(ITestOutputHelper output)
         Assert.False(ProjektPruefdatenKopie.Gleich(kopie, p));
     }
 
+    /// <summary>Deepscan 02.10.2026, R3: Die Kopie traegt die Fotopfade, sonst sieht die UI keine Temp-Fotos.</summary>
+    [Fact]
+    public async Task Kopie_traegt_Fotopfade_fuer_die_Temp_Pruefung()
+    {
+        var p = new Project();
+        var h = new HaltungRecord { Protocol = new() { Current = new() } };
+        var e = new ProtocolEntry { Code = "BAB" };
+        e.FotoPaths.Add(@"C:\Sim\Temp\vsa_foto1.png");
+        h.Protocol.Current.Entries.Add(e);
+        p.Data.Add(h);
+
+        var kopie = await ProjektPruefdatenKopie.ErfasseAsync(p, () => Task.CompletedTask, default);
+        string[] temp = [@"C:\Sim\Temp"];
+        var live = ProjektPruefregeln.Pruefe(p, _ => null, default, temp);
+        var abbild = ProjektPruefregeln.Pruefe(kopie, _ => null, default, temp);
+
+        Assert.Contains(abbild.Punkte, x => x.Bereich == ProjektPruefbereich.Dateien && x.EintragId == e.EntryId);
+        Assert.Equal(live.Punkte.ToArray(), abbild.Punkte.ToArray());
+        Assert.True(ProjektPruefdatenKopie.Gleich(kopie, p));
+        e.FotoPaths[0] = @"D:\Projekt\Fotos\vsa_foto1.png";
+        Assert.False(ProjektPruefdatenKopie.Gleich(kopie, p));
+        kopie.Data[0].Protocol!.Current.Entries[0].FotoPaths.Clear();
+        Assert.Equal(@"D:\Projekt\Fotos\vsa_foto1.png", Assert.Single(e.FotoPaths));
+    }
+
     [Fact]
     public async Task Viele_Befunde_einer_Haltung_werden_in_kleinen_Abschnitten_erfasst()
     {

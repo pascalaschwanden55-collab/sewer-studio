@@ -3,7 +3,11 @@ using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.UI.Ai.Coding;
 
-public sealed record CodingSnapshotTarget(string PhotoDirectory, string FilePath);
+/// <param name="LiegtImTemp">
+/// Ohne Video zeigt das Ziel in den Temp-Ordner. Dorthin gehoeren nie Befundfotos;
+/// die Aufnahme lehnt ein solches Ziel ab (Deepscan 02.10.2026, R3).
+/// </param>
+public sealed record CodingSnapshotTarget(string PhotoDirectory, string FilePath, bool LiegtImTemp = false);
 
 public static class CodingSnapshotTargetPolicy
 {
@@ -12,9 +16,11 @@ public static class CodingSnapshotTargetPolicy
         string? videoPath,
         DateTimeOffset now)
     {
-        var videoDir = !string.IsNullOrEmpty(videoPath)
-            ? Path.GetDirectoryName(videoPath) ?? Path.GetTempPath()
-            : Path.GetTempPath();
+        var videoOrdner = !string.IsNullOrEmpty(videoPath)
+            ? Path.GetDirectoryName(videoPath)
+            : null;
+        var liegtImTemp = string.IsNullOrEmpty(videoOrdner);
+        var videoDir = liegtImTemp ? Path.GetTempPath() : videoOrdner!;
 
         var photoDirectory = Path.Combine(videoDir, "Fotos");
         var timestamp = entry.Zeit.HasValue
@@ -24,6 +30,7 @@ public static class CodingSnapshotTargetPolicy
 
         return new CodingSnapshotTarget(
             photoDirectory,
-            Path.Combine(photoDirectory, fileName));
+            Path.Combine(photoDirectory, fileName),
+            liegtImTemp);
     }
 }

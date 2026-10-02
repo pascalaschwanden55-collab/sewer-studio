@@ -204,7 +204,75 @@ public sealed class VsaCodeExplorerPhotoCaptureWorkflowTests
         Assert.Equal([DauerhaftesFoto], photoPaths);
         Assert.Equal([DauerhaftesFoto], originalPhotoPaths);
         Assert.Equal([(TempSnapshot, 0)], uebernommen);
+        Assert.False(result.NurVorlaeufig);
+        Assert.Equal("", result.Message);
     }
+
+    /// <summary>
+    /// Deepscan 02.10.2026, R3: Ohne bekanntes Video bleibt das Foto ehrlich im Temp-Ordner
+    /// (Regel 12.09.2026), aber nicht mehr still: Der Aufrufer bekommt einen Hinweis mit Grund.
+    /// </summary>
+    [Fact]
+    public async Task CaptureAsync_meldet_foto_ohne_video_als_nur_vorlaeufig_gespeichert()
+    {
+        var photoPaths = new List<string>();
+
+        var result = await VsaCodeExplorerPhotoCaptureWorkflow.CaptureAsync(
+            new VsaCodeExplorerPhotoCaptureRequest(
+                PhotoIndex: 0,
+                PhotoPaths: photoPaths,
+                LiveSnapshotProvider: () => TempSnapshot,
+                VideoPath: null,
+                CurrentVideoTime: null,
+                TimeText: null,
+                FileExists: path => path == TempSnapshot,
+                ResolveFfmpeg: () => throw new InvalidOperationException(),
+                ExtractFramePngAsync: (_, _, _, _) => throw new InvalidOperationException(),
+                CreateTempPhotoPath: _ => throw new InvalidOperationException(),
+                WriteAllBytesAsync: (_, _, _) => throw new InvalidOperationException(),
+                CancellationToken: CancellationToken.None,
+                PersistPhoto: (quelle, _) => quelle,
+                IstTempPfad: ImSimuliertenTemp));
+
+        Assert.Equal(VsaCodeExplorerPhotoCaptureOutcome.Captured, result.Outcome);
+        Assert.Equal([TempSnapshot], photoPaths);
+        Assert.True(result.NurVorlaeufig);
+        Assert.Equal("Foto nur vorläufig gespeichert", result.Title);
+        Assert.Contains("Kein Video geladen", result.Message);
+        Assert.Contains(TempSnapshot, result.Message);
+    }
+
+    [Fact]
+    public async Task CaptureAsync_meldet_gescheitertes_verschieben_neben_das_video()
+    {
+        var photoPaths = new List<string>();
+
+        var result = await VsaCodeExplorerPhotoCaptureWorkflow.CaptureAsync(
+            new VsaCodeExplorerPhotoCaptureRequest(
+                PhotoIndex: 0,
+                PhotoPaths: photoPaths,
+                LiveSnapshotProvider: () => TempSnapshot,
+                VideoPath: VideoPfad,
+                CurrentVideoTime: null,
+                TimeText: null,
+                FileExists: path => path == TempSnapshot || path == VideoPfad,
+                ResolveFfmpeg: () => throw new InvalidOperationException(),
+                ExtractFramePngAsync: (_, _, _, _) => throw new InvalidOperationException(),
+                CreateTempPhotoPath: _ => throw new InvalidOperationException(),
+                WriteAllBytesAsync: (_, _, _) => throw new InvalidOperationException(),
+                CancellationToken: CancellationToken.None,
+                // VsaFotoAblage gibt bei einem Fehler die Quelle zurueck.
+                PersistPhoto: (quelle, _) => quelle,
+                IstTempPfad: ImSimuliertenTemp));
+
+        Assert.Equal([TempSnapshot], photoPaths);
+        Assert.True(result.NurVorlaeufig);
+        Assert.Contains("nicht in den Ordner «Fotos» neben dem Video", result.Message);
+        Assert.Contains(TempSnapshot, result.Message);
+    }
+
+    private static bool ImSimuliertenTemp(string pfad)
+        => pfad.StartsWith(@"C:\Temp\", StringComparison.OrdinalIgnoreCase);
 
     [Fact]
     public async Task CaptureAsync_uebernimmt_auch_das_aus_dem_video_geschnittene_bild()

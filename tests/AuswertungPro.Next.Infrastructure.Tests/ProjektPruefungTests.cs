@@ -131,6 +131,66 @@ public sealed class ProjektPruefungTests
         Assert.Contains("Ohne gültigen Projektordner", Assert.Single(r.Punkte).Meldung);
     }
 
+    // Deepscan 02.10.2026, R3: Ein Befundfoto im Temp-Ordner galt als in Ordnung, bis Windows
+    // aufraeumte (Fall 12.09.2026). Die Pruefung meldet es jetzt am Befund.
+    [Fact]
+    public void Befundfotos_im_Temp_Ordner_werden_am_Befund_gemeldet()
+    {
+        var (p, h) = Haltung();
+        var e = new ProtocolEntry { Code = "BAB", MeterStart = 2 };
+        e.FotoPaths.AddRange([@"C:\Sim\Temp\vsa_foto1_x.png", @"D:\Projekt\Fotos\ok.png"]);
+        var geloescht = new ProtocolEntry { Code = "BAC", MeterStart = 3, IsDeleted = true };
+        geloescht.FotoPaths.Add(@"C:\Sim\Temp\alt.png");
+        h.Protocol!.Current.Entries.AddRange([e, geloescht]);
+        var gelesen = new List<string>();
+
+        var r = ProjektPruefregeln.Pruefe(p, pfad => { gelesen.Add(pfad); return null; }, default, [@"C:\Sim\Temp"]);
+
+        var punkt = Assert.Single(r.Punkte.Where(x => x.Bereich == ProjektPruefbereich.Dateien));
+        Assert.Equal(e.EntryId, punkt.EintragId);
+        Assert.Equal(h.Id, punkt.ObjektId);
+        Assert.Contains(@"C:\Sim\Temp\vsa_foto1_x.png", punkt.Meldung);
+        Assert.Contains("liegt im Temp-Ordner", punkt.Meldung);
+        Assert.Equal([@"C:\Sim\Temp\vsa_foto1_x.png"], gelesen);
+    }
+
+    [Fact]
+    public void Fehlendes_Befundfoto_aus_dem_Temp_Ordner_nennt_beides()
+    {
+        var (p, h) = Haltung();
+        var e = new ProtocolEntry { Code = "BAB", MeterStart = 2 };
+        e.FotoPaths.Add(@"C:\Sim\Temp\weg.png");
+        h.Protocol!.Current.Entries.Add(e);
+
+        var r = ProjektPruefregeln.Pruefe(p, _ => "Datei fehlt.", default, [@"C:\Sim\Temp"]);
+
+        var meldung = Assert.Single(r.Punkte.Where(x => x.Bereich == ProjektPruefbereich.Dateien)).Meldung;
+        Assert.Contains("Datei fehlt.", meldung);
+        Assert.Contains("Temp-Ordner", meldung);
+    }
+
+    [Fact]
+    public void Dienst_meldet_ein_vorhandenes_Befundfoto_im_echten_Temp_Ordner()
+    {
+        var foto = Path.Combine(Path.GetTempPath(), "vsa_foto1_" + Guid.NewGuid().ToString("N") + ".png");
+        File.WriteAllBytes(foto, [1, 2, 3]);
+        try
+        {
+            var (p, h) = Haltung();
+            var e = new ProtocolEntry { Code = "BAB", MeterStart = 2 };
+            e.FotoPaths.Add(foto);
+            h.Protocol!.Current.Entries.Add(e);
+
+            var r = new ProjektPruefungService().Pruefe(p, null, default);
+
+            var punkt = Assert.Single(r.Punkte.Where(x => x.Bereich == ProjektPruefbereich.Dateien));
+            Assert.Equal(e.EntryId, punkt.EintragId);
+            Assert.Contains("liegt im Temp-Ordner", punkt.Meldung);
+            Assert.True(File.Exists(foto), "Die Prüfung darf nichts verändern.");
+        }
+        finally { File.Delete(foto); }
+    }
+
     [Fact]
     public void Werte_ohne_webgis_begriff_und_nicht_sendbare_masse_werden_gemeldet()
     {

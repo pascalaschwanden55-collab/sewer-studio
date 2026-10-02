@@ -1,4 +1,5 @@
 using System.IO;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.UseCases.VsaFotos;
 
@@ -35,6 +36,10 @@ public static class VsaFotoAblage
                                        or ArgumentException
                                        or PathTooLongException)
         {
+            // Den Grund fuer das Log festhalten; den sichtbaren Hinweis gibt der Aufnahmeweg
+            // ueber VsaFotoTempHinweis (Deepscan 02.10.2026, R3).
+            BestEffort.ReportWarning(
+                $"[VsaFotoAblage] Foto bleibt im Temp-Ordner, Verschieben gescheitert: {ex.GetType().Name}: {ex.Message}");
             return quelle;
         }
     }
