@@ -312,4 +312,36 @@ public sealed class LeereFelderPlanBuilderTests
             new HashSet<string>(StringComparer.OrdinalIgnoreCase),
             jeName.Count);
     }
+
+    // Planer-Paket nach PR #81: Ein Handwert (auch bewusst leer) in irgendeiner Schreibweise
+    // sperrt das Fuellen - der Plan schlaegt dort nichts vor, was der Schreibweg ablehnen wuerde.
+    [Fact]
+    public void Bewusst_leere_andere_Schreibweise_wird_nicht_zum_Fuellen_geplant()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.ShaftDimension1Mm, "", FieldSource.Pdf, userEdited: false);
+        schacht.SetFieldValue("Dimension1_mm", "", FieldSource.Manual, userEdited: true);
+
+        var plan = LeereFelderPlanBuilder.BaueFuerSchaechte(
+            new[] { schacht },
+            Bestand(BauteilArt.Schacht,
+                ("80401", ("ns_dimension1", "600")), ("80401", ("ns_dimension2", "600"))));
+
+        Assert.DoesNotContain(plan.Positionen, p => p.Feld == FieldKeys.ShaftDimension1Mm);
+        Assert.Contains(plan.Positionen, p => p.Feld == FieldKeys.ShaftDimension2Mm);
+    }
+
+    [Fact]
+    public void Ohne_Handwert_plant_die_leere_Schreibweise_das_Fuellen()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.ShaftDimension1Mm, "", FieldSource.Pdf, userEdited: false);
+        schacht.SetFieldValue("Dimension1_mm", "", FieldSource.Pdf, userEdited: false);
+
+        var plan = LeereFelderPlanBuilder.BaueFuerSchaechte(
+            new[] { schacht },
+            Bestand(BauteilArt.Schacht, ("80401", ("ns_dimension1", "600")), ("80401", ("ns_dimension2", "600"))));
+
+        Assert.Contains(plan.Positionen, p => p.Feld == FieldKeys.ShaftDimension1Mm);
+    }
 }

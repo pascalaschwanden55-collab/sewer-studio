@@ -96,8 +96,11 @@ public static class LeereFelderPlanBuilder
             BauteilArt.Schacht,
             schaechte.Select(s => new Bauteilsicht(
                 s.GetFieldValue(SchachtFeldnamen.Feld(s, "Schachtnummer")),
-                feld => s.GetFieldValue(SchachtFeldnamen.Feld(s, feld)),
-                feld => s.IstBewusstLeer(SchachtFeldnamen.Feld(s, feld)))),
+                // Ueber alle Schreibweisen (Planer-Paket nach PR #81): Ist-Wert wie der Export; ein
+                // Handwert in irgendeiner Schreibweise sperrt das Fuellen wie im Schreibweg. Bei leerem
+                // Wert heisst das: irgendwo bewusst leer.
+                feld => SchachtFeldnamen.Wert(s, feld),
+                feld => SchachtFeldnamen.HatHandwert(s, feld))),
             bestand);
     }
 
