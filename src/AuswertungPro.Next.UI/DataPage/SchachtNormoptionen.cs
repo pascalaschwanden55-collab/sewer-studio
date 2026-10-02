@@ -53,6 +53,7 @@ internal sealed class SchachtNormoptionen : IMultiValueConverter
             art.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(RecordDetailItem.Value)) Aktualisiere(); };
     }
 
+    // Ueber alle Schreibweisen: Handwert (auch bewusst leer) vor Importwert (Folgepaket PR #80).
     private static string Wert(SchachtRecord record, string feld)
-        => record.GetFieldValue(SchachtFeldnamen.Feld(record, feld));
+        => SchachtFeldnamen.Wert(record, feld);
 }
