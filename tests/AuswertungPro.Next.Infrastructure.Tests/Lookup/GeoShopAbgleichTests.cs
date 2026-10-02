@@ -501,4 +501,26 @@ public sealed class GeoShopAbgleichTests : IDisposable
                 Objekt("Normschacht", BB, ("Bezeichnung", "B"))))));
         aendere?.Invoke(doc); doc.Save(_datei);
     }
+
+    // Planer-Paket nach PR #81: Ein Handwert (auch bewusst leer) in irgendeiner Schreibweise wird
+    // nicht zum Fuellen geplant; der Plan liest den Ist-Wert wie der Export (SchachtFeldnamen.Wert).
+    [Fact]
+    public void Bewusst_leere_andere_Schreibweise_wird_im_GeoShop_Abgleich_nicht_geplant()
+    {
+        Schreibe(); var s = Schacht();
+        s.SetFieldValue("Material", "", FieldSource.Pdf, false);
+        s.SetFieldValue("MATERIAL", "", FieldSource.Manual, true);
+        var plan = GeoShopAbgleichPlanBuilder.Baue([GeoShopZiel.Fuer(s)], Lies(BauteilArt.Schacht, "A"));
+        Assert.DoesNotContain(plan.Positionen.SelectMany(p => p.Felder), f => f.Feld == "Material");
+    }
+
+    [Fact]
+    public void Ohne_Handwert_plant_der_GeoShop_Abgleich_das_Material()
+    {
+        Schreibe(); var s = Schacht();
+        s.SetFieldValue("Material", "", FieldSource.Pdf, false);
+        s.SetFieldValue("MATERIAL", "", FieldSource.Pdf, false);
+        var plan = GeoShopAbgleichPlanBuilder.Baue([GeoShopZiel.Fuer(s)], Lies(BauteilArt.Schacht, "A"));
+        Assert.Contains(plan.Positionen.SelectMany(p => p.Felder), f => f.Feld == "Material");
+    }
 }

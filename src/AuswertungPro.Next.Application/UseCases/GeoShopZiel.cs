@@ -91,8 +91,11 @@ public sealed class GeoShopZiel
             r.SetFieldValue(f, w, FieldSource.Kataster, false);
         });
 
+    // Planen ueber alle Schreibweisen (Planer-Paket nach PR #81): Ist-Wert wie der Export
+    // (SchachtFeldnamen.Wert), geschuetzt ist das Feld, wenn irgendeine Schreibweise ein Handwert
+    // ist (auch bewusst leer) - genau dann lehnt der Schreibweg ab. Das Schreibziel bleibt Feld.
     public static GeoShopZiel Fuer(SchachtRecord r) => new(r, BauteilArt.Schacht,
-        f => r.GetFieldValue(SchachtFeldnamen.Feld(r, f)), f => r.IsUserEdited(SchachtFeldnamen.Feld(r, f)),
+        f => SchachtFeldnamen.Wert(r, f), f => SchachtFeldnamen.HatHandwert(r, f),
         () => JsonSerializer.Serialize(new { r.Fields, r.FieldMeta, r.Geonis }), () => r.Geonis,
         r.SetzeGeonisKennungen, (f, w) => r.SetFieldValue(SchachtFeldnamen.Feld(r, f), w, FieldSource.Kataster, false),
         (f, w) => r.FuelleLeeresFeld(SchachtFeldnamen.Feld(r, f), w, FieldSource.Kataster),
