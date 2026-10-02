@@ -7,6 +7,7 @@ using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Application.Dashboard;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Models.Dossiers;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Dossiers;
 
@@ -256,7 +257,7 @@ public static class DossierSnapshotBuilder
             record.Id,
             name,
             (record.GetFieldValue(FieldKeys.Street) ?? string.Empty).Trim(),
-            ParseDouble(record.GetFieldValue(FieldKeys.HoldingLengthMeters)),
+            HaltungFeldwerte.LiesLaenge(record),
             DashboardStatisticsBuilder.NormalizeZustandsklasse(
                 record.GetFieldValue(FieldKeys.ConditionClass)),
             ResolveNetTotal(cost),
@@ -319,18 +320,4 @@ public static class DossierSnapshotBuilder
         return TablePauschaleCostHelper.ResolveNetTotal(cost);
     }
 
-    private static double? ParseDouble(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        var normalized = value.Replace("'", "").Replace(" ", "").Replace(',', '.');
-        return double.TryParse(
-            normalized,
-            NumberStyles.Float,
-            CultureInfo.InvariantCulture,
-            out var number)
-            ? number
-            : null;
-    }
 }

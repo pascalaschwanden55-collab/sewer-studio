@@ -1,5 +1,6 @@
 using System.Globalization;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Import;
 
@@ -47,7 +48,8 @@ public static class ImportPlausibilityValidator
         }
 
         // Meterstand darf nicht (deutlich) hinter der Haltungslaenge liegen
-        if (TryParseDouble(record.GetFieldValue("Haltungslaenge_m"), out var length) && length > 0)
+        // Haltungslaenge nach der gemeinsamen Leseregel (Deepscan A4).
+        if (HaltungFeldwerte.LiesLaenge(record) is double length && length > 0)
         {
             var entries = record.Protocol?.Current?.Entries;
             if (entries is not null)
@@ -79,13 +81,4 @@ public static class ImportPlausibilityValidator
         return int.TryParse(cleaned, NumberStyles.Integer, CultureInfo.InvariantCulture, out result);
     }
 
-    private static bool TryParseDouble(string? value, out double result)
-    {
-        result = 0;
-        if (string.IsNullOrWhiteSpace(value))
-            return false;
-        // Komma- und Punkt-Dezimaltrenner akzeptieren (de-CH vs invariant).
-        var cleaned = value.Trim().Replace(',', '.');
-        return double.TryParse(cleaned, NumberStyles.Float, CultureInfo.InvariantCulture, out result);
-    }
 }

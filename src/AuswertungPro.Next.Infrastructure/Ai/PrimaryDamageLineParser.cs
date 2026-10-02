@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
 
@@ -89,18 +90,13 @@ internal static class PrimaryDamageLineParser
 
     /// <summary>
     /// Versucht einen Laenge-Wert aus einem HaltungRecord-Feld zu lesen.
-    /// Unterstuetzt Komma und Punkt als Dezimaltrennzeichen.
+    /// Liest nach der gemeinsamen Laengenregel (HaltungFeldwerte, Deepscan A4); nur positive Werte gelten.
     /// </summary>
     internal static double? TryParseLengthField(HaltungRecord haltung, string fieldName)
     {
-        if (!haltung.Fields.TryGetValue(fieldName, out var raw) || string.IsNullOrWhiteSpace(raw))
+        if (!haltung.Fields.TryGetValue(fieldName, out var raw))
             return null;
 
-        var normalized = raw.Replace(',', '.');
-        if (double.TryParse(normalized, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var val) && val > 0)
-            return val;
-
-        return null;
+        return HaltungFeldwerte.LiesLaenge(raw) is double val && val > 0 ? val : null;
     }
 }

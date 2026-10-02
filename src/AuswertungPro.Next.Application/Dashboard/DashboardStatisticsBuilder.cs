@@ -160,7 +160,7 @@ public static class DashboardStatisticsBuilder
             holdings.Count,
             schaechte.Count,
             Math.Round(holdings.Sum(r =>
-                ParseDouble(r.GetFieldValue(FieldKeys.HoldingLengthMeters)) ?? 0d), 2),
+                HaltungFeldwerte.LiesLaenge(r) ?? 0d), 2),
             totalCost,
             hVerteilung,
             sVerteilung,

@@ -1,18 +1,10 @@
-using System.Globalization;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Ai;
 
 public static class PipelineReachLengthParser
 {
+    // Haltungslaenge nach der gemeinsamen Leseregel (Deepscan A4); nur positive Werte gelten.
     public static double? TryParse(string? raw)
-    {
-        var normalized = raw?.Replace(',', '.');
-        if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var reachLength)
-            || reachLength <= 0)
-        {
-            return null;
-        }
-
-        return reachLength;
-    }
+        => HaltungFeldwerte.LiesLaenge(raw) is double reachLength && reachLength > 0 ? reachLength : null;
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Kostenanalyse;
 
@@ -65,7 +66,7 @@ public static class KostenfallMerkmalLeser
         return new KostenfallMerkmale
         {
             DnMm = LiesGanzzahl(record.GetFieldValue(FieldKeys.NominalDiameterMm)),
-            LaengeM = LiesZahl(record.GetFieldValue(FieldKeys.HoldingLengthMeters)) ?? 0d,
+            LaengeM = HaltungFeldwerte.LiesLaenge(record) ?? 0d,
             BogenAnzahl = boegen,
             AnschlussAnzahl = anschluesse,
             Schaeden = schaeden
@@ -79,13 +80,4 @@ public static class KostenfallMerkmalLeser
         => int.TryParse((text ?? "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var wert)
             ? wert
             : null;
-
-    private static double? LiesZahl(string? text)
-    {
-        // Punkt und Komma gleich behandeln — nie ueber CurrentCulture.
-        var roh = (text ?? "").Trim().Replace(',', '.');
-        return double.TryParse(roh, NumberStyles.Float, CultureInfo.InvariantCulture, out var wert)
-            ? wert
-            : null;
-    }
 }
