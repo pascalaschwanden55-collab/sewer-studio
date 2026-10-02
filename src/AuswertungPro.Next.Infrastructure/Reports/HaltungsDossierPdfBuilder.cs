@@ -598,7 +598,7 @@ public static class HaltungsDossierPdfBuilder
             if (!string.IsNullOrWhiteSpace(p) && File.Exists(p))
             {
                 try { return File.ReadAllBytes(p); }
-                catch { /* next */ }
+                catch { /* Logo nicht lesbar (gesperrt/defekt): naechster Kandidat, am Ende gilt der Bericht ohne Logo */ }
             }
         }
 

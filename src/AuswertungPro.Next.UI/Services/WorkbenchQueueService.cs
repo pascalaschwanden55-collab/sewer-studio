@@ -377,7 +377,7 @@ public sealed class WorkbenchQueueService
 
     private static WorkbenchItem ToItem(TrainingSample s)
     {
-        var sourceSuggestion = BuildSourceSuggestion(s);
+        var sourceSuggestion = WorkbenchSourceSuggestionFactory.Von(s);
         return new WorkbenchItem(
             s.FramePath,
             s.CaseId,
@@ -409,29 +409,4 @@ public sealed class WorkbenchQueueService
                 sample.BboxHeight!.Value)
             : null;
 
-    private static WorkbenchSourceSuggestion? BuildSourceSuggestion(TrainingSample sample)
-    {
-        if (!string.Equals(
-                sample.SourceType,
-                SourceTypeNames.PdfPhoto,
-                StringComparison.OrdinalIgnoreCase)
-            || !PdfGoldProvenancePolicy.TryParse(sample.Notes, out var provenance)
-            || string.IsNullOrWhiteSpace(sample.SourceReferenceCode)
-            || string.IsNullOrWhiteSpace(sample.SourceReferenceDescription))
-        {
-            return null;
-        }
-
-        return new WorkbenchSourceSuggestion(
-            sample.SourceReferenceCode,
-            sample.SourceReferenceDescription,
-            provenance.SourceDocumentName,
-            provenance.SourceDocumentSha256,
-            provenance.PageNumber,
-            provenance.PhotoId,
-            provenance.MatchKind)
-        {
-            InspectionDate = sample.InspectionDate,
-        };
-    }
 }

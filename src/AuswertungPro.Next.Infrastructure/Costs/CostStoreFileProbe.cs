@@ -52,6 +52,41 @@ internal static class CostStoreFileProbe
         }
     }
 
+    /// <summary>
+    /// Entfernt eine Benutzer-Override-Datei sicher: Eine fehlende Datei gilt als entfernt, ein
+    /// verknuepfter Pfad, ein Ordner am Dateipfad oder eine nicht loeschbare Datei wird gemeldet.
+    /// Gemeinsam fuer Kostenkatalog und Massnahmenvorlagen.
+    /// </summary>
+    public static bool TryRemove(string path, out string error)
+    {
+        error = "";
+        try
+        {
+            var probe = Probe(path);
+            if (probe.State == CostStorePathState.Invalid)
+            {
+                error = probe.Error ?? "User-Override ist nicht sicher zugreifbar.";
+                return false;
+            }
+
+            if (probe.State == CostStorePathState.File)
+                File.Delete(path);
+
+            if (Probe(path).State != CostStorePathState.Missing)
+            {
+                error = "User-Override konnte nicht sicher entfernt werden.";
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
     public static bool ShouldUseProjectCandidate(string path)
         => Probe(path).State != CostStorePathState.Missing;
 }

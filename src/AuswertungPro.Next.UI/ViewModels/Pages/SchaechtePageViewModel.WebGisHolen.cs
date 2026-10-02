@@ -16,10 +16,6 @@ public sealed partial class SchaechtePageViewModel
     private async Task WebGisHolenAsync()
     {
         if (_webGisHolen is null || !CanMutateShaftData) return;
-        await _webGisHolen.OeffneAsync(_shell, () => Settings.LastProjectPath, () =>
-        {
-            ScheduleAutoSave();
-            MeldeUebernahme();
-        });
+        await _webGisHolen.OeffneAsync(_shell, () => Settings.LastProjectPath, MeldeUebernahme);
     }
 }

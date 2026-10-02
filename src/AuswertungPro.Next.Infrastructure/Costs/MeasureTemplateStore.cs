@@ -110,34 +110,22 @@ public sealed class MeasureTemplateStore : IMeasureTemplateStore
 
     public bool ResetUserOverrides(out string error)
     {
-        error = "";
+        string path;
         try
         {
-            var path = ResolveUserOverridePath();
-            var probe = CostStoreFileProbe.Probe(path);
-            if (probe.State == CostStorePathState.Invalid)
-            {
-                error = probe.Error ?? "User-Override ist nicht sicher zugreifbar.";
-                return false;
-            }
-
-            if (probe.State == CostStorePathState.File)
-                File.Delete(path);
-
-            if (CostStoreFileProbe.Probe(path).State != CostStorePathState.Missing)
-            {
-                error = "User-Override konnte nicht sicher entfernt werden.";
-                return false;
-            }
-
-            LastUserOverrideLoadError = null;
-            return true;
+            path = ResolveUserOverridePath();
         }
         catch (Exception ex)
         {
             error = ex.Message;
             return false;
         }
+
+        if (!CostStoreFileProbe.TryRemove(path, out error))
+            return false;
+
+        LastUserOverrideLoadError = null;
+        return true;
     }
 
     public bool UpsertUserTemplate(MeasureTemplate template, out string error)

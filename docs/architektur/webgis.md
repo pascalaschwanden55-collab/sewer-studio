@@ -367,8 +367,16 @@ Sanierungsabnahme. Gegenrichtung zum bestehenden GeoShop-/Katasterimport.
     keine Punkt-Regel; doppelter Maskeneintrag sperrt das Feld. (3) Holen: BEWUSST LEER = GESCHUETZT (Entscheid
     Pascal, wie GeoShop; `WebGisImportFeld.Handwert`, `BaujahrHandwert`); `Uebernimm` prueft je Feld nochmals
     Handmarke, Wert seit der Vorschau und bei der Schachtfunktion die AKTUELLE Bauwerksart. «Leere Felder aus
-    QGIS» behaelt seine eigene Regel (die Leere entscheidet). (4) `HaltungRecord.FuelleLeeresFeld` speichert
-    ebenfalls den WebGIS-Begriff.
+    QGIS» hatte bis 02.10.2026 eine eigene Regel (die Leere entscheidet); seit dem Entscheid E3 gilt ueberall
+    «bewusst leer bleibt leer», gemeinsame Stelle `FuelleLeeresFeld` (`xtf-kataster-qgis.md`). (4)
+    `HaltungRecord.FuelleLeeresFeld` speichert ebenfalls den WebGIS-Begriff.
+  - BEWUSST LEER, EINE REGEL FUER ALLE FUELLWEGE (Entscheid Pascal 02.10.2026, E3): `HaltungRecord`/
+    `SchachtRecord.FuelleLeeresFeld` fuellen ein bewusst leeres Feld (`IstBewusstLeer`: `UserEdited` und leer)
+    nicht mehr. Beim Holen schuetzte schon der Planer und `SeitVorschauUnveraendert`; neu haelt auch die
+    Uebernahme selbst stand (`WebGisImportUebernahmeTests.Bewusst_leeres_feld_wird_bei_der_uebernahme_nicht_gefuellt`).
+    Die Ausnahme vom 24.09.2026 bleibt: Den Eigentuemer fuehrt das WebGIS, er ersetzt auch eine bewusst leere
+    Handeingabe — `WebGisImportUseCase.FuelleLeer` nimmt dafuer die Handmarke vor dem Fuellen weg und setzt sie
+    zurueck, wenn nichts geschrieben wurde (`Bewusst_leerer_eigentuemer_wird_bei_der_uebernahme_gefuellt`).
   - SCHREIBSCHUTZ, EINDEUTIGKEIT, AENDERUNGSDATUM (Entscheid Pascal 23.09.2026 abends): Eigentum,
     Betreiber, Haltungslaenge (alle Laengenfelder), Baujahr, GlobalID, Objekt-ID (OBJECTID) und die
     Bezeichnung werden im WebGIS nie ueberschrieben; das Baujahr darf nur ein LEERES Feld fuellen — bei

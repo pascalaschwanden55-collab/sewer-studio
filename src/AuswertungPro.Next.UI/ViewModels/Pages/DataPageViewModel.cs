@@ -38,7 +38,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     /// </summary>
     public event Action? FelderExternErgaenzt;
 
-    private void MeldeFelderExternErgaenzt() { Verlauf.Leere(AuswertungPro.Next.Application.UseCases.Datenaenderungen.DatenaenderungsVerlauf.GrundUebernahme); FelderExternErgaenzt?.Invoke(); }
+    private void MeldeUebernahme() => SeitenUebernahme.Abschliessen(_shell, ScheduleAutoSave, FelderExternErgaenzt);
 
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;

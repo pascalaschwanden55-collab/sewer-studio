@@ -173,6 +173,19 @@ public sealed class WebGisImportUebernahmeTests
         Assert.False(h.FieldMeta[FieldKeys.Owner].UserEdited);
     }
 
+    // Entscheid Pascal 02.10.2026 (E3): Ein bewusst leeres Feld fuellt auch die Uebernahme nicht,
+    // selbst wenn der Plan es anbietet. Ausnahme bleibt der Eigentuemer (Fuehrungsfeld, Test unten).
+    [Fact]
+    public void Bewusst_leeres_feld_wird_bei_der_uebernahme_nicht_gefuellt()
+    {
+        var (p, h) = ProjektMit(FieldKeys.OperatingStatus, "", FieldSource.Manual, true);
+
+        Assert.Equal(0, WebGisImportUseCase.Uebernimm(Plan(h, FieldKeys.OperatingStatus, null, "in_Betrieb"), p));
+
+        Assert.Equal("", h.GetFieldValue(FieldKeys.OperatingStatus));
+        Assert.True(h.FieldMeta[FieldKeys.OperatingStatus].UserEdited);
+    }
+
     [Fact]
     public void Bewusst_leerer_eigentuemer_wird_bei_der_uebernahme_gefuellt()
     {

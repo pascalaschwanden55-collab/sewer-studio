@@ -140,6 +140,59 @@ public sealed class SchattenAuswertungServiceTests
         Assert.Equal(12000m, kaputt.RegelKosten);
     }
 
+    private sealed class WerfendeVsa : IVsaEvaluationService
+    {
+        public Result<IReadOnlyList<VsaConditionResult>> Evaluate(Project project)
+            => Result<IReadOnlyList<VsaConditionResult>>.Success(Array.Empty<VsaConditionResult>());
+
+        public Result<bool> EvaluateRecord(HaltungRecord record)
+            => throw new IOException(@"The process cannot access the file C:\Kunde\geheim.db");
+
+        public Result<string> Explain(Project project, HaltungRecord record)
+            => Result<string>.Success("");
+    }
+
+    private sealed class WerfendeMassnahmen : IMeasureRecommendationService
+    {
+        public MeasureRecommendationResult Recommend(HaltungRecord record, int maxSuggestions = 5)
+            => throw new InvalidOperationException(@"SQLite Error 14: unable to open C:\Kunde\modell.db");
+        public MeasureLearningStats GetStats() => new(0, 0, 0, false, null, null, "");
+        public MeasureModelTrainingResult TrainModel(int minSamples = 25) => new(false, 0, minSamples, "", null, null);
+        public bool Learn(HaltungRecord record) => false;
+    }
+
+    [Fact]
+    public async Task Bewertungsfehler_WirdAlsFehlerGespeichert_NichtAlsNurRegeln()
+    {
+        var service = new SchattenAuswertungService(new WerfendeVsa(), new FixeMassnahmen(), ki: null);
+        var store = await service.BerechneAsync(
+            ProjektMit(Haltung("H1", true)), mitKi: false, null, null, CancellationToken.None);
+
+        var e = store.ByHaltung["H1"];
+        Assert.Equal(SchattenStatus.Fehler, e.Status);
+        Assert.Contains("Zustandsbewertung", e.Fehler);
+        Assert.False(string.IsNullOrWhiteSpace(e.Fehler));
+        // Kein roher Fremdtext (englisch, mit Pfad) im gespeicherten Fehlertext.
+        Assert.DoesNotContain("process cannot access", e.Fehler);
+        Assert.DoesNotContain("geheim.db", e.Fehler);
+    }
+
+    [Fact]
+    public async Task Massnahmenfehler_WirdAlsFehlerGespeichert_UndErreichtDieKiNicht()
+    {
+        var ki = new SkriptKi();
+        var service = new SchattenAuswertungService(new MutierendeVsa(), new WerfendeMassnahmen(), ki);
+        var store = await service.BerechneAsync(
+            ProjektMit(Haltung("H1", true)), mitKi: true, null, null, CancellationToken.None);
+
+        var e = store.ByHaltung["H1"];
+        Assert.Equal(SchattenStatus.Fehler, e.Status);
+        Assert.Contains("Massnahmen", e.Fehler);
+        Assert.DoesNotContain("SQLite", e.Fehler);
+        Assert.DoesNotContain("modell.db", e.Fehler);
+        Assert.Equal(0, ki.Aufrufe);
+    }
+
     [Fact]
     public async Task OhneCodierung_WirdAusgewiesen_UndErreichtDieKiNicht()
     {

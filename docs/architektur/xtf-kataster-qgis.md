@@ -641,6 +641,19 @@ Vier Regeln dieses Wegs:
   revidierte XTF zurueck — er stammt aus derselben Quelle.
 - **`unbekannt` fuellt nichts.** Zwei Sperren in `QgisFeldKarte` decken das
   gemeinsam ab (Rohwert und umgesetzter Wert); keine der beiden entfernen.
+- **Ein bewusst leeres Feld bleibt leer** (Entscheid Pascal 02.10.2026, E3; ersetzt
+  «die Leere entscheidet» vom 03.09.2026). Bewusst leer = `UserEdited` und leer
+  (`HaltungRecord`/`SchachtRecord.IstBewusstLeer`). Die gemeinsame Stelle ist
+  `FuelleLeeresFeld` an beiden Datensaetzen; der Planer bietet ein solches Feld gar
+  nicht erst an. Dieselbe Regel gilt fuer alle Fuellwege: GeoShop-Abgleich auch ohne
+  Vergleich (`GeoShopAbgleichPlanBuilder`; eine bewusst leere Handkennung sperrt das
+  Objekt wie im Vergleich), Schachtmasse (`SchachtMasse.Schreibe` mit `nurLeere`: ein
+  bewusst leeres Mass haelt das ganze Paar leer; die Alttext-Uebernahme laesst den
+  Alttext dann sichtbar stehen), WebGIS-Holen (`webgis.md`) und Kanalverteilung
+  (`SetFieldValue` schuetzt schon). Ausnahme bleibt der Eigentuemer beim WebGIS-Holen.
+  Tests `BewusstLeerHandwertTests` und je Weg (`LeereFelderAnwenderTests`,
+  `LeereFelderPlanBuilderTests`, `GeoShopAbgleichTests`, `SchachtMasseTests`,
+  `WebGisImportUebernahmeTests`, `SammelprotokollVerteilungTests`).
 
 Die Pfade stehen in `AppSettings.QgisHaltungenGpkgPath` und
 `QgisSchaechteGpkgPath`. Der bestehende Einzelnachschlag per Rechtsklick

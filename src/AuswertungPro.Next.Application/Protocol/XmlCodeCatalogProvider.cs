@@ -514,7 +514,7 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
         }
         catch
         {
-            // ignore fallback errors
+            // Defekte oder fehlende Katalogdatei: die Rueckfall-Textliste bleibt so weit gefuellt, wie sie gelesen werden konnte.
         }
 
         return map;

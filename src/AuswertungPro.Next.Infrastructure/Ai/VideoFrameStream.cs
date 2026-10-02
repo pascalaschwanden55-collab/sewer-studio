@@ -396,7 +396,7 @@ public sealed class VideoFrameStream : IVideoFrameSource
                 await _process.WaitForExitAsync().ConfigureAwait(false);
             }
         }
-        catch { /* ignore cleanup errors */ }
+        catch { /* Prozess schon beendet oder nicht beendbar: Dispose im finally gibt die Handles trotzdem frei */ }
         finally
         {
             _process.Dispose();

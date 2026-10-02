@@ -907,7 +907,7 @@ public static partial class HoldingFolderDistributor
             }
             catch
             {
-                // ignore
+                // Die Temp-Sammeldatei bleibt liegen, wenn sie gesperrt ist; das Ergebnis der Verteilung ist schon geschrieben.
             }
         }
     }

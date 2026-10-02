@@ -228,7 +228,7 @@ public partial class SanierungsmassnahmenWindow : Window
         }
         catch
         {
-            // Swallow layout exceptions
+            // Das Springen zum Block ist nur eine Bequemlichkeit; scheitert das Layout, bleibt die Ansicht an ihrer Stelle.
         }
     }
 
@@ -368,14 +368,5 @@ public partial class SanierungsmassnahmenWindow : Window
         return null;
     }
 
-    private void EnsureVisibleOnScreen()
-    {
-        var area = SystemParameters.WorkArea;
-        if (Width > area.Width) Width = area.Width - 20;
-        if (Height > area.Height) Height = area.Height - 20;
-        if (Left < area.Left) Left = area.Left;
-        if (Top < area.Top) Top = area.Top;
-        if (Left + Width > area.Right) Left = area.Right - Width;
-        if (Top + Height > area.Bottom) Top = area.Bottom - Height;
-    }
+    private void EnsureVisibleOnScreen() => WindowBoundsHelper.EnsureVisibleOnScreen(this);
 }

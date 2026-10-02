@@ -161,9 +161,13 @@ public sealed class DesignAuditNovaAufklappListeTests
         Assert.True(File.Exists(controller), "DataPageAufklappListeController.cs fehlt");
 
         var code = File.ReadAllText(controller);
+        // Deepscan 02.10.2026 (A2): Der Ablauf steht im gemeinsamen Controller fuer Haltungen und Schaechte.
+        var gemeinsam = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "DataPage", "AufklappListeController.cs"));
+        Assert.Contains(": AufklappListeController<HaltungAufklappListe, HaltungRecord>", code, StringComparison.Ordinal);
         // Kein zweiter Schreibweg: Der Controller baut nur das Formular und den Live-Abgleich.
-        Assert.Contains("DataPageDetailLiveSync", code, StringComparison.Ordinal);
+        Assert.Contains("new DataPageDetailLiveSync(", gemeinsam, StringComparison.Ordinal);
         Assert.DoesNotContain("SetFieldValue", code, StringComparison.Ordinal);
+        Assert.DoesNotContain("SetFieldValue", gemeinsam, StringComparison.Ordinal);
         // Der Konflikt-Wortlaut ist gemeinsam, keine Kopie aus dem Nova-Workspace-Controller.
         Assert.Contains("DataPageKonfliktHinweis", code, StringComparison.Ordinal);
 

@@ -57,6 +57,7 @@ public sealed record LeereFelderPlan(
 /// Plant, welche LEEREN Felder aus dem QGIS-Bestand gefuellt wuerden.
 ///
 /// Die eine Regel, an der alles haengt: <b>Ein Feld mit Inhalt wird nie angefasst.</b>
+/// Ebenso wenig ein bewusst leeres (von Hand geleertes) Feld (Entscheid Pascal 02.10.2026, E3).
 /// Egal woher der Inhalt stammt und egal, was der Bestand sagt — die Arbeit des
 /// Bearbeiters gewinnt immer. Der Bestand fuellt nur Luecken.
 ///
@@ -77,7 +78,8 @@ public static class LeereFelderPlanBuilder
             BauteilArt.Haltung,
             haltungen.Select(h => new Bauteilsicht(
                 h.GetFieldValue(FieldKeys.HoldingName),
-                feld => h.GetFieldValue(feld))),
+                feld => h.GetFieldValue(feld),
+                h.IstBewusstLeer)),
             bestand);
     }
 
@@ -94,12 +96,13 @@ public static class LeereFelderPlanBuilder
             BauteilArt.Schacht,
             schaechte.Select(s => new Bauteilsicht(
                 s.GetFieldValue(SchachtFeldnamen.Feld(s, "Schachtnummer")),
-                feld => s.GetFieldValue(SchachtFeldnamen.Feld(s, feld)))),
+                feld => s.GetFieldValue(SchachtFeldnamen.Feld(s, feld)),
+                feld => s.IstBewusstLeer(SchachtFeldnamen.Feld(s, feld)))),
             bestand);
     }
 
-    /// <summary>Ein Datensatz, soweit die Planung ihn braucht: Name und Feldzugriff.</summary>
-    private sealed record Bauteilsicht(string? Name, Func<string, string?> Wert);
+    /// <summary>Ein Datensatz, soweit die Planung ihn braucht: Name, Feldzugriff und Handwert-Leere.</summary>
+    private sealed record Bauteilsicht(string? Name, Func<string, string?> Wert, Func<string, bool> IstBewusstLeer);
 
     private static LeereFelderPlan Baue(
         BauteilArt art, IEnumerable<Bauteilsicht> bauteile, QgisBestand bestand)
@@ -137,6 +140,11 @@ public static class LeereFelderPlanBuilder
             {
                 // Die Kernregel: Ein Feld mit Inhalt bleibt unberuehrt.
                 if (!string.IsNullOrWhiteSpace(bauteil.Wert(feld)))
+                    continue;
+
+                // Ein bewusst leeres Feld (von Hand geleert) ist keine Luecke
+                // (Entscheid Pascal 02.10.2026, E3).
+                if (bauteil.IstBewusstLeer(feld))
                     continue;
 
                 var wert = QgisFeldKarte.Wert(quelle, feld, art);

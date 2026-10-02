@@ -196,7 +196,7 @@ public sealed class JsonProjectRepository : IProjectRepository
         {
             if (!string.IsNullOrWhiteSpace(tempPath) && File.Exists(tempPath))
             {
-                try { File.Delete(tempPath); } catch { /* best effort cleanup */ }
+                try { File.Delete(tempPath); } catch { /* Die Temp-Datei bleibt liegen, wenn sie gesperrt ist; das Ergebnis des Speicherns steht schon fest */ }
             }
         }
     }

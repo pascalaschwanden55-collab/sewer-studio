@@ -54,7 +54,7 @@ public sealed class TrainingCenterImportService
             }
             catch
             {
-                // ignore folder errors
+                // Ein nicht lesbarer Ordner liefert keinen Trainingsfall und fehlt dann in der Liste (Sichtbarmachen: R6/Training Center).
             }
         }
 

@@ -6,8 +6,8 @@ using CommunityToolkit.Mvvm.Input;
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 /// <summary>
-/// "Leere Felder aus QGIS ergänzen" für die Schächte — derselbe Ablauf wie bei
-/// den Haltungen, nur mit der anderen Bauteilart.
+/// "Leere Felder aus QGIS ergänzen" für die Schächte — derselbe Ablauf und Abschluss (Meldung,
+/// Verlauf leeren, Formular neu zeichnen) wie bei den Haltungen, nur mit der anderen Bauteilart.
 /// </summary>
 public sealed partial class SchaechtePageViewModel
 {
@@ -28,8 +28,8 @@ public sealed partial class SchaechtePageViewModel
             _dialogs,
             bestand => LeereFelderPlanBuilder.BaueFuerSchaechte(Records, bestand),
             plan => LeereFelderAnwender.WendeAnAufSchaechte(Records, plan));
-        // Optik Aufgabe 16: Eine Uebernahme leert Rueckgaengig/Wiederholen (wie bei den Haltungen).
+        LastResult = ergebnis.Meldung;
         if (ergebnis.Ausgefuehrt)
-            Verlauf.Leere(AuswertungPro.Next.Application.UseCases.Datenaenderungen.DatenaenderungsVerlauf.GrundUebernahme);
+            MeldeUebernahme();
     }
 }

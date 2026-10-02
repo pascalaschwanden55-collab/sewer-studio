@@ -184,16 +184,7 @@ public partial class MediaSearchWindow : Window
         Close();
     }
 
-    private void EnsureVisibleOnScreen()
-    {
-        var area = SystemParameters.WorkArea;
-        if (Width > area.Width) Width = area.Width - 20;
-        if (Height > area.Height) Height = area.Height - 20;
-        if (Left < area.Left) Left = area.Left;
-        if (Top < area.Top) Top = area.Top;
-        if (Left + Width > area.Right) Left = area.Right - Width;
-        if (Top + Height > area.Bottom) Top = area.Bottom - Height;
-    }
+    private void EnsureVisibleOnScreen() => WindowBoundsHelper.EnsureVisibleOnScreen(this);
 }
 
 /// <summary>Row model for the results DataGrid with INotifyPropertyChanged for the Apply checkbox.</summary>

@@ -57,38 +57,49 @@ public sealed class LeereFelderAnwenderTests
         Assert.Equal("Beton", record.GetFieldValue(FieldKeys.PipeMaterial));
     }
 
-    // Der Fall aus dem echten Projekt: Der Bearbeiter loescht den Inhalt einer Zelle
-    // im Raster. Die Bindung schreibt dabei direkt in Fields und laesst FieldMeta
-    // unberuehrt — das Feld ist danach LEER, traegt aber weiter UserEdited=true.
-    //
-    // Der Schutz in SetFieldValue weist einen automatischen Schreibvorgang auf ein
-    // handmarkiertes Feld ab. An einem leeren Feld ist dieser Schutz sinnlos: Es gibt
-    // dort keine Arbeit zu schuetzen, und der Nachfuelllauf hat sichtbar gemeldet,
-    // dass er es fuellen wuerde. In Jagdmatt trifft das Schacht 33461 (Dimension
-    // leer, UserEdited=true).
+    // Entscheid Pascal 02.10.2026 (E3, Deepscan R10): Ein Handwert hat Vorrang, auch ein
+    // bewusst leerer. Wer eine Zelle von Hand leert (UserEdited=true, Wert leer), will sie
+    // leer haben; das Nachfuellen aus QGIS fuellt sie nicht. Bis dahin galt hier "die Leere
+    // entscheidet" (Fall Schacht 33461, 03.09.2026). Ein normal leeres Feld wird weiter gefuellt.
     [Fact]
-    public void Ein_leeres_Feld_mit_alter_Handmarkierung_wird_trotzdem_gefuellt()
+    public void Ein_bewusst_geleertes_Feld_bleibt_leer()
     {
         var record = Haltung("80638-80631");
         record.SetFieldValue(FieldKeys.PipeMaterial, "Beton", FieldSource.Manual, userEdited: true);
-        record.Fields[FieldKeys.PipeMaterial] = "";   // wie das Leeren im Raster
+        record.SetFieldValue(FieldKeys.PipeMaterial, "", FieldSource.Manual, userEdited: true);
 
         var geschrieben = LeereFelderAnwender.WendeAnAufHaltungen(
             new[] { record },
             Plan(new LeereFeldPosition("80638-80631", FieldKeys.PipeMaterial, "Steinzeug")));
 
-        Assert.Equal(1, geschrieben);
-        Assert.Equal("Steinzeug", record.GetFieldValue(FieldKeys.PipeMaterial));
-        Assert.False(record.FieldMeta[FieldKeys.PipeMaterial].UserEdited);
+        Assert.Equal(0, geschrieben);
+        Assert.Equal("", record.GetFieldValue(FieldKeys.PipeMaterial));
+        Assert.True(record.FieldMeta[FieldKeys.PipeMaterial].UserEdited);
     }
 
     [Fact]
-    public void Auch_am_Schacht_wird_ein_leeres_handmarkiertes_Feld_gefuellt()
+    public void Auch_am_Schacht_bleibt_ein_bewusst_geleertes_Feld_leer()
     {
         var record = new SchachtRecord();
         record.SetFieldValue("Schachtnummer", "33461", FieldSource.Xtf, userEdited: false);
-        record.SetFieldValue(FieldKeys.ShaftDimension1Mm, "120", FieldSource.Manual, userEdited: true);
-        record.Fields[FieldKeys.ShaftDimension1Mm] = "";
+        record.SetFieldValue(FieldKeys.ShaftDimension1Mm, "", FieldSource.Manual, userEdited: true);
+
+        var plan = new LeereFelderPlan(
+            BauteilArt.Schacht,
+            new[] { new LeereFeldPosition("33461", FieldKeys.ShaftDimension1Mm, "600") },
+            Array.Empty<LeerfeldHinweis>(),
+            GepruefteBauteile: 1);
+
+        Assert.Equal(0, LeereFelderAnwender.WendeAnAufSchaechte(new[] { record }, plan));
+        Assert.Equal("", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.True(record.IsUserEdited(FieldKeys.ShaftDimension1Mm));
+    }
+
+    [Fact]
+    public void Am_Schacht_wird_ein_normal_leeres_Feld_gefuellt()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", "33461", FieldSource.Xtf, userEdited: false);
 
         var plan = new LeereFelderPlan(
             BauteilArt.Schacht,
@@ -98,6 +109,7 @@ public sealed class LeereFelderAnwenderTests
 
         Assert.Equal(1, LeereFelderAnwender.WendeAnAufSchaechte(new[] { record }, plan));
         Assert.Equal("600", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
+        Assert.False(record.IsUserEdited(FieldKeys.ShaftDimension1Mm));
     }
 
     // Die gezaehlte Zahl muss stimmen. Vorher zaehlte der Ausfuehrer jeden Versuch,

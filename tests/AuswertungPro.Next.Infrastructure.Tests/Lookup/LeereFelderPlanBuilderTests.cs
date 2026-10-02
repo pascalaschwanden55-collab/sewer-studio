@@ -57,6 +57,38 @@ public sealed class LeereFelderPlanBuilderTests
         Assert.Equal("Steinzeug", position.Wert);
     }
 
+    // Entscheid Pascal 02.10.2026 (E3): Ein bewusst leeres Feld (von Hand geleert) ist keine
+    // Luecke. Der Plan bietet es nicht an, sonst meldete der Dialog eine Zahl, die der
+    // Ausfuehrer nicht erfuellt.
+    [Fact]
+    public void Ein_bewusst_leeres_Feld_wird_nicht_angeboten()
+    {
+        var record = Haltung("80638-80631");
+        record.SetFieldValue(FieldKeys.PipeMaterial, "", FieldSource.Manual, userEdited: true);
+
+        var plan = LeereFelderPlanBuilder.BaueFuerHaltungen(
+            new[] { record },
+            Bestand(("80638-80631", ("ha_material", "Steinzeug"))));
+
+        Assert.Empty(plan.Positionen);
+        Assert.Equal(1, plan.Anzahl(LeerfeldGrund.NichtsZuErgaenzen));
+    }
+
+    [Fact]
+    public void Am_Schacht_wird_ein_bewusst_leeres_Feld_nicht_angeboten()
+    {
+        var schacht = Schacht("80401");
+        schacht.SetFieldValue(FieldKeys.ShaftDimension1Mm, "", FieldSource.Manual, userEdited: true);
+
+        var plan = LeereFelderPlanBuilder.BaueFuerSchaechte(
+            new[] { schacht },
+            Bestand(BauteilArt.Schacht,
+                ("80401", ("ns_dimension1", "600")), ("80401", ("ns_dimension2", "600"))));
+
+        Assert.DoesNotContain(plan.Positionen, p => p.Feld == FieldKeys.ShaftDimension1Mm);
+        Assert.Contains(plan.Positionen, p => p.Feld == FieldKeys.ShaftDimension2Mm);
+    }
+
     // 2574 Haltungsnamen tragen im Bestand mehr als ein Objekt. Einen davon zu
     // nehmen waere geraten und saehe wie eine Tatsache aus.
     [Fact]

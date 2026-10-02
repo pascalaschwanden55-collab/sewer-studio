@@ -58,7 +58,7 @@ public sealed class DossierConditionClassPdfService : IDossierConditionClassPdfS
                     .FontSize(9.5f)
                     .FontColor(TextColor));
 
-                page.Header().Element(container => ComposeHeader(container, logo, coatOfArms));
+                page.Header().Element(container => DossierPdfBausteine.ComposeHeader(container, logo, coatOfArms));
                 page.Content().PaddingTop(12).Column(column =>
                 {
                     column.Spacing(7);
@@ -179,31 +179,6 @@ public sealed class DossierConditionClassPdfService : IDossierConditionClassPdfS
         var background = "#" + rule.Farbe[^6..];
         var foreground = value is "0" or "1" ? "#FFFFFF" : TextColor;
         return (background, foreground);
-    }
-
-    private static void ComposeHeader(
-        IContainer container,
-        byte[]? logo,
-        byte[]? coatOfArms)
-    {
-        container.Row(row =>
-        {
-            row.ConstantItem(150).Height(48).AlignLeft().AlignMiddle().Element(left =>
-            {
-                if (logo is not null)
-                    left.Image(logo).FitArea();
-                else
-                    left.Text("ABWASSER URI").FontSize(13).Bold().FontColor(BrandBlue);
-            });
-
-            row.RelativeItem();
-
-            row.ConstantItem(42).Height(48).AlignRight().AlignMiddle().Element(right =>
-            {
-                if (coatOfArms is not null)
-                    right.Image(coatOfArms).FitArea();
-            });
-        });
     }
 
     private static void ComposeClassRow(

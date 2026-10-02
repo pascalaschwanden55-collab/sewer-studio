@@ -21,9 +21,6 @@ public sealed class DataPageNovaWorkspaceController
     private const string NovaViewKey = "DataPage";
     private const string DrawerSplitterKey = "HaltungenEingabefelder";
     private const string SideSplitterKey = "HaltungenUebersicht";
-    private const double SideColStandard = 320;
-    private const double SideColMin = 240;
-    private const double SideColMax = 560;
     // Spaltenkopf plus waagrechte Bildlaufleiste der Tabelle (Sichtprobe 06.09.2026).
     private const double TabellenkopfHoehe = 54;
 
@@ -184,33 +181,19 @@ public sealed class DataPageNovaWorkspaceController
     }
 
     /// <summary>
-    /// Auf- oder zugeklappte Eingabefelder (W03): Zugeklappt bleibt nur die Kopfzeile stehen, die
-    /// Zeile schrumpft auf Auto und die Trennlinie verschwindet. Aufgeklappt gelten Mindesthoehe,
-    /// Trennlinie und die gespeicherte beziehungsweise berechnete Hoehe wieder.
+    /// Auf- oder zugeklappte Eingabefelder; die Regel steht in <see cref="NovaWorkspaceLayout"/>.
     /// </summary>
     private void ApplyDrawerOpenState()
     {
         if (!IstSichtbar)
             return;
 
-        if (_e.FelderDrawer.IsOpen)
-        {
-            _e.DrawerSplitter.Visibility = Visibility.Visible;
-            _e.DrawerSplitterRow.Height = new GridLength(DataPageWorkspaceLayoutPolicy.SplitterHoehe);
-            _e.DrawerRow.MinHeight = DataPageWorkspaceLayoutPolicy.MinDrawer;
-            // Kam die Zeile aus dem zugeklappten Zustand (Auto), zuerst eine feste Hoehe geben.
-            if (_e.DrawerRow.Height.IsAuto)
-                _e.DrawerRow.Height = new GridLength(DataPageWorkspaceLayoutPolicy.MinDrawer);
-            ApplyDrawerHeight();
-        }
-        else
-        {
-            _e.DrawerSplitter.Visibility = Visibility.Collapsed;
-            _e.DrawerSplitterRow.Height = new GridLength(0);
-            _e.DrawerRow.MinHeight = 0;
-            _e.DrawerRow.Height = GridLength.Auto;
-        }
+        NovaWorkspaceLayout.WendeSchubladeAn(Flaechen, _e.FelderDrawer.IsOpen, ApplyDrawerHeight);
     }
+
+    private NovaWorkspaceLayout.Flaechen Flaechen => new(
+        _e.Uebersicht, _e.SideSplitter, _e.FelderDrawer, _e.SideSplitterCol, _e.SideCol,
+        _e.DrawerSplitter, _e.DrawerSplitterRow, _e.DrawerRow);
 
     /// <summary>
     /// Blendet Uebersicht und Eingabefelder getrennt ein oder aus. Die festen Spalten- und
@@ -220,37 +203,11 @@ public sealed class DataPageNovaWorkspaceController
     /// </summary>
     public void SetzeSichtbar(bool uebersicht, bool eingabefelder)
     {
-        _e.Uebersicht.Visibility = uebersicht ? Visibility.Visible : Visibility.Collapsed;
-        _e.SideSplitter.Visibility = uebersicht ? Visibility.Visible : Visibility.Collapsed;
-        _e.FelderDrawer.Visibility = eingabefelder ? Visibility.Visible : Visibility.Collapsed;
-
-        if (uebersicht)
-        {
-            _e.SideSplitterCol.Width = new GridLength(DataPageWorkspaceLayoutPolicy.SplitterHoehe);
-            _e.SideCol.MinWidth = SideColMin;
-            _e.SideCol.MaxWidth = SideColMax;
-            var breite = SplitterPersistenceCore.TryGetStored(NovaViewKey, SideSplitterKey, out var w)
-                ? Math.Clamp(w, SideColMin, SideColMax)
-                : SideColStandard;
-            _e.SideCol.Width = new GridLength(breite);
-        }
-        else
-        {
-            _e.SideSplitterCol.Width = new GridLength(0);
-            _e.SideCol.MinWidth = 0;
-            _e.SideCol.Width = new GridLength(0);
-        }
-
-        if (eingabefelder)
-        {
-            ApplyDrawerOpenState();
-        }
-        else
-        {
-            _e.DrawerSplitter.Visibility = Visibility.Collapsed;
-            _e.DrawerSplitterRow.Height = new GridLength(0);
-            _e.DrawerRow.MinHeight = 0;
-            _e.DrawerRow.Height = new GridLength(0);
-        }
+        NovaWorkspaceLayout.SetzeSichtbar(
+            Flaechen,
+            uebersicht,
+            eingabefelder,
+            () => SplitterPersistenceCore.TryGetStored(NovaViewKey, SideSplitterKey, out var w) ? w : null,
+            ApplyDrawerOpenState);
     }
 }
