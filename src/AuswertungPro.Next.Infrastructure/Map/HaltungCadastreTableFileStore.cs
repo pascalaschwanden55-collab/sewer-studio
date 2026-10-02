@@ -109,8 +109,7 @@ public sealed class HaltungCadastreTableFileStore : IHaltungCadastreTableStore
         var sourceInfo = new FileInfo(xtfPath);
         AtomicTextFileWriter.Write(outTablePath, writer =>
         {
-            writer.WriteLine(
-                $"# source={xtfPath}\tbytes={sourceInfo.Length}\tmtimeUtc={sourceInfo.LastWriteTimeUtc:O}");
+            writer.WriteLine(CadastreTableStamp.Line(xtfPath, sourceInfo));
             writer.WriteLine(HaltungCadastreExtractor.TableHeader);
 
             foreach (var haltung in Extract(xtfPath))
@@ -156,27 +155,7 @@ public sealed class HaltungCadastreTableFileStore : IHaltungCadastreTableStore
     }
 
     public bool IsTableFresh(string tablePath, string xtfPath)
-    {
-        if (!File.Exists(tablePath) || !File.Exists(xtfPath))
-            return false;
-
-        try
-        {
-            var firstLine = File.ReadLines(tablePath).FirstOrDefault();
-            if (firstLine is null || !firstLine.StartsWith('#'))
-                return false;
-
-            var sourceInfo = new FileInfo(xtfPath);
-            return firstLine.Contains($"bytes={sourceInfo.Length}", StringComparison.Ordinal)
-                   && firstLine.Contains(
-                       $"mtimeUtc={sourceInfo.LastWriteTimeUtc:O}",
-                       StringComparison.Ordinal);
-        }
-        catch
-        {
-            return false;
-        }
-    }
+        => CadastreTableStamp.IsFresh(tablePath, xtfPath);
 
     private static string? Clean(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
