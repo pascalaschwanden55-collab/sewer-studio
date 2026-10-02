@@ -27,9 +27,6 @@ public sealed partial class DataPageViewModel
         SaveStatus = anzahl > 0 ? $"GeoShop: {anzahl} Haltungen abgeglichen." : "GeoShop: Keine Änderungen übernommen.";
         IsSaveStatusVisible = true;
         if (anzahl > 0)
-        {
-            _shell.MarkProjectDirty(); ScheduleAutoSave();
-            MeldeFelderExternErgaenzt();
-        }
+            MeldeUebernahme();
     }
 }
