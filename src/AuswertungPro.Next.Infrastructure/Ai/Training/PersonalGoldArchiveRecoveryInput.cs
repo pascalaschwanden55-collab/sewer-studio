@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
@@ -31,8 +32,8 @@ internal static class PersonalGoldArchiveRecoveryInput
             throw new DirectoryNotFoundException($"Aktiver Wissensordner fehlt: {activeRoot}");
         if (!Directory.Exists(legacyRoot))
             throw new DirectoryNotFoundException($"Altarchiv fehlt: {legacyRoot}");
-        if ((File.GetAttributes(activeRoot) & FileAttributes.ReparsePoint) != 0
-            || (File.GetAttributes(legacyRoot) & FileAttributes.ReparsePoint) != 0)
+        // Gemeinsame Verknuepfungspruefung (Deepscan A5), Regel Streng; Lesefehler werfen wie bisher.
+        if (IstVerknuepfung(activeRoot) || IstVerknuepfung(legacyRoot))
         {
             throw new InvalidDataException(
                 "Aktiver Wissensordner oder Altarchiv ist eine Verknüpfung.");
@@ -348,5 +349,13 @@ internal static class PersonalGoldArchiveRecoveryInput
         return PersonalGoldBrainFileService.NormalizeRoot(
             previousRootLines[0][previousRootPrefix.Length..],
             "Früherer aktiver Wissensordner");
+    }
+
+    private static bool IstVerknuepfung(string pfad)
+    {
+        var befund = VerknuepfungsSchutz.PruefeEintrag(pfad, VerknuepfungsRegel.Streng);
+        if (befund.Fehler is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(befund.Fehler);
+        return befund.Befund == VerknuepfungsBefund.Verknuepfung;
     }
 }
