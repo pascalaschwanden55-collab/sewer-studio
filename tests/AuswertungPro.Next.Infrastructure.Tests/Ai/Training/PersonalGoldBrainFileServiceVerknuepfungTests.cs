@@ -6,7 +6,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Ai.Training;
 
 /// <summary>
 /// Gold-Speicher auf dem gemeinsamen VerknuepfungsSchutz (Deepscan 02.10.2026, A5), Regel
-/// GoldSpeicher: Wurzel eingeschlossen, jedes Glied muss vorhanden und lesbar sein. Ausnahmetyp
+/// Streng: Wurzel eingeschlossen, jedes Glied muss vorhanden und lesbar sein. Ausnahmetyp
 /// und Meldung bleiben wie vor der Umstellung.
 /// </summary>
 public sealed class PersonalGoldBrainFileServiceVerknuepfungTests : IDisposable

@@ -49,12 +49,12 @@ internal static class PersonalGoldBrainFileService
         }
     }
 
-    // Gemeinsame Verknuepfungspruefung (Deepscan A5), Regel GoldSpeicher: Wurzel eingeschlossen,
+    // Gemeinsame Verknuepfungspruefung (Deepscan A5), Regel Streng: Wurzel eingeschlossen,
     // fehlende oder unlesbare Glieder werfen ihre urspruengliche Ausnahme.
     public static void EnsureNoReparsePoint(string path, string stopRoot)
     {
         var root = NormalizeRoot(stopRoot, "Schutzwurzel");
-        var befund = VerknuepfungsSchutz.PruefeKette(root, path, VerknuepfungsRegel.GoldSpeicher);
+        var befund = VerknuepfungsSchutz.PruefeKette(root, path, VerknuepfungsRegel.Streng);
         if (befund.Befund == VerknuepfungsBefund.Ausserhalb)
             throw new InvalidDataException($"Pfad liegt ausserhalb der Schutzwurzel: {path}");
         WirfBeiVerknuepfung(befund, "Verknüpfung im geschützten Pfad");
@@ -207,7 +207,7 @@ internal static class PersonalGoldBrainFileService
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 WirfBeiVerknuepfung(
-                    VerknuepfungsSchutz.PruefeEintrag(entry, VerknuepfungsRegel.GoldSpeicher),
+                    VerknuepfungsSchutz.PruefeEintrag(entry, VerknuepfungsRegel.Streng),
                     "Verknüpfung im zu kopierenden Ordner");
 
                 var target = Path.Combine(current.Target, Path.GetFileName(entry));

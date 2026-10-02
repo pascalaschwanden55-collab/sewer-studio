@@ -124,7 +124,7 @@ public sealed class VerknuepfungsSchutzTests
         var attribute = Attribute((Wurzel, FileAttributes.ReparsePoint));
 
         Assert.True(VerknuepfungsSchutz.PruefeKette(Wurzel, Wurzel, VerknuepfungsRegel.Spiegel, attribute).IstSicher);
-        Assert.False(VerknuepfungsSchutz.PruefeKette(Wurzel, Wurzel, VerknuepfungsRegel.GoldSpeicher, attribute).IstSicher);
+        Assert.False(VerknuepfungsSchutz.PruefeKette(Wurzel, Wurzel, VerknuepfungsRegel.Streng, attribute).IstSicher);
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public sealed class VerknuepfungsSchutzTests
     {
         Assert.Equal(new VerknuepfungsRegel { WurzelEinschliessen = false, OberhalbPruefen = false, BeiFehlerSperren = false, FehlendErlaubt = true }, VerknuepfungsRegel.Spiegel);
         Assert.Equal(new VerknuepfungsRegel { WurzelEinschliessen = true, OberhalbPruefen = true, BeiFehlerSperren = true, FehlendErlaubt = true }, VerknuepfungsRegel.ProjektSchreibgrenze);
-        Assert.Equal(new VerknuepfungsRegel { WurzelEinschliessen = true, OberhalbPruefen = false, BeiFehlerSperren = true, FehlendErlaubt = false }, VerknuepfungsRegel.GoldSpeicher);
+        Assert.Equal(new VerknuepfungsRegel { WurzelEinschliessen = true, OberhalbPruefen = false, BeiFehlerSperren = true, FehlendErlaubt = false }, VerknuepfungsRegel.Streng);
         Assert.Equal(new VerknuepfungsRegel { WurzelEinschliessen = false, OberhalbPruefen = false, BeiFehlerSperren = true, FehlendErlaubt = true }, VerknuepfungsRegel.GanzerPfad);
     }
 
@@ -156,11 +156,11 @@ public sealed class VerknuepfungsSchutzTests
             JunctionTestSupport.CreateDirectoryLink(link, ziel);
             File.WriteAllText(Path.Combine(ziel, "datei.txt"), "x");
 
-            var befund = VerknuepfungsSchutz.PruefeKette(wurzel, Path.Combine(link, "datei.txt"), VerknuepfungsRegel.GoldSpeicher);
+            var befund = VerknuepfungsSchutz.PruefeKette(wurzel, Path.Combine(link, "datei.txt"), VerknuepfungsRegel.Streng);
 
             Assert.Equal(VerknuepfungsBefund.Verknuepfung, befund.Befund);
             Assert.Equal(link, befund.Pfad);
-            Assert.True(VerknuepfungsSchutz.PruefeKette(wurzel, Path.Combine(ziel, "datei.txt"), VerknuepfungsRegel.GoldSpeicher).IstSicher);
+            Assert.True(VerknuepfungsSchutz.PruefeKette(wurzel, Path.Combine(ziel, "datei.txt"), VerknuepfungsRegel.Streng).IstSicher);
         }
         finally
         {

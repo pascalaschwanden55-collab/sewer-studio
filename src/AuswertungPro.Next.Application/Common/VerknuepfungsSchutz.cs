@@ -57,8 +57,8 @@ public sealed record VerknuepfungsRegel
     /// <summary>Projekt-Schreibgrenze (<c>ProjectMutationPathPolicy</c>): Wurzel und alle Vorfahren bis zum Laufwerk.</summary>
     public static VerknuepfungsRegel ProjektSchreibgrenze { get; } = new() { WurzelEinschliessen = true, OberhalbPruefen = true };
 
-    /// <summary>Geschuetzte Gold-Speicher: Wurzel eingeschlossen, jedes Glied muss vorhanden und lesbar sein.</summary>
-    public static VerknuepfungsRegel GoldSpeicher { get; } = new() { WurzelEinschliessen = true, FehlendErlaubt = false };
+    /// <summary>Streng (Gold-Speicher, Import-Staging): Wurzel eingeschlossen, jedes Glied muss vorhanden und lesbar sein.</summary>
+    public static VerknuepfungsRegel Streng { get; } = new() { WurzelEinschliessen = true, FehlendErlaubt = false };
 
     /// <summary>Trainingsablage (<c>TrainingInventoryPaths</c>): ganzer Pfad ab Laufwerk, fehlender Rest erlaubt, Lesefehler sperren.</summary>
     public static VerknuepfungsRegel GanzerPfad { get; } = new();

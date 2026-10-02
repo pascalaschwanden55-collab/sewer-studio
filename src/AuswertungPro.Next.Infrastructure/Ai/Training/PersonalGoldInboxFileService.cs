@@ -137,7 +137,7 @@ public sealed class PersonalGoldInboxFileService : IPersonalGoldInboxService
     // Gemeinsame Verknuepfungspruefung (Deepscan A5); Lesefehler werfen wie bisher und landen als Hinweis.
     private static bool IstVerknuepfung(string path)
     {
-        var befund = VerknuepfungsSchutz.PruefeEintrag(path, VerknuepfungsRegel.GoldSpeicher);
+        var befund = VerknuepfungsSchutz.PruefeEintrag(path, VerknuepfungsRegel.Streng);
         if (befund.Fehler is not null)
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(befund.Fehler);
         return befund.Befund == VerknuepfungsBefund.Verknuepfung;

@@ -314,7 +314,7 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
     // Gemeinsame Verknuepfungspruefung (Deepscan A5); fehlende oder unlesbare Eintraege werfen wie bisher.
     private static void RejectReparsePoint(string path)
     {
-        var befund = VerknuepfungsSchutz.PruefeEintrag(path, VerknuepfungsRegel.GoldSpeicher);
+        var befund = VerknuepfungsSchutz.PruefeEintrag(path, VerknuepfungsRegel.Streng);
         if (befund.Fehler is not null)
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(befund.Fehler);
         if (befund.Befund == VerknuepfungsBefund.Verknuepfung)
