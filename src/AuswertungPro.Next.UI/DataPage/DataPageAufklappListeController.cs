@@ -11,7 +11,7 @@ namespace AuswertungPro.Next.UI.DataPage;
 
 /// <summary>
 /// Aufklapp-Liste der Haltungen; der Ablauf steht in <see cref="AufklappListeController{TListe,TRecord}"/>.
-/// Schranke ist <c>IsProjectReady</c>. Nur hier gibt es den Konflikthinweis (W01).
+/// Schranke ist <c>IsProjectReady</c>.
 /// </summary>
 public sealed class DataPageAufklappListeController(
     HaltungAufklappListe liste,
@@ -28,7 +28,6 @@ public sealed class DataPageAufklappListeController(
     protected override DataPageLayoutSettings Layout(AppSettings einstellungen) => einstellungen.DataPageLayout;
     protected override string? Wert(HaltungRecord record, string feld) => record.GetFieldValue(feld);
     protected override ObjektakteViewModel? ErstelleObjektakte(HaltungRecord record) => _vm()?.ObjektakteErstellen?.Invoke(record.Id);
-    protected override void SetzeHinweis(string text) => Liste.Hinweis = text;
 
     protected override bool WaehleUndVerschiebe(HaltungRecord record, int position)
     {

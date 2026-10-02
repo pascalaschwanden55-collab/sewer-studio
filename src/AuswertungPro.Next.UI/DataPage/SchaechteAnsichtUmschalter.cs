@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
 using AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 
 namespace AuswertungPro.Next.UI.DataPage;
@@ -20,7 +21,10 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// </summary>
 public sealed class SchaechteAnsichtUmschalter
 {
-    /// <summary>Die benannten Elemente der Schachtseite aus SchaechtePage.xaml.</summary>
+    /// <summary>
+    /// Die benannten Elemente der Schachtseite aus SchaechtePage.xaml. <c>Eingabefelder</c> ist
+    /// die Schublade unter der Tabelle; sie traegt dort den Konflikthinweis (W01).
+    /// </summary>
     public sealed record Elemente(
         DataGrid Tabelle,
         FrameworkElement AlteAnsicht,
@@ -28,7 +32,8 @@ public sealed class SchaechteAnsichtUmschalter
         FrameworkElement Spaltenchips,
         MenuItem AlteAnsichtSchalter,
         MenuItem ListeSchalter,
-        MenuItem TabelleSchalter);
+        MenuItem TabelleSchalter,
+        HaltungFelderDrawer Eingabefelder);
 
     private readonly Elemente _e;
     private readonly Func<AppSettings?> _settings;
@@ -58,6 +63,26 @@ public sealed class SchaechteAnsichtUmschalter
 
     /// <summary>Zeigt die Seite gerade die Aufklapp-Liste?</summary>
     public bool ListeSichtbar => _e.Liste.Visibility == Visibility.Visible;
+
+    /// <summary>
+    /// Steht das bearbeitbare Formular gerade in der Liste? Nur dann gehoert ein Konflikthinweis
+    /// dorthin; sonst in die Eingabefelder-Schublade der Tabelle (wie bei den Haltungen).
+    /// </summary>
+    public bool ListeZeigtFormular => ListeSichtbar && _e.Liste.Aufgeklappt is not null;
+
+    /// <summary>
+    /// W01: Die verworfene Eingabe gehoert in die Kopfzeile des Formulars, das sie gezeigt hat —
+    /// in der Listenansicht die aufgeklappte Zeile, sonst die Eingabefelder-Schublade. Beide
+    /// Formulare loeschen den Hinweis selbst, sobald sie neu aufgebaut werden.
+    /// </summary>
+    public void MeldeKonflikt(string feld, string aktuellerWert, string eingabe)
+    {
+        var text = DataPageKonfliktHinweis.Schacht(feld, aktuellerWert, eingabe);
+        if (ListeZeigtFormular)
+            _e.Liste.Hinweis = text;
+        else
+            _e.Eingabefelder.Hinweis = text;
+    }
 
     /// <summary>Die gespeicherte Nova-Ansicht, normalisiert ("liste" oder "tabelle").</summary>
     public string Gewaehlt

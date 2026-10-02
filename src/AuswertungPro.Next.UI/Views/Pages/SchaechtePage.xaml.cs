@@ -102,7 +102,7 @@ public partial class SchaechtePage : UserControl
             CommitSchachtDetailMitVerlauf,
             () => _vm is not null,
             BaueNachschlagBefehl,
-            BaueStrassenBefehl);
+            BaueStrassenBefehl, (feld, aktuell, eingabe) => _ansichtSchacht?.MeldeKonflikt(feld, aktuell, eingabe));
 
         SchachtansichtView.DetailBuilder = BuildRecordDetailsForAnsicht;
         SchachtansichtView.DamageLineBuilder = SchachtDamageLineBuilder.Build;
