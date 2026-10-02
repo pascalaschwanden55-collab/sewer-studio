@@ -99,6 +99,32 @@ public sealed class TrainingSampleEligibilityTests
         Assert.Equal(DateTime.ParseExact(expectedIso, "yyyy-MM-dd", CultureInfo.InvariantCulture), parsed);
     }
 
+    // Deepscan A4: Das Training liest das Inspektionsdatum nach derselben Regel wie Suche und
+    // Dateistempel (HaltungFeldwerte). Beispiele wie in HaltungFeldwerteTests plus Grenzfaelle.
+    [Theory]
+    [InlineData("05.03.2024")]
+    [InlineData("5.3.2024")]
+    [InlineData("24.09.25")]
+    [InlineData("2024-03-05")]
+    [InlineData("2024.03.05")]
+    [InlineData("20240305")]
+    [InlineData("2024-03-05T10:00:00")]
+    [InlineData("05.03.2024 14:30")]
+    [InlineData("Aufnahmen: 04.12.14 - 05.12.14")]
+    [InlineData("Aufnahme vom 01.06.55")]
+    [InlineData("Aufnahme 5.3.202")]
+    [InlineData("20251110_9866-9327.pdf")]
+    [InlineData("2024")]
+    [InlineData("GEP Aufnahmen Altdorf 2025")]
+    [InlineData("unbekannt")]
+    [InlineData("")]
+    public void TryParseInspectionDate_folgt_der_gemeinsamen_Leseregel(string raw)
+    {
+        Assert.Equal(
+            AuswertungPro.Next.Application.Common.HaltungFeldwerte.LiesInspektionsdatum(raw),
+            TrainingSampleEligibility.TryParseInspectionDate(raw));
+    }
+
     private static TrainingSample MakeSample(string code)
         => new()
         {
