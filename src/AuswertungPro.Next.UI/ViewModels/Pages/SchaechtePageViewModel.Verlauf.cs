@@ -39,10 +39,6 @@ public sealed partial class SchaechtePageViewModel
         LastResult = ergebnis.Meldung;
     }
 
-    /// <summary>Eine Uebernahme hat Feldwerte geschrieben: Anzeige neu, Verlauf leeren.</summary>
-    private void MeldeUebernahme()
-    {
-        Verlauf.Leere(DatenaenderungsVerlauf.GrundUebernahme);
-        FelderExternErgaenzt?.Invoke();
-    }
+    /// <summary>Eine Uebernahme hat Feldwerte geschrieben: derselbe Abschluss wie bei den Haltungen.</summary>
+    private void MeldeUebernahme() => SeitenUebernahme.Abschliessen(_shell, ScheduleAutoSave, FelderExternErgaenzt);
 }

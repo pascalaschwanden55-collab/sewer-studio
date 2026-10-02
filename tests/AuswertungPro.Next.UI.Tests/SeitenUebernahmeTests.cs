@@ -11,15 +11,16 @@ using Microsoft.Extensions.Logging;
 namespace AuswertungPro.Next.UI.Tests;
 
 /// <summary>
-/// Deepscan 02.10.2026 (A2): «Leere Felder aus QGIS ergänzen» muss auf beiden Seiten gleich
-/// abschliessen — Ergebnis in der Statuszeile, Verlauf leeren und das Ereignis
-/// <c>FelderExternErgaenzt</c>, an dem das offene Formular seine Importwerte neu zeichnet.
-/// Vorher meldete die Schachtseite nichts und zeichnete nichts neu.
+/// Deepscan 02.10.2026 (A2): Eine Uebernahme (QGIS, GeoShop, WebGIS) schliesst auf beiden Seiten
+/// gleich ab — Ergebnis in der Statuszeile, Projekt als geaendert markiert, Verlauf leer und das
+/// Ereignis <c>FelderExternErgaenzt</c>, an dem das offene Formular seine Importwerte neu zeichnet.
+/// Vorher meldete die Schachtseite bei QGIS nichts und zeichnete nichts neu, und QGIS liess auf
+/// beiden Seiten das Projekt «ungeaendert» (keine Rueckfrage beim Schliessen, kein Autosave).
 ///
 /// Die Seiten laufen echt (Shell, ServiceProvider, QGIS-Leser); die GeoPackage-Datei ist eine
 /// kleine, im Test erzeugte SQLite-Datei.
 /// </summary>
-public sealed class SeitenUebernahmeQgisTests : IDisposable
+public sealed class SeitenUebernahmeTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"seiten-qgis-{Guid.NewGuid():N}");
     private readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(_ => { });
@@ -27,7 +28,7 @@ public sealed class SeitenUebernahmeQgisTests : IDisposable
     private readonly ServiceProvider _services;
     private readonly ShellViewModel _shell;
 
-    public SeitenUebernahmeQgisTests()
+    public SeitenUebernahmeTests()
     {
         Directory.CreateDirectory(_dir);
         _services = new ServiceProvider(_settings, new DiagnosticsOptions(),
@@ -47,7 +48,7 @@ public sealed class SeitenUebernahmeQgisTests : IDisposable
     }
 
     [Fact]
-    public void Schachtseite_meldet_das_Ergebnis_leert_den_Verlauf_und_zeichnet_die_Anzeige_neu()
+    public void Qgis_auf_der_Schachtseite_meldet_markiert_leert_den_Verlauf_und_zeichnet_neu()
     {
         _settings.QgisSchaechteGpkgPath = Gpkg("schaechte.gpkg", "Schaechte",
             ["bw_bezeichnung", "ns_dimension1"], ["80401", "800"]);
@@ -63,8 +64,12 @@ public sealed class SeitenUebernahmeQgisTests : IDisposable
         Assert.True(_services.DatenaenderungsVerlauf.KannRueckgaengig(DatenaenderungsBereich.Schaechte));
         var neuGezeichnet = 0;
         seite.FelderExternErgaenzt += () => neuGezeichnet++;
+        _shell.Project.Dirty = false;
 
         seite.QgisFelderErgaenzenCommand.Execute(null);
+
+        // Das Projekt weiss, dass es geaendert ist: Titelmarke, Rueckfrage beim Schliessen, Autosave.
+        Assert.True(_shell.Project.Dirty);
 
         Assert.Equal("800", schacht.GetFieldValue(FieldKeys.ShaftDimension1Mm));
         Assert.Equal("1 leere Felder aus QGIS ergänzt. Nicht vergessen zu speichern.", seite.LastResult);
@@ -72,9 +77,9 @@ public sealed class SeitenUebernahmeQgisTests : IDisposable
         Assert.False(_services.DatenaenderungsVerlauf.KannRueckgaengig(DatenaenderungsBereich.Schaechte));
     }
 
-    /// <summary>Das Vorbild: Die Haltungsseite tat das schon. Der Test haelt es fest.</summary>
+    /// <summary>Meldung, Verlauf und Ereignis hatte die Haltungsseite schon; neu ist die Aenderungsmarke.</summary>
     [Fact]
-    public void Haltungsseite_meldet_das_Ergebnis_leert_den_Verlauf_und_zeichnet_die_Anzeige_neu()
+    public void Qgis_auf_der_Haltungsseite_meldet_markiert_leert_den_Verlauf_und_zeichnet_neu()
     {
         _settings.QgisHaltungenGpkgPath = Gpkg("leitungen.gpkg", "Leitungen",
             ["ne_bezeichnung", "ha_lichte_hoehe"], ["10001-10002", "300"]);
@@ -90,13 +95,64 @@ public sealed class SeitenUebernahmeQgisTests : IDisposable
         Assert.True(_services.DatenaenderungsVerlauf.KannRueckgaengig(DatenaenderungsBereich.Haltungen));
         var neuGezeichnet = 0;
         seite.FelderExternErgaenzt += () => neuGezeichnet++;
+        _shell.Project.Dirty = false;
 
         seite.QgisFelderErgaenzenCommand.Execute(null);
+
+        // Das Projekt weiss, dass es geaendert ist: Titelmarke, Rueckfrage beim Schliessen, Autosave.
+        Assert.True(_shell.Project.Dirty);
 
         Assert.Equal("300", haltung.GetFieldValue(FieldKeys.NominalDiameterMm));
         Assert.Equal("1 leere Felder aus QGIS ergänzt. Nicht vergessen zu speichern.", seite.SaveStatus);
         Assert.Equal(1, neuGezeichnet);
         Assert.False(_services.DatenaenderungsVerlauf.KannRueckgaengig(DatenaenderungsBereich.Haltungen));
+    }
+
+    [Fact]
+    public void Abschliessen_markiert_plant_den_Autosave_leert_den_Verlauf_und_meldet_in_dieser_Reihenfolge()
+    {
+        var haltung = new HaltungRecord();
+        haltung.Fields[FieldKeys.HoldingName] = "10001-10002";
+        var projekt = new Project { Name = "Abschluss" };
+        projekt.Data.Add(haltung);
+        OeffneProjekt(projekt);
+        using (_services.DatenaenderungsVerlauf.Erfasse(haltung, FieldKeys.PipeMaterial))
+            haltung.SetFieldValue(FieldKeys.PipeMaterial, "PVC", FieldSource.Manual, true);
+        _shell.Project.Dirty = false;
+        var ablauf = new List<string>();
+
+        SeitenUebernahme.Abschliessen(_shell,
+            () => ablauf.Add($"autosave dirty={_shell.Project.Dirty}"),
+            () => ablauf.Add($"neu zeichnen verlauf={_services.DatenaenderungsVerlauf.KannRueckgaengig(DatenaenderungsBereich.Haltungen)}"));
+
+        Assert.Equal(["autosave dirty=True", "neu zeichnen verlauf=False"], ablauf);
+    }
+
+    /// <summary>
+    /// Die Uebernahmen mit Fenster (GeoShop, WebGIS) laufen ohne Bildschirm nicht im Test. Deshalb haelt
+    /// dieser Waechter fest: Jeder Uebernahmeweg beider Seiten endet in <c>MeldeUebernahme</c>, und
+    /// nur der gemeinsame Abschluss markiert und leert dort. Ein eigener, halber Abschluss je Weg war
+    /// genau der Weg, auf dem die Seiten auseinanderliefen.
+    /// </summary>
+    [Fact]
+    public void Jeder_Uebernahmeweg_beider_Seiten_endet_im_gemeinsamen_Abschluss()
+    {
+        var vms = Path.Combine(TestRepoPaths.FindRepositoryRoot(), "src", "AuswertungPro.Next.UI", "ViewModels", "Pages");
+        foreach (var seite in new[] { "DataPageViewModel", "SchaechtePageViewModel" })
+        {
+            foreach (var weg in new[] { "QgisNachfuellen", "KatasterKennungen", "WebGisHolen" })
+            {
+                var code = File.ReadAllText(Path.Combine(vms, $"{seite}.{weg}.cs"));
+                Assert.Contains("MeldeUebernahme", code);
+                Assert.DoesNotContain("Verlauf.Leere(", code);
+                Assert.DoesNotContain("MarkProjectDirty", code);
+            }
+
+            var teile = Directory.GetFiles(vms, $"{seite}*.cs").Select(File.ReadAllText).ToArray();
+            Assert.Single(teile, t => t.Contains(
+                "SeitenUebernahme.Abschliessen(_shell, ScheduleAutoSave, FelderExternErgaenzt)", StringComparison.Ordinal));
+            Assert.DoesNotContain(teile, t => t.Contains("GrundUebernahme", StringComparison.Ordinal));
+        }
     }
 
     private void OeffneProjekt(Project projekt)

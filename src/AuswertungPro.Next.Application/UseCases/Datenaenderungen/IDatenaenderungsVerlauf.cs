@@ -48,10 +48,9 @@ public sealed class DatenaenderungsVerlaufGeleertEventArgs(string grund) : Event
 /// Uebernahme aus GeoShop, QGIS, WebGIS oder einer Objektakte): danach <see cref="Leere"/> mit
 /// <see cref="DatenaenderungsVerlauf.GrundUebernahme"/> aufrufen. Sonst nimmt Strg+Z spaeter Werte
 /// zurueck, die der Schritt gar nicht mehr besitzt. Heutige Stellen:
-///  - Haltungen: <c>DataPageViewModel.MeldeFelderExternErgaenzt</c>, aufgerufen von
-///    <c>DataPageViewModel.KatasterKennungen</c>, <c>.QgisNachfuellen</c> und <c>.WebGisHolen</c>.
-///  - Schaechte: <c>SchaechtePageViewModel.MeldeUebernahme</c>, aufgerufen von <c>.KatasterKennungen</c>,
-///    <c>.QgisNachfuellen</c> und <c>.WebGisHolen</c>.
+///  - Haltungen und Schaechte: <c>DataPageViewModel.MeldeUebernahme</c> bzw.
+///    <c>SchaechtePageViewModel.MeldeUebernahme</c>, beide ueber <c>SeitenUebernahme.Abschliessen</c>,
+///    aufgerufen von <c>.KatasterKennungen</c>, <c>.QgisNachfuellen</c> und <c>.WebGisHolen</c>.
 ///  - <c>WebGisHolenAblauf</c> (Holen ueber die Shell) und <c>ObjektaktenDialog</c> (nach erfolgreichem
 ///    Speichern der Objektakte).
 ///  - <c>ShellViewModel.DatenVerlauf</c>: Import, Uebertragung oder Projektwechsel

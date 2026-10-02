@@ -16,10 +16,6 @@ public sealed partial class DataPageViewModel
     private async Task WebGisHolenAsync()
     {
         if (_webGisHolen is null || !_shell.IsProjectReady) return;
-        await _webGisHolen.OeffneAsync(_shell, () => _settings.LastProjectPath, () =>
-        {
-            ScheduleAutoSave();
-            MeldeFelderExternErgaenzt();
-        });
+        await _webGisHolen.OeffneAsync(_shell, () => _settings.LastProjectPath, MeldeUebernahme);
     }
 }

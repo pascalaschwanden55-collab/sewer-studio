@@ -1319,7 +1319,7 @@ ganzen Programm, ohne Fachlogik/Datenformate/Feldschluessel zu aendern.
   ReplaceProject` → `Binde`), jede Listenaenderung von `Data`/`SchaechteData` (neu, loeschen, verschieben,
   auch aus Importen), jeder laufende Projektvorgang (`NotifyShellOperationCommands` →
   `PruefeDatenVerlaufBeiVorgang`: Import, Verteilung, WebGIS, Laden) und Uebernahmen (GeoShop, QGIS,
-  WebGIS-Holen ueber `MeldeFelderExternErgaenzt`/`MeldeUebernahme`). Nicht erfasst (Vorbedingung schuetzt):
+  WebGIS-Holen ueber `MeldeUebernahme` → `SeitenUebernahme.Abschliessen`). Nicht erfasst (Vorbedingung schuetzt):
   Nachschlagen, Strassennamen, Durchnummerieren, GeoShop-Einzelergaenzung in der Akte.
   **Bedienung:** Menue «_Bearbeiten» zwischen Datei und Werkzeuge («Rückgängig: Rohrmaterial 10001-10002»,
   Unterstrich im Namen verdoppelt), Strg+Z / Strg+Y / Strg+Umschalt+Z als Fenster-KeyBindings; die
