@@ -45,6 +45,9 @@ public sealed class KinsImportService : IKinsImportService
 
         // Single recursive scan for format detection instead of 5 separate scans
         var (hasDb3, hasMdb, hasFdb, hasDatenTxt, hasKiDvDataTxt) = DetectFormats(exportRoot);
+        // R1: Uebersprungene Ordner der Quelle einmal bestimmen. Die Teilimporte melden sie auch;
+        // ihre Zeilen werden beim Zusammenfuehren herausgenommen und am Schluss genau einmal gezaehlt.
+        var luecken = UebersprungeneOrdner.PruefeBaum(exportRoot);
 
         // Heuristik:
         // - KINS-TXT: kiDVDaten.txt vorhanden.
@@ -88,14 +91,14 @@ public sealed class KinsImportService : IKinsImportService
         if (runWinCan)
         {
             executed++;
-            MergeResult("WinCan", _winCanImport.ImportWinCanExport(exportRoot, project, ctx), messages,
+            MergeResult("WinCan", UebersprungeneOrdnerImport.Entferne(_winCanImport.ImportWinCanExport(exportRoot, project, ctx), luecken), messages,
                 ref found, ref created, ref updated, ref errors, ref uncertain, ref successCount);
         }
 
         if (runIbak)
         {
             executed++;
-            MergeResult("IBAK", _ibakImport.ImportIbakExport(exportRoot, project, ctx), messages,
+            MergeResult("IBAK", UebersprungeneOrdnerImport.Entferne(_ibakImport.ImportIbakExport(exportRoot, project, ctx), luecken), messages,
                 ref found, ref created, ref updated, ref errors, ref uncertain, ref successCount);
         }
 
@@ -106,14 +109,13 @@ public sealed class KinsImportService : IKinsImportService
         {
             var last = messages.LastOrDefault(m => m.StartsWith("Fehler:", StringComparison.OrdinalIgnoreCase))
                        ?? "Kein kompatibles KINS-Format erkannt.";
-            return UebersprungeneOrdnerImport.Ergaenze(Result<ImportStats>.Fail("KINS_IMPORT_FAILED", last), exportRoot);
+            return UebersprungeneOrdnerImport.Ergaenze(Result<ImportStats>.Fail("KINS_IMPORT_FAILED", last), luecken);
         }
 
         var dedupedMessages = Deduplicate(messages);
         var stats = new ImportStats(found, created, updated, errors, uncertain, dedupedMessages);
-        // R1 (02.10.2026): Ordner, die die Suche ausliess, zaehlen als Fehler. Hat ein Teilimport
-        // (WinCan, IBAK) denselben Ordner schon gemeldet, zaehlt er nicht doppelt.
-        return UebersprungeneOrdnerImport.Ergaenze(Result<ImportStats>.Success(stats), exportRoot);
+        // R1 (02.10.2026): Ordner, die die Suche ausliess, zaehlen genau einmal als Fehler.
+        return UebersprungeneOrdnerImport.Ergaenze(Result<ImportStats>.Success(stats), luecken);
     }
 
     private static Result<ImportStats> ImportKinsDvdText(string exportRoot, Project project, IProtocolService protocolService, ImportRunContext? ctx = null)

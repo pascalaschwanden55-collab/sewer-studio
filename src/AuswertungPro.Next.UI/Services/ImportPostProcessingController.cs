@@ -85,8 +85,11 @@ internal static class ImportPostProcessingController
             var luecken = UebersprungeneOrdner.Meldungen(uebersprungen);
             var lueckenText = string.Concat(luecken.Select(zeile => Environment.NewLine + zeile));
 
+            // Liegen alle PDFs hinter einem ausgelassenen Ordner, ist «keine PDF» nur die halbe Wahrheit.
             if (pdfFiles.Length == 0)
-                return new PdfScanResult(0, 0, 0, "Keine PDF-Dateien im Quellordner gefunden." + lueckenText);
+                return new PdfScanResult(0, 0, 0, luecken.Count == 0
+                    ? "Keine PDF-Dateien im Quellordner gefunden."
+                    : $"Keine PDF-Dateien im Quellordner gefunden, {luecken.Count} Fehler" + lueckenText, luecken.Count);
 
             var found = 0;
             var updated = 0;
@@ -133,11 +136,11 @@ internal static class ImportPostProcessingController
 
             var message = $"PDF-Scan: {pdfFiles.Length} Dateien, {found} Haltungen zugeordnet, {updated} aktualisiert, {errors} Fehler"
                           + lueckenText;
-            return new PdfScanResult(pdfFiles.Length, found, updated, message);
+            return new PdfScanResult(pdfFiles.Length, found, updated, message, errors);
         });
 
         actions.AppendSummaryText($"\n{result.Message}");
-        if (result.Files > 0)
+        if (result.Files > 0 || result.Errors > 0)
             actions.AppendDetailsText($"\n\n{result.Message}");
     }
 
@@ -236,5 +239,5 @@ internal static class ImportPostProcessingController
         }
     }
 
-    private sealed record PdfScanResult(int Files, int Found, int Updated, string Message);
+    private sealed record PdfScanResult(int Files, int Found, int Updated, string Message, int Errors);
 }

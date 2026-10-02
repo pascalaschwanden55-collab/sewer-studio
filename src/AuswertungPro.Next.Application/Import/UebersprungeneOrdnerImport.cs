@@ -50,6 +50,30 @@ public static class UebersprungeneOrdnerImport
         });
     }
 
+    /// <summary>
+    /// Nimmt die von einem Teilimport schon eingetragenen Zeilen samt ihrem Fehlerzaehler wieder
+    /// heraus. Ein Sammelimport (KINS) ruft das fuer jeden Teilimport auf und traegt die Zeilen
+    /// danach genau einmal mit <see cref="Ergaenze(Result{ImportStats}, IReadOnlyList{string})"/> ein.
+    /// Sonst zaehlte derselbe Ordner bei WinCan und IBAK je einmal (Review PR #68).
+    /// </summary>
+    public static Result<ImportStats> Entferne(Result<ImportStats> ergebnis, IReadOnlyList<string> meldungen)
+    {
+        ArgumentNullException.ThrowIfNull(ergebnis);
+        if (meldungen is not { Count: > 0 } || !ergebnis.Ok || ergebnis.Value is null)
+            return ergebnis;
+
+        var stats = ergebnis.Value;
+        var entfernt = meldungen.Distinct(StringComparer.Ordinal).Count(meldung => stats.Messages.Contains(meldung));
+        if (entfernt == 0)
+            return ergebnis;
+
+        return Result<ImportStats>.Success(stats with
+        {
+            Errors = Math.Max(0, stats.Errors - entfernt),
+            Messages = stats.Messages.Where(text => !meldungen.Contains(text)).ToList()
+        });
+    }
+
     private static bool SchonGemeldet(IReadOnlyList<string> vorhandene, string meldung)
         => vorhandene.Any(text => string.Equals(text, meldung, StringComparison.Ordinal)
                                   || text.EndsWith(": " + meldung, StringComparison.Ordinal));

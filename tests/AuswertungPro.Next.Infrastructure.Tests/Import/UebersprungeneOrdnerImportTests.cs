@@ -134,23 +134,24 @@ public sealed class UebersprungeneOrdnerImportTests
     }
 
     [JunctionFact]
-    public void Kins_zaehlt_die_Meldung_des_WinCan_Teilimports_nicht_doppelt()
+    public void Kins_zaehlt_einen_Ordner_bei_WinCan_und_IBAK_Teilimport_genau_einmal()
     {
-        using var baum = new UebersprungeneOrdnerTestbaum("r1-kins-wincan");
+        // Review PR #68: Beide Teilimporte melden denselben Ordner (wie die echten Dienste).
+        // Zusammengefuehrt darf er nur einmal zaehlen und nur einmal im Bericht stehen.
+        using var baum = new UebersprungeneOrdnerTestbaum("r1-kins-gemischt");
         File.WriteAllText(Path.Combine(baum.Quelle, "export.db3"), "dummy");
+        File.WriteAllText(Path.Combine(baum.Quelle, "Daten.txt"), "dummy");
         var link = baum.Verknuepfe(baum.Quelle);
         var zeile = UebersprungeneOrdnerTestbaum.ErwarteteZeile(link);
         var sut = new KinsImportService(
-            new FesterImport<IWinCanDbImportService>(
-                Result<ImportStats>.Success(new ImportStats(1, 0, 1, 1, 0, new[] { zeile }))),
-            new FesterImport<IIbakImportService>(Result<ImportStats>.Fail("X", "nicht erwartet")));
+            new MeldenderImport(new ImportStats(1, 0, 1, 0, 0, new[] { "ok-w" })),
+            new MeldenderImport(new ImportStats(2, 1, 1, 0, 0, new[] { "ok-i" })));
 
         var ergebnis = sut.ImportKinsExport(baum.Quelle, new Project());
 
         Assert.True(ergebnis.Ok, ergebnis.ErrorMessage);
         Assert.Equal(1, ergebnis.Value!.Errors);
-        Assert.Contains("WinCan: " + zeile, ergebnis.Value.Messages);
-        Assert.DoesNotContain(zeile, ergebnis.Value.Messages);
+        Assert.Single(ergebnis.Value.Messages, text => text.Contains(zeile, StringComparison.Ordinal));
     }
 
     [JunctionFact]
@@ -210,6 +211,16 @@ public sealed class UebersprungeneOrdnerImportTests
 
         public Result<ImportStats> ImportIbakExport(string exportRoot, Project project, ImportRunContext? ctx = null)
             => _ergebnis;
+    }
+
+    /// <summary>Teilimport, der wie die echten Dienste uebersprungene Ordner der Quelle meldet.</summary>
+    private sealed class MeldenderImport(ImportStats stats) : IWinCanDbImportService, IIbakImportService
+    {
+        public Result<ImportStats> ImportWinCanExport(string exportRoot, Project project, ImportRunContext? ctx = null)
+            => UebersprungeneOrdnerImport.Ergaenze(Result<ImportStats>.Success(stats), exportRoot);
+
+        public Result<ImportStats> ImportIbakExport(string exportRoot, Project project, ImportRunContext? ctx = null)
+            => UebersprungeneOrdnerImport.Ergaenze(Result<ImportStats>.Success(stats), exportRoot);
     }
 
     private sealed class ErfolgreicherXtfImport : IXtfImportService
