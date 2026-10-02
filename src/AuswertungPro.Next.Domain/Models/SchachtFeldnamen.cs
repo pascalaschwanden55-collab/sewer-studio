@@ -33,6 +33,10 @@ public static class SchachtFeldnamen
     /// Bei mehreren Treffern gewinnt der zuerst gefundene mit Inhalt — sonst der
     /// erste ueberhaupt. So wird ein bereits gefuelltes Feld nicht durch eine leere
     /// Zweitschreibweise verdeckt.
+    ///
+    /// Bewusst nur ueber <see cref="Falte"/>, ohne Mojibake-Rueckrechnung: Schreiber holen
+    /// sich hier ihr Ziel, und ein Wert soll nicht in einen kaputten Namen geschrieben werden,
+    /// den die Tabelle nicht zeigt. Lesen ueber alle Schreibweisen: <see cref="Wert"/>.
     /// </summary>
     public static string Feld(SchachtRecord record, string gemeint)
     {
@@ -56,19 +60,44 @@ public static class SchachtFeldnamen
     }
 
     /// <summary>
-    /// Alle Namen, unter denen <paramref name="record"/> dasselbe Feld fuehrt.
+    /// Alle Namen, unter denen <paramref name="record"/> dasselbe Feld fuehrt — auch die
+    /// bekannten Mojibake-Schreibweisen («PrimÃ¤re SchÃ¤den», siehe <see cref="Gruppenschluessel"/>).
     /// Bei einem sauberen Datensatz ist das genau einer.
     /// </summary>
     public static IReadOnlyList<string> Schreibweisen(SchachtRecord record, string gemeint)
     {
         ArgumentNullException.ThrowIfNull(record);
 
-        var gesucht = Falte(gemeint);
+        var gesucht = Gruppenschluessel(gemeint);
         if (gesucht.Length == 0)
             return new List<string>();
 
-        return PassendeSchreibweisen(record, gesucht).ToList();
+        return record.Fields.Keys
+            .Where(vorhanden => string.Equals(Gruppenschluessel(vorhanden), gesucht, StringComparison.Ordinal))
+            .ToList();
     }
+
+    /// <summary>
+    /// Der Wert des gemeinten Feldes ueber alle Schreibweisen nach <see cref="AktuellerWert"/>:
+    /// Handwert (auch bewusst leer) vor Importwert, darin der juengste. Fuer Leser wie den
+    /// XTF-Export; vorher lasen sie die erste Schreibweise mit Inhalt und zeigten so einen alten
+    /// Importwert neben einer bewusst geleerten Handkorrektur (Review PR #80).
+    /// </summary>
+    public static string Wert(SchachtRecord record, string gemeint)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return AktuellerWert(record.Fields, record.FieldMeta, Schreibweisen(record, gemeint));
+    }
+
+    /// <summary>
+    /// Vergleichsschluessel einer Schreibweisen-Gruppe: bekannte Mojibake-Schreibweisen
+    /// (UTF-8 als CP1252 gelesen, auch doppelt) werden mit
+    /// <see cref="SchachtFeldnamenReparatur.Entwirre"/> zurueckgerechnet, dann gefaltet. Ohne das
+    /// erkannte die Handwert-Sperre einen Handwert unter «PrimÃ¤re SchÃ¤den» nicht, und SchachtPro,
+    /// XTF oder KINS schrieben weiter unter «Primäre Schäden» (Review PR #80).
+    /// </summary>
+    public static string Gruppenschluessel(string? name)
+        => Falte(SchachtFeldnamenReparatur.Entwirre(name));
 
     /// <summary>
     /// Der aktuelle Wert eines Feldes, das unter mehreren Schreibweisen steht (Vorlage
@@ -122,8 +151,39 @@ public static class SchachtFeldnamen
     }
 
     /// <summary>
+    /// Traegt irgendeine Schreibweise dieses Feldes einen Handwert (<see cref="FieldMetadata.UserEdited"/>,
+    /// auch bewusst leer)? Dann darf keine automatische Quelle in irgendeine Schreibweise derselben
+    /// Gruppe schreiben — die Projektregel «Handwerte, auch bewusst leer, ueberschreibt kein Import»
+    /// (Entscheid E3, 02.10.2026) gilt fuer das Feld, nicht nur fuer den einen Namen. Vorher fuellte
+    /// ein Import die ungeschuetzten Schreibweisen (Nachtrag Review PR #78).
+    ///
+    /// Die eine Stelle fuer diese Regel; der Schreibweg des Datensatzes
+    /// (<see cref="SchachtRecord.SetFieldValue(string, string?, FieldSource, bool)"/>,
+    /// <see cref="SchachtRecord.FuelleLeeresFeld"/>) fragt hier.
+    /// </summary>
+    public static bool HatHandwert(SchachtRecord record, string gemeint)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+
+        string? gesucht = null;
+        foreach (var (name, meta) in record.FieldMeta)
+        {
+            if (meta is not { UserEdited: true })
+                continue;
+            if (string.Equals(name, gemeint, StringComparison.Ordinal))
+                return true;
+
+            gesucht ??= Gruppenschluessel(gemeint);
+            if (gesucht.Length > 0 && string.Equals(Gruppenschluessel(name), gesucht, StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Alle im Datensatz vorhandenen Feldnamen, deren gefaltete Form <paramref name="gesucht"/>
-    /// entspricht. Gemeinsame Suchlogik fuer <see cref="Feld"/> und <see cref="Schreibweisen"/>.
+    /// entspricht. Suchlogik fuer <see cref="Feld"/> (ohne Mojibake-Rueckrechnung).
     /// </summary>
     private static IEnumerable<string> PassendeSchreibweisen(SchachtRecord record, string gesucht)
     {

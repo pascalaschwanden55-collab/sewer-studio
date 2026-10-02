@@ -141,14 +141,40 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
         // Schutz wie bei HaltungRecord: ein von Hand gesetzter Wert wird nie
         // ueberschrieben - auch nicht durch einen versehentlich wiederholten Import.
         // Wer bewusst eine Handeingabe setzt oder ersetzt (Umbenennen, Massnahme
-        // leeren), ruft die Ueberladung mit userEdited: true.
-        if (IsUserEdited(fieldName))
+        // leeren), ruft die Ueberladung mit userEdited: true. Seit 02.10.2026 gilt das fuer
+        // jede Schreibweise des Feldes (SchachtFeldnamen.HatHandwert, Entscheid E3).
+        if (SchachtFeldnamen.HatHandwert(this, fieldName))
             return FeldSchreibErgebnis.HandwertGeschuetzt;
 
         if (KatasterFeldschutz.Pruefe(fieldName, FieldMeta.GetValueOrDefault(fieldName), GetFieldValue(fieldName), value, FieldSource.Manual, false))
             return FeldSchreibErgebnis.KatasterwertGeschuetzt;
 
         return WriteField(fieldName, value, FieldSource.Manual, userEdited: null);
+    }
+
+    /// <summary>
+    /// Nur fuer den Protokoll-Neuaufbau: leert die genannten Schreibweisen eines Feldes, die
+    /// KEIN Handwert sind. Der Handwert selbst (auch bewusst leer) bleibt stehen. Noetig, weil
+    /// der automatische Schreibweg eine Gruppe mit Handwert ganz sperrt
+    /// (<see cref="SchachtFeldnamen.HatHandwert"/>): Ohne diesen Weg bliebe ein alter Importwert
+    /// neben einer bewusst geleerten Handkorrektur stehen (Review PR #80). Kein allgemeiner
+    /// Umweg um die Sperre — es wird nur geleert, nie gefuellt, und Katasterwerte bleiben
+    /// geschuetzt wie beim normalen Leeren.
+    /// </summary>
+    public void LeereNichtHandbearbeiteteSchreibweisen(IEnumerable<string> schreibweisen)
+    {
+        ArgumentNullException.ThrowIfNull(schreibweisen);
+
+        foreach (var name in schreibweisen.Distinct(StringComparer.Ordinal).ToList())
+        {
+            // Nur wirklich vorhandene Spalten; sonst entstuenden leere Zusatzfelder.
+            if (!Fields.ContainsKey(name) || IsUserEdited(name))
+                continue;
+            if (KatasterFeldschutz.Pruefe(name, FieldMeta.GetValueOrDefault(name), GetFieldValue(name), "", FieldSource.Manual, false))
+                continue;
+
+            WriteField(name, "", FieldSource.Manual, userEdited: null);
+        }
     }
 
     /// <summary>
@@ -170,7 +196,9 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     public FeldSchreibErgebnis SetFieldValue(string fieldName, string? value, FieldSource source, bool userEdited)
     {
         value = AlsWebGisBegriff(fieldName, value);
-        if (!userEdited && IsUserEdited(fieldName))
+        // Ein Handwert (auch bewusst leer) in irgendeiner Schreibweise sperrt die ganze Gruppe
+        // fuer automatische Quellen (SchachtFeldnamen.HatHandwert, Entscheid E3, 02.10.2026).
+        if (!userEdited && SchachtFeldnamen.HatHandwert(this, fieldName))
             return FeldSchreibErgebnis.HandwertGeschuetzt;
 
         if (KatasterFeldschutz.Pruefe(fieldName, FieldMeta.GetValueOrDefault(fieldName), GetFieldValue(fieldName), value, source, userEdited))
@@ -199,8 +227,9 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
         if (!string.IsNullOrWhiteSpace(GetFieldValue(fieldName)))
             return false;
 
-        // Handwert, auch bewusst leer, hat Vorrang (Entscheid Pascal 02.10.2026, E3).
-        if (IstBewusstLeer(fieldName))
+        // Handwert, auch bewusst leer, hat Vorrang (Entscheid Pascal 02.10.2026, E3) - in jeder
+        // Schreibweise des Feldes, nicht nur unter diesem Namen.
+        if (SchachtFeldnamen.HatHandwert(this, fieldName))
             return false;
 
         if (string.IsNullOrWhiteSpace(value))

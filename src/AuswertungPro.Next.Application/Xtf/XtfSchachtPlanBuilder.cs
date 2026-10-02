@@ -61,7 +61,8 @@ public static class XtfSchachtPlanBuilder
     public static string? Wert(SchachtRecord record, string gemeint)
     {
         ArgumentNullException.ThrowIfNull(record);
-        return record.GetFieldValue(SchachtFeldnamen.Feld(record, gemeint));
+        // Ueber alle Schreibweisen: Handwert (auch bewusst leer) vor Importwert (Review PR #80).
+        return SchachtFeldnamen.Wert(record, gemeint);
     }
 
     /// <summary>True, wenn der Mensch dieses Feld gesetzt hat — unter jeder Schreibweise.</summary>

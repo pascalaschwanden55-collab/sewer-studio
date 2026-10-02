@@ -9,11 +9,44 @@
 
 ## Inhalt
 
+- Handwert sperrt alle Schreibweisen eines Schachtfelds (02.10.2026)
 - Der PDF-Textleser wird geprueft gewaehlt (19.09.2026)
 - SchachtPro-QR aus Bildern (19.09.2026)
 - SchachtPro-Archive bis Format 3 / Schema 23 (19.09.2026)
 - Schachtgrafik Stammkarte (19.09.2026)
 - Ausdrücklich ausgewählte Schacht-PDF (14.09.2026)
+
+## Handwert sperrt alle Schreibweisen eines Schachtfelds (02.10.2026)
+
+Projektregel «Handwerte, auch bewusst leer, ueberschreibt kein Import» und Entscheid E3:
+Traegt EINE Schreibweise eines Schachtfelds (zum Beispiel «Ausführung Datum/Jahr» neben
+«Ausfuehrung Datum/Jahr», «Eigentümer» neben «Eigentuemer») einen Handwert (`UserEdited`,
+auch bewusst leer), schreibt keine automatische Quelle in irgendeine Schreibweise dieser Gruppe.
+Vorher fuellten PDF-Import, SchachtPro, XTF, KINS und Kataster die ungeschuetzten
+Schreibweisen, und der Ergaenzungsmodus sah «bewusst leer» nur unter genau einem Namen.
+Die Regel steht an EINER Stelle, `SchachtFeldnamen.HatHandwert`; der Schreibweg des Datensatzes
+(`SchachtRecord.SetFieldValue` ohne Handmarke, `FuelleLeeresFeld`) fragt dort, deshalb gilt sie
+fuer jeden Import ohne eigene Kopie. Der PDF-Import (`SchachtProtocolApplier`) prueft zusaetzlich
+seine Alias-Liste, weil sie Mojibake-Schreibweisen enthaelt, die die Faltung nicht zusammenfuehrt;
+`SchachtMasse` laesst im Ergaenzungsmodus kein halbes Paar entstehen. Gemeldet wird wie beim
+bisherigen Handwertschutz (`HandwertGeschuetzt`, SchachtPro-Bericht «von Hand geändert»), keine
+neue Meldungsart. Waechter: `SchachtHandwertGruppeTests`, SchachtPro-Fall in
+`SchachtProImportServiceTests`.
+
+Nachtrag Review PR #80 (03.10.2026):
+- **Mojibake gehoert zur Gruppe.** `SchachtFeldnamen.Gruppenschluessel` rechnet bekannte
+  Mojibake-Schreibweisen («PrimÃ¤re SchÃ¤den», auch doppelt) mit `SchachtFeldnamenReparatur.Entwirre`
+  zurueck und faltet dann. `HatHandwert` und `Schreibweisen` nutzen ihn; ein Handwert unter einem
+  kaputten Namen sperrt damit auch SchachtPro, XTF und KINS. Die Sonderpruefung im PDF-Import ist
+  entfallen. `Feld` faltet bewusst weiter ohne Rueckrechnung: Schreiber holen dort ihr Ziel und
+  sollen nicht in einen kaputten Namen schreiben, den die Tabelle nicht zeigt.
+- **Neuaufbau leert Importwerte neben einem Handwert.** `SchachtRecord.LeereNichtHandbearbeiteteSchreibweisen`
+  (nur fuer den Protokoll-Neuaufbau, nur leeren, Katasterschutz bleibt) leert die nicht
+  handbearbeiteten Schreibweisen; der Handwert selbst bleibt.
+- **Exportleser lesen ueber alle Schreibweisen.** `XtfSchachtPlanBuilder.Wert` liest jetzt
+  `SchachtFeldnamen.Wert` (Regel `AktuellerWert`: Handwert, auch bewusst leer, vor Importwert, darin
+  der juengste) statt der ersten Schreibweise mit Inhalt. Das betrifft alle XTF/DSS-Exportleser, die
+  `XtfSchachtPlanBuilder.Wert` nutzen.
 
 ## Der PDF-Textleser wird geprueft gewaehlt (19.09.2026)
 

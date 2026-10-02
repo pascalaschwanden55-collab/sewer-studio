@@ -634,4 +634,58 @@ public sealed partial class SchachtProImportServiceTests
         Assert.Equal(FieldSource.Spro, schacht.FieldMeta["Schachtnummer"].Source);
         Assert.False(schacht.IsUserEdited("Funktion"));
     }
+
+    [Fact]
+    public void Handwert_in_einer_Schreibweise_sperrt_die_anderen_Schreibweisen_und_wird_gemeldet()
+    {
+        // Entscheid E3/Projektregel Handwerte (02.10.2026): Das Archiv schreibt das Datum unter
+        // "Ausführung Datum/Jahr" UND "Ausfuehrung Datum/Jahr". Ist eine davon ein Handwert,
+        // erhaelt keine Schreibweise den Importwert, und der Bericht nennt das Feld.
+        using var temp = new TempDir();
+        var archiv = ErzeugeArchivMitZweiProtokollen(temp);
+        var project = new Project();
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "S-100", FieldSource.Manual, userEdited: false);
+        schacht.SetFieldValue("Ausführung Datum/Jahr", "", FieldSource.Manual, userEdited: true);
+        project.SchaechteData.Add(schacht);
+        var service = new SchachtProImportService();
+
+        using var lauf = BeginStaging(temp);
+        var result = service.ImportSchachtProArchive(archiv, project, Ctx(lauf));
+        lauf.Publish();
+        lauf.Accept();
+
+        Assert.True(result.Ok, result.ErrorMessage);
+        var danach = project.SchaechteData.Single(r => r.GetFieldValue("Schachtnummer") == "S-100");
+        Assert.True(danach.IstBewusstLeer("Ausführung Datum/Jahr"));
+        Assert.Equal("", danach.GetFieldValue("Ausfuehrung Datum/Jahr"));
+        Assert.Contains(result.Value!.Messages, m => m.Contains("S-100", StringComparison.Ordinal)
+                                                     && m.Contains("Ausfuehrung Datum/Jahr", StringComparison.Ordinal)
+                                                     && m.Contains("von Hand", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Handwert_unter_Mojibake_Schreibweise_sperrt_den_SchachtPro_Import()
+    {
+        // Review PR #80 (P1): "PrimÃ¤re SchÃ¤den" ist dieselbe Angabe wie "Primäre Schäden".
+        using var temp = new TempDir();
+        var archiv = ErzeugeArchivMitZweiProtokollen(temp);
+        var project = new Project();
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "S-100", FieldSource.Manual, userEdited: false);
+        schacht.SetFieldValue("Prim\u00c3\u00a4re Sch\u00c3\u00a4den", "Handkorrektur", FieldSource.Manual, userEdited: true);
+        project.SchaechteData.Add(schacht);
+        var service = new SchachtProImportService();
+
+        using var lauf = BeginStaging(temp);
+        var result = service.ImportSchachtProArchive(archiv, project, Ctx(lauf));
+        lauf.Publish();
+        lauf.Accept();
+
+        Assert.True(result.Ok, result.ErrorMessage);
+        var danach = project.SchaechteData.Single(r => r.GetFieldValue("Schachtnummer") == "S-100");
+        Assert.Equal("", danach.GetFieldValue("Primäre Schäden"));
+        Assert.Equal("", danach.GetFieldValue("Primaere Schaeden"));
+        Assert.Equal("Handkorrektur", danach.GetFieldValue("Prim\u00c3\u00a4re Sch\u00c3\u00a4den"));
+    }
 }

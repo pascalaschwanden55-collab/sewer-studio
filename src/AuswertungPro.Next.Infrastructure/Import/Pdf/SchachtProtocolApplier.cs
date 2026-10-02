@@ -229,16 +229,11 @@ internal static class SchachtProtocolApplier
         }
     }
 
+    // Neuaufbau: Importwerte aller Schreibweisen leeren, ein Handwert (auch bewusst leer) bleibt.
+    // Vorher brach eine Gruppe mit Handwert ganz ab, und ein alter Importwert in einer anderen
+    // Schreibweise blieb sichtbar und ging in den Export (Review PR #80).
     private static void ClearSchachtField(SchachtRecord record, string logicalField)
-    {
-        foreach (var candidate in GetSchachtFieldAliases(logicalField))
-        {
-            // Nur wirklich vorhandene Spalten anfassen. Sonst entstuenden aus den
-            // Schreibweise-Aliasen leere Zusatzfelder, die es vorher nicht gab.
-            if (record.Fields.ContainsKey(candidate))
-                record.SetFieldValue(candidate, string.Empty);
-        }
-    }
+        => record.LeereNichtHandbearbeiteteSchreibweisen(GetSchachtFieldAliases(logicalField));
 
     private static void SetSchachtField(
         SchachtRecord record,
@@ -252,6 +247,8 @@ internal static class SchachtProtocolApplier
         if (fillMissingOnly && HasNonEmptySchachtField(record, logicalField))
             return;
 
+        // Ein Handwert (auch bewusst leer) in irgendeiner Schreibweise sperrt jede Schreibweise
+        // der Gruppe, Mojibake eingeschlossen (SchachtFeldnamen.HatHandwert, Entscheid E3).
         foreach (var candidate in GetSchachtFieldAliases(logicalField))
             record.SetFieldValue(candidate, value, FieldSource.Pdf, userEdited: false);
     }
