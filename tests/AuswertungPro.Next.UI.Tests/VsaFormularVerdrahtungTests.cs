@@ -8,6 +8,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Die gemeinsame Verdrahtung des VSA-Formulars von Eintrags-Editor und Beobachtungs-Katalog
 /// (B6, Deepscan 02.10.2026). Laeuft im isolierten Kindprozess (WPF-Regel).
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 public sealed class VsaFormularVerdrahtungTests
 {
     [Fact]

@@ -8,6 +8,7 @@ namespace AuswertungPro.Next.UI.Tests;
 /// Die eine gemeinsame Layoutregel der Nova-Arbeitsflaechen (Haltungen und Schaechte), B4 Deepscan 02.10.2026.
 /// Laeuft im isolierten Kindprozess (WPF-Regel).
 /// </summary>
+[Trait(TestKategorie.Name, TestKategorie.Kindprozess)]
 public sealed class NovaWorkspaceLayoutTests
 {
     [Fact]
