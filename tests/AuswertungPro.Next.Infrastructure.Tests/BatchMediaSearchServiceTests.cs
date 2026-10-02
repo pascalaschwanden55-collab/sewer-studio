@@ -32,6 +32,40 @@ public sealed class BatchMediaSearchServiceTests
         Assert.True(match.Apply);
     }
 
+    // Deepscan A4: Die Mediensuche liest Datum_Jahr nach der gemeinsamen Regel. Frueher verlor
+    // sie bei "5.3.2024", "24.09.25" oder "2024-03-05" still den Datumshinweis.
+    [Theory]
+    [MemberData(nameof(Common.HaltungFeldwerteTests.Datumsbeispiele), MemberType = typeof(Common.HaltungFeldwerteTests))]
+    public void Search_nutzt_Datum_Jahr_nach_der_gemeinsamen_Leseregel(string datum, string? erwartetIso, bool nurJahr)
+    {
+        _ = nurJahr;
+        using var directory = new TempDirectory();
+        var stempel = erwartetIso is null
+            ? "20240305"
+            : Common.HaltungFeldwerteTests.Iso(erwartetIso).ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+        var passend = Path.Combine(directory.Path, $"{stempel}_H100.mp4");
+        var anderes = Path.Combine(directory.Path, "19991231_H100.mp4");
+        File.WriteAllText(passend, "video");
+        File.WriteAllText(anderes, "video");
+
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "H100", FieldSource.Manual, userEdited: false);
+        record.SetFieldValue(FieldKeys.InspectionYear, datum, FieldSource.Manual, userEdited: false);
+
+        var match = Assert.Single(new BatchMediaSearchService().Search(
+            [record],
+            new BatchMediaSearchOptions { SearchFolder = directory.Path, Recursive = false, SearchPdfs = false, SearchPhotos = false }));
+
+        if (erwartetIso is null)
+        {
+            Assert.Equal(MediaMatchStatus.Ambiguous, match.VideoStatus);
+            return;
+        }
+
+        Assert.Equal(MediaMatchStatus.Found, match.VideoStatus);
+        Assert.Equal(passend, match.VideoPath);
+    }
+
     private sealed class TempDirectory : IDisposable
     {
         public TempDirectory()

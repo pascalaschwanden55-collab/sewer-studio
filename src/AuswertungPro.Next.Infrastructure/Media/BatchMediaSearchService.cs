@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -414,24 +413,9 @@ public sealed class BatchMediaSearchService
         return found.OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
+    // Datum_Jahr nach der gemeinsamen Leseregel (Deepscan A4); ein reines Jahr ergibt den 1. Januar.
     private static DateTime? TryParseDate(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-
-        // Try yyyyMMdd
-        if (DateTime.TryParseExact(raw.Trim(), "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt1))
-            return dt1;
-
-        // Try dd.MM.yyyy
-        if (DateTime.TryParseExact(raw.Trim(), "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt2))
-            return dt2;
-
-        // Try yyyy
-        if (raw.Trim().Length == 4 && int.TryParse(raw.Trim(), out var year) && year > 1990 && year < 2100)
-            return new DateTime(year, 1, 1);
-
-        return null;
-    }
+        => HaltungFeldwerte.LiesInspektionsdatum(raw);
 
     private static string SanitizePathSegment(string value)
         => ProjectPathResolver.SanitizePathSegment(value);
