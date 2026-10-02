@@ -49,6 +49,26 @@ public sealed class XtfDssAenderungsExportTests
     }
 
     [Fact]
+    public void Erfasste_Angaben_lesen_das_Stammfeld_mit_bewusst_leerem_Handwert()
+    {
+        // Folgepaket PR #80: A = Schachtform bewusst leer von Hand, B = aelterer Importwert unter
+        // "SCHACHTFORM". Die Objektakte traegt noch den alten Bestand "Oval"; der aktuelle
+        // Datensatzwert ist leer, und genau der muss in die Erfassten Angaben.
+        var p = XtfDssVerbundTests.Verbund(); var s = p.SchaechteData[0];
+        SchachtFeldLeserHandwertTests.Altbestand(FieldKeys.ShaftShape, "SCHACHTFORM", "Oval", s);
+        var a = p.Objektakten.Single(a => a.Id == s.Id);
+        a.Werte["schacht.form"] = new() { Text = "Oval", Bestandswert = "Oval", VonHand = false };
+        WithExport(p, xml =>
+        {
+            var paket = Assert.Single(xml.Descendants(), e => e.Name.LocalName.EndsWith(".Zusatzangabe")
+                && Feld(e, "ObjektTid") == s.Geonis!.Knoten && Feld(e, "Feld") == "Erfasste_Angaben");
+            using var json = JsonDocument.Parse(Feld(paket, "Wert")!);
+            var daten = json.RootElement.GetProperty("Objekte")[0];
+            Assert.Equal("", daten.GetProperty("Objektfelder").GetProperty("schacht.form").GetProperty("Wert").GetString());
+        });
+    }
+
+    [Fact]
     public void Jahresangabe_erfindet_keinen_Tag_und_Neubauten_erhalten_stabile_Kennungen()
     {
         var p = XtfDssVerbundTests.Verbund(); var a = p.Objektakten.Single(a => a.Art == "sanierung");

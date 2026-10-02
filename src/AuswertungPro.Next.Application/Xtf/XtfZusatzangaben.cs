@@ -59,6 +59,19 @@ public static class XtfZusatzangaben
         return SchachtFeldnamen.Feld(record, alias);
     }
 
+    /// <summary>
+    /// Der Wert eines Schachtfelds fuer die Zusatzangaben (Leser): ueber alle Schreibweisen,
+    /// Handwert (auch bewusst leer) vor Importwert (SchachtFeldnamen.Wert, Folgepaket PR #80).
+    /// Ohne Handwert und ohne Wert gilt wie bisher der Ausweichname (<see cref="Schachtfeld"/>).
+    /// <see cref="Schachtfeld"/> selbst bleibt das Schreibziel.
+    /// </summary>
+    public static string SchachtfeldWert(SchachtRecord record, string feld)
+    {
+        var wert = SchachtFeldnamen.Wert(record, feld);
+        if (wert.Length > 0 || SchachtFeldnamen.HatHandwert(record, feld)) return wert;
+        return record.GetFieldValue(Schachtfeld(record, feld));
+    }
+
     public static XtfNeuPlan Ergaenze(XtfNeuPlan plan, Project projekt)
     {
         var objekte = plan.Objekte.ToList();
@@ -69,7 +82,7 @@ public static class XtfZusatzangaben
             if (gruppe.Count() != 1) continue;
             var s = gruppe.Single();
             var klasse = AbwasserbauwerkVokabular.Klasse(XtfSchachtPlanBuilder.Wert(s, FieldKeys.ShaftStructureType), XtfSchachtPlanBuilder.Wert(s, "Funktion"));
-            ErgaenzeObjekt(gruppe.Key, klasse, key => s.GetFieldValue(Schachtfeld(s, key)));
+            ErgaenzeObjekt(gruppe.Key, klasse, key => SchachtfeldWert(s, key));
         }
         foreach (var gruppe in projekt.Data.GroupBy(h => h.GetFieldValue(FieldKeys.HoldingName)?.Trim(), StringComparer.Ordinal))
         {

@@ -47,6 +47,11 @@ Nachtrag Review PR #80 (03.10.2026):
   `SchachtFeldnamen.Wert` (Regel `AktuellerWert`: Handwert, auch bewusst leer, vor Importwert, darin
   der juengste) statt der ersten Schreibweise mit Inhalt. Das betrifft alle XTF/DSS-Exportleser, die
   `XtfSchachtPlanBuilder.Wert` nutzen.
+- **Weitere Leser (Folgepaket PR #80, 03.10.2026).** Projektpruefung, XTF-Zusatzangaben
+  (`XtfZusatzangaben.SchachtfeldWert`), DSS-Erfasste-Angaben, Schachtgrafik, Protokollquelle,
+  Objektakte (Stammfelder), Uebersichtskennzahlen und die Funktionsauswahl (`SchachtNormoptionen`)
+  lesen jetzt ueber `SchachtFeldnamen.Wert`. Schreiber holen ihr Ziel weiter ueber `Feld`;
+  WebGIS-Leser sind bewusst noch nicht umgestellt (nur mit Pascal am PC).
 
 ## Der PDF-Textleser wird geprueft gewaehlt (19.09.2026)
 

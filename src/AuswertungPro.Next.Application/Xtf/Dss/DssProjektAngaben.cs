@@ -45,9 +45,11 @@ internal static class DssProjektAngaben
             {
                 if (wert.Text.Length == 0 && !wert.VonHand) continue;
                 var feld = FieldCatalog.Objektfelder.Felder.FirstOrDefault(f => f.Id == key)?.Speicherfeld;
-                if (feld is not null && art == "schacht") feld = SchachtFeldnamen.Feld(p.SchaechteData.Single(s => s.Id == id), feld);
-                // Ein alter Anzeigetext darf den aktuellen Recordwert niemals ersetzen.
-                var aktuell = feld is null ? null : felder.GetValueOrDefault(feld, "");
+                // Ein alter Anzeigetext darf den aktuellen Recordwert niemals ersetzen. Am Schacht ueber
+                // alle Schreibweisen: Handwert (auch bewusst leer) vor Importwert (Folgepaket PR #80).
+                var aktuell = feld is null ? null
+                    : art == "schacht" ? SchachtFeldnamen.Wert(p.SchaechteData.Single(s => s.Id == id), feld)
+                    : felder.GetValueOrDefault(feld, "");
                 var synchron = aktuell is null || aktuell == wert.Bestandswert;
                 objektwerte[key] = new { Wert = synchron ? wert.Text : aktuell, wert.VonHand, wert.GeaendertUtc,
                     KatalogId = synchron ? wert.KatalogId : null, Originalcode = synchron ? wert.Originalcode : null, wert.Zusatzdaten };

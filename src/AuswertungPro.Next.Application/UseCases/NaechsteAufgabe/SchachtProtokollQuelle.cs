@@ -48,7 +48,8 @@ public static class SchachtProtokollQuelle
     /// </summary>
     private static void Ergaenze(List<string> kandidaten, SchachtRecord record, string gemeint)
     {
-        var wert = record.GetFieldValue(SchachtFeldnamen.Feld(record, gemeint))?.Trim();
+        // Ueber alle Schreibweisen: Handwert (auch bewusst leer) vor Importwert (Folgepaket PR #80).
+        var wert = SchachtFeldnamen.Wert(record, gemeint).Trim();
         if (string.IsNullOrWhiteSpace(wert))
             return;
 

@@ -45,7 +45,8 @@ public static class ProjektPruefregeln
         foreach (var s in projekt.SchaechteData)
         {
             ct.ThrowIfCancellationRequested();
-            string Wert(string key) => s.GetFieldValue(SchachtFeldnamen.Feld(s, key));
+            // Ueber alle Schreibweisen: Handwert (auch bewusst leer) vor Importwert (Folgepaket PR #80).
+            string Wert(string key) => SchachtFeldnamen.Wert(s, key);
             var name = Wert("Schachtnummer");
             var b = new ObjektaktenBearbeitung(projekt, s.Id, "schacht");
             PruefeObjekt(b, name, Wert, s.Protocol?.Current);
