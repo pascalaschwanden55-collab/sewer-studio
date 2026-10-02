@@ -27,11 +27,19 @@ public static class SettingsFullBackupPresentationBuilder
         }
 
         sb.AppendLine();
-        sb.AppendLine($"Gesamt: {ByteSizeFormatter.Format(report.TotalBytes)} / {report.TotalFiles} Dateien");
+        sb.AppendLine($"Gesamter Datenbestand: {ByteSizeFormatter.Format(report.TotalBytes)} / {report.TotalFiles} Dateien");
         sb.AppendLine($"Ziel: {targetRoot}");
         sb.AppendLine();
+        sb.AppendLine("Neue und geänderte Dateien werden kopiert.");
+        sb.AppendLine("Unveränderte Dateien werden geprüft und weiterverwendet.");
+        sb.AppendLine("Datenbanken werden als Schnappschüsse gesichert.");
+        sb.AppendLine("Die Gesamtgrösse ist nicht der zusätzlich benötigte freie Speicherplatz.");
+        sb.AppendLine("Für Änderungen und vorübergehende Vorherkopien wird zusätzlicher Platz benötigt.");
+        sb.AppendLine("Hinzu kommen Datenbank-Schnappschüsse und eine Reserve.");
+        sb.AppendLine();
         sb.AppendLine("Hinweis: Gesichert wird nur der aktuelle Stand. Ersetzte und entfallene");
-        sb.AppendLine("Dateien werden nach einem erfolgreichen Lauf nicht aufbewahrt.");
+        sb.AppendLine("Dateien sollen nach einem erfolgreichen Lauf entfernt werden.");
+        sb.AppendLine("Bei blockierter Löschung können ältere Kopien bestehen bleiben.");
         var projects = report.Components.FirstOrDefault(c => c.Name == "Projekte");
         if (projects is not null)
             sb.AppendLine($"Projekte enthalten: ja. {projects.Beschreibung}");
