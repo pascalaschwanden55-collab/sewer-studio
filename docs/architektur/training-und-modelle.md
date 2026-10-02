@@ -1463,8 +1463,10 @@ Gold-Speicher, Wissenssuche (`GuardedRetrievalFactory.Sperrliste` ueber
   Gesperrt sind `SaveAsync`, `MergeAndSaveAsync`, `TryAddNewAsync`, `MergeOrUpdateAsync`,
   `ReplaceBySampleIdAsync` (lehnt zusaetzlich ein Sample aus einer Pruefhaltung ab, statt
   es wie bisher ungeprueft zu ersetzen) und auch `LoadAsync` (kein ungefilterter Bestand).
-  `RemoveBySampleIdAsync` bleibt erlaubt (schreibt nichts Neues). Eine leere Eingabe wird
-  ohne Pruefung durchgereicht.
+  `RemoveBySampleIdAsync` bleibt erlaubt (schreibt nichts Neues). Der Schutz wird je
+  Vorgang VOR dem ersten Dateizugriff geladen (Review PR #69): Laden kann sonst eine
+  Signatur-Migration zurueckschreiben oder eine Rettungskopie (`.bad_*`) anlegen; bei
+  gesperrtem Schutz bleibt der Ordner byte-gleich. Auch ein leeres `SaveAsync` sperrt.
 - `ConfigureEvalProtection(null)` heisst «nicht konfiguriert» (Umgebungsvariable
   `SEWERSTUDIO_EVAL_SET_ROOT`, sonst `C:\KI_BRAIN\eval_set`); fehlt dieser Ordner, sperrt
   der Speicher. Ein leerer Eintrag schaltet ab, `EffectiveEvalSetRoot` ist dann `""`.

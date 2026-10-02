@@ -75,7 +75,8 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         await fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            return FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false));
+            var protection = LoadEvalProtection();
+            return FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false), protection);
         }
         finally
         {
@@ -89,7 +90,8 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         await fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            await SaveInternalAsync(FilterEvalContamination(samples)).ConfigureAwait(false);
+            var protection = LoadEvalProtection();
+            await SaveInternalAsync(FilterEvalContamination(samples, protection)).ConfigureAwait(false);
         }
         finally
         {
@@ -121,8 +123,9 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         await fileLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var incoming = FilterEvalContamination(samples);
-            var existing = FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false));
+            var protection = LoadEvalProtection();
+            var incoming = FilterEvalContamination(samples, protection);
+            var existing = FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false), protection);
             var signatures = existing
                 .SelectMany(GetDedupSignatures)
                 .ToHashSet(StringComparer.Ordinal);
@@ -175,8 +178,9 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         await fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            var incoming = FilterEvalContamination(samples);
-            var existing = FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false));
+            var protection = LoadEvalProtection();
+            var incoming = FilterEvalContamination(samples, protection);
+            var existing = FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false), protection);
             var signatureIndex = new Dictionary<string, int>(StringComparer.Ordinal);
             for (var index = 0; index < existing.Count; index++)
             {
@@ -255,6 +259,8 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
             // Ungefiltert laden: entfernt/ersetzt wird gezielt per SampleId, der Eval-Filter
             // darf keinen fremden Bestand verwerfen. EIN Lock fuer Loeschen + Anhaengen +
             // Speichern — zwischen den Schritten kann kein anderer Schreiber dazwischenkommen.
+            // Eval-Schutz ZUERST: Bei gesperrtem Schutz darf auch Migration/Rettung nichts schreiben.
+            var protection = LoadEvalProtection();
             var existing = await LoadInternalAsync().ConfigureAwait(false);
             var index = existing.FindIndex(
                 candidate => string.Equals(candidate.SampleId, sample.SampleId, StringComparison.Ordinal));
@@ -275,7 +281,7 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
 
             // Auch eine Ersetzung speichert ein Sample: ohne lesbaren Eval-Schutz nichts
             // schreiben, und ein Sample aus einer Pruefhaltung nie in den Bestand bringen.
-            if (FilterEvalContamination([sample]).Count == 0)
+            if (FilterEvalContamination([sample], protection).Count == 0)
             {
                 throw new InvalidOperationException(
                     $"Das Sample '{sample.SampleId}' gehört zu den reservierten Prüfdaten und wird " +
@@ -293,13 +299,20 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         }
     }
 
-    private List<TrainingSample> FilterEvalContamination(IEnumerable<TrainingSample>? samples)
+    /// <summary>
+    /// Filtert gegen bereits geladene Schutzmengen. Jede Operation laedt den Schutz
+    /// (<see cref="LoadEvalProtection"/>) VOR dem ersten Dateizugriff: Beim Laden koennen
+    /// Signatur-Migration und Rettung aus der Sicherung schreiben, und bei gesperrtem
+    /// Eval-Schutz darf der Speicher nichts veraendern (Review PR #69).
+    /// </summary>
+    private static List<TrainingSample> FilterEvalContamination(
+        IEnumerable<TrainingSample>? samples,
+        EvalProtectionSets protection)
     {
         var input = samples?.Where(sample => sample is not null).ToList() ?? [];
         if (input.Count == 0)
             return input;
 
-        var protection = LoadEvalProtection();
         if (protection.IsDisabled)
             return input;
 

@@ -125,6 +125,63 @@ public sealed class EvalSchutzLesewegeTests : IDisposable
         Assert.Equal(vorher, File.ReadAllBytes(store.StoragePath));
     }
 
+    // Review PR #69: Laden migrierte alte Signaturen und rettete eine defekte Datei aus der
+    // Sicherung, BEVOR der Eval-Schutz geprueft wurde. Bei gesperrtem Schutz darf der Speicher
+    // gar nichts schreiben - auch keine Migration und keine Rettungskopie.
+    [Theory]
+    [InlineData("laden")]
+    [InlineData("ersetzen")]
+    public async Task Gesperrter_Schutz_schreibt_auch_keine_Signatur_Migration(string weg)
+    {
+        var store = Speicher(Path.Combine(_root, "eval_fehlt"));
+        Directory.CreateDirectory(Path.GetDirectoryName(store.StoragePath)!);
+        var altbestand = new TrainingSample
+        {
+            SampleId = "alt",
+            CaseId = "300-400",
+            Code = "BAB",
+            Beschreibung = "Altbestand",
+            Signature = "BAB|1.0|1.0"   // dreiteilig: wird beim Laden migriert
+        };
+        File.WriteAllText(store.StoragePath, System.Text.Json.JsonSerializer.Serialize(new[] { altbestand }));
+        var vorher = File.ReadAllBytes(store.StoragePath);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => weg == "laden"
+            ? store.LoadAsync()
+            : store.ReplaceBySampleIdAsync(Sample("alt", "300-400")));
+
+        Assert.Equal(vorher, File.ReadAllBytes(store.StoragePath));
+        Assert.Equal(
+            [Path.GetFileName(store.StoragePath)],
+            Directory.EnumerateFiles(Path.GetDirectoryName(store.StoragePath)!).Select(Path.GetFileName));
+    }
+
+    [Theory]
+    [InlineData("laden")]
+    [InlineData("ersetzen")]
+    public async Task Gesperrter_Schutz_schreibt_auch_keine_Rettungskopie(string weg)
+    {
+        var store = Speicher(Path.Combine(_root, "eval_fehlt"));
+        var ordner = Path.GetDirectoryName(store.StoragePath)!;
+        Directory.CreateDirectory(ordner);
+        File.WriteAllText(store.StoragePath, "{ defekt");
+        File.WriteAllText(
+            store.StoragePath + ".bak",
+            System.Text.Json.JsonSerializer.Serialize(new[] { Sample("alt", "300-400") }));
+        var vorher = Directory.EnumerateFiles(ordner)
+            .ToDictionary(pfad => Path.GetFileName(pfad), File.ReadAllBytes);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => weg == "laden"
+            ? store.LoadAsync()
+            : store.ReplaceBySampleIdAsync(Sample("alt", "300-400")));
+
+        var nachher = Directory.EnumerateFiles(ordner)
+            .ToDictionary(pfad => Path.GetFileName(pfad), File.ReadAllBytes);
+        Assert.Equal(vorher.Keys.Order(), nachher.Keys.Order());
+        foreach (var (name, inhalt) in vorher)
+            Assert.Equal(inhalt, nachher[name]);
+    }
+
     [Fact]
     public async Task Ersetzen_lehnt_ein_Sample_aus_einer_Pruefhaltung_ab()
     {
