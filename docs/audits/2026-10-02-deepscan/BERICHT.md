@@ -26,7 +26,8 @@ Hebel liegt nicht mehr in der Grösse, sondern an drei anderen Stellen:
 
 Gut und zu erhalten: Sperrklinken und Architekturwächter, die Schritt-Aufteilung von KI-Pipeline,
 XTF-Rückweg und Gold-Speichern, HttpClient-Lebensdauer, globale Fehlerbehandler,
-BestEffort-Muster, PDF-Zusammenführungsprüfung. Alle 237 leeren `catch` tragen einen Kommentar;
+BestEffort-Muster, PDF-Zusammenführungsprüfung. Von den 234 leeren `catch` ausserhalb der
+Codex-Bereiche tragen 233 einen Kommentar (3 weitere liegen in Codex-Bereichen, nicht geprüft);
 200 davon sind gewollt.
 
 ## Selbst nachgeprüft (Hauptagent)
@@ -82,7 +83,8 @@ BestEffort-Muster, PDF-Zusammenführungsprüfung. Alle 237 leeren `catch` tragen
 ## Umsetzungsplan (kleine, einzeln prüfbare Pakete, je eigener PR nach `master`)
 
 **Welle 1: Schutz und Sichtbarkeit (P1, ohne Codex-Bereiche)**
-1. T1 + T3: Python-Tests unter `tools/` in die CI aufnehmen; Zeitgrenzen und `--blame-hang`.
+1. T1 + T3: alle 16 Python-Tests unter `tools/` (EvalVisibilityReview, VideoLabelTool,
+   GroundTruthPipeScaleProbe, skill-linter) in die CI aufnehmen; Zeitgrenzen und `--blame-hang`.
 2. R1: übersprungene Ordner in KINS-, WinCan-, Dichtheits- und Medien-Wegen im Importbericht
    melden. Die Haltungsverteilung erst nach Codex' Umbau.
 3. A1/R2 (nach E1): ein gemeinsamer Eval-Schutz-Leser mit einer Bedeutung von «fehlt».

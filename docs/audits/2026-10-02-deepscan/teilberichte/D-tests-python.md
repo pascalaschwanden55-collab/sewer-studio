@@ -26,7 +26,7 @@ Die Umgebungsabhängigkeiten vom 01.10. sind im Wesentlichen sauber abgefangen. 
 - Beleg: `.github/workflows/ci.yml` Zeilen 90, 93, 111 führen nur `sidecar` (pytest), `integrations/qgis/tests` (unittest) und `training/scripts/tests` aus.
 - Nicht erfasst: `tools/EvalVisibilityReview/test_*.py` (13 Dateien, ca. 3'900 Zeilen Tests, darunter `test_review_server_security.py`, `test_bcc_release_holdout_review_server.py` 648 Zeilen, `test_detect_gold_error_review_server.py` 670 Zeilen), `tools/skill-linter/test_skill_lint.py`, `tools/VideoLabelTool/test_server_selection.py`, `tools/GroundTruthPipeScaleProbe/test_probe.py`.
 - Warum es bremst: Die Server schreiben Prüfurteile (Eval-/Gold-Entscheide). Ihre Host-/Pfad-/Signaturprüfungen sind getestet, aber nur auf Pascals Rechner, wenn er daran denkt. Sie können still brechen.
-- Empfehlung: Im Schritt «Trainingsskript-Tests» eine Zeile `pytest tools/EvalVisibilityReview tools/VideoLabelTool -q -p no:cacheprovider` anfügen (gleiche venv). Fehlende Abhängigkeiten in `requirements-test.txt` ergänzen.
+- Empfehlung: Im Schritt «Trainingsskript-Tests» eine Zeile `pytest tools/EvalVisibilityReview tools/VideoLabelTool tools/GroundTruthPipeScaleProbe tools/skill-linter -q -p no:cacheprovider` (alle vier Ordner, also alle 16 Dateien; Nachtrag nach Review 02.10.) anfügen (gleiche venv). Fehlende Abhängigkeiten in `requirements-test.txt` ergänzen.
 - Fertig, wenn: CI führt die Tests aus und ist grün; eine absichtlich entfernte Host-Prüfung in `review_server_security.py` macht CI rot.
 
 ### T2 (P1, belegt) – Trainingsdaten schreibende Skripte ohne Test
