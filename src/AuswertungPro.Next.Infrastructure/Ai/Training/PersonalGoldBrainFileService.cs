@@ -49,25 +49,23 @@ internal static class PersonalGoldBrainFileService
         }
     }
 
+    // Gemeinsame Verknuepfungspruefung (Deepscan A5), Regel GoldSpeicher: Wurzel eingeschlossen,
+    // fehlende oder unlesbare Glieder werfen ihre urspruengliche Ausnahme.
     public static void EnsureNoReparsePoint(string path, string stopRoot)
     {
         var root = NormalizeRoot(stopRoot, "Schutzwurzel");
-        var current = Path.GetFullPath(path);
-        while (true)
-        {
-            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-                throw new InvalidDataException($"Verknüpfung im geschützten Pfad: {current}");
-            if (string.Equals(current, root, StringComparison.OrdinalIgnoreCase))
-                return;
+        var befund = VerknuepfungsSchutz.PruefeKette(root, path, VerknuepfungsRegel.GoldSpeicher);
+        if (befund.Befund == VerknuepfungsBefund.Ausserhalb)
+            throw new InvalidDataException($"Pfad liegt ausserhalb der Schutzwurzel: {path}");
+        WirfBeiVerknuepfung(befund, "Verknüpfung im geschützten Pfad");
+    }
 
-            current = Path.GetDirectoryName(current)
-                      ?? throw new InvalidDataException($"Pfad liegt ausserhalb der Schutzwurzel: {path}");
-            if (!IsInside(root, current)
-                && !string.Equals(current, root, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidDataException($"Pfad liegt ausserhalb der Schutzwurzel: {path}");
-            }
-        }
+    private static void WirfBeiVerknuepfung(VerknuepfungsPruefung befund, string meldung)
+    {
+        if (befund.Fehler is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(befund.Fehler);
+        if (befund.Befund == VerknuepfungsBefund.Verknuepfung)
+            throw new InvalidDataException($"{meldung}: {befund.Pfad}");
     }
 
     public static void EnsureMutationPathIsSafe(string safetyRoot, string path)
@@ -208,8 +206,9 @@ internal static class PersonalGoldBrainFileService
             foreach (var entry in Directory.EnumerateFileSystemEntries(current.Source))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if ((File.GetAttributes(entry) & FileAttributes.ReparsePoint) != 0)
-                    throw new InvalidDataException($"Verknüpfung im zu kopierenden Ordner: {entry}");
+                WirfBeiVerknuepfung(
+                    VerknuepfungsSchutz.PruefeEintrag(entry, VerknuepfungsRegel.GoldSpeicher),
+                    "Verknüpfung im zu kopierenden Ordner");
 
                 var target = Path.Combine(current.Target, Path.GetFileName(entry));
                 if (Directory.Exists(entry))
