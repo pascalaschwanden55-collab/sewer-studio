@@ -9,18 +9,22 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class SilentCatchGuardTests
 {
+    // Eine runde Klammer samt Inhalt, auch verschachtelt (Balancing Group): ein Filter wie
+    // when (File.Exists(x)) oder when (e.InnerExceptions.All(i => i is IOException)) endet nicht am ersten ")".
+    private const string Klammer = @"\((?:[^()]|(?<o>\()|(?<-o>\)))*(?(o)(?!))\)";
+
     private static readonly Regex EmptyCatchPattern = new(
-        @"catch(?:\s*\([^)]*\))?\s*\{\s*\}",
+        @"catch(?:\s*" + Klammer + @")?(?:\s+when\s*" + Klammer + @")?\s*\{\s*\}",
         RegexOptions.CultureInvariant);
 
     // Ein catch-Block, in dem nur Kommentare stehen (kein Code).
     private static readonly Regex CommentOnlyCatchPattern = new(
-        @"catch(?:\s*\([^)]*\))?(?:\s+when\s*\([^)]*\))?\s*\{((?:\s|//[^\r\n]*|/\*.*?\*/)*)\}",
+        @"catch(?:\s*" + Klammer + @")?(?:\s+when\s*" + Klammer + @")?\s*\{((?:\s|//[^\r\n]*|/\*.*?\*/)*)\}",
         RegexOptions.CultureInvariant | RegexOptions.Singleline);
 
-    // Obergrenze der Kommentar-catch-Bloecke (Sperrklinke, Deepscan 02.10.2026 R7): darf nur sinken.
+    // Obergrenze der Kommentar-catch-Bloecke (Sperrklinke, Deepscan 02.10.2026 R7, mit verschachtelten when-Filtern gezaehlt): darf nur sinken.
     // Wer einen Block entfernt oder durch sichtbare Fehlermeldung ersetzt, zieht den Wert nach.
-    private const int MaxKommentarCatchBloecke = 230;
+    private const int MaxKommentarCatchBloecke = 237;
 
     // Woerter, die allein noch keinen Grund nennen ("ignore", "non-fatal", "best effort cleanup" ...).
     private static readonly HashSet<string> Floskelwoerter = new(StringComparer.OrdinalIgnoreCase)
@@ -118,6 +122,18 @@ public sealed class SilentCatchGuardTests
     [InlineData("// Eine gesperrte Temp-Datei bleibt liegen; das Ergebnis steht schon fest.")]
     public void Begruendungen_sind_keine_Floskeln(string kommentar)
         => Assert.False(IstFloskel(kommentar), kommentar);
+
+    [Theory]
+    [InlineData("catch (IOException) when (File.Exists(target)) { // ignore\n }")]
+    [InlineData("catch (AggregateException e) when (e.InnerExceptions.All(i => i is IOException)) { // ignore\n }")]
+    [InlineData("catch when (A(B(C()))) { // ignore\n }")]
+    public void Catch_mit_verschachteltem_when_Filter_wird_erfasst(string quelle)
+    {
+        var treffer = FindeKommentarCatches("void F() { try { X(); } " + quelle + " }").ToArray();
+
+        Assert.Single(treffer);
+        Assert.True(IstFloskel(treffer[0].Kommentar));
+    }
 
     [Fact]
     public void Ein_neuer_catch_mit_Floskelkommentar_wird_gefunden()
