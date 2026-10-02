@@ -156,6 +156,37 @@ class ImportGoldLabelsTests(unittest.TestCase):
         self.assertEqual(vorher, self.samples_path.read_bytes())
         self.assertEqual([], list(self.root.glob("*.bak*")))
 
+    def test_apply_sperrt_wenn_die_datei_zwischen_lesen_und_schreiben_geaendert_wird(self):
+        self._bild(self.gold, "frame_a.jpg", (200, 10, 10))
+        self._label("frame_a.jpg")
+        echtes_build = MODULE.build_samples
+        fremd = [{"SampleId": "wb_fremd", "CaseId": "1111-2222", "FramePath": ""}]
+
+        def build_und_fremde_aenderung(*args, **kwargs):
+            ergebnis = echtes_build(*args, **kwargs)
+            self._write(self.samples_path, fremd)  # anderer Prozess speichert dazwischen
+            return ergebnis
+
+        with mock.patch.object(MODULE, "build_samples", side_effect=build_und_fremde_aenderung), \
+                mock.patch.object(MODULE, "_sewerstudio_laeuft", return_value=False):
+            code, _, err = self._main("--apply")
+            fremd_bytes = self.samples_path.read_bytes()
+
+        self.assertEqual(1, code)
+        self.assertIn("GESPERRT", err)
+        self.assertIn("waehrend des Imports", err)
+        self.assertEqual(fremd, json.loads(fremd_bytes.decode("utf-8")))  # fremde Aenderung bleibt
+        self.assertEqual([], list(self.root.glob("*.bak*")))
+
+    def test_fehlende_trainingsdatei_wird_in_main_als_gesperrt_gemeldet(self):
+        self.samples_path.unlink()
+
+        code, _, err = self._main()
+
+        self.assertEqual(1, code)
+        self.assertIn("GESPERRT", err)
+        self.assertIn("training_samples.json", err)
+
     def test_limit_begrenzt_die_neuen_samples(self):
         for index in range(3):
             self._bild(self.gold, f"frame_{index}.jpg", (index * 40, 20, 20))
