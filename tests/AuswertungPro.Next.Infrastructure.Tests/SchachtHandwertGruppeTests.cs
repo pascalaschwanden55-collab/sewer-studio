@@ -102,4 +102,70 @@ public sealed class SchachtHandwertGruppeTests
         Assert.Equal("", record.GetFieldValue(FieldKeys.ShaftDimension1Mm));
         Assert.Equal("", record.GetFieldValue(FieldKeys.ShaftDimension2Mm));
     }
+
+    // Review PR #80 (P1): bekannte Mojibake-Schreibweisen gehoeren zur selben Gruppe.
+    private const string PrimaereMojibake = "Prim\u00c3\u00a4re Sch\u00c3\u00a4den";
+
+    [Fact]
+    public void Handwert_unter_Mojibake_Schreibweise_sperrt_den_kanonischen_Namen()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue(PrimaereMojibake, "Handkorrektur", FieldSource.Manual, userEdited: true);
+
+        Assert.True(SchachtFeldnamen.HatHandwert(record, "Primaere_Schaeden"));
+        Assert.Equal(FeldSchreibErgebnis.HandwertGeschuetzt,
+            record.SetFieldValue("Primäre Schäden", "Import", FieldSource.Xtf405, userEdited: false));
+        Assert.Contains(PrimaereMojibake, SchachtFeldnamen.Schreibweisen(record, "Primäre Schäden"));
+        Assert.True(AuswertungPro.Next.Application.Xtf.XtfSchachtPlanBuilder.IstHandgesetzt(record, "Primäre Schäden"));
+    }
+
+    // Review PR #80 (P2): Altbestand mit bewusst leerem Handwert in A und aelterem Importwert in B.
+    private static SchachtRecord AltbestandBewusstLeerNebenImport()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", "74467", FieldSource.Pdf, userEdited: false);
+        record.SetFieldValue("Ausfuehrung Datum/Jahr", "01.01.2020", FieldSource.Pdf, userEdited: false);
+        record.SetFieldValue("Ausführung Datum/Jahr", "", FieldSource.Manual, userEdited: true);
+        return record;
+    }
+
+    [Fact]
+    public void Exportleser_liefert_den_bewusst_leeren_Handwert_statt_des_Importwerts()
+    {
+        var record = AltbestandBewusstLeerNebenImport();
+
+        Assert.Equal("", AuswertungPro.Next.Application.Xtf.XtfSchachtPlanBuilder.Wert(record, "Ausführung Datum/Jahr"));
+        Assert.Equal("", AuswertungPro.Next.Application.Xtf.XtfSchachtPlanBuilder.Wert(record, "Ausfuehrung Datum/Jahr"));
+    }
+
+    [Fact]
+    public void Neuaufbau_leert_die_Importschreibweise_und_laesst_den_Handwert_stehen()
+    {
+        var record = AltbestandBewusstLeerNebenImport();
+        var ohneDatum = new LegacyPdfImportService.ParsedSchachtFields(
+            "74467", null, "Kontrollschacht", null, null, null, null, null, null, null);
+
+        SchachtProtocolApplier.Apply(record, "74467", ohneDatum, Array.Empty<(string, string)>(), "C:/x/neu.pdf",
+            rebuildFromProtocol: true);
+
+        Assert.Equal("", record.GetFieldValue("Ausfuehrung Datum/Jahr"));
+        Assert.True(record.IstBewusstLeer("Ausführung Datum/Jahr"));
+        Assert.False(record.IsUserEdited("Ausfuehrung Datum/Jahr"));
+    }
+
+    [Fact]
+    public void Ohne_Handwert_leert_der_Neuaufbau_wie_bisher()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Ausfuehrung Datum/Jahr", "01.01.2020", FieldSource.Pdf, userEdited: false);
+        record.SetFieldValue("Ausführung Datum/Jahr", "01.01.2020", FieldSource.Pdf, userEdited: false);
+        var ohneDatum = new LegacyPdfImportService.ParsedSchachtFields(
+            "74467", null, null, null, null, null, null, null, null, null);
+
+        SchachtProtocolApplier.Apply(record, "74467", ohneDatum, Array.Empty<(string, string)>(), "C:/x/neu.pdf",
+            rebuildFromProtocol: true);
+
+        Assert.Equal("", record.GetFieldValue("Ausfuehrung Datum/Jahr"));
+        Assert.Equal("", record.GetFieldValue("Ausführung Datum/Jahr"));
+    }
 }

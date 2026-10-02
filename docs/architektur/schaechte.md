@@ -33,6 +33,21 @@ bisherigen Handwertschutz (`HandwertGeschuetzt`, SchachtPro-Bericht «von Hand g
 neue Meldungsart. Waechter: `SchachtHandwertGruppeTests`, SchachtPro-Fall in
 `SchachtProImportServiceTests`.
 
+Nachtrag Review PR #80 (03.10.2026):
+- **Mojibake gehoert zur Gruppe.** `SchachtFeldnamen.Gruppenschluessel` rechnet bekannte
+  Mojibake-Schreibweisen («PrimÃ¤re SchÃ¤den», auch doppelt) mit `SchachtFeldnamenReparatur.Entwirre`
+  zurueck und faltet dann. `HatHandwert` und `Schreibweisen` nutzen ihn; ein Handwert unter einem
+  kaputten Namen sperrt damit auch SchachtPro, XTF und KINS. Die Sonderpruefung im PDF-Import ist
+  entfallen. `Feld` faltet bewusst weiter ohne Rueckrechnung: Schreiber holen dort ihr Ziel und
+  sollen nicht in einen kaputten Namen schreiben, den die Tabelle nicht zeigt.
+- **Neuaufbau leert Importwerte neben einem Handwert.** `SchachtRecord.LeereNichtHandbearbeiteteSchreibweisen`
+  (nur fuer den Protokoll-Neuaufbau, nur leeren, Katasterschutz bleibt) leert die nicht
+  handbearbeiteten Schreibweisen; der Handwert selbst bleibt.
+- **Exportleser lesen ueber alle Schreibweisen.** `XtfSchachtPlanBuilder.Wert` liest jetzt
+  `SchachtFeldnamen.Wert` (Regel `AktuellerWert`: Handwert, auch bewusst leer, vor Importwert, darin
+  der juengste) statt der ersten Schreibweise mit Inhalt. Das betrifft alle XTF/DSS-Exportleser, die
+  `XtfSchachtPlanBuilder.Wert` nutzen.
+
 ## Der PDF-Textleser wird geprueft gewaehlt (19.09.2026)
 
 Anlass: Messung an allen 264 SchachtPro-Protokollen aus Goeschenen, rein lesend, drei

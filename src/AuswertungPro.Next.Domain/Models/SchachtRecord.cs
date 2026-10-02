@@ -153,6 +153,31 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     }
 
     /// <summary>
+    /// Nur fuer den Protokoll-Neuaufbau: leert die genannten Schreibweisen eines Feldes, die
+    /// KEIN Handwert sind. Der Handwert selbst (auch bewusst leer) bleibt stehen. Noetig, weil
+    /// der automatische Schreibweg eine Gruppe mit Handwert ganz sperrt
+    /// (<see cref="SchachtFeldnamen.HatHandwert"/>): Ohne diesen Weg bliebe ein alter Importwert
+    /// neben einer bewusst geleerten Handkorrektur stehen (Review PR #80). Kein allgemeiner
+    /// Umweg um die Sperre — es wird nur geleert, nie gefuellt, und Katasterwerte bleiben
+    /// geschuetzt wie beim normalen Leeren.
+    /// </summary>
+    public void LeereNichtHandbearbeiteteSchreibweisen(IEnumerable<string> schreibweisen)
+    {
+        ArgumentNullException.ThrowIfNull(schreibweisen);
+
+        foreach (var name in schreibweisen.Distinct(StringComparer.Ordinal).ToList())
+        {
+            // Nur wirklich vorhandene Spalten; sonst entstuenden leere Zusatzfelder.
+            if (!Fields.ContainsKey(name) || IsUserEdited(name))
+                continue;
+            if (KatasterFeldschutz.Pruefe(name, FieldMeta.GetValueOrDefault(name), GetFieldValue(name), "", FieldSource.Manual, false))
+                continue;
+
+            WriteField(name, "", FieldSource.Manual, userEdited: null);
+        }
+    }
+
+    /// <summary>
     /// Zieht einen Wert technisch nach, ohne Herkunft oder Handmarkierung zu
     /// veraendern. Gedacht fuer Dateipfade nach einem Umbenennen: der alte Pfad
     /// zeigt ins Leere, also muss auch ein handgesetzter Wert mit - er darf dadurch
