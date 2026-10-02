@@ -54,7 +54,7 @@ public sealed record VerknuepfungsRegel
     /// <summary>Spiegel und Verwaisten-Loeschung (<c>ReparsePointGuard</c>): Wurzel bereits geprueft, Lesefehler offen.</summary>
     public static VerknuepfungsRegel Spiegel { get; } = new() { BeiFehlerSperren = false };
 
-    /// <summary>Projekt-Schreibgrenze (<c>ProjectMutationPathPolicy</c>): Wurzel und alle Vorfahren bis zum Laufwerk.</summary>
+    /// <summary>Schreibgrenze (<c>ProjectMutationPathPolicy</c>, Sicherungsziel <c>BackupTargetPathGuard</c>): Wurzel und alle Vorfahren bis zum Laufwerk.</summary>
     public static VerknuepfungsRegel ProjektSchreibgrenze { get; } = new() { WurzelEinschliessen = true, OberhalbPruefen = true };
 
     /// <summary>Streng (Gold-Speicher, Import-Staging): Wurzel eingeschlossen, jedes Glied muss vorhanden und lesbar sein.</summary>
