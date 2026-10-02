@@ -29,7 +29,10 @@ public static class FormularKonfliktschutz
     /// <param name="datensatzwert">Liest den aktuellen Wert des Feldes aus dem Datensatz.</param>
     /// <param name="eingabe">Die Formulareingabe.</param>
     /// <param name="schreiben">Schreibt die Eingabe in den Datensatz (Weg der Seite).</param>
-    /// <param name="konflikt">Meldet (aktueller Datensatzwert, verworfene Eingabe).</param>
+    /// <param name="konflikt">
+    /// Meldet (aktueller Datensatzwert, verworfene Eingabe) an die Seite — nur wenn kein Formular
+    /// den Hinweis selbst zeigt (<see cref="FormularKonfliktAnzeige"/>).
+    /// </param>
     public static void Rueckschreiben(
         RecordDetailItem? item,
         Func<string> datensatzwert,
@@ -44,7 +47,10 @@ public static class FormularKonfliktschutz
         if (item is not null && IstKonflikt(item.Ausgangswert, aktuell, eingabe))
         {
             item.UebernehmeAusDatensatz(aktuell);
-            konflikt?.Invoke(aktuell, eingabe);
+            // Zeigt das Formular den Hinweis selbst (Detailfenster), gehoert er dorthin; sonst an
+            // die Seite (Liste oder Schublade). Review PR #75.
+            if (!item.MeldeKonfliktAnFormular(aktuell, eingabe))
+                konflikt?.Invoke(aktuell, eingabe);
             return;
         }
 

@@ -71,6 +71,57 @@ public static class SchachtFeldnamen
     }
 
     /// <summary>
+    /// Der aktuelle Wert eines Feldes, das unter mehreren Schreibweisen steht (Vorlage
+    /// «Ausführung», Import «Ausfuehrung»). Mit zaehlen nur Schreibweisen mit Inhalt und
+    /// bewusst leere (von Hand geleert, E3) — eine leere Vorlagenspalte ist keine Aussage.
+    /// 1. Handwerte (<see cref="FieldMetadata.UserEdited"/>, auch bewusst leer) gehen jeder
+    ///    automatischen Quelle vor — die Projektregel «Handwerte ueberschreibt kein Import» gilt
+    ///    auch ueber Schreibweisen hinweg. Der PDF-Import (SchachtProtocolApplier) schreibt alle
+    ///    Schreibweisen; die handbearbeitete bleibt geschuetzt, eine andere bekommt den Importwert
+    ///    mit neuerem Zeitstempel. Der darf die Handkorrektur nicht verdecken (Review PR #78).
+    /// 2. Innerhalb derselben Klasse gewinnt die zuletzt geaenderte
+    ///    (<see cref="FieldMetadata.LastUpdatedUtc"/>).
+    /// 3. Ohne Zeitangabe oder bei gleicher Zeit gilt die Reihenfolge von
+    ///    <paramref name="schreibweisen"/> (bisherige Regel: erste nicht-leere).
+    ///
+    /// Review PR #75: Mit «erste nicht-leere» ging eine bewusste Leer-Korrektur an einer
+    /// Schreibweise verloren, solange eine andere noch den Altwert trug — das Formular sah keinen
+    /// Konflikt und schrieb den Altwert-Zusatz in beide Schreibweisen.
+    /// </summary>
+    public static string AktuellerWert(
+        IReadOnlyDictionary<string, string>? felder,
+        IReadOnlyDictionary<string, FieldMetadata>? meta,
+        IEnumerable<string> schreibweisen)
+    {
+        string? bester = null;
+        var besterIstHandwert = false;
+        var besteZeit = DateTime.MinValue;
+
+        foreach (var name in schreibweisen ?? Enumerable.Empty<string>())
+        {
+            var wert = felder is not null && felder.TryGetValue(name, out var w) ? w ?? "" : "";
+            FieldMetadata? herkunft = null;
+            meta?.TryGetValue(name, out herkunft);
+            if (string.IsNullOrWhiteSpace(wert) && herkunft is not { UserEdited: true })
+                continue;
+
+            var handwert = herkunft is { UserEdited: true };
+            var zeit = herkunft?.LastUpdatedUtc ?? DateTime.MinValue;
+            var gewinnt = bester is null
+                          || (handwert && !besterIstHandwert)
+                          || (handwert == besterIstHandwert && zeit > besteZeit);
+            if (gewinnt)
+            {
+                bester = wert;
+                besterIstHandwert = handwert;
+                besteZeit = zeit;
+            }
+        }
+
+        return bester ?? "";
+    }
+
+    /// <summary>
     /// Alle im Datensatz vorhandenen Feldnamen, deren gefaltete Form <paramref name="gesucht"/>
     /// entspricht. Gemeinsame Suchlogik fuer <see cref="Feld"/> und <see cref="Schreibweisen"/>.
     /// </summary>

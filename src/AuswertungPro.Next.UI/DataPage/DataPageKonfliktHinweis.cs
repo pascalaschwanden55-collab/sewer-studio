@@ -20,6 +20,7 @@ public static class DataPageKonfliktHinweis
     public static string Schacht(string feld, string aktuellerWert, string eingabe)
         => MitBeschriftung(SchaechteColumnPolicy.GetDisplayHeader(feld), aktuellerWert, eingabe);
 
-    private static string MitBeschriftung(string label, string aktuellerWert, string eingabe)
+    /// <summary>Mit fertiger Beschriftung (Detailfenster: die Beschriftung des Formularfelds).</summary>
+    public static string MitBeschriftung(string label, string aktuellerWert, string eingabe)
         => $"„{label}“ wurde inzwischen auf „{aktuellerWert}“ geändert. Die Eingabe „{eingabe}“ wurde nicht übernommen.";
 }

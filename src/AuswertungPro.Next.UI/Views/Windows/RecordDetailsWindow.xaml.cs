@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Input;
+using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -31,6 +32,19 @@ public partial class RecordDetailsWindow : Window
         CloseCommand = new CloseWindowCommand(this);
         SuggestMeasuresCommand = suggestMeasuresCommand;
         Loaded += (_, _) => EnsureVisibleOnScreen();
+        // W01: Ein Konflikt aus diesem Fenster erscheint hier, nicht in Liste/Schublade dahinter.
+        var konfliktAnzeige = FormularKonfliktAnzeige.Verbinde(Groups, text => Hinweis = text);
+        Closed += (_, _) => konfliktAnzeige.Dispose();
+    }
+
+    public static readonly DependencyProperty HinweisProperty = DependencyProperty.Register(
+        nameof(Hinweis), typeof(string), typeof(RecordDetailsWindow), new PropertyMetadata(string.Empty));
+
+    /// <summary>Konflikthinweis (W01) unter dem Fensterkopf; leer = keiner.</summary>
+    public string Hinweis
+    {
+        get => (string)GetValue(HinweisProperty);
+        private set => SetValue(HinweisProperty, value);
     }
 
     private void EnsureVisibleOnScreen() => WindowBoundsHelper.EnsureVisibleOnScreen(this);

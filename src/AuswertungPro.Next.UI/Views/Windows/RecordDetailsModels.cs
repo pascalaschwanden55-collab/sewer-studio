@@ -216,6 +216,23 @@ public sealed class RecordDetailItem : INotifyPropertyChanged, IDataErrorInfo
     public Func<string>? LiesDatensatzwert { get; init; }
 
     /// <summary>
+    /// Ein Formular, das den Konflikthinweis selbst zeigt (Detailfenster), meldet sich hier an
+    /// (W01): (Feld, aktueller Datensatzwert, verworfene Eingabe). Ohne Anmeldung meldet der
+    /// Rueckschreibweg den Konflikt an die Seite (Liste oder Schublade).
+    /// </summary>
+    public event Action<RecordDetailItem, string, string>? KonfliktGemeldet;
+
+    /// <summary>Meldet den Konflikt an ein angemeldetes Formular; false, wenn keines zuhoert.</summary>
+    internal bool MeldeKonfliktAnFormular(string aktuellerWert, string eingabe)
+    {
+        var zuhoerer = KonfliktGemeldet;
+        if (zuhoerer is null)
+            return false;
+        zuhoerer(this, aktuellerWert, eingabe);
+        return true;
+    }
+
+    /// <summary>
     /// Der Editor dieses Feldes hat den Tastaturfokus. Externe Aenderungen ersetzen den Text
     /// dann nicht unter dem Cursor, sondern werden bis <see cref="BeendeBearbeitung"/> gemerkt.
     /// </summary>

@@ -171,4 +171,82 @@ public sealed class SchaechteFormularTabelleAbgleichTests
         Assert.Empty(konflikte);
         Assert.True(record.IstBewusstLeer(Feld));
     }
+
+    // Zeitstempel ausdruecklich, damit die Reihenfolge nicht an der Uhr haengt.
+    private static void Stempel(SchachtRecord record, string feld, int minute)
+        => record.FieldMeta[feld].LastUpdatedUtc = new DateTime(2026, 10, 2, 12, minute, 0, DateTimeKind.Utc);
+
+    [Fact]
+    public void Bewusst_geleerte_juengste_Schreibweise_ist_der_aktuelle_Stand()
+    {
+        // Review PR #75 (P1): Das Formular hat beide Schreibweisen gleich gesetzt, danach leert die
+        // Tabelle eine davon bewusst. Die andere traegt noch den Altwert. Massgebend ist die zuletzt
+        // geaenderte Schreibweise - sonst gilt die Formulareingabe nicht als Konflikt und
+        // ueberschreibt die Leer-Korrektur in beiden Schreibweisen.
+        var (builder, konflikte, commits) = Builder();
+        var record = RecordMit("Alt");
+        record.SetFieldValue("Ausführung", "Beton", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("Ausfuehrung", "Beton", FieldSource.Manual, userEdited: true);
+        Stempel(record, "Ausführung", 1);
+        Stempel(record, "Ausfuehrung", 1);
+        var item = Item(builder.Build(["Ausfuehrung", "Ausführung", Feld], record), "Ausfuehrung");
+        Assert.Equal("Beton", item.Value);
+
+        record.SetFieldValue("Ausführung", "", FieldSource.Manual, userEdited: true);
+        Stempel(record, "Ausführung", 2);
+        item.Value = "Beton + Zusatz";
+
+        Assert.Empty(commits);
+        Assert.Equal(("Ausfuehrung", "", "Beton + Zusatz"), Assert.Single(konflikte));
+        Assert.True(record.IstBewusstLeer("Ausführung"));
+        Assert.Equal("Beton", record.GetFieldValue("Ausfuehrung"));
+
+        // Neu aufgebaut zeigt das Formular den juengsten Stand: bewusst leer.
+        Assert.Equal("", Item(builder.Build(["Ausfuehrung", "Ausführung", Feld], record), "Ausfuehrung").Value);
+    }
+
+    [Fact]
+    public void Gleiche_Schreibweisen_mit_verschiedenen_Zeitstempeln_sind_kein_Konflikt()
+    {
+        var (builder, konflikte, _) = Builder();
+        var record = RecordMit("Alt");
+        record.SetFieldValue("Ausführung", "Beton", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("Ausfuehrung", "Beton", FieldSource.Manual, userEdited: true);
+        Stempel(record, "Ausführung", 1);
+        Stempel(record, "Ausfuehrung", 3);
+        var item = Item(builder.Build(["Ausführung", Feld], record), "Ausführung");
+
+        item.Value = "Kunststoff";
+
+        Assert.Empty(konflikte);
+        Assert.Equal("Kunststoff", record.GetFieldValue("Ausführung"));
+        Assert.Equal("Kunststoff", record.GetFieldValue("Ausfuehrung"));
+    }
+
+    [Fact]
+    public void Detailfenster_zeigt_den_Konflikthinweis_selbst_statt_der_Seite()
+    {
+        // Review PR #75 (P2): Das Detailfenster nutzt denselben Builder. Der Hinweis gehoert in das
+        // Fenster, in dem eingegeben wurde, nicht in Liste oder Schublade dahinter.
+        var (builder, konflikte, _) = Builder();
+        var record = RecordMit("Alt");
+        var gruppen = builder.Build([Feld], record);
+        string? hinweis = null;
+        using var anzeige = FormularKonfliktAnzeige.Verbinde(gruppen, text => hinweis = text);
+
+        record.SetFieldValue(Feld, "Tabellenkorrektur", FieldSource.Manual, userEdited: true);
+        Item(gruppen, Feld).Value = "Alt + Zusatz";
+
+        Assert.Empty(konflikte);
+        Assert.NotNull(hinweis);
+        Assert.Contains("„Tabellenkorrektur“", hinweis);
+        Assert.Contains("„Alt + Zusatz“", hinweis);
+        Assert.Equal("Tabellenkorrektur", record.GetFieldValue(Feld));
+
+        // Nach dem Abmelden (Fenster zu) meldet wieder die Seite.
+        anzeige.Dispose();
+        record.SetFieldValue(Feld, "Noch neuer", FieldSource.Manual, userEdited: true);
+        Item(gruppen, Feld).Value = "Tabellenkorrektur + Zusatz";
+        Assert.Single(konflikte);
+    }
 }

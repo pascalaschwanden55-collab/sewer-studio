@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 
@@ -71,7 +72,8 @@ public static class SchachtDetailFeldKonsolidierer
     /// </summary>
     public static IReadOnlyList<KonsolidiertesSchachtFeld> Konsolidiere(
         IEnumerable<string> templateSpalten,
-        IReadOnlyDictionary<string, string> recordFelder)
+        IReadOnlyDictionary<string, string> recordFelder,
+        IReadOnlyDictionary<string, FieldMetadata>? feldMeta = null)
     {
         var gruppen = new Dictionary<string, List<string>>(StringComparer.Ordinal); // kanon -> roh-keys (Reihenfolge)
         var reihenfolge = new List<string>();
@@ -113,7 +115,7 @@ public static class SchachtDetailFeldKonsolidierer
 
             // Wert: erste nicht-leere Variante (Template-Feld ist oft leer, Import-Variante traegt den Wert).
             var primaer = keys.FirstOrDefault(k => !string.IsNullOrWhiteSpace(WertVon(k)));
-            var wert = AktuellerWert(recordFelder, keys);
+            var wert = AktuellerWert(recordFelder, keys, feldMeta);
             // Commit-Ziel: das wertfuehrende Feld, sonst der Anzeige-Key (kanonisch).
             primaer ??= anzeige;
 
@@ -124,21 +126,17 @@ public static class SchachtDetailFeldKonsolidierer
     }
 
     /// <summary>
-    /// Der Wert eines konsolidierten Feldes: die erste nicht-leere Schreibweise in der Reihenfolge
-    /// von <see cref="KonsolidiertesSchachtFeld.AlleKeys"/>. Dieselbe Regel wie beim Aufbau
+    /// Der Wert eines konsolidierten Feldes ueber alle Schreibweisen
+    /// (<see cref="KonsolidiertesSchachtFeld.AlleKeys"/>): die zuletzt geaenderte, siehe
+    /// <see cref="SchachtFeldnamen.AktuellerWert"/>. Dieselbe Regel wie beim Aufbau
     /// (<see cref="Konsolidiere"/>); Live-Abgleich und Konfliktschutz des Formulars (W01) lesen
-    /// damit genau den Wert, den das Formular beim Oeffnen gezeigt hat.
+    /// damit genau den Wert, den das Formular zeigt.
     /// </summary>
-    public static string AktuellerWert(IReadOnlyDictionary<string, string>? recordFelder, IEnumerable<string> keys)
-    {
-        foreach (var key in keys ?? Enumerable.Empty<string>())
-        {
-            if (recordFelder is not null && recordFelder.TryGetValue(key, out var wert) && !string.IsNullOrWhiteSpace(wert))
-                return wert;
-        }
-
-        return "";
-    }
+    public static string AktuellerWert(
+        IReadOnlyDictionary<string, string>? recordFelder,
+        IEnumerable<string> keys,
+        IReadOnlyDictionary<string, FieldMetadata>? feldMeta = null)
+        => SchachtFeldnamen.AktuellerWert(recordFelder, feldMeta, keys);
 
     private static bool IstSichtbarerFeldname(string? feldName)
     {
