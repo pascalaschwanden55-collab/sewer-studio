@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AuswertungPro.Next.Application.UseCases.GoldQualityReview;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Inventory;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training.GoldQualityReview;
 
@@ -310,10 +311,13 @@ public sealed class GoldQualityReviewSessionFileStore : IGoldQualityReviewSessio
                 $"Verknüpfte Pfade sind für Goldprüfungen nicht erlaubt: {reparsePoint}");
     }
 
+    // Gemeinsame Verknuepfungspruefung (Deepscan A5); fehlende oder unlesbare Eintraege werfen wie bisher.
     private static void RejectReparsePoint(string path)
     {
-        var attributes = File.GetAttributes(path);
-        if ((attributes & FileAttributes.ReparsePoint) != 0)
+        var befund = VerknuepfungsSchutz.PruefeEintrag(path, VerknuepfungsRegel.GoldSpeicher);
+        if (befund.Fehler is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(befund.Fehler);
+        if (befund.Befund == VerknuepfungsBefund.Verknuepfung)
             throw new InvalidDataException($"Verknüpfte Pfade sind für Goldprüfungen nicht erlaubt: {path}");
     }
 

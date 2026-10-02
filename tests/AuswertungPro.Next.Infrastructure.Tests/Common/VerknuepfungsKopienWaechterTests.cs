@@ -9,7 +9,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Common;
 /// </summary>
 public sealed class VerknuepfungsKopienWaechterTests
 {
-    private const int EigeneReparsePointPruefungen = 28;
+    private const int EigeneReparsePointPruefungen = 27;
 
     [Fact]
     public void Eigene_Verknuepfungspruefungen_werden_nicht_mehr()
