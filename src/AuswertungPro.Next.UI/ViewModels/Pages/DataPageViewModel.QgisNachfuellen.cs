@@ -32,6 +32,6 @@ public sealed partial class DataPageViewModel
         SaveStatus = ergebnis.Meldung;
         IsSaveStatusVisible = true;
         if (ergebnis.Ausgefuehrt)
-            MeldeFelderExternErgaenzt();
+            MeldeUebernahme();
     }
 }

@@ -308,16 +308,20 @@ public sealed class DesignAuditNovaSchaechteTests
     [Fact]
     public void Schacht_Aufklapp_Liste_verwendet_die_geteilten_Bausteine_der_Haltungen()
     {
+        // Deepscan 02.10.2026 (A2): Beide Seiten nutzen denselben Aufklapp-Controller, nicht zwei Kopien.
         var controllerCode = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "DataPage", "SchaechteAufklappListeController.cs"));
-        Assert.Contains("AufklappDetailLayout.Themen(", controllerCode);
+        Assert.Contains(": AufklappListeController<SchachtAufklappListe, SchachtRecord>", controllerCode);
         var haltungController = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "DataPage", "DataPageAufklappListeController.cs"));
-        Assert.Contains("AufklappDetailLayout.Themen(", haltungController);
+        Assert.Contains(": AufklappListeController<HaltungAufklappListe, HaltungRecord>", haltungController);
+        var gemeinsam = File.ReadAllText(TestRepoPaths.RepoFile(
+            "src", "AuswertungPro.Next.UI", "DataPage", "AufklappListeController.cs"));
+        Assert.Contains("AufklappDetailLayout.Themen(", gemeinsam);
         var layoutCode = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "DataPage", "AufklappDetailLayout.cs"));
         Assert.Contains("HaltungThemenGruppierung.Bilde(", layoutCode);
-        Assert.Contains("new DataPageDetailLiveSync(", controllerCode);
+        Assert.Contains("new DataPageDetailLiveSync(", gemeinsam);
 
         var controlCode = File.ReadAllText(TestRepoPaths.RepoFile(
             "src", "AuswertungPro.Next.UI", "Views", "Pages", "Schachtansicht", "SchachtAufklappListe.xaml.cs"));
