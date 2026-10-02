@@ -9,6 +9,7 @@
 
 ## Inhalt
 
+- Übersprungene Ordner erscheinen im Ergebnis (02.10.2026)
 - AP07: Ein-Knopf-Import und Medienverteilung (28.09.2026)
 - Auditkorrektur: Portabilitaet ordnet keine fremden PDFs zusammen (18.09.2026)
 - Dichtheitsverteilung: Zielordner, Seitenfehler, Behaelter (18.09.2026)
@@ -16,6 +17,35 @@
 - Befundfotos gehoeren nie in den Temp-Ordner (12.09.2026)
 - (Fortsetzung aus «Wichtige Klassen»)
 - (Fortsetzung aus «Begleitprotokolle der Sanierung und Videodopplung (Bürglen, 09.09.2026)»)
+
+## Übersprungene Ordner erscheinen im Ergebnis (02.10.2026)
+
+Deepscan 02.10.2026, Befund R1: `SafeFileEnumeration` lässt unlesbare Ordner und
+Verknüpfungen bewusst aus, meldete das aber nur, wenn der Aufrufer eine Liste mitgab.
+
+- **Regel:** Wo ein ausgelassener Ordner Daten unterschlagen kann (Import, Verteilung,
+  Protokoll- und Videosuche in der Kundenquelle), steht er im Ergebnis als Zeile
+  `Ordner «…» übersprungen: nicht lesbar` bzw. `…: Verknüpfung, wird nicht betreten`
+  und **zählt als Fehler**. Der Ein-Knopf-Import sagt dann «nicht vollständig» statt
+  «0 Fehler». Verknüpfungen werden weiterhin nicht betreten.
+- **Gemeinsame Bausteine:** `Application.Common.UebersprungeneOrdner` (Text, Grund,
+  Baumprüfung `PruefeBaum`/`SammleBaum`), `Application.Import.UebersprungeneOrdnerImport`
+  (ergänzt ein `Result<ImportStats>`; zählt eine Zeile, die ein Teilimport schon meldete,
+  nicht doppelt) und `HoldingDistribution.UebersprungeneQuellordner` (Fehlerergebnisse
+  der Haltungsverteilung, vorangestellt). Neue Aufrufer formatieren die Liste nicht selbst.
+- **Angeschlossen:** KINS-, WinCan- und IBAK-Import (Quellwurzel), Dichtheitsverteilung im
+  Import (Fehlerliste), Haltungs-, TXT-, Schacht- und Dichtheitsverteilung von
+  `HoldingFolderDistributor` (PDF-/TXT-Quelle und rekursiver Videoordner, damit auch die
+  Kanalverteilung des Imports), manuelle Schachtverteilung (gleicher Text) und der
+  PDF-Nachscan von `ImportPostProcessingController`.
+- **Bewusst nicht angeschlossen:** Suchen im eigenen Projektordner (Staging-Lesesicht,
+  `InspectionProtocolFileLocator`), weil dort kein Kundenoriginal fehlt und die Suche nur
+  «gefunden/nicht gefunden» liefert. Training Center (`TrainingCenterImportService`) hat
+  keinen Berichtsweg; das gehört zu R6/R8. Archivierung (`ImportSourceArchiveService`) und
+  Medienverteilung (`MediaDistributionService`) folgen nach dem Umbau durch Codex.
+- Tests: `UebersprungeneOrdnerImportTests`, `UebersprungeneOrdnerVerteilungTests`
+  (Verknüpfung als Unterordner, `JunctionFact`) und
+  `ImportPostProcessingControllerTests.RunAsync_meldet_einen_uebersprungenen_Unterordner_als_Fehler`.
 
 ## AP07: Ein-Knopf-Import und Medienverteilung (28.09.2026)
 

@@ -116,7 +116,7 @@ public sealed class ShaftDistributionService : IShaftDistributionService
                 variant: request.Variant));
         foreach (var path in skipped)
             results.Add(new HoldingFolderDistributor.DistributionResult(false,
-                "PDF-Quellordner nicht lesbar: " + path, path, null, null, null, null, null,
+                UebersprungeneOrdner.Meldung(path), path, null, null, null, null, null,
                 HoldingFolderDistributor.VideoMatchStatus.NotChecked));
         return results;
     }

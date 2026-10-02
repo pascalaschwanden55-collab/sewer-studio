@@ -8,6 +8,7 @@ using AuswertungPro.Next.Application.UseCases.Import.Quellen;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Common;
 using FileContentComparer = AuswertungPro.Next.Application.Common.FileContentComparer;
+using UebersprungeneOrdner = AuswertungPro.Next.Application.Common.UebersprungeneOrdner;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
 
@@ -575,10 +576,12 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
         var gefunden = new List<Sanierungsprotokoll>();
         var gemeldet = new List<string>();
         var fehlgeschlagen = new List<string>();
+        // R1 (02.10.2026): Ein Ordner, den die Suche auslaesst, ist ein Fehler im Bericht.
+        var uebersprungen = new List<string>();
         try
         {
             foreach (var pfad in SafeFileEnumeration
-                         .EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
+                         .EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true, uebersprungen)
                          .OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
             {
                 try
@@ -604,6 +607,7 @@ public sealed class DichtheitImportDistributionService : IDichtheitImportDistrib
             fehlgeschlagen.Add($"Begleitprotokolle in {sourceFolder} nicht vollständig durchsucht: {ex.Message}");
         }
 
+        fehlgeschlagen.InsertRange(0, UebersprungeneOrdner.Meldungen(uebersprungen));
         hinweise = gemeldet;
         fehler = fehlgeschlagen;
         return gefunden;
