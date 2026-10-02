@@ -180,6 +180,7 @@ public sealed partial class SchattenauswertungPageViewModel : ObservableObject
         var abweichend = 0;
         var veraltet = 0;
         var ohneCodierung = 0;
+        var fehler = 0;
 
         foreach (var record in projekt.Data)
         {
@@ -194,11 +195,13 @@ public sealed partial class SchattenauswertungPageViewModel : ObservableObject
             if (row.AbweichungKey is "Stark" or "Leicht") abweichend++;
             if (row.IstVeraltet) veraltet++;
             if (ergebnis?.Status == SchattenStatus.OhneCodierung) ohneCodierung++;
+            if (ergebnis?.Status == SchattenStatus.Fehler) fehler++;
         }
 
         Zusammenfassung = Rows.Count == 0
             ? ""
-            : $"{Rows.Count} Haltungen · {abweichend} abweichend · {veraltet} veraltet · {ohneCodierung} ohne Codierung";
+            : $"{Rows.Count} Haltungen · {abweichend} abweichend · {veraltet} veraltet · {ohneCodierung} ohne Codierung"
+              + (fehler > 0 ? $" · {fehler} Fehler" : "");
     }
 
     internal static string FormatKosten(decimal? wert)
@@ -249,7 +252,7 @@ public sealed class SchattenauswertungRowVm
             ?? "";
         var schattenKosten = ergebnis?.KostenErwartet ?? ergebnis?.RegelKosten;
 
-        var abweichung = ergebnis is null || ergebnis.Status == SchattenStatus.OhneCodierung
+        var abweichung = ergebnis is null || ergebnis.Status is SchattenStatus.OhneCodierung or SchattenStatus.Fehler
             ? SchattenAbweichung.KeinVergleich
             : SchattenVergleich.Bewerte(
                 menschKlasse, menschMassnahme, menschKosten,
@@ -257,7 +260,8 @@ public sealed class SchattenauswertungRowVm
 
         var istVeraltet = ergebnis is not null
             && ergebnis.Status != SchattenStatus.OhneCodierung
-            && !string.Equals(ergebnis.CodierungsHash, SchattenCodierungsHash.Compute(record), StringComparison.Ordinal);
+            && (ergebnis.Status == SchattenStatus.Fehler // ein Fehler wird beim naechsten Lauf immer neu gerechnet
+                || !string.Equals(ergebnis.CodierungsHash, SchattenCodierungsHash.Compute(record), StringComparison.Ordinal));
 
         return new SchattenauswertungRowVm
         {
@@ -298,7 +302,7 @@ public sealed class SchattenauswertungRowVm
                   $"{SchattenauswertungPageViewModel.FormatKosten(ergebnis.KostenMax)} CHF"
                 : "",
             KiConfidenceText = ergebnis?.KiConfidence is { } c ? c.ToString("P0", CultureInfo.InvariantCulture) : "",
-            KiFehler = ergebnis?.KiFehler ?? ""
+            KiFehler = ergebnis?.Fehler ?? ergebnis?.KiFehler ?? ""
         };
     }
 
@@ -309,6 +313,7 @@ public sealed class SchattenauswertungRowVm
         SchattenStatus.NurRegeln => "Regeln",
         SchattenStatus.MitKi => "Regeln + KI",
         SchattenStatus.KiFallback => "Regeln (KI-Rückfall)",
+        SchattenStatus.Fehler => "Fehler",
         _ => ""
     };
 }

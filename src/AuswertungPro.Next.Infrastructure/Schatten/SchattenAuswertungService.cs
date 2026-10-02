@@ -86,7 +86,7 @@ public sealed class SchattenAuswertungService : ISchattenAuswertungService
         {
             var kandidaten = haltungen
                 .Select(r => (Record: r, Name: KeyOf(r)))
-                .Where(x => store.ByHaltung.TryGetValue(x.Name, out var e) && e.Status != SchattenStatus.OhneCodierung)
+                .Where(x => store.ByHaltung.TryGetValue(x.Name, out var e) && e.Status is not (SchattenStatus.OhneCodierung or SchattenStatus.Fehler))
                 .ToList();
 
             for (var i = 0; i < kandidaten.Count; i++)
@@ -128,13 +128,15 @@ public sealed class SchattenAuswertungService : ISchattenAuswertungService
         // Zustand: auf der Tiefkopie rechnen, vom Klon ablesen — Original bleibt still.
         var klon = HaltungRecordCloner.CloneForEvaluation(record);
         var vsaOk = false;
+        string? fehler = null;
         try
         {
             vsaOk = _vsa.EvaluateRecord(klon).Ok;
         }
-        catch
+        catch (Exception ex)
         {
-            // Bewertungsfehler einer Haltung darf den Lauf nicht stoppen — Noten bleiben leer.
+            // Der Lauf geht weiter, aber die Haltung wird als Fehler gespeichert (nicht als Ergebnis).
+            fehler = "Zustandsbewertung: " + ex.Message;
         }
 
         // Massnahmen: rein lesende Empfehlung direkt vom Original.
@@ -143,9 +145,23 @@ public sealed class SchattenAuswertungService : ISchattenAuswertungService
         {
             empfehlung = _massnahmen.Recommend(record, maxSuggestions: 5);
         }
-        catch
+        catch (Exception ex)
         {
             empfehlung = MeasureRecommendationResult.Empty;
+            fehler = (fehler is null ? "" : fehler + " | ") + "Massnahmen: " + ex.Message;
+        }
+
+        if (fehler is not null)
+        {
+            // Fehler als Fehler zeigen: kein Teilergebnis, das wie eine Auswertung aussieht.
+            return new SchattenHaltungErgebnis
+            {
+                Haltung = name,
+                CodierungsHash = hash,
+                BerechnetUtc = DateTime.UtcNow,
+                Status = SchattenStatus.Fehler,
+                Fehler = fehler
+            };
         }
 
         return new SchattenHaltungErgebnis
