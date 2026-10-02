@@ -186,31 +186,12 @@ public partial class ProtocolEntryEditorDialog : Window
 
     private void HookVsaValidationEvents()
     {
-        VsaDistanzTextBox.TextChanged += (_, _) => ApplyLiveValidation();
-        VsaVideoTextBox.TextChanged += (_, _) => ApplyLiveValidation();
-        VsaQ1TextBox.TextChanged += (_, _) => ApplyLiveValidation();
-        VsaQ2TextBox.TextChanged += (_, _) => ApplyLiveValidation();
-        VsaStreckeTextBox.TextChanged += (_, _) => ApplyLiveValidation();
-        VsaAnsichtTextBox.TextChanged += (_, _) => ApplyLiveValidation();
-        VsaSchachtbereichTextBox.TextChanged += (_, _) => ApplyLiveValidation();
-        VsaAnmerkungTextBox.TextChanged += (_, _) => ApplyLiveValidation();
-
-        VsaUhrVonComboBox.SelectionChanged += (_, _) => ApplyLiveValidation();
-        VsaUhrBisComboBox.SelectionChanged += (_, _) => ApplyLiveValidation();
-        VsaEzComboBox.SelectionChanged += (_, _) => ApplyLiveValidation();
-
-        VsaVerbindungCheckBox.Checked += (_, _) => ApplyLiveValidation();
-        VsaVerbindungCheckBox.Unchecked += (_, _) => ApplyLiveValidation();
-
-        VsaDistanzTextBox.LostFocus += (_, _) => NormalizeNumberText(VsaDistanzTextBox);
-        VsaVideoTextBox.LostFocus += (_, _) => NormalizeTimeText(VsaVideoTextBox);
-        VsaQ1TextBox.LostFocus += (_, _) => NormalizeNumberText(VsaQ1TextBox);
-        VsaQ2TextBox.LostFocus += (_, _) => NormalizeNumberText(VsaQ2TextBox);
-        VsaStreckeTextBox.LostFocus += (_, _) => NormalizeStreckeText(VsaStreckeTextBox);
-        VsaUhrVonComboBox.LostFocus += (_, _) => NormalizeClockCombo(VsaUhrVonComboBox);
-        VsaUhrBisComboBox.LostFocus += (_, _) => NormalizeClockCombo(VsaUhrBisComboBox);
-        VsaEzComboBox.LostFocus += (_, _) => NormalizeEzCombo(VsaEzComboBox);
-        VsaSchachtbereichTextBox.LostFocus += (_, _) => NormalizeSchachtbereichText(VsaSchachtbereichTextBox);
+        VsaFormularVerdrahtung.Verdrahte(
+            new VsaFormularVerdrahtung.Felder(
+                VsaDistanzTextBox, VsaVideoTextBox, VsaQ1TextBox, VsaQ2TextBox, VsaStreckeTextBox,
+                VsaAnsichtTextBox, VsaSchachtbereichTextBox, VsaAnmerkungTextBox,
+                VsaUhrVonComboBox, VsaUhrBisComboBox, VsaEzComboBox, VsaVerbindungCheckBox),
+            () => ApplyLiveValidation());
     }
 
     private void EntryVm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -330,104 +311,22 @@ public partial class ProtocolEntryEditorDialog : Window
     }
 
     private void NormalizeNumberText(TextBox textBox, bool revalidate = true)
-    {
-        if (!TryParseOptionalDouble(textBox.Text, out var value))
-        {
-            if (revalidate)
-                ApplyLiveValidation();
-            return;
-        }
-
-        var normalized = value.HasValue
-            ? value.Value.ToString("0.###", CultureInfo.InvariantCulture)
-            : string.Empty;
-        if (!string.Equals(textBox.Text, normalized, StringComparison.Ordinal))
-            textBox.Text = normalized;
-
-        if (revalidate)
-            ApplyLiveValidation();
-    }
+        => VsaFormularVerdrahtung.Zahl(textBox, revalidate ? () => ApplyLiveValidation() : null);
 
     private void NormalizeTimeText(TextBox textBox, bool revalidate = true)
-    {
-        if (!TryParseOptionalTimeSpan(textBox.Text, out var value))
-        {
-            if (revalidate)
-                ApplyLiveValidation();
-            return;
-        }
-
-        var normalized = value.HasValue ? FormatTime(value.Value) : string.Empty;
-        if (!string.Equals(textBox.Text, normalized, StringComparison.Ordinal))
-            textBox.Text = normalized;
-
-        if (revalidate)
-            ApplyLiveValidation();
-    }
+        => VsaFormularVerdrahtung.Zeit(textBox, revalidate ? () => ApplyLiveValidation() : null);
 
     private void NormalizeStreckeText(TextBox textBox, bool revalidate = true)
-    {
-        if (!TryNormalizeStrecke(textBox.Text, out var normalized, out _))
-        {
-            if (revalidate)
-                ApplyLiveValidation();
-            return;
-        }
-
-        if (!string.Equals(textBox.Text, normalized, StringComparison.Ordinal))
-            textBox.Text = normalized;
-
-        if (revalidate)
-            ApplyLiveValidation();
-    }
+        => VsaFormularVerdrahtung.Strecke(textBox, revalidate ? () => ApplyLiveValidation() : null);
 
     private void NormalizeClockCombo(ComboBox comboBox, bool revalidate = true)
-    {
-        if (!TryNormalizeClockPosition(comboBox.Text, out var normalized, out _))
-        {
-            if (revalidate)
-                ApplyLiveValidation();
-            return;
-        }
-
-        if (!string.Equals(comboBox.Text, normalized, StringComparison.Ordinal))
-            comboBox.Text = normalized;
-
-        if (revalidate)
-            ApplyLiveValidation();
-    }
+        => VsaFormularVerdrahtung.Uhrlage(comboBox, revalidate ? () => ApplyLiveValidation() : null);
 
     private void NormalizeEzCombo(ComboBox comboBox, bool revalidate = true)
-    {
-        if (!TryNormalizeEz(comboBox.Text, out var normalized, out _))
-        {
-            if (revalidate)
-                ApplyLiveValidation();
-            return;
-        }
-
-        if (!string.Equals(comboBox.Text, normalized, StringComparison.Ordinal))
-            comboBox.Text = normalized;
-
-        if (revalidate)
-            ApplyLiveValidation();
-    }
+        => VsaFormularVerdrahtung.Ez(comboBox, revalidate ? () => ApplyLiveValidation() : null);
 
     private void NormalizeSchachtbereichText(TextBox textBox, bool revalidate = true)
-    {
-        if (!TryNormalizeSchachtbereich(textBox.Text, out var normalized, out _))
-        {
-            if (revalidate)
-                ApplyLiveValidation();
-            return;
-        }
-
-        if (!string.Equals(textBox.Text, normalized, StringComparison.Ordinal))
-            textBox.Text = normalized;
-
-        if (revalidate)
-            ApplyLiveValidation();
-    }
+        => VsaFormularVerdrahtung.Schachtbereich(textBox, revalidate ? () => ApplyLiveValidation() : null);
 
     private void NormalizeAllStrictInputs()
     {
