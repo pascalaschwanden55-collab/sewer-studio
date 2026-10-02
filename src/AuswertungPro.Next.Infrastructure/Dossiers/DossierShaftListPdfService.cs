@@ -21,7 +21,6 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
     private const string MutedTextColor = "#64748B";
     private const string BorderColor = "#CBD5E1";
     private const string HeaderBackground = "#E5EEF3";
-    private const string SoftBackground = "#F3F6F8";
     private const string AlternateRowBackground = "#FAFBFC";
     private const string MissingText = "nicht erfasst";
 
@@ -57,12 +56,12 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
                     .FontSize(9.25f)
                     .FontColor(TextColor));
 
-                page.Header().Element(container => ComposeHeader(container, _logo, _coatOfArms));
+                page.Header().Element(container => DossierPdfBausteine.ComposeHeader(container, _logo, _coatOfArms, 70, "SCHACHTLISTE"));
                 page.Content().PaddingTop(12).Column(column =>
                 {
                     column.Spacing(9);
                     column.Item().Element(ComposeTitle);
-                    column.Item().Element(container => ComposeMetadata(container, model));
+                    column.Item().Element(container => DossierPdfBausteine.ComposeMetadata(container, model.OwnerName, model.PropertyAddress, model.Stand));
                     column.Item().Element(container => ComposeSummary(container, model));
 
                     column.Item()
@@ -114,49 +113,6 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
             : $"Z{minimum} bis Z{maximum}";
     }
 
-    internal static (string Background, string Foreground)? ResolveConditionColors(string? value)
-    {
-        var normalized = DossierConditionClassValue.Normalize(value);
-        if (normalized is null)
-            return null;
-
-        var colors = ProtocolPdfExporter.ResolveZustandsklassenFarbe(
-            normalized.Value.ToString(CultureInfo.InvariantCulture));
-        return colors is null
-            ? null
-            : (colors.Value.Hintergrund, colors.Value.Schrift);
-    }
-
-    private static void ComposeHeader(
-        IContainer container,
-        byte[]? logo,
-        byte[]? coatOfArms)
-    {
-        container.Row(row =>
-        {
-            row.ConstantItem(150).Height(48).AlignLeft().AlignMiddle().Element(left =>
-            {
-                if (logo is not null)
-                    left.Image(logo).FitArea();
-                else
-                    left.Text("ABWASSER URI").FontSize(13).Bold().FontColor(BrandBlue);
-            });
-
-            row.RelativeItem();
-
-            row.ConstantItem(70).Height(48).AlignRight().AlignMiddle().Element(right =>
-            {
-                if (coatOfArms is not null)
-                    right.Image(coatOfArms).FitArea();
-                else
-                    right.Text("SCHACHTLISTE")
-                        .FontSize(7.5f)
-                        .SemiBold()
-                        .FontColor(MutedTextColor);
-            });
-        });
-    }
-
     private static void ComposeTitle(IContainer container)
     {
         container
@@ -176,45 +132,6 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
                     .FontSize(10)
                     .FontColor("#DDECF2");
             });
-    }
-
-    private static void ComposeMetadata(
-        IContainer container,
-        DossierShaftListPdfModel model)
-    {
-        container
-            .Border(1)
-            .BorderColor("#D8E2E8")
-            .Background(SoftBackground)
-            .PaddingHorizontal(12)
-            .PaddingVertical(9)
-            .Row(row =>
-            {
-                ComposeMetadataItem(
-                    row.RelativeItem(1.2f).PaddingRight(12),
-                    "EIGENTÜMER",
-                    Display(model.OwnerName));
-                ComposeMetadataItem(
-                    row.RelativeItem(1.45f).PaddingRight(12),
-                    "LIEGENSCHAFT",
-                    Display(model.PropertyAddress));
-                ComposeMetadataItem(
-                    row.RelativeItem(0.72f),
-                    "STAND",
-                    model.Stand.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture));
-            });
-    }
-
-    private static void ComposeMetadataItem(
-        IContainer container,
-        string label,
-        string value)
-    {
-        container.Column(column =>
-        {
-            column.Item().Text(label).FontSize(7.5f).SemiBold().FontColor(MutedTextColor);
-            column.Item().PaddingTop(2).Text(value).FontSize(10).SemiBold();
-        });
     }
 
     private static void ComposeSummary(
@@ -324,36 +241,9 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
                 table.Cell().Element(cell => BodyCell(cell, index))
                     .Text(Display(line.Funktion));
                 table.Cell().Element(cell => BodyCell(cell, index))
-                    .Element(cell => ComposeCondition(cell, line.ConditionClass));
+                    .Element(cell => DossierPdfBausteine.ComposeCondition(cell, line.ConditionClass));
             }
         });
-    }
-
-    private static void ComposeCondition(IContainer container, string? value)
-    {
-        var normalized = DossierConditionClassValue.Normalize(value);
-        var colors = ResolveConditionColors(value);
-        if (normalized is null || colors is null)
-        {
-            container
-                .Background("#EEF1F3")
-                .PaddingHorizontal(3)
-                .PaddingVertical(5)
-                .AlignCenter()
-                .Text(MissingText)
-                .FontSize(6.75f)
-                .FontColor(MutedTextColor);
-            return;
-        }
-
-        container
-            .Background(colors.Value.Background)
-            .PaddingHorizontal(4)
-            .PaddingVertical(5)
-            .AlignCenter()
-            .Text("Z" + normalized.Value.ToString(CultureInfo.InvariantCulture))
-            .Bold()
-            .FontColor(colors.Value.Foreground);
     }
 
     private static void ComposeLegend(IContainer container)
@@ -475,5 +365,8 @@ public sealed class DossierShaftListPdfService : IDossierShaftListPdfService
     }
 
     private static string Display(string? value)
-        => string.IsNullOrWhiteSpace(value) ? MissingText : value.Trim();
+        => DossierPdfBausteine.Display(value);
+
+    internal static (string Background, string Foreground)? ResolveConditionColors(string? value)
+        => DossierPdfBausteine.ResolveConditionColors(value);
 }
