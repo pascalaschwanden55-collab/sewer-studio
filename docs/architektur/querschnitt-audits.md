@@ -9,10 +9,42 @@
 
 ## Inhalt
 
+- Feldleser an einer Stelle: Inspektionsdatum und Haltungslänge (02.10.2026)
 - Gesamtaudit 23.09.2026: Behebung A01 bis A18
 - Auditkorrekturen: Restbefunde 11 bis 18 (19.09.2026)
 - Statuskorrektur und erste Projektprüfung (16.09.2026)
 - Gesamtaudit 2026-08-14 — umgesetzte Haertungen
+
+## Feldleser an einer Stelle: Inspektionsdatum und Haltungslänge (02.10.2026)
+
+Deepscan 02.10.2026, Befund A4. `Datum_Jahr` und `Haltungslaenge_m` lesen nur noch über
+`HaltungFeldwerte` (`Application/Common`); gespeicherte Werte bleiben unverändert, die Importparser
+legen ihre Rohform weiter selbst fest.
+
+- **Datum:** `LiesInspektionsdatum` / `LiesInspektionsdatumGenau` (mit `NurJahr`). Reihenfolge: ganzer
+  Wert in einem festen Format (Tag vor Monat, ISO, JJJJMMTT), Tag.Monat.Jahr im Text, Jahr-Monat-Tag
+  im Text (auch mit Uhrzeit), eingebettetes JJJJMMTT (1990–2099), zuletzt eine alleinstehende
+  Jahreszahl (1. Januar). Zweistellige Jahre: bis 49 = 20xx, ab 50 = 19xx, unabhängig von der
+  Windows-Kultur. Nutzer: Mediensuche, Dateistempel der Verteilung (`ImportDateStampResolver`),
+  Trainings-Stichtag, Schachtprotokoll-Ordnerimport, Druckcenter-Jahr, Excel-Berichtskopf,
+  XTF-`Zustandserhebung_Jahr`. Wer nur ein Jahr hat, entscheidet selbst über `NurJahr`: Der
+  Ordnerimport nimmt dann den genaueren Dateinamenstempel, der XTF-Export rät kein Jahr aus Freitext.
+- **Länge:** `LiesLaenge` = Regel des `FachzahlParser` (Punkt oder Komma, Apostroph-Tausender,
+  mehrdeutige Werte und Einheiten wie «45 m» abgelehnt). Jeder Leser behält nur seine Folge für
+  Unlesbares (0, null, keine Prüfung) und für Werte ≤ 0. Nutzer: Bewertung, Dashboard, Dossier,
+  Kostenfall, Übersicht, Schattenanfrage, Protokoll-PDF, Plausibilität, Reichweite der Videoanalyse,
+  Codiersitzung, Videoüberlagerung, Sanierungsoptimierung, Codiermodus, Dossierauswahl.
+- **Bewusst geänderte Deutungen:** «5.3» ergab im Dateistempel das laufende Jahr, «24/25» den Stempel
+  24250101 (jetzt 00000000); Mediensuche und Excel kannten «24.09.25» nicht; Tausendertrenner galten
+  in den meisten Längenlesern als unlesbar, «1e2»/«NaN» als Zahl; Dashboard und Dossier lasen
+  «45 30» als 4530. Die vollständige Liste steht im Bericht des Pakets und in den Commit-Texten.
+- **Tests:** `HaltungFeldwerteTests` (gemeinsame Beispieltabellen), `HaltungslaengeLeserTests`,
+  `HaltungslaengeUiLeserTests`, `ImportDateStampResolverTests`, `XtfZustandserhebungJahrTests`.
+  Sperrklinke `DatumsformatlistenWaechterTests`: eigene Tag-Monat-Jahr-Formatlisten zum Parsen nur
+  noch in der Leseregel, den Importparsern und drei Stellen ohne `Datum_Jahr`; die Liste darf nur
+  schrumpfen.
+- **Offen (Codex-Bereich):** `ProtocolPdfExporter.ResolveInspectionDate` und der Player
+  (`PlayerWindow.xaml.cs`) reichen `Datum_Jahr` als Text weiter; sie deuten es nicht selbst.
 
 ## Gesamtaudit 23.09.2026: Behebung A01 bis A18
 
