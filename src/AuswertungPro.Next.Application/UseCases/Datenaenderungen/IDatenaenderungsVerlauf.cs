@@ -51,7 +51,7 @@ public sealed class DatenaenderungsVerlaufGeleertEventArgs(string grund) : Event
 ///  - Haltungen: <c>DataPageViewModel.MeldeFelderExternErgaenzt</c>, aufgerufen von
 ///    <c>DataPageViewModel.KatasterKennungen</c>, <c>.QgisNachfuellen</c> und <c>.WebGisHolen</c>.
 ///  - Schaechte: <c>SchaechtePageViewModel.MeldeUebernahme</c>, aufgerufen von <c>.KatasterKennungen</c>,
-///    <c>.WebGisHolen</c>; <c>.QgisNachfuellen</c> ruft <c>Leere</c> selbst auf.
+///    <c>.QgisNachfuellen</c> und <c>.WebGisHolen</c>.
 ///  - <c>WebGisHolenAblauf</c> (Holen ueber die Shell) und <c>ObjektaktenDialog</c> (nach erfolgreichem
 ///    Speichern der Objektakte).
 ///  - <c>ShellViewModel.DatenVerlauf</c>: Import, Uebertragung oder Projektwechsel
