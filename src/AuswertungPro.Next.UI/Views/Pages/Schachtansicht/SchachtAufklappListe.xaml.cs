@@ -23,12 +23,12 @@ namespace AuswertungPro.Next.UI.Views.Pages.Schachtansicht;
 /// samt Live-Abgleich uebernimmt <see cref="SchaechteAufklappListeController"/> — kein
 /// zweiter Schreibweg auf den Datensatz.
 /// </summary>
-public partial class SchachtAufklappListe : UserControl
+public partial class SchachtAufklappListe : UserControl, IAufklappListe<SchachtRecord>
 {
     /// <summary>Name des Rahmens um das Formular; die Knoepfe "Alle auf/zu" finden ihn darueber.</summary>
     private const string FormularWurzelName = "FormularWurzel";
 
-    internal ListenReihenfolgeController Reihenfolge { get; }
+    public ListenReihenfolgeController Reihenfolge { get; }
 
     public SchachtAufklappListe()
     {
@@ -90,7 +90,7 @@ public partial class SchachtAufklappListe : UserControl
     public ViewModels.ObjektakteViewModel? Objektakte
     {
         get => (ViewModels.ObjektakteViewModel?)GetValue(ObjektakteProperty);
-        internal set => SetValue(ObjektakteProperty, value);
+        set => SetValue(ObjektakteProperty, value);
     }
 
     public static readonly DependencyProperty ThemenProperty = DependencyProperty.Register(
@@ -105,7 +105,7 @@ public partial class SchachtAufklappListe : UserControl
     }
 
     /// <summary>Setzt die Themen; nur der Controller schreibt sie.</summary>
-    internal void ZeigeThemen(IReadOnlyList<ThemaAnzeige>? themen) => Themen = themen;
+    public void ZeigeThemen(IReadOnlyList<ThemaAnzeige>? themen) => Themen = themen;
 
     public static readonly DependencyProperty ProtokollCommandProperty = DependencyProperty.Register(
         nameof(ProtokollCommand), typeof(ICommand), typeof(SchachtAufklappListe), new PropertyMetadata(null));

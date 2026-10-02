@@ -293,6 +293,34 @@ public sealed class GeoShopAbgleichTests : IDisposable
         Assert.Equal(FieldSource.Kataster, h.FieldMeta[FieldKeys.HoldingLengthMeters].Source);
     }
 
+    // Entscheid Pascal 02.10.2026 (E3): Ein bewusst leeres Feld (von Hand geleert) ist keine Luecke.
+    // Der GeoShop-Abgleich ohne Vergleich fuellte es bisher; jetzt gilt dieselbe Regel wie im Vergleich.
+    [Fact]
+    public void Bewusst_leere_haltungslaenge_bleibt_beim_geoshop_leer()
+    {
+        Schreibe();
+        var h = Haltung();
+        h.SetFieldValue(FieldKeys.HoldingLengthMeters, "", FieldSource.Manual, true);
+        var ziel = GeoShopZiel.Fuer(h);
+        var plan = GeoShopAbgleichPlanBuilder.Baue([ziel], Lies(BauteilArt.Haltung, "A-B"));
+
+        Assert.DoesNotContain(plan.Positionen.SelectMany(p => p.Felder), f => f.Feld == FieldKeys.HoldingLengthMeters);
+        GeoShopAbgleichAnwender.WendeAn(plan, [ziel]);
+        Assert.Equal("", h.GetFieldValue(FieldKeys.HoldingLengthMeters));
+        Assert.True(h.FieldMeta[FieldKeys.HoldingLengthMeters].UserEdited);
+        Assert.Equal("300", h.GetFieldValue(FieldKeys.NominalDiameterMm)); // normal leer: gefuellt
+    }
+
+    [Fact]
+    public void Bewusst_leere_handkennung_wird_auch_ohne_vergleich_nicht_gefuellt()
+    {
+        Schreibe(); var h = Haltung();
+        h.SetFieldValue(FieldKeys.CadastreObjectId, "", FieldSource.Manual, true);
+        var plan = GeoShopAbgleichPlanBuilder.Baue([GeoShopZiel.Fuer(h)], Lies(BauteilArt.Haltung, "A-B"));
+        Assert.Empty(plan.Positionen); Assert.Contains(plan.Hinweise, h => h.Contains("geschützt"));
+        Assert.Equal("", h.GetFieldValue(FieldKeys.CadastreObjectId));
+    }
+
     [Fact]
     public void Einzelergaenzung_liest_nur_dieses_Bauteil_und_schreibt_erst_beim_Anwenden()
     {

@@ -76,12 +76,14 @@ public static class GeoShopAbgleichPlanBuilder
             var altText = Beschreibe(alt);
             var neuText = Beschreibe(neu);
             var aendern = altText != neuText || alt?.Quelle != $"GeoShop-XTF: {bestand.Quelle}";
+            // Nur echte Luecken: ein bewusst leeres Feld (von Hand geleert) bleibt leer (Entscheid Pascal 02.10.2026, E3).
             var felder = werte.Where(p => !string.IsNullOrWhiteSpace(p.Value)
-                && string.IsNullOrWhiteSpace(ziel.Wert(p.Key)))
+                && string.IsNullOrWhiteSpace(ziel.Wert(p.Key)) && !ziel.Handgesetzt(p.Key))
                 .Select(p => new GeoShopFeldAenderung(p.Key, ziel.Wert(p.Key), p.Value)).ToList();
             var id = quelle.Kennungen.Hauptkennung!;
             var kennungsfelder = new[] { FieldKeys.GeonisId, FieldKeys.CadastreObjectId };
-            if (kennungsfelder.Any(f => ziel.Handgesetzt(f) && (mitVergleich || !string.IsNullOrWhiteSpace(ziel.Wert(f))) && ziel.Wert(f) != id))
+            // Eine von Hand gesetzte Kennung schuetzt, auch bewusst leer - mit und ohne Vergleich (E3, 02.10.2026).
+            if (kennungsfelder.Any(f => ziel.Handgesetzt(f) && ziel.Wert(f) != id))
             { Hinweis("Eine abweichende Kennung ist von Hand geschützt – ausgelassen."); continue; }
             foreach (var feld in kennungsfelder)
                 if (ziel.Wert(feld) != id) felder.Add(new GeoShopFeldAenderung(feld, ziel.Wert(feld), id, true));

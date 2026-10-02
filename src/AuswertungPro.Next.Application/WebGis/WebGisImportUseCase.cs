@@ -358,7 +358,8 @@ public sealed class WebGisImportUseCase
                     // FuelleLeeresFeld); ein vorhandener Wert der Kanalfirma ist nie ersetzbar (IstErsetzbar).
                     if (!SeitVorschauUnveraendert(h.GetFieldValue(a.Feld), h.FieldMeta.GetValueOrDefault(a.Feld), a))
                         continue;
-                    if (h.FuelleLeeresFeld(a.Feld, a.Neu, FieldSource.Kataster))
+                    if (FuelleLeer(h.FieldMeta.GetValueOrDefault(a.Feld), a.Feld, h.GetFieldValue(a.Feld),
+                            () => h.FuelleLeeresFeld(a.Feld, a.Neu, FieldSource.Kataster)))
                         geaendert = true;
                     else if (DarfErsetzen(h.GetFieldValue(a.Feld), h.FieldMeta.GetValueOrDefault(a.Feld), a))
                     {
@@ -381,7 +382,8 @@ public sealed class WebGisImportUseCase
                         && AbwasserbauwerkVokabular.Klasse(s.GetFieldValue(SchachtFeldnamen.Feld(s, FieldKeys.ShaftStructureType)),
                             s.GetFieldValue(name)) != "Normschacht")
                         continue;
-                    if (s.FuelleLeeresFeld(name, a.Neu, FieldSource.Kataster))
+                    if (FuelleLeer(s.FieldMeta.GetValueOrDefault(name), a.Feld, s.GetFieldValue(name),
+                            () => s.FuelleLeeresFeld(name, a.Neu, FieldSource.Kataster)))
                         geaendert = true;
                     else if (DarfErsetzen(s.GetFieldValue(name), s.FieldMeta.GetValueOrDefault(name), a))
                     {
@@ -489,5 +491,20 @@ public sealed class WebGisImportUseCase
     private static void GibHandmarkeFrei(FieldMetadata? meta, string feld)
     {
         if (meta is { UserEdited: true } && WebGisFuehrungsfelder.HolenUeberschreibtHand(feld)) meta.UserEdited = false;
+    }
+
+    /// <summary>
+    /// Fuellt ein leeres Feld. Ein bewusst leeres Feld bleibt leer (Entscheid Pascal 02.10.2026, E3,
+    /// <c>FuelleLeeresFeld</c>) - ausser beim Eigentuemer, den das WebGIS fuehrt und der auch eine bewusst
+    /// leere Handeingabe ersetzt (Entscheid Pascal 24.09.2026, <see cref="WebGisFuehrungsfelder.HolenUeberschreibtHand"/>).
+    /// Scheitert das Fuellen, kommt die Handmarke zurueck.
+    /// </summary>
+    private static bool FuelleLeer(FieldMetadata? meta, string feld, string aktuell, Func<bool> fuelle)
+    {
+        var handLeer = meta is { UserEdited: true } && string.IsNullOrWhiteSpace(aktuell);
+        if (handLeer) GibHandmarkeFrei(meta, feld);
+        if (fuelle()) return true;
+        if (handLeer) meta!.UserEdited = true;
+        return false;
     }
 }

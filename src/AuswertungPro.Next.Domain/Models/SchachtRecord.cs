@@ -123,6 +123,13 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
         => FieldMeta.TryGetValue(fieldName, out var meta) && meta.UserEdited;
 
     /// <summary>
+    /// Bewusst leer: von Hand gesetzt (<c>UserEdited</c>) und leer. Kein Import und kein
+    /// Abgleich fuellt ein solches Feld (Entscheid Pascal 02.10.2026, E3).
+    /// </summary>
+    public bool IstBewusstLeer(string fieldName)
+        => IsUserEdited(fieldName) && string.IsNullOrWhiteSpace(GetFieldValue(fieldName));
+
+    /// <summary>
     /// Kompatibilitaetsweg fuer bestehende Aufrufer (Durchnummerieren, Import).
     /// Schreibt mit Herkunft "Manual", laesst aber ein von Hand gesetztes Feld
     /// unveraendert und senkt keine vorhandene Handmarkierung ab. Damit ueberlebt
@@ -177,22 +184,23 @@ public sealed class SchachtRecord : System.ComponentModel.INotifyPropertyChanged
     /// Herkunft neu. Liefert <c>false</c>, wenn das Feld Inhalt hat — dann wird
     /// nichts angefasst.
     ///
-    /// Warum es diesen Weg neben <c>SetFieldValue</c> braucht: Dort weist der
-    /// Handwert-Schutz jeden automatischen Schreibvorgang auf ein Feld mit
-    /// <c>UserEdited</c> ab. Diese Markierung bleibt aber stehen, wenn der
-    /// Bearbeiter den Inhalt im Raster loescht — die Bindung schreibt direkt in
-    /// <see cref="Fields"/> und laesst <see cref="FieldMeta"/> unberuehrt. Das Feld
-    /// ist danach leer und trotzdem geschuetzt; ein Nachfuelllauf prallte
-    /// stillschweigend daran ab (gemessen 2026-09-03 an Schacht 33461).
+    /// Seit 02.10.2026 (Entscheid Pascal, E3): Ein bewusst leeres Feld
+    /// (<see cref="IstBewusstLeer"/>: von Hand gesetzt und leer) wird NICHT gefuellt —
+    /// «Handwert, auch bewusst leer» hat Vorrang. Wer im Raster eine Zelle leert, will sie
+    /// leer haben. Bis dahin entschied hier die Leere, nicht die Markierung (Fall Schacht
+    /// 33461, 03.09.2026); das widersprach der Regel in CLAUDE.md. Frei wird das Feld durch
+    /// eine neue Handeingabe oder (Haltungsseite) «Spalte leeren», das die Handmarke wegnimmt.
     ///
-    /// An einem leeren Feld hat der Schutz keinen Gegenstand: Es gibt dort keine
-    /// Arbeit zu bewahren. Die Leere entscheidet, nicht die alte Markierung. Weil
-    /// der Wert nicht von Hand kommt, wird <c>UserEdited</c> dabei auf <c>false</c>
-    /// gesetzt — sonst ginge er spaeter als Handeingabe in die revidierte XTF.
+    /// Weil der gefuellte Wert nicht von Hand kommt, bleibt <c>UserEdited</c> dabei
+    /// <c>false</c> — sonst ginge er spaeter als Handeingabe in die revidierte XTF.
     /// </summary>
     public bool FuelleLeeresFeld(string fieldName, string? value, FieldSource source)
     {
         if (!string.IsNullOrWhiteSpace(GetFieldValue(fieldName)))
+            return false;
+
+        // Handwert, auch bewusst leer, hat Vorrang (Entscheid Pascal 02.10.2026, E3).
+        if (IstBewusstLeer(fieldName))
             return false;
 
         if (string.IsNullOrWhiteSpace(value))

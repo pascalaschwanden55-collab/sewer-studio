@@ -112,6 +112,40 @@ public sealed class DatenVerlaufShellTests : IDisposable
         Assert.False(_shell.RueckgaengigCommand.CanExecute(null)); // Verlauf ist geleert (GrundFehler)
     }
 
+    /// <summary>Deepscan 02.10.2026 (A2): derselbe Fall auf der Schachtseite, ueber den gemeinsamen Ablauf.</summary>
+    [Fact]
+    public void Schachtseite_nicht_vollstaendiger_Rueckbau_markiert_das_Projekt_trotzdem_als_geaendert()
+    {
+        var s = new SchachtRecord();
+        s.Fields["Schachtnummer"] = "80409";
+        var projekt = new Project { Name = "Verlauf" };
+        projekt.SchaechteData.Add(s);
+        _shell.ReplaceProject(projekt);
+        _shell.MarkProjectReady();
+        _shell.NavigateTo("Schaechte");
+        var seite = Assert.IsType<SchaechtePageViewModel>(_shell.CurrentPage);
+        using (_services.DatenaenderungsVerlauf.Erfasse(s))
+        {
+            s.SetFieldValue("Material", "Beton", FieldSource.Manual, true);
+            s.SetFieldValue("Funktion", "Kontrollschacht", FieldSource.Manual, true);
+        }
+        s.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == "Fields[Funktion]")
+                throw new InvalidOperationException("Anzeige gestört");
+        };
+        _shell.Project.Dirty = false;
+        var felderErgaenztAufgerufen = false;
+        seite.FelderExternErgaenzt += () => felderErgaenztAufgerufen = true;
+
+        _shell.RueckgaengigCommand.Execute(null);
+
+        Assert.True(_shell.Project.Dirty);
+        Assert.True(felderErgaenztAufgerufen);
+        Assert.False(_shell.RueckgaengigCommand.CanExecute(null));
+        Assert.False(_shell.WiederholenCommand.CanExecute(null)); // gescheitert, nicht angewendet: Verlauf ganz leer
+    }
+
     [Fact]
     public void Projektwechsel_leert_den_Verlauf()
     {

@@ -26,12 +26,12 @@ namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
 /// Inhalt nur fuer die aufgeklappte Haltung gesetzt wird. Bei 300 Haltungen entstehen deshalb
 /// nur Kopfzeilen — nicht 300 Formulare.
 /// </summary>
-public partial class HaltungAufklappListe : UserControl
+public partial class HaltungAufklappListe : UserControl, IAufklappListe<HaltungRecord>
 {
     /// <summary>Name des Rahmens um das Formular; die Knoepfe "Alle auf/zu" finden ihn darueber.</summary>
     private const string FormularWurzelName = "FormularWurzel";
 
-    internal ListenReihenfolgeController Reihenfolge { get; }
+    public ListenReihenfolgeController Reihenfolge { get; }
 
     public HaltungAufklappListe()
     {
@@ -94,7 +94,7 @@ public partial class HaltungAufklappListe : UserControl
     public ViewModels.ObjektakteViewModel? Objektakte
     {
         get => (ViewModels.ObjektakteViewModel?)GetValue(ObjektakteProperty);
-        internal set => SetValue(ObjektakteProperty, value);
+        set => SetValue(ObjektakteProperty, value);
     }
 
     public static readonly DependencyProperty ThemenProperty = DependencyProperty.Register(
@@ -109,7 +109,7 @@ public partial class HaltungAufklappListe : UserControl
     }
 
     /// <summary>Setzt die Themen; nur der Controller schreibt sie.</summary>
-    internal void ZeigeThemen(IReadOnlyList<ThemaAnzeige>? themen) => Themen = themen;
+    public void ZeigeThemen(IReadOnlyList<ThemaAnzeige>? themen) => Themen = themen;
 
     public static readonly DependencyProperty HinweisProperty = DependencyProperty.Register(
         nameof(Hinweis), typeof(string), typeof(HaltungAufklappListe), new PropertyMetadata(string.Empty));
