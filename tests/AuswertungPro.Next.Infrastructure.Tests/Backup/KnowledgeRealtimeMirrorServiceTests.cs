@@ -384,9 +384,10 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
 
         connectedTarget = target;
 
+        // Warten, bis die Kopie fertig und lesbar ist: Unter Last las der Test die Datei,
+        // waehrend der Spiegel sie noch schrieb (IOException «being used by another process», 02.10.2026).
         await WaitUntilAsync(
-            () => File.Exists(Path.Combine(target, "goldsample.jpg")));
-        Assert.Equal("gold", await File.ReadAllTextAsync(Path.Combine(target, "goldsample.jpg")));
+            () => LiestSich(Path.Combine(target, "goldsample.jpg")) == "gold");
     }
 
     private static KnowledgeRealtimeMirrorService CreateService(
@@ -404,6 +405,12 @@ public sealed class KnowledgeRealtimeMirrorServiceTests : IDisposable
     {
         JunctionTestSupport.CreateDirectoryLink(link, target);
         _createdLinks.Add(link);
+    }
+
+    private static string? LiestSich(string pfad)
+    {
+        try { return File.Exists(pfad) ? File.ReadAllText(pfad) : null; }
+        catch (IOException) { return null; } // Datei wird gerade geschrieben: im naechsten Durchgang erneut.
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition)
