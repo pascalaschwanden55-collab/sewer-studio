@@ -47,7 +47,7 @@ public sealed class TrainingSampleFileStoreTests : IDisposable
                 sperre.Dispose();
             _sperren.Clear();
         });
-        var store = new TrainingSampleFileStore(pfad);
+        var store = Speicher(pfad);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => store.MergeOrUpdateAsync([NeuesSample("neu-1")]));
@@ -62,7 +62,7 @@ public sealed class TrainingSampleFileStoreTests : IDisposable
     public async Task Ein_fehlender_Bestand_ist_ein_Erstlauf_kein_Fehler()
     {
         var pfad = Path.Combine(_root, "training_samples.json");
-        var store = new TrainingSampleFileStore(pfad);
+        var store = Speicher(pfad);
 
         await store.MergeOrUpdateAsync([NeuesSample("neu-2")]);
 
@@ -78,7 +78,7 @@ public sealed class TrainingSampleFileStoreTests : IDisposable
         // unveraendert — sie ist nicht der Fehlerpfad, sondern der Schutz.
         var pfad = GolddateiMitEintraegen(2);
         File.WriteAllText(pfad, "{ defekt", Encoding.UTF8);
-        var store = new TrainingSampleFileStore(pfad);
+        var store = Speicher(pfad);
 
         await store.MergeOrUpdateAsync([NeuesSample("neu-3")]);
 
@@ -100,6 +100,15 @@ public sealed class TrainingSampleFileStoreTests : IDisposable
         File.WriteAllText(pfad + ".bak.2", json, Encoding.UTF8);
         File.WriteAllText(pfad + ".bak.3", json, Encoding.UTF8);
         return pfad;
+    }
+
+    // Gueltiger Test-Eval-Schutz (Deepscan 02.10.2026, E1): ohne lesbaren Pruefdaten-Ordner
+    // sperrt der Speicher. So kommt ein erwarteter Fehler sicher aus der Golddatei.
+    private TrainingSampleFileStore Speicher(string pfad)
+    {
+        var store = new TrainingSampleFileStore(pfad);
+        store.ConfigureEvalProtection(EvalSchutzTestOrdner.Anlegen(Path.Combine(_root, "eval_set")));
+        return store;
     }
 
     private void Sperre(string pfad)

@@ -6,6 +6,7 @@ using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Tests.Ai.Training;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -23,7 +24,11 @@ public sealed class CodingSessionServiceTests
 
         try
         {
-            var service = new CodingSessionService();
+            // Eigener Speicher mit gueltigem Test-Eval-Schutz (Deepscan 02.10.2026, E1):
+            // ohne lesbaren Pruefdaten-Ordner speichert der Speicher nichts mehr.
+            var store = new TrainingSampleFileStore(KnowledgeBasePaths.GetTrainingSamplesPath());
+            store.ConfigureEvalProtection(EvalSchutzTestOrdner.Anlegen(Path.Combine(root, "eval_set")));
+            var service = new CodingSessionService(trainingSamples: store);
             var haltung = CreateHaltung("22147-22151", "12.5");
             service.StartSession(haltung, videoPath: null);
             service.AddEvent(new ProtocolEntry
@@ -39,7 +44,7 @@ public sealed class CodingSessionServiceTests
             Assert.Equal("22147-22151", document.HaltungId);
             Assert.True(File.Exists(KnowledgeBasePaths.GetTrainingSamplesPath()));
 
-            var sample = Assert.Single(await TrainingSamplesStore.LoadAsync());
+            var sample = Assert.Single(await store.LoadAsync());
             Assert.Equal("22147-22151", sample.CaseId);
             Assert.Equal("BAB", sample.Code);
             Assert.Equal(@"frames\frame-001.png", sample.FramePath);

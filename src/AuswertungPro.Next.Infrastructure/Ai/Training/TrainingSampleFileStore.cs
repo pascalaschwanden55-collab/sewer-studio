@@ -48,15 +48,26 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
     // Das ueber alle Instanzen geteilte Lock fuer die aktuelle Zieldatei.
     private SemaphoreSlim FileLock => FileLocks.GetOrAdd(StoragePath, static _ => new SemaphoreSlim(1, 1));
 
+    /// <summary>
+    /// Der wirksame Pruefdaten-Ordner. Leer heisst: Schutz bewusst abgeschaltet (wie bei
+    /// Wissenssuche und UI-Ladern). Ohne Konfiguration gilt die Umgebungsvariable, sonst der
+    /// Standardordner - fehlt dieser, sperrt der Speicher (Deepscan 02.10.2026, Entscheid E1).
+    /// </summary>
     public string EffectiveEvalSetRoot =>
         Volatile.Read(ref _configuredEvalSetRoot)
         ?? Environment.GetEnvironmentVariable("SEWERSTUDIO_EVAL_SET_ROOT")
         ?? DefaultEvalSetRoot;
 
+    /// <summary>
+    /// Setzt den Pruefdaten-Ordner. <c>null</c> heisst «nicht konfiguriert» (Umgebungsvariable
+    /// bzw. Standardordner), ein leerer Eintrag schaltet den Schutz bewusst ab.
+    /// </summary>
     public void ConfigureEvalProtection(string? evalSetRoot) =>
         Volatile.Write(
             ref _configuredEvalSetRoot,
-            string.IsNullOrWhiteSpace(evalSetRoot) ? null : Path.GetFullPath(evalSetRoot));
+            evalSetRoot is null
+                ? null
+                : string.IsNullOrWhiteSpace(evalSetRoot) ? string.Empty : Path.GetFullPath(evalSetRoot));
 
     public async Task<List<TrainingSample>> LoadAsync()
     {
@@ -64,7 +75,8 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         await fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            return FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false));
+            var protection = LoadEvalProtection();
+            return FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false), protection);
         }
         finally
         {
@@ -78,7 +90,8 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         await fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            await SaveInternalAsync(FilterEvalContamination(samples)).ConfigureAwait(false);
+            var protection = LoadEvalProtection();
+            await SaveInternalAsync(FilterEvalContamination(samples, protection)).ConfigureAwait(false);
         }
         finally
         {
@@ -110,8 +123,9 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         await fileLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var incoming = FilterEvalContamination(samples);
-            var existing = FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false));
+            var protection = LoadEvalProtection();
+            var incoming = FilterEvalContamination(samples, protection);
+            var existing = FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false), protection);
             var signatures = existing
                 .SelectMany(GetDedupSignatures)
                 .ToHashSet(StringComparer.Ordinal);
@@ -164,8 +178,9 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         await fileLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            var incoming = FilterEvalContamination(samples);
-            var existing = FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false));
+            var protection = LoadEvalProtection();
+            var incoming = FilterEvalContamination(samples, protection);
+            var existing = FilterEvalContamination(await LoadInternalAsync().ConfigureAwait(false), protection);
             var signatureIndex = new Dictionary<string, int>(StringComparer.Ordinal);
             for (var index = 0; index < existing.Count; index++)
             {
@@ -244,6 +259,8 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
             // Ungefiltert laden: entfernt/ersetzt wird gezielt per SampleId, der Eval-Filter
             // darf keinen fremden Bestand verwerfen. EIN Lock fuer Loeschen + Anhaengen +
             // Speichern — zwischen den Schritten kann kein anderer Schreiber dazwischenkommen.
+            // Eval-Schutz ZUERST: Bei gesperrtem Schutz darf auch Migration/Rettung nichts schreiben.
+            var protection = LoadEvalProtection();
             var existing = await LoadInternalAsync().ConfigureAwait(false);
             var index = existing.FindIndex(
                 candidate => string.Equals(candidate.SampleId, sample.SampleId, StringComparison.Ordinal));
@@ -262,6 +279,15 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
                     "wurde nicht verändert.");
             }
 
+            // Auch eine Ersetzung speichert ein Sample: ohne lesbaren Eval-Schutz nichts
+            // schreiben, und ein Sample aus einer Pruefhaltung nie in den Bestand bringen.
+            if (FilterEvalContamination([sample], protection).Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Das Sample '{sample.SampleId}' gehört zu den reservierten Prüfdaten und wird " +
+                    "nicht gespeichert. Der bestehende Gold-Datenbestand wurde nicht verändert.");
+            }
+
             existing.RemoveAt(index);
             existing.Add(sample);
             await SaveInternalAsync(existing).ConfigureAwait(false);
@@ -273,23 +299,29 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         }
     }
 
-    private List<TrainingSample> FilterEvalContamination(IEnumerable<TrainingSample>? samples)
+    /// <summary>
+    /// Filtert gegen bereits geladene Schutzmengen. Jede Operation laedt den Schutz
+    /// (<see cref="LoadEvalProtection"/>) VOR dem ersten Dateizugriff: Beim Laden koennen
+    /// Signatur-Migration und Rettung aus der Sicherung schreiben, und bei gesperrtem
+    /// Eval-Schutz darf der Speicher nichts veraendern (Review PR #69).
+    /// </summary>
+    private static List<TrainingSample> FilterEvalContamination(
+        IEnumerable<TrainingSample>? samples,
+        EvalProtectionSets protection)
     {
         var input = samples?.Where(sample => sample is not null).ToList() ?? [];
         if (input.Count == 0)
             return input;
 
-        var hashes = EvalContaminationGuard.LoadEvalImageHashes(EffectiveEvalSetRoot);
-        var holdings = EvalContaminationGuard.LoadEvalHaltungKeys(EffectiveEvalSetRoot);
-        if (hashes.Count == 0 && holdings.Count == 0)
+        if (protection.IsDisabled)
             return input;
 
         var clean = new List<TrainingSample>(input.Count);
         foreach (var sample in input)
         {
             var classification = EvalContaminationGuard.ClassifyForExport(
-                hashes,
-                holdings,
+                protection.ImageHashes,
+                protection.HaltungKeys,
                 sample.FramePath,
                 sample.CaseId);
             if (classification == EvalContaminationGuard.ExportContaminationResult.Clean)
@@ -304,6 +336,29 @@ public sealed class TrainingSampleFileStore : ITrainingSampleStore
         }
 
         return clean;
+    }
+
+    /// <summary>
+    /// Deepscan 02.10.2026 (A1/R2), Entscheid Pascal E1: Fehlt der Pruefdaten-Ordner, ist er
+    /// oder ein Unterordner unlesbar, eine Verknuepfung, defekt oder leer, wird weder gespeichert
+    /// noch ungefiltert geladen. Frueher liess dieser Speicher dann alle Samples durch.
+    /// </summary>
+    private EvalProtectionSets LoadEvalProtection()
+    {
+        var root = EffectiveEvalSetRoot;
+        try
+        {
+            return EvalProtectionSetReader.LoadStrict(root);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            throw new InvalidOperationException(
+                $"Der Eval-Schutz ist nicht verfügbar: Der Prüfdaten-Ordner «{root}» fehlt, ist nicht " +
+                "lesbar oder enthält keine gültigen Schutzdaten. Gold- und Trainingssamples werden " +
+                "deshalb weder gespeichert noch geladen. Bitte den Prüfdaten-Ordner in den " +
+                "Einstellungen prüfen (leer lassen schaltet den Schutz bewusst ab).",
+                ex);
+        }
     }
 
     private async Task<List<TrainingSample>> LoadInternalAsync()

@@ -95,8 +95,8 @@ public sealed class CodingTrainingSamplePersisterTests
     {
         using var temp = new TempDir();
         var store = new TrainingSampleFileStore(Path.Combine(temp.Path, "training_samples.json"));
-        var emptyEval = Path.Combine(temp.Path, "eval-disabled-for-test");
-        store.ConfigureEvalProtection(emptyEval);
+        // Gueltiger Test-Eval-Schutz (Deepscan 02.10.2026, E1: fehlender Ordner sperrt).
+        store.ConfigureEvalProtection(EvalSchutzTestOrdner.Anlegen(Path.Combine(temp.Path, "eval-test")));
         await store.SaveAsync([
             new TrainingSample
             {
@@ -141,8 +141,8 @@ public sealed class CodingTrainingSamplePersisterTests
     {
         using var temp = new TempDir();
         var store = new TrainingSampleFileStore(Path.Combine(temp.Path, "training_samples.json"));
-        var emptyEval = Path.Combine(temp.Path, "eval-disabled-for-test");
-        store.ConfigureEvalProtection(emptyEval);
+        // Gueltiger Test-Eval-Schutz (Deepscan 02.10.2026, E1: fehlender Ordner sperrt).
+        store.ConfigureEvalProtection(EvalSchutzTestOrdner.Anlegen(Path.Combine(temp.Path, "eval-test")));
         await store.SaveAsync([
             new TrainingSample
             {

@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Ai.Training;
 
@@ -82,7 +83,8 @@ public static class EvalContaminationGuard
     /// Laedt die SHA-256-Hashes (lowercase) der Eval-Set-Bilder. Bevorzugt _manifest.json
     /// (hashes.images/*.sha256, gleiche Quelle wie Inventar/eval-set-warden), faellt sonst
     /// auf direkte Hash-Berechnung der images/-Dateien zurueck. Fehlender Pfad/Ordner oder defektes
-    /// Manifest -> leerer Satz (Schutz inaktiv statt Crash; degradiert sicher auf fremden Maschinen).
+    /// Manifest -> leerer Satz. Milde Lesart nur fuer Mess- und Werkzeugwege; Schutzwege (Speichern,
+    /// Suche, Training) lesen streng ueber <see cref="EvalProtectionSetReader"/> (Deepscan 02.10.2026).
     /// </summary>
     public static IReadOnlySet<string> LoadEvalImageHashes(string? evalSetRoot)
     {
@@ -208,7 +210,8 @@ public static class EvalContaminationGuard
     /// Laedt die normalisierten Haltungs-Schluessel der Eval-Kandidaten. Bevorzugt
     /// _candidates.json (Feld haltung_key), faellt sonst auf das Haltungs-Praefix der
     /// images/-Dateinamen (&lt;haltung_key&gt;_&lt;zeit&gt;s_&lt;code&gt;_t+0.png) zurueck. Fehlender
-    /// Pfad oder defekte Datei -> leerer Satz (Schutz inaktiv statt Crash; degradiert sicher).
+    /// Pfad oder defekte Datei -> leerer Satz (milde Lesart; Schutzwege nutzen
+    /// <see cref="EvalProtectionSetReader"/>).
     /// </summary>
     public static IReadOnlySet<string> LoadEvalHaltungKeys(string? evalSetRoot)
     {
@@ -265,65 +268,37 @@ public static class EvalContaminationGuard
     }
 
     /// <summary>
-    /// Strenge Fassung fuer die Wissenssuche (Audit A10, 23.09.2026). Ein konfigurierter, aber fehlender
-    /// Ordner ergab bei <see cref="LoadEvalHaltungKeys"/> eine leere Liste — die Suche lieferte reservierte
-    /// Pruefhaltungen danach als Vergleichswissen. Hier gilt: nur ein bewusst leerer Eintrag schaltet den
-    /// Schutz ab; fehlender Ordner, unlesbare Kandidatendatei oder keine einzige Haltungskennung sind Fehler.
+    /// Strenge Fassung fuer die Wissenssuche (Audit A10, 23.09.2026; seit Deepscan 02.10.2026 A1/R2
+    /// ueber den gemeinsamen <see cref="EvalProtectionSetReader"/>). Nur ein bewusst leerer Eintrag
+    /// schaltet den Schutz ab; fehlender Ordner, unlesbarer Unterordner, Verknuepfung, defekte oder
+    /// leere Kandidatenliste oder keine einzige Haltungskennung sind Fehler.
     /// </summary>
     public static IReadOnlySet<string> LoadEvalHaltungKeysStrict(string? evalSetRoot)
-    {
-        if (string.IsNullOrWhiteSpace(evalSetRoot))
-            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        var fullRoot = Path.GetFullPath(evalSetRoot);
-        if (!Directory.Exists(fullRoot))
-            throw new DirectoryNotFoundException($"Der konfigurierte Prüfdaten-Ordner fehlt: {fullRoot}");
-
-        foreach (var setRoot in EnumerateEvalSetRoots(fullRoot))
-        {
-            var candidatesPath = Path.Combine(setRoot, "_candidates.json");
-            if (!File.Exists(candidatesPath))
-                continue;
-            JsonNode? node;
-            try
-            {
-                node = JsonNode.Parse(File.ReadAllText(candidatesPath));
-            }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-            {
-                throw new InvalidDataException($"Prüfdaten-Datei nicht lesbar: {candidatesPath}", ex);
-            }
-            if (node is not JsonArray && !(node is JsonObject o && o["candidates"] is JsonArray))
-                throw new InvalidDataException($"Prüfdaten-Datei ohne Kandidatenliste: {candidatesPath}");
-        }
-
-        var keys = LoadEvalHaltungKeys(fullRoot);
-        if (keys.Count == 0)
-            throw new InvalidDataException($"Der Prüfdaten-Ordner enthält keine Haltungskennungen: {fullRoot}");
-        return keys;
-    }
+        => EvalProtectionSetReader.LoadStrict(evalSetRoot).HaltungKeys;
 
     private static IReadOnlyList<string> EnumerateEvalSetRoots(string evalSetRoot)
     {
         var fullRoot = Path.GetFullPath(evalSetRoot);
         var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { fullRoot };
 
-        try
+        // Deepscan 02.10.2026 (A1/R2): Frueher beendete ein unlesbarer Ordner die ganze Suche
+        // still, weitere Pruefsaetze (z. B. v2) fehlten. Jetzt wird nur der einzelne Ordner
+        // uebersprungen (Verknuepfungen nie betreten) und protokolliert. Die strengen
+        // Schutzwege brechen in EvalProtectionSetReader vorher mit Fehler ab.
+        var skipped = new List<string>();
+        foreach (var manifest in SafeFileEnumeration.EnumerateFilesSafe(
+                     fullRoot,
+                     "_manifest.json",
+                     recursive: true,
+                     skipped))
         {
-            foreach (var manifest in Directory.EnumerateFiles(
-                         fullRoot,
-                         "_manifest.json",
-                         SearchOption.AllDirectories))
-            {
-                var directory = Path.GetDirectoryName(manifest);
-                if (!string.IsNullOrWhiteSpace(directory))
-                    roots.Add(Path.GetFullPath(directory));
-            }
+            var directory = Path.GetDirectoryName(manifest);
+            if (!string.IsNullOrWhiteSpace(directory))
+                roots.Add(Path.GetFullPath(directory));
         }
-        catch
-        {
-            // Hauptset bleibt trotzdem aktiv.
-        }
+
+        foreach (var directory in skipped.Distinct(StringComparer.OrdinalIgnoreCase))
+            BestEffort.ReportWarning($"[EvalContaminationGuard] Eval-Ordner übersprungen (nicht lesbar oder Verknüpfung): {directory}");
 
         return roots.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
     }
