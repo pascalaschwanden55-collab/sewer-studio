@@ -16,6 +16,7 @@
 - SAM-Review im Training Center
 - Aktive Few-Shot-Wege
 - Schutz persistenter KI-Dateien
+- Eval-Schutz: eine Regel an allen Lesewegen (2026-10-02)
 - Ereignisbasierte Eval-Messung (AP 0.4a, technische Grundlage)
 
 ## Geplant / nicht implementiert (nicht als Ist-Zustand behandeln)
@@ -1435,6 +1436,51 @@ Wiederherstellung erfolgt nur, wenn SewerStudio auch waehrend und nach dem Lauf
 nicht beobachtet wurde und der letzte Harness-Stand weiterhin denselben SHA-256
 besitzt. Bei einer parallelen Aenderung bleibt der aktuelle Store unangetastet und
 die eindeutige Harness-Sicherung fuer die manuelle Pruefung erhalten.
+
+## Eval-Schutz: eine Regel an allen Lesewegen (2026-10-02)
+
+Deepscan 02.10.2026 (A1/R2), Entscheid Pascal E1 «sperren». Vorher hatte «Ordner fehlt»
+drei Bedeutungen: Der Gold-Speicher (`TrainingSampleFileStore`) liess bei fehlendem,
+leerem oder unlesbarem Pruefdaten-Ordner alle Samples ungefiltert durch, und ein
+unlesbarer Unterordner beendete in `EvalContaminationGuard.EnumerateEvalSetRoots` still
+die Suche (weitere Saetze wie `v2` fehlten, auch im «strengen» Weg).
+
+Jetzt liest `EvalProtectionSetReader.LoadStrict` (Application/Ai/Training) fuer
+Gold-Speicher, Wissenssuche (`GuardedRetrievalFactory.Sperrliste` ueber
+`EvalContaminationGuard.LoadEvalHaltungKeysStrict`) und die UI-Lader
+(`EvalContaminationSetProvider`). Regel an allen drei Wegen:
+
+| Fall | Ergebnis |
+| --- | --- |
+| Eintrag bewusst leer (`""`/Leerzeichen) | Schutz aus — die einzige Abschaltung |
+| Ordner fehlt | `DirectoryNotFoundException` |
+| Ordner selbst Verknuepfung, Unterordner unlesbar oder Verknuepfung/Junction | `IOException` (nie betreten, nie still weglassen) |
+| `_manifest.json`/`_candidates.json` unlesbar oder ungueltig, Kandidatenliste leer, Kandidat ohne gueltige Haltungskennung | `InvalidDataException` |
+| Keine einzige Haltungskennung (auch: nur Bildhashes) | `InvalidDataException` |
+
+- Der Gold-Speicher wandelt diese Fehler in eine `InvalidOperationException` mit
+  Ordnerpfad und Hinweis auf die Einstellungen; `UserError` zeigt sie unveraendert.
+  Gesperrt sind `SaveAsync`, `MergeAndSaveAsync`, `TryAddNewAsync`, `MergeOrUpdateAsync`,
+  `ReplaceBySampleIdAsync` (lehnt zusaetzlich ein Sample aus einer Pruefhaltung ab, statt
+  es wie bisher ungeprueft zu ersetzen) und auch `LoadAsync` (kein ungefilterter Bestand).
+  `RemoveBySampleIdAsync` bleibt erlaubt (schreibt nichts Neues). Eine leere Eingabe wird
+  ohne Pruefung durchgereicht.
+- `ConfigureEvalProtection(null)` heisst «nicht konfiguriert» (Umgebungsvariable
+  `SEWERSTUDIO_EVAL_SET_ROOT`, sonst `C:\KI_BRAIN\eval_set`); fehlt dieser Ordner, sperrt
+  der Speicher. Ein leerer Eintrag schaltet ab, `EffectiveEvalSetRoot` ist dann `""`.
+- Programmstart und Codiermodus blockieren nicht: Die Sperre wirkt erst beim Laden/Speichern
+  von Samples. Die Wissenssuche meldet beim Start wie bisher «ohne Vergleichswissen»; der
+  Codiermodus sperrt ueber `CodingTrainingSampleEvalProtector` (bisher nur Logzeile).
+- Die milden Lader `LoadEvalImageHashes`/`LoadEvalHaltungKeys` bleiben fuer Mess- und
+  Werkzeugwege (`EvalSetV2Builder`, `tools/ClassifierDatasetBuilder`); sie ueberspringen
+  einen unlesbaren Ordner einzeln (Protokollzeile) statt die ganze Suche abzubrechen.
+- Der Inventar-Leser des YOLO-Exports (`TrainingInventoryEvalProtectionReader`) bleibt
+  unveraendert und strenger (eingefrorenes Manifest, Kandidaten-Hash, Bildabgleich); er
+  kennt keine Abschaltung: ohne Eintrag kein Export.
+- Tests: `EvalSchutzLesewegeTests` (Infrastructure.Tests, Tabellentest je Fall fuer Leser,
+  Wissenssuche und Speicher, ACL- und Junction-Fall), `EvalContaminationSetProviderTests`.
+  Tests ohne echte Pruefdaten nutzen `EvalSchutzTestOrdner.Anlegen` (gueltiger Ordner mit
+  einer unbenutzten Haltung) statt eines fehlenden Ordners.
 
 ## Ereignisbasierte Eval-Messung (AP 0.4a, technische Grundlage)
 

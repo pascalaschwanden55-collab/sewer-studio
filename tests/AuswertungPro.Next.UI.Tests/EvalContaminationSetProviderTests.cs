@@ -125,6 +125,33 @@ public sealed class EvalContaminationSetProviderTests
         Assert.Contains("Haltungskennung", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    // Deepscan 02.10.2026 (A1/R2, Entscheid E1): dieselbe Regel wie Gold-Speicher und
+    // Wissenssuche. Eine leere Kandidatenliste oder ein Ordner ohne Haltungskennung ist
+    // kein gueltiger Schutz, auch wenn Bildhashes vorhanden sind.
+    [Fact]
+    public void Load_empty_candidate_list_fails_loud()
+    {
+        using var temp = new TempEvalSet();
+        File.WriteAllText(Path.Combine(temp.Root, "_candidates.json"), "[]");
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => EvalContaminationSetProvider.Load(temp.Root));
+
+        Assert.Contains("_candidates.json", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Load_image_hashes_without_haltung_keys_fail_loud()
+    {
+        using var temp = new TempEvalSet();
+        File.Delete(Path.Combine(temp.Root, "_candidates.json"));
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => EvalContaminationSetProvider.Load(temp.Root));
+
+        Assert.Contains("Haltungskennungen", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void Load_normalizes_area_prefixes_in_haltung_keys()
     {

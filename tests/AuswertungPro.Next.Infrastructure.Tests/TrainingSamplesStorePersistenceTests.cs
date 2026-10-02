@@ -3,6 +3,7 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
+using AuswertungPro.Next.Infrastructure.Tests.Ai.Training;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -78,7 +79,7 @@ public sealed class TrainingSamplesStorePersistenceTests
             "sewer-training-sample-file-store-tests",
             Guid.NewGuid().ToString("N"));
         var store = new TrainingSampleFileStore(Path.Combine(root, "training_samples.json"));
-        store.ConfigureEvalProtection(Path.Combine(root, "empty-eval"));
+        store.ConfigureEvalProtection(EvalSchutzTestOrdner.Anlegen(Path.Combine(root, "empty-eval")));
 
         try
         {
@@ -109,8 +110,8 @@ public sealed class TrainingSamplesStorePersistenceTests
         var path = Path.Combine(root, "training_samples.json");
         var storeA = new TrainingSampleFileStore(path);
         var storeB = new TrainingSampleFileStore(path);
-        storeA.ConfigureEvalProtection(Path.Combine(root, "empty-eval"));
-        storeB.ConfigureEvalProtection(Path.Combine(root, "empty-eval"));
+        storeA.ConfigureEvalProtection(EvalSchutzTestOrdner.Anlegen(Path.Combine(root, "empty-eval")));
+        storeB.ConfigureEvalProtection(EvalSchutzTestOrdner.Anlegen(Path.Combine(root, "empty-eval")));
 
         try
         {
@@ -529,7 +530,10 @@ public sealed class TrainingSamplesStorePersistenceTests
             Guid.NewGuid().ToString("N"));
         var knowledgeRoot = Path.Combine(root, "knowledge");
         Environment.SetEnvironmentVariable(KnowledgeBasePaths.EnvironmentVariableName, knowledgeRoot);
-        Environment.SetEnvironmentVariable("SEWERSTUDIO_EVAL_SET_ROOT", Path.Combine(root, "empty-eval"));
+        // Gueltiger Test-Eval-Schutz: seit Deepscan 02.10.2026 (E1) sperrt ein fehlender Ordner.
+        Environment.SetEnvironmentVariable(
+            "SEWERSTUDIO_EVAL_SET_ROOT",
+            EvalSchutzTestOrdner.Anlegen(Path.Combine(root, "empty-eval")));
         KnowledgeBasePaths.InvalidateCache();
         TrainingSamplesStore.ConfigureEvalProtection(null);
 

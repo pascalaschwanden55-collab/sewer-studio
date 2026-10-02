@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AuswertungPro.Next.Application.Ai.Evaluation;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
@@ -51,12 +52,15 @@ public sealed class TrainingSamplesStoreEvalLeakageTests
             Assert.Equal(["clean"], afterSave.Select(sample => sample.SampleId));
 
             // Simuliert einen Altbestand, der vor Einfuehrung der Sperre gespeichert wurde.
-            TrainingSamplesStore.ConfigureEvalProtection(Path.Combine(root, "noch-nicht-konfiguriert"));
-            await TrainingSamplesStore.SaveAsync([
-                Sample("eval-altbestand", "900-901", evalImage),
-                Sample("clean", "300-400", cleanImage)
-            ]);
-            TrainingSamplesStore.ConfigureEvalProtection(evalRoot);
+            // Seit Deepscan 02.10.2026 (E1) speichert der Speicher ohne lesbaren Pruefdaten-
+            // Ordner gar nicht mehr; der Altbestand wird deshalb direkt als Datei geschrieben.
+            File.WriteAllText(
+                TrainingSamplesStore.DefaultPath,
+                JsonSerializer.Serialize(new List<TrainingSample>
+                {
+                    Sample("eval-altbestand", "900-901", evalImage),
+                    Sample("clean", "300-400", cleanImage)
+                }));
             var protectedLoad = await TrainingSamplesStore.LoadAsync();
             Assert.Equal(["clean"], protectedLoad.Select(sample => sample.SampleId));
 

@@ -17,6 +17,8 @@ public sealed class TrainingCenterReviewThreadingTests
         using var temp = new TempKnowledgeRoot();
         var uiThread = new RecordingUiThread();
         var sampleStore = new TrainingSampleFileStore(Path.Combine(temp.Path, "training_samples.json"));
+        // Gueltiger Test-Eval-Schutz statt des echten Standardordners (Deepscan 02.10.2026, E1).
+        sampleStore.ConfigureEvalProtection(EvalSchutzTestOrdner.Anlegen(Path.Combine(temp.Path, "eval_test")));
         var vm = CreateViewModel(temp, uiThread, sampleStore);
         await sampleStore.SaveAsync(
         [

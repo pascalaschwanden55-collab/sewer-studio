@@ -38,9 +38,9 @@ public sealed class WorkbenchGoldenPathIntegrationTests : IDisposable
     {
         // ── Arrange: echte Stores in Temp ──
         var sampleStore = new TrainingSampleFileStore(Path.Combine(_root, "training_samples.json"));
-        var emptyEval = Path.Combine(_root, "eval_leer");
-        Directory.CreateDirectory(emptyEval);
-        sampleStore.ConfigureEvalProtection(emptyEval);   // kein echtes Eval-Set im Test
+        // Kein echtes Eval-Set im Test, aber ein gueltiger Schutzordner: Seit Deepscan
+        // 02.10.2026 (E1) sperrt ein leerer oder fehlender Ordner das Speichern.
+        sampleStore.ConfigureEvalProtection(EvalSchutzTestOrdner.Anlegen(Path.Combine(_root, "eval_test")));
 
         var teacherStore = new TeacherAnnotationFileStore(_root);
 
