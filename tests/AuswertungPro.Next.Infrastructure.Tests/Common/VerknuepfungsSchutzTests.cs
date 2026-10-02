@@ -127,6 +127,15 @@ public sealed class VerknuepfungsSchutzTests
         Assert.Equal(new VerknuepfungsRegel { WurzelEinschliessen = false, OberhalbPruefen = false, BeiFehlerSperren = false, FehlendErlaubt = true }, VerknuepfungsRegel.Spiegel);
         Assert.Equal(new VerknuepfungsRegel { WurzelEinschliessen = true, OberhalbPruefen = true, BeiFehlerSperren = true, FehlendErlaubt = true }, VerknuepfungsRegel.ProjektSchreibgrenze);
         Assert.Equal(new VerknuepfungsRegel { WurzelEinschliessen = true, OberhalbPruefen = false, BeiFehlerSperren = true, FehlendErlaubt = false }, VerknuepfungsRegel.GoldSpeicher);
+        Assert.Equal(new VerknuepfungsRegel { WurzelEinschliessen = false, OberhalbPruefen = false, BeiFehlerSperren = true, FehlendErlaubt = true }, VerknuepfungsRegel.GanzerPfad);
+    }
+
+    [Fact]
+    public void Pfad_ab_Laufwerk_prueft_jeden_Vorfahren_ausser_dem_Laufwerk()
+    {
+        Assert.Equal(VerknuepfungsBefund.Verknuepfung,
+            VerknuepfungsSchutz.PruefePfadAbLaufwerk(Tief, VerknuepfungsRegel.GanzerPfad, Attribute((@"C:\vs", FileAttributes.ReparsePoint))).Befund);
+        Assert.True(VerknuepfungsSchutz.PruefePfadAbLaufwerk(Tief, VerknuepfungsRegel.GanzerPfad, Attribute((@"C:\", FileAttributes.ReparsePoint))).IstSicher);
     }
 
     [JunctionFact]

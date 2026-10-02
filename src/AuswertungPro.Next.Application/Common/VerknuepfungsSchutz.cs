@@ -59,6 +59,9 @@ public sealed record VerknuepfungsRegel
 
     /// <summary>Geschuetzte Gold-Speicher: Wurzel eingeschlossen, jedes Glied muss vorhanden und lesbar sein.</summary>
     public static VerknuepfungsRegel GoldSpeicher { get; } = new() { WurzelEinschliessen = true, FehlendErlaubt = false };
+
+    /// <summary>Trainingsablage (<c>TrainingInventoryPaths</c>): ganzer Pfad ab Laufwerk, fehlender Rest erlaubt, Lesefehler sperren.</summary>
+    public static VerknuepfungsRegel GanzerPfad { get; } = new();
 }
 
 /// <summary>
@@ -97,6 +100,19 @@ public static class VerknuepfungsSchutz
                 ? new VerknuepfungsPruefung(VerknuepfungsBefund.NichtPruefbar, pfad, ex)
                 : VerknuepfungsPruefung.Frei;
         }
+    }
+
+    /// <summary>Prueft den ganzen Pfad bis unter das Laufwerk (die Laufwerkswurzel selbst nicht).</summary>
+    public static VerknuepfungsPruefung PruefePfadAbLaufwerk(
+        string pfad,
+        VerknuepfungsRegel regel,
+        Func<string, FileAttributes>? leseAttribute = null)
+    {
+        var voll = Path.GetFullPath(pfad);
+        var laufwerk = Path.GetPathRoot(voll);
+        return string.IsNullOrWhiteSpace(laufwerk)
+            ? VerknuepfungsPruefung.Frei
+            : PruefeKette(laufwerk, voll, regel, leseAttribute);
     }
 
     /// <summary>
