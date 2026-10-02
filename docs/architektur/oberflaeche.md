@@ -36,17 +36,28 @@ steht einmal** und beide Seiten rufen ihn; die Seiten liefern nur, was wirklich 
   Seite behaelt ihre Schranke. Tests: `DatenVerlaufShellTests` (Teilweise-Fall je Seite).
 - **Aufklapp-Liste**: `AufklappListeController<TListe, TRecord>` mit `IAufklappListe<TRecord>`;
   `DataPageAufklappListeController`/`SchaechteAufklappListeController` liefern nur Datensaetze,
-  Schranke, Layout und (nur Haltungen) den Konflikthinweis W01.
+  Schranke und Layout. Den Konflikthinweis W01 zeigen beide Listen (`IAufklappListe.Hinweis`).
 - **Gewollte Unterschiede** (nicht angleichen): Die Schachtseite sperrt Aenderungen zusaetzlich
   ueber `CanMutateShaftData` (laufender Protokollimport), die Haltungsseite nur ueber
   `IsProjectReady`. Nur die Haltungsseite hat Abdocken, die getrennte alte Suchzeile, die
-  Mehrfachauswahl zum Loeschen und den Konflikthinweis W01. Die Schacht-Matrix braucht weder den
+  Mehrfachauswahl zum Loeschen. Die Schacht-Matrix braucht weder den
   Mehrfach-Massnahmen-Schutz noch das Leeren von Tabellenfeldern der Haltungs-Matrix:
   `schacht_costs.json` schreibt nur sie selbst, immer mit genau einer Massnahme, und sie schreibt
   keine Kostenfelder in die Schachtdatensaetze.
-- **Offen (Entscheid)**: W01-Konfliktschutz im Schachtformular (heute schreibt eine Eingabe auch
-  ueber eine inzwischen geaenderte Tabellenkorrektur); Sprung von aussen (Dossier, Suche) klappt
-  in der Schachtliste nicht auf wie bei den Haltungen (`ZeigeHaltung`).
+- **W01-Konfliktschutz auch im Schachtformular (02.10.2026).** Eine Formulareingabe, die auf
+  einem aelteren Stand beruht, ueberschreibt keine neuere Tabellenkorrektur (Inline-Edit,
+  Rueckgaengig, Uebernahme) mehr still. Regel und Ablauf stehen fuer beide Seiten an EINER Stelle:
+  `FormularKonfliktschutz` (Ausgangswert vergleichen, bei Abweichung neuere Korrektur behalten
+  und melden, sonst schreiben und den echten Datensatzwert uebernehmen). Folge der gleichen Regel:
+  Lehnt die Seite das Schreiben ab (laufender Protokollimport, abgelehnte Umbenennung), zeigt das
+  Schachtformular danach wieder den Datensatzwert, wie das Haltungsformular. Schachtfelder lesen
+  fuer Live-Abgleich und Vergleich die erste nicht-leere Schreibweise
+  (`SchachtDetailFeldKonsolidierer.AktuellerWert` ueber `RecordDetailItem.LiesDatensatzwert`) —
+  vorher leerte der Abgleich ein Feld, dessen Wert nur unter einer zweiten Schreibweise stand.
+  Den Hinweis verteilt `SchaechteAnsichtUmschalter.MeldeKonflikt` (Liste oder Schublade).
+  Waechter: `SchaechteFormularTabelleAbgleichTests`, `SchaechteFormularKonfliktIsolatedTests`.
+- **Offen (Entscheid)**: Sprung von aussen (Dossier, Suche) klappt in der Schachtliste nicht auf
+  wie bei den Haltungen (`ZeigeHaltung`).
 
 ## Optik und Bedienung professionell (28.09.2026)
 
@@ -1677,6 +1688,7 @@ erweiterte `DesignAuditSchriftskalaTests`, `DesignAuditContrastTests`, `DesignAu
   der Eingabefelder (kein Service-Locator in der Seite, `UiArchitectureGuardTests`). Nie wieder
   eine Momentaufnahme still ueber einen neueren Wert schreiben. Waechter:
   `DataPageFormularTabelleAbgleichTests` (Ablauf Alt -> Neue Tabellenkorrektur -> Zusatz).
+  Seit 02.10.2026 gilt dieselbe Regel ueber `FormularKonfliktschutz` auch fuer Schaechte.
 - Nicht umgesetzt (Etappe 2): Uebersichtsseite, Schaechte, Player, Training Studio, Chip „Naechste
   Aufgabe" (braucht einen fachlichen Pruefstatus je Haltung), Palettenwechsel Glas/Cockpit,
   animierte Symbole ueber den bestehenden `MotionSettings`-Rahmen hinaus.

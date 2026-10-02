@@ -107,6 +107,19 @@ public partial class SchachtAufklappListe : UserControl, IAufklappListe<SchachtR
     /// <summary>Setzt die Themen; nur der Controller schreibt sie.</summary>
     public void ZeigeThemen(IReadOnlyList<ThemaAnzeige>? themen) => Themen = themen;
 
+    public static readonly DependencyProperty HinweisProperty = DependencyProperty.Register(
+        nameof(Hinweis), typeof(string), typeof(SchachtAufklappListe), new PropertyMetadata(string.Empty));
+
+    /// <summary>
+    /// Sichtbarer Hinweis in der Kopfzeile des aufgeklappten Eintrags: eine verworfene Eingabe
+    /// nach einer neueren Korrektur am Datensatz (W01, wie bei den Haltungen). Leer = kein Hinweis.
+    /// </summary>
+    public string Hinweis
+    {
+        get => (string)GetValue(HinweisProperty);
+        set => SetValue(HinweisProperty, value);
+    }
+
     public static readonly DependencyProperty ProtokollCommandProperty = DependencyProperty.Register(
         nameof(ProtokollCommand), typeof(ICommand), typeof(SchachtAufklappListe), new PropertyMetadata(null));
 

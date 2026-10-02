@@ -113,7 +113,7 @@ public static class SchachtDetailFeldKonsolidierer
 
             // Wert: erste nicht-leere Variante (Template-Feld ist oft leer, Import-Variante traegt den Wert).
             var primaer = keys.FirstOrDefault(k => !string.IsNullOrWhiteSpace(WertVon(k)));
-            var wert = primaer is null ? "" : WertVon(primaer);
+            var wert = AktuellerWert(recordFelder, keys);
             // Commit-Ziel: das wertfuehrende Feld, sonst der Anzeige-Key (kanonisch).
             primaer ??= anzeige;
 
@@ -121,6 +121,23 @@ public static class SchachtDetailFeldKonsolidierer
         }
 
         return ergebnis;
+    }
+
+    /// <summary>
+    /// Der Wert eines konsolidierten Feldes: die erste nicht-leere Schreibweise in der Reihenfolge
+    /// von <see cref="KonsolidiertesSchachtFeld.AlleKeys"/>. Dieselbe Regel wie beim Aufbau
+    /// (<see cref="Konsolidiere"/>); Live-Abgleich und Konfliktschutz des Formulars (W01) lesen
+    /// damit genau den Wert, den das Formular beim Oeffnen gezeigt hat.
+    /// </summary>
+    public static string AktuellerWert(IReadOnlyDictionary<string, string>? recordFelder, IEnumerable<string> keys)
+    {
+        foreach (var key in keys ?? Enumerable.Empty<string>())
+        {
+            if (recordFelder is not null && recordFelder.TryGetValue(key, out var wert) && !string.IsNullOrWhiteSpace(wert))
+                return wert;
+        }
+
+        return "";
     }
 
     private static bool IstSichtbarerFeldname(string? feldName)

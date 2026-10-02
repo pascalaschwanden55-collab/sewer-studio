@@ -24,7 +24,14 @@ public sealed class SchaechteRecordDetailsBuilderTests
         var builder = new SchaechteRecordDetailsBuilder(
             _ => ["Nein", "Ja"],
             _ => null,
-            (_, field, value) => commits.Add((field, value)));
+            (target, field, value) =>
+            {
+                // Wie die Seite: Der Wert landet im Datensatz. Das Formular uebernimmt danach den
+                // echten Datensatzwert (W01, FormularKonfliktschutz).
+                commits.Add((field, value));
+                foreach (var key in field.AlleKeys)
+                    target.SetFieldValue(key, value ?? "", FieldSource.Manual, userEdited: true);
+            });
 
         var groups = builder.Build(
             ["Schachtnummer", "Sanieren", "Kosten", "Zustandsklasse", "PDF"],

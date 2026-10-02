@@ -7,6 +7,7 @@
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Schachtansicht"
              xmlns:haltung="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
              xmlns:dp="clr-namespace:AuswertungPro.Next.UI.DataPage"
+             xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
              xmlns:na="clr-namespace:AuswertungPro.Next.Application.UseCases.NaechsteAufgabe;assembly=AuswertungPro.Next.Application"
              x:Name="Root">
     <!--
@@ -38,6 +39,7 @@
 
         <local:SchachtLaufnummerConverter x:Key="Laufnummer"/>
         <BooleanToVisibilityConverter x:Key="BoolSichtbar"/>
+        <pages:StringNotEmptyToVisibilityConverter x:Key="TextSichtbar"/>
         <uc:GrossbuchstabenConverter x:Key="Grossbuchstaben"/>
         <haltung:HaltungAufgeklapptConverter x:Key="IstAufgeklappt"/>
         <haltung:SchmaleBreiteConverter x:Key="IstSchmal"/>
@@ -159,6 +161,13 @@
                                    Text="{Binding Aufgeklappt.Fields[Schachtnummer], RelativeSource={RelativeSource AncestorType=local:SchachtAufklappListe}}"
                                    FontFamily="{DynamicResource FontMono}" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextBrush}"/>
+                        <!-- Konflikthinweis (W01): verworfene Eingabe nach einer neueren Korrektur -->
+                        <TextBlock DockPanel.Dock="Left" Margin="14,0,0,0" VerticalAlignment="Center"
+                                   Text="{Binding Hinweis, RelativeSource={RelativeSource AncestorType=local:SchachtAufklappListe}}"
+                                   FontSize="{DynamicResource TextS}" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource WarningTextBrush}"
+                                   ToolTip="{Binding Hinweis, RelativeSource={RelativeSource AncestorType=local:SchachtAufklappListe}}"
+                                   Visibility="{Binding Hinweis, RelativeSource={RelativeSource AncestorType=local:SchachtAufklappListe}, Converter={StaticResource TextSichtbar}}"/>
                         <Button DockPanel.Dock="Right" Content="Ansicht anpassen" Click="AnsichtAnpassen_Click"
                                 Style="{DynamicResource ToolbarButton}" Margin="6,0,0,0"
                                 ToolTip="Felder verschieben, ausblenden und wieder einblenden"/>

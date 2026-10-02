@@ -41,13 +41,11 @@ public sealed class DataPageDetailItemFactory
     }
 
     /// <summary>
-    /// Konfliktregel des Rueckschreibwegs (Nachpruefung W01): Der Datensatz traegt inzwischen
-    /// einen anderen Wert als den, auf dem die Eingabe beruht, und die Eingabe ist nicht
-    /// zufaellig genau dieser Wert. Dann darf die neuere Korrektur nicht ueberschrieben werden.
+    /// Konfliktregel des Rueckschreibwegs (Nachpruefung W01); sie steht fuer Haltungen und
+    /// Schaechte in <see cref="FormularKonfliktschutz"/>.
     /// </summary>
     public static bool IstKonflikt(string? ausgangswert, string? aktuellerWert, string? eingabe)
-        => !string.Equals(aktuellerWert ?? string.Empty, ausgangswert ?? string.Empty, StringComparison.Ordinal)
-           && !string.Equals(aktuellerWert ?? string.Empty, eingabe ?? string.Empty, StringComparison.Ordinal);
+        => FormularKonfliktschutz.IstKonflikt(ausgangswert, aktuellerWert, eingabe);
 
     public RecordDetailItem Create(string fieldName, HaltungRecord record)
     {
@@ -129,22 +127,15 @@ public sealed class DataPageDetailItemFactory
     }
 
     /// <summary>
-    /// Rueckschreibweg mit Konfliktschutz: Hat sich der Datensatz seit der Anzeige geaendert
-    /// (Tabelle, Dienst), bleibt die neuere Korrektur stehen, das Formular zeigt sie, und die
-    /// verworfene Eingabe wird gemeldet. Sonst wird geschrieben und der Ausgangswert nachgefuehrt.
+    /// Rueckschreibweg mit Konfliktschutz (<see cref="FormularKonfliktschutz"/>): Hat sich der
+    /// Datensatz seit der Anzeige geaendert (Tabelle, Dienst), bleibt die neuere Korrektur stehen,
+    /// das Formular zeigt sie, und die verworfene Eingabe wird gemeldet.
     /// </summary>
     private void Rueckschreiben(HaltungRecord record, string fieldName, RecordDetailItem? item, string next)
-    {
-        var aktuell = record.GetFieldValue(fieldName);
-        if (item is not null && IstKonflikt(item.Ausgangswert, aktuell, next))
-        {
-            item.UebernehmeAusDatensatz(aktuell);
-            _konfliktGemeldet?.Invoke(fieldName, aktuell, next);
-            return;
-        }
-
-        _commitValue(record, fieldName, next);
-        // Nach dem Schreiben den echten Datensatzwert uebernehmen (Umbenennung kann abweichen).
-        item?.UebernehmeAusDatensatz(record.GetFieldValue(fieldName));
-    }
+        => FormularKonfliktschutz.Rueckschreiben(
+            item,
+            () => record.GetFieldValue(fieldName),
+            next,
+            () => _commitValue(record, fieldName, next),
+            (aktuell, eingabe) => _konfliktGemeldet?.Invoke(fieldName, aktuell, eingabe));
 }

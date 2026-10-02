@@ -19,6 +19,8 @@ public interface IAufklappListe<TRecord> where TRecord : class
     System.Collections.IEnumerable? ItemsSource { get; }
     Func<TRecord, IReadOnlyList<RecordDetailGroup>>? DetailBuilder { get; set; }
     ObjektakteViewModel? Objektakte { get; set; }
+    /// <summary>Konflikthinweis in der Kopfzeile des Formulars (W01); leer = keiner.</summary>
+    string Hinweis { get; set; }
     ListenReihenfolgeController Reihenfolge { get; }
     event EventHandler? AufgeklapptChanged;
     event EventHandler? AnsichtAnpassenRequested;
@@ -31,7 +33,7 @@ public interface IAufklappListe<TRecord> where TRecord : class
 /// eine Fassung fuer Haltungen und Schaechte (Deepscan 02.10.2026, A2; vorher zwei Kopien, zu
 /// 91 % gleich). Die Seiten liefern in <c>DataPageAufklappListeController</c> und
 /// <c>SchaechteAufklappListeController</c> nur, was fachlich verschieden ist: Datensaetze,
-/// Aenderungsschranke, Layout und — nur bei den Haltungen — den Konflikthinweis (W01).
+/// Aenderungsschranke und Layout. Den Konflikthinweis (W01) zeigen beide Listen gleich.
 ///
 /// Zwei Regeln tragen diese Klasse:
 /// 1. Es gibt genau EIN Formular, naemlich das des aufgeklappten Datensatzes. Beim Wechsel wird der
@@ -39,7 +41,8 @@ public interface IAufklappListe<TRecord> where TRecord : class
 ///    weiter in ein nicht mehr sichtbares Formular schreiben.
 /// 2. Es gibt keinen zweiten Schreibweg. Die Felder kommen fertig aus dem Detail-Builder der
 ///    Seite (Haltungen mit der Konfliktregel der <c>DataPageDetailItemFactory</c>); hier wird nur
-///    gebaut, angeschlossen und wieder entsorgt.
+///    gebaut, angeschlossen und wieder entsorgt. Beide Detail-Builder schreiben ueber
+///    <see cref="FormularKonfliktschutz"/>.
 /// </summary>
 public abstract class AufklappListeController<TListe, TRecord> : IDisposable
     where TListe : FrameworkElement, IAufklappListe<TRecord>
@@ -82,10 +85,8 @@ public abstract class AufklappListeController<TListe, TRecord> : IDisposable
     /// <summary>Feldwert fuer den Live-Abgleich (beide Datensaetze melden Fields[Name]/Fields).</summary>
     protected abstract string? Wert(TRecord record, string feld);
 
-    /// <summary>Hinweis in der Kopfzeile des Formulars (W01). Nur die Haltungsliste zeigt einen.</summary>
-    protected virtual void SetzeHinweis(string text)
-    {
-    }
+    /// <summary>Hinweis in der Kopfzeile des Formulars (W01); ein neues Formular beginnt ohne.</summary>
+    protected void SetzeHinweis(string text) => _liste.Hinweis = text;
 
     /// <summary>Einmalige Verdrahtung, unabhaengig vom ViewModel.</summary>
     public void Verdrahte()

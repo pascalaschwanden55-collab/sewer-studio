@@ -24,7 +24,7 @@ public partial class SchaechtePage
         _ansichtSchacht = new SchaechteAnsichtUmschalter(
             new SchaechteAnsichtUmschalter.Elemente(
                 Grid, SchachtansichtView, AufklappListe, ColumnViewChips,
-                SchachtansichtToggle, AnsichtListeMenu, AnsichtTabelleMenu),
+                SchachtansichtToggle, AnsichtListeMenu, AnsichtTabelleMenu, FelderDrawer),
             () => (DataContext as SchaechtePageViewModel)?.Settings,
             () => (DataContext as SchaechtePageViewModel)?.Settings.Save(),
             (uebersicht, felder) => _novaWorkspace?.SetzeSichtbar(uebersicht, felder));

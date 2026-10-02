@@ -206,6 +206,16 @@ public sealed class RecordDetailItem : INotifyPropertyChanged, IDataErrorInfo
     public string Ausgangswert { get; private set; }
 
     /// <summary>
+    /// Liest den aktuellen Datensatzwert genau dieses Feldes, wenn er nicht unter
+    /// <see cref="FieldName"/> allein steht. Schaechte fuehren ein Feld oft in mehreren
+    /// Schreibweisen (Vorlage "Ausführung", Import "Ausfuehrung"); das Formular zeigt sie als EIN
+    /// Feld. Live-Abgleich und Konfliktschutz (W01) lesen dann denselben Wert wie der Aufbau,
+    /// sonst leerte der Abgleich das Feld und meldete danach einen falschen Konflikt.
+    /// Null = der Abgleich liest den Datensatz unter <see cref="FieldName"/> (Haltungen).
+    /// </summary>
+    public Func<string>? LiesDatensatzwert { get; init; }
+
+    /// <summary>
     /// Der Editor dieses Feldes hat den Tastaturfokus. Externe Aenderungen ersetzen den Text
     /// dann nicht unter dem Cursor, sondern werden bis <see cref="BeendeBearbeitung"/> gemerkt.
     /// </summary>
