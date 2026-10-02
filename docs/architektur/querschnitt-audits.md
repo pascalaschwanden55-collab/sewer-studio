@@ -225,3 +225,9 @@ zurueckgedreht werden:
 - `TrainingCenterViewModel` gibt seinen eigenen Knowledge-Base-HTTP-Client beim
   Schliessen des Fensters frei. Dispose ist mehrfach sicher aufrufbar.
 
+
+### Deepscan 02.10.2026, Welle 2 (Klone und leere catch)
+
+- **Leere `catch` (R7):** `SilentCatchGuardTests` lehnt Floskel-Kommentare ab (`ignore`, `next`, `non-fatal`, `best effort` ohne Grund, `skip`, `swallow` ...). Ein leerer `catch` braucht einen Grund: welcher Fehler, warum harmlos, was gilt stattdessen. Die Anzahl der Kommentar-`catch` ist nach oben UND unten festgenagelt (`MaxKommentarCatchBloecke`, heute 230); wer einen Block entfernt, zieht den Wert nach. Einzige Ausnahme mit Verweis: `ParsedHoldingDistributionController` (nach Codex).
+- **Schattenauswertung (R5):** Ein Rechenfehler der Bewertung oder der Massnahmenempfehlung wird als `SchattenStatus.Fehler` mit Fehlertext gespeichert, nicht als Teilergebnis. Ein Fehler gilt immer als veraltet (naechster Lauf rechnet neu), ist kein Vergleich und erreicht die KI nicht.
+- **Eine Stelle statt zwei Kopien (B4-B6):** `NovaWorkspaceLayout` (Haltungen/Schaechte, Auf-/Zuklappen und Sichtbarkeit), `DossierPdfBausteine` (Kopf, Zustandszelle, Metadaten der Dossier-PDFs; die Schachtliste behaelt ihren Ersatztext am Wappenplatz), `WindowBoundsHelper` (Dialoge im Arbeitsbereich), `CostStoreFileProbe.TryRemove` (User-Overrides), `CadastreTableStamp` (Herkunftszeile und Frische der Kataster-Tabellen), `VsaFormularVerdrahtung` (VSA-Formular in Eintrags-Editor und Beobachtungs-Katalog), `FeldzustandWiederherstellung` (Rueckgaengig am Datensatz), `WorkbenchSourceSuggestionFactory` (Quellvorgabe des Pruefplatzes). Neue Kopien dieser Abschnitte gehoeren nicht mehr in die Seiten, sondern in diese Helfer.
