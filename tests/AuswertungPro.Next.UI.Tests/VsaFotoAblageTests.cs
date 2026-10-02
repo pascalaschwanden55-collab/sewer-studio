@@ -84,6 +84,57 @@ public sealed class VsaFotoAblageTests : IDisposable
         Assert.True(File.Exists(result.PhotoPath));
     }
 
+    /// <summary>
+    /// Deepscan 02.10.2026, R3: Echte Dateien, echter Temp-Ordner. Ohne Video bleibt das
+    /// Foto erhalten, aber das Ergebnis sagt deutlich, dass es nur vorlaeufig liegt.
+    /// </summary>
+    [Fact]
+    public async Task CaptureWithDefaults_meldet_ohne_video_ein_nur_vorlaeufiges_foto()
+    {
+        var snapshot = Path.Combine(Path.GetTempPath(), "coding_live_" + Guid.NewGuid().ToString("N") + ".png");
+        File.WriteAllBytes(snapshot, [7, 8, 9]);
+        string? abgelegt = null;
+        try
+        {
+            var result = await VsaCodeExplorerPhotoCaptureWorkflow.CaptureWithDefaultsAsync(
+                photoIndex: 0,
+                photoPaths: new List<string>(),
+                originalPhotoPaths: new List<string>(),
+                liveSnapshotProvider: () => snapshot,
+                videoPath: null,
+                currentVideoTime: null,
+                timeText: null,
+                cancellationToken: CancellationToken.None);
+            abgelegt = result.PhotoPath;
+
+            Assert.Equal(VsaCodeExplorerPhotoCaptureOutcome.Captured, result.Outcome);
+            Assert.True(File.Exists(result.PhotoPath), "Das Foto darf nicht verloren gehen.");
+            Assert.True(result.NurVorlaeufig);
+            Assert.Contains("Temp-Ordner", result.Message);
+        }
+        finally
+        {
+            foreach (var datei in new[] { snapshot, abgelegt })
+                if (datei is not null && File.Exists(datei))
+                    File.Delete(datei);
+        }
+    }
+
+    [Fact]
+    public void TempHinweis_nennt_ein_video_das_selbst_im_temp_ordner_liegt()
+    {
+        static bool ImTemp(string pfad) => pfad.StartsWith(@"C:\Temp\", StringComparison.OrdinalIgnoreCase);
+
+        var hinweis = VsaFotoTempHinweis.Fuer(
+            @"C:\Temp\Haltung\Fotos\vsa_foto1.png",
+            @"C:\Temp\Haltung\video.mp4",
+            ImTemp);
+
+        Assert.NotNull(hinweis);
+        Assert.Contains("Das Video liegt selbst im Temp-Ordner", hinweis);
+        Assert.Null(VsaFotoTempHinweis.Fuer(@"D:\Projekte\Fotos\vsa_foto1.png", @"D:\Projekte\video.mp4", ImTemp));
+    }
+
     public void Dispose()
     {
         try

@@ -673,6 +673,10 @@ public partial class VsaCodeExplorerWindow : Window
 
             _pendingPhotoAnnotations.Remove(fotoIndex);
             UpdateFotoImages();
+
+            // Deepscan 02.10.2026, R3: Ein Foto im Temp-Ordner nie still übernehmen.
+            if (result.NurVorlaeufig)
+                DialogHost.Current.Warn(result.Message, result.Title);
         }
         finally
         {

@@ -21,6 +21,7 @@ public sealed class CodingSnapshotTargetPolicyTests
 
         var expectedMeter = entry.MeterStart!.Value.ToString("F2", CultureInfo.CurrentCulture);
         Assert.Equal(Path.Combine("C:\\video", "Fotos"), target.PhotoDirectory);
+        Assert.False(target.LiegtImTemp);
         Assert.Equal(
             Path.Combine("C:\\video", "Fotos", $"BCA_{expectedMeter}m_00-00-11-123.png"),
             target.FilePath);
@@ -40,6 +41,8 @@ public sealed class CodingSnapshotTargetPolicyTests
         var expectedDirectory = Path.Combine(Path.GetTempPath(), "Fotos");
 
         Assert.Equal(expectedDirectory, target.PhotoDirectory);
+        // Deepscan 02.10.2026, R3: Der Rueckfall ist markiert, damit niemand still im Temp ablegt.
+        Assert.True(target.LiegtImTemp);
         Assert.Equal(
             Path.Combine(expectedDirectory, $"BCA_{expectedMeter}m_140509.png"),
             target.FilePath);

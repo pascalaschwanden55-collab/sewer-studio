@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO;
+using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.UseCases.VsaFotos;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
@@ -27,13 +28,18 @@ public sealed record VsaCodeExplorerPhotoCaptureRequest(
     Func<string, byte[], CancellationToken, Task> WriteAllBytesAsync,
     CancellationToken CancellationToken,
     IList<string>? OriginalPhotoPaths = null,
-    Func<string, int, string>? PersistPhoto = null);
+    Func<string, int, string>? PersistPhoto = null,
+    Func<string, bool>? IstTempPfad = null);
 
+/// <param name="NurVorlaeufig">
+/// Das Foto liegt im Temp-Ordner (Deepscan 02.10.2026, R3); <see cref="Message"/> nennt den Grund.
+/// </param>
 public sealed record VsaCodeExplorerPhotoCaptureResult(
     VsaCodeExplorerPhotoCaptureOutcome Outcome,
     string? PhotoPath,
     string Message,
-    string Title);
+    string Title,
+    bool NurVorlaeufig = false);
 
 public static class VsaCodeExplorerPhotoCaptureWorkflow
 {
@@ -96,9 +102,7 @@ public static class VsaCodeExplorerPhotoCaptureWorkflow
         var liveSnapshotPath = request.LiveSnapshotProvider?.Invoke();
         if (!string.IsNullOrEmpty(liveSnapshotPath) && request.FileExists(liveSnapshotPath))
             return Captured(
-                request.PhotoPaths,
-                request.OriginalPhotoPaths ?? request.PhotoPaths,
-                request.PhotoIndex,
+                request,
                 Uebernehme(request, liveSnapshotPath));
 
         if (string.IsNullOrWhiteSpace(request.VideoPath) || !request.FileExists(request.VideoPath))
@@ -122,9 +126,7 @@ public static class VsaCodeExplorerPhotoCaptureWorkflow
             request.CancellationToken).ConfigureAwait(false);
 
         return Captured(
-            request.PhotoPaths,
-            request.OriginalPhotoPaths ?? request.PhotoPaths,
-            request.PhotoIndex,
+            request,
             Uebernehme(request, tempPhotoPath));
     }
 
@@ -157,18 +159,24 @@ public static class VsaCodeExplorerPhotoCaptureWorkflow
     }
 
     private static VsaCodeExplorerPhotoCaptureResult Captured(
-        IList<string> photoPaths,
-        IList<string> originalPhotoPaths,
-        int photoIndex,
+        VsaCodeExplorerPhotoCaptureRequest request,
         string photoPath)
     {
-        SetPhotoSlot(photoPaths, photoIndex, photoPath);
-        SetPhotoSlot(originalPhotoPaths, photoIndex, photoPath);
+        SetPhotoSlot(request.PhotoPaths, request.PhotoIndex, photoPath);
+        SetPhotoSlot(request.OriginalPhotoPaths ?? request.PhotoPaths, request.PhotoIndex, photoPath);
+
+        // Deepscan 02.10.2026, R3: Liegt das Foto noch im Temp-Ordner, erfaehrt der Nutzer es
+        // sofort und mit Grund, statt erst nach dem naechsten Aufraeumen von Windows.
+        var hinweis = VsaFotoTempHinweis.Fuer(
+            photoPath,
+            request.VideoPath,
+            request.IstTempPfad ?? BefundfotoTempOrt.LiegtImTemp);
         return new VsaCodeExplorerPhotoCaptureResult(
             VsaCodeExplorerPhotoCaptureOutcome.Captured,
             photoPath,
-            Message: "",
-            Title: "");
+            Message: hinweis ?? "",
+            Title: hinweis is null ? "" : VsaFotoTempHinweis.Titel,
+            NurVorlaeufig: hinweis is not null);
     }
 
     private static void SetPhotoSlot(IList<string> photoPaths, int photoIndex, string photoPath)

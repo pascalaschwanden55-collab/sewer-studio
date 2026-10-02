@@ -20,7 +20,9 @@ public sealed class CodingReplayUseCaseTests
             return new CodingReplayObservation("NoDamage", [], new Dictionary<string, string>());
         });
         var result = await new CodingReplayUseCase(analyzer).RunAsync(
-            [Frame(), Frame("b")], Actions([]), TimeSpan.FromMilliseconds(20));
+            // 500 ms statt 20 ms: "b" antwortet sofort, auf dem CI-Runner reichten 20 ms aber
+            // nicht einmal fuer das Einplanen (02.10.2026). "a" wartet endlos und laeuft sicher ab.
+            [Frame(), Frame("b")], Actions([]), TimeSpan.FromMilliseconds(500));
         Assert.Equal(new[] { "timeout", "measured" }, result.Select(r => r.Status));
         Assert.Null(result[0].Observation);
     }

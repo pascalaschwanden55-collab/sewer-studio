@@ -1,6 +1,7 @@
 using System.Globalization;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
+using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Application.UseCases.Objektakten;
 using AuswertungPro.Next.Domain.Models;
@@ -11,10 +12,12 @@ namespace AuswertungPro.Next.Application.UseCases.ProjektPruefung;
 /// <summary>Fuenf lesende Pruefungen. Vorhandene Eingabe- und Hoehenregeln bleiben die einzige Quelle.</summary>
 public static class ProjektPruefregeln
 {
+    /// <param name="tempOrdner">Nur fuer Tests: simulierte Temp-Wurzeln; sonst die echten.</param>
     public static ProjektPruefergebnis Pruefe(Project projekt, Func<string, string?> dateifehler,
-        CancellationToken ct = default)
+        CancellationToken ct = default, IReadOnlyList<string>? tempOrdner = null)
     {
         var punkte = new List<ProjektPruefpunkt>();
+        var temp = tempOrdner ?? BefundfotoTempOrt.Standardwurzeln();
         foreach (var h in projekt.Data)
         {
             ct.ThrowIfCancellationRequested();
@@ -104,6 +107,21 @@ public static class ProjektPruefregeln
             foreach (var e in revision?.Entries ?? [])
                 if (b.Art == "haltung" && !e.IsDeleted && e.Ai is { Accepted: false })
                     Add(b, name, ProjektPruefbereich.KiBefunde, $"{e.Code}: KI-Vorschlag noch nicht bestätigt.", e.EntryId);
+            // Deepscan 02.10.2026, R3: Befundfotos im Temp-Ordner gehen beim Aufräumen verloren
+            // (Fall 12.09.2026). Nur diese Fotos werden gelesen, nicht jedes Projektfoto.
+            foreach (var e in revision?.Entries ?? [])
+            {
+                if (b.Art != "haltung" || e.IsDeleted) continue;
+                foreach (var foto in e.FotoPaths ?? [])
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (!BefundfotoTempOrt.LiegtImTemp(foto, temp) || !gesehen.Add(foto.Trim())) continue;
+                    var fehler = dateifehler(foto);
+                    Add(b, name, ProjektPruefbereich.Dateien, fehler is null
+                        ? $"{foto}: Befundfoto liegt im Temp-Ordner und geht beim Aufräumen von Windows verloren. Bitte ins Projekt übernehmen oder neu aufnehmen."
+                        : $"{foto}: {fehler} Das Befundfoto lag im Temp-Ordner.", e.EntryId);
+                }
+            }
             foreach (var a in b.Verbund)
             foreach (var f in ObjektaktenBestandsfelder.Fuer(b, a).Where(f => !f.NurLesen))
             {

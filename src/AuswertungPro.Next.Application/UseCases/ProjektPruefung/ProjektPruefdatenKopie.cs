@@ -46,6 +46,8 @@ public static class ProjektPruefdatenKopie
                     {
                         EntryId = e.EntryId, Code = e.Code, MeterStart = e.MeterStart,
                         MeterEnd = e.MeterEnd, IsDeleted = e.IsDeleted,
+                        // R3 (02.10.2026): die Temp-Prüfung der Befundfotos liest diese Pfade.
+                        FotoPaths = new(e.FotoPaths ?? []),
                         Ai = e.Ai is null ? null : new ProtocolEntryAiMeta
                         { Accepted = e.Ai.Accepted, SuggestedAt = DateTimeOffset.MinValue }
                     });
@@ -126,7 +128,8 @@ public static class ProjektPruefdatenKopie
                     || !Nullable.Equals(x.MeterStart, y.MeterStart)
                     || !Nullable.Equals(x.MeterEnd, y.MeterEnd) || x.IsDeleted != y.IsDeleted
                     || (x.Ai is null) != (y.Ai is null)
-                    || x.Ai?.Accepted != y.Ai?.Accepted) return false;
+                    || x.Ai?.Accepted != y.Ai?.Accepted
+                    || !(x.FotoPaths ?? []).SequenceEqual(y.FotoPaths ?? [], StringComparer.Ordinal)) return false;
             }
         }
         for (var i = 0; i < stand.SchaechteData.Count; i++)
