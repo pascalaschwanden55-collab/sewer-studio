@@ -119,6 +119,25 @@ public sealed class BuilderPageRowBuilderTests
             text);
     }
 
+    // Deepscan A4: Das Jahr der Druckcenter-Zeile kommt aus der gemeinsamen Leseregel.
+    // Frueher zaehlten nur die ersten vier Zeichen; "05.03.2024" blieb als eigener Filterwert stehen.
+    [Theory]
+    [InlineData("2026-07-16", "2026")]
+    [InlineData("05.03.2024", "2024")]
+    [InlineData("24.09.25", "2025")]
+    [InlineData("2024", "2024")]
+    [InlineData("unbekannt", "unbekannt")]
+    public void Build_liest_das_Jahr_nach_der_gemeinsamen_Leseregel(string datum, string erwartetesJahr)
+    {
+        var record = Record("H-2");
+        record.Fields[FieldKeys.InspectionYear] = datum;
+
+        var row = Assert.Single(BuilderPageRowBuilder.Build(
+            [record], new Dictionary<string, string>(), new ProjectCostStore()));
+
+        Assert.Equal(erwartetesJahr, row.Year);
+    }
+
     private static HaltungRecord Record(string holding)
     {
         var record = new HaltungRecord();

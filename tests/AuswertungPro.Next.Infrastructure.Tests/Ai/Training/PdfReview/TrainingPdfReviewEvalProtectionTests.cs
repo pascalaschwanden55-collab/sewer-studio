@@ -106,6 +106,23 @@ public sealed class TrainingPdfReviewEvalProtectionTests : IDisposable
                 SearchOption.TopDirectoryOnly));
     }
 
+    // Deepscan A5: Die Ablagepruefung laeuft ueber den gemeinsamen VerknuepfungsSchutz (Regel Spiegel:
+    // fehlende und unlesbare Glieder gelten wie bisher als frei, eine Verknuepfung sperrt).
+    [Backup.JunctionFact]
+    public async Task ImportAsync_sperrt_eine_verknuepfte_Pruefablage_ohne_zu_schreiben()
+    {
+        var fixture = CreateFixture("700-800");
+        var brain = Directory.CreateDirectory(Path.Combine(_tempRoot, "brain")).FullName;
+        var fremd = Directory.CreateDirectory(Path.Combine(_tempRoot, "fremd")).FullName;
+        Directory.CreateSymbolicLink(Path.Combine(brain, "training"), fremd);
+
+        var fehler = await Assert.ThrowsAsync<IOException>(() => fixture.Service.ImportAsync(
+            new TrainingPdfReviewImportRequest(fixture.PdfPath, 300)));
+
+        Assert.Contains("Verknüpfung", fehler.Message, StringComparison.Ordinal);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(fremd));
+    }
+
     private Fixture CreateFixture(string haltung)
     {
         var sourceFolder = Path.Combine(_tempRoot, haltung);

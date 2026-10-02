@@ -110,7 +110,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             unknownCodeCount += unknownForRecord;
             WriteShadowDiffs(record, classified, shadowSelector);
 
-            var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+            var assessmentLength = LiesBewertungslaenge(record);
             const double minLength = 3.0; // Kanäle; Schächte: 0.5
             var rb = ComputeRandbedingungen(record);
 
@@ -155,7 +155,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var classified = ClassifyFindings(findings, table, out _);
         WriteShadowDiffs(record, classified, TryLoadShadowSelector());
 
-        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+        var assessmentLength = LiesBewertungslaenge(record);
         const double minLength = 3.0;
         var rb = ComputeRandbedingungen(record);
 
@@ -186,7 +186,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
             var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, model.ApproxEz, out var unknownForRecord);
             unknownCodeCount += unknownForRecord;
 
-            var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+            var assessmentLength = LiesBewertungslaenge(record);
             const double minLength = 3.0;
             var rb = ComputeRandbedingungen(record);
 
@@ -220,7 +220,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var findings = ResolveFindings(record, model.KnownCodes);
         var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, model.ApproxEz, out _);
 
-        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+        var assessmentLength = LiesBewertungslaenge(record);
         const double minLength = 3.0;
         var rb = ComputeRandbedingungen(record);
 
@@ -361,7 +361,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var findings = ResolveFindings(record, knownCodes);
         var classified = ClassifyFindings(findings, table, out var unknownForRecord);
 
-        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+        var assessmentLength = LiesBewertungslaenge(record);
         const double minLength = 3.0;
         var rb = ComputeRandbedingungen(record);
 
@@ -428,7 +428,7 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
         var findings = ResolveFindings(record, model.KnownCodes);
         var classified = ClassifyFindingsV2(findings, model.Selector, record, model.KnownCodes, model.ApproxEz, out var unknownForRecord);
 
-        var assessmentLength = ParseDouble(record.GetFieldValue("Haltungslaenge_m"));
+        var assessmentLength = LiesBewertungslaenge(record);
         const double minLength = 3.0;
         var rb = ComputeRandbedingungen(record);
 
@@ -775,11 +775,9 @@ public sealed class VsaEvaluationService : IVsaEvaluationService
     internal static string? ExtractQuantValue(string? text)
         => PrimaryDamageParser.ExtractQuantValue(text);
 
-    private static double ParseDouble(string? s)
-    {
-        if (string.IsNullOrWhiteSpace(s)) return 0;
-        return double.TryParse(s.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0;
-    }
+    // Bewertungslaenge nach der gemeinsamen Leseregel (Deepscan A4); unlesbar ergibt wie bisher 0.
+    internal static double LiesBewertungslaenge(HaltungRecord record)
+        => HaltungFeldwerte.LiesLaenge(record) ?? 0;
 
     private static string FmtEz(int? ez)
         => ez is null ? "n/a" : ez.Value.ToString(CultureInfo.InvariantCulture);

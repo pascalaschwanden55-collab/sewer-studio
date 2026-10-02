@@ -4,6 +4,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Application.Protocol;
 using static AuswertungPro.Next.Application.Reports.ProtocolPdfObservationText;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Reports;
 
@@ -17,8 +18,8 @@ internal static class ProtocolPdfEntryResolver
 
     internal static double? ResolveHoldingLength(HaltungRecord record, IReadOnlyList<ProtocolEntry> entries)
     {
-        var raw = record.GetFieldValue("Haltungslaenge_m");
-        var parsed = TryParseDouble(raw);
+        // Haltungslaenge nach der gemeinsamen Leseregel (Deepscan A4).
+        var parsed = HaltungFeldwerte.LiesLaenge(record);
         if (parsed.HasValue && parsed.Value > 0)
             return parsed.Value;
 

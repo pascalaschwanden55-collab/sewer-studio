@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Domain.Models;
 
@@ -72,13 +73,18 @@ public static class ExcelReportContextFactory
     }
 
     /// <summary>
-    /// Zieht alle vierstelligen Jahreszahlen aus Werten wie "2025", "25.10.2024"
-    /// oder "2024/2025". Alles andere gilt als nicht lesbar.
+    /// Zieht das Jahr eines lesbaren Datums (gemeinsame Leseregel, auch "24.09.25") und alle
+    /// vierstelligen Jahreszahlen aus Werten wie "2025", "25.10.2024" oder "2024/2025".
+    /// Alles andere gilt als nicht lesbar.
     /// </summary>
     private static IEnumerable<int> JahreAus(string? wert)
     {
         if (string.IsNullOrWhiteSpace(wert))
             yield break;
+
+        // Ein einzelnes Datum nach der gemeinsamen Leseregel (Deepscan A4), z.B. "24.09.25".
+        if (HaltungFeldwerte.LiesInspektionsdatum(wert) is { } datum)
+            yield return datum.Year;
 
         foreach (System.Text.RegularExpressions.Match treffer in
                  System.Text.RegularExpressions.Regex.Matches(wert, @"(?<!\d)(19|20)\d{2}(?!\d)"))

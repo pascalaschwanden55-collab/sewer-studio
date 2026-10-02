@@ -532,21 +532,13 @@ public sealed partial class TrainingPdfReviewImportService : ITrainingPdfReviewI
         if (!fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
             throw new IOException("PDF-Prüfdatei liegt ausserhalb des Wissensordners.");
 
-        var relative = Path.GetRelativePath(_knowledgeRoot, fullPath);
-        var current = _knowledgeRoot;
-        foreach (var segment in relative.Split(
-                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-                     StringSplitOptions.RemoveEmptyEntries))
+        // Gemeinsame Verknuepfungspruefung (Deepscan A5), Regel Spiegel: Glieder unter dem
+        // Wissensordner; fehlende und (wie bisher ueber Exists) unlesbare Glieder gelten als frei.
+        if (VerknuepfungsSchutz.PruefeKette(_knowledgeRoot, fullPath, VerknuepfungsRegel.Spiegel).Befund
+            == VerknuepfungsBefund.Verknuepfung)
         {
-            current = Path.Combine(current, segment);
-            if (!Directory.Exists(current) && !File.Exists(current))
-                continue;
-
-            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-            {
-                throw new IOException(
-                    "PDF-Prüfablage enthält eine Verknüpfung ausserhalb des Wissensordners.");
-            }
+            throw new IOException(
+                "PDF-Prüfablage enthält eine Verknüpfung ausserhalb des Wissensordners.");
         }
     }
 

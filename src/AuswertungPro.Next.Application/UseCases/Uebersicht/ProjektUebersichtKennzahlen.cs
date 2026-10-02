@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Application.UseCases.NaechsteAufgabe;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.UseCases.Uebersicht;
 
@@ -37,7 +38,7 @@ public static class ProjektUebersichtRechner
         var stand = h.Select(HaltungPruefstatus.Bestimme).ToList();
         static bool Dringend(string? zk) => zk?.Trim() is "0" or "1";
         static bool Gefuellt(string? v) => !string.IsNullOrWhiteSpace(v);
-        double Laenge(HaltungRecord r) => double.TryParse((r.GetFieldValue(FieldKeys.HoldingLengthMeters) ?? "").Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var d) && d > 0 ? d : 0;
+        static double Laenge(HaltungRecord r) => HaltungFeldwerte.LiesLaenge(r) is double d && d > 0 ? d : 0;
 
         StammdatenVollstaendigkeit St(string feld, Func<HaltungRecord, string?> wert)
             => new(feld, h.Count(r => Gefuellt(wert(r))), h.Count);

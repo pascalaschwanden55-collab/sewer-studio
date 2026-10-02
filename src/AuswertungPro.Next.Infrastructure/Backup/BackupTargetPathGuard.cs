@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Backup;
 
@@ -161,27 +162,21 @@ internal static class BackupTargetPathGuard
     /// </summary>
     private const int MeldeJeEintraege = 2000;
 
+    // Gemeinsame Verknuepfungspruefung (Deepscan A5), Regel ProjektSchreibgrenze: fehlender
+    // Eintrag erlaubt, unlesbarer Eintrag sperrt (fail-closed); Meldungen unveraendert.
     private static void EnsureEntryIsNotReparsePoint(
         string path,
         Func<string, FileAttributes?> readAttributes)
     {
-        FileAttributes? attributes;
-        try
-        {
-            attributes = readAttributes(path);
-        }
-        catch (Exception ex) when (ex is IOException
-                                   or UnauthorizedAccessException
-                                   or PathTooLongException
-                                   or NotSupportedException)
+        var befund = VerknuepfungsSchutz.PruefeEintrag(path, VerknuepfungsRegel.ProjektSchreibgrenze, readAttributes);
+        if (befund.Befund == VerknuepfungsBefund.NichtPruefbar)
         {
             throw BackupTargetBoundary.Fail(
                 $"Zielpfad konnte nicht sicher geprüft werden: {path}",
-                ex);
+                befund.Fehler!);
         }
 
-        if (attributes is not null
-            && (attributes.Value & FileAttributes.ReparsePoint) != 0)
+        if (befund.Befund == VerknuepfungsBefund.Verknuepfung)
         {
             throw BackupTargetBoundary.Fail(
                 $"Verknüpfung im Sicherungs-Zielpfad wurde blockiert: {path}");

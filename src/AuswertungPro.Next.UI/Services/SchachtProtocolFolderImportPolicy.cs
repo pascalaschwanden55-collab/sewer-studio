@@ -214,19 +214,13 @@ internal static class SchachtProtocolFolderImportPolicy
            || folderName.StartsWith("Saniert ", StringComparison.OrdinalIgnoreCase)
            || string.Equals(folderName, "Saniert", StringComparison.OrdinalIgnoreCase);
 
+    // Protokolldatum nach der gemeinsamen Leseregel (Deepscan A4). Steht nur ein Jahr da,
+    // ist der Dateinamenstempel genauer; das Jahr gilt erst, wenn auch dieser fehlt.
     private static DateTime ParseProtocolDate(string? rawDate, string pdfPath)
     {
-        var formats = new[] { "dd.MM.yyyy", "dd.MM.yy", "yyyy-MM-dd", "yyyyMMdd" };
-        if (!string.IsNullOrWhiteSpace(rawDate)
-            && DateTime.TryParseExact(
-                rawDate.Trim(),
-                formats,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.None,
-                out var parsed))
-        {
-            return parsed;
-        }
+        var gelesen = HaltungFeldwerte.LiesInspektionsdatumGenau(rawDate);
+        if (gelesen is { NurJahr: false } genau)
+            return genau.Datum;
 
         var fileName = Path.GetFileNameWithoutExtension(pdfPath);
         var stamp = fileName.Length >= 8 ? fileName[..8] : string.Empty;
@@ -235,9 +229,9 @@ internal static class SchachtProtocolFolderImportPolicy
             "yyyyMMdd",
             CultureInfo.InvariantCulture,
             DateTimeStyles.None,
-            out parsed)
+            out var parsed)
             ? parsed
-            : DateTime.MinValue;
+            : gelesen?.Datum ?? DateTime.MinValue;
     }
 
     internal static bool IsSameOrBelow(string path, string folder)

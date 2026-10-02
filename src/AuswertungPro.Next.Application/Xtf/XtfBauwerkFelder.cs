@@ -1,4 +1,5 @@
 using System.Globalization;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Xtf;
@@ -69,10 +70,11 @@ public static class XtfBauwerkFelder
         }
         var datum = wert(FieldKeys.InspectionYear)?.Trim();
         if (string.IsNullOrEmpty(datum)) return;
+        // Datum nach der gemeinsamen Leseregel (Deepscan A4). Ein Jahr aus Freitext wird fuer den
+        // Export nicht geraten: Als reines Jahr zaehlt nur ein ganzer Wert aus vier Ziffern.
         var jahr = int.TryParse(datum, out var zahl) && datum.Length == 4 ? zahl : 0;
-        if (jahr == 0 && DateOnly.TryParseExact(datum,
-            ["dd.MM.yyyy", "d.M.yyyy", "yyyy-MM-dd", "yyyyMMdd"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var tag))
-            jahr = tag.Year;
+        if (jahr == 0 && HaltungFeldwerte.LiesInspektionsdatumGenau(datum) is { NurJahr: false } tag)
+            jahr = tag.Datum.Year;
         if (jahr is >= 1800 and <= 2100) felder.Add(new("Zustandserhebung_Jahr", jahr.ToString(CultureInfo.InvariantCulture)));
     }
 }

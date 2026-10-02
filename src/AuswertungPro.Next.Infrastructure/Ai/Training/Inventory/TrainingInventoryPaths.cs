@@ -1,3 +1,5 @@
+using AuswertungPro.Next.Application.Common;
+
 namespace AuswertungPro.Next.Infrastructure.Ai.Training.Inventory;
 
 internal static class TrainingInventoryPaths
@@ -40,34 +42,14 @@ internal static class TrainingInventoryPaths
                || fullPath.StartsWith(fullRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
+    // Gemeinsame Verknuepfungspruefung (Deepscan A5): ganzer Pfad ab Laufwerk, ein noch fehlender
+    // Rest ist erlaubt, Lesefehler werfen ihre urspruengliche Ausnahme. Gemeldet wird das unterste
+    // verknuepfte Glied (frueher das oberste; nur bei mehreren Verknuepfungen verschieden).
     public static string? FindReparsePoint(string path)
     {
-        var fullPath = Path.GetFullPath(path);
-        var pathRoot = Path.GetPathRoot(fullPath);
-        if (string.IsNullOrWhiteSpace(pathRoot))
-            return null;
-
-        var current = pathRoot;
-        var relative = Path.GetRelativePath(pathRoot, fullPath);
-        foreach (var part in relative.Split(
-                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-                     StringSplitOptions.RemoveEmptyEntries))
-        {
-            current = Path.Combine(current, part);
-            FileAttributes attributes;
-            try
-            {
-                attributes = File.GetAttributes(current);
-            }
-            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
-            {
-                break;
-            }
-
-            if ((attributes & FileAttributes.ReparsePoint) != 0)
-                return current;
-        }
-
-        return null;
+        var befund = VerknuepfungsSchutz.PruefePfadAbLaufwerk(path, VerknuepfungsRegel.GanzerPfad);
+        if (befund.Fehler is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(befund.Fehler);
+        return befund.Befund == VerknuepfungsBefund.Verknuepfung ? befund.Pfad : null;
     }
 }

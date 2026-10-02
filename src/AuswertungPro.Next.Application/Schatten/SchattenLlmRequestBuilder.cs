@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Schatten;
 
@@ -57,9 +58,8 @@ public static class SchattenLlmRequestBuilder
         var dnRaw = record.GetFieldValue("DN_mm");
         int.TryParse(dnRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var dn);
 
-        var lengthRaw = record.GetFieldValue("Haltungslaenge_m");
-        double.TryParse(lengthRaw?.Replace(',', '.'), NumberStyles.Float,
-            CultureInfo.InvariantCulture, out var lengthM);
+        // Haltungslaenge nach der gemeinsamen Leseregel (Deepscan A4).
+        var lengthM = HaltungFeldwerte.LiesLaenge(record) ?? 0d;
 
         var gwRaw = record.GetFieldValue("Grundwasserspiegel");
         bool? groundwater = gwRaw?.Trim().ToLowerInvariant() switch

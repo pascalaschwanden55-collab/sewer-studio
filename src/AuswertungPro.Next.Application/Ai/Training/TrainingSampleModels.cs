@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -337,85 +337,11 @@ public static class TrainingSampleEligibility
             : new TrainingEligibilityResult(false, InvalidCatalogCodeReason);
     }
 
+    /// <summary>
+    /// Inspektionsdatum fuer den Trainings-Stichtag. Liest nach der gemeinsamen Regel
+    /// <see cref="HaltungFeldwerte.LiesInspektionsdatum(string?)"/> (Deepscan A4), damit
+    /// Training, Mediensuche und Dateistempel denselben Feldwert gleich deuten.
+    /// </summary>
     public static DateTime? TryParseInspectionDate(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim();
-        var formats = new[]
-        {
-            "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy",
-            "dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy", "d/M/yy",
-            "yyyy-MM-dd", "yyyy/MM/dd", "yyyyMMdd"
-        };
-
-        if (DateTime.TryParseExact(
-                text,
-                formats,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeLocal,
-                out var exact))
-        {
-            return exact.Date;
-        }
-
-        var dateMatch = Regex.Match(text, @"\b(?<d>\d{1,2})[./-](?<m>\d{1,2})[./-](?<y>\d{2,4})\b");
-        if (dateMatch.Success)
-        {
-            var day = int.Parse(dateMatch.Groups["d"].Value, CultureInfo.InvariantCulture);
-            var month = int.Parse(dateMatch.Groups["m"].Value, CultureInfo.InvariantCulture);
-            var year = int.Parse(dateMatch.Groups["y"].Value, CultureInfo.InvariantCulture);
-            if (year < 100)
-                year += year >= 70 ? 1900 : 2000;
-            if (TryCreateDate(year, month, day, out var parsed))
-                return parsed;
-        }
-
-        var isoMatch = Regex.Match(text, @"\b(?<y>\d{4})[-/](?<m>\d{1,2})[-/](?<d>\d{1,2})\b");
-        if (isoMatch.Success)
-        {
-            var year = int.Parse(isoMatch.Groups["y"].Value, CultureInfo.InvariantCulture);
-            var month = int.Parse(isoMatch.Groups["m"].Value, CultureInfo.InvariantCulture);
-            var day = int.Parse(isoMatch.Groups["d"].Value, CultureInfo.InvariantCulture);
-            if (TryCreateDate(year, month, day, out var parsed))
-                return parsed;
-        }
-
-        // Eingebettetes yyyyMMdd-Datum, z.B. im Dateinamen-Praefix "20251110_9866-9327.pdf".
-        // 8 zusammenhaengende Ziffern, die NICHT Teil einer laengeren Ziffernfolge sind (Lookarounds),
-        // links-nach-rechts der erste gueltige Kalendertag mit plausiblem Jahr [1990,2099].
-        // Laeuft erst nach Exact/Trennzeichen-Formaten und VOR dem reinen Jahres-Fallback.
-        foreach (Match compact in Regex.Matches(text, @"(?<!\d)(?<y>\d{4})(?<m>\d{2})(?<d>\d{2})(?!\d)"))
-        {
-            var cy = int.Parse(compact.Groups["y"].Value, CultureInfo.InvariantCulture);
-            var cm = int.Parse(compact.Groups["m"].Value, CultureInfo.InvariantCulture);
-            var cd = int.Parse(compact.Groups["d"].Value, CultureInfo.InvariantCulture);
-            if (cy is >= 1990 and <= 2099 && TryCreateDate(cy, cm, cd, out var compactDate))
-                return compactDate;
-        }
-
-        var yearMatch = Regex.Match(text, @"\b(?<y>19\d{2}|20\d{2})\b");
-        if (yearMatch.Success)
-        {
-            var year = int.Parse(yearMatch.Groups["y"].Value, CultureInfo.InvariantCulture);
-            return new DateTime(year, 1, 1);
-        }
-
-        return null;
-    }
-
-    private static bool TryCreateDate(int year, int month, int day, out DateTime date)
-    {
-        try
-        {
-            date = new DateTime(year, month, day);
-            return true;
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            date = default;
-            return false;
-        }
-    }
+        => HaltungFeldwerte.LiesInspektionsdatum(raw);
 }

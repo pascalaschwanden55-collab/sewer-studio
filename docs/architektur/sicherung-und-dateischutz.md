@@ -9,10 +9,40 @@
 
 ## Inhalt
 
+- Gemeinsame Verknüpfungsprüfung (02.10.2026)
 - Auditkorrekturen: Originalschutz und stabile Sicherungen (18.09.2026)
 - Sicherung und Ausfallschutz (09.09.2026)
 - Audit Paket 1 — Dateischutz und Wiederherstellung (06.09.2026)
 - (Fortsetzung aus «Wichtige Klassen»)
+
+## Gemeinsame Verknüpfungsprüfung (02.10.2026)
+
+Deepscan 02.10.2026, Befund A5. «Keine Verknüpfungen/Junctions betreten» hat einen gemeinsamen
+Baustein: `VerknuepfungsSchutz` mit `VerknuepfungsRegel` (`Application/Common`). Die vier Punkte, in
+denen sich die lokalen Kopien unterschieden, sind jetzt ausdrücklich: Wurzel einschliessen, oberhalb
+der Wurzel prüfen, bei Lesefehler sperren, fehlender Pfad erlaubt. Meldung und Ausnahmetyp wählt
+weiter der Aufrufer; `Fehlt`/`NichtPruefbar` tragen die ursprüngliche Ausnahme zum Weitergeben.
+
+- **Benannte Regeln:** `Spiegel` (Wurzel aus, Lesefehler offen: `ReparsePointGuard`,
+  PDF-Prüfablage), `ProjektSchreibgrenze` (Wurzel und alle Vorfahren bis zum Laufwerk:
+  `ProjectMutationPathPolicy`, `BackupTargetPathGuard`), `Streng` (jedes Glied vorhanden und lesbar:
+  Gold-Speicher, Gold-Eingang, Goldprüfung, Gold-Altarchiv, Import-Staging, Importquellen),
+  `GanzerPfad` (ganzer Pfad ab Laufwerk, fehlender Rest erlaubt: `TrainingInventoryPaths`).
+- **Gleich geblieben:** Meldungen, Ausnahmetypen und welche Glieder geprüft werden. Kleine
+  benannte Unterschiede: Bei mehreren Verknüpfungen nennt die Trainingsablage das unterste statt
+  des obersten Glieds; ausserhalb der Gold-Schutzwurzel werden erst alle Vorfahren geprüft;
+  `ReparsePointGuard` wertet auch ungültige Pfade als frei; das Sicherungsziel meldet auch
+  `SecurityException`/`ArgumentException` als «nicht sicher geprüft».
+- **Tests:** Tabellentests `VerknuepfungsSchutzTests` (eingespielte Attribute) und je umgestelltem
+  Weg ein Junction-Test (`JunctionFact`). Sperrklinke `VerknuepfungsKopienWaechterTests`: Zahl der
+  Produktdateien mit eigener `FileAttributes.ReparsePoint`-Prüfung, darf nur sinken (am 02.10.2026
+  von 30 auf 19). Wer eine weitere Kopie umstellt, senkt den Wert.
+- **Noch lokal (19 Dateien, folgen bei der nächsten Berührung):** Dateisuche und Zähler
+  (`SafeFileEnumeration`, `UebersprungeneOrdner`, `TrainingInventoryFileEnumerator`,
+  `TrainingPdfFolderDiscoveryService`) brauchen die Attribute zusätzlich; ferner Eval-Schutz-Leser,
+  Haltungsumbenennung, Trainings-Export-Registry, Sicherungsquelle und externe Verweise,
+  Wissensspiegel, Kostenspeicher-Probe, Diagnosepaket, Verteilabgleich, Importjournal und
+  -wiederherstellung, Aufräumdienste und Protokolleditor.
 
 ## Auditkorrekturen: Originalschutz und stabile Sicherungen (18.09.2026)
 

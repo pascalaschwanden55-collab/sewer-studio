@@ -22,6 +22,34 @@ public sealed class BackupTargetPathGuardTests
         Assert.Contains("Verknüpfung", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    // Deepscan A5: Die Eintragspruefung laeuft ueber den gemeinsamen VerknuepfungsSchutz.
+    [JunctionFact]
+    public void EnsurePathIsSafe_echte_Junction_in_der_Zielkette_wird_blockiert()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "backup-ziel-" + Guid.NewGuid().ToString("N"));
+        var fremd = Path.Combine(Path.GetTempPath(), "backup-fremd-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(fremd);
+        var link = Path.Combine(root, "link");
+        try
+        {
+            JunctionTestSupport.CreateDirectoryLink(link, fremd);
+
+            var error = Assert.Throws<InvalidDataException>(() =>
+                BackupTargetPathGuard.EnsurePathIsSafe(root, Path.Combine(link, "datei.txt")));
+
+            Assert.Contains("Verknüpfung im Sicherungs-Zielpfad", error.Message, StringComparison.Ordinal);
+            Assert.Empty(Directory.EnumerateFileSystemEntries(fremd));
+        }
+        finally
+        {
+            if (Directory.Exists(link))
+                Directory.Delete(link);
+            Directory.Delete(root, recursive: true);
+            Directory.Delete(fremd, recursive: true);
+        }
+    }
+
     [Fact]
     public void EnsureRootIsSafe_Verknuepfung_in_der_Elternkette_wird_blockiert()
     {

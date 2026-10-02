@@ -1,3 +1,5 @@
+using AuswertungPro.Next.Application.Common;
+
 namespace AuswertungPro.Next.Infrastructure.Import;
 
 internal sealed class ImportFileStagingPathGuard
@@ -61,9 +63,14 @@ internal sealed class ImportFileStagingPathGuard
         }
     }
 
+    // Gemeinsame Verknuepfungspruefung (Deepscan A5), Regel Streng: ein fehlender oder unlesbarer
+    // Eintrag wirft seine urspruengliche Ausnahme (EnsureExistingTargetIsNotReparsePoint faengt "fehlt").
     public static void EnsureNotReparsePoint(string path)
     {
-        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+        var befund = VerknuepfungsSchutz.PruefeEintrag(path, VerknuepfungsRegel.Streng);
+        if (befund.Fehler is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(befund.Fehler);
+        if (befund.Befund == VerknuepfungsBefund.Verknuepfung)
             throw new IOException($"Importpfad enthält eine Verknüpfung oder Junction: {path}");
     }
 

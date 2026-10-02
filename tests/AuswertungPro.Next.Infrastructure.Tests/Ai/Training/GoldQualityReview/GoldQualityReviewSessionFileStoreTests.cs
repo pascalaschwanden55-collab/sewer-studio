@@ -98,6 +98,22 @@ public sealed class GoldQualityReviewSessionFileStoreTests : IDisposable
         }
     }
 
+    // Deepscan A5: Die Eintragspruefung laeuft ueber den gemeinsamen VerknuepfungsSchutz.
+    [JunctionFact]
+    public void LoadCurrent_blockiert_ein_verknuepftes_Sitzungsmanifest()
+    {
+        var store = new GoldQualityReviewSessionFileStore(_root);
+        store.SaveCurrent(CreateSession());
+        var path = store.GetCurrentPath("Besitzer");
+        var fremd = Path.Combine(_root, "fremdes-manifest.json");
+        File.Move(path, fremd);
+        File.CreateSymbolicLink(path, fremd);
+
+        var error = Assert.Throws<InvalidDataException>(() => store.LoadCurrent("Besitzer"));
+
+        Assert.Contains("Verknüpfte Pfade", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void SaveCurrent_prueft_die_vollstaendige_Pfadkette_vor_dem_Schreiben()
     {
