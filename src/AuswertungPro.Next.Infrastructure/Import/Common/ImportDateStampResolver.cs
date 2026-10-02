@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
-using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Common;
 
@@ -37,39 +37,13 @@ internal static class ImportDateStampResolver
         return Unbekannt;
     }
 
+    // Datum_Jahr nach der gemeinsamen Leseregel (Deepscan A4). Frueher eigene Deutung mit
+    // de-CH-TryParse und Ziffernzaehlung: "5.3" ergab das laufende Jahr, "24/25" den Stempel 24250101.
     private static bool TryFromText(string? raw, out string stamp)
     {
-        stamp = Unbekannt;
-        if (string.IsNullOrWhiteSpace(raw))
-            return false;
-
-        raw = raw.Trim();
-
-        if (DateTime.TryParse(raw, CultureInfo.GetCultureInfo("de-CH"), DateTimeStyles.None, out var d)
-            || DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out d))
-        {
-            stamp = d.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
-            return true;
-        }
-
-        var digits = new string(raw.Where(char.IsDigit).ToArray());
-        if (digits.Length == 4)          // reines Jahr
-        {
-            stamp = digits + "0101";
-            return true;
-        }
-
-        if (digits.Length >= 8)          // bereits JJJJMMTT o.ae.
-        {
-            var candidate = digits.Substring(0, 8);
-            if (DateTime.TryParseExact(candidate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
-            {
-                stamp = candidate;
-                return true;
-            }
-        }
-
-        return false;
+        var datum = HaltungFeldwerte.LiesInspektionsdatum(raw);
+        stamp = datum?.ToString("yyyyMMdd", CultureInfo.InvariantCulture) ?? Unbekannt;
+        return datum is not null;
     }
 
     private static bool TryFromPath(string? path, out string stamp)
