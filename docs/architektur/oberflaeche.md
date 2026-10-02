@@ -9,12 +9,44 @@
 
 ## Inhalt
 
+- Haltungs- und Schachtseite: gemeinsame Ablaeufe (02.10.2026)
 - Optik und Bedienung professionell (28.09.2026)
 - Startanimation 5.0: Kugel, deutlich neu (14.09.2026)
 - Persoenliche Erledigt-Markierung (13.09.2026)
 - Aufklapplisten: Reihenfolge (09.09.2026)
 - Nova-Abschluss: Video-Kopienregel (2026-09-06)
 - Nova-Nachpruefung abgeschlossen (2026-09-06)
+
+## Haltungs- und Schachtseite: gemeinsame Ablaeufe (02.10.2026)
+
+Deepscan 02.10.2026, Befund A2: Die beiden Datenseiten bestanden aus Datei-Paaren, die zu
+59-91 % gleich waren, und liefen auseinander. Regel: **Ein Ablauf, der fachlich gleich ist,
+steht einmal** und beide Seiten rufen ihn; die Seiten liefern nur, was wirklich verschieden ist.
+
+- **Uebernahme abgeschlossen** (QGIS-Nachfuellen, GeoShop-Abgleich, WebGIS-Holen): jeder Weg
+  beider Seiten ruft `MeldeUebernahme()`, beide nur `SeitenUebernahme.Abschliessen` — Projekt
+  geaendert (`MarkProjectDirty`), Autosave nach Einstellung, Rueckgaengig-Verlauf leeren,
+  `FelderExternErgaenzt` (offenes Formular und Objektakte zeichnen neu). Vorher meldete die
+  Schachtseite bei QGIS kein Ergebnis und zeichnete nichts neu, und QGIS liess auf BEIDEN Seiten
+  das Projekt «ungeaendert»: keine Titelmarke, keine Rueckfrage beim Schliessen, kein Autosave,
+  obwohl die Werte schon im Datensatz standen. Die Ergebnismeldung zeigt jede Seite in ihrer
+  Statuszeile (Haltungen `SaveStatus`, Schaechte `LastResult`).
+  Waechter: `SeitenUebernahmeTests` (QGIS beide Seiten echt, Reihenfolge, alle sechs Wege).
+- **Rueckgaengig/Wiederholen**: `SeitenVerlauf.Wende` (auch der Fall «nicht vollständig»). Die
+  Seite behaelt ihre Schranke. Tests: `DatenVerlaufShellTests` (Teilweise-Fall je Seite).
+- **Aufklapp-Liste**: `AufklappListeController<TListe, TRecord>` mit `IAufklappListe<TRecord>`;
+  `DataPageAufklappListeController`/`SchaechteAufklappListeController` liefern nur Datensaetze,
+  Schranke, Layout und (nur Haltungen) den Konflikthinweis W01.
+- **Gewollte Unterschiede** (nicht angleichen): Die Schachtseite sperrt Aenderungen zusaetzlich
+  ueber `CanMutateShaftData` (laufender Protokollimport), die Haltungsseite nur ueber
+  `IsProjectReady`. Nur die Haltungsseite hat Abdocken, die getrennte alte Suchzeile, die
+  Mehrfachauswahl zum Loeschen und den Konflikthinweis W01. Die Schacht-Matrix braucht weder den
+  Mehrfach-Massnahmen-Schutz noch das Leeren von Tabellenfeldern der Haltungs-Matrix:
+  `schacht_costs.json` schreibt nur sie selbst, immer mit genau einer Massnahme, und sie schreibt
+  keine Kostenfelder in die Schachtdatensaetze.
+- **Offen (Entscheid)**: W01-Konfliktschutz im Schachtformular (heute schreibt eine Eingabe auch
+  ueber eine inzwischen geaenderte Tabellenkorrektur); Sprung von aussen (Dossier, Suche) klappt
+  in der Schachtliste nicht auf wie bei den Haltungen (`ZeigeHaltung`).
 
 ## Optik und Bedienung professionell (28.09.2026)
 
