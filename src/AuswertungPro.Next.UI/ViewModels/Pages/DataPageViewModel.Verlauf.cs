@@ -21,29 +21,9 @@ public sealed partial class DataPageViewModel
         if (!_shell.IsProjectReady)
             return;
 
-        var ergebnis = rueckgaengig
-            ? Verlauf.Rueckgaengig(DatenaenderungsBereich.Haltungen)
-            : Verlauf.Wiederholen(DatenaenderungsBereich.Haltungen);
-        if (!ergebnis.Angewendet)
-        {
-            _toasts.Warning(ergebnis.Meldung);
-            // Schlusswelle (Item 4): "nicht vollständig" (Teilweise=true) heisst, das Anwenden UND
-            // der Rueckbau der bereits geschriebenen Teile sind mitten im Schritt gescheitert - an
-            // den betroffenen Datensaetzen koennen trotzdem Feldwerte stehen geblieben sein. Das
-            // muss ins Projekt/die Anzeige, obwohl der Schritt selbst nicht als Rueckgaengig-Eintrag
-            // zaehlt (Angewendet bleibt false).
-            if (ergebnis.Teilweise)
-            {
-                _shell.MarkProjectDirty();
-                ScheduleAutoSave();
-                FelderExternErgaenzt?.Invoke();
-            }
-            return;
-        }
-
-        _shell.MarkProjectDirty();
-        ScheduleAutoSave();
-        FelderExternErgaenzt?.Invoke();
-        ShowSaveStatus(ergebnis.Meldung);
+        // Der Ablauf (auch der Fall «nicht vollständig») steht einmal fuer beide Seiten in SeitenVerlauf.
+        SeitenVerlauf.Wende(Verlauf, DatenaenderungsBereich.Haltungen, rueckgaengig, meldung => _toasts.Warning(meldung),
+            () => { _shell.MarkProjectDirty(); ScheduleAutoSave(); FelderExternErgaenzt?.Invoke(); },
+            ShowSaveStatus);
     }
 }

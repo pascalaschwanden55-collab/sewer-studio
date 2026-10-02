@@ -57,7 +57,7 @@ public sealed class MaintainabilityFitnessTests
         ["AuswertungPro.Next.UI.Views.Pages.DataPage"] = 1_945,
         ["AuswertungPro.Next.UI.ViewModels.Pages.BuilderPageViewModel"] = 1_964,
         ["AuswertungPro.Next.UI.ViewModels.TrainingStudioViewModel"] = 1_951,
-        ["AuswertungPro.Next.UI.ViewModels.Pages.SchaechtePageViewModel"] = 1_913,
+        ["AuswertungPro.Next.UI.ViewModels.Pages.SchaechtePageViewModel"] = 1_894,
         ["AuswertungPro.Next.UI.ViewModels.Pages.ExportPageViewModel"] = 1_889,
         ["AuswertungPro.Next.Infrastructure.Import.WinCan.WinCanDbImportService"] = 1_821,
         ["AuswertungPro.Next.UI.ViewModels.ShellViewModel"] = 1_783,
@@ -65,7 +65,7 @@ public sealed class MaintainabilityFitnessTests
         ["AuswertungPro.Next.UI.Views.Pages.SchaechtePage"] = 1_687,
         ["AuswertungPro.Next.UI.ViewModels.Pages.DossiersPageViewModel"] = 1_642,
         ["AuswertungPro.Next.UI.Views.Windows.StartupSplashWindow"] = 1_618,
-        ["AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel"] = 1_557,
+        ["AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel"] = 1_537,
         ["AuswertungPro.Next.UI.ServiceProvider"] = 1_557,
         ["AuswertungPro.Next.UI.Views.Windows.PhotoMeasurementWindow"] = 1_556
     };
