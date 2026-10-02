@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using AuswertungPro.Next.Application.Import;
+using UebersprungeneOrdner = AuswertungPro.Next.Application.Common.UebersprungeneOrdner;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Common;
 
@@ -72,19 +73,27 @@ internal static class ImportPostProcessingController
 
         var result = await Task.Run(() =>
         {
+            // R1 (02.10.2026): Ordner, die die Suche ausliess, zaehlen als Fehler und stehen im Text.
+            var uebersprungen = new List<string>();
             var pdfFiles = EnumerateProjectFiles(
                     request.SourceFolder,
                     PdfExtensions,
                     includeRoot: true,
-                    PdfDirectories)
+                    PdfDirectories,
+                    uebersprungen)
                 .ToArray();
+            var luecken = UebersprungeneOrdner.Meldungen(uebersprungen);
+            var lueckenText = string.Concat(luecken.Select(zeile => Environment.NewLine + zeile));
 
+            // Liegen alle PDFs hinter einem ausgelassenen Ordner, ist «keine PDF» nur die halbe Wahrheit.
             if (pdfFiles.Length == 0)
-                return new PdfScanResult(0, 0, 0, "Keine PDF-Dateien im Quellordner gefunden.");
+                return new PdfScanResult(0, 0, 0, luecken.Count == 0
+                    ? "Keine PDF-Dateien im Quellordner gefunden."
+                    : $"Keine PDF-Dateien im Quellordner gefunden, {luecken.Count} Fehler" + lueckenText, luecken.Count);
 
             var found = 0;
             var updated = 0;
-            var errors = 0;
+            var errors = luecken.Count;
 
             for (var i = 0; i < pdfFiles.Length; i++)
             {
@@ -125,12 +134,13 @@ internal static class ImportPostProcessingController
                 }
             }
 
-            var message = $"PDF-Scan: {pdfFiles.Length} Dateien, {found} Haltungen zugeordnet, {updated} aktualisiert, {errors} Fehler";
-            return new PdfScanResult(pdfFiles.Length, found, updated, message);
+            var message = $"PDF-Scan: {pdfFiles.Length} Dateien, {found} Haltungen zugeordnet, {updated} aktualisiert, {errors} Fehler"
+                          + lueckenText;
+            return new PdfScanResult(pdfFiles.Length, found, updated, message, errors);
         });
 
         actions.AppendSummaryText($"\n{result.Message}");
-        if (result.Files > 0)
+        if (result.Files > 0 || result.Errors > 0)
             actions.AppendDetailsText($"\n\n{result.Message}");
     }
 
@@ -189,7 +199,8 @@ internal static class ImportPostProcessingController
         string root,
         IReadOnlyCollection<string> extensions,
         bool includeRoot,
-        IReadOnlyCollection<string> includeDirs)
+        IReadOnlyCollection<string> includeDirs,
+        ICollection<string> uebersprungen)
     {
         var searched = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var yieldedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -211,7 +222,7 @@ internal static class ImportPostProcessingController
             IEnumerable<string> files;
             try
             {
-                files = SafeFileEnumeration.EnumerateFilesSafe(baseDir, "*.*", recursive: true);
+                files = SafeFileEnumeration.EnumerateFilesSafe(baseDir, "*.*", recursive: true, uebersprungen);
             }
             catch
             {
@@ -228,5 +239,5 @@ internal static class ImportPostProcessingController
         }
     }
 
-    private sealed record PdfScanResult(int Files, int Found, int Updated, string Message);
+    private sealed record PdfScanResult(int Files, int Found, int Updated, string Message, int Errors);
 }

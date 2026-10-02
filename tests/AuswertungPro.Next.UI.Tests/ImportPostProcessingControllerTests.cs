@@ -99,6 +99,74 @@ public sealed class ImportPostProcessingControllerTests
         Assert.Equal(2, pdfImport.Paths.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
+    [Fact]
+    public async Task RunAsync_meldet_einen_uebersprungenen_Unterordner_als_Fehler()
+    {
+        // R1 (Deepscan 02.10.2026): Die PDFs hinter einer Verknuepfung werden nicht gelesen.
+        // Der Lauf muss das sagen, statt «0 Fehler» zu melden.
+        using var temp = new TempDirectory();
+        var quelle = Path.Combine(temp.Path, "quelle");
+        var extern_ = Path.Combine(temp.Path, "extern");
+        Directory.CreateDirectory(quelle);
+        Directory.CreateDirectory(extern_);
+        File.WriteAllText(Path.Combine(quelle, "protokoll.pdf"), "test");
+        File.WriteAllText(Path.Combine(extern_, "fehlt.pdf"), "test");
+        var link = Path.Combine(quelle, "verknuepft");
+        Directory.CreateSymbolicLink(link, extern_);
+        var pdfImport = new FakePdfImportService(_ => Result<ImportStats>.Success(
+            new ImportStats(Found: 2, Created: 0, Updated: 1, Errors: 0, Uncertain: 0, Messages: [])));
+        var state = new UiState();
+
+        try
+        {
+            await ImportPostProcessingController.RunAsync(
+                Request(quelle, new Project(), pdfImport),
+                Actions(state));
+        }
+        finally
+        {
+            Directory.Delete(link);
+        }
+
+        Assert.Single(pdfImport.Paths);
+        Assert.Contains("PDF-Scan: 1 Dateien, 2 Haltungen zugeordnet, 1 aktualisiert, 1 Fehler", state.Summary);
+        Assert.Contains($"Ordner «{link}» übersprungen: Verknüpfung, wird nicht betreten", state.Summary);
+        Assert.Contains($"Ordner «{link}» übersprungen", state.Details);
+    }
+
+    [Fact]
+    public async Task RunAsync_meldet_den_Ordner_als_Fehler_wenn_alle_Pdfs_dahinter_liegen()
+    {
+        // Review PR #68: Ohne gefundene PDF darf der Lauf nicht nur «Keine PDF-Dateien» sagen.
+        using var temp = new TempDirectory();
+        var quelle = Path.Combine(temp.Path, "quelle");
+        var extern_ = Path.Combine(temp.Path, "extern");
+        Directory.CreateDirectory(quelle);
+        Directory.CreateDirectory(extern_);
+        File.WriteAllText(Path.Combine(extern_, "fehlt.pdf"), "test");
+        var link = Path.Combine(quelle, "verknuepft");
+        Directory.CreateSymbolicLink(link, extern_);
+        var pdfImport = new FakePdfImportService(_ => throw new InvalidOperationException("Nicht erwartet."));
+        var state = new UiState();
+
+        try
+        {
+            await ImportPostProcessingController.RunAsync(
+                Request(quelle, new Project(), pdfImport),
+                Actions(state));
+        }
+        finally
+        {
+            Directory.Delete(link);
+        }
+
+        var zeile = $"Ordner «{link}» übersprungen: Verknüpfung, wird nicht betreten";
+        Assert.Empty(pdfImport.Paths);
+        Assert.Contains("Keine PDF-Dateien im Quellordner gefunden, 1 Fehler", state.Summary);
+        Assert.Contains(zeile, state.Summary);
+        Assert.Contains(zeile, state.Details);
+    }
+
     private static ImportPostProcessingRequest Request(
         string sourceFolder,
         Project project,
