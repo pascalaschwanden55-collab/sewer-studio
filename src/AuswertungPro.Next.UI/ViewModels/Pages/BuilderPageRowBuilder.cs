@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 
@@ -112,17 +113,13 @@ public static class BuilderPageRowBuilder
         return null;
     }
 
+    // Jahr nach der gemeinsamen Leseregel fuer Datum_Jahr (Deepscan A4); Unlesbares bleibt sichtbar.
     private static string NormalizeYear(string? value)
     {
         var text = SafeText(value);
-        if (text.Length >= 4
-            && int.TryParse(text[..4], out var year)
-            && year is >= 1900 and <= 2200)
-        {
-            return year.ToString(CultureInfo.InvariantCulture);
-        }
-
-        return text;
+        return HaltungFeldwerte.LiesInspektionsdatum(text) is { } datum
+            ? datum.Year.ToString(CultureInfo.InvariantCulture)
+            : text;
     }
 
     private static string BuildMeasurePreview(string? raw)

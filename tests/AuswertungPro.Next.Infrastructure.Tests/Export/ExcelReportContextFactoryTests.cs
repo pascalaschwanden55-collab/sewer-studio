@@ -72,4 +72,18 @@ public sealed class ExcelReportContextFactoryTests
 
         Assert.Equal("Schachtprojekt / Aufnahmen 2026 Schächte", title);
     }
+
+    // Deepscan A4: Ein Datum mit zweistelligem Jahr zaehlt nach der gemeinsamen Leseregel mit.
+    [Fact]
+    public void Aufnahmejahr_aus_Datum_mit_zweistelligem_Jahr()
+    {
+        var project = new Project { Name = "GEP" };
+        var record = new HaltungRecord();
+        record.SetFieldValue(FieldKeys.InspectionYear, "24.09.25", FieldSource.Manual, userEdited: false);
+        project.Data.Add(record);
+
+        var title = ExcelReportContextFactory.AusProjekt(project).TitelFuer("Haltungen");
+
+        Assert.Equal("GEP / Aufnahmen 2025 Haltungen", title);
+    }
 }
