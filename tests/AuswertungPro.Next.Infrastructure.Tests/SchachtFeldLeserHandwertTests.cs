@@ -57,4 +57,14 @@ public sealed class SchachtFeldLeserHandwertTests
 
         Assert.Equal("Ersatz", XtfZusatzangaben.SchachtfeldWert(record, FieldKeys.RecommendedRehabilitationMeasures));
     }
+
+    [Fact]
+    public void Schachtgrafik_zeigt_keine_alte_Schachtform_neben_bewusst_leer()
+    {
+        var record = Altbestand(FieldKeys.ShaftShape, "SCHACHTFORM", "Oval");
+
+        var modell = SchachtgrafikModellBuilder.Baue(record, null, null, null, "#000000");
+
+        Assert.Null(modell.Schachtform);
+    }
 }
