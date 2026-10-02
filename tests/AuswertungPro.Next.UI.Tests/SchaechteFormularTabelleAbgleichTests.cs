@@ -222,4 +222,31 @@ public sealed class SchaechteFormularTabelleAbgleichTests
         Assert.Equal("Kunststoff", record.GetFieldValue("Ausführung"));
         Assert.Equal("Kunststoff", record.GetFieldValue("Ausfuehrung"));
     }
+
+    [Fact]
+    public void Detailfenster_zeigt_den_Konflikthinweis_selbst_statt_der_Seite()
+    {
+        // Review PR #75 (P2): Das Detailfenster nutzt denselben Builder. Der Hinweis gehoert in das
+        // Fenster, in dem eingegeben wurde, nicht in Liste oder Schublade dahinter.
+        var (builder, konflikte, _) = Builder();
+        var record = RecordMit("Alt");
+        var gruppen = builder.Build([Feld], record);
+        string? hinweis = null;
+        using var anzeige = FormularKonfliktAnzeige.Verbinde(gruppen, text => hinweis = text);
+
+        record.SetFieldValue(Feld, "Tabellenkorrektur", FieldSource.Manual, userEdited: true);
+        Item(gruppen, Feld).Value = "Alt + Zusatz";
+
+        Assert.Empty(konflikte);
+        Assert.NotNull(hinweis);
+        Assert.Contains("„Tabellenkorrektur“", hinweis);
+        Assert.Contains("„Alt + Zusatz“", hinweis);
+        Assert.Equal("Tabellenkorrektur", record.GetFieldValue(Feld));
+
+        // Nach dem Abmelden (Fenster zu) meldet wieder die Seite.
+        anzeige.Dispose();
+        record.SetFieldValue(Feld, "Noch neuer", FieldSource.Manual, userEdited: true);
+        Item(gruppen, Feld).Value = "Tabellenkorrektur + Zusatz";
+        Assert.Single(konflikte);
+    }
 }

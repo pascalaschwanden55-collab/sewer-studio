@@ -5,10 +5,14 @@
         ui:WindowFx.Entrance="True"
         xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
         xmlns:nova="clr-namespace:AuswertungPro.Next.UI.Controls"
+        xmlns:pages="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
         x:Name="Root"
         Title="SewerStudio — Details" Width="1360" Height="860" MinWidth="980" MinHeight="680"
         WindowStartupLocation="CenterOwner" WindowStyle="SingleBorderWindow"
         AllowsTransparency="False" ResizeMode="CanResize">
+    <Window.Resources>
+        <pages:StringNotEmptyToVisibilityConverter x:Key="TextSichtbar"/>
+    </Window.Resources>
     <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -19,9 +23,16 @@
         <!-- RecordDetailsView traegt ihren eigenen Kopf ueber Header/SubHeader; hier wird er
              ausgeblendet (IsHeaderVisible=False, gleiches Muster wie DataPageNovaWorkspaceController)
              und stattdessen als gemeinsamer Fensterkopf gezeigt. -->
-        <nova:NovaDialogHeader Grid.Row="0"
-                                Title="{Binding Header, ElementName=Root}"
-                                Subtitle="{Binding SubHeader, ElementName=Root}"/>
+        <StackPanel Grid.Row="0">
+            <nova:NovaDialogHeader Title="{Binding Header, ElementName=Root}"
+                                    Subtitle="{Binding SubHeader, ElementName=Root}"/>
+            <!-- Konflikthinweis (W01): verworfene Eingabe nach einer neueren Korrektur -->
+            <TextBlock x:Name="KonfliktHinweisText" Margin="0,0,0,8" TextWrapping="Wrap"
+                       Text="{Binding Hinweis, ElementName=Root}"
+                       FontSize="{DynamicResource TextS}"
+                       Foreground="{DynamicResource WarningTextBrush}"
+                       Visibility="{Binding Hinweis, ElementName=Root, Converter={StaticResource TextSichtbar}}"/>
+        </StackPanel>
 
         <controls:RecordDetailsView Grid.Row="1"
                                     IsHeaderVisible="False"

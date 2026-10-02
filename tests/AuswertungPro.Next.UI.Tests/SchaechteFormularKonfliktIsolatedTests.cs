@@ -104,6 +104,24 @@ public sealed class SchaechteFormularKonfliktIsolatedTests
             Assert.Contains("„Neu“", schublade.Hinweis);
             Assert.Empty(liste.Hinweis);
 
+            // Detailfenster (Review PR #75): Der Hinweis erscheint im Fenster, in dem eingegeben
+            // wurde - nicht in Liste oder Schublade dahinter.
+            schublade.Hinweis = string.Empty;
+            var fensterGruppen = builder.Build(Array.Empty<string>(), datensaetze[1]);
+            var fenster = new AuswertungPro.Next.UI.Views.Windows.RecordDetailsWindow("Schachtdetails", "Schacht S2", "", fensterGruppen);
+            var fensterFeld = fensterGruppen.SelectMany(g => g.Items).Single(i => i.FieldName == Feld);
+            datensaetze[1].SetFieldValue(Feld, "Tabellenkorrektur", FieldSource.Manual, userEdited: true);
+            fensterFeld.Value = "Alt + Zusatz";
+
+            Assert.Equal("Tabellenkorrektur", datensaetze[1].GetFieldValue(Feld));
+            Assert.Contains("„Alt + Zusatz“", fenster.Hinweis);
+            Assert.Empty(schublade.Hinweis);
+            Assert.Empty(liste.Hinweis);
+            var hinweisText = Assert.IsType<TextBlock>(fenster.FindName("KonfliktHinweisText"));
+            Assert.Equal(fenster.Hinweis, hinweisText.Text);
+            Assert.Equal(Visibility.Visible, hinweisText.Visibility);
+            fenster.Close();
+
             controller.Dispose();
             WpfIsolatedTestProcess.MarkChildScenarioCompleted();
         });
