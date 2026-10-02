@@ -67,4 +67,12 @@ public sealed class SchachtFeldLeserHandwertTests
 
         Assert.Null(modell.Schachtform);
     }
+
+    [Fact]
+    public void Protokollquelle_nennt_keinen_alten_Pfad_neben_bewusst_leer()
+    {
+        var record = Altbestand(FieldKeys.PdfPath, "PDF Path", "C:/alt/protokoll.pdf");
+
+        Assert.Empty(SchachtProtokollQuelle.Kandidaten(record));
+    }
 }
