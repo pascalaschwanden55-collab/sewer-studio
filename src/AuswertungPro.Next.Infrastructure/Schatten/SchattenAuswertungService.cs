@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Sanierung;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Schatten;
 using AuswertungPro.Next.Application.Vsa;
 using AuswertungPro.Next.Domain.Models;
@@ -136,7 +137,7 @@ public sealed class SchattenAuswertungService : ISchattenAuswertungService
         catch (Exception ex)
         {
             // Der Lauf geht weiter, aber die Haltung wird als Fehler gespeichert (nicht als Ergebnis).
-            fehler = "Zustandsbewertung: " + ex.Message;
+            fehler = "Zustandsbewertung: " + UserError.DescribeAndReport(ex, "Schattenauswertung Zustandsbewertung");
         }
 
         // Massnahmen: rein lesende Empfehlung direkt vom Original.
@@ -148,7 +149,7 @@ public sealed class SchattenAuswertungService : ISchattenAuswertungService
         catch (Exception ex)
         {
             empfehlung = MeasureRecommendationResult.Empty;
-            fehler = (fehler is null ? "" : fehler + " | ") + "Massnahmen: " + ex.Message;
+            fehler = (fehler is null ? "" : fehler + " | ") + "Massnahmen: " + UserError.DescribeAndReport(ex, "Schattenauswertung Massnahmen");
         }
 
         if (fehler is not null)
