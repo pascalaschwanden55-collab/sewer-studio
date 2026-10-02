@@ -1,7 +1,7 @@
-using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Player;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
@@ -9,15 +9,9 @@ public static class DataPageVideoOverlayBuilder
 {
     public static PlayerDamageOverlayData? Build(HaltungRecord record)
     {
-        var lengthStr = record.GetFieldValue("Haltungslaenge_m");
-        if (!double.TryParse(lengthStr?.Replace(',', '.'),
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out var pipeLength)
-            || pipeLength <= 0)
-        {
+        // Haltungslaenge nach der gemeinsamen Leseregel (Deepscan A4).
+        if (HaltungFeldwerte.LiesLaenge(record) is not double pipeLength || pipeLength <= 0)
             return null;
-        }
 
         var markers = new List<DamageMarkerInfo>();
         if (record.Protocol?.Current?.Entries is { Count: > 0 } entries)

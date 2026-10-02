@@ -1,6 +1,7 @@
 using System.Globalization;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Ai.Coding;
 
@@ -88,36 +89,14 @@ public static class CodingHaltungslaengeResolver
 
         foreach (var fieldName in new[] { "Haltungslaenge_m", "Laenge_m" })
         {
-            var raw = record.GetFieldValue(fieldName);
-            if (string.IsNullOrWhiteSpace(raw))
-                continue;
-
-            if (double.TryParse(
-                    raw.Replace(',', '.'),
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture,
-                    out var value)
-                && value > 0)
-            {
+            // Haltungslaenge nach der gemeinsamen Leseregel (Deepscan A4).
+            if (HaltungFeldwerte.LiesLaenge(record.GetFieldValue(fieldName)) is double value && value > 0)
                 return value;
-            }
         }
 
         return null;
     }
 
     public static bool HasValidLength(HaltungRecord record, string fieldName)
-    {
-        var raw = record.GetFieldValue(fieldName);
-        if (string.IsNullOrWhiteSpace(raw))
-            return false;
-
-        var normalized = raw.Replace(',', '.');
-        return double.TryParse(
-            normalized,
-            NumberStyles.Float,
-            CultureInfo.InvariantCulture,
-            out var value)
-            && value > 0;
-    }
+        => HaltungFeldwerte.LiesLaenge(record.GetFieldValue(fieldName)) is double value && value > 0;
 }

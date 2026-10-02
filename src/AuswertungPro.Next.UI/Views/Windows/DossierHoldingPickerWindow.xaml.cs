@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using AuswertungPro.Next.Application.Dashboard;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -57,18 +58,11 @@ public sealed partial class DossierHoldingChoice : ObservableObject
     [ObservableProperty]
     private bool _isChosen;
 
+    // Haltungslaenge nach der gemeinsamen Leseregel (Deepscan A4).
     private static string FormatLength(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return "—";
-
-        var normalized = raw.Replace("'", "").Replace(",", ".");
-        return double.TryParse(
-            normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
-            && value > 0
+        => HaltungFeldwerte.LiesLaenge(raw) is double value && value > 0
             ? value.ToString("0.0", CultureInfo.GetCultureInfo("de-CH")) + " m"
             : "—";
-    }
 
     private static string DescribeCondition(string normalized) => normalized switch
     {

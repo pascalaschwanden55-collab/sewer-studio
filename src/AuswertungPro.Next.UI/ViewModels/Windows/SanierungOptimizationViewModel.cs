@@ -210,7 +210,7 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject, I
         };
     }
 
-    private static SanierungOptimizationRequest BuildRequest(
+    internal static SanierungOptimizationRequest BuildRequest(
         HaltungRecord record,
         RuleRecommendationDto? rule)
     {
@@ -249,9 +249,8 @@ public sealed partial class SanierungOptimizationViewModel : ObservableObject, I
         var dnRaw  = record.GetFieldValue("DN_mm");
         int.TryParse(dnRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var dn);
 
-        var lengthRaw = record.GetFieldValue("Haltungslaenge_m");
-        double.TryParse(lengthRaw?.Replace(',', '.'), NumberStyles.Float,
-            CultureInfo.InvariantCulture, out var lengthM);
+        // Haltungslaenge nach der gemeinsamen Leseregel (Deepscan A4).
+        var lengthM = HaltungFeldwerte.LiesLaenge(record) ?? 0d;
 
         // Grundwasser aus Grundwasserspiegel-Feld: "oberhalb" = Grundwasser vorhanden
         var gwRaw = record.GetFieldValue("Grundwasserspiegel");
