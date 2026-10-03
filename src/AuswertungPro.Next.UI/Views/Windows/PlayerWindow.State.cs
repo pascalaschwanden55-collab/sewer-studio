@@ -11,6 +11,7 @@ public partial class PlayerWindow
     private readonly PlayerMediaHosts _playerMediaHosts;
     private readonly PlayerWindowPlaybackContext _playbackContext;
     private readonly PlayerWindowControllerSet _playerControllers;
+    private readonly PlayerKeyboardPresenter _keyboardPresenter;
     private readonly PlayerSliderInputController? _playerSliderInputController;
     private readonly PlayerPlaybackController _playerPlaybackController;
     private readonly ICodingApplyController _codingApplyController;
@@ -41,10 +42,6 @@ public partial class PlayerWindow
     private PlayerPositionInputController _positionInputController => _playerControllers.PositionInputController;
 
     private PlayerPositionSliderStateController _positionSliderStateController => _playerControllers.PositionSliderStateController;
-
-    private PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner => _playerControllers.KeyboardActionControllerOwner;
-
-    private PlayerShortcutOverlayController _shortcutOverlayController => _playerControllers.ShortcutOverlayController;
 
     private PlayerControlInputController _playerControlInputController => _playerControllers.ControlInputController;
 

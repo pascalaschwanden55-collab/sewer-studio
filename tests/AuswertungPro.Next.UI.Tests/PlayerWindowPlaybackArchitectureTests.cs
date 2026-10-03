@@ -512,7 +512,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
         var hostPaths = new[]
         {
-            Path.Combine(windowsRoot, "PlayerWindow.Keyboard.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"),
             Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs"),
             Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs"),
             Path.Combine(uiRoot, "Player", "PlayerPlaybackController.cs")
@@ -532,6 +532,18 @@ public sealed class PlayerWindowPlaybackArchitectureTests
                 "_player.IsPlaying",
                 "_player.Stop");
         }
+
+        var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
+        var keyboard = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Keyboard.cs"));
+        var keyboardPresenter = File.ReadAllText(Path.Combine(uiRoot, "Player", "PlayerKeyboardPresenter.cs"));
+        Assert.Contains("_keyboardPresenter = new PlayerKeyboardPresenter(", windowRoot);
+        Assert.Contains("StopPlayback: _playerPlaybackControlHost.Stop", windowRoot);
+        Assert.Contains("SetPause: _playerPlaybackControlHost.SetPause", windowRoot);
+        Assert.Contains("_keyboardPresenter.HandleKey(e)", keyboard);
+        Assert.Contains("_owner.Ensure(_createActions())", keyboardPresenter);
+        Assert.Contains("ExecuteAction: keyboardActions.Execute", keyboardPresenter);
+        AssertNoForbiddenTokens(keyboard + keyboardPresenter,
+            "_player.SetPause", "_player.IsPlaying", "_player.Stop");
 
         var controls = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Playback.Controls.cs"));
         var playback = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Playback.cs"));

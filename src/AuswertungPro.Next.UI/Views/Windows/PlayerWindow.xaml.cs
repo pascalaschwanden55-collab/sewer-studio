@@ -542,6 +542,20 @@ public partial class PlayerWindow : Window
                 ClearDetectionOverlays,
                 _positionControls.ApplyPlaybackState,
                 UpdateCodingCurrentCode));
+        _keyboardPresenter = new PlayerKeyboardPresenter(
+            _playerControllers.ShortcutOverlayController,
+            _playerControllers.KeyboardActionControllerOwner,
+            () => new PlayerKeyboardActionControllerFactoryActions(
+                CancelCodingOverlay: CancelCodingOverlayShortcut,
+                TogglePlayPause: TogglePlayPause,
+                StopPlayback: _playerPlaybackControlHost.Stop,
+                SetPause: _playerPlaybackControlHost.SetPause,
+                EnsurePlaying: EnsurePlaying,
+                ChangeSpeed: _playerControlInputController.ChangeSpeed,
+                JumpSeconds: JumpSeconds,
+                ToggleDetection: ToggleDetectionShortcut,
+                ToggleMarkTool: ToggleMarkToolShortcut),
+            () => _codingOverlayToolHost.HasOverlayService);
         _playerControlInputController.Initialize();
         WirePositionSliderEvents();
         WireWindowLifecycleEvents();
