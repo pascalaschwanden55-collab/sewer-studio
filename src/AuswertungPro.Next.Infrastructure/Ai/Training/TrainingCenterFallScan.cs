@@ -61,17 +61,20 @@ internal sealed class TrainingCenterFallScan
                     .ToList();
 
                 var caseId = SafeRelativeId(rootFolder, folder);
-                var (bestVideo, bestProto) = TrainingCenterPaarung.ResolvePair(direktVideos, protos, caseId, out var mehrdeutigeVideos);
+                var (bestVideo, bestProto) = TrainingCenterPaarung.ResolvePair(
+                    direktVideos, protos, caseId, out var mehrdeutigeVideos, out var widerspruch);
 
                 // Ein verwendbares Direktvideo hat Vorrang. Wird keines ausgewaehlt (keines da, nur ausgeschlossene
                 // wie *_g.mpg, mehrdeutig), gelten als Rueckfall die Videoverweise der Verteilung (PR #85).
                 var verweisVideos = new List<string>();
+                TrainingCenterPaarung.Widerspruch? verweisWiderspruch = null;
                 if (string.IsNullOrWhiteSpace(bestVideo))
                 {
                     verweisVideos = _fallDateien.LoeseVideoverweiseAuf(files, hinweise);
                     if (verweisVideos.Count > 0)
                     {
-                        var (verweisVideo, verweisProto) = TrainingCenterPaarung.ResolvePair(verweisVideos, protos, caseId);
+                        var (verweisVideo, verweisProto) = TrainingCenterPaarung.ResolvePair(
+                            verweisVideos, protos, caseId, out _, out verweisWiderspruch);
                         if (!string.IsNullOrWhiteSpace(verweisVideo))
                             (bestVideo, bestProto) = (verweisVideo, verweisProto);
                     }
@@ -91,6 +94,10 @@ internal sealed class TrainingCenterFallScan
                     hinweise?.Add($"Fall «{caseId}»: mehrere Videos ohne eindeutigen Haltungsschlüssel ({string.Join(", ", namen)}) "
                                   + "– keines verwendet; bitte das passende Video nach der Haltung benennen.");
                 }
+
+                // Paket B: widersprechende Haltungsschluessel nicht still verwerfen, sondern begruenden.
+                MeldeWiderspruch(caseId, widerspruch, hinweise);
+                MeldeWiderspruch(caseId, verweisWiderspruch, hinweise);
 
                 var inspectionDate = ResolveInspectionDate(folder, bestProto, bestVideo);
 
@@ -161,6 +168,22 @@ internal sealed class TrainingCenterFallScan
 
         cases = cases.OrderBy(c => c.CaseId, StringComparer.OrdinalIgnoreCase).ToList();
         return cases;
+    }
+
+    /// <summary>
+    /// Paket B: Dateihinweis zu einem Widerspruch der Haltungsschluessel (Video, Protokoll, beide Schluessel, verworfener
+    /// Teil). Ohne Hinweisliste (Batch-Import, Selbsttraining) nur im Trace.
+    /// </summary>
+    private static void MeldeWiderspruch(string caseId, TrainingCenterPaarung.Widerspruch? widerspruch, ICollection<string>? hinweise)
+    {
+        if (widerspruch is null)
+            return;
+
+        var meldung = $"Fall «{caseId}»: Video «{widerspruch.Video}» (Haltungsschlüssel {widerspruch.VideoSchluessel}) und "
+                      + $"Protokoll «{widerspruch.Protokoll}» (Haltungsschlüssel {widerspruch.ProtokollSchluessel}) widersprechen sich – "
+                      + (widerspruch.VideoVerworfen ? "Video" : "Protokoll") + " nicht verwendet.";
+        hinweise?.Add(meldung);
+        System.Diagnostics.Trace.WriteLine($"[TrainingCenterImport] {meldung}");
     }
 
     private static DateTime? ResolveInspectionDate(string folder, string protocolPath, string videoPath)

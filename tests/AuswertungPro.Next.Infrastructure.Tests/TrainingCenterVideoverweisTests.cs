@@ -732,7 +732,9 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
             ScanWurzel, null, hinweise, CancellationToken.None));
 
         Assert.Equal(Path.Combine(fallordner, "aufnahme_a.mpg"), fall.VideoPath);
-        Assert.Empty(hinweise);
+        // Paket B: Der Bestand verwirft hier das Protokoll (Schluessel «aufnahme_a» gegen «bericht»); das ist jetzt
+        // als Widerspruch sichtbar. Dieser Test prueft nur, dass keine Mehrdeutigkeit gemeldet wird.
+        Assert.DoesNotContain(hinweise, hinweis => hinweis.Contains("mehrere Videos", StringComparison.Ordinal));
     }
 
     private static Func<string, FileAttributes?> VerknuepfungFuer(string pfad)

@@ -1647,3 +1647,12 @@ bestehenden Training-Center-Tests laufen unveraendert; angepasst wurde nur die D
 - `TrainingCenterProtokollJson`: Protokolltext -> Beobachtungen (nur bekannte VSA-Codes) und atomares JSON.
 - `TrainingCenterFallDateien` (seit PR #85): Verknuepfungs- und Verweisregeln der Fallordner-Dateien.
 - Tests je Teil: `TrainingCenterTeileTests`.
+- **Widerspruch melden (Paket B, 03.10.2026):** Widersprechen sich die Haltungsschluessel von Video und Protokoll,
+  verwirft `TrainingCenterPaarung` wie bisher einen Teil (Regel unveraendert), liefert aber den Widerspruch mit
+  (Video, Protokoll, beide Schluessel, verworfener Teil). Der Scan meldet ihn als Dateihinweis; ohne Hinweisliste
+  (`ScanAsync(root)`: Batch-Import, Selbsttraining) nur im Trace. `ResolveProtocolOnlyPair` (nur Protokoll-Scan,
+  derzeit nur in Tests) verwirft bei Widerspruch das Video ebenso still; dort ist keine Hinweisliste vorhanden,
+  deshalb unveraendert. Tests: `TrainingCenterWiderspruchTests`. Hinweis: `NormalizeHaltungKey` liefert fuer Namen
+  ohne Haltungsnummer den Namen selbst; zwei solche Dateien (z. B. `aufnahme_a.mpg`, `bericht.pdf`) gelten deshalb
+  als Widerspruch, und der Bestand verwirft dann das Protokoll. Das ist jetzt sichtbar; die Regel selbst ist eine
+  offene Entscheidung.
