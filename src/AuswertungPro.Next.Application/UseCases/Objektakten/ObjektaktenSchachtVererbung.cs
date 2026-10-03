@@ -31,7 +31,8 @@ internal static class ObjektaktenSchachtVererbung
             // Auch das bewusste Leeren des Projektfeldes ist ein aktueller Wert.
             if (parent.Wurzel.Werte.ContainsKey(schachtfeld.Id)
                 || schachtfeld.Speicherfeld is { } speicher && (text.Length > 0
-                    || schaechte[0].FieldMeta.GetValueOrDefault(SchachtFeldnamen.Feld(schaechte[0], speicher))?.UserEdited == true)) return true;
+                    // Wie Lies ueber alle Schreibweisen: bewusst leer in irgendeiner Schreibweise (PR #82).
+                    || SchachtFeldnamen.HatHandwert(schaechte[0], speicher))) return true;
         }
         else if (schaechte.Length > 1) return true;
         var quellen = b.Projekt.Objektakten.SelectMany(a => a.Quellen).ToArray();

@@ -98,4 +98,41 @@ public sealed class SchachtFeldLeserHandwertTests
 
         Assert.Equal(0, ProjektUebersichtRechner.Berechne(projekt).DringendSchaechte);
     }
+
+    // Folgepruefung zu PR #82: Die Einbaumaske erbt den Schachtwert; bewusst leer in einer
+    // zweiten Schreibweise ist ein aktueller Wert und schlaegt den Quelltext der Objektakte.
+    private const string Knoten = "ch23h1a4ftlGdbHU";
+
+    private static (ObjektaktenBearbeitung B, ObjektAkte Pumpe) Einbau(SchachtRecord schacht)
+    {
+        var projekt = new Project();
+        schacht.SetzeGeonisKennungen(new GeonisKennungen { Knoten = Knoten });
+        projekt.SchaechteData.Add(schacht);
+        var pumpe = new ObjektAkte { Art = "pumpe" };
+        pumpe.Werte["pumpe.knoten"] = new() { Text = Knoten };
+        pumpe.Quellen.Add(new() { Klasse = "Abwasserknoten", Kennung = Knoten, Referenzen = { ["AbwasserbauwerkRef"] = "ch23h1a4BAUWERK0" } });
+        pumpe.Quellen.Add(new() { Klasse = "Normschacht", Kennung = "ch23h1a4BAUWERK0", Werte = { ["Bemerkung"] = "Quelltext" } });
+        projekt.Objektakten.Add(pumpe);
+        return (new ObjektaktenBearbeitung(projekt, pumpe.Id, "pumpe"), pumpe);
+    }
+
+    [Fact]
+    public void Einbaumaske_erbt_bewusst_leer_aus_zweiter_Schreibweise()
+    {
+        var (b, pumpe) = Einbau(Altbestand("BEMERKUNGEN", "Bemerkungen", "alt"));
+
+        Assert.True(ObjektaktenSchachtVererbung.Lies(b, pumpe, FieldCatalog.Objektfelder.Feld("pumpe.bemerkung"), out var text));
+        Assert.Equal("", text);
+    }
+
+    [Fact]
+    public void Einbaumaske_erbt_ohne_Schachtwert_den_Quelltext()
+    {
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "S-1", FieldSource.Pdf, userEdited: false);
+        var (b, pumpe) = Einbau(schacht);
+
+        Assert.True(ObjektaktenSchachtVererbung.Lies(b, pumpe, FieldCatalog.Objektfelder.Feld("pumpe.bemerkung"), out var text));
+        Assert.Equal("Quelltext", text);
+    }
 }

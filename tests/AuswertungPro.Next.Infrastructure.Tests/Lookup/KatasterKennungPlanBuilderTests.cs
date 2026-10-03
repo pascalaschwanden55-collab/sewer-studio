@@ -295,4 +295,80 @@ public sealed class KatasterKennungPlanBuilderTests
         record.SetFieldValue("Schachtnummer", nummer, FieldSource.Manual, true);
         return record;
     }
+
+    // Planer-Paket nach PR #81: Eine von Hand gesetzte Anzeige-Kennung (auch bewusst leer, in
+    // irgendeiner Schreibweise) wird nicht zum Fuellen geplant.
+    [Fact]
+    public void Bewusst_leere_Kennung_in_anderer_Schreibweise_wird_nicht_geplant()
+    {
+        var bestand = Bestand(BauteilArt.Schacht, KatasterKennung.FuerSchacht("78998", "Altdorf", KnotenId, null));
+        var record = Schacht("78998");
+        record.SetFieldValue("GEONIS Kennung", "", FieldSource.Manual, userEdited: true);
+
+        var plan = KatasterKennungPlanBuilder.BaueFuerSchaechte([record], bestand);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Equal(1, plan.Anzahl(KatasterKennungGrund.Abweichend));
+    }
+
+    [Fact]
+    public void Bewusst_leere_Anzeige_wird_bei_vorhandener_Kennung_nicht_nachgezogen()
+    {
+        var bestand = Bestand(BauteilArt.Schacht, KatasterKennung.FuerSchacht("78998", "Altdorf", KnotenId, null));
+        var record = Schacht("78998");
+        record.SetzeGeonisKennungen(new GeonisKennungen { Knoten = KnotenId });
+        record.SetFieldValue("GEONIS Kennung", "", FieldSource.Manual, userEdited: true);
+
+        var plan = KatasterKennungPlanBuilder.BaueFuerSchaechte([record], bestand);
+
+        Assert.DoesNotContain(plan.Positionen, p => p.NurAnzeige);
+    }
+
+    [Fact]
+    public void Ohne_Handwert_wird_die_Kennung_in_jeder_Schreibweise_geplant()
+    {
+        var bestand = Bestand(BauteilArt.Schacht, KatasterKennung.FuerSchacht("78998", "Altdorf", KnotenId, null));
+        var record = Schacht("78998");
+        record.SetFieldValue("GEONIS Kennung", "", FieldSource.Pdf, userEdited: false);
+
+        var plan = KatasterKennungPlanBuilder.BaueFuerSchaechte([record], bestand);
+
+        Assert.Single(plan.Positionen);
+    }
+
+    // Review PR #82: Stimmt der gespeicherte Kennungsverbund schon, traegt das sichtbare Feld aber
+    // einen abweichenden Handwert, wird der Widerspruch gemeldet statt als «bereits vorhanden» verdeckt.
+    [Fact]
+    public void Abweichender_Handwert_der_Anzeige_wird_auch_bei_vorhandener_Kennung_gemeldet()
+    {
+        var bestand = Bestand(BauteilArt.Schacht, KatasterKennung.FuerSchacht("78998", "Altdorf", KnotenId, null));
+        var record = Schacht("78998");
+        record.SetzeGeonisKennungen(new GeonisKennungen { Knoten = KnotenId });
+        record.SetFieldValue("GEONIS Kennung", "ANDERE-KENNUNG", FieldSource.Manual, userEdited: true);
+
+        var plan = KatasterKennungPlanBuilder.BaueFuerSchaechte([record], bestand);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Equal(1, plan.Anzahl(KatasterKennungGrund.Abweichend));
+        Assert.Equal(0, plan.Anzahl(KatasterKennungGrund.BereitsVorhanden));
+    }
+
+    // Folgepruefung zu PR #82: Herkunft der Objekt-ID von derselben Schreibweise wie ihr Wert.
+    [Fact]
+    public void Herkunft_der_Objekt_ID_gehoert_zur_Schreibweise_die_den_Wert_liefert()
+    {
+        var bestand = Bestand(BauteilArt.Schacht, KatasterKennung.FuerSchacht("78998", "Altdorf", KnotenId, null));
+        var record = Schacht("78998");
+        record.SetFieldValue(FieldKeys.CadastreObjectId, "ch23h1a4AAAAAAAA", FieldSource.Xtf405, userEdited: false);
+        record.SetFieldValue("Objekt ID", "ch23h1a4BBBBBBBB", FieldSource.Kataster, userEdited: false);
+        record.FieldMeta[FieldKeys.CadastreObjectId].LastUpdatedUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        record.FieldMeta["Objekt ID"].LastUpdatedUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var plan = KatasterKennungPlanBuilder.BaueFuerSchaechte([record], bestand);
+
+        // Gelesen wird die juengere Kataster-ID; ihre Herkunft ist bestaetigt, nicht «unklar».
+        Assert.Empty(plan.Positionen);
+        Assert.Equal(1, plan.Anzahl(KatasterKennungGrund.Abweichend));
+        Assert.Equal(0, plan.Anzahl(KatasterKennungGrund.HerkunftUnklar));
+    }
 }

@@ -25,7 +25,9 @@ public sealed class GeoShopZiel
     public Guid Id => _id;
     public string Herkunft(string feld)
     {
-        var meta = Datensatz is SchachtRecord s ? s.FieldMeta.GetValueOrDefault(SchachtFeldnamen.Feld(s, feld))
+        // Am Schacht von derselben Schreibweise, die Wert liefert (Review PR #82).
+        var meta = Datensatz is SchachtRecord s
+            ? s.FieldMeta.GetValueOrDefault(SchachtFeldnamen.AktuelleSchreibweise(s, feld) ?? SchachtFeldnamen.Feld(s, feld))
             : ((HaltungRecord)Datensatz).FieldMeta.GetValueOrDefault(feld);
         return meta?.UserEdited == true ? "Handeingabe" : meta?.Source switch
         {
@@ -57,7 +59,9 @@ public sealed class GeoShopZiel
                 return Datensatz is HaltungRecord h && _projekt.Data.Contains(h)
                     && _projekt.Data.Count(r => string.Equals(r.GetFieldValue(FieldKeys.HoldingName).Trim(), name, StringComparison.OrdinalIgnoreCase)) == 1;
             return Datensatz is SchachtRecord s && _projekt.SchaechteData.Contains(s)
-                && _projekt.SchaechteData.Count(r => string.Equals(r.GetFieldValue(SchachtFeldnamen.Feld(r, "Schachtnummer")).Trim(), name, StringComparison.OrdinalIgnoreCase)) == 1;
+                // Dieselbe Regel wie Name (SchachtFeldnamen.Wert), sonst sieht die Pruefung beim eigenen
+                // Datensatz einen anderen Namen (Review PR #82).
+                && _projekt.SchaechteData.Count(r => string.Equals(SchachtFeldnamen.Wert(r, "Schachtnummer").Trim(), name, StringComparison.OrdinalIgnoreCase)) == 1;
         }
     }
     public bool HatNeueAktenwerte(GeoShopBauteil quelle) => _projekt is not null
@@ -91,8 +95,11 @@ public sealed class GeoShopZiel
             r.SetFieldValue(f, w, FieldSource.Kataster, false);
         });
 
+    // Planen ueber alle Schreibweisen (Planer-Paket nach PR #81): Ist-Wert wie der Export
+    // (SchachtFeldnamen.Wert), geschuetzt ist das Feld, wenn irgendeine Schreibweise ein Handwert
+    // ist (auch bewusst leer) - genau dann lehnt der Schreibweg ab. Das Schreibziel bleibt Feld.
     public static GeoShopZiel Fuer(SchachtRecord r) => new(r, BauteilArt.Schacht,
-        f => r.GetFieldValue(SchachtFeldnamen.Feld(r, f)), f => r.IsUserEdited(SchachtFeldnamen.Feld(r, f)),
+        f => SchachtFeldnamen.Wert(r, f), f => SchachtFeldnamen.HatHandwert(r, f),
         () => JsonSerializer.Serialize(new { r.Fields, r.FieldMeta, r.Geonis }), () => r.Geonis,
         r.SetzeGeonisKennungen, (f, w) => r.SetFieldValue(SchachtFeldnamen.Feld(r, f), w, FieldSource.Kataster, false),
         (f, w) => r.FuelleLeeresFeld(SchachtFeldnamen.Feld(r, f), w, FieldSource.Kataster),
