@@ -68,6 +68,7 @@ internal sealed class TrainingCenterFallDateien
     public List<string> LoeseVideoverweiseAuf(IEnumerable<string> files, ICollection<string>? hinweise)
     {
         var videos = new List<string>();
+        string? fallordner = null;
         foreach (var verweis in files.Where(IstVideoverweis))
         {
             // Ist der Verweis selbst eine Verknuepfung, fuehrte das Lesen aus dem Baum heraus.
@@ -125,9 +126,23 @@ internal sealed class TrainingCenterFallDateien
             }
 
             videos.Add(ziel);
+            fallordner ??= Path.GetDirectoryName(verweis);
         }
 
-        return videos;
+        // PR #85: Mehrere gueltige Verweise (z. B. alter Verweis nach erneuter Verteilung mit anderem Video)
+        // werden nicht geraten; sonst koppelte ResolvePair womoeglich das veraltete Video zum neuen Protokoll.
+        var ziele = videos.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (ziele.Count > 1)
+        {
+            Melde(
+                hinweise,
+                $"Im Fallordner «{fallordner}» liegen mehrere Videoverweise ({ziele.Count}); keiner wird "
+                + "verwendet – bitte die Verteilung erneut ausführen.",
+                null);
+            return [];
+        }
+
+        return ziele;
     }
 
     public bool IstVideoverweis(string pfad)

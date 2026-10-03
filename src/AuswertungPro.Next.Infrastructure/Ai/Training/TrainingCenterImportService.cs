@@ -611,6 +611,7 @@ public sealed class TrainingCenterImportService
                 {
                     AtomicTextFileWriter.WriteAllText(linkPath, matchedVideo);
                     videoPath = matchedVideo; // Original-Pfad verwenden
+                    EntferneAndereVideoverweise(writePaths, caseDir, linkPath, haltungId, messages);
                 }
                 else
                 {
@@ -650,6 +651,44 @@ public sealed class TrainingCenterImportService
         catch (Exception ex) when (IstPfadwaechterAblehnung(ex))
         {
             return false;
+        }
+    }
+
+    /// <summary>
+    /// PR #85: Nach erneutem Verteilen mit anderem Video blieb der alte Verweis liegen, und der Scan konnte das
+    /// veraltete Video koppeln. Entfernt werden nur andere Videoverweise der Verteilung im selben Fallordner,
+    /// nie Videos; jedes Ziel ueber den Pfadwaechter. Eine Verknuepfung wird gemeldet und nicht angefasst,
+    /// ein Loeschfehler gemeldet (der Scan waehlt dann bei mehreren Verweisen keinen).
+    /// </summary>
+    private void EntferneAndereVideoverweise(
+        DistributionWritePathGuard writePaths,
+        string caseDir,
+        string behalten,
+        string haltungId,
+        List<string> messages)
+    {
+        foreach (var alt in Directory.EnumerateFiles(caseDir, "*.link"))
+        {
+            if (!_fallDateien.IstVideoverweis(alt) || string.Equals(alt, behalten, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (!VerknuepfungsSchutz.PruefeEintrag(alt, VerknuepfungsRegel.Streng, _leseAttribute).IstSicher)
+            {
+                messages.Add($"Haltung {haltungId}: alter Videoverweis «{alt}» ist eine Verknüpfung oder nicht sicher prüfbar; "
+                             + "nicht entfernt.");
+                continue;
+            }
+
+            try
+            {
+                File.Delete(writePaths.EnsureFileTarget(alt));
+                messages.Add($"Haltung {haltungId}: alter Videoverweis «{Path.GetFileName(alt)}» entfernt.");
+            }
+            catch (Exception ex) when (IstPfadwaechterAblehnung(ex))
+            {
+                messages.Add($"Haltung {haltungId}: alter Videoverweis «{alt}» konnte nicht entfernt werden: "
+                             + UserError.DescribeAndReport(ex, "Training Center Videoverweis entfernen"));
+            }
         }
     }
 

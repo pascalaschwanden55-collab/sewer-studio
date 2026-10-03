@@ -1598,6 +1598,11 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   Wird kein verwendbares Direktvideo ausgewaehlt (keines, nur ausgeschlossene, mehrdeutig), gelten die
   `.link`-Verweise als Rueckfall. Die Verteilung nennt ausgelassene Unterordner und Videodateien des
   Videoordners, prueft den Abbruch auch waehrend der Videosuche und zeigt Fehler nur ueber `UserError`.
+- **Erneut verteilen (PR #85):** Nach dem Schreiben des neuen Verweises entfernt die Verteilung andere
+  Videoverweise (`*.<videoendung>.link`) im selben Fallordner ueber den Pfadwaechter; Videos werden nie
+  geloescht, ein verknuepfter oder nicht loeschbarer Verweis wird gemeldet. Liegen im Scan mehrere
+  gueltige Verweise, wird keiner verwendet (Hinweis «bitte die Verteilung erneut ausführen»). Der
+  Scan-Status nennt alle Datei-Hinweise allgemein als «n Dateihinweise (siehe Protokoll)».
 - **Unlesbare Ordner (R8c):** `ScanAsync(root, uebersprungeneOrdner, token)` sammelt Ordner, deren
   Dateiliste scheitert, und die von `SafeFileEnumeration` ausgelassenen (gesperrt, Verknuepfung).
   `TrainingCenterScanWorkflow` schreibt je Ordner die Zeile von `UebersprungeneOrdner.Meldung` ins

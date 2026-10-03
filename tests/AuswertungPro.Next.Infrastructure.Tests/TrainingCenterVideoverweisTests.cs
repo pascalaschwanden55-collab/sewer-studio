@@ -287,6 +287,100 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         Assert.Equal("steht fuer einen alten Symlink", File.ReadAllText(alterSymlink));
     }
 
+    // --- PR #85, Runde 7: erneutes Verteilen mit anderem Video ---
+
+    [Fact]
+    public async Task Erneute_verteilung_mit_anderem_video_ersetzt_den_alten_verweis()
+    {
+        var (videos, ausgabe, fallordner, altVideo) = await ErsteVerteilungMitMpgAsync();
+        var neuVideo = Path.Combine(videos, "H_23021-22369.mp4");
+        File.WriteAllText(neuVideo, "neues video");
+
+        var ergebnis = await Verteiler().DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), videos, ausgabe, CancellationToken.None);
+
+        Assert.Equal(1, ergebnis.VideosMatched);
+        Assert.Equal(["H_23021-22369.mp4.link"], Directory.GetFiles(fallordner, "*.link").Select(Path.GetFileName));
+        Assert.True(File.Exists(altVideo));
+        var fall = Assert.Single(await Verteiler().ScanAsync(ausgabe));
+        Assert.Equal(neuVideo, fall.VideoPath);
+    }
+
+    [Fact]
+    public async Task Alter_verweis_nicht_loeschbar_wird_gemeldet_und_der_scan_koppelt_nicht_falsch()
+    {
+        var (videos, ausgabe, fallordner, _) = await ErsteVerteilungMitMpgAsync();
+        var alterVerweis = Path.Combine(fallordner, "H_23021-22369.mpg.link");
+        File.SetAttributes(alterVerweis, FileAttributes.ReadOnly);
+        File.WriteAllText(Path.Combine(videos, "H_23021-22369.mp4"), "neues video");
+        try
+        {
+            var ergebnis = await Verteiler().DistributeByHaltungAsync(
+                Path.Combine(_root, "Sammel.pdf"), videos, ausgabe, CancellationToken.None);
+
+            Assert.True(File.Exists(alterVerweis));
+            Assert.Contains(ergebnis.Messages, meldung =>
+                meldung.Contains($"«{alterVerweis}» konnte nicht entfernt werden", StringComparison.Ordinal));
+            var hinweise = new List<string>();
+            var fall = Assert.Single(await Verteiler().ScanAsync(ausgabe, null, hinweise, CancellationToken.None));
+            Assert.Equal("", fall.VideoPath);
+            Assert.Contains(hinweise, hinweis => hinweis.Contains("mehrere Videoverweise", StringComparison.Ordinal));
+        }
+        finally
+        {
+            File.SetAttributes(alterVerweis, FileAttributes.Normal);
+        }
+    }
+
+    [Fact]
+    public async Task Alter_verweis_als_verknuepfung_wird_nicht_angefasst_sondern_gemeldet()
+    {
+        var (videos, ausgabe, fallordner, _) = await ErsteVerteilungMitMpgAsync();
+        var alterVerweis = Path.Combine(fallordner, "H_23021-22369.mpg.link");
+        File.WriteAllText(Path.Combine(videos, "H_23021-22369.mp4"), "neues video");
+
+        var ergebnis = await Verteiler(VerknuepfungFuer(alterVerweis)).DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), videos, ausgabe, CancellationToken.None);
+
+        Assert.True(File.Exists(alterVerweis));
+        Assert.Contains(ergebnis.Messages, meldung =>
+            meldung.Contains($"«{alterVerweis}» ist eine Verknüpfung", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Mehrere_gueltige_verweise_im_fallordner_werden_nicht_geraten()
+    {
+        var fallordner = Fallordner("23021-22369");
+        var a = Path.Combine(_root, "H_23021-22369.mpg");
+        var b = Path.Combine(_root, "H_23021-22369.mp4");
+        File.WriteAllText(a, "a");
+        File.WriteAllText(b, "bb");
+        File.WriteAllText(Path.Combine(fallordner, "H_23021-22369.mpg.link"), a);
+        File.WriteAllText(Path.Combine(fallordner, "H_23021-22369.mp4.link"), b);
+        var hinweise = new List<string>();
+
+        var fall = Assert.Single(await new TrainingCenterImportService().ScanAsync(
+            ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal("", fall.VideoPath);
+        var hinweis = Assert.Single(hinweise);
+        Assert.Contains("mehrere Videoverweise", hinweis, StringComparison.Ordinal);
+        Assert.Contains("bitte die Verteilung erneut ausführen", hinweis, StringComparison.Ordinal);
+    }
+
+    private async Task<(string Videos, string Ausgabe, string Fallordner, string AltVideo)> ErsteVerteilungMitMpgAsync()
+    {
+        var videos = Path.Combine(_root, "Videos");
+        Directory.CreateDirectory(videos);
+        var altVideo = Path.Combine(videos, "H_23021-22369.mpg");
+        File.WriteAllText(altVideo, "altes video");
+        var ausgabe = Path.Combine(_root, "Sammel_Training");
+        await Verteiler().DistributeByHaltungAsync(Path.Combine(_root, "Sammel.pdf"), videos, ausgabe, CancellationToken.None);
+        var fallordner = Path.Combine(ausgabe, "23021-22369");
+        Assert.True(File.Exists(Path.Combine(fallordner, "H_23021-22369.mpg.link")));
+        return (videos, ausgabe, fallordner, altVideo);
+    }
+
     [JunctionFact]
     public async Task Verteilung_laesst_echten_alten_video_symlink_stehen_und_schreibt_den_link_verweis()
     {
