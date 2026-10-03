@@ -1578,6 +1578,12 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   ueber `ScanAsync(root)` mit, ohne Hinweisliste. Vor dem Lesen prueft `VerknuepfungsSchutz.PruefeEintrag`
   (Regel `Streng`) den Verweis selbst: Ist er eine Verknuepfung oder nicht pruefbar, wird er nicht
   gelesen, sondern als ungueltig gemeldet. Tests: `TrainingCenterVideoverweisTests`.
+- **Alte Video-Symlinks (PR #85):** Fruehere Laeufe legten im Haltungsordner symbolische Links auf
+  das Video an. Der Scan uebernimmt eine Videodatei, die eine Verknuepfung oder nicht pruefbar ist
+  (`VerknuepfungsSchutz.PruefeEintrag`, Regel `Streng`), nicht als Video, sondern meldet sie und nutzt
+  einen gueltigen `.link`-Verweis im selben Ordner. Die Verteilung zaehlt einen solchen alten Link
+  nicht als vorhandenes Video, laesst ihn unberuehrt und schreibt den `.link`-Verweis. Fuer Ordner
+  aus alten Laeufen: die Verteilung einmal neu ausfuehren.
 - **Unlesbare Ordner (R8c):** `ScanAsync(root, uebersprungeneOrdner, token)` sammelt Ordner, deren
   Dateiliste scheitert, und die von `SafeFileEnumeration` ausgelassenen (gesperrt, Verknuepfung).
   `TrainingCenterScanWorkflow` schreibt je Ordner die Zeile von `UebersprungeneOrdner.Meldung` ins

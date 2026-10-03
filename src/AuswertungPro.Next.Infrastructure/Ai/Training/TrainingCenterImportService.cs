@@ -96,7 +96,12 @@ public sealed class TrainingCenterImportService
                 if (files.Count == 0)
                     continue;
 
-                var videos = files.Where(f => VideoExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
+                // PR #85: Ein Video, das selbst eine Verknuepfung ist (Symlink aelterer Verteillaeufe) oder
+                // nicht pruefbar, wird nicht uebernommen; es fuehrte FFmpeg aus dem Baum heraus.
+                var videos = files
+                    .Where(f => VideoExts.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                    .Where(f => IstUnverknuepftesVideo(f, hinweise))
+                    .ToList();
                 var protos = files.Where(f => ProtocolExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
 
                 // Ein echtes Video im Ordner hat Vorrang; sonst gelten die Videoverweise der Verteilung.
@@ -190,6 +195,24 @@ public sealed class TrainingCenterImportService
         }
 
         return videos;
+    }
+
+    /// <summary>
+    /// Prueft eine Videodatei im Fallordner mit dem gemeinsamen VerknuepfungsSchutz (Regel Streng).
+    /// Eine Verknuepfung oder ein nicht pruefbarer Eintrag wird gemeldet und nicht verwendet.
+    /// </summary>
+    private bool IstUnverknuepftesVideo(string video, ICollection<string>? hinweise)
+    {
+        var befund = VerknuepfungsSchutz.PruefeEintrag(video, VerknuepfungsRegel.Streng, _leseAttribute);
+        if (befund.IstSicher)
+            return true;
+
+        MeldeVideoverweis(
+            hinweise,
+            $"Video «{video}» ist eine Verknüpfung (alter Lauf) oder nicht sicher prüfbar und wird nicht verwendet – "
+            + "bitte die Verteilung erneut ausführen.",
+            befund.Fehler);
+        return false;
     }
 
     private static bool IstVideoverweis(string pfad)
@@ -639,10 +662,13 @@ public sealed class TrainingCenterImportService
                 // Deepscan R6: keine symbolische Verknuepfung mehr; der Verweis auf das Originalvideo
                 // steht immer in einer .link-Datei (frueher nur der Rueckfall ohne Adminrechte).
                 // PR #85: Gezaehlt und gemeldet wird ein Video nur mit geschriebenem Verweis oder einem
-                // bereits vorhandenen Video aus frueheren Laeufen.
+                // bereits vorhandenen Video aus frueheren Laeufen. Ein vorhandenes Ziel, das eine Verknuepfung
+                // oder nicht pruefbar ist (Symlink aelterer Laeufe), zaehlt nicht; es bleibt unberuehrt, und
+                // stattdessen wird der .link-Verweis geschrieben.
                 var videoTarget = Path.Combine(caseDir, Path.GetFileName(matchedVideo));
                 var linkPath = videoTarget + ".link";
-                if (File.Exists(videoTarget))
+                if (File.Exists(videoTarget)
+                    && VerknuepfungsSchutz.PruefeEintrag(videoTarget, VerknuepfungsRegel.Streng, _leseAttribute).IstSicher)
                 {
                     videoPath = videoTarget;
                 }

@@ -189,6 +189,118 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         Assert.Empty(hinweise);
     }
 
+    // --- PR #85: Video-Symlinks aelterer Verteillaeufe (Entscheid Koordinator 03.10.2026) ---
+
+    [Fact]
+    public async Task Scan_nimmt_verknuepftes_video_nicht_und_nutzt_den_link_verweis()
+    {
+        var fallordner = Fallordner("23021-22369");
+        var original = Path.Combine(_root, "H_23021-22369.mpg");
+        File.WriteAllText(original, "original");
+        var alterSymlink = Path.Combine(fallordner, "H_23021-22369.mpg");
+        File.WriteAllText(alterSymlink, "steht fuer einen alten Symlink");
+        File.WriteAllText(alterSymlink + ".link", original);
+        var hinweise = new List<string>();
+
+        var fall = Assert.Single(await DienstMitVerknuepfung(alterSymlink).ScanAsync(
+            ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal(original, fall.VideoPath);
+        var hinweis = Assert.Single(hinweise);
+        Assert.Contains($"Video «{alterSymlink}» ist eine Verknüpfung", hinweis, StringComparison.Ordinal);
+        Assert.Contains("Verteilung erneut ausführen", hinweis, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Scan_ohne_link_verweis_laedt_den_fall_ohne_das_verknuepfte_video()
+    {
+        var fallordner = Fallordner("23021-22369");
+        var alterSymlink = Path.Combine(fallordner, "H_23021-22369.mpg");
+        File.WriteAllText(alterSymlink, "steht fuer einen alten Symlink");
+        var hinweise = new List<string>();
+
+        var fall = Assert.Single(await DienstMitVerknuepfung(alterSymlink).ScanAsync(
+            ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal("", fall.VideoPath);
+        Assert.Contains(alterSymlink, Assert.Single(hinweise), StringComparison.Ordinal);
+    }
+
+    [JunctionFact]
+    public async Task Scan_nimmt_echten_video_symlink_nicht_und_nutzt_den_link_verweis()
+    {
+        var fallordner = Fallordner("23021-22369");
+        var original = Path.Combine(_root, "H_23021-22369.mpg");
+        File.WriteAllText(original, "original");
+        var fremd = Path.Combine(_root, "fremd.mpg");
+        File.WriteAllText(fremd, "fremd");
+        var alterSymlink = Path.Combine(fallordner, "H_23021-22369.mpg");
+        File.CreateSymbolicLink(alterSymlink, fremd);
+        File.WriteAllText(alterSymlink + ".link", original);
+        var hinweise = new List<string>();
+
+        var fall = Assert.Single(await new TrainingCenterImportService().ScanAsync(
+            ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal(original, fall.VideoPath);
+        Assert.Contains(alterSymlink, Assert.Single(hinweise), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Verteilung_zaehlt_verknuepftes_altes_video_nicht_und_schreibt_den_link_verweis()
+    {
+        var videos = Path.Combine(_root, "Videos");
+        Directory.CreateDirectory(videos);
+        var video = Path.Combine(videos, "H_23021-22369.mpg");
+        File.WriteAllText(video, "kunden-video");
+        var ausgabe = Path.Combine(_root, "Sammel_Training");
+        var fallordner = Path.Combine(ausgabe, "23021-22369");
+        Directory.CreateDirectory(fallordner);
+        var alterSymlink = Path.Combine(fallordner, "H_23021-22369.mpg");
+        File.WriteAllText(alterSymlink, "steht fuer einen alten Symlink");
+
+        var ergebnis = await Verteiler(VerknuepfungFuer(alterSymlink)).DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), videos, ausgabe, CancellationToken.None);
+
+        Assert.Equal(1, ergebnis.VideosMatched);
+        Assert.Equal(video, File.ReadAllText(alterSymlink + ".link"));
+        Assert.Equal("steht fuer einen alten Symlink", File.ReadAllText(alterSymlink));
+    }
+
+    [JunctionFact]
+    public async Task Verteilung_laesst_echten_alten_video_symlink_stehen_und_schreibt_den_link_verweis()
+    {
+        var videos = Path.Combine(_root, "Videos");
+        Directory.CreateDirectory(videos);
+        var video = Path.Combine(videos, "H_23021-22369.mpg");
+        File.WriteAllText(video, "kunden-video");
+        var fremd = Path.Combine(_root, "fremd.mpg");
+        File.WriteAllText(fremd, "fremd");
+        var ausgabe = Path.Combine(_root, "Sammel_Training");
+        var fallordner = Path.Combine(ausgabe, "23021-22369");
+        Directory.CreateDirectory(fallordner);
+        var alterSymlink = Path.Combine(fallordner, "H_23021-22369.mpg");
+        File.CreateSymbolicLink(alterSymlink, fremd);
+
+        var ergebnis = await Verteiler().DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), videos, ausgabe, CancellationToken.None);
+
+        Assert.Equal(1, ergebnis.VideosMatched);
+        Assert.Equal(video, File.ReadAllText(alterSymlink + ".link"));
+        Assert.Equal(fremd, new FileInfo(alterSymlink).LinkTarget);
+        Assert.Equal("fremd", File.ReadAllText(fremd));
+        var fall = Assert.Single(await Verteiler().ScanAsync(ausgabe));
+        Assert.Equal(video, fall.VideoPath);
+    }
+
+    private static Func<string, FileAttributes?> VerknuepfungFuer(string pfad)
+        => p => string.Equals(p, pfad, StringComparison.OrdinalIgnoreCase)
+            ? FileAttributes.Archive | FileAttributes.ReparsePoint
+            : File.GetAttributes(p);
+
+    private static TrainingCenterImportService DienstMitVerknuepfung(string pfad)
+        => new(pdfSeitenLesen: null, dateienImOrdner: null, nachHaltungsordner: null, leseAttribute: VerknuepfungFuer(pfad));
+
     // Ablage der Faelle; Originale und fremde Dateien liegen ausserhalb, damit der Scan sie nicht findet.
     private string ScanWurzel => Path.Combine(_root, "Scan");
 
@@ -200,7 +312,7 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         return ordner;
     }
 
-    private static TrainingCenterImportService Verteiler()
+    private static TrainingCenterImportService Verteiler(Func<string, FileAttributes?>? leseAttribute = null)
         => new(
             pdfSeitenLesen: _ => new PdfTextExtraction(
                 [string.Join("\n",
@@ -211,5 +323,6 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
                 ])],
                 ""),
             dateienImOrdner: null,
-            nachHaltungsordner: null);
+            nachHaltungsordner: null,
+            leseAttribute: leseAttribute);
 }
