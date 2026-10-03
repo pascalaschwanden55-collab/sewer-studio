@@ -90,6 +90,9 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
         var aiEvents = File.ReadAllText(aiEventsPath);
         var resultWorkflow = File.ReadAllText(resultWorkflowPath);
         var context = File.ReadAllText(contextPath);
+        var contextFactory = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Player", "PlayerWindowCodingContextFactory.cs"));
+        var compactFactory = string.Concat(contextFactory.Where(c => !char.IsWhiteSpace(c)));
         var state = File.ReadAllText(statePath);
         var windowRoot = File.ReadAllText(windowRootPath);
         var meterPolicy = File.ReadAllText(meterPolicyPath);
@@ -120,7 +123,13 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
         Assert.Contains("_codingFindingContext.FilterValid", aiEvents);
         Assert.Contains("_codingFindingContext.IsKnown", aiEvents);
         Assert.Contains("private readonly Ai.Coding.CodingFindingContext _codingFindingContext", state);
-        Assert.Contains("_codingFindingContext = CodingFindingContext.CreateDefault", windowRoot);
+        Assert.Contains("PlayerWindowCodingContextFactory.Create(", windowRoot);
+        Assert.Contains("_codingFindingContext = codingContexts.Finding;", windowRoot);
+        Assert.Contains("=>dependencies.ResolveSessionService()?.ActiveSession?.Events;", compactFactory);
+        Assert.Contains("ViewEvents()=>dependencies.SessionHost.Events;", compactFactory);
+        Assert.Contains(
+            "CodingFindingContext.CreateDefault(SessionEvents,ViewEvents,dependencies.ImportEvents,boundaryActions.Trace)",
+            compactFactory);
         Assert.Contains("CodingFindingFilterPolicy.FilterValid", context);
         Assert.Contains("CodingFindingCodeResolver.Resolve", context);
         Assert.Contains("CodingKnownFindingPolicy.IsKnown", context);
