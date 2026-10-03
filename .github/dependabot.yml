@@ -10,6 +10,24 @@ updates:
       interval: "monthly"
       time: "06:00"
       timezone: "Europe/Zurich"
+    # Je Paket alle Projekte gemeinsam aktualisieren; Major bleibt separat.
+    # Diese Gruppen gelten nur fuer Versionsupdates, nicht fuer Sicherheitsupdates.
+    groups:
+      nuget-minor-patch:
+        applies-to: "version-updates"
+        group-by: "dependency-name"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      nuget-major:
+        applies-to: "version-updates"
+        group-by: "dependency-name"
+        patterns:
+          - "*"
+        update-types:
+          - "major"
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps)"

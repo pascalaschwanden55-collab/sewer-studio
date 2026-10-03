@@ -35,6 +35,23 @@ Der Hook meldet das seit 2026-08-08 ausdrücklich: mit dem gesperrten Pfad und
 dem Vorschlag, das Programm zu beenden und erneut zu pushen. Erst wenn keine
 Sperrmeldung im Log steht, gilt: Tests sind rot.
 
+## Gemeinsame NuGet-Updates (02.10.2026)
+
+Dependabot prueft die Projektdateien unter `src/`, `tests/` und `tools/` monatlich.
+Die Gruppen `nuget-minor-patch` und `nuget-major` verwenden
+`group-by: dependency-name`: dieselbe Abhaengigkeit wird ueber die erfassten
+Projektordner hinweg gemeinsam aktualisiert. Major-Updates bleiben getrennt von
+Minor/Patch und werden weiterhin angeboten. Beide Gruppen gelten ausschliesslich
+fuer Versionsupdates; das bisherige Verhalten von Sicherheitsupdates bleibt erhalten.
+
+Unvereinbare Versionsbedingungen koennen weiterhin getrennte PRs erzeugen.
+Eine Gruppierung garantiert keinen erfolgreichen Build: Jeder Paket-PR muss auch
+die betroffenen `packages.lock.json` enthalten und den unveraenderten gesperrten
+Restore sowie das CI-Gate bestehen. Der erste echte gruppierte PR dient als
+praktische Kontrolle der neuen Einstellung. Es werden hier keine Pakete aktualisiert.
+
+Quelle: [GitHub-Optionsreferenz](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#group-by-groups).
+
 ## Grenzen (bewusst)
 
 - Der Hook ist mit `git push --no-verify` umgehbar — er ist eine Bequemlichkeits-
