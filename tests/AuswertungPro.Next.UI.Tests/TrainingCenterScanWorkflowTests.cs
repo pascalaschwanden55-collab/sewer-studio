@@ -100,6 +100,27 @@ public sealed class TrainingCenterScanWorkflowTests
     }
 
     [Fact]
+    public async Task RunAsync_unerwarteter_fehler_protokolliert_die_gesammelten_hinweise_vor_dem_weiterwerfen()
+    {
+        // Eigenpruefung Folgepaket 1: auch ein unerwarteter Fehler darf die gesammelten Hinweise nicht verlieren.
+        var state = new WorkflowState();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            TrainingCenterScanWorkflow.RunAsync(
+                CreateRequest(
+                    state: state,
+                    rootFolders: ["root-a"],
+                    scanFolderAsync: (_, _, hinweise, _) =>
+                    {
+                        hinweise.Add("Hinweis A");
+                        throw new InvalidOperationException("kaputt");
+                    })));
+
+        Assert.Equal(["Hinweis A"], state.Logs);
+        Assert.False(state.IsBusy);
+    }
+
+    [Fact]
     public async Task RunAsync_reicht_das_abbruchtoken_an_jeden_ordner_weiter()
     {
         using var abbruch = new CancellationTokenSource();
@@ -226,6 +247,57 @@ public sealed class TrainingCenterScanWorkflowTests
         Assert.Equal(new[] { "root-a", "root-b" }, scanned);
         Assert.Equal(1, state.SaveCalls);
         Assert.False(state.IsBusy);
+    }
+
+    [Fact]
+    public async Task RunAsync_abbruch_protokolliert_die_bis_dahin_gesammelten_hinweise()
+    {
+        // Folgepaket 1: Bei Abbruch gingen uebersprungene Ordner und Dateihinweise verloren.
+        var state = new WorkflowState();
+        var unlesbar = Path.Combine(Path.GetTempPath(), "sewerstudio-fehlt-" + Guid.NewGuid().ToString("N"));
+
+        await TrainingCenterScanWorkflow.RunAsync(
+            CreateRequest(
+                state: state,
+                rootFolders: ["root-a"],
+                scanFolderAsync: (_, uebersprungen, hinweise, _) =>
+                {
+                    uebersprungen.Add(unlesbar);
+                    hinweise.Add("Videoverweis «x.mpg.link» zeigt auf kein vorhandenes Video; Fall ohne Video geladen.");
+                    throw new OperationCanceledException();
+                }));
+
+        Assert.Equal(
+            [
+                $"Ordner «{unlesbar}» übersprungen: nicht lesbar",
+                "Videoverweis «x.mpg.link» zeigt auf kein vorhandenes Video; Fall ohne Video geladen."
+            ],
+            state.Logs);
+        Assert.Equal("Scan abgebrochen. · 1 Ordner übersprungen · 1 Dateihinweis (siehe Protokoll)", state.StatusText);
+        Assert.Equal(0, state.SaveCalls);
+    }
+
+    [Fact]
+    public async Task RunAsync_abbruch_nach_dem_letzten_ordner_protokolliert_jeden_hinweis_einmal()
+    {
+        using var abbruch = new CancellationTokenSource();
+        var state = new WorkflowState();
+
+        await TrainingCenterScanWorkflow.RunAsync(
+            CreateRequest(
+                state: state,
+                rootFolders: ["root-a"],
+                resetCancellation: () => abbruch.Token,
+                scanFolderAsync: (_, _, hinweise, _) =>
+                {
+                    hinweise.Add("Hinweis A");
+                    abbruch.Cancel();
+                    return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
+                }));
+
+        Assert.Equal(["Hinweis A"], state.Logs);
+        Assert.Equal("Scan abgebrochen. · 1 Dateihinweis (siehe Protokoll)", state.StatusText);
+        Assert.Equal(0, state.SaveCalls);
     }
 
     private static TrainingCenterScanWorkflowRequest CreateRequest(

@@ -80,6 +80,45 @@ public sealed class TrainingCenterImportServiceVerteilungTests : IDisposable
         Assert.Equal("23021-22369", Path.GetFileName(ordner));
     }
 
+    [Fact]
+    public async Task DistributeByHaltungAsync_abbruch_liefert_die_meldungen_der_verarbeiteten_haltungen()
+    {
+        // Folgepaket 2: Bei Abbruch gingen die Meldungen schon verarbeiteter Haltungen verloren.
+        using var abbruch = new CancellationTokenSource();
+        var dienst = new TrainingCenterImportService(
+            pdfSeitenLesen: _ => new PdfTextExtraction(
+                [Protokollseite("23021-22369"), Protokollseite("23022-22370")],
+                ""),
+            dateienImOrdner: null,
+            nachHaltungsordner: _ => abbruch.Cancel());
+        var meldungen = new List<string>();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => dienst.DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"),
+            _root,
+            Path.Combine(_root, "Sammel_Training"),
+            meldungen,
+            abbruch.Token));
+
+        Assert.Contains(meldungen, meldung => meldung.StartsWith("Haltung 23021-22369: Seiten", StringComparison.Ordinal));
+        Assert.DoesNotContain(meldungen, meldung => meldung.Contains("23022-22370", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DistributeByHaltungAsync_mit_sammler_liefert_dieselben_meldungen_wie_das_ergebnis()
+    {
+        var dienst = new TrainingCenterImportService(
+            pdfSeitenLesen: _ => new PdfTextExtraction([Protokollseite("23021-22369")], ""),
+            dateienImOrdner: null,
+            nachHaltungsordner: null);
+        var meldungen = new List<string>();
+
+        var ergebnis = await dienst.DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), _root, Path.Combine(_root, "Sammel_Training"), meldungen, CancellationToken.None);
+
+        Assert.Equal(ergebnis.Messages, meldungen);
+    }
+
     // Review PR #85: Ein Abbruch waehrend der LETZTEN Haltung darf nicht als erfolgreiche Verteilung enden.
     [Fact]
     public async Task DistributeByHaltungAsync_abbruch_in_der_letzten_haltung_endet_als_abbruch()

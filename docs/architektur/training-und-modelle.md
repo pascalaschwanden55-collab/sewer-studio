@@ -1609,6 +1609,13 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   geloescht, ein verknuepfter oder nicht loeschbarer Verweis wird gemeldet. Liegen im Scan mehrere
   gueltige Verweise, wird keiner verwendet (Hinweis «bitte die Verteilung erneut ausführen»). Der
   Scan-Status nennt alle Datei-Hinweise allgemein als «n Dateihinweise (siehe Protokoll)».
+- **Folgepaket nach PR #85 (03.10.2026):** (1) Ein Scan-Abbruch protokolliert die bis dahin gesammelten
+  uebersprungenen Ordner und Dateihinweise genau einmal und nennt die Zaehler im Status. (2) Die Verteilung
+  hat die Ueberladung `DistributeByHaltungAsync(pdf, video, ausgabe, meldungen, token)`: der Sammler erhaelt
+  alle Meldungen auch bei Abbruch oder Fehler; der Workflow protokolliert sie vor «Verteilung abgebrochen.».
+  Die bisherigen Ueberladungen bleiben. (3) Mehrere echte Videos ohne eindeutigen Haltungsschluessel melden
+  einen Dateihinweis statt still kein Video; ausgeschlossene Videos (Grafik, Uebersicht) zaehlen dabei
+  nicht mit, ein einzelnes echtes Video neben einem Grafikvideo wird verwendet.
 - **Unlesbare Ordner (R8c):** `ScanAsync(root, uebersprungeneOrdner, token)` sammelt Ordner, deren
   Dateiliste scheitert, und die von `SafeFileEnumeration` ausgelassenen (gesperrt, Verknuepfung).
   `TrainingCenterScanWorkflow` schreibt je Ordner die Zeile von `UebersprungeneOrdner.Meldung` ins

@@ -54,12 +54,13 @@ public sealed class MediaConflictsPageViewModelDependencyTests
     }
 
     [Fact]
-    public void Leerer_Projektordner_ohne_Konflikte_zeigt_den_Leerzustand()
+    public async Task Leerer_Projektordner_ohne_Konflikte_zeigt_den_Leerzustand()
     {
         var dir = Directory.CreateTempSubdirectory("mediaconflicts_empty_");
         try
         {
             var vm = CreateViewModel(new Project(), getProjectFolder: () => dir.FullName, playVideo: _ => { });
+            await vm.AktualisierungTask;
 
             Assert.Empty(vm.Conflicts);
             Assert.Equal(StatusHostState.Empty, vm.ConflictsState);
@@ -72,7 +73,7 @@ public sealed class MediaConflictsPageViewModelDependencyTests
     }
 
     [Fact]
-    public void Unlesbare_Konfliktdatei_wird_im_Ergebnis_genannt()
+    public async Task Unlesbare_Konfliktdatei_wird_im_Ergebnis_genannt()
     {
         // Deepscan R8b: Eine unlesbare Konfliktdatei fehlte still in der Konfliktliste.
         var dir = Directory.CreateTempSubdirectory("mediaconflicts_locked_");
@@ -85,7 +86,10 @@ public sealed class MediaConflictsPageViewModelDependencyTests
 
             MediaConflictsPageViewModel vm;
             using (new FileStream(gesperrt, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
                 vm = CreateViewModel(new Project(), getProjectFolder: () => dir.FullName, playVideo: _ => { });
+                await vm.AktualisierungTask;
+            }
 
             Assert.Empty(vm.Conflicts);
             Assert.Equal("Konfliktcenter aktualisiert: 0 offene Fälle · 1 Konfliktdatei nicht lesbar.", vm.LastResult);
@@ -97,7 +101,7 @@ public sealed class MediaConflictsPageViewModelDependencyTests
     }
 
     [Fact]
-    public void Gelernte_Zuordnungen_uebernehmen_behaelt_den_Scan_Hinweis()
+    public async Task Gelernte_Zuordnungen_uebernehmen_behaelt_den_Scan_Hinweis()
     {
         // PR #85: Die Aufloesungsstatistik ueberschrieb den Hinweis auf gesperrte Konfliktdateien.
         var dir = Directory.CreateTempSubdirectory("mediaconflicts_autoresolve_");
@@ -111,8 +115,10 @@ public sealed class MediaConflictsPageViewModelDependencyTests
             using (new FileStream(gesperrt, FileMode.Open, FileAccess.Read, FileShare.None))
             {
                 var vm = CreateViewModel(new Project(), getProjectFolder: () => dir.FullName, playVideo: _ => { });
+                await vm.AktualisierungTask;
 
                 vm.AutoResolveLearnedCommand.Execute(null);
+                await vm.AktualisierungTask;
 
                 Assert.StartsWith("Gelernte Zuordnungen übernommen:", vm.LastResult, StringComparison.Ordinal);
                 Assert.EndsWith(" · 1 Konfliktdatei nicht lesbar.", vm.LastResult, StringComparison.Ordinal);
@@ -125,7 +131,7 @@ public sealed class MediaConflictsPageViewModelDependencyTests
     }
 
     [Fact]
-    public void Manuelle_Aufloesung_behaelt_den_Scan_Hinweis()
+    public async Task Manuelle_Aufloesung_behaelt_den_Scan_Hinweis()
     {
         // Review PR #85: Auch die Einzelaufloesung ueberschrieb den Hinweis auf eine gesperrte Konfliktdatei;
         // der unsichtbare offene Fall war danach nirgends mehr erwaehnt.
@@ -143,6 +149,7 @@ public sealed class MediaConflictsPageViewModelDependencyTests
             using (new FileStream(gesperrt, FileMode.Open, FileAccess.Read, FileShare.None))
             {
                 var vm = CreateViewModel(new Project(), getProjectFolder: () => dir.FullName, playVideo: _ => { });
+                await vm.AktualisierungTask;
                 vm.SelectedConflict = Assert.Single(vm.Conflicts);
                 vm.SelectedConflict.SuggestedSourcePath = Path.Combine(dir.FullName, "fehlt.mpg");
 
@@ -156,6 +163,116 @@ public sealed class MediaConflictsPageViewModelDependencyTests
         {
             dir.Delete(recursive: true);
         }
+    }
+
+    // --- Folgepaket 4: Konflikt-Scan im Hintergrund ---
+
+    [Fact]
+    public async Task Aktualisierung_laeuft_im_Hintergrund_und_sperrt_die_aendernden_Befehle()
+    {
+        var dir = KonfliktOrdner("mediaconflicts_hintergrund_");
+        try
+        {
+            var vm = CreateViewModel(new Project(), getProjectFolder: () => dir.FullName, playVideo: _ => { });
+            await vm.AktualisierungTask;
+            using var tor = new ManualResetEventSlim(false);
+            vm.ScanHaken = () => tor.Wait(TimeSpan.FromSeconds(10));
+
+            vm.RefreshCommand.Execute(null);
+            var lauf = vm.AktualisierungTask;
+
+            Assert.False(lauf.IsCompleted, "Der Scan lief im aufrufenden (UI-)Thread.");
+            Assert.True(vm.IsRefreshing);
+            Assert.False(vm.ResolveFromCandidateCommand.CanExecute(null));
+            Assert.False(vm.ResolveManualCommand.CanExecute(null));
+            Assert.False(vm.ResolveSuggestedCommand.CanExecute(null));
+            Assert.False(vm.AutoResolveLearnedCommand.CanExecute(null));
+            Assert.False(vm.ClearLearnedMappingsCommand.CanExecute(null));
+
+            tor.Set();
+            await lauf;
+
+            Assert.False(vm.IsRefreshing);
+            Assert.True(vm.AutoResolveLearnedCommand.CanExecute(null));
+            Assert.Single(vm.Conflicts);
+            Assert.Equal("Konfliktcenter aktualisiert: 1 offene Fälle", vm.LastResult);
+        }
+        finally
+        {
+            dir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Neuer_Lauf_verwirft_das_Ergebnis_des_alten()
+    {
+        var dir = KonfliktOrdner("mediaconflicts_neustart_");
+        try
+        {
+            var vm = CreateViewModel(new Project(), getProjectFolder: () => dir.FullName, playVideo: _ => { });
+            await vm.AktualisierungTask;
+            using var tor = new ManualResetEventSlim(false);
+            using var betreten = new ManualResetEventSlim(false);
+            var aufrufe = 0;
+            vm.ScanHaken = () =>
+            {
+                if (Interlocked.Increment(ref aufrufe) != 1)
+                    return;
+                betreten.Set();
+                tor.Wait(TimeSpan.FromSeconds(10));
+            };
+
+            vm.RefreshCommand.Execute(null);
+            var erster = vm.AktualisierungTask;
+            // Erst wenn der erste Lauf im Hintergrund haengt, den zweiten starten (sonst Reihenfolge zufaellig).
+            Assert.True(betreten.Wait(TimeSpan.FromSeconds(10)));
+            vm.RefreshCommand.Execute(null);
+            var zweiter = vm.AktualisierungTask;
+            await zweiter;
+            tor.Set();
+            await erster;
+
+            Assert.Single(vm.Conflicts);
+            Assert.False(vm.IsRefreshing);
+        }
+        finally
+        {
+            dir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Schliessen_bricht_die_Aktualisierung_ab_und_verwirft_das_Ergebnis()
+    {
+        var dir = KonfliktOrdner("mediaconflicts_schliessen_");
+        try
+        {
+            var vm = CreateViewModel(new Project(), getProjectFolder: () => dir.FullName, playVideo: _ => { });
+            await vm.AktualisierungTask;
+            using var tor = new ManualResetEventSlim(false);
+            vm.ScanHaken = () => tor.Wait(TimeSpan.FromSeconds(10));
+
+            vm.RefreshCommand.Execute(null);
+            var lauf = vm.AktualisierungTask;
+            vm.Dispose();
+            tor.Set();
+            await lauf;
+
+            Assert.Empty(vm.Conflicts);
+        }
+        finally
+        {
+            dir.Delete(recursive: true);
+        }
+    }
+
+    private static DirectoryInfo KonfliktOrdner(string praefix)
+    {
+        var dir = Directory.CreateTempSubdirectory(praefix);
+        var holding = Path.Combine(dir.FullName, "Haltungen", "H-1");
+        Directory.CreateDirectory(holding);
+        File.WriteAllText(Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt"), "Haltung: H-1");
+        return dir;
     }
 
     [Fact]

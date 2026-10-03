@@ -32,7 +32,7 @@ public sealed class TrainingCenterDistributionRequestFactoryTests
                     calls.Add("select-video");
                     return "videos";
                 },
-                DistributeAsync: (pdfPath, videoFolder, outputFolder) =>
+                DistributeAsync: (pdfPath, videoFolder, outputFolder, _) =>
                 {
                     calls.Add($"distribute:{pdfPath}:{videoFolder}:{outputFolder}");
                     return Task.FromResult(result);
@@ -47,7 +47,7 @@ public sealed class TrainingCenterDistributionRequestFactoryTests
         request.SetIsBusy(true);
         Assert.Equal("input.pdf", request.SelectPdfPath());
         Assert.Equal("videos", request.SelectVideoFolder());
-        Assert.Same(result, await request.DistributeAsync("input.pdf", "videos", "out"));
+        Assert.Same(result, await request.DistributeAsync("input.pdf", "videos", "out", new List<string>()));
         Assert.Same(rootFolders, request.RootFolders);
         request.UpdateRootFolderDisplay();
         request.SetLogText("");

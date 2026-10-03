@@ -3,6 +3,8 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
@@ -99,7 +101,7 @@ public sealed partial class MediaConflictRowViewModel : ObservableObject
     }
 }
 
-public sealed partial class MediaConflictsPageViewModel : ObservableObject
+public sealed partial class MediaConflictsPageViewModel : ObservableObject, IDisposable
 {
     private readonly Func<Project> _getProject;
     private readonly Func<string?> _getProjectFolder;
@@ -124,6 +126,16 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
     // (Projektordner fehlt). Wird zentral in UpdateSummary bzw. im Fehlerzweig von Refresh gesetzt.
     [ObservableProperty] private StatusHostState _conflictsState = StatusHostState.Empty;
     [ObservableProperty] private string _conflictsError = "";
+
+    // Folgepaket 4: Der Konflikt-Scan laeuft im Hintergrund; aendernde Befehle sind waehrenddessen gesperrt.
+    [ObservableProperty] private bool _isRefreshing;
+    private CancellationTokenSource? _refreshCts;
+
+    /// <summary>Laufende Aktualisierung bzw. Sammelaktion (Tests warten darauf).</summary>
+    public Task AktualisierungTask { get; private set; } = Task.CompletedTask;
+
+    /// <summary>Testnaht: laeuft im Hintergrund unmittelbar vor dem Scan.</summary>
+    internal Action? ScanHaken { get; set; }
 
     public ObservableCollection<MediaConflictRowViewModel> Conflicts { get; } = new();
 
@@ -184,12 +196,13 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         _shellOpen = shellOpen ?? throw new ArgumentNullException(nameof(shellOpen));
         _explorerReveal = explorerReveal ?? throw new ArgumentNullException(nameof(explorerReveal));
 
-        RefreshCommand = new RelayCommand(Refresh);
-        ResolveFromCandidateCommand = new RelayCommand(ResolveFromCandidate);
-        ResolveManualCommand = new RelayCommand(ResolveManual);
-        ResolveSuggestedCommand = new RelayCommand(ResolveSuggested);
-        AutoResolveLearnedCommand = new RelayCommand(AutoResolveLearned);
-        ClearLearnedMappingsCommand = new RelayCommand(ClearLearnedMappings);
+        // «Aktualisieren» bleibt bedienbar: ein neuer Lauf verwirft den alten (Abbruch beim Neustart).
+        RefreshCommand = new RelayCommand(() => AktualisierungTask = RefreshAsync());
+        ResolveFromCandidateCommand = new RelayCommand(ResolveFromCandidate, KannAendern);
+        ResolveManualCommand = new RelayCommand(ResolveManual, KannAendern);
+        ResolveSuggestedCommand = new RelayCommand(ResolveSuggested, KannAendern);
+        AutoResolveLearnedCommand = new RelayCommand(() => AktualisierungTask = AutoResolveLearnedAsync(), KannAendern);
+        ClearLearnedMappingsCommand = new RelayCommand(() => AktualisierungTask = ClearLearnedMappingsAsync(), KannAendern);
         OpenInfoCommand = new RelayCommand(OpenInfo);
         OpenPdfCommand = new RelayCommand(OpenPdf);
         OpenHoldingFolderCommand = new RelayCommand(OpenHoldingFolder);
@@ -198,8 +211,22 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         PlaySelectedCandidateCommand = new RelayCommand(PlaySelectedCandidate);
         PlaySuggestedSourceCommand = new RelayCommand(PlaySuggestedSource);
 
-        Refresh();
+        AktualisierungTask = RefreshAsync();
     }
+
+    private bool KannAendern() => !IsRefreshing;
+
+    partial void OnIsRefreshingChanged(bool value)
+    {
+        ResolveFromCandidateCommand.NotifyCanExecuteChanged();
+        ResolveManualCommand.NotifyCanExecuteChanged();
+        ResolveSuggestedCommand.NotifyCanExecuteChanged();
+        AutoResolveLearnedCommand.NotifyCanExecuteChanged();
+        ClearLearnedMappingsCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>Schliessen der Seite: eine laufende Aktualisierung wird abgebrochen, ihr Ergebnis verworfen.</summary>
+    public void Dispose() => _refreshCts?.Cancel();
 
     // PR #85: Hinweis des letzten Scans (gesperrte Konfliktdateien, uebersprungene Ordner); die
     // Sammelaktionen ueberschreiben LastResult und muessen ihn deshalb wieder anhaengen.
@@ -208,8 +235,13 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
     private string MitScanHinweis(string text)
         => _scanHinweis is null ? text : $"{text} · {_scanHinweis}";
 
-    private void Refresh()
+    private async Task RefreshAsync()
     {
+        _refreshCts?.Cancel();
+        var lauf = new CancellationTokenSource();
+        _refreshCts = lauf;
+        var token = lauf.Token;
+
         Conflicts.Clear();
         SelectedConflict = null;
         _scanHinweis = null;
@@ -229,7 +261,71 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             return;
         }
 
-        var scan = _service.ScanWithResult(projectFolder);
+        IsRefreshing = true;
+        try
+        {
+            // Hintergrund: Scan und gelernte Quellen (Dateisystem). Gelesen wird nur eine Kopie der gelernten
+            // Zuordnungen, nie das lebende Projekt; das Ergebnis wird danach im UI-Thread uebernommen.
+            var lernStand = LernStand(project);
+            var letzterVideoOrdner = _getLastVideoSourceFolder();
+            var haken = ScanHaken;
+            var (scan, vorschlaege) = await Task.Run(() =>
+            {
+                haken?.Invoke();
+                token.ThrowIfCancellationRequested();
+                var ergebnis = _service.ScanWithResult(projectFolder);
+                var quellen = new List<string?>();
+                foreach (var konflikt in ergebnis.Success ? ergebnis.Cases : [])
+                {
+                    token.ThrowIfCancellationRequested();
+                    quellen.Add(_service.TryResolveLearnedSourcePath(lernStand, konflikt, letzterVideoOrdner));
+                }
+
+                return (ergebnis, quellen);
+            }, token);
+
+            // Neuer Lauf oder Schliessen waehrend des Scans: das Ergebnis gehoert nicht mehr zur Seite.
+            if (token.IsCancellationRequested)
+                return;
+
+            UebernehmeScan(project, scan, vorschlaege);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            // Verworfen: ein neuer Lauf oder das Schliessen hat abgebrochen; nichts uebernehmen.
+            return;
+        }
+        catch (Exception ex) when (!token.IsCancellationRequested)
+        {
+            // Frueher gingen Fehler an den globalen Handler; im Hintergrund werden sie hier sichtbar.
+            OpenConflictCount = 0;
+            MissingConflictCount = 0;
+            AmbiguousConflictCount = 0;
+            SummaryText = "Konflikte konnten nicht geprüft werden.";
+            LastResult = "";
+            ConflictsError = UserError.DescribeAndReport(ex, "Medienkonflikte prüfen");
+            ConflictsState = StatusHostState.Error;
+        }
+        finally
+        {
+            if (ReferenceEquals(_refreshCts, lauf))
+                IsRefreshing = false;
+        }
+    }
+
+    private static Project LernStand(Project project)
+    {
+        var stand = new Project();
+        if (project.Metadata.TryGetValue(MediaConflictCenterService.MappingMetadataKey, out var raw))
+            stand.Metadata[MediaConflictCenterService.MappingMetadataKey] = raw;
+        return stand;
+    }
+
+    private void UebernehmeScan(
+        Project project,
+        MediaConflictCenterService.ScanResult scan,
+        IReadOnlyList<string?> vorschlaege)
+    {
         if (!scan.Success)
         {
             OpenConflictCount = 0;
@@ -243,18 +339,8 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             return;
         }
 
-        foreach (var conflict in scan.Cases)
-        {
-            var row = new MediaConflictRowViewModel(conflict)
-            {
-                SuggestedSourcePath = _service.TryResolveLearnedSourcePath(
-                    project,
-                    conflict,
-                    _getLastVideoSourceFolder())
-            };
-
-            Conflicts.Add(row);
-        }
+        for (var i = 0; i < scan.Cases.Count; i++)
+            Conflicts.Add(new MediaConflictRowViewModel(scan.Cases[i]) { SuggestedSourcePath = vorschlaege[i] });
 
         SelectedConflict = Conflicts.FirstOrDefault();
         LearnedMappingCount = _service.GetMappingCount(project);
@@ -358,7 +444,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         _setStatus("Medienkonflikt aufgelöst");
     }
 
-    private void AutoResolveLearned()
+    private async Task AutoResolveLearnedAsync()
     {
         var projectFolder = _getProjectFolder();
         if (string.IsNullOrWhiteSpace(projectFolder) || !Directory.Exists(projectFolder))
@@ -367,21 +453,31 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             return;
         }
 
-        var result = _service.AutoResolveLearned(
-            _getProject(),
-            projectFolder,
-            _getLastVideoSourceFolder(),
-            setUserEdited: false);
+        MediaConflictCenterService.AutoResolveResult result;
+        try
+        {
+            // Aendert das Projekt; laeuft deshalb wie bisher im UI-Thread.
+            result = _service.AutoResolveLearned(
+                _getProject(),
+                projectFolder,
+                _getLastVideoSourceFolder(),
+                setUserEdited: false);
+        }
+        catch (Exception ex)
+        {
+            LastResult = MitScanHinweis($"Fehler: {UserError.DescribeAndReport(ex, "Gelernte Zuordnungen übernehmen")}");
+            return;
+        }
 
-        Refresh();
+        await RefreshAsync();
         LastResult = MitScanHinweis(
             $"Gelernte Zuordnungen übernommen: {result.Resolved}/{result.TotalConflicts} aufgelöst, {result.Failed} Fehler, {result.Unresolved} offen");
     }
 
-    private void ClearLearnedMappings()
+    private async Task ClearLearnedMappingsAsync()
     {
         var count = _service.ClearMappings(_getProject());
-        Refresh();
+        await RefreshAsync();
         LastResult = MitScanHinweis(count > 0
             ? $"Gelernte Zuordnungen gelöscht: {count}"
             : "Keine gelernten Zuordnungen vorhanden.");
