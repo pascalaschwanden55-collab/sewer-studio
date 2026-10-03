@@ -75,6 +75,17 @@ public static class SafeFileEnumeration
         }
     }
 
+    /// <summary>
+    /// Bisherige vierstellige Signatur, binaer kompatibel fuer bereits kompilierte Aufrufer (Review PR #85).
+    /// Ohne Standardwerte, damit kurze Aufrufe eindeutig die neue Ueberladung waehlen.
+    /// </summary>
+    public static IEnumerable<string> EnumerateFilesSafe(
+        string root,
+        string searchPattern,
+        bool recursive,
+        ICollection<string>? skippedDirectories)
+        => EnumerateFilesSafe(root, searchPattern, recursive, skippedDirectories, skippedFiles: null);
+
     /// <param name="skippedFiles">
     /// Optionaler Sammler (PR #85): Dateien, die als Verknuepfung oder mit nicht lesbaren Attributen
     /// ausgelassen werden. Ohne Sammler bleibt das Verhalten unveraendert.

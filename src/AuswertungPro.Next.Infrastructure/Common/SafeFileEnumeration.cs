@@ -13,6 +13,17 @@ public static class SafeFileEnumeration
         ICollection<string>? skippedDirectories = null)
         => AuswertungPro.Next.Application.Common.SafeFileEnumeration.EnumerateDirectoriesSafe(root, skippedDirectories);
 
+    /// <summary>
+    /// Bisherige vierstellige Signatur, binaer kompatibel fuer bereits kompilierte Aufrufer (Review PR #85).
+    /// Ohne Standardwerte, damit kurze Aufrufe eindeutig die neue Ueberladung waehlen.
+    /// </summary>
+    public static IEnumerable<string> EnumerateFilesSafe(
+        string root,
+        string searchPattern,
+        bool recursive,
+        ICollection<string>? skippedDirectories)
+        => EnumerateFilesSafe(root, searchPattern, recursive, skippedDirectories, skippedFiles: null);
+
     public static IEnumerable<string> EnumerateFilesSafe(
         string root,
         string searchPattern = "*",

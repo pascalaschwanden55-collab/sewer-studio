@@ -19,6 +19,20 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 [SupportedOSPlatform("windows")]
 public sealed class SafeFileEnumerationTests
 {
+    // Review PR #85: Der optionale Sammler fuer ausgelassene Dateien darf die bisherige vierstellige
+    // Signatur nicht ersetzen; bereits kompilierte Aufrufer erhielten sonst eine MissingMethodException.
+    [Theory]
+    [InlineData(typeof(SafeFileEnumeration))]
+    [InlineData(typeof(AuswertungPro.Next.Application.Common.SafeFileEnumeration))]
+    public void Bisherige_vierstellige_Signatur_bleibt_erhalten(Type fassade)
+    {
+        var methode = fassade.GetMethod(
+            nameof(SafeFileEnumeration.EnumerateFilesSafe),
+            [typeof(string), typeof(string), typeof(bool), typeof(ICollection<string>)]);
+
+        Assert.NotNull(methode);
+    }
+
     [JunctionFact]
     public void EnumerateFilesSafe_BetrittKeineVerzeichnisVerknuepfung_UndMeldetSieAlsUebersprungen()
     {
