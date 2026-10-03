@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.VsaCatalog;
+using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
@@ -433,6 +434,20 @@ public sealed class TrainingCenterImportService
         var messages = new List<string>();
         cancellationToken.ThrowIfCancellationRequested();
 
+        // Deepscan R6: Der Ausgabeordner liegt neben der Kundenablage. Vor jedem Schreiben gilt der
+        // gemeinsame Verteil-Pfadwaechter; ein verknuepfter Ausgabeordner wird ohne Schreiben abgelehnt.
+        DistributionWritePathGuard writePaths;
+        try
+        {
+            writePaths = new DistributionWritePathGuard(outputFolder);
+        }
+        catch (Exception ex) when (IstPfadwaechterAblehnung(ex))
+        {
+            messages.Add($"Ausgabeordner «{outputFolder}» wird nicht beschrieben: "
+                         + "Er ist eine Verknüpfung (Junction) oder nicht sicher prüfbar.");
+            return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
+        }
+
         // 1. Text aus PDF extrahieren (seitenweise)
         PdfTextExtraction extraction;
         try
@@ -483,11 +498,17 @@ public sealed class TrainingCenterImportService
             var haltungId = chunk.DetectedId;
             var safeId = Regex.Replace(haltungId, @"[^\w\-\.]", "_");
             var caseDir = Path.Combine(outputFolder, safeId);
+            var jsonPath = Path.Combine(caseDir, $"{safeId}_protokoll.json");
+            if (!IstSicheresZiel(writePaths, caseDir) || !IstSicheresZiel(writePaths, jsonPath))
+            {
+                messages.Add($"Haltung {haltungId}: Zielordner ist eine Verknüpfung oder nicht sicher prüfbar, nicht beschrieben.");
+                continue;
+            }
+
             Directory.CreateDirectory(caseDir);
 
             // JSON-Protokoll schreiben (Format kompatibel mit PdfProtocolExtractor.ExtractFromJson)
             var entries = ExtractEntriesFromChunkText(chunk.Text);
-            var jsonPath = Path.Combine(caseDir, $"{safeId}_protokoll.json");
             WriteProtocolJson(jsonPath, entries, haltungId, chunk.PageRange);
 
             // Video zuordnen
@@ -495,20 +516,17 @@ public sealed class TrainingCenterImportService
             var normalizedId = NormalizeId(haltungId);
             if (videoIndex.TryGetValue(normalizedId, out var matchedVideo))
             {
-                // Hardlink oder Kopie erstellen
+                // Deepscan R6: keine symbolische Verknuepfung mehr; der Verweis auf das Originalvideo
+                // steht immer in einer .link-Datei (frueher nur der Rueckfall ohne Adminrechte).
                 var videoTarget = Path.Combine(caseDir, Path.GetFileName(matchedVideo));
                 if (!File.Exists(videoTarget))
                 {
-                    try
-                    {
-                        File.CreateSymbolicLink(videoTarget, matchedVideo);
-                    }
-                    catch
-                    {
-                        // Fallback: Pfad-Datei schreiben (Windows Symlinks brauchen Adminrechte)
-                        AtomicTextFileWriter.WriteAllText(videoTarget + ".link", matchedVideo);
-                        videoTarget = matchedVideo; // Original-Pfad verwenden
-                    }
+                    var linkPath = videoTarget + ".link";
+                    if (IstSicheresZiel(writePaths, linkPath))
+                        AtomicTextFileWriter.WriteAllText(linkPath, matchedVideo);
+                    else
+                        messages.Add($"Haltung {haltungId}: Videoverweis ist eine Verknüpfung, nicht beschrieben.");
+                    videoTarget = matchedVideo; // Original-Pfad verwenden
                 }
                 videoPath = videoTarget;
                 videosMatched++;
@@ -528,6 +546,30 @@ public sealed class TrainingCenterImportService
         return new DistributeResult(
             chunks.Count, distributed, videosMatched, uncertain, outputFolder, messages);
     }
+
+    /// <summary>
+    /// Prueft ein Schreibziel der Verteilung mit dem Verteil-Pfadwaechter. Eine Verknuepfung
+    /// (oder ein nicht pruefbares Glied) im Ziel oder darueber bis zum Ausgabeordner sperrt.
+    /// </summary>
+    private static bool IstSicheresZiel(DistributionWritePathGuard writePaths, string path)
+    {
+        try
+        {
+            writePaths.EnsureFileTarget(path);
+            return true;
+        }
+        catch (Exception ex) when (IstPfadwaechterAblehnung(ex))
+        {
+            return false;
+        }
+    }
+
+    private static bool IstPfadwaechterAblehnung(Exception ex)
+        => ex is IOException
+            or UnauthorizedAccessException
+            or ArgumentException
+            or NotSupportedException
+            or System.Security.SecurityException;
 
     /// <summary>
     /// Erstellt einen Index: normalisierte Haltungs-ID → Videodatei-Pfad
