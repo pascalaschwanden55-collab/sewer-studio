@@ -608,18 +608,26 @@ public sealed class TrainingCenterImportService
             {
                 // Deepscan R6: keine symbolische Verknuepfung mehr; der Verweis auf das Originalvideo
                 // steht immer in einer .link-Datei (frueher nur der Rueckfall ohne Adminrechte).
+                // PR #85: Gezaehlt und gemeldet wird ein Video nur mit geschriebenem Verweis oder einem
+                // bereits vorhandenen Video aus frueheren Laeufen.
                 var videoTarget = Path.Combine(caseDir, Path.GetFileName(matchedVideo));
-                if (!File.Exists(videoTarget))
+                var linkPath = videoTarget + ".link";
+                if (File.Exists(videoTarget))
                 {
-                    var linkPath = videoTarget + ".link";
-                    if (IstSicheresZiel(writePaths, linkPath))
-                        AtomicTextFileWriter.WriteAllText(linkPath, matchedVideo);
-                    else
-                        messages.Add($"Haltung {haltungId}: Videoverweis ist eine Verknüpfung, nicht beschrieben.");
-                    videoTarget = matchedVideo; // Original-Pfad verwenden
+                    videoPath = videoTarget;
                 }
-                videoPath = videoTarget;
-                videosMatched++;
+                else if (IstSicheresZiel(writePaths, linkPath))
+                {
+                    AtomicTextFileWriter.WriteAllText(linkPath, matchedVideo);
+                    videoPath = matchedVideo; // Original-Pfad verwenden
+                }
+                else
+                {
+                    messages.Add($"Haltung {haltungId}: Videoverweis ist eine Verknüpfung, nicht beschrieben.");
+                }
+
+                if (videoPath is not null)
+                    videosMatched++;
             }
             else
             {

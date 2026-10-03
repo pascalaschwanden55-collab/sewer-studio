@@ -86,6 +86,29 @@ public sealed class TrainingCenterImportServiceVerknuepfungTests : IDisposable
             && meldung.Contains("nicht beschrieben", StringComparison.Ordinal));
     }
 
+    [JunctionFact]
+    public async Task DistributeByHaltungAsync_abgelehnter_videoverweis_zaehlt_nicht_als_zugeordnetes_video()
+    {
+        // PR #85 (Codex-Hinweis P2): Zaehler und Erfolgsmeldung nur nach geschriebenem Verweis.
+        var videos = Path.Combine(_root, "Videos");
+        Directory.CreateDirectory(videos);
+        File.WriteAllText(Path.Combine(videos, "H_23021-22369.mpg"), "kunden-video");
+        var fremd = Path.Combine(_root, "Fremd");
+        Directory.CreateDirectory(fremd);
+        var fallordner = Path.Combine(_root, "Sammel_Training", "23021-22369");
+        Directory.CreateDirectory(fallordner);
+        Verknuepfe(Path.Combine(fallordner, "H_23021-22369.mpg.link"), fremd);
+
+        var ergebnis = await Dienst().DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), videos, Path.Combine(_root, "Sammel_Training"), CancellationToken.None);
+
+        Assert.Equal(0, ergebnis.VideosMatched);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(fremd));
+        Assert.Contains(ergebnis.Messages, meldung =>
+            meldung.StartsWith("Haltung 23021-22369: Videoverweis", StringComparison.Ordinal));
+        Assert.DoesNotContain(ergebnis.Messages, meldung => meldung.Contains(", Video:", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task DistributeByHaltungAsync_legt_keine_symbolische_verknuepfung_an_sondern_eine_link_datei()
     {
