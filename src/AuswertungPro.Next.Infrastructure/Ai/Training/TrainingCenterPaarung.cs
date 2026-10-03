@@ -110,14 +110,34 @@ internal static class TrainingCenterPaarung
         IReadOnlyList<string> protos,
         string caseId,
         out bool mehrdeutigeVideos)
-        => ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: false, out mehrdeutigeVideos);
+        => ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: false, out mehrdeutigeVideos, out _);
+
+    /// <summary>
+    /// Widerspruch der Haltungsschluessel von Video und Protokoll; <see cref="VideoVerworfen"/> sagt, welcher
+    /// Teil deshalb nicht verwendet wurde (Paket B: der Grund wird als Dateihinweis gemeldet).
+    /// </summary>
+    internal sealed record Widerspruch(
+        string Video,
+        string VideoSchluessel,
+        string Protokoll,
+        string ProtokollSchluessel,
+        bool VideoVerworfen);
+
+    /// <summary>Wie oben; <paramref name="widerspruch"/> beschreibt einen verworfenen Widerspruch (Paket B).</summary>
+    internal static (string VideoPath, string ProtocolPath) ResolvePair(
+        IReadOnlyList<string> videos,
+        IReadOnlyList<string> protos,
+        string caseId,
+        out bool mehrdeutigeVideos,
+        out Widerspruch? widerspruch)
+        => ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: false, out mehrdeutigeVideos, out widerspruch);
 
     internal static (string VideoPath, string ProtocolPath) ResolveProtocolOnlyPair(
         IReadOnlyList<string> videos,
         IReadOnlyList<string> protos,
         string caseId)
     {
-        return ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: true, out _);
+        return ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: true, out _, out _);
     }
 
     private static (string VideoPath, string ProtocolPath) ResolvePairCore(
@@ -125,9 +145,11 @@ internal static class TrainingCenterPaarung
         IReadOnlyList<string> protos,
         string caseId,
         bool preserveProtocolOnConflict,
-        out bool mehrdeutigeVideos)
+        out bool mehrdeutigeVideos,
+        out Widerspruch? widerspruch)
     {
         mehrdeutigeVideos = false;
+        widerspruch = null;
         var videoList = videos.ToList();
         var protoList = protos.ToList();
 
@@ -137,7 +159,7 @@ internal static class TrainingCenterPaarung
         if (videoList.Count <= 1 && protoList.Count <= 1)
         {
             return preserveProtocolOnConflict
-                ? DropContradiction(bestVideo, bestProto, caseId, preserveProtocolOnConflict: true)
+                ? DropContradiction(bestVideo, bestProto, caseId, preserveProtocolOnConflict: true, out widerspruch)
                 : (bestVideo, bestProto);
         }
 
@@ -160,7 +182,7 @@ internal static class TrainingCenterPaarung
         if (!string.IsNullOrWhiteSpace(matchingProto))
             bestProto = matchingProto;
 
-        return DropContradiction(bestVideo, bestProto, caseId, preserveProtocolOnConflict);
+        return DropContradiction(bestVideo, bestProto, caseId, preserveProtocolOnConflict, out widerspruch);
     }
 
     private static string PickVideoByHaltungKey(List<string> videos, string? caseKey, string caseId)
@@ -191,8 +213,10 @@ internal static class TrainingCenterPaarung
         string videoPath,
         string protocolPath,
         string caseId,
-        bool preserveProtocolOnConflict)
+        bool preserveProtocolOnConflict,
+        out Widerspruch? widerspruch)
     {
+        widerspruch = null;
         if (string.IsNullOrWhiteSpace(videoPath) || string.IsNullOrWhiteSpace(protocolPath))
             return (videoPath, protocolPath);
 
@@ -204,6 +228,20 @@ internal static class TrainingCenterPaarung
         if (string.Equals(videoKey, protocolKey, StringComparison.OrdinalIgnoreCase))
             return (videoPath, protocolPath);
 
+        // Paket B: Die Regel bleibt; der verworfene Teil und beide Schluessel gehen an den Aufrufer zur Meldung.
+        var ergebnis = VerwirfBeiWiderspruch(videoPath, protocolPath, videoKey, protocolKey, caseId, preserveProtocolOnConflict);
+        widerspruch = new Widerspruch(videoPath, videoKey, protocolPath, protocolKey, VideoVerworfen: ergebnis.VideoPath.Length == 0);
+        return ergebnis;
+    }
+
+    private static (string VideoPath, string ProtocolPath) VerwirfBeiWiderspruch(
+        string videoPath,
+        string protocolPath,
+        string videoKey,
+        string protocolKey,
+        string caseId,
+        bool preserveProtocolOnConflict)
+    {
         if (preserveProtocolOnConflict)
             return ("", protocolPath);
 
