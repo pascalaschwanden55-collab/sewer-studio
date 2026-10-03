@@ -30,6 +30,30 @@ public static class TrainingCenterScanWorkflow
             return;
         }
 
+        var uebersprungeneOrdner = new List<string>();
+        var hinweise = new List<string>();
+        var protokolliert = false;
+
+        // Folgepaket 1: Ordner- und Dateihinweise genau einmal ins Protokoll, auch im Abbruchpfad
+        // (Abbruch mitten im Lauf oder erst vor dem Speichern); liefert den Zusatz fuer den Status.
+        string ProtokolliereHinweise()
+        {
+            var uebersprungen = UebersprungeneOrdner.Meldungen(uebersprungeneOrdner);
+            if (!protokolliert)
+            {
+                foreach (var meldung in uebersprungen.Concat(hinweise))
+                    request.Log(meldung);
+                protokolliert = true;
+            }
+
+            var teile = new List<string>();
+            if (uebersprungen.Count > 0)
+                teile.Add($"{uebersprungen.Count} Ordner übersprungen");
+            if (hinweise.Count > 0)
+                teile.Add(hinweise.Count == 1 ? "1 Dateihinweis" : $"{hinweise.Count} Dateihinweise");
+            return teile.Count == 0 ? "" : $" · {string.Join(" · ", teile)} (siehe Protokoll)";
+        }
+
         try
         {
             request.SetIsBusy(true);
@@ -37,8 +61,6 @@ public static class TrainingCenterScanWorkflow
             request.ReplaceCases(Array.Empty<TrainingCase>());
             // Deepscan R6: «Abbrechen» wirkt auch auf den Scan; der Dienst prueft je Ordner.
             var cancellationToken = request.ResetCancellation();
-            var uebersprungeneOrdner = new List<string>();
-            var hinweise = new List<string>();
 
             // Momentaufnahme: Waehrend des await kann der Nutzer die Ordnerliste aendern
             // (Ordner wählen/zurücksetzen); gescannt wird die Liste vom Start (Review PR #85).
@@ -62,20 +84,8 @@ public static class TrainingCenterScanWorkflow
                 withProtocol,
                 pdfOnly);
 
-            // Deepscan R8: nicht lesbare Ordner fehlen nicht still, sondern stehen im Protokoll.
-            var uebersprungen = UebersprungeneOrdner.Meldungen(uebersprungeneOrdner);
-            foreach (var meldung in uebersprungen.Concat(hinweise))
-                request.Log(meldung);
-
-            // PR #85: Dateihinweise (ungueltige Videoverweise, verknuepfte Videos/Protokolle) stehen im Protokoll.
-            var teile = new List<string>();
-            if (uebersprungen.Count > 0)
-                teile.Add($"{uebersprungen.Count} Ordner übersprungen");
-            if (hinweise.Count > 0)
-                teile.Add(hinweise.Count == 1 ? "1 Dateihinweis" : $"{hinweise.Count} Dateihinweise");
-            request.SetStatusText(teile.Count == 0
-                ? summary
-                : $"{summary} · {string.Join(" · ", teile)} (siehe Protokoll)");
+            // Deepscan R8 / PR #85: uebersprungene Ordner und Dateihinweise stehen im Protokoll.
+            request.SetStatusText(summary + ProtokolliereHinweise());
 
             // Review PR #85: Ein Abbruch waehrend des letzten Ordners laesst den Dienst normal zurueckkehren;
             // vor dem Speichern deshalb nochmals pruefen, damit kein abgebrochener Scan gespeichert wird.
@@ -85,7 +95,8 @@ public static class TrainingCenterScanWorkflow
         catch (OperationCanceledException)
         {
             // Bereits gefundene Faelle bleiben sichtbar; gespeichert wird ein abgebrochener Scan nicht.
-            request.SetStatusText("Scan abgebrochen.");
+            // Die bis dahin gesammelten Hinweise gehen nicht verloren (Folgepaket 1).
+            request.SetStatusText("Scan abgebrochen." + ProtokolliereHinweise());
         }
         finally
         {
