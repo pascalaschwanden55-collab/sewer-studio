@@ -80,6 +80,23 @@ public sealed class TrainingCenterImportServiceVerteilungTests : IDisposable
         Assert.Equal("23021-22369", Path.GetFileName(ordner));
     }
 
+    // Review PR #85: Ein Abbruch waehrend der LETZTEN Haltung darf nicht als erfolgreiche Verteilung enden.
+    [Fact]
+    public async Task DistributeByHaltungAsync_abbruch_in_der_letzten_haltung_endet_als_abbruch()
+    {
+        using var abbruch = new CancellationTokenSource();
+        var dienst = new TrainingCenterImportService(
+            pdfSeitenLesen: _ => new PdfTextExtraction([Protokollseite("23021-22369")], ""),
+            dateienImOrdner: null,
+            nachHaltungsordner: _ => abbruch.Cancel());
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => dienst.DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"),
+            _root,
+            Path.Combine(_root, "Sammel_Training"),
+            abbruch.Token));
+    }
+
     [Fact]
     public async Task DistributeByHaltungAsync_ohne_abbruch_legt_beide_ordner_an()
     {

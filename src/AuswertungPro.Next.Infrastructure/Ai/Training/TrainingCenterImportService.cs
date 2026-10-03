@@ -129,7 +129,7 @@ public sealed class TrainingCenterImportService
                 // Ohne Video UND ohne Protokoll: ueberspringen. Nur ausgeschlossene Videos (Grafik, Uebersicht)
                 // zaehlen dabei nicht als Video (Review PR #85); mehrdeutige echte Videos bleiben als Fall sichtbar.
                 var nurAusgeschlosseneVideos = direktVideos.All(IstAusgeschlossenesVideo);
-                if (nurAusgeschlosseneVideos && verweisVideos.Count == 0 && protos.Count == 0)
+                if (nurAusgeschlosseneVideos && verweisVideos.All(IstAusgeschlossenesVideo) && protos.Count == 0)
                     continue;
 
                 var inspectionDate = ResolveInspectionDate(folder, bestProto, bestVideo);
@@ -667,6 +667,8 @@ public sealed class TrainingCenterImportService
             _nachHaltungsordner?.Invoke(caseDir);
         }
 
+        // Review PR #85: Ein Abbruch waehrend der letzten Haltung endet als Abbruch, nicht als «Fertig».
+        cancellationToken.ThrowIfCancellationRequested();
         return new DistributeResult(
             chunks.Count, distributed, videosMatched, uncertain, outputFolder, messages);
     }

@@ -463,6 +463,20 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         Assert.Contains(ergebnis.Messages, meldung => meldung.Contains("nicht mehr vorhanden", StringComparison.Ordinal));
     }
 
+    // Review PR #85: Ein alter Fallordner ohne Protokoll, dessen einziger Verweis auf ein Grafikvideo zeigt,
+    // ergibt keinen leeren Fall.
+    [Fact]
+    public async Task Verweis_nur_auf_grafikvideo_ohne_protokoll_ergibt_keinen_fall()
+    {
+        var fallordner = Path.Combine(ScanWurzel, "23021-22369");
+        Directory.CreateDirectory(fallordner);
+        var grafik = Path.Combine(_root, "H_23021-22369_g.mpg");
+        File.WriteAllText(grafik, "grafikvideo");
+        File.WriteAllText(Path.Combine(fallordner, "H_23021-22369_g.mpg.link"), grafik);
+
+        Assert.Empty(await new TrainingCenterImportService().ScanAsync(ScanWurzel));
+    }
+
     // Review PR #85: Ein ausgeschlossenes Quellvideo (Grafik *_g.mpg) ist schon beim Verteilen kein Treffer;
     // sonst meldete die Verteilung ein Video, das der Scan danach verwirft.
     [Fact]
