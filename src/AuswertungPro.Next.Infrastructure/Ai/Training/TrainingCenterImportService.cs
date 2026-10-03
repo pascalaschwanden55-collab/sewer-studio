@@ -22,6 +22,7 @@ public sealed class TrainingCenterImportService
     private readonly Func<string, PdfTextExtraction> _pdfSeitenLesen;
     private readonly Func<string, IEnumerable<string>> _dateienImOrdner;
     private readonly Action<string>? _nachHaltungsordner;
+    private readonly Func<string, FileAttributes?>? _leseAttribute;
 
     public TrainingCenterImportService()
         : this(null, null, null)
@@ -29,18 +30,21 @@ public sealed class TrainingCenterImportService
     }
 
     /// <summary>
-    /// Testnaht: PDF-Leser, Dateiliste je Ordner und ein Haken nach jedem fertig angelegten
-    /// Haltungsordner der Verteilung. Ohne Angabe gelten die echten Dateizugriffe.
+    /// Testnaht: PDF-Leser, Dateiliste je Ordner, ein Haken nach jedem fertig angelegten
+    /// Haltungsordner der Verteilung und der Attributleser der Verweispruefung (wie
+    /// <see cref="VerknuepfungsSchutz.PruefeEintrag"/>). Ohne Angabe gelten die echten Dateizugriffe.
     /// </summary>
     internal TrainingCenterImportService(
         Func<string, PdfTextExtraction>? pdfSeitenLesen,
         Func<string, IEnumerable<string>>? dateienImOrdner,
-        Action<string>? nachHaltungsordner)
+        Action<string>? nachHaltungsordner,
+        Func<string, FileAttributes?>? leseAttribute = null)
     {
         _pdfSeitenLesen = pdfSeitenLesen ?? (pfad => PdfTextExtractor.ExtractPages(pfad));
         _dateienImOrdner = dateienImOrdner
                            ?? (ordner => Directory.EnumerateFiles(ordner, "*.*", SearchOption.TopDirectoryOnly));
         _nachHaltungsordner = nachHaltungsordner;
+        _leseAttribute = leseAttribute;
     }
 
     public Task<List<TrainingCaseInput>> ScanAsync(string rootFolder)
@@ -134,11 +138,24 @@ public sealed class TrainingCenterImportService
     /// Zeile mit absolutem Pfad; uebernommen wird er nur mit Videoendung und vorhandener Datei. Sonst
     /// bleibt der Fall ohne Video, und der Verweis steht in <paramref name="hinweise"/>.
     /// </summary>
-    private static List<string> LoeseVideoverweiseAuf(IEnumerable<string> files, ICollection<string>? hinweise)
+    private List<string> LoeseVideoverweiseAuf(IEnumerable<string> files, ICollection<string>? hinweise)
     {
         var videos = new List<string>();
         foreach (var verweis in files.Where(IstVideoverweis))
         {
+            // PR #85: Ist der Verweis selbst eine Verknuepfung, fuehrte das Lesen aus dem Baum heraus.
+            // Gemeinsamer VerknuepfungsSchutz, Regel Streng: Verknuepfung, fehlend oder nicht pruefbar sperrt.
+            var befund = VerknuepfungsSchutz.PruefeEintrag(verweis, VerknuepfungsRegel.Streng, _leseAttribute);
+            if (!befund.IstSicher)
+            {
+                MeldeVideoverweis(
+                    hinweise,
+                    $"Videoverweis «{verweis}» ist eine Verknüpfung oder nicht sicher prüfbar und wird nicht gelesen; "
+                    + "Fall ohne Video geladen.",
+                    befund.Fehler);
+                continue;
+            }
+
             string[] zeilen;
             try
             {

@@ -1575,7 +1575,9 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   Ordner hat Vorrang. Ungueltige oder unlesbare Verweise laden den Fall ohne Video und stehen in der
   Hinweisliste (`ScanAsync(root, uebersprungeneOrdner, hinweise, token)`); das Training Center nennt
   sie im Protokoll und als «n Videoverweis(e) ungültig». Batch-Import und Selbsttraining profitieren
-  ueber `ScanAsync(root)` mit, ohne Hinweisliste. Tests: `TrainingCenterVideoverweisTests`.
+  ueber `ScanAsync(root)` mit, ohne Hinweisliste. Vor dem Lesen prueft `VerknuepfungsSchutz.PruefeEintrag`
+  (Regel `Streng`) den Verweis selbst: Ist er eine Verknuepfung oder nicht pruefbar, wird er nicht
+  gelesen, sondern als ungueltig gemeldet. Tests: `TrainingCenterVideoverweisTests`.
 - **Unlesbare Ordner (R8c):** `ScanAsync(root, uebersprungeneOrdner, token)` sammelt Ordner, deren
   Dateiliste scheitert, und die von `SafeFileEnumeration` ausgelassenen (gesperrt, Verknuepfung).
   `TrainingCenterScanWorkflow` schreibt je Ordner die Zeile von `UebersprungeneOrdner.Meldung` ins

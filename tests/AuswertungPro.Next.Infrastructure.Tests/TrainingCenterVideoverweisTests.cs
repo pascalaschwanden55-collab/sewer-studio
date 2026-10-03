@@ -1,6 +1,7 @@
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
+using AuswertungPro.Next.Infrastructure.Tests.Backup;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -99,6 +100,75 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         var hinweis = Assert.Single(hinweise);
         Assert.Contains(verweis, hinweis, StringComparison.Ordinal);
         Assert.Contains("nicht lesbar", hinweis, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Verweis_mit_reparse_attribut_wird_nicht_gelesen_sondern_gemeldet()
+    {
+        // PR #85 (Codex-Hinweis P2): Eine .link-Datei, die selbst eine Verknuepfung ist, wuerde beim Lesen
+        // aus dem Baum herausfuehren. Attribut-Testnaht, damit der Beleg ohne Symlink-Recht laeuft.
+        var fallordner = Fallordner("23021-22369");
+        var original = Path.Combine(_root, "H_23021-22369.mpg");
+        File.WriteAllText(original, "original");
+        var verweis = Path.Combine(fallordner, "H_23021-22369.mpg.link");
+        File.WriteAllText(verweis, original);
+        var hinweise = new List<string>();
+        var dienst = new TrainingCenterImportService(
+            pdfSeitenLesen: null,
+            dateienImOrdner: null,
+            nachHaltungsordner: null,
+            leseAttribute: pfad => string.Equals(pfad, verweis, StringComparison.OrdinalIgnoreCase)
+                ? FileAttributes.Archive | FileAttributes.ReparsePoint
+                : File.GetAttributes(pfad));
+
+        var fall = Assert.Single(await dienst.ScanAsync(ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal("", fall.VideoPath);
+        var hinweis = Assert.Single(hinweise);
+        Assert.Contains(verweis, hinweis, StringComparison.Ordinal);
+        Assert.Contains("Verknüpfung", hinweis, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Nicht_pruefbarer_verweis_wird_abgelehnt()
+    {
+        var fallordner = Fallordner("23021-22369");
+        var original = Path.Combine(_root, "H_23021-22369.mpg");
+        File.WriteAllText(original, "original");
+        var verweis = Path.Combine(fallordner, "H_23021-22369.mpg.link");
+        File.WriteAllText(verweis, original);
+        var hinweise = new List<string>();
+        var dienst = new TrainingCenterImportService(
+            pdfSeitenLesen: null,
+            dateienImOrdner: null,
+            nachHaltungsordner: null,
+            leseAttribute: pfad => string.Equals(pfad, verweis, StringComparison.OrdinalIgnoreCase)
+                ? throw new UnauthorizedAccessException("gesperrt")
+                : File.GetAttributes(pfad));
+
+        var fall = Assert.Single(await dienst.ScanAsync(ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal("", fall.VideoPath);
+        Assert.Contains(verweis, Assert.Single(hinweise), StringComparison.Ordinal);
+    }
+
+    [JunctionFact]
+    public async Task Verweis_als_echter_datei_symlink_auf_fremde_datei_wird_nicht_gelesen()
+    {
+        var fallordner = Fallordner("23021-22369");
+        var original = Path.Combine(_root, "H_23021-22369.mpg");
+        File.WriteAllText(original, "original");
+        var fremd = Path.Combine(_root, "fremd.txt");
+        File.WriteAllText(fremd, original);
+        var verweis = Path.Combine(fallordner, "H_23021-22369.mpg.link");
+        File.CreateSymbolicLink(verweis, fremd);
+        var hinweise = new List<string>();
+
+        var fall = Assert.Single(await new TrainingCenterImportService().ScanAsync(
+            ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal("", fall.VideoPath);
+        Assert.Contains(verweis, Assert.Single(hinweise), StringComparison.Ordinal);
     }
 
     [Fact]
