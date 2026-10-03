@@ -64,6 +64,13 @@ public static class KinsHoldingNameNormalizer
 
             if (bestehend is null)
             {
+                // Handwert vor Import: Ein von Hand gesetzter Name bleibt, auch wenn er numerisch ist.
+                if (record.FieldMeta.TryGetValue("Haltungsname", out var nameMeta) && nameMeta.UserEdited)
+                {
+                    map[name] = record;
+                    continue;
+                }
+
                 record.SetFieldValue("Haltungsname", zielName, FieldSource.Xtf, userEdited: false);
                 record.SetFieldValue(BezeichnungsFeld, name, FieldSource.Legacy, userEdited: false);
                 map[name] = record;
