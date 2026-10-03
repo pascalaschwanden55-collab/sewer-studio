@@ -393,6 +393,32 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
             meldung.Contains("alte Videoverweise konnten nicht geprüft werden", StringComparison.Ordinal));
     }
 
+    // Review PR #85: Ein Schreibfehler einer Haltung (hier der gleichnamige, schreibgeschuetzte Verweis)
+    // wird fuer diese Haltung gemeldet und bricht die Verteilung nicht mit einer Ausnahme ab.
+    [Fact]
+    public async Task Schreibfehler_einer_haltung_wird_gemeldet_statt_die_verteilung_abzubrechen()
+    {
+        var (videos, ausgabe, fallordner, _) = await ErsteVerteilungMitMpgAsync();
+        var verweis = Path.Combine(fallordner, "H_23021-22369.mpg.link");
+        File.SetAttributes(verweis, FileAttributes.ReadOnly);
+        try
+        {
+            var ergebnis = await Verteiler().DistributeByHaltungAsync(
+                Path.Combine(_root, "Sammel.pdf"), videos, ausgabe, CancellationToken.None);
+
+            Assert.Equal(0, ergebnis.Distributed);
+            Assert.Equal(0, ergebnis.VideosMatched);
+            Assert.Contains(ergebnis.Messages, meldung =>
+                meldung.Contains("Haltung 23021-22369: konnte nicht geschrieben werden", StringComparison.Ordinal));
+        }
+        finally
+        {
+            // Der Schreibbaustein legt beim Versuch eine (ebenfalls schreibgeschuetzte) .bak-Kopie an.
+            foreach (var datei in Directory.EnumerateFiles(fallordner))
+                File.SetAttributes(datei, FileAttributes.Normal);
+        }
+    }
+
     private async Task<(string Videos, string Ausgabe, string Fallordner, string AltVideo)> ErsteVerteilungMitMpgAsync()
     {
         var videos = Path.Combine(_root, "Videos");

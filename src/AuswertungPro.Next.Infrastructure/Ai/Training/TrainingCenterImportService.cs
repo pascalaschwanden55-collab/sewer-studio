@@ -577,56 +577,68 @@ public sealed class TrainingCenterImportService
                 continue;
             }
 
-            Directory.CreateDirectory(caseDir);
-
-            // JSON-Protokoll schreiben (Format kompatibel mit PdfProtocolExtractor.ExtractFromJson)
-            var entries = ExtractEntriesFromChunkText(chunk.Text);
-            WriteProtocolJson(jsonPath, entries, haltungId, chunk.PageRange);
-
-            // Video zuordnen
+            // Review PR #85: Ein Dateifehler einer Haltung (Ordner, Protokoll, Verweis) wird fuer diese Haltung
+            // gemeldet; die Verteilung faehrt mit der naechsten fort statt ganz abzubrechen.
+            List<ProtocolEntry> entries;
             string? videoPath = null;
-            var normalizedId = NormalizeId(haltungId);
-            if (videoIndex.TryGetValue(normalizedId, out var matchedVideo))
+            try
             {
-                // Deepscan R6: keine symbolische Verknuepfung mehr; der Verweis auf das Originalvideo
-                // steht immer in einer .link-Datei (frueher nur der Rueckfall ohne Adminrechte).
-                // PR #85: Gezaehlt und gemeldet wird ein Video nur mit geschriebenem Verweis oder einem
-                // bereits vorhandenen Video aus frueheren Laeufen. Ein vorhandenes Ziel, das eine Verknuepfung
-                // oder nicht pruefbar ist (Symlink aelterer Laeufe), zaehlt nicht; es bleibt unberuehrt, und
-                // stattdessen wird der .link-Verweis geschrieben.
-                var videoTarget = Path.Combine(caseDir, Path.GetFileName(matchedVideo));
-                var linkPath = videoTarget + ".link";
-                if (File.Exists(videoTarget)
-                    && VerknuepfungsSchutz.PruefeEintrag(videoTarget, VerknuepfungsRegel.Streng, _leseAttribute).IstSicher)
+                Directory.CreateDirectory(caseDir);
+
+                // JSON-Protokoll schreiben (Format kompatibel mit PdfProtocolExtractor.ExtractFromJson)
+                entries = ExtractEntriesFromChunkText(chunk.Text);
+                WriteProtocolJson(jsonPath, entries, haltungId, chunk.PageRange);
+
+                // Video zuordnen
+                var normalizedId = NormalizeId(haltungId);
+                if (videoIndex.TryGetValue(normalizedId, out var matchedVideo))
                 {
-                    videoPath = videoTarget;
-                }
-                else if (!_fallDateien.PruefeVideoziel(matchedVideo).IstSicher)
-                {
-                    // Derselbe Massstab wie beim Lesen des Verweises im Scan: kein Verweis hinter eine Verknuepfung.
-                    messages.Add($"Haltung {haltungId}: Video «{matchedVideo}» liegt hinter einer Verknüpfung oder ist nicht "
-                                 + "sicher prüfbar; kein Verweis geschrieben.");
-                }
-                else if (IstSicheresZiel(writePaths, linkPath))
-                {
-                    AtomicTextFileWriter.WriteAllText(linkPath, matchedVideo);
-                    // Nur bei eindeutiger Bereinigung gilt das Video als zugeordnet (Review PR #85).
-                    if (EntferneAndereVideoverweise(writePaths, caseDir, linkPath, haltungId, messages))
-                        videoPath = matchedVideo; // Original-Pfad verwenden
+                    // Deepscan R6: keine symbolische Verknuepfung mehr; der Verweis auf das Originalvideo
+                    // steht immer in einer .link-Datei (frueher nur der Rueckfall ohne Adminrechte).
+                    // PR #85: Gezaehlt und gemeldet wird ein Video nur mit geschriebenem Verweis oder einem
+                    // bereits vorhandenen Video aus frueheren Laeufen. Ein vorhandenes Ziel, das eine Verknuepfung
+                    // oder nicht pruefbar ist (Symlink aelterer Laeufe), zaehlt nicht; es bleibt unberuehrt, und
+                    // stattdessen wird der .link-Verweis geschrieben.
+                    var videoTarget = Path.Combine(caseDir, Path.GetFileName(matchedVideo));
+                    var linkPath = videoTarget + ".link";
+                    if (File.Exists(videoTarget)
+                        && VerknuepfungsSchutz.PruefeEintrag(videoTarget, VerknuepfungsRegel.Streng, _leseAttribute).IstSicher)
+                    {
+                        videoPath = videoTarget;
+                    }
+                    else if (!_fallDateien.PruefeVideoziel(matchedVideo).IstSicher)
+                    {
+                        // Derselbe Massstab wie beim Lesen des Verweises im Scan: kein Verweis hinter eine Verknuepfung.
+                        messages.Add($"Haltung {haltungId}: Video «{matchedVideo}» liegt hinter einer Verknüpfung oder ist nicht "
+                                     + "sicher prüfbar; kein Verweis geschrieben.");
+                    }
+                    else if (IstSicheresZiel(writePaths, linkPath))
+                    {
+                        AtomicTextFileWriter.WriteAllText(linkPath, matchedVideo);
+                        // Nur bei eindeutiger Bereinigung gilt das Video als zugeordnet (Review PR #85).
+                        if (EntferneAndereVideoverweise(writePaths, caseDir, linkPath, haltungId, messages))
+                            videoPath = matchedVideo; // Original-Pfad verwenden
+                        else
+                            messages.Add($"Haltung {haltungId}: Videozuordnung nicht eindeutig – bitte die Verteilung erneut ausführen.");
+                    }
                     else
-                        messages.Add($"Haltung {haltungId}: Videozuordnung nicht eindeutig – bitte die Verteilung erneut ausführen.");
+                    {
+                        messages.Add($"Haltung {haltungId}: Videoverweis ist eine Verknüpfung, nicht beschrieben.");
+                    }
+
+                    if (videoPath is not null)
+                        videosMatched++;
                 }
                 else
                 {
-                    messages.Add($"Haltung {haltungId}: Videoverweis ist eine Verknüpfung, nicht beschrieben.");
+                    messages.Add($"Haltung {haltungId}: kein Video gefunden.");
                 }
-
-                if (videoPath is not null)
-                    videosMatched++;
             }
-            else
+            catch (Exception ex) when (IstDateifehler(ex))
             {
-                messages.Add($"Haltung {haltungId}: kein Video gefunden.");
+                messages.Add($"Haltung {haltungId}: konnte nicht geschrieben werden: "
+                             + UserError.DescribeAndReport(ex, "Training Center Haltung verteilen"));
+                continue;
             }
 
             distributed++;
@@ -715,6 +727,15 @@ public sealed class TrainingCenterImportService
 
         return eindeutig;
     }
+
+    /// <summary>
+    /// Dateifehler einer einzelnen Haltung; der Schreibbaustein buendelt Ersetzen und Sicherung als
+    /// <see cref="AggregateException"/>, die nur aus solchen Fehlern bestehen darf (Review PR #85).
+    /// </summary>
+    private static bool IstDateifehler(Exception ex)
+        => IstPfadwaechterAblehnung(ex)
+           || ex is AggregateException sammel && sammel.InnerExceptions.Count > 0
+              && sammel.InnerExceptions.All(IstPfadwaechterAblehnung);
 
     private static bool IstPfadwaechterAblehnung(Exception ex)
         => ex is IOException
