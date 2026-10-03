@@ -18,6 +18,7 @@
 - Schutz persistenter KI-Dateien
 - Eval-Schutz: eine Regel an allen Lesewegen (2026-10-02)
 - Ereignisbasierte Eval-Messung (AP 0.4a, technische Grundlage)
+- Training Center: Verteilung und Scan (03.10.2026, Deepscan R6/R8c)
 
 ## Geplant / nicht implementiert (nicht als Ist-Zustand behandeln)
 - `ByteTrack` / `OC-SORT`: kein Tracking im aktuellen HEAD.
@@ -1548,3 +1549,30 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
 ### Tests der Gold-Schreibskripte (02.10.2026)
 
 `import_gold_labels.py`, `remove_eval_contaminated_from_register.py` und `repair_inbox_gold_holding_ids.py` haben Tests unter `training/scripts/tests/` (synthetische Daten im Temp-Ordner, laufen in der CI). Sie halten fest: Standardlauf bzw. Vorschau schreibfrei, Sicherung vor dem Schreiben, Eval-Haltung (beide Richtungen) und Eval-Bild-Hash werden nicht ins Training uebernommen, harte Sperren bei laufendem Programm, paralleler Aenderung und Kollisionen (`import_gold_labels.py` haelt den gelesenen Stand der `training_samples.json` fest und schreibt nicht, wenn sie sich bis dahin geaendert hat; fehlende Datei wird als GESPERRT gemeldet), Rueckrollen bei Schreibfehlern. Wer eine dieser Schutzzeilen aendert, muss einen roten Test begruenden.
+
+## Training Center: Verteilung und Scan (03.10.2026, Deepscan R6/R8c)
+
+- **Ausserhalb des UI-Threads, mit Abbruch:** `TrainingCenterImportService.DistributeByHaltungAsync`
+  und `ScanAsync` laufen per `Task.Run` und nehmen ein Abbruch-Token an. Geprueft wird vor dem
+  PDF-Lesen und vor jeder Haltung bzw. vor jedem Ordner. Das Fenster reicht das Token des
+  vorhandenen «Abbrechen»-Knopfs durch (`ResetGenerationCancellation`, erst nach der
+  Busy-Pruefung). Ein Abbruch meldet «Verteilung abgebrochen.» bzw. «Scan abgebrochen.», kein
+  Fehler; ein abgebrochener Scan wird nicht gespeichert.
+- **Pfadwaechter:** Die Verteilung schreibt nach `<Eltern des PDF-Ordners>\<PDF-Name>_Training`,
+  also neben die Kundenablage. Vor jedem Schreiben gilt `DistributionWritePathGuard` mit dem
+  Ausgabeordner als Wurzel: Ausgabeordner, Haltungsordner, Protokoll-JSON und `.link`-Datei.
+  Ein verknuepfter Ausgabeordner wird ohne Schreiben abgelehnt («Ausgabeordner … wird nicht
+  beschrieben: Er ist eine Verknüpfung …»), ein verknuepfter Haltungsordner wird uebersprungen
+  und benannt.
+- **Kein Symlink:** `File.CreateSymbolicLink` ist gestrichen. Der Videoverweis steht immer in
+  `<Video>.link` (Pfad des Originalvideos); ein aus frueheren Laeufen vorhandenes Ziel bleibt
+  unberuehrt.
+- **Unlesbare Ordner (R8c):** `ScanAsync(root, uebersprungeneOrdner, token)` sammelt Ordner, deren
+  Dateiliste scheitert, und die von `SafeFileEnumeration` ausgelassenen (gesperrt, Verknuepfung).
+  `TrainingCenterScanWorkflow` schreibt je Ordner die Zeile von `UebersprungeneOrdner.Meldung` ins
+  Protokoll und haengt «n Ordner übersprungen (siehe Protokoll)» an die Zusammenfassung.
+  `ScanAsync(root)` (Batch-Import, Selbsttraining, Werkzeuge) bleibt ohne Liste und ohne Abbruch.
+- Tests: `TrainingCenterImportServiceVerteilungTests` (Rueckkehr vor Ende der Arbeit, Abbruch
+  vor dem zweiten Chunk -> ein Ordner, Abbruch im Scan, unlesbarer Ordner),
+  `TrainingCenterImportServiceVerknuepfungTests` (zwei `JunctionFact`, keine Symlink-Datei),
+  `TrainingCenterScanWorkflowTests`, `TrainingCenterDistributionWorkflowTests`.
