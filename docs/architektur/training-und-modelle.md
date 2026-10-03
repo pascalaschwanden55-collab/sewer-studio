@@ -1652,7 +1652,9 @@ bestehenden Training-Center-Tests laufen unveraendert; angepasst wurde nur die D
   (Video, Protokoll, beide Schluessel, verworfener Teil). Der Scan meldet ihn als Dateihinweis; ohne Hinweisliste
   (`ScanAsync(root)`: Batch-Import, Selbsttraining) nur im Trace. `ResolveProtocolOnlyPair` (nur Protokoll-Scan,
   derzeit nur in Tests) verwirft bei Widerspruch das Video ebenso still; dort ist keine Hinweisliste vorhanden,
-  deshalb unveraendert. Tests: `TrainingCenterWiderspruchTests`. Hinweis: `NormalizeHaltungKey` liefert fuer Namen
-  ohne Haltungsnummer den Namen selbst; zwei solche Dateien (z. B. `aufnahme_a.mpg`, `bericht.pdf`) gelten deshalb
-  als Widerspruch, und der Bestand verwirft dann das Protokoll. Das ist jetzt sichtbar; die Regel selbst ist eine
-  offene Entscheidung.
+  deshalb unveraendert. Tests: `TrainingCenterWiderspruchTests`, auch fuer `.link`-Videos.
+  **Meldungsgrenze (Korrektur nach PR #92):** Nur wenn beide Dateinamen ein numerisches Schachtpaar enthalten,
+  liefert die Paarung einen `Widerspruch`; dann bleibt die Meldung im Scan und Trace sichtbar.
+  `NormalizeHaltungKey` liefert ohne Haltungsnummer den Namen selbst. Die bisherige Auswahl-/Verwerfungsregel
+  bleibt auch fuer solche Namen unveraendert, aber `aufnahme.mp4` und `bericht.pdf` belegen keinen
+  Haltungswiderspruch und ergeben deshalb keinen Hinweis. Das gilt auch, wenn nur eine Datei eine Nummer traegt.
