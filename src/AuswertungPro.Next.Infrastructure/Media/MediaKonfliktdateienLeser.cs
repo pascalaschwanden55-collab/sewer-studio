@@ -58,7 +58,16 @@ internal static class MediaKonfliktdateienLeser
             {
                 var fall = lese(pfad);
                 if (fall is not null)
+                {
                     faelle.Add(fall);
+                }
+                else
+                {
+                    // Review PR #85: Liefert der Leser nichts (Datei seit dem Auflisten verschwunden, kein
+                    // Haltungsordner), ist der Konflikthinweis verloren – wie ein Lesefehler zaehlen.
+                    unlesbar++;
+                    System.Diagnostics.Trace.WriteLine($"[MediaConflictCenter] Konfliktdatei ohne Leseergebnis: {pfad}");
+                }
             }
             catch (Exception ex)
             {

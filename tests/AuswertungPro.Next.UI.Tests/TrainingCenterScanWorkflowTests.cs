@@ -134,6 +134,30 @@ public sealed class TrainingCenterScanWorkflowTests
         Assert.Equal(0, state.SaveCalls);
     }
 
+    // Review PR #85: Kommt «Abbrechen» waehrend des letzten Ordners, kehrt der Dienst normal zurueck
+    // (keine naechste Ordnerpruefung mehr). Gespeichert werden darf der abgebrochene Scan trotzdem nicht.
+    [Fact]
+    public async Task RunAsync_abbruch_im_letzten_ordner_speichert_nicht()
+    {
+        var state = new WorkflowState();
+        using var abbruch = new CancellationTokenSource();
+
+        await TrainingCenterScanWorkflow.RunAsync(
+            CreateRequest(
+                state: state,
+                rootFolders: ["root-a"],
+                resetCancellation: () => abbruch.Token,
+                scanFolderAsync: (_, _, _, _) =>
+                {
+                    abbruch.Cancel(); // Nutzer bricht ab, waehrend der einzige Ordner bearbeitet wird
+                    return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
+                }));
+
+        Assert.Equal("Scan abgebrochen.", state.StatusText);
+        Assert.Equal(0, state.SaveCalls);
+        Assert.False(state.IsBusy);
+    }
+
     [Fact]
     public async Task RunAsync_nennt_uebersprungene_ordner_im_protokoll_und_im_status()
     {

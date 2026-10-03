@@ -7,6 +7,17 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 public sealed class MediaConflictCenterServiceTests
 {
+    // Review PR #85: Eine aufgelistete Konfliktdatei, die vor dem Lesen verschwindet (Leser liefert null),
+    // fehlte weder als Fall noch als unlesbar – die Oberflaeche warnte dann nicht.
+    [Fact]
+    public void Konfliktdatei_ohne_Leseergebnis_zaehlt_als_unlesbar()
+    {
+        var (faelle, unlesbar) = MediaKonfliktdateienLeser.LeseAlle(["verschwunden_VIDEO_MISSING.txt"], _ => null);
+
+        Assert.Empty(faelle);
+        Assert.Equal(1, unlesbar);
+    }
+
     [JunctionFact]
     public void Scan_BetrittKeinenVerknuepftenHaltungsroot()
     {

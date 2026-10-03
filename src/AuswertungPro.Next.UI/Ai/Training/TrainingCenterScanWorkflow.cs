@@ -77,6 +77,9 @@ public static class TrainingCenterScanWorkflow
                 ? summary
                 : $"{summary} · {string.Join(" · ", teile)} (siehe Protokoll)");
 
+            // Review PR #85: Ein Abbruch waehrend des letzten Ordners laesst den Dienst normal zurueckkehren;
+            // vor dem Speichern deshalb nochmals pruefen, damit kein abgebrochener Scan gespeichert wird.
+            cancellationToken.ThrowIfCancellationRequested();
             await request.SaveStateAsync();
         }
         catch (OperationCanceledException)
