@@ -72,6 +72,31 @@ public sealed class MediaConflictsPageViewModelDependencyTests
     }
 
     [Fact]
+    public void Unlesbare_Konfliktdatei_wird_im_Ergebnis_genannt()
+    {
+        // Deepscan R8b: Eine unlesbare Konfliktdatei fehlte still in der Konfliktliste.
+        var dir = Directory.CreateTempSubdirectory("mediaconflicts_locked_");
+        try
+        {
+            var holding = Path.Combine(dir.FullName, "Haltungen", "H-1");
+            Directory.CreateDirectory(holding);
+            var gesperrt = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+            File.WriteAllText(gesperrt, "Haltung: H-1");
+
+            MediaConflictsPageViewModel vm;
+            using (new FileStream(gesperrt, FileMode.Open, FileAccess.Read, FileShare.None))
+                vm = CreateViewModel(new Project(), getProjectFolder: () => dir.FullName, playVideo: _ => { });
+
+            Assert.Empty(vm.Conflicts);
+            Assert.Equal("Konfliktcenter aktualisiert: 0 offene Fälle · 1 Konfliktdatei nicht lesbar.", vm.LastResult);
+        }
+        finally
+        {
+            dir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public void Videoaktion_nutzt_den_uebergebenen_Player_statt_selbst_ein_Fenster_zu_erzeugen()
     {
         var tempFile = Path.GetTempFileName();

@@ -251,7 +251,9 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         SelectedConflict = Conflicts.FirstOrDefault();
         LearnedMappingCount = _service.GetMappingCount(project);
         UpdateSummary();
-        LastResult = $"Konfliktcenter aktualisiert: {Conflicts.Count} offene Fälle";
+        // Deepscan R8b: unlesbare Konfliktdateien fehlen in der Liste, werden hier aber genannt.
+        LastResult = $"Konfliktcenter aktualisiert: {Conflicts.Count} offene Fälle"
+                     + (scan.Hinweis is null ? "" : $" · {scan.Hinweis}");
     }
 
     private void ResolveFromCandidate()

@@ -60,9 +60,11 @@ public sealed class MediaConflictCenterService
         int Unresolved,
         IReadOnlyList<string> Messages);
 
+    // Hinweis: nennt z.B. unlesbare Konfliktdateien, ohne den Scan als Fehler zu werten (Deepscan R8b).
     public sealed record ScanResult(
         IReadOnlyList<MediaConflictCase> Cases,
-        string? Error)
+        string? Error,
+        string? Hinweis = null)
     {
         public bool Success => string.IsNullOrWhiteSpace(Error);
     }
@@ -114,27 +116,13 @@ public sealed class MediaConflictCenterService
                 || path.EndsWith("_VIDEO_AMBIGUOUS.txt", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        var list = new List<MediaConflictCase>();
-        foreach (var infoPath in infoFiles)
-        {
-            try
-            {
-                var parsed = ParseConflictInfo(infoPath);
-                if (parsed is not null)
-                    list.Add(parsed);
-            }
-            catch
-            {
-                // Skip malformed conflict files.
-            }
-        }
-
+        var (list, unlesbar) = MediaKonfliktdateienLeser.LeseAlle(infoFiles, ParseConflictInfo);
         var cases = list
             .OrderByDescending(x => x.DateStamp ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.HoldingFolderName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.InfoPath, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        return new ScanResult(cases, null);
+        return new ScanResult(cases, null, MediaKonfliktdateienLeser.Hinweis(unlesbar));
     }
 
     public int GetMappingCount(Project project)

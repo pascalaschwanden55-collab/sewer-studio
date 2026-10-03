@@ -59,6 +59,62 @@ public sealed class MediaConflictCenterServiceTests
         }
     }
 
+    [Fact]
+    public void ScanWithResult_zaehlt_unlesbare_Konfliktdateien_im_Hinweis()
+    {
+        // Deepscan R8b: Eine unlesbare Konfliktdatei fehlte still, das Video blieb ohne Hinweis unzugeordnet.
+        var root = TempRoot();
+        var holding = Path.Combine(root, "Projekt", "Haltungen", "H-1");
+        Directory.CreateDirectory(holding);
+        var gesperrt = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+        File.WriteAllText(gesperrt, "Haltung: H-1");
+        File.WriteAllText(Path.Combine(holding, "20260821_H-2_VIDEO_AMBIGUOUS.txt"), "Haltung: H-2");
+
+        try
+        {
+            ScanResultMitSperre(gesperrt, Path.Combine(root, "Projekt"), out var result);
+
+            Assert.True(result.Success);
+            Assert.Single(result.Cases);
+            Assert.Equal("1 Konfliktdatei nicht lesbar.", result.Hinweis);
+        }
+        finally
+        {
+            TryDeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public void ScanWithResult_ohne_unlesbare_Konfliktdatei_hat_keinen_Hinweis()
+    {
+        var root = TempRoot();
+        var holding = Path.Combine(root, "Projekt", "Haltungen", "H-1");
+        Directory.CreateDirectory(holding);
+        File.WriteAllText(Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt"), "Haltung: H-1");
+
+        try
+        {
+            var result = new MediaConflictCenterService().ScanWithResult(Path.Combine(root, "Projekt"));
+
+            Assert.Single(result.Cases);
+            Assert.Null(result.Hinweis);
+        }
+        finally
+        {
+            TryDeleteRoot(root);
+        }
+    }
+
+    private static void ScanResultMitSperre(
+        string gesperrteDatei,
+        string projectRoot,
+        out MediaConflictCenterService.ScanResult result)
+    {
+        // Exklusiv geoeffnet: Die Datei existiert, ist fuer den Dienst aber nicht lesbar.
+        using var sperre = new FileStream(gesperrteDatei, FileMode.Open, FileAccess.Read, FileShare.None);
+        result = new MediaConflictCenterService().ScanWithResult(projectRoot);
+    }
+
     [JunctionFact]
     public void ResolveConflict_SchreibtUndLoeschtNichtDurchVerknuepftenHaltungsordner()
     {
