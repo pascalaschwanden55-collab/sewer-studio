@@ -221,6 +221,17 @@ public static class KatasterKennungPlanBuilder
                 continue;
             }
 
+            // Ein Handwert im Anzeigefeld (auch bewusst leer) wird nicht ueberschrieben - der
+            // Schreibweg lehnte das ohnehin ab. Wie eine abweichende Kennung melden, nicht planen.
+            // Vor dem Zweig «bereits vorhanden», sonst verdeckte er den Widerspruch zwischen
+            // Anzeige und gespeichertem Kennungsverbund (Review PR #82).
+            if (bauteil.AnzeigeHandwert is { } handwert
+                && !string.Equals(handwert.Trim(), kennung.Hauptkennung, StringComparison.Ordinal))
+            {
+                hinweise.Add(new KatasterKennungHinweis(name, KatasterKennungGrund.Abweichend));
+                continue;
+            }
+
             var vorhanden = art == BauteilArt.Haltung ? bauteil.Vorhanden?.Haltung : bauteil.Vorhanden?.Knoten;
             if (!string.IsNullOrWhiteSpace(vorhanden))
             {
@@ -236,15 +247,6 @@ public static class KatasterKennungPlanBuilder
 
                 hinweise.Add(new KatasterKennungHinweis(
                     name, gleich ? KatasterKennungGrund.BereitsVorhanden : KatasterKennungGrund.Abweichend));
-                continue;
-            }
-
-            // Ein Handwert im Anzeigefeld (auch bewusst leer) wird nicht ueberschrieben - der
-            // Schreibweg lehnte das ohnehin ab. Wie eine abweichende Kennung melden, nicht planen.
-            if (bauteil.AnzeigeHandwert is { } handwert
-                && !string.Equals(handwert.Trim(), kennung.Hauptkennung, StringComparison.Ordinal))
-            {
-                hinweise.Add(new KatasterKennungHinweis(name, KatasterKennungGrund.Abweichend));
                 continue;
             }
 

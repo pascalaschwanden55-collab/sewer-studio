@@ -336,6 +336,23 @@ public sealed class KatasterKennungPlanBuilderTests
         Assert.Single(plan.Positionen);
     }
 
+    // Review PR #82: Stimmt der gespeicherte Kennungsverbund schon, traegt das sichtbare Feld aber
+    // einen abweichenden Handwert, wird der Widerspruch gemeldet statt als «bereits vorhanden» verdeckt.
+    [Fact]
+    public void Abweichender_Handwert_der_Anzeige_wird_auch_bei_vorhandener_Kennung_gemeldet()
+    {
+        var bestand = Bestand(BauteilArt.Schacht, KatasterKennung.FuerSchacht("78998", "Altdorf", KnotenId, null));
+        var record = Schacht("78998");
+        record.SetzeGeonisKennungen(new GeonisKennungen { Knoten = KnotenId });
+        record.SetFieldValue("GEONIS Kennung", "ANDERE-KENNUNG", FieldSource.Manual, userEdited: true);
+
+        var plan = KatasterKennungPlanBuilder.BaueFuerSchaechte([record], bestand);
+
+        Assert.Empty(plan.Positionen);
+        Assert.Equal(1, plan.Anzahl(KatasterKennungGrund.Abweichend));
+        Assert.Equal(0, plan.Anzahl(KatasterKennungGrund.BereitsVorhanden));
+    }
+
     // Folgepruefung zu PR #82: Herkunft der Objekt-ID von derselben Schreibweise wie ihr Wert.
     [Fact]
     public void Herkunft_der_Objekt_ID_gehoert_zur_Schreibweise_die_den_Wert_liefert()
