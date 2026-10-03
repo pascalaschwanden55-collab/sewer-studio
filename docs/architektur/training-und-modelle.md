@@ -1577,13 +1577,18 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   sie im Protokoll und als «n Videoverweis(e) ungültig». Batch-Import und Selbsttraining profitieren
   ueber `ScanAsync(root)` mit, ohne Hinweisliste. Vor dem Lesen prueft `VerknuepfungsSchutz.PruefeEintrag`
   (Regel `Streng`) den Verweis selbst: Ist er eine Verknuepfung oder nicht pruefbar, wird er nicht
-  gelesen, sondern als ungueltig gemeldet. Tests: `TrainingCenterVideoverweisTests`.
+  gelesen, sondern als ungueltig gemeldet. Dieselbe Pruefung gilt fuer das gelesene Ziel: ist das
+  Originalvideo selbst eine Verknuepfung, bleibt der Fall ohne Video. Tests: `TrainingCenterVideoverweisTests`.
 - **Alte Video-Symlinks (PR #85):** Fruehere Laeufe legten im Haltungsordner symbolische Links auf
   das Video an. Der Scan uebernimmt eine Videodatei, die eine Verknuepfung oder nicht pruefbar ist
   (`VerknuepfungsSchutz.PruefeEintrag`, Regel `Streng`), nicht als Video, sondern meldet sie und nutzt
   einen gueltigen `.link`-Verweis im selben Ordner. Die Verteilung zaehlt einen solchen alten Link
   nicht als vorhandenes Video, laesst ihn unberuehrt und schreibt den `.link`-Verweis. Fuer Ordner
   aus alten Laeufen: die Verteilung einmal neu ausfuehren.
+- **Ordnerliste waehrend eines Laufs gesperrt (PR #85):** «Ordner wählen…» und «Ordnerauswahl
+  zurücksetzen» sind bei `IsBusy` nicht ausfuehrbar (`KannOrdnerAendern`, neu ausgewertet bei jedem
+  `IsBusy`-Wechsel). So speichert der Scan nie eine inzwischen geaenderte Ordnerliste zu Faellen der
+  alten; die Momentaufnahme im Scan-Workflow bleibt als zweite Sicherung.
 - **Unlesbare Ordner (R8c):** `ScanAsync(root, uebersprungeneOrdner, token)` sammelt Ordner, deren
   Dateiliste scheitert, und die von `SafeFileEnumeration` ausgelassenen (gesperrt, Verknuepfung).
   `TrainingCenterScanWorkflow` schreibt je Ordner die Zeile von `UebersprungeneOrdner.Meldung` ins

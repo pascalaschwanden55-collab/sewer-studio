@@ -53,7 +53,10 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private TrainingSample? _selectedSample;
     [ObservableProperty] private string _rootFolder = "";
     [ObservableProperty] private string _statusText = "";
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(BrowseRootFolderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ClearRootFoldersCommand))]
+    private bool _isBusy;
     [ObservableProperty] private string _logText = "";
     [ObservableProperty] private int _progressValue;
     [ObservableProperty] private int _progressMax = 1;
@@ -304,7 +307,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             value => MismatchPercent = value,
             value => NoFindingsPercent = value);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(KannOrdnerAendern))]
     private void BrowseRootFolder()
     {
         TrainingCenterRootFolderWorkflow.ApplySelected(
@@ -313,17 +316,12 @@ public partial class TrainingCenterViewModel : ObservableObject
             UpdateRootFolderDisplay);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(KannOrdnerAendern))]
     private void ClearRootFolders()
     {
         TrainingCenterRootFolderWorkflow.Clear(
             _rootFolders,
             UpdateRootFolderDisplay);
-    }
-
-    private void UpdateRootFolderDisplay()
-    {
-        RootFolder = TrainingCenterDisplayFormatter.FormatRootFolders(_rootFolders);
     }
 
     [RelayCommand]

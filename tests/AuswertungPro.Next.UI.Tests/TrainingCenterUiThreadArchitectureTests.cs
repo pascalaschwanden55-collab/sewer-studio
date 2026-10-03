@@ -33,6 +33,33 @@ public sealed class TrainingCenterUiThreadArchitectureTests
         Assert.Equal("1 Einträge zur Prüfung", vm.ReviewStatusText);
     }
 
+    [Fact]
+    public void TrainingCenterViewModel_sperrt_Ordneraenderungen_waehrend_IsBusy()
+    {
+        // PR #85: Waehrend eines Laufs darf sich die Ordnerliste nicht aendern, sonst passen die
+        // gespeicherten Faelle und die gespeicherte Ordnerliste nicht mehr zusammen.
+        using var temp = new TempDir();
+        var vm = CreateViewModel(temp, new RecordingUiThread());
+        var gemeldet = new List<string>();
+        vm.BrowseRootFolderCommand.CanExecuteChanged += (_, _) => gemeldet.Add("browse");
+        vm.ClearRootFoldersCommand.CanExecuteChanged += (_, _) => gemeldet.Add("clear");
+
+        Assert.True(vm.BrowseRootFolderCommand.CanExecute(null));
+        Assert.True(vm.ClearRootFoldersCommand.CanExecute(null));
+
+        vm.IsBusy = true;
+
+        Assert.False(vm.BrowseRootFolderCommand.CanExecute(null));
+        Assert.False(vm.ClearRootFoldersCommand.CanExecute(null));
+        Assert.Contains("browse", gemeldet);
+        Assert.Contains("clear", gemeldet);
+
+        vm.IsBusy = false;
+
+        Assert.True(vm.BrowseRootFolderCommand.CanExecute(null));
+        Assert.True(vm.ClearRootFoldersCommand.CanExecute(null));
+    }
+
     private static TrainingCenterViewModel CreateViewModel(TempDir temp, IUiThread uiThread)
         => new(
             new TrainingCenterStore(Path.Combine(temp.Path, "training_center.json")),
