@@ -2,7 +2,6 @@ using System.Windows.Input;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Coding;
 using AuswertungPro.Next.UI.Controls;
-using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -10,54 +9,13 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        // Waehrend einer Texteingabe bleibt die Tastatur dem Feld vorbehalten.
-        // Einzige Ausnahme ist F1: die Tastenuebersicht schreibt kein Zeichen.
-        var textInputFocused = KeyboardTextInputFocusGuard.IsTextInputFocused();
-        if (textInputFocused && !PlayerKeyboardShortcutPolicy.IsAllowedDuringTextInput(e.Key))
-            return;
-
-        var overlayOutcome = _shortcutOverlayController.HandleKey(e.Key);
-        if (overlayOutcome == PlayerShortcutOverlayKeyOutcome.Handled)
-            e.Handled = true;
-
-        if (overlayOutcome != PlayerShortcutOverlayKeyOutcome.Continue)
-            return;
-
-        if (textInputFocused)
-            return;
-
-        var keyboardActions = _keyboardActionControllerOwner.Ensure(
-            new PlayerKeyboardActionControllerFactoryActions(
-                CancelCodingOverlay: CancelCodingOverlayShortcut,
-                TogglePlayPause: TogglePlayPause,
-                StopPlayback: _playerPlaybackControlHost.Stop,
-                SetPause: _playerPlaybackControlHost.SetPause,
-                EnsurePlaying: EnsurePlaying,
-                ChangeSpeed: _playerControlInputController.ChangeSpeed,
-                JumpSeconds: JumpSeconds,
-                ToggleDetection: ToggleDetectionShortcut,
-                ToggleMarkTool: ToggleMarkToolShortcut));
-
-        var action = PlayerKeyboardShortcutPolicy.Resolve(e.Key, _codingOverlayToolHost.HasOverlayService);
-        PlayerKeyboardInputWorkflow.Execute(
-            new PlayerKeyboardInputWorkflowRequest(action),
-            new PlayerKeyboardInputWorkflowActions(
-                ExecuteAction: keyboardActions.Execute,
-                MarkHandled: () => { e.Handled = true; }));
-    }
+        => _keyboardPresenter.HandleKey(e);
 
     private void ShowShortcutOverlay_Click(object sender, System.Windows.RoutedEventArgs e)
-    {
-        e.Handled = true;
-        _shortcutOverlayController.Show();
-    }
+        => _keyboardPresenter.Show(e);
 
     private void CloseShortcutOverlay_Click(object sender, System.Windows.RoutedEventArgs e)
-    {
-        e.Handled = true;
-        _shortcutOverlayController.Hide();
-    }
+        => _keyboardPresenter.Hide(e);
 
     private void Close_Click(object sender, System.Windows.RoutedEventArgs e) => Close();
 

@@ -108,6 +108,24 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
     }
 
     [Fact]
+    public void PlayerWindow_manual_code_meter_resolution_passes_cached_osd_timestamp()
+    {
+        var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var events = File.ReadAllText(eventsPath);
+        var resolverStart = events.IndexOf("ResolveManualEntryMeter: osdMeter => CodingCurrentMeterResolver.ResolveManualEntry(", StringComparison.Ordinal);
+        Assert.True(resolverStart >= 0, "Manuelle Meterauflösung muss den bestehenden Resolver aufrufen.");
+        var resolverEnd = events.IndexOf("CreateManualEntry:", resolverStart, StringComparison.Ordinal);
+        Assert.True(resolverEnd > resolverStart, "Der Resolveranschluss muss vor der Eintragserzeugung liegen.");
+
+        var resolverCall = events[resolverStart..resolverEnd];
+
+        Assert.Contains("_codingOsdMeterController.LastMeter", resolverCall);
+        Assert.Contains("_codingOsdMeterController.LastTimestampSeconds", resolverCall);
+        var compactCall = string.Concat(resolverCall.Where(c => !char.IsWhiteSpace(c)));
+        Assert.Contains("cachedOsdTimestampSeconds:_codingOsdMeterController.LastTimestampSeconds", compactCall);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_coding_ai_context_lives_in_factory()
     {
         var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.cs");

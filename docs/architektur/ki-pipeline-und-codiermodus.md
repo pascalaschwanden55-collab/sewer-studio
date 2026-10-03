@@ -9,6 +9,8 @@
 
 ## Inhalt
 
+- Gemeinsame Player-Integration (03.10.2026)
+- Handeintrag: OSD-Zwischenspeicher an Bildzeit binden (03.10.2026)
 - Fachregeln der Mehrmodell-Videoanalyse (Entscheid 01.10.2026)
 - Grafik-Audit 23.09.2026: B01, B02, B04 behoben (24.09.2026)
 - Gebundene Bild-/Zeit-/Meterbelege im Player (20.09.2026)
@@ -19,6 +21,49 @@
 - Aufbau der Mehrmodell-Videoanalyse (AP05, 30.09.2026)
 - Aktueller Pipeline-Ablauf
 - Codiermodus-Bildvergleich (20.09.2026, erste Messstufe)
+
+## Gemeinsame Player-Integration (03.10.2026)
+
+Codierkontexte (PR84), Tastatur (PR86) und E2 samt Pflichtzeitparameter (PR87)
+werden im Zweig codex/player-integration gemeinsam geprüft. Fachregeln und
+späte Quellen bleiben erhalten; die Einzelpaketabschnitte und ihre Prüfzahlen
+beschreiben weiterhin die historischen Lieferstände. Tatsächliche gemeinsame
+Fenstergrösse: 4.207 Zeilen in 73 Teildateien, Hauptdatei573, beide Helfer je68.
+Nur die gemeinsame Grössenkonstante musste aufgelöst werden. Anschluss- und
+Testnetzprüfung unabhängig ohne Befund. Release-Build ohne Warnungen/Fehler,
+132 gezielte Prüfungen grün, vier volle Testsuiten19.313 bestanden/58 übersprungen/0 Fehler.
+Ergebnis und Liefergrenzen: docs/audits/2026-10-03-player-integration/ERGEBNIS.md.
+
+## Handeintrag: OSD-Zwischenspeicher an Bildzeit binden (03.10.2026)
+
+Fehler E2: `CodingCurrentMeterResolver.ResolveManualEntry` verwendete beim Handeintrag
+jeden letzten OSD-Meter, auch nach einem Videosprung oder ohne Zeitbeleg. Der Fensteraufruf
+in `PlayerWindow.Coding.Events.cs` reicht nun `CodingOsdMeterController.LastTimestampSeconds`
+als benannten letzten Parameter weiter.
+
+- Die vorhandene Regel in `Application/Ai/CodingMeterResolver.ResolveRecentOsdMeter` wird
+  öffentlich wiederverwendet; ihr Körper bleibt unverändert. Cachemeter müssen 0–500 m
+  betragen und höchstens 1,5 Sekunden vom aktuellen Playerzeitpunkt entfernt sein,
+  unabhängig von Vorwärts-/Rückwärtsrichtung. Die Grenze ist eingeschlossen.
+- Fehlender oder nicht endlicher Cachezeitbeleg liefert keinen Cachemeter. Die bestehende
+  relative Zeitregel wird erhalten; eine zusätzliche Prüfung negativer Zeitpunkte gehört
+  nicht zu diesem Paket.
+- Nach dem Reviewhinweis zu PR 87 wurde die sechsstellige UI-Signatur auf ausdrücklichen
+  Wunsch entfernt. Jeder Aufrufer muss den siebten, nicht optionalen Zeitparameter
+  übergeben. Unbekannte Zeit wird ausdrücklich als null übergeben; der Cache entfällt dann.
+  Ein API-Wächter schützt diese Pflicht. Beim späteren Übernehmen des noch ungelieferten
+  CodingEventActionsPresenter muss LastTimestampSeconds aus seinem OsdMeterController
+  übergeben werden; ein alter Aufruf ohne Zeitparameter scheitert bereits beim Build.
+- Ein frisch gelesener OSD-Wert behält Vorrang und bisherige Behandlung. Rundung auf zwei
+  Stellen, Untergrenze null, lineare Videorückfallrechnung und Sitzungsrückfall bleiben
+  erhalten. Die bestehende UI-Rechnung wird nicht auf die Videodauer begrenzt.
+- Kein neuer Workflow/Typ unter `UI/Ai`, keine Registrierung, kein Paket- oder Datenformatwechsel.
+  Der gemeinsame KI-Start in `CodingPipelineHealthController` (#47) bleibt unverändert.
+
+Zwei Verhaltenstests und ein gezielter Fensteranschlusswächter waren am unveränderten
+Original rot: 70 m statt 4 m, 70 m statt 4,57 m und fehlende Zeitübergabe. Weitere Tests
+schützen Altersgrenze, Richtung, ungültige Cachewerte, frischen OSD-Vorrang und Rückfall.
+Details und Liefergrenzen: `docs/audits/2026-10-03-player-osd/ERGEBNIS.md`.
 
 ## Fachregeln der Mehrmodell-Videoanalyse (Entscheid 01.10.2026)
 
