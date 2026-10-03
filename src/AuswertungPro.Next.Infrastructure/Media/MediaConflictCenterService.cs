@@ -61,11 +61,11 @@ public sealed class MediaConflictCenterService
         IReadOnlyList<string> Messages);
 
     // Hinweis: nennt z.B. unlesbare Konfliktdateien, ohne den Scan als Fehler zu werten (Deepscan R8b).
-    public sealed record ScanResult(
-        IReadOnlyList<MediaConflictCase> Cases,
-        string? Error,
-        string? Hinweis = null)
+    // Zweistelliger Konstruktor und Deconstruct bleiben binaer kompatibel zur Fassung vor PR #85.
+    public sealed record ScanResult(IReadOnlyList<MediaConflictCase> Cases, string? Error, string? Hinweis = null)
     {
+        public ScanResult(IReadOnlyList<MediaConflictCase> Cases, string? Error) : this(Cases, Error, null) { }
+        public void Deconstruct(out IReadOnlyList<MediaConflictCase> Cases, out string? Error) => (Cases, Error) = (this.Cases, this.Error);
         public bool Success => string.IsNullOrWhiteSpace(Error);
     }
 

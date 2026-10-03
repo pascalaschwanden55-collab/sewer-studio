@@ -488,8 +488,14 @@ public sealed class TrainingCenterImportService
     /// Laeuft ausserhalb des aufrufenden Threads (Deepscan R6); der Abbruch wird vor dem
     /// PDF-Lesen und vor jeder Haltung geprueft und wirft <see cref="OperationCanceledException"/>.
     /// </summary>
+    /// <summary>
+    /// Bisherige dreistellige Signatur, binaer kompatibel fuer bereits kompilierte Aufrufer (Review PR #85).
+    /// </summary>
+    public Task<DistributeResult> DistributeByHaltungAsync(string pdfPath, string videoFolder, string outputFolder)
+        => DistributeByHaltungAsync(pdfPath, videoFolder, outputFolder, CancellationToken.None);
+
     public Task<DistributeResult> DistributeByHaltungAsync(
-        string pdfPath, string videoFolder, string outputFolder, CancellationToken cancellationToken = default)
+        string pdfPath, string videoFolder, string outputFolder, CancellationToken cancellationToken)
         => Task.Run(() => DistributeByHaltung(pdfPath, videoFolder, outputFolder, cancellationToken), cancellationToken);
 
     private DistributeResult DistributeByHaltung(

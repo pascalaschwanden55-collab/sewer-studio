@@ -7,6 +7,20 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 public sealed class MediaConflictCenterServiceTests
 {
+    // Review PR #85: Erweiterte oeffentliche Signaturen behalten ihre bisherige Form (binaer kompatibel).
+    [Fact]
+    public void Bisherige_oeffentliche_Signaturen_bleiben_erhalten()
+    {
+        var scan = typeof(MediaConflictCenterService.ScanResult);
+        var faelle = typeof(IReadOnlyList<MediaConflictCenterService.MediaConflictCase>);
+        Assert.NotNull(scan.GetConstructor([faelle, typeof(string)]));
+        Assert.NotNull(scan.GetMethod("Deconstruct", [faelle.MakeByRefType(), typeof(string).MakeByRefType()]));
+
+        var verteilen = typeof(AuswertungPro.Next.Infrastructure.Ai.Training.TrainingCenterImportService).GetMethod(
+            "DistributeByHaltungAsync", [typeof(string), typeof(string), typeof(string)]);
+        Assert.NotNull(verteilen);
+    }
+
     // Review PR #85: Eine aufgelistete Konfliktdatei, die vor dem Lesen verschwindet (Leser liefert null),
     // fehlte weder als Fall noch als unlesbar – die Oberflaeche warnte dann nicht.
     [Fact]
