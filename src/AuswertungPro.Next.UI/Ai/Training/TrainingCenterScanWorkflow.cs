@@ -98,6 +98,13 @@ public static class TrainingCenterScanWorkflow
             // Die bis dahin gesammelten Hinweise gehen nicht verloren (Folgepaket 1).
             request.SetStatusText("Scan abgebrochen." + ProtokolliereHinweise());
         }
+        catch (Exception)
+        {
+            // Unerwarteter Fehler: die gesammelten Hinweise noch ins Protokoll, dann wie bisher weiterwerfen
+            // (globaler Fehlerdialog mit UserError-Text).
+            ProtokolliereHinweise();
+            throw;
+        }
         finally
         {
             request.SetIsBusy(false);

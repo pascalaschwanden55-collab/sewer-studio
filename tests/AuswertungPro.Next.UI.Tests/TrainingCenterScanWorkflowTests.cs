@@ -100,6 +100,27 @@ public sealed class TrainingCenterScanWorkflowTests
     }
 
     [Fact]
+    public async Task RunAsync_unerwarteter_fehler_protokolliert_die_gesammelten_hinweise_vor_dem_weiterwerfen()
+    {
+        // Eigenpruefung Folgepaket 1: auch ein unerwarteter Fehler darf die gesammelten Hinweise nicht verlieren.
+        var state = new WorkflowState();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            TrainingCenterScanWorkflow.RunAsync(
+                CreateRequest(
+                    state: state,
+                    rootFolders: ["root-a"],
+                    scanFolderAsync: (_, _, hinweise, _) =>
+                    {
+                        hinweise.Add("Hinweis A");
+                        throw new InvalidOperationException("kaputt");
+                    })));
+
+        Assert.Equal(["Hinweis A"], state.Logs);
+        Assert.False(state.IsBusy);
+    }
+
+    [Fact]
     public async Task RunAsync_reicht_das_abbruchtoken_an_jeden_ordner_weiter()
     {
         using var abbruch = new CancellationTokenSource();
