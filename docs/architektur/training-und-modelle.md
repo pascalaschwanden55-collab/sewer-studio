@@ -1566,7 +1566,14 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   und benannt.
 - **Kein Symlink:** `File.CreateSymbolicLink` ist gestrichen. Der Videoverweis steht immer in
   `<Video>.link` (Pfad des Originalvideos); ein aus frueheren Laeufen vorhandenes Ziel bleibt
-  unberuehrt.
+  unberuehrt. `VideosMatched` und «, Video: …» gelten nur fuer einen geschriebenen Verweis oder ein
+  vorhandenes Video (PR #85).
+- **Videoverweis im Scan (PR #85):** `ScanAsync` loest `<name>.<videoendung>.link` nur lesend zum
+  Originalvideo auf (eine Zeile, absoluter Pfad, Videoendung, Datei vorhanden); ein echtes Video im
+  Ordner hat Vorrang. Ungueltige oder unlesbare Verweise laden den Fall ohne Video und stehen in der
+  Hinweisliste (`ScanAsync(root, uebersprungeneOrdner, hinweise, token)`); das Training Center nennt
+  sie im Protokoll und als «n Videoverweis(e) ungültig». Batch-Import und Selbsttraining profitieren
+  ueber `ScanAsync(root)` mit, ohne Hinweisliste. Tests: `TrainingCenterVideoverweisTests`.
 - **Unlesbare Ordner (R8c):** `ScanAsync(root, uebersprungeneOrdner, token)` sammelt Ordner, deren
   Dateiliste scheitert, und die von `SafeFileEnumeration` ausgelassenen (gesperrt, Verknuepfung).
   `TrainingCenterScanWorkflow` schreibt je Ordner die Zeile von `UebersprungeneOrdner.Meldung` ins
