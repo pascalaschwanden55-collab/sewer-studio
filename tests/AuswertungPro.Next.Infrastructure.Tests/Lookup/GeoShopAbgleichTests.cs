@@ -523,4 +523,31 @@ public sealed class GeoShopAbgleichTests : IDisposable
         var plan = GeoShopAbgleichPlanBuilder.Baue([GeoShopZiel.Fuer(s)], Lies(BauteilArt.Schacht, "A"));
         Assert.Contains(plan.Positionen.SelectMany(p => p.Felder), f => f.Feld == "Material");
     }
+
+    // Review PR #82 (P2): Wert und Herkunft stammen von derselben gewinnenden Schreibweise.
+    [Fact]
+    public void Herkunft_gehoert_zur_Schreibweise_die_den_Wert_liefert()
+    {
+        var s = Schacht();
+        s.SetFieldValue("Material", "Beton", FieldSource.Pdf, false);
+        s.SetFieldValue("MATERIAL", "Kunststoff", FieldSource.Manual, true);
+        var z = GeoShopZiel.Fuer(s);
+
+        Assert.Equal("Kunststoff", z.Wert("Material"));
+        Assert.Equal("Handeingabe", z.Herkunft("Material"));
+    }
+
+    // Review PR #82 (P2): Name und Eindeutigkeit lesen nach derselben Regel.
+    [Fact]
+    public void Handkorrigierte_Schachtnummer_in_zweiter_Schreibweise_bleibt_eindeutig()
+    {
+        var s = new SchachtRecord();
+        s.SetFieldValue("Schachtnummer", "ALT", FieldSource.Pdf, false);
+        s.SetFieldValue("SCHACHTNUMMER", "NEU", FieldSource.Manual, true);
+        var p = new Project(); p.SchaechteData.Add(s);
+        var z = GeoShopZiel.Fuer(s, p);
+
+        Assert.Equal("NEU", z.Name);
+        Assert.True(z.ProjektnameEindeutig);
+    }
 }

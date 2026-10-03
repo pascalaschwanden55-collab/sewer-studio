@@ -90,6 +90,18 @@ public static class SchachtFeldnamen
     }
 
     /// <summary>
+    /// Die Schreibweise, die <see cref="Wert"/> liefert (dieselbe Regel wie <see cref="AktuellerWert"/>);
+    /// null, wenn keine Schreibweise Inhalt hat und keine bewusst leer ist. Wer neben dem Wert
+    /// Metadaten zeigt (Herkunft, Quelle), liest sie hier — sonst stammen Wert und Herkunft von
+    /// verschiedenen Schreibweisen (Review PR #82).
+    /// </summary>
+    public static string? AktuelleSchreibweise(SchachtRecord record, string gemeint)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return AktuelleSchreibweise(record.Fields, record.FieldMeta, Schreibweisen(record, gemeint));
+    }
+
+    /// <summary>
     /// Vergleichsschluessel einer Schreibweisen-Gruppe: bekannte Mojibake-Schreibweisen
     /// (UTF-8 als CP1252 gelesen, auch doppelt) werden mit
     /// <see cref="SchachtFeldnamenReparatur.Entwirre"/> zurueckgerechnet, dann gefaltet. Ohne das
@@ -121,6 +133,19 @@ public static class SchachtFeldnamen
         IReadOnlyDictionary<string, string>? felder,
         IReadOnlyDictionary<string, FieldMetadata>? meta,
         IEnumerable<string> schreibweisen)
+        => AktuelleSchreibweise(felder, meta, schreibweisen) is { } name
+           && felder is not null && felder.TryGetValue(name, out var wert)
+            ? wert ?? ""
+            : "";
+
+    /// <summary>
+    /// Die gewinnende Schreibweise nach der Regel von <see cref="AktuellerWert"/> — die EINE
+    /// Auswahl, auf der Wert und Metadaten beide aufbauen. Null, wenn keine Schreibweise zaehlt.
+    /// </summary>
+    public static string? AktuelleSchreibweise(
+        IReadOnlyDictionary<string, string>? felder,
+        IReadOnlyDictionary<string, FieldMetadata>? meta,
+        IEnumerable<string> schreibweisen)
     {
         string? bester = null;
         var besterIstHandwert = false;
@@ -141,13 +166,13 @@ public static class SchachtFeldnamen
                           || (handwert == besterIstHandwert && zeit > besteZeit);
             if (gewinnt)
             {
-                bester = wert;
+                bester = name;
                 besterIstHandwert = handwert;
                 besteZeit = zeit;
             }
         }
 
-        return bester ?? "";
+        return bester;
     }
 
     /// <summary>
