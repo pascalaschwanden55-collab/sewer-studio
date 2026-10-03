@@ -378,9 +378,15 @@ public static class ImportRunWorkflowController
                         actions.SetLastReportPath(reportPath);
                 }
             }
-            catch
+            catch (Exception berichtFehler)
             {
-                // Report-Fehler duerfen den Import nicht nachtraeglich brechen.
+                // Report-Fehler duerfen den Import nicht nachtraeglich brechen. Deepscan R8a: Sie bleiben
+                // aber sichtbar, denn die Fehlersuche beginnt bei __IMPORT_REPORTS; die volle Ausnahme
+                // geht ins Programmlog, in den Details steht nur der verstaendliche Text.
+                actions.SetDetailsText(AppendParagraph(
+                    actions.GetDetailsText(),
+                    "Importbericht konnte nicht geschrieben werden: "
+                    + UserError.DescribeAndReport(berichtFehler, "Importbericht schreiben")));
             }
         }
     }
