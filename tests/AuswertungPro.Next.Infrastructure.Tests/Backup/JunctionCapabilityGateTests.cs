@@ -11,7 +11,7 @@ public sealed class JunctionCapabilityGateTests
     [Fact]
     public void Alle_Verknuepfungsschutztests_sind_registriert_und_ausfuehrbar()
     {
-        const int expectedJunctionFacts = 118; // Zusaetzlich sieben Schutzfaelle der Haltungsumbenennung;
+        const int expectedJunctionFacts = 127; // Zusaetzlich sieben Schutzfaelle der Haltungsumbenennung;
                                               // zwei fuer «Ordner wird zur Verknuepfung» (Audit A01, 23.09.2026);
                                               // einer fuer die WebGIS-Berichtsablage (C3, 24.09.2026);
                                               // einer fuer den Papierkorb des Verteilabgleichs (GA02, 28.09.2026);
@@ -19,6 +19,7 @@ public sealed class JunctionCapabilityGateTests
                                               // einer fuer den Eval-Schutzordner (Deepscan A1/R2, 02.10.2026);
                                               // einer fuer die gemeinsame Verknuepfungspruefung (Deepscan A5, 02.10.2026);
                                               // zwei fuer den Gold-Speicher, je einer fuer Trainingsablage, Goldpruefung, Gold-Eingang, Projekt-Schreibgrenze, Sicherungsziel, PDF-Pruefablage und Gold-Altarchiv auf dem gemeinsamen Baustein (A5).
+                                              // neun fuer die Schreibstellen der Dossiers, des Verteilberichts, der SchachtPro-QR-Ablage und des Projektdateipruefers (Testnetz T5, 03.10.2026).
 
         var actualJunctionFacts = typeof(JunctionCapabilityGateTests).Assembly
             .GetTypes()
