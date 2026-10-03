@@ -19,6 +19,7 @@
 - Eval-Schutz: eine Regel an allen Lesewegen (2026-10-02)
 - Ereignisbasierte Eval-Messung (AP 0.4a, technische Grundlage)
 - Training Center: Verteilung und Scan (03.10.2026, Deepscan R6/R8c)
+- Training Center: Aufteilung des Importdienstes (03.10.2026, Paket A)
 
 ## Geplant / nicht implementiert (nicht als Ist-Zustand behandeln)
 - `ByteTrack` / `OC-SORT`: kein Tracking im aktuellen HEAD.
@@ -1625,3 +1626,24 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   vor dem zweiten Chunk -> ein Ordner, Abbruch im Scan, unlesbarer Ordner),
   `TrainingCenterImportServiceVerknuepfungTests` (zwei `JunctionFact`, keine Symlink-Datei),
   `TrainingCenterScanWorkflowTests`, `TrainingCenterDistributionWorkflowTests`.
+
+## Training Center: Aufteilung des Importdienstes (03.10.2026, Paket A)
+
+Reines Verschieben ohne Verhaltensaenderung (Entscheid Pascal: vor der naechsten Erweiterung). Die
+bestehenden Training-Center-Tests laufen unveraendert; angepasst wurde nur die Dateiliste von
+`AtomicPersistenceArchitectureTests` (die Schreibstellen liegen jetzt in den neuen Dateien).
+
+- `TrainingCenterImportService` bleibt die oeffentliche Fassade: alle oeffentlichen und internen Signaturen
+  (inkl. der binaer kompatiblen Ueberladungen, `DistributeResult`, `ProtocolEntry` und des internen
+  Testnaht-Konstruktors) delegieren an die Teile. Der Dienst wird weiter direkt erzeugt (keine neue
+  DI-Registrierung; ServiceProvider unveraendert).
+- `TrainingCenterFallScan`: Fallordner unter der Wurzel durchsuchen, Dateien pruefen (ueber
+  `TrainingCenterFallDateien`), paaren, Verweis-Rueckfall, Inspektionsdatum; reiner Protokoll-Scan.
+- `TrainingCenterHaltungsverteilung`: Sammel-PDF nach Haltungen, je Haltung Ordner, JSON und Videoverweis
+  ueber den Verteil-Pfadwaechter, alte Verweise bereinigen.
+- `TrainingCenterPaarung`: bestes Video/Protokoll, Haltungsschluessel-Abgleich, Mehrdeutigkeit,
+  Widerspruchsregel (`DropContradiction`), Grafik-/Uebersichtsausschluss.
+- `TrainingCenterVideoIndex`: Videoindex Haltungs-ID -> Video mit Meldung ausgelassener Ordner/Dateien.
+- `TrainingCenterProtokollJson`: Protokolltext -> Beobachtungen (nur bekannte VSA-Codes) und atomares JSON.
+- `TrainingCenterFallDateien` (seit PR #85): Verknuepfungs- und Verweisregeln der Fallordner-Dateien.
+- Tests je Teil: `TrainingCenterTeileTests`.
