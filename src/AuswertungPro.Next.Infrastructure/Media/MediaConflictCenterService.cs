@@ -96,15 +96,15 @@ public sealed class MediaConflictCenterService
         string holdingsRoot;
         try
         {
-            var guard = new ProjectWritePathGuard(projectFolder);
-            holdingsRoot = guard.EnsureSafeDirectoryTarget(
-                Path.Combine(projectFolder, "Haltungen"));
+            holdingsRoot = new ProjectWritePathGuard(projectFolder)
+                .EnsureSafeDirectoryTarget(Path.Combine(projectFolder, "Haltungen"));
         }
         catch (Exception ex)
         {
             return new ScanResult(
                 Array.Empty<MediaConflictCase>(),
-                "Der Medien-Konfliktordner konnte nicht sicher geprüft werden: " + ex.Message);
+                "Der Medien-Konfliktordner konnte nicht sicher geprüft werden (Verknüpfung oder fehlende Berechtigung): "
+                + UserError.DescribeAndReport(ex, "Medienkonflikte prüfen"));
         }
 
         if (!Directory.Exists(holdingsRoot))

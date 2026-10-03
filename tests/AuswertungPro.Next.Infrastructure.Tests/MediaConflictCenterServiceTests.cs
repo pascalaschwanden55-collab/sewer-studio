@@ -84,6 +84,46 @@ public sealed class MediaConflictCenterServiceTests
         }
     }
 
+    [Fact]
+    public void ScanWithResult_zeigt_bei_fremder_Ausnahme_keinen_Rohtext()
+    {
+        // PR #85: Der Fehlertext haengte ex.Message an; eine fremde Ausnahme (hier aus Path.GetFullPath)
+        // erschien roh in der Oberflaeche. Jetzt laeuft er ueber UserError.
+        var result = new MediaConflictCenterService().ScanWithResult("C:\\Projekt\0Name");
+
+        Assert.False(result.Success);
+        Assert.StartsWith("Der Medien-Konfliktordner konnte nicht sicher geprüft werden", result.Error, StringComparison.Ordinal);
+        Assert.EndsWith("Technische Details stehen im Programmlog.", result.Error, StringComparison.Ordinal);
+    }
+
+    [JunctionFact]
+    public void ScanWithResult_nennt_verknuepfte_Konfliktdatei_im_Hinweis()
+    {
+        // PR #85: Eine Konfliktdatei, die selbst eine Verknuepfung ist, fiel still aus der Suche.
+        var root = TempRoot();
+        var projectRoot = Path.Combine(root, "Projekt");
+        var holding = Path.Combine(projectRoot, "Haltungen", "H-1");
+        Directory.CreateDirectory(holding);
+        var fremd = Path.Combine(root, "fremd.txt");
+        File.WriteAllText(fremd, "Haltung: H-1");
+        var dateiLink = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+        File.CreateSymbolicLink(dateiLink, fremd);
+
+        try
+        {
+            var result = new MediaConflictCenterService().ScanWithResult(projectRoot);
+
+            Assert.True(result.Success);
+            Assert.Empty(result.Cases);
+            Assert.NotNull(result.Hinweis);
+            Assert.Contains($"Konfliktdatei «{dateiLink}» übersprungen", result.Hinweis, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteRoot(root);
+        }
+    }
+
     [JunctionFact]
     public void ScanWithResult_nennt_uebersprungenen_Haltungsunterordner_im_Hinweis()
     {

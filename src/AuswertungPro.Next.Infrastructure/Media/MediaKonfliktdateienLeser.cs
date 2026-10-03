@@ -28,15 +28,19 @@ internal static class MediaKonfliktdateienLeser
         Func<string, MediaConflictCenterService.MediaConflictCase?> lese)
     {
         var uebersprungen = new List<string>();
-        var infoPfade = SafeFileEnumeration.EnumerateFilesSafe(haltungsWurzel, "*_VIDEO_*.txt", recursive: true, uebersprungen)
-            .Where(path =>
-                path.EndsWith("_VIDEO_MISSING.txt", StringComparison.OrdinalIgnoreCase)
-                || path.EndsWith("_VIDEO_AMBIGUOUS.txt", StringComparison.OrdinalIgnoreCase))
+        var uebersprungeneDateien = new List<string>();
+        var infoPfade = SafeFileEnumeration
+            .EnumerateFilesSafe(haltungsWurzel, "*_VIDEO_*.txt", recursive: true, uebersprungen, uebersprungeneDateien)
+            .Where(IstKonfliktdatei)
             .ToList();
 
         var (faelle, unlesbar) = LeseAlle(infoPfade, lese);
-        return (faelle, Hinweis(unlesbar, uebersprungen));
+        return (faelle, Hinweis(unlesbar, uebersprungen, uebersprungeneDateien.Where(IstKonfliktdatei)));
     }
+
+    private static bool IstKonfliktdatei(string path)
+        => path.EndsWith("_VIDEO_MISSING.txt", StringComparison.OrdinalIgnoreCase)
+           || path.EndsWith("_VIDEO_AMBIGUOUS.txt", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Liest alle Dateien mit <paramref name="lese"/>; jede werfende Datei zaehlt als unlesbar.</summary>
     public static (List<MediaConflictCenterService.MediaConflictCase> Faelle, int Unlesbar) LeseAlle(
@@ -72,7 +76,10 @@ internal static class MediaKonfliktdateienLeser
     /// Hinweis fuer das Scan-Ergebnis, oder <c>null</c>, wenn alle Dateien lesbar waren und kein Ordner
     /// ausgelassen wurde. Ordnerzeilen kommen aus dem gemeinsamen Baustein <see cref="UebersprungeneOrdner"/>.
     /// </summary>
-    public static string? Hinweis(int unlesbar, IEnumerable<string>? uebersprungeneOrdner = null)
+    public static string? Hinweis(
+        int unlesbar,
+        IEnumerable<string>? uebersprungeneOrdner = null,
+        IEnumerable<string>? uebersprungeneDateien = null)
     {
         var teile = new List<string>();
         if (unlesbar == 1)
@@ -80,6 +87,11 @@ internal static class MediaKonfliktdateienLeser
         else if (unlesbar > 1)
             teile.Add($"{unlesbar} Konfliktdateien nicht lesbar.");
         teile.AddRange(UebersprungeneOrdner.Meldungen(uebersprungeneOrdner).Select(zeile => zeile + "."));
+        // PR #85: Die sichere Suche laesst verknuepfte oder nicht attributlesbare Dateien aus; auch sie nennen.
+        teile.AddRange((uebersprungeneDateien ?? [])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(pfad => pfad, StringComparer.OrdinalIgnoreCase)
+            .Select(pfad => $"Konfliktdatei «{pfad}» übersprungen: Verknüpfung oder nicht sicher prüfbar."));
         return teile.Count == 0 ? null : string.Join(" ", teile);
     }
 }
