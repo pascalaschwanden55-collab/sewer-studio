@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Views.Pages;
 
@@ -45,22 +44,33 @@ public sealed class EinfacherBefehlTests
         // laufen zwei Grundbuchabfragen gleichzeitig und zaehlen doppelt
         // gegen die Drosselung des Kantons.
         var tor = new NachschlagTor();
-        var laeuft = new TaskCompletionSource();
-        var freigabe = new TaskCompletionSource();
+        var laeuft = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var freigabe = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var wiederBedienbar = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var erster = new EinfacherBefehl(
             async () => { laeuft.SetResult(); await freigabe.Task; }, _ => { }, tor);
         var zweiter = new EinfacherBefehl(() => Task.CompletedTask, _ => { }, tor);
+        zweiter.CanExecuteChanged += (_, _) =>
+        {
+            if (zweiter.CanExecute(null))
+                wiederBedienbar.TrySetResult();
+        };
 
         Assert.True(zweiter.CanExecute(null));
 
         erster.Execute(null);
-        await laeuft.Task;
-
-        Assert.False(zweiter.CanExecute(null));
-
-        freigabe.SetResult();
-        await Task.Delay(50);
+        try
+        {
+            await laeuft.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(zweiter.CanExecute(null));
+        }
+        finally
+        {
+            freigabe.TrySetResult();
+            // Die Meldung kommt erst nach dem Freigeben der gemeinsamen Sperre.
+            await wiederBedienbar.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
 
         Assert.True(zweiter.CanExecute(null));
     }

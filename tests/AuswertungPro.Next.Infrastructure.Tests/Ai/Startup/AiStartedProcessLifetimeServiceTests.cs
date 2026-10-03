@@ -1,6 +1,6 @@
 using System;
 using System.Diagnostics;
-using System.Threading;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Infrastructure.Ai.Startup;
 using Xunit;
@@ -9,36 +9,68 @@ namespace AuswertungPro.Next.Infrastructure.Tests.Ai.Startup;
 
 /// <summary>
 /// Tests fuer die Prozessverfolgung mit Art/Pfad und PID-Reuse-Schutz (Paket 2/A3).
-/// Echte Prozesse nur nach dem vorhandenen, sicheren Self-Test-Muster (kurzer
-/// powershell-Sleep, wird in jedem Fall beendet).
+/// Der eigene Testprozess meldet seine Bereitschaft und wartet auf Standardeingabe.
+/// Er wird in jedem Fall beendet, ohne feste Schlafdauer als Lebenszeit.
 /// </summary>
 public sealed class AiStartedProcessLifetimeServiceTests
 {
     // Plausibel unmoegliche PID: GetProcessById schlaegt garantiert fehl.
     private const int ImpossiblePid = 1_073_741_820;
 
-    private static Process StartSleepProcess()
+    private static async Task<Process> StartTestProcessAsync()
     {
         var process = Process.Start(new ProcessStartInfo
         {
             FileName = "powershell",
-            Arguments = "-NoProfile -Command Start-Sleep -Seconds 30",
+            Arguments = "-NoProfile -Command \"[Console]::Out.WriteLine('ready'); [Console]::Out.Flush(); [Console]::In.ReadLine() | Out-Null\"",
             UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardInput = true,
             CreateNoWindow = true,
             WindowStyle = ProcessWindowStyle.Hidden
         });
         Assert.NotNull(process);
-        return process;
+        try
+        {
+            // Erst nach der Antwort ist PowerShell vollstaendig initialisiert.
+            Assert.Equal("ready", await process.StandardOutput.ReadLineAsync()
+                .WaitAsync(TimeSpan.FromSeconds(5)));
+            return process;
+        }
+        catch (Exception startupError)
+        {
+            try
+            {
+                // EOF gibt auch bei fehlgeschlagenem Kill den eigenen Testprozess frei.
+                process.StandardInput.Close();
+                if (!process.WaitForExit(milliseconds: 5_000))
+                {
+                    process.Kill(entireProcessTree: true);
+                    Assert.True(process.WaitForExit(milliseconds: 5_000),
+                        "Der eigene Testprozess wurde nicht beendet.");
+                }
+            }
+            catch (Exception cleanupError)
+            {
+                throw new AggregateException("Prozessstart und anschliessende Freigabe sind fehlgeschlagen.",
+                    startupError, cleanupError);
+            }
+            finally
+            {
+                process.Dispose();
+            }
+            throw;
+        }
     }
 
     [Fact]
-    public void TryTrack_mit_art_und_pfad_liefert_identitaetsdaten()
+    public async Task TryTrack_mit_art_und_pfad_liefert_identitaetsdaten()
     {
         if (!OperatingSystem.IsWindows())
             return;
 
         var lifetime = new AiStartedProcessLifetimeService();
-        using var process = StartSleepProcess();
+        using var process = await StartTestProcessAsync();
         try
         {
             Assert.True(
@@ -64,13 +96,13 @@ public sealed class AiStartedProcessLifetimeServiceTests
     }
 
     [Fact]
-    public void Nur_ollama_getrackt_ist_kein_sidecar()
+    public async Task Nur_ollama_getrackt_ist_kein_sidecar()
     {
         if (!OperatingSystem.IsWindows())
             return;
 
         var lifetime = new AiStartedProcessLifetimeService();
-        using var process = StartSleepProcess();
+        using var process = await StartTestProcessAsync();
         try
         {
             Assert.True(
@@ -89,13 +121,13 @@ public sealed class AiStartedProcessLifetimeServiceTests
     }
 
     [Fact]
-    public void Beendeter_prozess_wird_bei_abfrage_entfernt()
+    public async Task Beendeter_prozess_wird_bei_abfrage_entfernt()
     {
         if (!OperatingSystem.IsWindows())
             return;
 
         var lifetime = new AiStartedProcessLifetimeService();
-        using var process = StartSleepProcess();
+        using var process = await StartTestProcessAsync();
         try
         {
             Assert.True(
@@ -179,29 +211,18 @@ public sealed class AiStartedProcessLifetimeServiceTests
     }
 
     [Fact]
-    public void Probe_laufender_prozess_liefert_startzeit_und_pfad()
+    public async Task Probe_laufender_prozess_liefert_startzeit_und_pfad()
     {
         if (!OperatingSystem.IsWindows())
             return;
 
-        using var process = StartSleepProcess();
+        using var process = await StartTestProcessAsync();
         try
         {
             var probe = ProcessTreeInspector.ProbeProcessIdentity(process.Id);
 
             Assert.True(probe.Found);
             Assert.Equal(process.StartTime.ToUniversalTime(), probe.StartTimeUtc);
-
-            // MainModule ist direkt nach dem Start unter Last manchmal noch nicht lesbar
-            // oder Windows meldet waehrend der Initialisierung kurz ntdll.dll: nachfassen.
-            var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
-            while ((probe.ImagePath is null
-                    || !probe.ImagePath.Contains("powershell", StringComparison.OrdinalIgnoreCase))
-                   && DateTime.UtcNow < deadline)
-            {
-                Thread.Sleep(50);
-                probe = ProcessTreeInspector.ProbeProcessIdentity(process.Id);
-            }
 
             Assert.NotNull(probe.ImagePath);
             Assert.Contains("powershell", probe.ImagePath, StringComparison.OrdinalIgnoreCase);

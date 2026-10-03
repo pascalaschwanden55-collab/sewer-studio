@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -386,27 +387,71 @@ public sealed class DossierAttachmentCollectorTests : IDisposable
     {
         using var firstLocked = new ManualResetEventSlim();
         using var releaseFirst = new ManualResetEventSlim();
+        using var firstCancellation = new CancellationTokenSource();
+        using var cancellation = new CancellationTokenSource();
+        var secondEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var folder = AttachmentFolder();
         var first = Task.Run(() =>
         {
             using var held = DossierAttachmentFolderLock.Acquire(
                 folder,
-                CancellationToken.None);
+                firstCancellation.Token);
             firstLocked.Set();
             releaseFirst.Wait();
         });
-        Assert.True(firstLocked.Wait(TimeSpan.FromSeconds(5)));
-
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Task.Run(() =>
+        // Der eigene Thread erlaubt es, vor dem Abbruch einen Wartezustand
+        // innerhalb von Acquire zu beobachten. Die erste Sperre bleibt gehalten.
+        var second = new Thread(() =>
         {
-            using var blocked = DossierAttachmentFolderLock.Acquire(
-                folder,
-                cancellation.Token);
-        }));
+            try
+            {
+                secondEntered.TrySetResult();
+                using var blocked = DossierAttachmentFolderLock.Acquire(folder, cancellation.Token);
+                secondFinished.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                secondFinished.TrySetException(ex);
+            }
+        }) { IsBackground = true, Name = "Dossier-Sperre-Test" };
+        var secondStarted = false;
+        try
+        {
+            Assert.True(firstLocked.Wait(TimeSpan.FromSeconds(5)));
+            second.Start();
+            secondStarted = true;
+            await secondEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var watch = Stopwatch.StartNew();
+            var wartetAufSperre = false;
+            while (!secondFinished.Task.IsCompleted && watch.Elapsed < TimeSpan.FromSeconds(5))
+            {
+                wartetAufSperre = (second.ThreadState & System.Threading.ThreadState.WaitSleepJoin) != 0;
+                if (wartetAufSperre)
+                    break;
+                await Task.Delay(10);
+            }
 
-        releaseFirst.Set();
-        await first;
+            Assert.False(secondFinished.Task.IsCompleted, "Der zweite Lauf muss auf die Ordnersperre warten.");
+            Assert.True(wartetAufSperre,
+                "Der zweite Lauf hat das Warten auf die Ordnersperre nicht erreicht.");
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => secondFinished.Task.WaitAsync(TimeSpan.FromSeconds(5)));
+        }
+        finally
+        {
+            cancellation.Cancel();
+            firstCancellation.Cancel();
+            releaseFirst.Set();
+            try { await first.WaitAsync(TimeSpan.FromSeconds(5)); }
+            finally
+            {
+                if (secondStarted)
+                    Assert.True(second.Join(TimeSpan.FromSeconds(5)), "Der zweite Testlauf blieb haengen.");
+            }
+        }
+
         using var acquiredAfterRelease = DossierAttachmentFolderLock.Acquire(
             folder,
             CancellationToken.None);

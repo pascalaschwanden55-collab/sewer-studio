@@ -466,26 +466,43 @@ public sealed class TrainingSamplesStorePersistenceTests
     }
 
     [Fact]
-    public async Task SaveAsync_gelingt_waehrend_ein_Leser_die_Datei_kurz_offen_haelt()
+    public async Task Ersetzung_nach_echter_Lesersperre_laesst_neuen_Bestand_laden()
     {
         await WithTempStore(async path =>
         {
             await TrainingSamplesStore.SaveAsync([Sample("erst", "sig-1")]);
+            var vorher = await File.ReadAllBytesAsync(path);
+            var vorbereitet = path + ".vorbereitet";
+            var vorbereitenderStore = new TrainingSampleFileStore(vorbereitet);
+            await vorbereitenderStore.SaveAsync([Sample("erst", "sig-1"), Sample("zweit", "sig-2")]);
+            var wiederholungen = 0;
 
-            // Der Leser haelt die Datei so, wie es der Spiegeldienst waehrend des
-            // Hashens tut, und gibt sie danach wieder frei.
-            using var leser = new FileStream(
+            // Windows sperrt File.Move(overwrite:true) auch bei FileShare.Delete.
+            // Erst der echte Fehlversuch gibt den Leser frei, unabhaengig von der Uhr.
+            var leser = new FileStream(
                 path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            var freigabe = Task.Run(async () =>
+            try
             {
-                await Task.Delay(250);
+                await TrainingSampleFileStore.ReplaceAtomicallyAsync(
+                    vorbereitet,
+                    path,
+                    delay: _ =>
+                    {
+                        wiederholungen++;
+                        Assert.Equal(vorher, File.ReadAllBytes(path));
+                        Assert.True(File.Exists(vorbereitet));
+                        leser.Dispose();
+                        return Task.CompletedTask;
+                    });
+            }
+            finally
+            {
                 leser.Dispose();
-            });
+            }
 
-            await TrainingSamplesStore.SaveAsync([Sample("erst", "sig-1"), Sample("zweit", "sig-2")]);
-            await freigabe;
-
-            Assert.Equal(2, (await TrainingSamplesStore.LoadAsync()).Count);
+            Assert.True(wiederholungen > 0, "Die echte Lesersperre muss mindestens einen Fehlversuch ausloesen.");
+            Assert.False(File.Exists(vorbereitet));
+            Assert.Equal(["erst", "zweit"], (await TrainingSamplesStore.LoadAsync()).Select(sample => sample.SampleId));
         });
     }
 

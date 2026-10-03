@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -58,39 +59,92 @@ public sealed class XtfLieferungUiTests
         StaTestRunner.Run(() =>
         {
             var app = new System.Windows.Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-            SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(app.Dispatcher));
-            foreach (var path in new[] { "Theme/ThemeLight.xaml", "Theme/Controls.xaml", "Controls/NovaPageHeader.xaml" })
-                app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/SewerStudio;component/" + path, UriKind.Relative) });
-            var store = new Ablage(); var vm = new XtfLieferungViewModel(store, new Dialoge());
-            var window = new XtfLieferungWindow(vm) { Left = -20000, Top = -20000, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual };
-            window.Show(); Warte(window, vm.OeffnenCommand.ExecuteAsync(null));
-            vm.Auswahl = vm.Zeilen[0]; Warte(window, vm.AuswahlLaden);
-            var feld = vm.Felder.Single(f => f.Feld.Schluessel == "TextVAli");
-            var combo = VisualTreeSafe.FindDescendants<ComboBox>(window).Single(c => ReferenceEquals(c.DataContext, feld));
-            Assert.Equal(new[] { "Top", "Cap", "Half", "Base", "Bottom" }, combo.Items.Cast<string>());
-            Assert.Equal("Altwert", feld.Wert); Assert.Contains("Altwert", feld.Hinweis); Assert.False(vm.HatEntwurf);
-            combo.IsDropDownOpen = true; Pump(window); combo.SelectedItem = "Bottom"; combo.IsDropDownOpen = false; Pump(window);
-            Assert.Equal("Bottom", feld.Wert); Assert.True(vm.HatEntwurf);
-            window.Close(); Assert.True(window.IsVisible);
-            Warte(window, vm.SpeichernCommand.ExecuteAsync(null)); Assert.Equal("Bottom", store.Werte["TextVAli"]);
-            Bild(window);
-            window.Width = 900; window.Height = 680; Pump(window); Bild(window, "xtf-lieferung-nova-schmal");
-            app.Resources.MergedDictionaries[0] = new ResourceDictionary { Source = new Uri("/SewerStudio;component/Theme/Theme.xaml", UriKind.Relative) };
-            Pump(window); Bild(window, "xtf-lieferung-nova-dunkel-schmal");
-            window.Width = 1240; window.Height = 860; Pump(window); Bild(window, "xtf-lieferung-nova-dunkel");
-            // Der vorhandene Themenwechsel darf weder Eingaben noch die letzte Auswahl verlieren.
-            Assert.Equal("Bottom", vm.Felder.Single(f => f.Feld.Schluessel == "TextVAli").Wert);
-            Assert.False(vm.HatEntwurf); Assert.Equal(5, vm.Felder.Count);
-            window.Close(); WpfIsolatedTestProcess.MarkChildScenarioCompleted(); app.Shutdown();
+            var vorher = SynchronizationContext.Current;
+            XtfLieferungWindow? window = null;
+            try
+            {
+                SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(app.Dispatcher));
+                foreach (var path in new[] { "Theme/ThemeLight.xaml", "Theme/Controls.xaml", "Controls/NovaPageHeader.xaml" })
+                    app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/SewerStudio;component/" + path, UriKind.Relative) });
+                var store = new Ablage(); var vm = new XtfLieferungViewModel(store, new Dialoge());
+                window = new XtfLieferungWindow(vm) { Left = -20000, Top = -20000, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual };
+                window.Show(); Pump(window); Assert.True(window.IsLoaded);
+                // Ein fehlendes Ergebnis muss die Frist ausloesen. Danach muss
+                // derselbe Dispatcher weiterhin echte Fortsetzungen abarbeiten.
+                var ohneErgebnis = new TaskCompletionSource();
+                var zeitfehler = Assert.Throws<Xunit.Sdk.TrueException>(() =>
+                    Warte(window, ohneErgebnis.Task, TimeSpan.FromMilliseconds(50)));
+                Assert.Contains("UI-Vorgang blieb hängen.", zeitfehler.Message, StringComparison.Ordinal);
+                var fortgesetzt = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                window.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => fortgesetzt.SetResult()));
+                Warte(window, fortgesetzt.Task);
+                Warte(window, vm.OeffnenCommand.ExecuteAsync(null));
+                vm.Auswahl = vm.Zeilen[0]; Warte(window, vm.AuswahlLaden);
+                var feld = vm.Felder.Single(f => f.Feld.Schluessel == "TextVAli");
+                var combo = VisualTreeSafe.FindDescendants<ComboBox>(window).Single(c => ReferenceEquals(c.DataContext, feld));
+                Assert.Equal(new[] { "Top", "Cap", "Half", "Base", "Bottom" }, combo.Items.Cast<string>());
+                Assert.Equal("Altwert", feld.Wert); Assert.Contains("Altwert", feld.Hinweis); Assert.False(vm.HatEntwurf);
+                combo.IsDropDownOpen = true; Pump(window); combo.SelectedItem = "Bottom"; combo.IsDropDownOpen = false; Pump(window);
+                Assert.Equal("Bottom", feld.Wert); Assert.True(vm.HatEntwurf);
+                window.Close(); Assert.True(window.IsVisible);
+                Warte(window, vm.SpeichernCommand.ExecuteAsync(null)); Assert.Equal("Bottom", store.Werte["TextVAli"]);
+                Bild(window);
+                window.Width = 900; window.Height = 680; Pump(window); Bild(window, "xtf-lieferung-nova-schmal");
+                app.Resources.MergedDictionaries[0] = new ResourceDictionary { Source = new Uri("/SewerStudio;component/Theme/Theme.xaml", UriKind.Relative) };
+                Pump(window); Bild(window, "xtf-lieferung-nova-dunkel-schmal");
+                window.Width = 1240; window.Height = 860; Pump(window); Bild(window, "xtf-lieferung-nova-dunkel");
+                // Der vorhandene Themenwechsel darf weder Eingaben noch die letzte Auswahl verlieren.
+                Assert.Equal("Bottom", vm.Felder.Single(f => f.Feld.Schluessel == "TextVAli").Wert);
+                Assert.False(vm.HatEntwurf); Assert.Equal(5, vm.Felder.Count);
+                window.Close(); Assert.False(window.IsVisible);
+                WpfIsolatedTestProcess.MarkChildScenarioCompleted();
+            }
+            finally
+            {
+                try
+                {
+                    window?.Close();
+                }
+                finally
+                {
+                    try { app.Shutdown(); }
+                    finally { SynchronizationContext.SetSynchronizationContext(vorher); }
+                }
+            }
         });
     }
-    private static void Warte(Window w, Task task)
+    private static void Warte(Window w, Task task, TimeSpan? timeout = null)
     {
-        var limit = DateTime.UtcNow.AddSeconds(15);
-        while (!task.IsCompleted && DateTime.UtcNow < limit) Pump(w);
+        if (!task.IsCompleted)
+        {
+            var watch = Stopwatch.StartNew();
+            var frame = new DispatcherFrame();
+            var frist = timeout ?? TimeSpan.FromSeconds(15);
+            // Send liegt vor normalen UI-Fortsetzungen. Die Frist wartet damit
+            // nicht auf einen ApplicationIdle-Zustand, den WPF eventuell nie erreicht.
+            var timer = new DispatcherTimer(DispatcherPriority.Send, w.Dispatcher)
+            {
+                Interval = TimeSpan.FromMilliseconds(10)
+            };
+            timer.Tick += (_, _) =>
+            {
+                if (task.IsCompleted || watch.Elapsed >= frist)
+                    frame.Continue = false;
+            };
+            try
+            {
+                timer.Start();
+                Dispatcher.PushFrame(frame);
+            }
+            finally
+            {
+                timer.Stop();
+                frame.Continue = false;
+            }
+        }
         Assert.True(task.IsCompleted, "UI-Vorgang blieb hängen."); task.GetAwaiter().GetResult(); Pump(w);
     }
-    private static void Pump(Window w) { w.UpdateLayout(); w.Dispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle); }
+    private static void Pump(Window w) => w.UpdateLayout();
     private static void Bild(Window window, string name = "xtf-lieferung-fenster")
     {
         var host = (FrameworkElement)window.Content;
@@ -101,7 +155,9 @@ public sealed class XtfLieferungUiTests
         using (var dc = visual.RenderOpen()) dc.DrawRectangle(window.Background, null, new Rect(0, 0, breite, hoehe));
         // Direkt rendern: VisualBrush würde nach dem Verkleinern alte, überstehende Tabellenbereiche mit einpassen.
         bmp.Render(visual); bmp.Render(host); var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bmp));
-        using var output = File.Create(TestRepoPaths.RepoFile(".tmp", name + ".png")); png.Save(output);
+        var bildpfad = TestRepoPaths.RepoFile(".tmp", name + ".png");
+        Directory.CreateDirectory(Path.GetDirectoryName(bildpfad)!);
+        using var output = File.Create(bildpfad); png.Save(output);
     }
 
     private sealed class Ablage : IXtfLieferungsAblage
