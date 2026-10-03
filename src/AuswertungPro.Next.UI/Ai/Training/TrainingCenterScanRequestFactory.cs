@@ -7,7 +7,7 @@ public sealed record TrainingCenterScanRequestFactoryRequest(
     Action<bool> SetIsBusy,
     IReadOnlyCollection<string> RootFolders,
     Func<string, bool> DirectoryExists,
-    Func<string, ICollection<string>, CancellationToken, Task<List<TrainingCaseInput>>> ScanInputsAsync,
+    Func<string, ICollection<string>, ICollection<string>, CancellationToken, Task<List<TrainingCaseInput>>> ScanInputsAsync,
     Func<TrainingCaseInput, TrainingCase> ToTrainingCase,
     Action<IReadOnlyList<TrainingCase>> ReplaceCases,
     Action<IReadOnlyList<TrainingCase>> AppendCases,
@@ -20,7 +20,7 @@ public sealed record TrainingCenterScanDefaultRequestFactoryRequest(
     Func<bool> GetIsBusy,
     Action<bool> SetIsBusy,
     IReadOnlyCollection<string> RootFolders,
-    Func<string, ICollection<string>, CancellationToken, Task<List<TrainingCaseInput>>> ScanInputsAsync,
+    Func<string, ICollection<string>, ICollection<string>, CancellationToken, Task<List<TrainingCaseInput>>> ScanInputsAsync,
     Action<IReadOnlyList<TrainingCase>> ReplaceCases,
     Action<IReadOnlyList<TrainingCase>> AppendCases,
     Action<string> SetStatusText,
@@ -72,9 +72,9 @@ public static class TrainingCenterScanRequestFactory
             request.SetIsBusy,
             request.RootFolders,
             request.DirectoryExists,
-            async (folder, uebersprungeneOrdner, cancellationToken) =>
+            async (folder, uebersprungeneOrdner, hinweise, cancellationToken) =>
             {
-                var inputs = await request.ScanInputsAsync(folder, uebersprungeneOrdner, cancellationToken)
+                var inputs = await request.ScanInputsAsync(folder, uebersprungeneOrdner, hinweise, cancellationToken)
                     .ConfigureAwait(false);
                 return inputs.Select(request.ToTrainingCase).ToList();
             },

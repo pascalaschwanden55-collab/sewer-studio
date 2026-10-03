@@ -14,7 +14,7 @@ public sealed class TrainingCenterScanWorkflowTests
             CreateRequest(
                 getIsBusy: () => true,
                 setStatusText: value => calls.Add($"status:{value}"),
-                scanFolderAsync: (_, _, _) =>
+                scanFolderAsync: (_, _, _, _) =>
                 {
                     calls.Add("scan");
                     return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
@@ -53,7 +53,7 @@ public sealed class TrainingCenterScanWorkflowTests
                 state: state,
                 rootFolders: ["missing", "root-a"],
                 directoryExists: folder => folder == "root-a",
-                scanFolderAsync: (folder, _, _) =>
+                scanFolderAsync: (folder, _, _, _) =>
                 {
                     scanned.Add(folder);
                     return Task.FromResult<IReadOnlyList<TrainingCase>>(
@@ -94,7 +94,7 @@ public sealed class TrainingCenterScanWorkflowTests
                 CreateRequest(
                     state: state,
                     rootFolders: ["root-a"],
-                    scanFolderAsync: (_, _, _) => throw new InvalidOperationException("kaputt"))));
+                    scanFolderAsync: (_, _, _, _) => throw new InvalidOperationException("kaputt"))));
 
         Assert.False(state.IsBusy);
     }
@@ -109,7 +109,7 @@ public sealed class TrainingCenterScanWorkflowTests
             CreateRequest(
                 rootFolders: ["root-a", "root-b"],
                 resetCancellation: () => abbruch.Token,
-                scanFolderAsync: (_, _, token) =>
+                scanFolderAsync: (_, _, _, token) =>
                 {
                     tokens.Add(token);
                     return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
@@ -127,7 +127,7 @@ public sealed class TrainingCenterScanWorkflowTests
             CreateRequest(
                 state: state,
                 rootFolders: ["root-a"],
-                scanFolderAsync: (_, _, _) => throw new OperationCanceledException()));
+                scanFolderAsync: (_, _, _, _) => throw new OperationCanceledException()));
 
         Assert.False(state.IsBusy);
         Assert.Equal("Scan abgebrochen.", state.StatusText);
@@ -144,7 +144,7 @@ public sealed class TrainingCenterScanWorkflowTests
             CreateRequest(
                 state: state,
                 rootFolders: ["root-a"],
-                scanFolderAsync: (_, uebersprungen, _) =>
+                scanFolderAsync: (_, uebersprungen, _, _) =>
                 {
                     uebersprungen.Add(unlesbar);
                     return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
@@ -155,13 +155,35 @@ public sealed class TrainingCenterScanWorkflowTests
         Assert.Equal(1, state.SaveCalls);
     }
 
+    [Fact]
+    public async Task RunAsync_nennt_ungueltige_videoverweise_im_protokoll_und_im_status()
+    {
+        // PR #85: Ein ungueltiger .link-Verweis laedt den Fall ohne Video; das bleibt sichtbar.
+        var state = new WorkflowState();
+
+        await TrainingCenterScanWorkflow.RunAsync(
+            CreateRequest(
+                state: state,
+                rootFolders: ["root-a"],
+                scanFolderAsync: (_, _, hinweise, _) =>
+                {
+                    hinweise.Add("Videoverweis «x.mpg.link» zeigt auf kein vorhandenes Video; Fall ohne Video geladen.");
+                    return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
+                }));
+
+        Assert.Equal(
+            ["Videoverweis «x.mpg.link» zeigt auf kein vorhandenes Video; Fall ohne Video geladen."],
+            state.Logs);
+        Assert.Equal("Gefunden: 0 Fälle · 1 Videoverweis ungültig (siehe Protokoll)", state.StatusText);
+    }
+
     private static TrainingCenterScanWorkflowRequest CreateRequest(
         WorkflowState? state = null,
         IReadOnlyCollection<string>? rootFolders = null,
         Func<bool>? getIsBusy = null,
         Action<bool>? setIsBusy = null,
         Func<string, bool>? directoryExists = null,
-        Func<string, ICollection<string>, CancellationToken, Task<IReadOnlyList<TrainingCase>>>? scanFolderAsync = null,
+        Func<string, ICollection<string>, ICollection<string>, CancellationToken, Task<IReadOnlyList<TrainingCase>>>? scanFolderAsync = null,
         Action<IReadOnlyList<TrainingCase>>? replaceCases = null,
         Action<IReadOnlyList<TrainingCase>>? appendCases = null,
         Action<string>? setStatusText = null,
@@ -174,7 +196,7 @@ public sealed class TrainingCenterScanWorkflowTests
             SetIsBusy: setIsBusy ?? (value => state.IsBusy = value),
             RootFolders: rootFolders ?? ["root-a"],
             DirectoryExists: directoryExists ?? (_ => true),
-            ScanFolderAsync: scanFolderAsync ?? ((_, _, _) => Task.FromResult<IReadOnlyList<TrainingCase>>([])),
+            ScanFolderAsync: scanFolderAsync ?? ((_, _, _, _) => Task.FromResult<IReadOnlyList<TrainingCase>>([])),
             ReplaceCases: replaceCases ?? (items => state.ReplaceCalls.Add(items.ToList())),
             AppendCases: appendCases ?? (items => state.AppendCalls.Add(items.ToList())),
             SetStatusText: setStatusText ?? (value => state.StatusText = value),

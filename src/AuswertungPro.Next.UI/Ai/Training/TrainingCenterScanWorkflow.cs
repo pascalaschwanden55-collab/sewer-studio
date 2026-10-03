@@ -7,7 +7,7 @@ public sealed record TrainingCenterScanWorkflowRequest(
     Action<bool> SetIsBusy,
     IReadOnlyCollection<string> RootFolders,
     Func<string, bool> DirectoryExists,
-    Func<string, ICollection<string>, CancellationToken, Task<IReadOnlyList<TrainingCase>>> ScanFolderAsync,
+    Func<string, ICollection<string>, ICollection<string>, CancellationToken, Task<IReadOnlyList<TrainingCase>>> ScanFolderAsync,
     Action<IReadOnlyList<TrainingCase>> ReplaceCases,
     Action<IReadOnlyList<TrainingCase>> AppendCases,
     Action<string> SetStatusText,
@@ -38,6 +38,7 @@ public static class TrainingCenterScanWorkflow
             // Deepscan R6: «Abbrechen» wirkt auch auf den Scan; der Dienst prueft je Ordner.
             var cancellationToken = request.ResetCancellation();
             var uebersprungeneOrdner = new List<string>();
+            var hinweise = new List<string>();
 
             var allFound = new List<TrainingCase>();
             foreach (var folder in request.RootFolders)
@@ -45,7 +46,7 @@ public static class TrainingCenterScanWorkflow
                 if (!request.DirectoryExists(folder))
                     continue;
 
-                var found = await request.ScanFolderAsync(folder, uebersprungeneOrdner, cancellationToken);
+                var found = await request.ScanFolderAsync(folder, uebersprungeneOrdner, hinweise, cancellationToken);
                 allFound.AddRange(found);
                 request.AppendCases(found);
             }
@@ -60,11 +61,18 @@ public static class TrainingCenterScanWorkflow
 
             // Deepscan R8: nicht lesbare Ordner fehlen nicht still, sondern stehen im Protokoll.
             var uebersprungen = UebersprungeneOrdner.Meldungen(uebersprungeneOrdner);
-            foreach (var meldung in uebersprungen)
+            foreach (var meldung in uebersprungen.Concat(hinweise))
                 request.Log(meldung);
-            request.SetStatusText(uebersprungen.Count == 0
+
+            // PR #85: ungueltige Videoverweise laden den Fall ohne Video und werden ebenso genannt.
+            var teile = new List<string>();
+            if (uebersprungen.Count > 0)
+                teile.Add($"{uebersprungen.Count} Ordner übersprungen");
+            if (hinweise.Count > 0)
+                teile.Add(hinweise.Count == 1 ? "1 Videoverweis ungültig" : $"{hinweise.Count} Videoverweise ungültig");
+            request.SetStatusText(teile.Count == 0
                 ? summary
-                : $"{summary} · {uebersprungen.Count} Ordner übersprungen (siehe Protokoll)");
+                : $"{summary} · {string.Join(" · ", teile)} (siehe Protokoll)");
 
             await request.SaveStateAsync();
         }

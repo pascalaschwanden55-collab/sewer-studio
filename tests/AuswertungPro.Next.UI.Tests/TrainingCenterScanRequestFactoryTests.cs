@@ -28,7 +28,7 @@ public sealed class TrainingCenterScanRequestFactoryTests
                     calls.Add("exists:" + folder);
                     return true;
                 },
-                ScanInputsAsync: (folder, _, _) =>
+                ScanInputsAsync: (folder, _, _, _) =>
                 {
                     calls.Add("scan:" + folder);
                     return Task.FromResult(new List<TrainingCaseInput> { input });
@@ -59,7 +59,7 @@ public sealed class TrainingCenterScanRequestFactoryTests
         Assert.True(request.DirectoryExists("root-a"));
 
         Assert.Equal(CancellationToken.None, request.ResetCancellation());
-        var scanned = await request.ScanFolderAsync("root-a", [], CancellationToken.None);
+        var scanned = await request.ScanFolderAsync("root-a", [], [], CancellationToken.None);
         request.ReplaceCases([]);
         request.AppendCases(scanned);
         request.SetStatusText("ok");
@@ -99,7 +99,7 @@ public sealed class TrainingCenterScanRequestFactoryTests
                 GetIsBusy: () => false,
                 SetIsBusy: _ => { },
                 RootFolders: [],
-                ScanInputsAsync: (_, _, _) => Task.FromResult(new List<TrainingCaseInput> { input }),
+                ScanInputsAsync: (_, _, _, _) => Task.FromResult(new List<TrainingCaseInput> { input }),
                 ReplaceCases: _ => { },
                 AppendCases: _ => { },
                 SetStatusText: _ => { },
@@ -110,7 +110,7 @@ public sealed class TrainingCenterScanRequestFactoryTests
         Assert.True(request.DirectoryExists(AppContext.BaseDirectory));
         Assert.False(request.DirectoryExists(Path.Combine(AppContext.BaseDirectory, Guid.NewGuid().ToString("N"))));
 
-        var cases = await request.ScanFolderAsync(AppContext.BaseDirectory, [], CancellationToken.None);
+        var cases = await request.ScanFolderAsync(AppContext.BaseDirectory, [], [], CancellationToken.None);
 
         var item = Assert.Single(cases);
         Assert.Equal("case-default", item.CaseId);

@@ -56,11 +56,23 @@ public sealed class TrainingCenterImportService
         string rootFolder,
         ICollection<string>? uebersprungeneOrdner,
         CancellationToken cancellationToken)
-        => Task.Run(() => Scan(rootFolder, uebersprungeneOrdner, cancellationToken), cancellationToken);
+        => ScanAsync(rootFolder, uebersprungeneOrdner, null, cancellationToken);
+
+    /// <summary>
+    /// Wie oben; zusaetzlich landen Hinweise zu ungueltigen oder unlesbaren Videoverweisen
+    /// (<c>&lt;Video&gt;.link</c>) in <paramref name="hinweise"/> (PR #85).
+    /// </summary>
+    public Task<List<TrainingCaseInput>> ScanAsync(
+        string rootFolder,
+        ICollection<string>? uebersprungeneOrdner,
+        ICollection<string>? hinweise,
+        CancellationToken cancellationToken)
+        => Task.Run(() => Scan(rootFolder, uebersprungeneOrdner, hinweise, cancellationToken), cancellationToken);
 
     private List<TrainingCaseInput> Scan(
         string rootFolder,
         ICollection<string>? uebersprungeneOrdner,
+        ICollection<string>? hinweise,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(rootFolder) || !Directory.Exists(rootFolder))
@@ -82,6 +94,10 @@ public sealed class TrainingCenterImportService
 
                 var videos = files.Where(f => VideoExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
                 var protos = files.Where(f => ProtocolExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
+
+                // Ein echtes Video im Ordner hat Vorrang; sonst gelten die Videoverweise der Verteilung.
+                if (videos.Count == 0)
+                    videos = LoeseVideoverweiseAuf(files, hinweise);
 
                 // Ohne Video UND ohne Protokoll: ueberspringen
                 if (videos.Count == 0 && protos.Count == 0)
@@ -110,6 +126,64 @@ public sealed class TrainingCenterImportService
 
         // Stable ordering for UI
         return cases.OrderBy(c => c.CaseId, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>
+    /// Loest die Videoverweise <c>&lt;name&gt;.&lt;videoendung&gt;.link</c> der Haltungsverteilung nur lesend
+    /// zum Originalvideo auf (PR #85: seit Deepscan R6 gibt es keinen Symlink mehr). Der Inhalt ist eine
+    /// Zeile mit absolutem Pfad; uebernommen wird er nur mit Videoendung und vorhandener Datei. Sonst
+    /// bleibt der Fall ohne Video, und der Verweis steht in <paramref name="hinweise"/>.
+    /// </summary>
+    private static List<string> LoeseVideoverweiseAuf(IEnumerable<string> files, ICollection<string>? hinweise)
+    {
+        var videos = new List<string>();
+        foreach (var verweis in files.Where(IstVideoverweis))
+        {
+            string[] zeilen;
+            try
+            {
+                zeilen = File.ReadAllLines(verweis)
+                    .Where(zeile => !string.IsNullOrWhiteSpace(zeile))
+                    .Select(zeile => zeile.Trim())
+                    .ToArray();
+            }
+            catch (Exception ex) when (ex is IOException
+                                       or UnauthorizedAccessException
+                                       or System.Security.SecurityException)
+            {
+                // Lesefehler werden gemeldet, nicht verschluckt; der Fall bleibt ohne Video.
+                MeldeVideoverweis(hinweise, $"Videoverweis «{verweis}» nicht lesbar: {UserError.Describe(ex)}", ex);
+                continue;
+            }
+
+            var ziel = zeilen.Length == 1 ? zeilen[0] : null;
+            if (ziel is null
+                || !Path.IsPathFullyQualified(ziel)
+                || !VideoExts.Contains(Path.GetExtension(ziel).ToLowerInvariant())
+                || !File.Exists(ziel))
+            {
+                MeldeVideoverweis(
+                    hinweise,
+                    $"Videoverweis «{verweis}» zeigt auf kein vorhandenes Video; Fall ohne Video geladen.",
+                    null);
+                continue;
+            }
+
+            videos.Add(ziel);
+        }
+
+        return videos;
+    }
+
+    private static bool IstVideoverweis(string pfad)
+        => pfad.EndsWith(".link", StringComparison.OrdinalIgnoreCase)
+           && VideoExts.Contains(Path.GetExtension(Path.GetFileNameWithoutExtension(pfad)).ToLowerInvariant());
+
+    private static void MeldeVideoverweis(ICollection<string>? hinweise, string meldung, Exception? ex)
+    {
+        hinweise?.Add(meldung);
+        System.Diagnostics.Trace.WriteLine(
+            $"[TrainingCenterImport] {meldung}" + (ex is null ? "" : $" ({ex.GetType().Name}: {ex.Message})"));
     }
 
     /// <summary>
