@@ -132,7 +132,9 @@ public static class KatasterKennungPlanBuilder
             BauteilArt.Schacht,
             schaechte.Select(s =>
             {
-                var feld = SchachtFeldnamen.Feld(s, FieldKeys.CadastreObjectId);
+                // Herkunft von derselben Schreibweise, die den Wert liefert (Folgepruefung PR #82).
+                var feld = SchachtFeldnamen.AktuelleSchreibweise(s, FieldKeys.CadastreObjectId)
+                           ?? SchachtFeldnamen.Feld(s, FieldKeys.CadastreObjectId);
                 var (quelle, _) = LiesHerkunft(s.FieldMeta, feld);
                 // Ueber alle Schreibweisen (Planer-Paket nach PR #81): Ist-Werte wie der Export, und
                 // ein Handwert in irgendeiner Schreibweise (auch bewusst leer) schuetzt wie im Schreibweg.

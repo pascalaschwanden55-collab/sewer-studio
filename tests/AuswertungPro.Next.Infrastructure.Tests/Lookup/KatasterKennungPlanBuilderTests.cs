@@ -335,4 +335,23 @@ public sealed class KatasterKennungPlanBuilderTests
 
         Assert.Single(plan.Positionen);
     }
+
+    // Folgepruefung zu PR #82: Herkunft der Objekt-ID von derselben Schreibweise wie ihr Wert.
+    [Fact]
+    public void Herkunft_der_Objekt_ID_gehoert_zur_Schreibweise_die_den_Wert_liefert()
+    {
+        var bestand = Bestand(BauteilArt.Schacht, KatasterKennung.FuerSchacht("78998", "Altdorf", KnotenId, null));
+        var record = Schacht("78998");
+        record.SetFieldValue(FieldKeys.CadastreObjectId, "ch23h1a4AAAAAAAA", FieldSource.Xtf405, userEdited: false);
+        record.SetFieldValue("Objekt ID", "ch23h1a4BBBBBBBB", FieldSource.Kataster, userEdited: false);
+        record.FieldMeta[FieldKeys.CadastreObjectId].LastUpdatedUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        record.FieldMeta["Objekt ID"].LastUpdatedUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var plan = KatasterKennungPlanBuilder.BaueFuerSchaechte([record], bestand);
+
+        // Gelesen wird die juengere Kataster-ID; ihre Herkunft ist bestaetigt, nicht «unklar».
+        Assert.Empty(plan.Positionen);
+        Assert.Equal(1, plan.Anzahl(KatasterKennungGrund.Abweichend));
+        Assert.Equal(0, plan.Anzahl(KatasterKennungGrund.HerkunftUnklar));
+    }
 }
