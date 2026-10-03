@@ -24,7 +24,7 @@ public sealed class SilentCatchGuardTests
 
     // Obergrenze der Kommentar-catch-Bloecke (Sperrklinke, Deepscan 02.10.2026 R7, mit verschachtelten when-Filtern gezaehlt): darf nur sinken.
     // Wer einen Block entfernt oder durch sichtbare Fehlermeldung ersetzt, zieht den Wert nach.
-    private const int MaxKommentarCatchBloecke = 237;
+    private const int MaxKommentarCatchBloecke = 236;
 
     // Woerter, die allein noch keinen Grund nennen ("ignore", "non-fatal", "best effort cleanup" ...).
     private static readonly HashSet<string> Floskelwoerter = new(StringComparer.OrdinalIgnoreCase)

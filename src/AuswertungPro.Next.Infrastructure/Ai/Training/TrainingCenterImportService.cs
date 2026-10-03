@@ -44,22 +44,29 @@ public sealed class TrainingCenterImportService
     }
 
     public Task<List<TrainingCaseInput>> ScanAsync(string rootFolder)
-        => ScanAsync(rootFolder, CancellationToken.None);
+        => ScanAsync(rootFolder, null, CancellationToken.None);
 
     /// <summary>
     /// Sucht Trainingsfaelle unter <paramref name="rootFolder"/>. Laeuft ausserhalb des
     /// aufrufenden Threads (Deepscan R6: das Training Center fror beim Scan grosser Ablagen ein);
-    /// der Abbruch wird vor jedem Ordner geprueft.
+    /// der Abbruch wird vor jedem Ordner geprueft. Nicht lesbare oder verknuepfte Ordner landen
+    /// in <paramref name="uebersprungeneOrdner"/> statt still zu fehlen (Deepscan R8).
     /// </summary>
-    public Task<List<TrainingCaseInput>> ScanAsync(string rootFolder, CancellationToken cancellationToken)
-        => Task.Run(() => Scan(rootFolder, cancellationToken), cancellationToken);
+    public Task<List<TrainingCaseInput>> ScanAsync(
+        string rootFolder,
+        ICollection<string>? uebersprungeneOrdner,
+        CancellationToken cancellationToken)
+        => Task.Run(() => Scan(rootFolder, uebersprungeneOrdner, cancellationToken), cancellationToken);
 
-    private List<TrainingCaseInput> Scan(string rootFolder, CancellationToken cancellationToken)
+    private List<TrainingCaseInput> Scan(
+        string rootFolder,
+        ICollection<string>? uebersprungeneOrdner,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(rootFolder) || !Directory.Exists(rootFolder))
             return new List<TrainingCaseInput>();
 
-        var folders = EnumerateFolders(rootFolder);
+        var folders = EnumerateFolders(rootFolder, uebersprungeneOrdner);
 
         var cases = new List<TrainingCaseInput>();
 
@@ -91,9 +98,13 @@ public sealed class TrainingCenterImportService
                     ProtocolPath: bestProto,
                     InspectionDate: inspectionDate));
             }
-            catch
+            catch (Exception ex)
             {
-                // Ein nicht lesbarer Ordner liefert keinen Trainingsfall und fehlt dann in der Liste (Sichtbarmachen: R6/Training Center).
+                // Deepscan R8: Ein nicht lesbarer Ordner liefert keinen Trainingsfall. Er fehlt nicht mehr
+                // still, sondern wird gesammelt und vom Training Center im Protokoll benannt.
+                uebersprungeneOrdner?.Add(folder);
+                System.Diagnostics.Trace.WriteLine(
+                    $"[TrainingCenterImport] Ordner uebersprungen: {folder}: {ex.GetType().Name}: {ex.Message}");
             }
         }
 
@@ -227,10 +238,15 @@ public sealed class TrainingCenterImportService
         }
     }
 
-    private static IEnumerable<string> EnumerateFolders(string rootFolder)
+    private static IEnumerable<string> EnumerateFolders(
+        string rootFolder,
+        ICollection<string>? uebersprungeneOrdner = null)
     {
-        // Root + alle erreichbaren Unterordner (gesperrte werden uebersprungen statt zu werfen).
-        foreach (var dir in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateDirectoriesSafe(rootFolder))
+        // Root + alle erreichbaren Unterordner (gesperrte und verknuepfte werden uebersprungen statt zu
+        // werfen und, falls der Aufrufer eine Liste mitgibt, dort eingetragen).
+        foreach (var dir in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateDirectoriesSafe(
+                     rootFolder,
+                     uebersprungeneOrdner))
             yield return dir;
     }
 

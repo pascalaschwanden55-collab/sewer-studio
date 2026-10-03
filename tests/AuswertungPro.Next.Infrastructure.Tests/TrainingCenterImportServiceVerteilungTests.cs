@@ -114,7 +114,7 @@ public sealed class TrainingCenterImportServiceVerteilungTests : IDisposable
             },
             nachHaltungsordner: null);
 
-        var aufruf = Task.Factory.StartNew(() => dienst.ScanAsync(_root, CancellationToken.None));
+        var aufruf = Task.Factory.StartNew(() => dienst.ScanAsync(_root, null, CancellationToken.None));
         var sofortZurueck = await Task.WhenAny(aufruf, Task.Delay(TimeSpan.FromSeconds(5))) == aufruf;
         ordnerGesperrt.Set();
 
@@ -139,9 +139,31 @@ public sealed class TrainingCenterImportServiceVerteilungTests : IDisposable
             },
             nachHaltungsordner: null);
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => dienst.ScanAsync(_root, abbruch.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => dienst.ScanAsync(_root, null, abbruch.Token));
 
         Assert.Single(gelesen);
+    }
+
+    [Fact]
+    public async Task ScanAsync_unlesbarer_ordner_wird_gezaehlt_und_benannt_statt_still_ausgelassen()
+    {
+        var lesbar = Path.Combine(_root, "A");
+        var unlesbar = Path.Combine(_root, "B");
+        Directory.CreateDirectory(lesbar);
+        Directory.CreateDirectory(unlesbar);
+        File.WriteAllText(Path.Combine(lesbar, "bericht_24379-41412.pdf"), "pdf");
+        var dienst = new TrainingCenterImportService(
+            pdfSeitenLesen: null,
+            dateienImOrdner: ordner => string.Equals(ordner, unlesbar, StringComparison.OrdinalIgnoreCase)
+                ? throw new UnauthorizedAccessException("gesperrt")
+                : Directory.EnumerateFiles(ordner),
+            nachHaltungsordner: null);
+        var uebersprungen = new List<string>();
+
+        var faelle = await dienst.ScanAsync(_root, uebersprungen, CancellationToken.None);
+
+        Assert.Equal(lesbar, Assert.Single(faelle).FolderPath);
+        Assert.Equal([unlesbar], uebersprungen);
     }
 
     private static string Protokollseite(string haltung)

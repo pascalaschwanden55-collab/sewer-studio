@@ -1,3 +1,4 @@
+using System.IO;
 using AuswertungPro.Next.UI.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -13,7 +14,7 @@ public sealed class TrainingCenterScanWorkflowTests
             CreateRequest(
                 getIsBusy: () => true,
                 setStatusText: value => calls.Add($"status:{value}"),
-                scanFolderAsync: (_, _) =>
+                scanFolderAsync: (_, _, _) =>
                 {
                     calls.Add("scan");
                     return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
@@ -52,7 +53,7 @@ public sealed class TrainingCenterScanWorkflowTests
                 state: state,
                 rootFolders: ["missing", "root-a"],
                 directoryExists: folder => folder == "root-a",
-                scanFolderAsync: (folder, _) =>
+                scanFolderAsync: (folder, _, _) =>
                 {
                     scanned.Add(folder);
                     return Task.FromResult<IReadOnlyList<TrainingCase>>(
@@ -93,7 +94,7 @@ public sealed class TrainingCenterScanWorkflowTests
                 CreateRequest(
                     state: state,
                     rootFolders: ["root-a"],
-                    scanFolderAsync: (_, _) => throw new InvalidOperationException("kaputt"))));
+                    scanFolderAsync: (_, _, _) => throw new InvalidOperationException("kaputt"))));
 
         Assert.False(state.IsBusy);
     }
@@ -108,7 +109,7 @@ public sealed class TrainingCenterScanWorkflowTests
             CreateRequest(
                 rootFolders: ["root-a", "root-b"],
                 resetCancellation: () => abbruch.Token,
-                scanFolderAsync: (_, token) =>
+                scanFolderAsync: (_, _, token) =>
                 {
                     tokens.Add(token);
                     return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
@@ -126,11 +127,32 @@ public sealed class TrainingCenterScanWorkflowTests
             CreateRequest(
                 state: state,
                 rootFolders: ["root-a"],
-                scanFolderAsync: (_, _) => throw new OperationCanceledException()));
+                scanFolderAsync: (_, _, _) => throw new OperationCanceledException()));
 
         Assert.False(state.IsBusy);
         Assert.Equal("Scan abgebrochen.", state.StatusText);
         Assert.Equal(0, state.SaveCalls);
+    }
+
+    [Fact]
+    public async Task RunAsync_nennt_uebersprungene_ordner_im_protokoll_und_im_status()
+    {
+        var state = new WorkflowState();
+        var unlesbar = Path.Combine(Path.GetTempPath(), "sewerstudio-fehlt-" + Guid.NewGuid().ToString("N"));
+
+        await TrainingCenterScanWorkflow.RunAsync(
+            CreateRequest(
+                state: state,
+                rootFolders: ["root-a"],
+                scanFolderAsync: (_, uebersprungen, _) =>
+                {
+                    uebersprungen.Add(unlesbar);
+                    return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
+                }));
+
+        Assert.Equal([$"Ordner «{unlesbar}» übersprungen: nicht lesbar"], state.Logs);
+        Assert.Equal("Gefunden: 0 Fälle · 1 Ordner übersprungen (siehe Protokoll)", state.StatusText);
+        Assert.Equal(1, state.SaveCalls);
     }
 
     private static TrainingCenterScanWorkflowRequest CreateRequest(
@@ -139,7 +161,7 @@ public sealed class TrainingCenterScanWorkflowTests
         Func<bool>? getIsBusy = null,
         Action<bool>? setIsBusy = null,
         Func<string, bool>? directoryExists = null,
-        Func<string, CancellationToken, Task<IReadOnlyList<TrainingCase>>>? scanFolderAsync = null,
+        Func<string, ICollection<string>, CancellationToken, Task<IReadOnlyList<TrainingCase>>>? scanFolderAsync = null,
         Action<IReadOnlyList<TrainingCase>>? replaceCases = null,
         Action<IReadOnlyList<TrainingCase>>? appendCases = null,
         Action<string>? setStatusText = null,
@@ -152,7 +174,7 @@ public sealed class TrainingCenterScanWorkflowTests
             SetIsBusy: setIsBusy ?? (value => state.IsBusy = value),
             RootFolders: rootFolders ?? ["root-a"],
             DirectoryExists: directoryExists ?? (_ => true),
-            ScanFolderAsync: scanFolderAsync ?? ((_, _) => Task.FromResult<IReadOnlyList<TrainingCase>>([])),
+            ScanFolderAsync: scanFolderAsync ?? ((_, _, _) => Task.FromResult<IReadOnlyList<TrainingCase>>([])),
             ReplaceCases: replaceCases ?? (items => state.ReplaceCalls.Add(items.ToList())),
             AppendCases: appendCases ?? (items => state.AppendCalls.Add(items.ToList())),
             SetStatusText: setStatusText ?? (value => state.StatusText = value),
@@ -161,7 +183,8 @@ public sealed class TrainingCenterScanWorkflowTests
                 state.SaveCalls++;
                 return Task.CompletedTask;
             }),
-            ResetCancellation: resetCancellation ?? (() => CancellationToken.None));
+            ResetCancellation: resetCancellation ?? (() => CancellationToken.None),
+            Log: state.Logs.Add);
     }
 
     private sealed class WorkflowState
@@ -171,5 +194,6 @@ public sealed class TrainingCenterScanWorkflowTests
         public List<IReadOnlyList<TrainingCase>> ReplaceCalls { get; } = new();
         public List<IReadOnlyList<TrainingCase>> AppendCalls { get; } = new();
         public int SaveCalls { get; set; }
+        public List<string> Logs { get; } = new();
     }
 }

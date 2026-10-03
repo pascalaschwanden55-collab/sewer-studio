@@ -28,7 +28,7 @@ public sealed class TrainingCenterScanRequestFactoryTests
                     calls.Add("exists:" + folder);
                     return true;
                 },
-                ScanInputsAsync: (folder, _) =>
+                ScanInputsAsync: (folder, _, _) =>
                 {
                     calls.Add("scan:" + folder);
                     return Task.FromResult(new List<TrainingCaseInput> { input });
@@ -50,7 +50,8 @@ public sealed class TrainingCenterScanRequestFactoryTests
                 {
                     calls.Add("reset");
                     return CancellationToken.None;
-                }));
+                },
+                Log: value => calls.Add("log:" + value)));
 
         Assert.False(request.GetIsBusy());
         request.SetIsBusy(true);
@@ -58,10 +59,11 @@ public sealed class TrainingCenterScanRequestFactoryTests
         Assert.True(request.DirectoryExists("root-a"));
 
         Assert.Equal(CancellationToken.None, request.ResetCancellation());
-        var scanned = await request.ScanFolderAsync("root-a", CancellationToken.None);
+        var scanned = await request.ScanFolderAsync("root-a", [], CancellationToken.None);
         request.ReplaceCases([]);
         request.AppendCases(scanned);
         request.SetStatusText("ok");
+        request.Log("ordner");
         await request.SaveStateAsync();
 
         Assert.Equal(["case-1"], scanned.Select(item => item.CaseId));
@@ -75,6 +77,7 @@ public sealed class TrainingCenterScanRequestFactoryTests
                 "replace:0",
                 "append:1",
                 "status:ok",
+                "log:ordner",
                 "save"
             ],
             calls);
@@ -96,17 +99,18 @@ public sealed class TrainingCenterScanRequestFactoryTests
                 GetIsBusy: () => false,
                 SetIsBusy: _ => { },
                 RootFolders: [],
-                ScanInputsAsync: (_, _) => Task.FromResult(new List<TrainingCaseInput> { input }),
+                ScanInputsAsync: (_, _, _) => Task.FromResult(new List<TrainingCaseInput> { input }),
                 ReplaceCases: _ => { },
                 AppendCases: _ => { },
                 SetStatusText: _ => { },
                 SaveStateAsync: () => Task.CompletedTask,
-                ResetCancellation: () => CancellationToken.None));
+                ResetCancellation: () => CancellationToken.None,
+                Log: _ => { }));
 
         Assert.True(request.DirectoryExists(AppContext.BaseDirectory));
         Assert.False(request.DirectoryExists(Path.Combine(AppContext.BaseDirectory, Guid.NewGuid().ToString("N"))));
 
-        var cases = await request.ScanFolderAsync(AppContext.BaseDirectory, CancellationToken.None);
+        var cases = await request.ScanFolderAsync(AppContext.BaseDirectory, [], CancellationToken.None);
 
         var item = Assert.Single(cases);
         Assert.Equal("case-default", item.CaseId);
