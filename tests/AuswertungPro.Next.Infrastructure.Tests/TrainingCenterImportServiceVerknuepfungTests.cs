@@ -149,6 +149,114 @@ public sealed class TrainingCenterImportServiceVerknuepfungTests : IDisposable
         Assert.Equal(video, File.ReadAllText(Path.Combine(fallordner, "H_23021-22369.mpg.link")));
     }
 
+    // --- PR #85, Runde 6: Videoordner, Videoziel, Abbruch, Fehlertext ---
+
+    [JunctionFact]
+    public async Task DistributeByHaltungAsync_nennt_verknuepften_unterordner_des_videoordners()
+    {
+        var videos = Path.Combine(_root, "Videos");
+        Directory.CreateDirectory(videos);
+        var fremd = Path.Combine(_root, "Fremd");
+        Directory.CreateDirectory(fremd);
+        File.WriteAllText(Path.Combine(fremd, "H_23021-22369.mpg"), "fremdes video");
+        var link = Path.Combine(videos, "Unterordner");
+        Verknuepfe(link, fremd);
+
+        var ergebnis = await Dienst().DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), videos, Path.Combine(_root, "Sammel_Training"), CancellationToken.None);
+
+        Assert.Equal(0, ergebnis.VideosMatched);
+        Assert.Contains(ergebnis.Messages, meldung =>
+            meldung.StartsWith($"Ordner «{link}» übersprungen", StringComparison.Ordinal));
+    }
+
+    [JunctionFact]
+    public async Task DistributeByHaltungAsync_nennt_verknuepfte_videodatei_im_videoordner()
+    {
+        var videos = Path.Combine(_root, "Videos");
+        Directory.CreateDirectory(videos);
+        var fremd = Path.Combine(_root, "fremd.mpg");
+        File.WriteAllText(fremd, "fremdes video");
+        var videoLink = Path.Combine(videos, "H_23021-22369.mpg");
+        File.CreateSymbolicLink(videoLink, fremd);
+
+        var ergebnis = await Dienst().DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), videos, Path.Combine(_root, "Sammel_Training"), CancellationToken.None);
+
+        Assert.Equal(0, ergebnis.VideosMatched);
+        Assert.Contains(ergebnis.Messages, meldung =>
+            meldung.StartsWith($"Video «{videoLink}» übersprungen", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DistributeByHaltungAsync_schreibt_keinen_verweis_auf_ein_video_unter_einer_verknuepfung()
+    {
+        var videos = Path.Combine(_root, "Videos");
+        Directory.CreateDirectory(videos);
+        File.WriteAllText(Path.Combine(videos, "H_23021-22369.mpg"), "kunden-video");
+        var ausgabe = Path.Combine(_root, "Sammel_Training");
+        var dienst = new TrainingCenterImportService(
+            pdfSeitenLesen: _ => new PdfTextExtraction([Protokollseite()], ""),
+            dateienImOrdner: null,
+            nachHaltungsordner: null,
+            leseAttribute: pfad => string.Equals(pfad, videos, StringComparison.OrdinalIgnoreCase)
+                ? FileAttributes.Directory | FileAttributes.ReparsePoint
+                : File.GetAttributes(pfad));
+
+        var ergebnis = await dienst.DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), videos, ausgabe, CancellationToken.None);
+
+        Assert.Equal(0, ergebnis.VideosMatched);
+        Assert.False(File.Exists(Path.Combine(ausgabe, "23021-22369", "H_23021-22369.mpg.link")));
+        Assert.Contains(ergebnis.Messages, meldung =>
+            meldung.StartsWith("Haltung 23021-22369: Video «", StringComparison.Ordinal)
+            && meldung.Contains("Verknüpfung", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DistributeByHaltungAsync_abbruch_vor_dem_videoindex_legt_keinen_ausgabeordner_an()
+    {
+        using var abbruch = new CancellationTokenSource();
+        var ausgabe = Path.Combine(_root, "Sammel_Training");
+        var dienst = new TrainingCenterImportService(
+            pdfSeitenLesen: _ =>
+            {
+                abbruch.Cancel();
+                return new PdfTextExtraction([Protokollseite()], "");
+            },
+            dateienImOrdner: null,
+            nachHaltungsordner: null);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => dienst.DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), _root, ausgabe, abbruch.Token));
+
+        Assert.False(Directory.Exists(ausgabe));
+    }
+
+    [Fact]
+    public async Task DistributeByHaltungAsync_pdf_fehler_zeigt_keinen_rohen_ausnahmetext()
+    {
+        var dienst = new TrainingCenterImportService(
+            pdfSeitenLesen: _ => throw new IOException(@"Zugriff auf C:\Geheim\Sammel.pdf verweigert"),
+            dateienImOrdner: null,
+            nachHaltungsordner: null);
+
+        var ergebnis = await dienst.DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), _root, Path.Combine(_root, "Sammel_Training"), CancellationToken.None);
+
+        var meldung = Assert.Single(ergebnis.Messages);
+        Assert.StartsWith("PDF-Text konnte nicht extrahiert werden: Eine Datei oder ein Ordner ist momentan nicht verfügbar", meldung, StringComparison.Ordinal);
+        Assert.DoesNotContain("Geheim", meldung, StringComparison.Ordinal);
+    }
+
+    private static string Protokollseite()
+        => string.Join("\n",
+        [
+            "Kanalfernsehprotokoll / Inspektion: 1",
+            "Haltungsname:                Datum :                Wetter :               Operator :",
+            " 23021-22369                22.04.2014          schoen_trocken           Manuel Joschko"
+        ]);
+
     private void Verknuepfe(string link, string ziel)
     {
         JunctionTestSupport.CreateDirectoryLink(link, ziel);

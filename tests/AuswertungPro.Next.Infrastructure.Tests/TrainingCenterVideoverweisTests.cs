@@ -313,9 +313,118 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         Assert.Equal(video, fall.VideoPath);
     }
 
+    // --- PR #85, Runde 6: ganze Kette, Rueckfall, Protokolle ---
+
+    [Fact]
+    public async Task Verweisziel_unter_verknuepftem_elternordner_wird_nicht_uebernommen()
+    {
+        var fallordner = Fallordner("23021-22369");
+        var videoLink = Path.Combine(_root, "VideoLink");
+        Directory.CreateDirectory(videoLink);
+        var ziel = Path.Combine(videoLink, "H_23021-22369.mpg");
+        File.WriteAllText(ziel, "video");
+        var verweis = Path.Combine(fallordner, "H_23021-22369.mpg.link");
+        File.WriteAllText(verweis, ziel);
+        var hinweise = new List<string>();
+
+        var fall = Assert.Single(await DienstMitVerknuepfung(videoLink).ScanAsync(
+            ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal("", fall.VideoPath);
+        var hinweis = Assert.Single(hinweise);
+        Assert.Contains(verweis, hinweis, StringComparison.Ordinal);
+        Assert.Contains(ziel, hinweis, StringComparison.Ordinal);
+    }
+
+    [JunctionFact]
+    public async Task Verweisziel_unter_echter_verzeichnis_verknuepfung_wird_nicht_uebernommen()
+    {
+        var fallordner = Fallordner("23021-22369");
+        var echt = Path.Combine(_root, "VideoEcht");
+        Directory.CreateDirectory(echt);
+        File.WriteAllText(Path.Combine(echt, "H_23021-22369.mpg"), "video");
+        var videoLink = Path.Combine(_root, "VideoLink");
+        JunctionTestSupport.CreateDirectoryLink(videoLink, echt);
+        var verweis = Path.Combine(fallordner, "H_23021-22369.mpg.link");
+        File.WriteAllText(verweis, Path.Combine(videoLink, "H_23021-22369.mpg"));
+        var hinweise = new List<string>();
+
+        try
+        {
+            var fall = Assert.Single(await new TrainingCenterImportService().ScanAsync(
+                ScanWurzel, null, hinweise, CancellationToken.None));
+
+            Assert.Equal("", fall.VideoPath);
+            Assert.Contains(verweis, Assert.Single(hinweise), StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(videoLink);
+        }
+    }
+
+    [JunctionFact]
+    public async Task Scan_betritt_keinen_verknuepften_fallordner_und_nennt_ihn()
+    {
+        // Beleg fuer die Kette Direktvideo -> Scan-Wurzel: Unterordner betritt die Ordnersuche nur ohne
+        // Verknuepfung; ein verknuepfter Fallordner liefert keinen Fall und steht in der Ordnerliste.
+        Fallordner("23021-22369");
+        var fremd = Path.Combine(_root, "Fremd");
+        Directory.CreateDirectory(fremd);
+        File.WriteAllText(Path.Combine(fremd, "H_99999-88888.mpg"), "fremdes video");
+        File.WriteAllText(Path.Combine(fremd, "99999-88888_protokoll.json"), "{}");
+        var link = Path.Combine(ScanWurzel, "99999-88888");
+        JunctionTestSupport.CreateDirectoryLink(link, fremd);
+        var uebersprungen = new List<string>();
+
+        try
+        {
+            var faelle = await new TrainingCenterImportService().ScanAsync(
+                ScanWurzel, uebersprungen, null, CancellationToken.None);
+
+            Assert.Equal(["23021-22369"], faelle.Select(fall => fall.CaseId));
+            Assert.Equal([link], uebersprungen);
+        }
+        finally
+        {
+            Directory.Delete(link);
+        }
+    }
+
+    [Fact]
+    public async Task Kein_verwendbares_direktvideo_faellt_auf_den_gueltigen_verweis_zurueck()
+    {
+        // Zwei Direktvideos, beide ausgeschlossen (Grafik, Uebersicht) und ohne Haltungsschluessel:
+        // PickBestVideo waehlt keines. Ein einzelnes Direktvideo wird dagegen immer genommen (Bestand).
+        var fallordner = Fallordner("23021-22369");
+        File.WriteAllText(Path.Combine(fallordner, "Grafik_g.mpg"), "grafikvideo");
+        File.WriteAllText(Path.Combine(fallordner, "Uebersicht.mpg"), "uebersicht");
+        var original = Path.Combine(_root, "H_23021-22369.mpg");
+        File.WriteAllText(original, "original");
+        File.WriteAllText(Path.Combine(fallordner, "H_23021-22369.mpg.link"), original);
+
+        var fall = Assert.Single(await new TrainingCenterImportService().ScanAsync(ScanWurzel));
+
+        Assert.Equal(original, fall.VideoPath);
+    }
+
+    [Fact]
+    public async Task Verknuepftes_protokoll_wird_nicht_gelesen_sondern_gemeldet()
+    {
+        var fallordner = Fallordner("23021-22369");
+        var protokoll = Path.Combine(fallordner, "23021-22369_protokoll.json");
+        var hinweise = new List<string>();
+
+        var faelle = await DienstMitVerknuepfung(protokoll).ScanAsync(ScanWurzel, null, hinweise, CancellationToken.None);
+
+        Assert.Empty(faelle);
+        var hinweis = Assert.Single(hinweise);
+        Assert.Contains($"Protokoll «{protokoll}» ist eine Verknüpfung", hinweis, StringComparison.Ordinal);
+    }
+
     private static Func<string, FileAttributes?> VerknuepfungFuer(string pfad)
         => p => string.Equals(p, pfad, StringComparison.OrdinalIgnoreCase)
-            ? FileAttributes.Archive | FileAttributes.ReparsePoint
+            ? (Directory.Exists(p) ? FileAttributes.Directory : FileAttributes.Archive) | FileAttributes.ReparsePoint
             : File.GetAttributes(p);
 
     private static TrainingCenterImportService DienstMitVerknuepfung(string pfad)

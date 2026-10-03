@@ -139,7 +139,11 @@ public sealed class TrainingCenterDistributionWorkflowTests
         Assert.Equal(
             "Fehler bei Verteilung: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
             state.StatusText);
-        Assert.Contains("Fehler: kaputt", state.Logs);
+        // PR #85: auch das Protokoll zeigt den verstaendlichen Text, nicht den Rohtext der Ausnahme.
+        Assert.Contains(
+            "Fehler: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
+            state.Logs);
+        Assert.DoesNotContain(state.Logs, line => line.Contains("kaputt", StringComparison.Ordinal));
     }
 
     [Fact]

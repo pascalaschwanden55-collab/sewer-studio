@@ -23,6 +23,7 @@ public sealed class TrainingCenterImportService
     private readonly Func<string, IEnumerable<string>> _dateienImOrdner;
     private readonly Action<string>? _nachHaltungsordner;
     private readonly Func<string, FileAttributes?>? _leseAttribute;
+    private readonly TrainingCenterFallDateien _fallDateien;
 
     public TrainingCenterImportService()
         : this(null, null, null)
@@ -45,6 +46,7 @@ public sealed class TrainingCenterImportService
                            ?? (ordner => Directory.EnumerateFiles(ordner, "*.*", SearchOption.TopDirectoryOnly));
         _nachHaltungsordner = nachHaltungsordner;
         _leseAttribute = leseAttribute;
+        _fallDateien = new TrainingCenterFallDateien(VideoExts, leseAttribute);
     }
 
     public Task<List<TrainingCaseInput>> ScanAsync(string rootFolder)
@@ -96,24 +98,38 @@ public sealed class TrainingCenterImportService
                 if (files.Count == 0)
                     continue;
 
-                // PR #85: Ein Video, das selbst eine Verknuepfung ist (Symlink aelterer Verteillaeufe) oder
-                // nicht pruefbar, wird nicht uebernommen; es fuehrte FFmpeg aus dem Baum heraus.
-                var videos = files
-                    .Where(f => VideoExts.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                    .Where(f => IstUnverknuepftesVideo(f, hinweise))
+                // PR #85: Videos und Protokolle, die selbst eine Verknuepfung oder nicht pruefbar sind (z. B.
+                // Symlinks aelterer Verteillaeufe), werden nicht verwendet, sondern gemeldet.
+                var direktVideos = files
+                    .Where(_fallDateien.IstVideo)
+                    .Where(f => _fallDateien.IstUnverknuepft(f, TrainingCenterFallDateien.Art.Video, hinweise))
                     .ToList();
-                var protos = files.Where(f => ProtocolExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
-
-                // Ein echtes Video im Ordner hat Vorrang; sonst gelten die Videoverweise der Verteilung.
-                if (videos.Count == 0)
-                    videos = LoeseVideoverweiseAuf(files, hinweise);
-
-                // Ohne Video UND ohne Protokoll: ueberspringen
-                if (videos.Count == 0 && protos.Count == 0)
-                    continue;
+                var protos = files
+                    .Where(f => ProtocolExts.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                    .Where(f => _fallDateien.IstUnverknuepft(f, TrainingCenterFallDateien.Art.Protokoll, hinweise))
+                    .ToList();
 
                 var caseId = SafeRelativeId(rootFolder, folder);
-                var (bestVideo, bestProto) = ResolvePair(videos, protos, caseId);
+                var (bestVideo, bestProto) = ResolvePair(direktVideos, protos, caseId);
+
+                // Ein verwendbares Direktvideo hat Vorrang. Wird keines ausgewaehlt (keines da, nur ausgeschlossene
+                // wie *_g.mpg, mehrdeutig), gelten als Rueckfall die Videoverweise der Verteilung (PR #85).
+                var verweisVideos = new List<string>();
+                if (string.IsNullOrWhiteSpace(bestVideo))
+                {
+                    verweisVideos = _fallDateien.LoeseVideoverweiseAuf(files, hinweise);
+                    if (verweisVideos.Count > 0)
+                    {
+                        var (verweisVideo, verweisProto) = ResolvePair(verweisVideos, protos, caseId);
+                        if (!string.IsNullOrWhiteSpace(verweisVideo))
+                            (bestVideo, bestProto) = (verweisVideo, verweisProto);
+                    }
+                }
+
+                // Ohne Video UND ohne Protokoll: ueberspringen
+                if (direktVideos.Count == 0 && verweisVideos.Count == 0 && protos.Count == 0)
+                    continue;
+
                 var inspectionDate = ResolveInspectionDate(folder, bestProto, bestVideo);
 
                 cases.Add(new TrainingCaseInput(
@@ -135,107 +151,6 @@ public sealed class TrainingCenterImportService
 
         // Stable ordering for UI
         return cases.OrderBy(c => c.CaseId, StringComparer.OrdinalIgnoreCase).ToList();
-    }
-
-    /// <summary>
-    /// Loest die Videoverweise <c>&lt;name&gt;.&lt;videoendung&gt;.link</c> der Haltungsverteilung nur lesend
-    /// zum Originalvideo auf (PR #85: seit Deepscan R6 gibt es keinen Symlink mehr). Der Inhalt ist eine
-    /// Zeile mit absolutem Pfad; uebernommen wird er nur mit Videoendung und vorhandener Datei. Sonst
-    /// bleibt der Fall ohne Video, und der Verweis steht in <paramref name="hinweise"/>.
-    /// </summary>
-    private List<string> LoeseVideoverweiseAuf(IEnumerable<string> files, ICollection<string>? hinweise)
-    {
-        var videos = new List<string>();
-        foreach (var verweis in files.Where(IstVideoverweis))
-        {
-            // PR #85: Ist der Verweis selbst eine Verknuepfung, fuehrte das Lesen aus dem Baum heraus.
-            // Gemeinsamer VerknuepfungsSchutz, Regel Streng: Verknuepfung, fehlend oder nicht pruefbar sperrt.
-            var befund = VerknuepfungsSchutz.PruefeEintrag(verweis, VerknuepfungsRegel.Streng, _leseAttribute);
-            if (!befund.IstSicher)
-            {
-                MeldeVideoverweis(
-                    hinweise,
-                    $"Videoverweis «{verweis}» ist eine Verknüpfung oder nicht sicher prüfbar und wird nicht gelesen; "
-                    + "Fall ohne Video geladen.",
-                    befund.Fehler);
-                continue;
-            }
-
-            string[] zeilen;
-            try
-            {
-                zeilen = File.ReadAllLines(verweis)
-                    .Where(zeile => !string.IsNullOrWhiteSpace(zeile))
-                    .Select(zeile => zeile.Trim())
-                    .ToArray();
-            }
-            catch (Exception ex) when (ex is IOException
-                                       or UnauthorizedAccessException
-                                       or System.Security.SecurityException)
-            {
-                // Lesefehler werden gemeldet, nicht verschluckt; der Fall bleibt ohne Video.
-                MeldeVideoverweis(hinweise, $"Videoverweis «{verweis}» nicht lesbar: {UserError.Describe(ex)}", ex);
-                continue;
-            }
-
-            var ziel = zeilen.Length == 1 ? zeilen[0] : null;
-            if (ziel is null
-                || !Path.IsPathFullyQualified(ziel)
-                || !VideoExts.Contains(Path.GetExtension(ziel).ToLowerInvariant())
-                || !File.Exists(ziel))
-            {
-                MeldeVideoverweis(
-                    hinweise,
-                    $"Videoverweis «{verweis}» zeigt auf kein vorhandenes Video; Fall ohne Video geladen.",
-                    null);
-                continue;
-            }
-
-            // PR #85: Auch das Ziel selbst darf keine Verknuepfung sein (sonst ginge ein fremder Pfad an FFmpeg).
-            var zielBefund = VerknuepfungsSchutz.PruefeEintrag(ziel, VerknuepfungsRegel.Streng, _leseAttribute);
-            if (!zielBefund.IstSicher)
-            {
-                MeldeVideoverweis(
-                    hinweise,
-                    $"Videoverweis «{verweis}» zeigt auf «{ziel}», das eine Verknüpfung oder nicht sicher prüfbar ist; "
-                    + "Fall ohne Video geladen.",
-                    zielBefund.Fehler);
-                continue;
-            }
-
-            videos.Add(ziel);
-        }
-
-        return videos;
-    }
-
-    /// <summary>
-    /// Prueft eine Videodatei im Fallordner mit dem gemeinsamen VerknuepfungsSchutz (Regel Streng).
-    /// Eine Verknuepfung oder ein nicht pruefbarer Eintrag wird gemeldet und nicht verwendet.
-    /// </summary>
-    private bool IstUnverknuepftesVideo(string video, ICollection<string>? hinweise)
-    {
-        var befund = VerknuepfungsSchutz.PruefeEintrag(video, VerknuepfungsRegel.Streng, _leseAttribute);
-        if (befund.IstSicher)
-            return true;
-
-        MeldeVideoverweis(
-            hinweise,
-            $"Video «{video}» ist eine Verknüpfung (alter Lauf) oder nicht sicher prüfbar und wird nicht verwendet – "
-            + "bitte die Verteilung erneut ausführen.",
-            befund.Fehler);
-        return false;
-    }
-
-    private static bool IstVideoverweis(string pfad)
-        => pfad.EndsWith(".link", StringComparison.OrdinalIgnoreCase)
-           && VideoExts.Contains(Path.GetExtension(Path.GetFileNameWithoutExtension(pfad)).ToLowerInvariant());
-
-    private static void MeldeVideoverweis(ICollection<string>? hinweise, string meldung, Exception? ex)
-    {
-        hinweise?.Add(meldung);
-        System.Diagnostics.Trace.WriteLine(
-            $"[TrainingCenterImport] {meldung}" + (ex is null ? "" : $" ({ex.GetType().Name}: {ex.Message})"));
     }
 
     /// <summary>
@@ -611,7 +526,8 @@ public sealed class TrainingCenterImportService
         }
         catch (Exception ex)
         {
-            messages.Add($"PDF-Text konnte nicht extrahiert werden: {ex.Message}");
+            // PR #85: kein roher Ausnahmetext; die volle Ausnahme steht im Programmlog.
+            messages.Add($"PDF-Text konnte nicht extrahiert werden: {UserError.DescribeAndReport(ex, "Training Center PDF lesen")}");
             return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
         }
 
@@ -631,8 +547,9 @@ public sealed class TrainingCenterImportService
             return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
         }
 
-        // 3. Video-Index aufbauen: Haltungs-ID → Videodatei
-        var videoIndex = BuildVideoIndex(videoFolder);
+        // 3. Video-Index aufbauen: Haltungs-ID → Videodatei (Abbruch vor und waehrend der rekursiven Suche)
+        cancellationToken.ThrowIfCancellationRequested();
+        var videoIndex = BuildVideoIndex(videoFolder, messages, cancellationToken);
 
         // 4. Pro Haltung einen Ordner erstellen
         Directory.CreateDirectory(outputFolder);
@@ -683,6 +600,12 @@ public sealed class TrainingCenterImportService
                     && VerknuepfungsSchutz.PruefeEintrag(videoTarget, VerknuepfungsRegel.Streng, _leseAttribute).IstSicher)
                 {
                     videoPath = videoTarget;
+                }
+                else if (!_fallDateien.PruefeVideoziel(matchedVideo).IstSicher)
+                {
+                    // Derselbe Massstab wie beim Lesen des Verweises im Scan: kein Verweis hinter eine Verknuepfung.
+                    messages.Add($"Haltung {haltungId}: Video «{matchedVideo}» liegt hinter einer Verknüpfung oder ist nicht "
+                                 + "sicher prüfbar; kein Verweis geschrieben.");
                 }
                 else if (IstSicheresZiel(writePaths, linkPath))
                 {
@@ -740,7 +663,10 @@ public sealed class TrainingCenterImportService
     /// <summary>
     /// Erstellt einen Index: normalisierte Haltungs-ID → Videodatei-Pfad
     /// </summary>
-    private static Dictionary<string, string> BuildVideoIndex(string videoFolder)
+    private static Dictionary<string, string> BuildVideoIndex(
+        string videoFolder,
+        List<string> messages,
+        CancellationToken cancellationToken)
     {
         var index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (string.IsNullOrWhiteSpace(videoFolder) || !Directory.Exists(videoFolder))
@@ -751,8 +677,13 @@ public sealed class TrainingCenterImportService
             StringComparer.OrdinalIgnoreCase)
         { ".ts", ".m4v" };
 
-        foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(videoFolder, "*.*", recursive: true))
+        // PR #85: ausgelassene Unterordner und Videodateien (Verknuepfung, nicht lesbar) werden genannt.
+        var uebersprungeneOrdner = new List<string>();
+        var uebersprungeneDateien = new List<string>();
+        foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(
+                     videoFolder, "*.*", recursive: true, uebersprungeneOrdner, uebersprungeneDateien))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!videoExts.Contains(Path.GetExtension(file)))
                 continue;
 
@@ -765,6 +696,10 @@ public sealed class TrainingCenterImportService
             }
         }
 
+        messages.AddRange(UebersprungeneOrdner.Meldungen(uebersprungeneOrdner));
+        messages.AddRange(uebersprungeneDateien
+            .Where(datei => videoExts.Contains(Path.GetExtension(datei)))
+            .Select(datei => $"Video «{datei}» übersprungen: Verknüpfung oder nicht sicher prüfbar."));
         return index;
     }
 
