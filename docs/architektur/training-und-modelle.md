@@ -1598,6 +1598,12 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   Wird kein verwendbares Direktvideo ausgewaehlt (keines, nur ausgeschlossene, mehrdeutig), gelten die
   `.link`-Verweise als Rueckfall. Die Verteilung nennt ausgelassene Unterordner und Videodateien des
   Videoordners, prueft den Abbruch auch waehrend der Videosuche und zeigt Fehler nur ueber `UserError`.
+- **Weitere Review-Runden PR #85:** Ausschlussmuster (Grafikvideo `*_g.mpg`, Uebersicht) gelten auch
+  fuer ein EINZELNES Direktvideo (`PickBestVideo` filtert vor dem Einzelfall); dann gilt der
+  `.link`-Verweis. Ein Dateifehler einer Haltung (Ordner, Protokoll, Verweis, Bereinigung, auch die
+  `AggregateException` des Schreibbausteins) wird fuer diese Haltung gemeldet, die Verteilung faehrt
+  fort. Ein seit dem Videoindex verschwundenes Quellvideo ergibt keinen Verweis und keinen Treffer.
+  Ein Verweis mit syntaktisch ungueltigem Zielpfad verwirft nur sich selbst, nicht den Fall.
 - **Erneut verteilen (PR #85):** Nach dem Schreiben des neuen Verweises entfernt die Verteilung andere
   Videoverweise (`*.<videoendung>.link`) im selben Fallordner ueber den Pfadwaechter; Videos werden nie
   geloescht, ein verknuepfter oder nicht loeschbarer Verweis wird gemeldet. Liegen im Scan mehrere

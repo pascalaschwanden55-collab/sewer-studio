@@ -207,19 +207,18 @@ public sealed class TrainingCenterImportService
     /// </summary>
     private static string PickBestVideo(List<string> videos, string caseId)
     {
-        if (videos.Count == 1)
-            return videos[0];
-
         var nameNoExt = (string p) => Path.GetFileNameWithoutExtension(p).ToLowerInvariant();
         var nameWithExt = (string p) => Path.GetFileName(p).ToLowerInvariant();
         var caseIdLower = caseId.ToLowerInvariant().Replace("/", "").Replace("\\", "");
 
-        // Grafik-Videos und Uebersichten ausschliessen (Matching auf voller Dateiname MIT Extension)
+        // Grafik-Videos und Uebersichten ausschliessen (Matching auf voller Dateiname MIT Extension).
+        // Review PR #85: auch ein EINZELNES Video; vorher kam der Einzelfall-Ruecksprung vor dem Filter.
         var filtered = videos
             .Where(v => !VideoExcludePatterns.Any(pat => nameWithExt(v).Contains(pat)))
             .ToList();
         // Kein Fallback auf ausgeschlossene Videos — leere Liste wird vom Aufrufer behandelt
         if (filtered.Count == 0) return "";
+        if (filtered.Count == 1) return filtered[0];
 
         // 1. Prio: Video dessen Name die CaseId enthaelt
         var caseMatch = filtered.FirstOrDefault(v => nameNoExt(v).Contains(caseIdLower));
@@ -611,6 +610,12 @@ public sealed class TrainingCenterImportService
                         // Derselbe Massstab wie beim Lesen des Verweises im Scan: kein Verweis hinter eine Verknuepfung.
                         messages.Add($"Haltung {haltungId}: Video «{matchedVideo}» liegt hinter einer Verknüpfung oder ist nicht "
                                      + "sicher prüfbar; kein Verweis geschrieben.");
+                    }
+                    else if (!File.Exists(matchedVideo))
+                    {
+                        // Review PR #85: Die Kettenpruefung erlaubt fehlende Pfadteile; ein seit dem Videoindex
+                        // verschwundenes Video (Netzlaufwerk getrennt, geloescht) ergaebe sonst einen defekten Verweis.
+                        messages.Add($"Haltung {haltungId}: Video «{matchedVideo}» ist nicht mehr vorhanden; kein Verweis geschrieben.");
                     }
                     else if (IstSicheresZiel(writePaths, linkPath))
                     {

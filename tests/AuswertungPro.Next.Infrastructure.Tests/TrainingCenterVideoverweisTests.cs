@@ -436,6 +436,33 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         }
     }
 
+    // Review PR #85: Verschwindet das indexierte Video vor der Verarbeitung der Haltung (Netzlaufwerk
+    // getrennt, extern geloescht), wird kein defekter Verweis geschrieben und kein Videotreffer gezaehlt.
+    [Fact]
+    public async Task Verschwundenes_quellvideo_ergibt_keinen_verweis_und_keinen_treffer()
+    {
+        var videos = Path.Combine(_root, "Videos");
+        Directory.CreateDirectory(videos);
+        var video = Path.Combine(videos, "H_23021-22369.mpg");
+        File.WriteAllText(video, "video");
+        var ausgabe = Path.Combine(_root, "Sammel_Training");
+        FileAttributes? LeseUndLoesche(string pfad)
+        {
+            // Erster Blick der Verteilung auf das Video: es ist inzwischen weg.
+            if (string.Equals(pfad, video, StringComparison.OrdinalIgnoreCase) && File.Exists(video))
+                File.Delete(video);
+            try { return File.GetAttributes(pfad); }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) { return null; }
+        }
+
+        var ergebnis = await Verteiler(LeseUndLoesche).DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), videos, ausgabe, CancellationToken.None);
+
+        Assert.Equal(0, ergebnis.VideosMatched);
+        Assert.Empty(Directory.GetFiles(Path.Combine(ausgabe, "23021-22369"), "*.link"));
+        Assert.Contains(ergebnis.Messages, meldung => meldung.Contains("nicht mehr vorhanden", StringComparison.Ordinal));
+    }
+
     private async Task<(string Videos, string Ausgabe, string Fallordner, string AltVideo)> ErsteVerteilungMitMpgAsync()
     {
         var videos = Path.Combine(_root, "Videos");
@@ -557,10 +584,26 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
     public async Task Kein_verwendbares_direktvideo_faellt_auf_den_gueltigen_verweis_zurueck()
     {
         // Zwei Direktvideos, beide ausgeschlossen (Grafik, Uebersicht) und ohne Haltungsschluessel:
-        // PickBestVideo waehlt keines. Ein einzelnes Direktvideo wird dagegen immer genommen (Bestand).
+        // PickBestVideo waehlt keines.
         var fallordner = Fallordner("23021-22369");
         File.WriteAllText(Path.Combine(fallordner, "Grafik_g.mpg"), "grafikvideo");
         File.WriteAllText(Path.Combine(fallordner, "Uebersicht.mpg"), "uebersicht");
+        var original = Path.Combine(_root, "H_23021-22369.mpg");
+        File.WriteAllText(original, "original");
+        File.WriteAllText(Path.Combine(fallordner, "H_23021-22369.mpg.link"), original);
+
+        var fall = Assert.Single(await new TrainingCenterImportService().ScanAsync(ScanWurzel));
+
+        Assert.Equal(original, fall.VideoPath);
+    }
+
+    // Review PR #85: Auch ein EINZELNES ausgeschlossenes Direktvideo (Grafikvideo *_g.mpg) ist kein
+    // Inspektionsvideo; vorher nahm PickBestVideo es wegen des Einzelfall-Ruecksprungs trotzdem.
+    [Fact]
+    public async Task Einzelnes_grafikvideo_wird_nicht_genommen_der_verweis_gilt()
+    {
+        var fallordner = Fallordner("23021-22369");
+        File.WriteAllText(Path.Combine(fallordner, "H_23021-22369_g.mpg"), "grafikvideo");
         var original = Path.Combine(_root, "H_23021-22369.mpg");
         File.WriteAllText(original, "original");
         File.WriteAllText(Path.Combine(fallordner, "H_23021-22369.mpg.link"), original);
