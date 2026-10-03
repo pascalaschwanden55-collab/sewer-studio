@@ -8,8 +8,6 @@ using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
-
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class AiSettingsFactoryTests
