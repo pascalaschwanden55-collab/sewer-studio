@@ -33,28 +33,16 @@ public partial class PlayerWindow : Window
         _codingSessionViewModelOwner = codingSessionRuntime.ViewModelOwner;
         _codingSessionHost = codingSessionRuntime.SessionHost;
         _codingOverlayToolHost = codingSessionRuntime.OverlayToolHost;
-        _codingFindingContext = CodingFindingContext.CreateDefault(
-            () => _codingSessionRuntimeOwner.Service?.ActiveSession?.Events,
-            () => _codingSessionHost.Events,
-            () => _codingImportReferenceEvents.Events,
-            message => PlayerTrace.WriteLine(message));
-        _codingAnalysisContext = CodingAnalysisContext.CreateDefault(
-            () => _codingSessionRuntimeOwner.Service?.ActiveSession?.Events,
-            () => _codingSessionHost.Events,
-            () => _codingImportReferenceEvents.Events,
-            () => _codingOverlayToolHost.Calibration,
-            () => _codingOverlayRenderState.VideoAspect,
-            path => TakeSnapshotSafe(path));
-        _codingBoundaryContext = new CodingBoundaryContext(
-            new CodingBoundaryContextSources(
-                HasCodingViewModel: () => _codingSessionHost.HasViewModel,
-                ViewEvents: () => _codingSessionHost.EventCollection,
-                SessionEvents: () => _codingSessionRuntimeOwner.Service?.ActiveSession?.Events ?? [],
+        var codingContexts = PlayerWindowCodingContextFactory.Create(
+            new PlayerWindowCodingContextDependencies(
+                SessionHost: _codingSessionHost,
+                ResolveSessionService: () => _codingSessionRuntimeOwner.Service,
                 ImportEvents: () => _codingImportReferenceEvents.Events,
-                CodingSessionService: () => _codingSessionRuntimeOwner.Service,
+                Calibration: () => _codingOverlayToolHost.Calibration,
+                VideoAspect: () => _codingOverlayRenderState.VideoAspect,
+                TakeSnapshot: path => TakeSnapshotSafe(path),
                 FirstCleanFrameSeconds: () => _codingFrameReadinessController.FirstCleanFrameSeconds,
                 OsdMeter: () => _codingOsdMeterController.LastMeter,
-                ViewModelEndMeter: () => _codingSessionHost.EndMeter,
                 FallbackVideoTime: () => _playerTimelineHost.CurrentTimeOrZero),
             new CodingBoundaryEventWorkflowActions(
                 VsaCodeResolver.LookupLabel,
@@ -63,6 +51,9 @@ public partial class PlayerWindow : Window
                 (entry, frameBytes) => AttachBoundaryAnalyzedFramePhoto(entry, frameBytes),
                 () => TryAutoCalibrationFromCurrentFrame().SafeFireAndForget("TryAutoCalibration"),
                 RefreshCodingEventsList));
+        _codingFindingContext = codingContexts.Finding;
+        _codingAnalysisContext = codingContexts.Analysis;
+        _codingBoundaryContext = codingContexts.Boundary;
 
         InitializeComponent();
         var liveDetectionStatusControllers = PlayerWindowLiveDetectionStatusInitializer.Create(
@@ -542,6 +533,20 @@ public partial class PlayerWindow : Window
                 ClearDetectionOverlays,
                 _positionControls.ApplyPlaybackState,
                 UpdateCodingCurrentCode));
+        _keyboardPresenter = new PlayerKeyboardPresenter(
+            _playerControllers.ShortcutOverlayController,
+            _playerControllers.KeyboardActionControllerOwner,
+            () => new PlayerKeyboardActionControllerFactoryActions(
+                CancelCodingOverlay: CancelCodingOverlayShortcut,
+                TogglePlayPause: TogglePlayPause,
+                StopPlayback: _playerPlaybackControlHost.Stop,
+                SetPause: _playerPlaybackControlHost.SetPause,
+                EnsurePlaying: EnsurePlaying,
+                ChangeSpeed: _playerControlInputController.ChangeSpeed,
+                JumpSeconds: JumpSeconds,
+                ToggleDetection: ToggleDetectionShortcut,
+                ToggleMarkTool: ToggleMarkToolShortcut),
+            () => _codingOverlayToolHost.HasOverlayService);
         _playerControlInputController.Initialize();
         WirePositionSliderEvents();
         WireWindowLifecycleEvents();

@@ -43,7 +43,7 @@ public static class CodingMeterResolver
            && cachedOsdTimestampSeconds.HasValue
            && Math.Abs(frameTimestampSeconds.Value - cachedOsdTimestampSeconds.Value) > OsdSeekResetGapSeconds;
 
-    private static double? ResolveRecentOsdMeter(
+    public static double? ResolveRecentOsdMeter(
         double? frameTimestampSeconds,
         double? cachedOsdMeter,
         double? cachedOsdTimestampSeconds)

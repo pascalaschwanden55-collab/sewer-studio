@@ -329,6 +329,9 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var ai = File.ReadAllText(aiPath);
         var multiModel = File.ReadAllText(multiModelPath);
         var context = File.ReadAllText(contextPath);
+        var contextFactory = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Player", "PlayerWindowCodingContextFactory.cs"));
+        var compactFactory = string.Concat(contextFactory.Where(c => !char.IsWhiteSpace(c)));
         var state = File.ReadAllText(statePath);
         var windowRoot = File.ReadAllText(windowRootPath);
         var preflightWorkflow = File.ReadAllText(preflightWorkflowPath);
@@ -354,7 +357,14 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("_codingAnalysisContext.CaptureSnapshotAsync", ai);
         Assert.Contains("_codingAnalysisContext.BuildSegmentedFindings", multiModel);
         Assert.Contains("private readonly Ai.Coding.CodingAnalysisContext _codingAnalysisContext", state);
-        Assert.Contains("_codingAnalysisContext = CodingAnalysisContext.CreateDefault", windowRoot);
+        Assert.Contains("PlayerWindowCodingContextFactory.Create(", windowRoot);
+        Assert.Contains("_codingAnalysisContext = codingContexts.Analysis;", windowRoot);
+        Assert.Contains("=>dependencies.ResolveSessionService()?.ActiveSession?.Events;", compactFactory);
+        Assert.Contains("ViewEvents()=>dependencies.SessionHost.Events;", compactFactory);
+        Assert.Contains(
+            "CodingAnalysisContext.CreateDefault(SessionEvents,ViewEvents,dependencies.ImportEvents,"
+            + "dependencies.Calibration,dependencies.VideoAspect,dependencies.TakeSnapshot)",
+            compactFactory);
         Assert.Contains("CodingTerminalBoundaryCandidateBuilder.Enumerate", context);
         Assert.Contains("CodingFindingProximityPolicy.IsTooFarAhead", context);
         Assert.Contains("CodingSegmentedFindingsBuildWorkflow.Execute", context);
