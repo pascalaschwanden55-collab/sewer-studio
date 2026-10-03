@@ -7,7 +7,7 @@ public sealed record TrainingCenterDistributionRequestFactoryRequest(
     Action<bool> SetIsBusy,
     Func<string?> SelectPdfPath,
     Func<string?> SelectVideoFolder,
-    Func<string, string, string, Task<TrainingCenterImportService.DistributeResult>> DistributeAsync,
+    Func<string, string, string, ICollection<string>, Task<TrainingCenterImportService.DistributeResult>> DistributeAsync,
     IList<string> RootFolders,
     Action UpdateRootFolderDisplay,
     Action<string> SetLogText,
@@ -17,7 +17,7 @@ public sealed record TrainingCenterDistributionRequestFactoryRequest(
 public sealed record TrainingCenterDistributionDefaultRequestFactoryRequest(
     Func<bool> GetIsBusy,
     Action<bool> SetIsBusy,
-    Func<string, string, string, Task<TrainingCenterImportService.DistributeResult>> DistributeAsync,
+    Func<string, string, string, ICollection<string>, Task<TrainingCenterImportService.DistributeResult>> DistributeAsync,
     IList<string> RootFolders,
     Action UpdateRootFolderDisplay,
     Action<string> SetLogText,

@@ -496,12 +496,44 @@ public sealed class TrainingCenterImportService
 
     public Task<DistributeResult> DistributeByHaltungAsync(
         string pdfPath, string videoFolder, string outputFolder, CancellationToken cancellationToken)
-        => Task.Run(() => DistributeByHaltung(pdfPath, videoFolder, outputFolder, cancellationToken), cancellationToken);
+        => Task.Run(
+            () => DistributeByHaltung(pdfPath, videoFolder, outputFolder, new List<string>(), cancellationToken),
+            cancellationToken);
+
+    /// <summary>
+    /// Wie oben; zusaetzlich landen alle Meldungen in <paramref name="meldungen"/> – auch bei Abbruch oder Fehler,
+    /// damit die Meldungen bereits verarbeiteter Haltungen nicht verloren gehen (Folgepaket 2). Der Sammler wird
+    /// erst nach dem Ende der Hintergrundarbeit befuellt (kein gleichzeitiger Zugriff).
+    /// </summary>
+    public async Task<DistributeResult> DistributeByHaltungAsync(
+        string pdfPath,
+        string videoFolder,
+        string outputFolder,
+        ICollection<string> meldungen,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(meldungen);
+        var messages = new List<string>();
+        try
+        {
+            return await Task.Run(
+                () => DistributeByHaltung(pdfPath, videoFolder, outputFolder, messages, cancellationToken),
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            foreach (var meldung in messages)
+                meldungen.Add(meldung);
+        }
+    }
 
     private DistributeResult DistributeByHaltung(
-        string pdfPath, string videoFolder, string outputFolder, CancellationToken cancellationToken)
+        string pdfPath,
+        string videoFolder,
+        string outputFolder,
+        List<string> messages,
+        CancellationToken cancellationToken)
     {
-        var messages = new List<string>();
         cancellationToken.ThrowIfCancellationRequested();
 
         // Deepscan R6: Der Ausgabeordner liegt neben der Kundenablage. Vor jedem Schreiben gilt der

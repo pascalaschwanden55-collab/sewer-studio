@@ -26,7 +26,7 @@ public sealed class TrainingCenterDistributionWorkflowTests
                 selectors++;
                 return @"V:\Videos";
             },
-            distributeAsync: (_, _, _) =>
+            distributeAsync: (_, _, _, _) =>
             {
                 imports++;
                 return Task.FromResult(Result(0));
@@ -67,7 +67,7 @@ public sealed class TrainingCenterDistributionWorkflowTests
             rootFolders: rootFolders,
             updateRootFolderDisplay: () => updateCount++,
             log: message => state.Logs.Add(message),
-            distributeAsync: (pdf, video, output) =>
+            distributeAsync: (pdf, video, output, _) =>
             {
                 calls.Add($"{pdf}|{video}|{output}");
                 return Task.FromResult(new TrainingCenterImportService.DistributeResult(
@@ -108,7 +108,7 @@ public sealed class TrainingCenterDistributionWorkflowTests
             state: state,
             rootFolders: rootFolders,
             updateRootFolderDisplay: () => updateCount++,
-            distributeAsync: (_, _, output) =>
+            distributeAsync: (_, _, output, _) =>
                 Task.FromResult(new TrainingCenterImportService.DistributeResult(
                     TotalChunks: 1,
                     Distributed: 0,
@@ -131,7 +131,7 @@ public sealed class TrainingCenterDistributionWorkflowTests
         var request = CreateRequest(
             state: state,
             log: message => state.Logs.Add(message),
-            distributeAsync: (_, _, _) => throw new InvalidOperationException("kaputt"));
+            distributeAsync: (_, _, _, _) => throw new InvalidOperationException("kaputt"));
 
         await TrainingCenterDistributionWorkflow.RunAsync(request);
 
@@ -153,7 +153,7 @@ public sealed class TrainingCenterDistributionWorkflowTests
         var request = CreateRequest(
             state: state,
             log: message => state.Logs.Add(message),
-            distributeAsync: (_, _, _) => throw new OperationCanceledException());
+            distributeAsync: (_, _, _, _) => throw new OperationCanceledException());
 
         await TrainingCenterDistributionWorkflow.RunAsync(request);
 
@@ -163,6 +163,53 @@ public sealed class TrainingCenterDistributionWorkflowTests
         Assert.DoesNotContain(state.Logs, line => line.StartsWith("Fehler:", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task RunAsync_abbruch_protokolliert_die_meldungen_der_verarbeiteten_haltungen()
+    {
+        // Folgepaket 2: Meldungen schon verarbeiteter Haltungen gehen beim Abbruch nicht verloren.
+        var state = new WorkflowState();
+        var request = CreateRequest(
+            state: state,
+            log: message => state.Logs.Add(message),
+            distributeAsync: (_, _, _, meldungen) =>
+            {
+                meldungen.Add("Haltung A: Seiten 1-2, 3 Beobachtungen");
+                meldungen.Add("Haltung A: konnte nicht geschrieben werden: Zugriff verweigert");
+                throw new OperationCanceledException();
+            });
+
+        await TrainingCenterDistributionWorkflow.RunAsync(request);
+
+        Assert.Equal(
+            [
+                "  Haltung A: Seiten 1-2, 3 Beobachtungen",
+                "  Haltung A: konnte nicht geschrieben werden: Zugriff verweigert",
+                "Verteilung abgebrochen."
+            ],
+            state.Logs.Skip(3));
+        Assert.Equal("Verteilung abgebrochen.", state.StatusText);
+        Assert.False(state.IsBusy);
+    }
+
+    [Fact]
+    public async Task RunAsync_unerwarteter_fehler_protokolliert_die_bisherigen_meldungen()
+    {
+        var state = new WorkflowState();
+        var request = CreateRequest(
+            state: state,
+            log: message => state.Logs.Add(message),
+            distributeAsync: (_, _, _, meldungen) =>
+            {
+                meldungen.Add("Haltung A: Seiten 1-2, 3 Beobachtungen");
+                throw new InvalidOperationException("kaputt");
+            });
+
+        await TrainingCenterDistributionWorkflow.RunAsync(request);
+
+        Assert.Contains("  Haltung A: Seiten 1-2, 3 Beobachtungen", state.Logs);
+        Assert.DoesNotContain(state.Logs, line => line.Contains("kaputt", StringComparison.Ordinal));
+    }
+
     private static TrainingCenterDistributionWorkflowRequest CreateRequest(
         WorkflowState? state = null,
         IList<string>? rootFolders = null,
@@ -170,7 +217,7 @@ public sealed class TrainingCenterDistributionWorkflowTests
         Action<bool>? setIsBusy = null,
         Func<string?>? selectPdfPath = null,
         Func<string?>? selectVideoFolder = null,
-        Func<string, string, string, Task<TrainingCenterImportService.DistributeResult>>? distributeAsync = null,
+        Func<string, string, string, ICollection<string>, Task<TrainingCenterImportService.DistributeResult>>? distributeAsync = null,
         Action? updateRootFolderDisplay = null,
         Action<string>? setLogText = null,
         Action<string>? setStatusText = null,
@@ -183,7 +230,7 @@ public sealed class TrainingCenterDistributionWorkflowTests
             SetIsBusy: setIsBusy ?? (value => state.IsBusy = value),
             SelectPdfPath: selectPdfPath ?? (() => @"D:\Projekt\Input\Uri.pdf"),
             SelectVideoFolder: selectVideoFolder ?? (() => @"V:\Videos"),
-            DistributeAsync: distributeAsync ?? ((_, _, output) => Task.FromResult(Result(1, output))),
+            DistributeAsync: distributeAsync ?? ((_, _, output, _) => Task.FromResult(Result(1, output))),
             RootFolders: rootFolders ?? new List<string>(),
             UpdateRootFolderDisplay: updateRootFolderDisplay ?? (() => { }),
             SetLogText: setLogText ?? (value => state.LogText = value),

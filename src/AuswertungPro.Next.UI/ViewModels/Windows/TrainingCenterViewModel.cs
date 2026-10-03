@@ -332,8 +332,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 new TrainingCenterDistributionDefaultRequestFactoryRequest(
                     GetIsBusy: () => IsBusy,
                     SetIsBusy: value => IsBusy = value,
-                    DistributeAsync: (pdfPath, videoFolder, outputFolder) => _import.DistributeByHaltungAsync(
-                        pdfPath, videoFolder, outputFolder, ResetGenerationCancellation()),
+                    DistributeAsync: (pdfPath, videoFolder, outputFolder, meldungen) => _import.DistributeByHaltungAsync(
+                        pdfPath, videoFolder, outputFolder, meldungen, ResetGenerationCancellation()),
                     RootFolders: _rootFolders,
                     UpdateRootFolderDisplay: UpdateRootFolderDisplay,
                     SetLogText: value => LogText = value,

@@ -12,7 +12,7 @@ public sealed record TrainingCenterDistributionWorkflowRequest(
     Action<bool> SetIsBusy,
     Func<string?> SelectPdfPath,
     Func<string?> SelectVideoFolder,
-    Func<string, string, string, Task<TrainingCenterImportService.DistributeResult>> DistributeAsync,
+    Func<string, string, string, ICollection<string>, Task<TrainingCenterImportService.DistributeResult>> DistributeAsync,
     IList<string> RootFolders,
     Action UpdateRootFolderDisplay,
     Action<string> SetLogText,
@@ -37,6 +37,8 @@ public static class TrainingCenterDistributionWorkflow
             return;
 
         var outputFolder = BuildOutputFolder(pdfPath, videoFolder);
+        // Folgepaket 2: Der Dienst liefert die Meldungen auch bei Abbruch oder Fehler hierher.
+        var meldungen = new List<string>();
 
         try
         {
@@ -47,7 +49,7 @@ public static class TrainingCenterDistributionWorkflow
             request.Log($"Videos: {videoFolder}");
             request.Log($"Output: {outputFolder}");
 
-            var result = await request.DistributeAsync(pdfPath, videoFolder, outputFolder);
+            var result = await request.DistributeAsync(pdfPath, videoFolder, outputFolder, meldungen);
 
             foreach (var msg in result.Messages)
                 request.Log($"  {msg}");
@@ -68,7 +70,10 @@ public static class TrainingCenterDistributionWorkflow
         }
         catch (OperationCanceledException)
         {
-            // Deepscan R6: «Abbrechen» ist kein Fehler; bereits angelegte Haltungsordner bleiben.
+            // Deepscan R6: «Abbrechen» ist kein Fehler; bereits angelegte Haltungsordner bleiben und ihre
+            // Meldungen (auch Fehler) stehen im Protokoll.
+            foreach (var msg in meldungen)
+                request.Log($"  {msg}");
             request.Log("Verteilung abgebrochen.");
             request.SetStatusText("Verteilung abgebrochen.");
         }
@@ -77,6 +82,8 @@ public static class TrainingCenterDistributionWorkflow
             // PR #85: auch das sichtbare Protokoll zeigt nur den verstaendlichen Text; die volle
             // Ausnahme geht ins Programmlog.
             var meldung = UserError.DescribeAndReport(ex, "Training Center Verteilung");
+            foreach (var msg in meldungen)
+                request.Log($"  {msg}");
             request.Log($"Fehler: {meldung}");
             request.SetStatusText($"Fehler bei Verteilung: {meldung}");
         }
