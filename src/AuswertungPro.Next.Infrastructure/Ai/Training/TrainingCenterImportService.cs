@@ -1,29 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Common;
-using AuswertungPro.Next.Domain.VsaCatalog;
-using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 
 public sealed class TrainingCenterImportService
 {
-    private static readonly string[] VideoExts = [..AuswertungPro.Next.Infrastructure.Media.MediaFileTypes.VideoExtensions, ".ts", ".m4v"];
-    private static readonly string[] ProtocolExts = [".json", ".xml", ".pdf"];
-
-    private readonly Func<string, PdfTextExtraction> _pdfSeitenLesen;
-    private readonly Func<string, IEnumerable<string>> _dateienImOrdner;
-    private readonly Action<string>? _nachHaltungsordner;
-    private readonly Func<string, FileAttributes?>? _leseAttribute;
-    private readonly TrainingCenterFallDateien _fallDateien;
+    // Paket A (03.10.2026): Die Fassade behaelt alle oeffentlichen und internen Signaturen und delegiert an
+    // TrainingCenterFallScan, TrainingCenterHaltungsverteilung, TrainingCenterPaarung, TrainingCenterVideoIndex
+    // und TrainingCenterProtokollJson; die Pruefregeln der Fallordner-Dateien stehen in TrainingCenterFallDateien.
+    private readonly TrainingCenterFallScan _scan;
+    private readonly TrainingCenterHaltungsverteilung _verteilung;
 
     public TrainingCenterImportService()
         : this(null, null, null)
@@ -41,12 +33,12 @@ public sealed class TrainingCenterImportService
         Action<string>? nachHaltungsordner,
         Func<string, FileAttributes?>? leseAttribute = null)
     {
-        _pdfSeitenLesen = pdfSeitenLesen ?? (pfad => PdfTextExtractor.ExtractPages(pfad));
-        _dateienImOrdner = dateienImOrdner
-                           ?? (ordner => Directory.EnumerateFiles(ordner, "*.*", SearchOption.TopDirectoryOnly));
-        _nachHaltungsordner = nachHaltungsordner;
-        _leseAttribute = leseAttribute;
-        _fallDateien = new TrainingCenterFallDateien(VideoExts, leseAttribute);
+        var pdfLeser = pdfSeitenLesen ?? (pfad => PdfTextExtractor.ExtractPages(pfad));
+        var dateiliste = dateienImOrdner
+                         ?? (ordner => Directory.EnumerateFiles(ordner, "*.*", SearchOption.TopDirectoryOnly));
+        var fallDateien = new TrainingCenterFallDateien(TrainingCenterFallScan.VideoExts, leseAttribute);
+        _scan = new TrainingCenterFallScan(dateiliste, fallDateien);
+        _verteilung = new TrainingCenterHaltungsverteilung(pdfLeser, dateiliste, nachHaltungsordner, leseAttribute, fallDateien);
     }
 
     public Task<List<TrainingCaseInput>> ScanAsync(string rootFolder)
@@ -73,292 +65,20 @@ public sealed class TrainingCenterImportService
         ICollection<string>? uebersprungeneOrdner,
         ICollection<string>? hinweise,
         CancellationToken cancellationToken)
-        => Task.Run(() => Scan(rootFolder, uebersprungeneOrdner, hinweise, cancellationToken), cancellationToken);
-
-    private List<TrainingCaseInput> Scan(
-        string rootFolder,
-        ICollection<string>? uebersprungeneOrdner,
-        ICollection<string>? hinweise,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(rootFolder) || !Directory.Exists(rootFolder))
-            return new List<TrainingCaseInput>();
-
-        var folders = EnumerateFolders(rootFolder, uebersprungeneOrdner);
-
-        var cases = new List<TrainingCaseInput>();
-
-        foreach (var folder in folders)
-        {
-            // Ausserhalb des try: der Fang fuer Ordnerfehler darf den Abbruch nicht verschlucken.
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                var files = _dateienImOrdner(folder).ToList();
-                if (files.Count == 0)
-                    continue;
-
-                // PR #85: Videos und Protokolle, die selbst eine Verknuepfung oder nicht pruefbar sind (z. B.
-                // Symlinks aelterer Verteillaeufe), werden nicht verwendet, sondern gemeldet.
-                var direktVideos = files
-                    .Where(_fallDateien.IstVideo)
-                    .Where(f => _fallDateien.IstUnverknuepft(f, TrainingCenterFallDateien.Art.Video, hinweise))
-                    .ToList();
-                var protos = files
-                    .Where(f => ProtocolExts.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                    .Where(f => _fallDateien.IstUnverknuepft(f, TrainingCenterFallDateien.Art.Protokoll, hinweise))
-                    .ToList();
-
-                var caseId = SafeRelativeId(rootFolder, folder);
-                var (bestVideo, bestProto) = ResolvePair(direktVideos, protos, caseId, out var mehrdeutigeVideos);
-
-                // Ein verwendbares Direktvideo hat Vorrang. Wird keines ausgewaehlt (keines da, nur ausgeschlossene
-                // wie *_g.mpg, mehrdeutig), gelten als Rueckfall die Videoverweise der Verteilung (PR #85).
-                var verweisVideos = new List<string>();
-                if (string.IsNullOrWhiteSpace(bestVideo))
-                {
-                    verweisVideos = _fallDateien.LoeseVideoverweiseAuf(files, hinweise);
-                    if (verweisVideos.Count > 0)
-                    {
-                        var (verweisVideo, verweisProto) = ResolvePair(verweisVideos, protos, caseId);
-                        if (!string.IsNullOrWhiteSpace(verweisVideo))
-                            (bestVideo, bestProto) = (verweisVideo, verweisProto);
-                    }
-                }
-
-                // Ohne Video UND ohne Protokoll: ueberspringen. Nur ausgeschlossene Videos (Grafik, Uebersicht)
-                // zaehlen dabei nicht als Video (Review PR #85); mehrdeutige echte Videos bleiben als Fall sichtbar.
-                var nurAusgeschlosseneVideos = direktVideos.All(IstAusgeschlossenesVideo);
-                if (nurAusgeschlosseneVideos && verweisVideos.All(IstAusgeschlossenesVideo) && protos.Count == 0)
-                    continue;
-
-                // Folgepaket 3: mehrere echte Videos ohne Haltungsschluessel nicht still verwerfen, sondern melden;
-                // der Fall bleibt sichtbar (ohne Video), damit das passende Video benannt werden kann.
-                if (mehrdeutigeVideos && string.IsNullOrWhiteSpace(bestVideo))
-                {
-                    var namen = direktVideos.Where(video => !IstAusgeschlossenesVideo(video)).Select(Path.GetFileName);
-                    hinweise?.Add($"Fall «{caseId}»: mehrere Videos ohne eindeutigen Haltungsschlüssel ({string.Join(", ", namen)}) "
-                                  + "– keines verwendet; bitte das passende Video nach der Haltung benennen.");
-                }
-
-                var inspectionDate = ResolveInspectionDate(folder, bestProto, bestVideo);
-
-                cases.Add(new TrainingCaseInput(
-                    CaseId: caseId,
-                    FolderPath: folder,
-                    VideoPath: bestVideo,
-                    ProtocolPath: bestProto,
-                    InspectionDate: inspectionDate));
-            }
-            catch (Exception ex)
-            {
-                // Deepscan R8: Ein nicht lesbarer Ordner liefert keinen Trainingsfall. Er fehlt nicht mehr
-                // still, sondern wird gesammelt und vom Training Center im Protokoll benannt.
-                uebersprungeneOrdner?.Add(folder);
-                System.Diagnostics.Trace.WriteLine(
-                    $"[TrainingCenterImport] Ordner uebersprungen: {folder}: {ex.GetType().Name}: {ex.Message}");
-            }
-        }
-
-        // Stable ordering for UI
-        return cases.OrderBy(c => c.CaseId, StringComparer.OrdinalIgnoreCase).ToList();
-    }
+        => Task.Run(() => _scan.Scan(rootFolder, uebersprungeneOrdner, hinweise, cancellationToken), cancellationToken);
 
     /// <summary>
     /// Scannt nur nach Protokollen (PDF/JSON), Video ist nicht erforderlich.
     /// Fuer den reinen Protokoll-Import ohne Videoanalyse.
     /// </summary>
     public Task<List<TrainingCaseInput>> ScanProtocolOnlyAsync(string rootFolder)
-    {
-        if (string.IsNullOrWhiteSpace(rootFolder) || !Directory.Exists(rootFolder))
-            return Task.FromResult(new List<TrainingCaseInput>());
-
-        var folders = EnumerateFolders(rootFolder);
-        var cases = new List<TrainingCaseInput>();
-
-        foreach (var folder in folders)
-        {
-            try
-            {
-                var files = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly).ToList();
-                if (files.Count == 0) continue;
-
-                var protos = files.Where(f => ProtocolExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
-                if (protos.Count == 0) continue;
-
-                var videos = files.Where(f => VideoExts.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
-                var caseId = SafeRelativeId(rootFolder, folder);
-                var (bestVideo, proto) = ResolveProtocolOnlyPair(videos, protos, caseId);
-                var inspectionDate = ResolveInspectionDate(folder, proto, bestVideo);
-                if (string.IsNullOrWhiteSpace(proto)) continue; // Nur Non-Protocol-Dateien -> ueberspringen
-
-                cases.Add(new TrainingCaseInput(
-                    CaseId: caseId,
-                    FolderPath: folder,
-                    VideoPath: bestVideo,
-                    ProtocolPath: proto,
-                    InspectionDate: inspectionDate));
-            }
-            catch (Exception ex)
-            {
-                // Frueher still verschluckt -> stiller Verlust von Trainingsfaellen. Jetzt sichtbar
-                // (mit Ordnerpfad), damit nachvollziehbar ist, WELCHER Ordner und WARUM uebersprungen wurde.
-                System.Diagnostics.Trace.WriteLine(
-                    $"[TrainingCenterImport] Ordner uebersprungen: {folder}: {ex.GetType().Name}: {ex.Message}");
-            }
-        }
-
-        cases = cases.OrderBy(c => c.CaseId, StringComparer.OrdinalIgnoreCase).ToList();
-        return Task.FromResult(cases);
-    }
-
-    /// <summary>
-    /// Waehlt das beste Video aus mehreren Kandidaten.
-    /// Prio: 1. CaseId im Namen, 2. Groesstes (laengstes) Video, 3. Grafik-Videos ausschliessen.
-    /// </summary>
-    /// <summary>Grafikvideo oder Uebersicht (Muster auf dem vollen Dateinamen mit Endung)?</summary>
-    private static bool IstAusgeschlossenesVideo(string pfad)
-    {
-        var name = Path.GetFileName(pfad).ToLowerInvariant();
-        return VideoExcludePatterns.Any(name.Contains);
-    }
-
-    private static string PickBestVideo(List<string> videos, string caseId)
-    {
-        var nameNoExt = (string p) => Path.GetFileNameWithoutExtension(p).ToLowerInvariant();
-        var caseIdLower = caseId.ToLowerInvariant().Replace("/", "").Replace("\\", "");
-
-        // Grafik-Videos und Uebersichten ausschliessen (Matching auf voller Dateiname MIT Extension).
-        // Review PR #85: auch ein EINZELNES Video; vorher kam der Einzelfall-Ruecksprung vor dem Filter.
-        var filtered = videos
-            .Where(v => !IstAusgeschlossenesVideo(v))
-            .ToList();
-        // Kein Fallback auf ausgeschlossene Videos — leere Liste wird vom Aufrufer behandelt
-        if (filtered.Count == 0) return "";
-        if (filtered.Count == 1) return filtered[0];
-
-        // 1. Prio: Video dessen Name die CaseId enthaelt
-        var caseMatch = filtered.FirstOrDefault(v => nameNoExt(v).Contains(caseIdLower));
-        if (caseMatch is not null) return caseMatch;
-
-        // 2. Prio: Groesstes Video (korreliert mit Laenge, da Bitrate aehnlich)
-        return filtered.Select(p => new FileInfo(p))
-            .OrderByDescending(fi => fi.Length)
-            .First().FullName;
-    }
-
-    private static DateTime? ResolveInspectionDate(string folder, string protocolPath, string videoPath)
-    {
-        foreach (var candidate in EnumerateDateCandidates(folder, protocolPath, videoPath))
-        {
-            var parsed = TrainingSampleEligibility.TryParseInspectionDate(candidate);
-            if (parsed is not null)
-                return parsed.Value;
-        }
-
-        return null;
-    }
-
-    private static IEnumerable<string> EnumerateDateCandidates(string folder, string protocolPath, string videoPath)
-    {
-        yield return Path.GetFileName(folder);
-        yield return folder;
-
-        if (!string.IsNullOrWhiteSpace(protocolPath))
-        {
-            yield return Path.GetFileName(protocolPath);
-            foreach (var line in ReadTextDateCandidates(protocolPath))
-                yield return line;
-        }
-
-        if (!string.IsNullOrWhiteSpace(videoPath))
-            yield return Path.GetFileName(videoPath);
-    }
-
-    private static IEnumerable<string> ReadTextDateCandidates(string path)
-    {
-        var ext = Path.GetExtension(path);
-        if (!string.Equals(ext, ".json", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(ext, ".xml", StringComparison.OrdinalIgnoreCase))
-        {
-            yield break;
-        }
-
-        foreach (var line in File.ReadLines(path).Take(200))
-        {
-            if (line.Contains("datum", StringComparison.OrdinalIgnoreCase) ||
-                line.Contains("date", StringComparison.OrdinalIgnoreCase) ||
-                line.Contains("aufnahme", StringComparison.OrdinalIgnoreCase))
-            {
-                yield return line;
-            }
-        }
-    }
-
-    private static IEnumerable<string> EnumerateFolders(
-        string rootFolder,
-        ICollection<string>? uebersprungeneOrdner = null)
-    {
-        // Root + alle erreichbaren Unterordner (gesperrte und verknuepfte werden uebersprungen statt zu
-        // werfen und, falls der Aufrufer eine Liste mitgibt, dort eingetragen).
-        foreach (var dir in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateDirectoriesSafe(
-                     rootFolder,
-                     uebersprungeneOrdner))
-            yield return dir;
-    }
-
-    // Dateinamen-Muster fuer Protokoll-PDFs (bevorzugt)
-    private static readonly string[] ProtocolKeywords =
-        ["protokoll", "haltung", "inspektion", "zustandsbericht", "bericht"];
-
-    // Dateinamen-Muster die KEINE Inspektionsprotokolle sind
-    private static readonly string[] NonProtocolKeywords =
-        ["plan", "situationsplan", "_dp", "lageplan", "uebersicht", "übersicht"];
-
-    // Video-Dateinamen die ausgeschlossen werden (Grafik-Videos, Uebersichten)
-    // Hinweis: Matching auf Dateiname MIT Extension (ToLowerInvariant)
-    private static readonly string[] VideoExcludePatterns = ["_g.mp", "_g.avi", "_g.ts", "_g.mkv", "_g.m4v", "uebersicht", "übersicht"];
-
-    /// <summary>
-    /// Waehlt das beste Protokoll. Gibt null zurueck wenn nur Non-Protocol-Dateien vorhanden.
-    /// </summary>
-    private static string? PickBestProtocol(List<string> protos)
-    {
-        // JSON hat hoechste Prio (strukturiert)
-        var json = protos.FirstOrDefault(p => Path.GetExtension(p).Equals(".json", StringComparison.OrdinalIgnoreCase));
-        if (json is not null) return json;
-
-        // PDFs: Protokoll-Keywords bevorzugen, Non-Protocol ausschliessen
-        var pdfs = protos.Where(p => Path.GetExtension(p).Equals(".pdf", StringComparison.OrdinalIgnoreCase)).ToList();
-        if (pdfs.Count > 0)
-        {
-            var name = (string p) => Path.GetFileNameWithoutExtension(p).ToLowerInvariant();
-
-            // 1. Prio: Dateiname enthaelt Protokoll-Keyword
-            var protocolPdf = pdfs.FirstOrDefault(p => ProtocolKeywords.Any(k => name(p).Contains(k)));
-            if (protocolPdf is not null) return protocolPdf;
-
-            // 2. Prio: Dateiname ist KEIN bekanntes Non-Protocol
-            var nonExcluded = pdfs.Where(p => !NonProtocolKeywords.Any(k => name(p).Contains(k))).ToList();
-            if (nonExcluded.Count > 0)
-            {
-                // Groesstes PDF unter den verbleibenden (wahrscheinlich das Protokoll)
-                return nonExcluded.OrderByDescending(p => new FileInfo(p).Length).First();
-            }
-
-            // Nur Non-Protocol-PDFs vorhanden → kein echtes Protokoll
-            return null;
-        }
-
-        // XML als letzter Fallback
-        return protos.FirstOrDefault(p => Path.GetExtension(p).Equals(".xml", StringComparison.OrdinalIgnoreCase));
-    }
+        => Task.FromResult(_scan.ScanProtocolOnly(rootFolder));
 
     internal static (string VideoPath, string ProtocolPath) ResolvePair(
         IReadOnlyList<string> videos,
         IReadOnlyList<string> protos,
         string caseId)
-        => ResolvePair(videos, protos, caseId, out _);
+        => TrainingCenterPaarung.ResolvePair(videos, protos, caseId);
 
     /// <summary>
     /// Wie oben; <paramref name="mehrdeutigeVideos"/> sagt, ob mehrere echte (nicht ausgeschlossene) Videos ohne
@@ -369,132 +89,16 @@ public sealed class TrainingCenterImportService
         IReadOnlyList<string> protos,
         string caseId,
         out bool mehrdeutigeVideos)
-        => ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: false, out mehrdeutigeVideos);
+        => TrainingCenterPaarung.ResolvePair(videos, protos, caseId, out mehrdeutigeVideos);
 
     internal static (string VideoPath, string ProtocolPath) ResolveProtocolOnlyPair(
         IReadOnlyList<string> videos,
         IReadOnlyList<string> protos,
         string caseId)
-    {
-        return ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: true, out _);
-    }
-
-    private static (string VideoPath, string ProtocolPath) ResolvePairCore(
-        IReadOnlyList<string> videos,
-        IReadOnlyList<string> protos,
-        string caseId,
-        bool preserveProtocolOnConflict,
-        out bool mehrdeutigeVideos)
-    {
-        mehrdeutigeVideos = false;
-        var videoList = videos.ToList();
-        var protoList = protos.ToList();
-
-        var bestVideo = videoList.Count > 0 ? PickBestVideo(videoList, caseId) : "";
-        var bestProto = protoList.Count > 0 ? PickBestProtocol(protoList) ?? "" : "";
-
-        if (videoList.Count <= 1 && protoList.Count <= 1)
-        {
-            return preserveProtocolOnConflict
-                ? DropContradiction(bestVideo, bestProto, caseId, preserveProtocolOnConflict: true)
-                : (bestVideo, bestProto);
-        }
-
-        var caseKey = EvalContaminationGuard.NormalizeHaltungKey(caseId);
-        var matchingVideo = PickVideoByHaltungKey(videoList, caseKey, caseId);
-        if (!string.IsNullOrWhiteSpace(matchingVideo))
-        {
-            bestVideo = matchingVideo;
-        }
-        else if (videoList.Count(video => !IstAusgeschlossenesVideo(video)) > 1)
-        {
-            // Mehrere echte Videos ohne eindeutigen Haltungs-Treffer sind unsicher.
-            // Lieber kein Video verwenden als das groesste falsche Video koppeln. Ausgeschlossene Videos
-            // (Grafik, Uebersicht) zaehlen nicht mit: ein echtes Video daneben bleibt eindeutig (Folgepaket 3).
-            bestVideo = "";
-            mehrdeutigeVideos = true;
-        }
-
-        var matchingProto = PickProtocolByHaltungKey(protoList, caseKey);
-        if (!string.IsNullOrWhiteSpace(matchingProto))
-            bestProto = matchingProto;
-
-        return DropContradiction(bestVideo, bestProto, caseId, preserveProtocolOnConflict);
-    }
-
-    private static string PickVideoByHaltungKey(List<string> videos, string? caseKey, string caseId)
-    {
-        if (string.IsNullOrWhiteSpace(caseKey))
-            return "";
-
-        var matches = videos
-            .Where(v => string.Equals(NormalizeFileHaltungKey(v), caseKey, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        return matches.Count == 0 ? "" : PickBestVideo(matches, caseId);
-    }
-
-    private static string PickProtocolByHaltungKey(List<string> protos, string? caseKey)
-    {
-        if (string.IsNullOrWhiteSpace(caseKey))
-            return "";
-
-        var matches = protos
-            .Where(p => string.Equals(NormalizeFileHaltungKey(p), caseKey, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        return matches.Count == 0 ? "" : PickBestProtocol(matches) ?? "";
-    }
-
-    private static (string VideoPath, string ProtocolPath) DropContradiction(
-        string videoPath,
-        string protocolPath,
-        string caseId,
-        bool preserveProtocolOnConflict)
-    {
-        if (string.IsNullOrWhiteSpace(videoPath) || string.IsNullOrWhiteSpace(protocolPath))
-            return (videoPath, protocolPath);
-
-        var videoKey = NormalizeFileHaltungKey(videoPath);
-        var protocolKey = NormalizeFileHaltungKey(protocolPath);
-        if (videoKey is null || protocolKey is null)
-            return (videoPath, protocolPath);
-
-        if (string.Equals(videoKey, protocolKey, StringComparison.OrdinalIgnoreCase))
-            return (videoPath, protocolPath);
-
-        if (preserveProtocolOnConflict)
-            return ("", protocolPath);
-
-        var caseKey = EvalContaminationGuard.NormalizeHaltungKey(caseId);
-        var videoMatchesCase = caseKey is not null
-            && string.Equals(videoKey, caseKey, StringComparison.OrdinalIgnoreCase);
-        var protocolMatchesCase = caseKey is not null
-            && string.Equals(protocolKey, caseKey, StringComparison.OrdinalIgnoreCase);
-
-        if (videoMatchesCase && !protocolMatchesCase)
-            return (videoPath, "");
-        if (protocolMatchesCase && !videoMatchesCase)
-            return ("", protocolPath);
-
-        return (videoPath, "");
-    }
-
-    private static string? NormalizeFileHaltungKey(string path)
-    {
-        return EvalContaminationGuard.NormalizeHaltungKey(Path.GetFileNameWithoutExtension(path));
-    }
+        => TrainingCenterPaarung.ResolveProtocolOnlyPair(videos, protos, caseId);
 
     // ── Haltungs-Verteilung ─────────────────────────────────────────────────
     // Teilt ein Multi-Haltungs-PDF in einzelne Ordner auf und ordnet Videos zu.
-
-    /// <summary>
-    /// Regex zum Extrahieren einer Haltungs-ID aus einem Dateinamen.
-    /// Erkennt z.B. "H_42046-41412.mpg" → "42046-41412"
-    /// </summary>
-    private static readonly Regex HaltungIdInFilename = new(
-        @"(?<id>\d[\d\.]*[-/]\d[\d\.]*)",
-        RegexOptions.Compiled);
 
     public sealed record DistributeResult(
         int TotalChunks,
@@ -519,7 +123,7 @@ public sealed class TrainingCenterImportService
     public Task<DistributeResult> DistributeByHaltungAsync(
         string pdfPath, string videoFolder, string outputFolder, CancellationToken cancellationToken)
         => Task.Run(
-            () => DistributeByHaltung(pdfPath, videoFolder, outputFolder, new List<string>(), cancellationToken),
+            () => _verteilung.Verteile(pdfPath, videoFolder, outputFolder, new List<string>(), cancellationToken),
             cancellationToken);
 
     /// <summary>
@@ -539,7 +143,7 @@ public sealed class TrainingCenterImportService
         try
         {
             return await Task.Run(
-                () => DistributeByHaltung(pdfPath, videoFolder, outputFolder, messages, cancellationToken),
+                () => _verteilung.Verteile(pdfPath, videoFolder, outputFolder, messages, cancellationToken),
                 cancellationToken).ConfigureAwait(false);
         }
         finally
@@ -549,276 +153,6 @@ public sealed class TrainingCenterImportService
         }
     }
 
-    private DistributeResult DistributeByHaltung(
-        string pdfPath,
-        string videoFolder,
-        string outputFolder,
-        List<string> messages,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // Deepscan R6: Der Ausgabeordner liegt neben der Kundenablage. Vor jedem Schreiben gilt der
-        // gemeinsame Verteil-Pfadwaechter; ein verknuepfter Ausgabeordner wird ohne Schreiben abgelehnt.
-        // PR #85: Der Waechter prueft nur ab dem Ausgabeordner abwaerts. Liegt das PDF unter einer
-        // Verknuepfung, laege auch der abgeleitete Ausgabeordner darin; deshalb zuerst der ganze Pfad
-        // bis zum Laufwerk (gemeinsamer VerknuepfungsSchutz, fehlender Rest erlaubt, Lesefehler sperren).
-        var pfadBefund = VerknuepfungsSchutz.PruefePfadAbLaufwerk(outputFolder, VerknuepfungsRegel.GanzerPfad);
-        if (!pfadBefund.IstSicher)
-        {
-            messages.Add($"Ausgabeordner «{outputFolder}» wird nicht beschrieben: «{pfadBefund.Pfad}» im Pfad ist "
-                         + (pfadBefund.Befund == VerknuepfungsBefund.Verknuepfung
-                             ? "eine Verknüpfung (Junction)."
-                             : "nicht sicher prüfbar (keine Verknüpfung nachweisbar)."));
-            return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
-        }
-
-        DistributionWritePathGuard writePaths;
-        try
-        {
-            writePaths = new DistributionWritePathGuard(outputFolder);
-        }
-        catch (Exception ex) when (IstPfadwaechterAblehnung(ex))
-        {
-            messages.Add($"Ausgabeordner «{outputFolder}» wird nicht beschrieben: "
-                         + "Er ist eine Verknüpfung (Junction) oder nicht sicher prüfbar.");
-            return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
-        }
-
-        // 1. Text aus PDF extrahieren (seitenweise)
-        PdfTextExtraction extraction;
-        try
-        {
-            extraction = _pdfSeitenLesen(pdfPath);
-        }
-        catch (Exception ex)
-        {
-            // PR #85: kein roher Ausnahmetext; die volle Ausnahme steht im Programmlog.
-            messages.Add($"PDF-Text konnte nicht extrahiert werden: {UserError.DescribeAndReport(ex, "Training Center PDF lesen")}");
-            return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
-        }
-
-        if (extraction.Pages.Count == 0)
-        {
-            messages.Add("Kein Text im PDF gefunden.");
-            return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
-        }
-
-        // 2. PDF nach Haltungen aufteilen
-        var parser = new PdfParser();
-        var chunks = PdfChunking.SplitIntoHaltungChunks(extraction.Pages, parser);
-
-        if (chunks.Count == 0)
-        {
-            messages.Add("Keine Haltungen im PDF erkannt.");
-            return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
-        }
-
-        // 3. Video-Index aufbauen: Haltungs-ID → Videodatei (Abbruch vor und waehrend der rekursiven Suche)
-        cancellationToken.ThrowIfCancellationRequested();
-        var videoIndex = BuildVideoIndex(videoFolder, messages, cancellationToken);
-
-        // 4. Pro Haltung einen Ordner erstellen
-        Directory.CreateDirectory(outputFolder);
-        int distributed = 0;
-        int videosMatched = 0;
-        int uncertain = 0;
-
-        foreach (var chunk in chunks)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (string.IsNullOrWhiteSpace(chunk.DetectedId) || chunk.IsUncertain)
-            {
-                uncertain++;
-                messages.Add($"Chunk {chunk.Index} (Seiten {chunk.PageRange}): keine Haltungs-ID erkannt, übersprungen.");
-                continue;
-            }
-
-            var haltungId = chunk.DetectedId;
-            var safeId = Regex.Replace(haltungId, @"[^\w\-\.]", "_");
-            var caseDir = Path.Combine(outputFolder, safeId);
-            var jsonPath = Path.Combine(caseDir, $"{safeId}_protokoll.json");
-            if (!IstSicheresZiel(writePaths, caseDir) || !IstSicheresZiel(writePaths, jsonPath))
-            {
-                messages.Add($"Haltung {haltungId}: Zielordner ist eine Verknüpfung oder nicht sicher prüfbar, nicht beschrieben.");
-                continue;
-            }
-
-            // Review PR #85: Ein Dateifehler einer Haltung (Ordner, Protokoll, Verweis) wird fuer diese Haltung
-            // gemeldet; die Verteilung faehrt mit der naechsten fort statt ganz abzubrechen.
-            List<ProtocolEntry> entries;
-            string? videoPath = null;
-            try
-            {
-                Directory.CreateDirectory(caseDir);
-
-                // JSON-Protokoll schreiben (Format kompatibel mit PdfProtocolExtractor.ExtractFromJson)
-                entries = ExtractEntriesFromChunkText(chunk.Text);
-                WriteProtocolJson(jsonPath, entries, haltungId, chunk.PageRange);
-
-                // Video zuordnen
-                var normalizedId = NormalizeId(haltungId);
-                if (videoIndex.TryGetValue(normalizedId, out var matchedVideo))
-                {
-                    // Deepscan R6: keine symbolische Verknuepfung mehr; der Verweis auf das Originalvideo
-                    // steht immer in einer .link-Datei (frueher nur der Rueckfall ohne Adminrechte).
-                    // PR #85: Gezaehlt und gemeldet wird ein Video nur mit geschriebenem Verweis oder einem
-                    // bereits vorhandenen Video aus frueheren Laeufen. Ein vorhandenes Ziel, das eine Verknuepfung
-                    // oder nicht pruefbar ist (Symlink aelterer Laeufe), zaehlt nicht; es bleibt unberuehrt, und
-                    // stattdessen wird der .link-Verweis geschrieben.
-                    var videoTarget = Path.Combine(caseDir, Path.GetFileName(matchedVideo));
-                    var linkPath = videoTarget + ".link";
-                    if (File.Exists(videoTarget)
-                        && VerknuepfungsSchutz.PruefeEintrag(videoTarget, VerknuepfungsRegel.Streng, _leseAttribute).IstSicher)
-                    {
-                        videoPath = videoTarget;
-                    }
-                    else if (!_fallDateien.PruefeVideoziel(matchedVideo).IstSicher)
-                    {
-                        // Derselbe Massstab wie beim Lesen des Verweises im Scan: kein Verweis hinter eine Verknuepfung.
-                        messages.Add($"Haltung {haltungId}: Video «{matchedVideo}» liegt hinter einer Verknüpfung oder ist nicht "
-                                     + "sicher prüfbar; kein Verweis geschrieben.");
-                    }
-                    else if (!File.Exists(matchedVideo))
-                    {
-                        // Review PR #85: Die Kettenpruefung erlaubt fehlende Pfadteile; ein seit dem Videoindex
-                        // verschwundenes Video (Netzlaufwerk getrennt, geloescht) ergaebe sonst einen defekten Verweis.
-                        messages.Add($"Haltung {haltungId}: Video «{matchedVideo}» ist nicht mehr vorhanden; kein Verweis geschrieben.");
-                    }
-                    else if (IstSicheresZiel(writePaths, linkPath))
-                    {
-                        AtomicTextFileWriter.WriteAllText(linkPath, matchedVideo);
-                        // Nur bei eindeutiger Bereinigung gilt das Video als zugeordnet (Review PR #85).
-                        if (EntferneAndereVideoverweise(writePaths, caseDir, linkPath, haltungId, messages))
-                            videoPath = matchedVideo; // Original-Pfad verwenden
-                        else
-                            messages.Add($"Haltung {haltungId}: Videozuordnung nicht eindeutig – bitte die Verteilung erneut ausführen.");
-                    }
-                    else
-                    {
-                        messages.Add($"Haltung {haltungId}: Videoverweis ist eine Verknüpfung, nicht beschrieben.");
-                    }
-
-                    if (videoPath is not null)
-                        videosMatched++;
-                }
-                else
-                {
-                    messages.Add($"Haltung {haltungId}: kein Video gefunden.");
-                }
-            }
-            catch (Exception ex) when (IstDateifehler(ex))
-            {
-                messages.Add($"Haltung {haltungId}: konnte nicht geschrieben werden: "
-                             + UserError.DescribeAndReport(ex, "Training Center Haltung verteilen"));
-                continue;
-            }
-
-            distributed++;
-            messages.Add($"Haltung {haltungId}: Seiten {chunk.PageRange}, "
-                + $"{entries.Count} Beobachtungen"
-                + (videoPath is not null ? $", Video: {Path.GetFileName(videoPath)}" : ""));
-            _nachHaltungsordner?.Invoke(caseDir);
-        }
-
-        // Review PR #85: Ein Abbruch waehrend der letzten Haltung endet als Abbruch, nicht als «Fertig».
-        cancellationToken.ThrowIfCancellationRequested();
-        return new DistributeResult(
-            chunks.Count, distributed, videosMatched, uncertain, outputFolder, messages);
-    }
-
-    /// <summary>
-    /// Prueft ein Schreibziel der Verteilung mit dem Verteil-Pfadwaechter. Eine Verknuepfung
-    /// (oder ein nicht pruefbares Glied) im Ziel oder darueber bis zum Ausgabeordner sperrt.
-    /// </summary>
-    private static bool IstSicheresZiel(DistributionWritePathGuard writePaths, string path)
-    {
-        try
-        {
-            writePaths.EnsureFileTarget(path);
-            return true;
-        }
-        catch (Exception ex) when (IstPfadwaechterAblehnung(ex))
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// PR #85: Nach erneutem Verteilen mit anderem Video blieb der alte Verweis liegen, und der Scan konnte das
-    /// veraltete Video koppeln. Entfernt werden nur andere Videoverweise der Verteilung im selben Fallordner,
-    /// nie Videos; jedes Ziel ueber den Pfadwaechter. Eine Verknuepfung wird gemeldet und nicht angefasst,
-    /// ein Loeschfehler gemeldet (der Scan waehlt dann bei mehreren Verweisen keinen).
-    /// Rueckgabe: true, wenn danach nur noch der neue Verweis gilt. Eine verknuepfte Altdatei zaehlt nicht
-    /// dagegen, weil der Scan sie ohnehin ablehnt. Bleibt ein gueltiger alter Verweis liegen oder laesst sich
-    /// der Fallordner nicht auflisten, laedt der Scan den Fall ohne Video; dann darf die Verteilung keinen
-    /// Videotreffer melden (Review PR #85).
-    /// </summary>
-    private bool EntferneAndereVideoverweise(
-        DistributionWritePathGuard writePaths,
-        string caseDir,
-        string behalten,
-        string haltungId,
-        List<string> messages)
-    {
-        List<string> dateien;
-        try
-        {
-            // Dieselbe Dateiliste wie der Scan; ein Auflistungsfehler bricht nicht die ganze Verteilung ab.
-            dateien = _dateienImOrdner(caseDir).ToList();
-        }
-        catch (Exception ex) when (IstPfadwaechterAblehnung(ex))
-        {
-            messages.Add($"Haltung {haltungId}: alte Videoverweise konnten nicht geprüft werden: "
-                         + UserError.DescribeAndReport(ex, "Training Center Videoverweise auflisten"));
-            return false;
-        }
-
-        var eindeutig = true;
-        foreach (var alt in dateien)
-        {
-            if (!_fallDateien.IstVideoverweis(alt) || string.Equals(alt, behalten, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            if (!VerknuepfungsSchutz.PruefeEintrag(alt, VerknuepfungsRegel.Streng, _leseAttribute).IstSicher)
-            {
-                messages.Add($"Haltung {haltungId}: alter Videoverweis «{alt}» ist eine Verknüpfung oder nicht sicher prüfbar; "
-                             + "nicht entfernt.");
-                continue;
-            }
-
-            try
-            {
-                File.Delete(writePaths.EnsureFileTarget(alt));
-                messages.Add($"Haltung {haltungId}: alter Videoverweis «{Path.GetFileName(alt)}» entfernt.");
-            }
-            catch (Exception ex) when (IstPfadwaechterAblehnung(ex))
-            {
-                eindeutig = false;
-                messages.Add($"Haltung {haltungId}: alter Videoverweis «{alt}» konnte nicht entfernt werden: "
-                             + UserError.DescribeAndReport(ex, "Training Center Videoverweis entfernen"));
-            }
-        }
-
-        return eindeutig;
-    }
-
-    /// <summary>
-    /// Dateifehler einer einzelnen Haltung; der Schreibbaustein buendelt Ersetzen und Sicherung als
-    /// <see cref="AggregateException"/>, die nur aus solchen Fehlern bestehen darf (Review PR #85).
-    /// </summary>
-    private static bool IstDateifehler(Exception ex)
-        => IstPfadwaechterAblehnung(ex)
-           || ex is AggregateException sammel && sammel.InnerExceptions.Count > 0
-              && sammel.InnerExceptions.All(IstPfadwaechterAblehnung);
-
-    private static bool IstPfadwaechterAblehnung(Exception ex)
-        => ex is IOException
-            or UnauthorizedAccessException
-            or ArgumentException
-            or NotSupportedException
-            or System.Security.SecurityException;
-
     /// <summary>
     /// Erstellt einen Index: normalisierte Haltungs-ID → Videodatei-Pfad
     /// </summary>
@@ -826,55 +160,7 @@ public sealed class TrainingCenterImportService
         string videoFolder,
         List<string> messages,
         CancellationToken cancellationToken)
-    {
-        var index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(videoFolder) || !Directory.Exists(videoFolder))
-            return index;
-
-        var videoExts = new HashSet<string>(
-            AuswertungPro.Next.Infrastructure.Media.MediaFileTypes.VideoExtensions,
-            StringComparer.OrdinalIgnoreCase)
-        { ".ts", ".m4v" };
-
-        // PR #85: ausgelassene Unterordner und Videodateien (Verknuepfung, nicht lesbar) werden genannt.
-        var uebersprungeneOrdner = new List<string>();
-        var uebersprungeneDateien = new List<string>();
-        // Review PR #85: Ordner fuer Ordner, damit der Abbruch auch in einem Baum ohne passende Dateien
-        // (leere Ordner, langsames Netzlaufwerk) wirkt; die Ordnersuche betritt keine Verknuepfungen.
-        var dateien = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
-            .EnumerateDirectoriesSafe(videoFolder, uebersprungeneOrdner)
-            .SelectMany(ordner =>
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                return AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(
-                    ordner, "*.*", recursive: false, uebersprungeneOrdner, uebersprungeneDateien);
-            });
-        foreach (var file in dateien)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            // Ausgeschlossene Videos (Grafik, Uebersicht) sind keine Inspektionsvideos; der Scan verwirft sie
-            // ohnehin, die Verteilung darf sie deshalb auch nicht als Treffer zaehlen (Review PR #85).
-            if (!videoExts.Contains(Path.GetExtension(file)) || IstAusgeschlossenesVideo(file))
-                continue;
-
-            var name = Path.GetFileNameWithoutExtension(file);
-            var m = HaltungIdInFilename.Match(name);
-            if (m.Success)
-            {
-                var id = NormalizeId(m.Groups["id"].Value);
-                index.TryAdd(id, file);
-            }
-        }
-
-        messages.AddRange(UebersprungeneOrdner.Meldungen(uebersprungeneOrdner));
-        messages.AddRange(uebersprungeneDateien
-            .Where(datei => videoExts.Contains(Path.GetExtension(datei)))
-            .Select(datei => $"Video «{datei}» übersprungen: Verknüpfung oder nicht sicher prüfbar."));
-        return index;
-    }
-
-    private static string NormalizeId(string id)
-        => (id ?? "").Trim().Replace(" ", "").Replace("/", "-");
+        => TrainingCenterVideoIndex.BuildVideoIndex(videoFolder, messages, cancellationToken);
 
     /// <summary>
     /// Extrahiert Beobachtungen aus dem Chunk-Text (Fretz-Format + Standard).
@@ -882,79 +168,7 @@ public sealed class TrainingCenterImportService
     /// nicht als Trainingslabel in den Batch gelangt.
     /// </summary>
     internal static List<ProtocolEntry> ExtractEntriesFromChunkText(string text)
-    {
-        var entries = new List<ProtocolEntry>();
-        if (string.IsNullOrWhiteSpace(text))
-            return entries;
-
-        // Fretz-Format: "[Foto?] [HH:MM:SS] [Meter] [Code] [Beschreibung]"
-        var fretzRx = new Regex(
-            @"^\s*(?:\d{1,5}\s+)?(?:\d{2}:\d{2}:\d{2}\s+)?(?<meter>\d{1,4}[.,]\d{1,3})\s+(?<code>[A-Z]{2,6}(?:\.[A-Z]{1,2})*)\s+(?<text>.+?)(?:\s{2,}|$)",
-            RegexOptions.Multiline);
-
-        foreach (Match m in fretzRx.Matches(text))
-        {
-            var code = m.Groups["code"].Value.Trim();
-            if (!VsaCodeValidator.IsKnownCode(code))
-                continue;
-
-            var desc = m.Groups["text"].Value.Trim();
-            if (double.TryParse(m.Groups["meter"].Value.Replace(',', '.'),
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var meter))
-            {
-                entries.Add(new ProtocolEntry(code.Replace(".", "").ToUpperInvariant(), desc, meter));
-            }
-        }
-
-        return entries;
-    }
+        => TrainingCenterProtokollJson.ExtractEntriesFromChunkText(text);
 
     internal sealed record ProtocolEntry(string Code, string Beschreibung, double MeterStart);
-
-    private static void WriteProtocolJson(string path, List<ProtocolEntry> entries, string haltungId, string pageRange)
-    {
-        // Format kompatibel mit PdfProtocolExtractor.ExtractFromJson:
-        // { "Current": { "Entries": [ { "Code": "BCD", "Beschreibung": "...", "MeterStart": 0.0 } ] } }
-        var jsonEntries = entries.Select(e => new Dictionary<string, object>
-        {
-            ["Code"] = e.Code,
-            ["Beschreibung"] = e.Beschreibung,
-            ["MeterStart"] = e.MeterStart,
-            ["MeterEnd"] = e.MeterStart,
-            ["IsStreckenschaden"] = false,
-            ["IsDeleted"] = false
-        }).ToArray();
-
-        var root = new Dictionary<string, object>
-        {
-            ["HaltungId"] = haltungId,
-            ["PageRange"] = pageRange,
-            ["Current"] = new Dictionary<string, object>
-            {
-                ["Entries"] = jsonEntries
-            }
-        };
-
-        var json = JsonSerializer.Serialize(root, JsonDefaults.Indented);
-        AtomicTextFileWriter.WriteAllText(path, json);
-    }
-
-    private static string SafeRelativeId(string root, string folder)
-    {
-        try
-        {
-            var rel = Path.GetRelativePath(root, folder);
-            if (string.IsNullOrWhiteSpace(rel) || rel == ".")
-                return new DirectoryInfo(folder).Name;
-
-            // Normalize slashes
-            rel = rel.Replace('\\', '/');
-            return rel;
-        }
-        catch
-        {
-            return new DirectoryInfo(folder).Name;
-        }
-    }
 }
