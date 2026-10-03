@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training;
@@ -13,6 +14,9 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// </summary>
 internal static class TrainingCenterPaarung
 {
+    private static readonly Regex HaltungIdInFilename = new(
+        @"(?<id>\d[\d\.]*[-/]\d[\d\.]*)", RegexOptions.Compiled);
+
     /// <summary>Grafikvideo oder Uebersicht (Muster auf dem vollen Dateinamen mit Endung)?</summary>
     internal static bool IstAusgeschlossenesVideo(string pfad)
     {
@@ -230,7 +234,10 @@ internal static class TrainingCenterPaarung
 
         // Paket B: Die Regel bleibt; der verworfene Teil und beide Schluessel gehen an den Aufrufer zur Meldung.
         var ergebnis = VerwirfBeiWiderspruch(videoPath, protocolPath, videoKey, protocolKey, caseId, preserveProtocolOnConflict);
-        widerspruch = new Widerspruch(videoPath, videoKey, protocolPath, protocolKey, VideoVerworfen: ergebnis.VideoPath.Length == 0);
+        // Der Normalisierer liefert ohne Schachtpaar auch blosse Namen zurueck. Diese sind kein Haltungsbeleg.
+        if (HaltungIdInFilename.IsMatch(Path.GetFileNameWithoutExtension(videoPath))
+            && HaltungIdInFilename.IsMatch(Path.GetFileNameWithoutExtension(protocolPath)))
+            widerspruch = new Widerspruch(videoPath, videoKey, protocolPath, protocolKey, VideoVerworfen: ergebnis.VideoPath.Length == 0);
         return ergebnis;
     }
 

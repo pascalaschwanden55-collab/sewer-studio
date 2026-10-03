@@ -31,17 +31,21 @@ public sealed class TrainingCenterWiderspruchTests : IDisposable
         }
     }
 
-    [Fact]
-    public async Task Widersprechendes_video_wird_uebersprungen_und_im_hinweis_genannt()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Widersprechendes_video_wird_uebersprungen_und_im_hinweis_genannt(bool alsVerweis)
     {
         var fall = Fallordner("24379-41412");
-        var video = Datei(fall, "H_99999-88888.mp4");
+        var video = Datei(alsVerweis ? Fallordner("Videos") : fall, "H_99999-88888.mp4");
+        if (alsVerweis)
+            File.WriteAllText(Path.Combine(fall, "H_99999-88888.mp4.link"), video);
         var protokoll = Datei(fall, "bericht_24379-41412.pdf");
         Datei(fall, "situationsplan.pdf");
         var hinweise = new List<string>();
 
         var gefunden = Assert.Single(await new TrainingCenterImportService().ScanAsync(
-            _root, null, hinweise, CancellationToken.None));
+            fall, null, hinweise, CancellationToken.None));
 
         Assert.Equal("", gefunden.VideoPath);
         Assert.Equal(protokoll, gefunden.ProtocolPath);
@@ -49,6 +53,32 @@ public sealed class TrainingCenterWiderspruchTests : IDisposable
         Assert.Contains($"Video «{video}» (Haltungsschlüssel 99999-88888)", hinweis, StringComparison.Ordinal);
         Assert.Contains($"Protokoll «{protokoll}» (Haltungsschlüssel 24379-41412)", hinweis, StringComparison.Ordinal);
         Assert.Contains("Video nicht verwendet", hinweis, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("aufnahme.mp4", "bericht.pdf")]
+    [InlineData("H_24379-41412.mp4", "bericht.pdf")]
+    [InlineData("aufnahme.mp4", "bericht_24379-41412.pdf")]
+    public async Task Generische_mehrfachauswahl_ergibt_keinen_erfundenen_haltungswiderspruch(
+        string videoName, string protokollName)
+    {
+        var fall = Fallordner("K1");
+        var video = Datei(fall, videoName);
+        var protokoll = Datei(fall, protokollName);
+        var weiteresProtokoll = Datei(fall, "protokoll.pdf");
+        var hinweise = new List<string>();
+
+        var paar = TrainingCenterPaarung.ResolvePair(
+            [video], [protokoll, weiteresProtokoll], "K1", out _, out var widerspruch);
+        var gefunden = Assert.Single(await new TrainingCenterImportService().ScanAsync(
+            fall, null, hinweise, CancellationToken.None));
+
+        Assert.Equal(video, paar.VideoPath);
+        Assert.Equal("", paar.ProtocolPath);
+        Assert.Null(widerspruch);
+        Assert.Equal(video, gefunden.VideoPath);
+        Assert.Equal("", gefunden.ProtocolPath);
+        Assert.Empty(hinweise);
     }
 
     [Fact]
