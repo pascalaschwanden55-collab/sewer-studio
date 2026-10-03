@@ -63,7 +63,9 @@ Deepscan 02.10.2026, Befund R8 (a, b).
   («1 Konfliktdatei nicht lesbar.»); es wertet den Scan nicht als Fehler (`Success` bleibt wahr).
   Die Medienkonflikt-Seite haengt den Hinweis an ihre Ergebniszeile. Seit PR #85 nennt derselbe
   Hinweis auch Unterordner von «Haltungen», die die sichere Dateisuche ausgelassen hat (unlesbar
-  oder Verknuepfung), mit der Zeile aus `UebersprungeneOrdner`.
+  oder Verknuepfung), mit der Zeile aus `UebersprungeneOrdner`. Die Seite haengt den Hinweis auch an
+  die Ergebniszeilen von «Gelernte Zuordnungen übernehmen» und «… löschen» an, statt ihn zu
+  ueberschreiben.
 - Tests: `ImportRunWorkflowControllerTests.RunAsync_bericht_fehler_steht_verstaendlich_in_den_details`,
   `MediaConflictCenterServiceTests.ScanWithResult_zaehlt_unlesbare_Konfliktdateien_im_Hinweis`,
   `MediaConflictsPageViewModelDependencyTests.Unlesbare_Konfliktdatei_wird_im_Ergebnis_genannt`

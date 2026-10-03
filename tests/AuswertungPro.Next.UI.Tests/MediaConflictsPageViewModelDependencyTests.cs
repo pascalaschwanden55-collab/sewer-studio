@@ -97,6 +97,34 @@ public sealed class MediaConflictsPageViewModelDependencyTests
     }
 
     [Fact]
+    public void Gelernte_Zuordnungen_uebernehmen_behaelt_den_Scan_Hinweis()
+    {
+        // PR #85: Die Aufloesungsstatistik ueberschrieb den Hinweis auf gesperrte Konfliktdateien.
+        var dir = Directory.CreateTempSubdirectory("mediaconflicts_autoresolve_");
+        try
+        {
+            var holding = Path.Combine(dir.FullName, "Haltungen", "H-1");
+            Directory.CreateDirectory(holding);
+            var gesperrt = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+            File.WriteAllText(gesperrt, "Haltung: H-1");
+
+            using (new FileStream(gesperrt, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                var vm = CreateViewModel(new Project(), getProjectFolder: () => dir.FullName, playVideo: _ => { });
+
+                vm.AutoResolveLearnedCommand.Execute(null);
+
+                Assert.StartsWith("Gelernte Zuordnungen übernommen:", vm.LastResult, StringComparison.Ordinal);
+                Assert.EndsWith(" · 1 Konfliktdatei nicht lesbar.", vm.LastResult, StringComparison.Ordinal);
+            }
+        }
+        finally
+        {
+            dir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public void Videoaktion_nutzt_den_uebergebenen_Player_statt_selbst_ein_Fenster_zu_erzeugen()
     {
         var tempFile = Path.GetTempFileName();

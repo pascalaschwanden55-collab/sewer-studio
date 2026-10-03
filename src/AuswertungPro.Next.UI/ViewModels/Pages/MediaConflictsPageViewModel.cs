@@ -201,10 +201,18 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         Refresh();
     }
 
+    // PR #85: Hinweis des letzten Scans (gesperrte Konfliktdateien, uebersprungene Ordner); die
+    // Sammelaktionen ueberschreiben LastResult und muessen ihn deshalb wieder anhaengen.
+    private string? _scanHinweis;
+
+    private string MitScanHinweis(string text)
+        => _scanHinweis is null ? text : $"{text} · {_scanHinweis}";
+
     private void Refresh()
     {
         Conflicts.Clear();
         SelectedConflict = null;
+        _scanHinweis = null;
 
         var project = _getProject();
         var projectFolder = _getProjectFolder();
@@ -252,8 +260,8 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         LearnedMappingCount = _service.GetMappingCount(project);
         UpdateSummary();
         // Deepscan R8b: unlesbare Konfliktdateien fehlen in der Liste, werden hier aber genannt.
-        LastResult = $"Konfliktcenter aktualisiert: {Conflicts.Count} offene Fälle"
-                     + (scan.Hinweis is null ? "" : $" · {scan.Hinweis}");
+        _scanHinweis = scan.Hinweis;
+        LastResult = MitScanHinweis($"Konfliktcenter aktualisiert: {Conflicts.Count} offene Fälle");
     }
 
     private void ResolveFromCandidate()
@@ -365,16 +373,17 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             setUserEdited: false);
 
         Refresh();
-        LastResult = $"Gelernte Zuordnungen übernommen: {result.Resolved}/{result.TotalConflicts} aufgelöst, {result.Failed} Fehler, {result.Unresolved} offen";
+        LastResult = MitScanHinweis(
+            $"Gelernte Zuordnungen übernommen: {result.Resolved}/{result.TotalConflicts} aufgelöst, {result.Failed} Fehler, {result.Unresolved} offen");
     }
 
     private void ClearLearnedMappings()
     {
         var count = _service.ClearMappings(_getProject());
         Refresh();
-        LastResult = count > 0
+        LastResult = MitScanHinweis(count > 0
             ? $"Gelernte Zuordnungen gelöscht: {count}"
-            : "Keine gelernten Zuordnungen vorhanden.";
+            : "Keine gelernten Zuordnungen vorhanden.");
     }
 
     private void OpenInfo()
