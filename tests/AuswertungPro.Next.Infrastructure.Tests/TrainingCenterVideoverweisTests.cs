@@ -613,6 +613,28 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         Assert.Equal(original, fall.VideoPath);
     }
 
+    // Review PR #85: Ein Ordner nur mit einem ausgeschlossenen Grafikvideo, ohne Protokoll und ohne
+    // Verweis, ergibt keinen leeren Trainingsfall.
+    [Fact]
+    public async Task Ordner_nur_mit_grafikvideo_ergibt_keinen_fall()
+    {
+        // Bewusst ohne Fallordner(...): der Helfer legt immer ein Protokoll an.
+        var nurGrafik = Path.Combine(ScanWurzel, "23021-22369");
+        Directory.CreateDirectory(nurGrafik);
+        File.WriteAllText(Path.Combine(nurGrafik, "H_23021-22369_g.mpg"), "grafikvideo");
+        // Gegenfall im selben Lauf: mehrere nicht ausgeschlossene Videos ohne Haltungsschluessel bleiben als
+        // (mehrdeutiger) Fall sichtbar und verschwinden nicht still.
+        var mehrdeutig = Path.Combine(ScanWurzel, "ohne-schluessel");
+        Directory.CreateDirectory(mehrdeutig);
+        File.WriteAllText(Path.Combine(mehrdeutig, "a.mpg"), "a");
+        File.WriteAllText(Path.Combine(mehrdeutig, "b.mpg"), "bb");
+
+        var faelle = await new TrainingCenterImportService().ScanAsync(ScanWurzel);
+
+        var fall = Assert.Single(faelle);
+        Assert.Equal("ohne-schluessel", fall.CaseId);
+    }
+
     [Fact]
     public async Task Verknuepftes_protokoll_wird_nicht_gelesen_sondern_gemeldet()
     {

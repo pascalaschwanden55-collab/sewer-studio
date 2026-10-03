@@ -335,7 +335,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             setUserEdited);
         if (!result.Success)
         {
-            LastResult = $"Fehler: {result.Message}";
+            LastResult = MitScanHinweis($"Fehler: {result.Message}");
             _dialogs.Warn(result.Message, "Konfliktcenter");
             return;
         }
@@ -348,7 +348,8 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             ? resolvedConflict.HoldingText
             : result.UpdatedHolding;
         var videoName = Path.GetFileName(result.DestVideoPath ?? sourcePath);
-        LastResult = $"OK: {resolvedHolding} -> {videoName}";
+        // Review PR #85: auch die Einzelaufloesung behaelt den Hinweis auf ausgelassene Konfliktdateien.
+        LastResult = MitScanHinweis($"OK: {resolvedHolding} -> {videoName}");
 
         Conflicts.Remove(resolvedConflict);
         SelectedConflict = Conflicts.FirstOrDefault();

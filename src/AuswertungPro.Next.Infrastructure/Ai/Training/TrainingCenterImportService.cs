@@ -126,8 +126,10 @@ public sealed class TrainingCenterImportService
                     }
                 }
 
-                // Ohne Video UND ohne Protokoll: ueberspringen
-                if (direktVideos.Count == 0 && verweisVideos.Count == 0 && protos.Count == 0)
+                // Ohne Video UND ohne Protokoll: ueberspringen. Nur ausgeschlossene Videos (Grafik, Uebersicht)
+                // zaehlen dabei nicht als Video (Review PR #85); mehrdeutige echte Videos bleiben als Fall sichtbar.
+                var nurAusgeschlosseneVideos = direktVideos.All(IstAusgeschlossenesVideo);
+                if (nurAusgeschlosseneVideos && verweisVideos.Count == 0 && protos.Count == 0)
                     continue;
 
                 var inspectionDate = ResolveInspectionDate(folder, bestProto, bestVideo);
@@ -205,16 +207,22 @@ public sealed class TrainingCenterImportService
     /// Waehlt das beste Video aus mehreren Kandidaten.
     /// Prio: 1. CaseId im Namen, 2. Groesstes (laengstes) Video, 3. Grafik-Videos ausschliessen.
     /// </summary>
+    /// <summary>Grafikvideo oder Uebersicht (Muster auf dem vollen Dateinamen mit Endung)?</summary>
+    private static bool IstAusgeschlossenesVideo(string pfad)
+    {
+        var name = Path.GetFileName(pfad).ToLowerInvariant();
+        return VideoExcludePatterns.Any(name.Contains);
+    }
+
     private static string PickBestVideo(List<string> videos, string caseId)
     {
         var nameNoExt = (string p) => Path.GetFileNameWithoutExtension(p).ToLowerInvariant();
-        var nameWithExt = (string p) => Path.GetFileName(p).ToLowerInvariant();
         var caseIdLower = caseId.ToLowerInvariant().Replace("/", "").Replace("\\", "");
 
         // Grafik-Videos und Uebersichten ausschliessen (Matching auf voller Dateiname MIT Extension).
         // Review PR #85: auch ein EINZELNES Video; vorher kam der Einzelfall-Ruecksprung vor dem Filter.
         var filtered = videos
-            .Where(v => !VideoExcludePatterns.Any(pat => nameWithExt(v).Contains(pat)))
+            .Where(v => !IstAusgeschlossenesVideo(v))
             .ToList();
         // Kein Fallback auf ausgeschlossene Videos — leere Liste wird vom Aufrufer behandelt
         if (filtered.Count == 0) return "";
