@@ -72,9 +72,46 @@ public sealed class CodingCurrentMeterResolverTests
             playerTimeMs: 500,
             playerLengthMs: 1000,
             endMeter: 50,
-            sessionCurrentMeter: 4);
+            sessionCurrentMeter: 4,
+            cachedOsdTimestampSeconds: 0.5);
 
         Assert.Equal(9.88, meter);
+    }
+
+    [Fact]
+    public void ResolveManualEntry_after_backward_seek_uses_video_position_without_cache_timestamp()
+    {
+        var cachedMeter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: 70,
+            cachedOsdMeter: null,
+            playerTimeMs: 90000,
+            playerLengthMs: 100000,
+            endMeter: 80,
+            sessionCurrentMeter: 4);
+
+        var meter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: null,
+            cachedOsdMeter: cachedMeter,
+            playerTimeMs: 5000,
+            playerLengthMs: 100000,
+            endMeter: 80,
+            sessionCurrentMeter: 4);
+
+        Assert.Equal(4, meter);
+    }
+
+    [Fact]
+    public void ResolveManualEntry_without_cache_timestamp_and_video_ratio_uses_session_meter()
+    {
+        var meter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: null,
+            cachedOsdMeter: 70,
+            playerTimeMs: 5000,
+            playerLengthMs: 0,
+            endMeter: 80,
+            sessionCurrentMeter: 4.567);
+
+        Assert.Equal(4.57, meter);
     }
 
     [Fact]
@@ -103,6 +140,105 @@ public sealed class CodingCurrentMeterResolverTests
             sessionCurrentMeter: 4);
 
         Assert.Equal(0, meter);
+    }
+
+    [Theory]
+    [InlineData(8.5, 9.88)]
+    [InlineData(11.5, 9.88)]
+    [InlineData(8.499, 8)]
+    [InlineData(11.501, 8)]
+    public void ResolveManualEntry_accepts_cached_osd_only_within_inclusive_time_window(
+        double cachedTimestampSeconds,
+        double expected)
+    {
+        var meter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: null,
+            cachedOsdMeter: 9.876,
+            playerTimeMs: 10000,
+            playerLengthMs: 100000,
+            endMeter: 80,
+            sessionCurrentMeter: 4,
+            cachedOsdTimestampSeconds: cachedTimestampSeconds);
+
+        Assert.Equal(expected, meter);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void ResolveManualEntry_without_finite_cache_timestamp_uses_video_position(
+        double? cachedTimestampSeconds)
+    {
+        var meter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: null,
+            cachedOsdMeter: 70,
+            playerTimeMs: 10000,
+            playerLengthMs: 100000,
+            endMeter: 80,
+            sessionCurrentMeter: 4,
+            cachedOsdTimestampSeconds: cachedTimestampSeconds);
+
+        Assert.Equal(8, meter);
+    }
+
+    [Theory]
+    [InlineData(0.0, 0.0)]
+    [InlineData(500.0, 500.0)]
+    [InlineData(-0.01, 8)]
+    [InlineData(500.01, 8)]
+    [InlineData(double.NaN, 8)]
+    [InlineData(double.PositiveInfinity, 8)]
+    [InlineData(double.NegativeInfinity, 8)]
+    [InlineData(null, 8)]
+    public void ResolveManualEntry_accepts_only_plausible_fresh_cached_osd(
+        double? cachedMeter,
+        double expected)
+    {
+        var meter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: null,
+            cachedOsdMeter: cachedMeter,
+            playerTimeMs: 10000,
+            playerLengthMs: 100000,
+            endMeter: 80,
+            sessionCurrentMeter: 4,
+            cachedOsdTimestampSeconds: 10);
+
+        Assert.Equal(expected, meter);
+    }
+
+    [Theory]
+    [InlineData(12.346, 12.35)]
+    [InlineData(-1.2, 0)]
+    public void ResolveManualEntry_fresh_osd_keeps_priority_and_rounding_with_valid_cache(
+        double freshOsdMeter,
+        double expected)
+    {
+        var meter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: freshOsdMeter,
+            cachedOsdMeter: 70,
+            playerTimeMs: 10000,
+            playerLengthMs: 100000,
+            endMeter: 80,
+            sessionCurrentMeter: 4,
+            cachedOsdTimestampSeconds: 10);
+
+        Assert.Equal(expected, meter);
+    }
+
+    [Fact]
+    public void ResolveManualEntry_video_position_beyond_duration_keeps_meter_above_end_meter()
+    {
+        var meter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: null,
+            cachedOsdMeter: null,
+            playerTimeMs: 1250,
+            playerLengthMs: 1000,
+            endMeter: 80,
+            sessionCurrentMeter: 4);
+
+        Assert.Equal(100, meter);
     }
 
     [Theory]

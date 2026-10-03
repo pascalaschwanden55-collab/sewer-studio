@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.Ai.Coding;
@@ -27,12 +28,31 @@ public static class CodingCurrentMeterResolver
         long playerLengthMs,
         double endMeter,
         double sessionCurrentMeter)
+        => ResolveManualEntry(
+            osdMeter,
+            cachedOsdMeter,
+            playerTimeMs,
+            playerLengthMs,
+            endMeter,
+            sessionCurrentMeter,
+            cachedOsdTimestampSeconds: null);
+
+    public static double ResolveManualEntry(
+        double? osdMeter,
+        double? cachedOsdMeter,
+        long playerTimeMs,
+        long playerLengthMs,
+        double endMeter,
+        double sessionCurrentMeter,
+        double? cachedOsdTimestampSeconds)
     {
+        var recentOsdMeter = CodingMeterResolver.ResolveRecentOsdMeter(
+            playerTimeMs / 1000.0, cachedOsdMeter, cachedOsdTimestampSeconds);
         var timelineMeter = sessionCurrentMeter;
         if (playerLengthMs > 0 && endMeter > 0)
             timelineMeter = Math.Round((playerTimeMs / (double)playerLengthMs) * endMeter, 2);
 
-        return Math.Round(Math.Max(0, osdMeter ?? cachedOsdMeter ?? timelineMeter), 2);
+        return Math.Round(Math.Max(0, osdMeter ?? recentOsdMeter ?? timelineMeter), 2);
     }
 
     public static double ParseDisplayedMeterOrZero(string? text)

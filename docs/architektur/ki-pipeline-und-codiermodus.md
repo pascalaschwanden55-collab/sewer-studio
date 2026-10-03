@@ -9,6 +9,7 @@
 
 ## Inhalt
 
+- Handeintrag: OSD-Zwischenspeicher an Bildzeit binden (03.10.2026)
 - Fachregeln der Mehrmodell-Videoanalyse (Entscheid 01.10.2026)
 - Grafik-Audit 23.09.2026: B01, B02, B04 behoben (24.09.2026)
 - Gebundene Bild-/Zeit-/Meterbelege im Player (20.09.2026)
@@ -19,6 +20,34 @@
 - Aufbau der Mehrmodell-Videoanalyse (AP05, 30.09.2026)
 - Aktueller Pipeline-Ablauf
 - Codiermodus-Bildvergleich (20.09.2026, erste Messstufe)
+
+## Handeintrag: OSD-Zwischenspeicher an Bildzeit binden (03.10.2026)
+
+Fehler E2: `CodingCurrentMeterResolver.ResolveManualEntry` verwendete beim Handeintrag
+jeden letzten OSD-Meter, auch nach einem Videosprung oder ohne Zeitbeleg. Der Fensteraufruf
+in `PlayerWindow.Coding.Events.cs` reicht nun `CodingOsdMeterController.LastTimestampSeconds`
+als benannten letzten Parameter weiter.
+
+- Die vorhandene Regel in `Application/Ai/CodingMeterResolver.ResolveRecentOsdMeter` wird
+  öffentlich wiederverwendet; ihr Körper bleibt unverändert. Cachemeter müssen 0–500 m
+  betragen und höchstens 1,5 Sekunden vom aktuellen Playerzeitpunkt entfernt sein,
+  unabhängig von Vorwärts-/Rückwärtsrichtung. Die Grenze ist eingeschlossen.
+- Fehlender oder nicht endlicher Cachezeitbeleg liefert keinen Cachemeter. Die bestehende
+  relative Zeitregel wird erhalten; eine zusätzliche Prüfung negativer Zeitpunkte gehört
+  nicht zu diesem Paket.
+- Die öffentliche sechsstellige UI-Signatur bleibt erhalten. Sie delegiert mit unbekannter
+  Cachezeit an die neue siebenstellige Überladung; unbelegte Cachewerte werden bewusst
+  nicht mehr verwendet. Der neue Zeitparameter ist nicht optional.
+- Ein frisch gelesener OSD-Wert behält Vorrang und bisherige Behandlung. Rundung auf zwei
+  Stellen, Untergrenze null, lineare Videorückfallrechnung und Sitzungsrückfall bleiben
+  erhalten. Die bestehende UI-Rechnung wird nicht auf die Videodauer begrenzt.
+- Kein neuer Workflow/Typ unter `UI/Ai`, keine Registrierung, kein Paket- oder Datenformatwechsel.
+  Der gemeinsame KI-Start in `CodingPipelineHealthController` (#47) bleibt unverändert.
+
+Zwei Verhaltenstests und ein gezielter Fensteranschlusswächter waren am unveränderten
+Original rot: 70 m statt 4 m, 70 m statt 4,57 m und fehlende Zeitübergabe. Weitere Tests
+schützen Altersgrenze, Richtung, ungültige Cachewerte, frischen OSD-Vorrang und Rückfall.
+Details und Liefergrenzen: `docs/audits/2026-10-03-player-osd/ERGEBNIS.md`.
 
 ## Fachregeln der Mehrmodell-Videoanalyse (Entscheid 01.10.2026)
 

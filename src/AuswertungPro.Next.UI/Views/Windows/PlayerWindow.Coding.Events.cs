@@ -30,7 +30,8 @@ public partial class PlayerWindow
                     _playerTimelineHost.TimeMilliseconds ?? 0,
                     _playerTimelineHost.LengthMilliseconds ?? 0,
                     _codingSessionHost.EndMeter,
-                    _codingSessionHost.CurrentMeter),
+                    _codingSessionHost.CurrentMeter,
+                    cachedOsdTimestampSeconds: _codingOsdMeterController.LastTimestampSeconds),
                 CreateManualEntry: (videoTime, meterValue) => CodingCodeExplorerManualEntryWorkflow.Execute(
                     new CodingCodeExplorerManualEntryWorkflowRequest(
                         _codingSessionHost.CurrentOverlay,
