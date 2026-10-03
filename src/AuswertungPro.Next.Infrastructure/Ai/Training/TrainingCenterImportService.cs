@@ -110,7 +110,7 @@ public sealed class TrainingCenterImportService
                     .ToList();
 
                 var caseId = SafeRelativeId(rootFolder, folder);
-                var (bestVideo, bestProto) = ResolvePair(direktVideos, protos, caseId);
+                var (bestVideo, bestProto) = ResolvePair(direktVideos, protos, caseId, out var mehrdeutigeVideos);
 
                 // Ein verwendbares Direktvideo hat Vorrang. Wird keines ausgewaehlt (keines da, nur ausgeschlossene
                 // wie *_g.mpg, mehrdeutig), gelten als Rueckfall die Videoverweise der Verteilung (PR #85).
@@ -131,6 +131,15 @@ public sealed class TrainingCenterImportService
                 var nurAusgeschlosseneVideos = direktVideos.All(IstAusgeschlossenesVideo);
                 if (nurAusgeschlosseneVideos && verweisVideos.All(IstAusgeschlossenesVideo) && protos.Count == 0)
                     continue;
+
+                // Folgepaket 3: mehrere echte Videos ohne Haltungsschluessel nicht still verwerfen, sondern melden;
+                // der Fall bleibt sichtbar (ohne Video), damit das passende Video benannt werden kann.
+                if (mehrdeutigeVideos && string.IsNullOrWhiteSpace(bestVideo))
+                {
+                    var namen = direktVideos.Where(video => !IstAusgeschlossenesVideo(video)).Select(Path.GetFileName);
+                    hinweise?.Add($"Fall «{caseId}»: mehrere Videos ohne eindeutigen Haltungsschlüssel ({string.Join(", ", namen)}) "
+                                  + "– keines verwendet; bitte das passende Video nach der Haltung benennen.");
+                }
 
                 var inspectionDate = ResolveInspectionDate(folder, bestProto, bestVideo);
 
@@ -349,24 +358,35 @@ public sealed class TrainingCenterImportService
         IReadOnlyList<string> videos,
         IReadOnlyList<string> protos,
         string caseId)
-    {
-        return ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: false);
-    }
+        => ResolvePair(videos, protos, caseId, out _);
+
+    /// <summary>
+    /// Wie oben; <paramref name="mehrdeutigeVideos"/> sagt, ob mehrere echte (nicht ausgeschlossene) Videos ohne
+    /// eindeutigen Haltungsschluessel vorlagen und deshalb keines gewaehlt wurde (Folgepaket 3).
+    /// </summary>
+    internal static (string VideoPath, string ProtocolPath) ResolvePair(
+        IReadOnlyList<string> videos,
+        IReadOnlyList<string> protos,
+        string caseId,
+        out bool mehrdeutigeVideos)
+        => ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: false, out mehrdeutigeVideos);
 
     internal static (string VideoPath, string ProtocolPath) ResolveProtocolOnlyPair(
         IReadOnlyList<string> videos,
         IReadOnlyList<string> protos,
         string caseId)
     {
-        return ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: true);
+        return ResolvePairCore(videos, protos, caseId, preserveProtocolOnConflict: true, out _);
     }
 
     private static (string VideoPath, string ProtocolPath) ResolvePairCore(
         IReadOnlyList<string> videos,
         IReadOnlyList<string> protos,
         string caseId,
-        bool preserveProtocolOnConflict)
+        bool preserveProtocolOnConflict,
+        out bool mehrdeutigeVideos)
     {
+        mehrdeutigeVideos = false;
         var videoList = videos.ToList();
         var protoList = protos.ToList();
 
@@ -386,11 +406,13 @@ public sealed class TrainingCenterImportService
         {
             bestVideo = matchingVideo;
         }
-        else if (videoList.Count > 1)
+        else if (videoList.Count(video => !IstAusgeschlossenesVideo(video)) > 1)
         {
-            // Mehrere Videos ohne eindeutigen Haltungs-Treffer sind unsicher.
-            // Lieber kein Video verwenden als das groesste falsche Video koppeln.
+            // Mehrere echte Videos ohne eindeutigen Haltungs-Treffer sind unsicher.
+            // Lieber kein Video verwenden als das groesste falsche Video koppeln. Ausgeschlossene Videos
+            // (Grafik, Uebersicht) zaehlen nicht mit: ein echtes Video daneben bleibt eindeutig (Folgepaket 3).
             bestVideo = "";
+            mehrdeutigeVideos = true;
         }
 
         var matchingProto = PickProtocolByHaltungKey(protoList, caseKey);

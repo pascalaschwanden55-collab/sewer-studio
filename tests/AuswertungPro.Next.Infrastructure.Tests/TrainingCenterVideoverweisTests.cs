@@ -695,6 +695,46 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         Assert.Contains($"Protokoll «{protokoll}» ist eine Verknüpfung", hinweis, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Mehrere_videos_ohne_haltungsschluessel_werden_gemeldet_und_der_fall_bleibt_sichtbar()
+    {
+        // Folgepaket 3: ResolvePair verwarf mehrdeutige Videos still; der Fall lud ohne Video und ohne Grund.
+        var fallordner = Path.Combine(ScanWurzel, "K1");
+        Directory.CreateDirectory(fallordner);
+        File.WriteAllText(Path.Combine(fallordner, "aufnahme_a.mpg"), "a");
+        File.WriteAllText(Path.Combine(fallordner, "aufnahme_b.mpg"), "bb");
+        File.WriteAllText(Path.Combine(fallordner, "bericht.pdf"), "pdf");
+        var hinweise = new List<string>();
+
+        var fall = Assert.Single(await new TrainingCenterImportService().ScanAsync(
+            ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal("K1", fall.CaseId);
+        Assert.Equal("", fall.VideoPath);
+        var hinweis = Assert.Single(hinweise);
+        Assert.Contains("mehrere Videos ohne eindeutigen Haltungsschlüssel", hinweis, StringComparison.Ordinal);
+        Assert.Contains("aufnahme_a.mpg", hinweis, StringComparison.Ordinal);
+        Assert.Contains("aufnahme_b.mpg", hinweis, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Ein_video_mit_grafikvideo_ist_eindeutig_und_wird_verwendet()
+    {
+        // Folgepaket 3: Ein Grafikvideo daneben machte das einzige echte Video bisher «mehrdeutig» (kein Video).
+        var fallordner = Path.Combine(ScanWurzel, "K1");
+        Directory.CreateDirectory(fallordner);
+        File.WriteAllText(Path.Combine(fallordner, "aufnahme_a.mpg"), "a");
+        File.WriteAllText(Path.Combine(fallordner, "Grafik_g.mpg"), "grafik");
+        File.WriteAllText(Path.Combine(fallordner, "bericht.pdf"), "pdf");
+        var hinweise = new List<string>();
+
+        var fall = Assert.Single(await new TrainingCenterImportService().ScanAsync(
+            ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal(Path.Combine(fallordner, "aufnahme_a.mpg"), fall.VideoPath);
+        Assert.Empty(hinweise);
+    }
+
     private static Func<string, FileAttributes?> VerknuepfungFuer(string pfad)
         => p => string.Equals(p, pfad, StringComparison.OrdinalIgnoreCase)
             ? (Directory.Exists(p) ? FileAttributes.Directory : FileAttributes.Archive) | FileAttributes.ReparsePoint
