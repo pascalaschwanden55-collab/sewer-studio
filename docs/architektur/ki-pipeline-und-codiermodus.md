@@ -9,6 +9,7 @@
 
 ## Inhalt
 
+- KI-Dienste in der UI: direkte Erzeugungen eingefroren (04.10.2026)
 - Gemeinsame Player-Integration (03.10.2026)
 - Handeintrag: OSD-Zwischenspeicher an Bildzeit binden (03.10.2026)
 - Fachregeln der Mehrmodell-Videoanalyse (Entscheid 01.10.2026)
@@ -21,6 +22,25 @@
 - Aufbau der Mehrmodell-Videoanalyse (AP05, 30.09.2026)
 - Aktueller Pipeline-Ablauf
 - Codiermodus-Bildvergleich (20.09.2026, erste Messstufe)
+
+## KI-Dienste in der UI: direkte Erzeugungen eingefroren (04.10.2026)
+
+Deepscan-Befund A6: `AiServiceCreationBoundaryTests` prüft im kompilierten UI-Assembly
+die Typen unter `AuswertungPro.Next.UI.Ai` und `AuswertungPro.Next.UI.Services`.
+Er zählt echte Konstruktoraufrufe (`newobj`) der vier Infrastructure-Typen
+`OllamaClient`, `KnowledgeBaseContext`, `EmbeddingService` und
+`KnowledgeBaseManager`. Auch Aufrufe in Lambdas und asynchronen Methoden gehören
+zum äussersten UI-Typ. Die Baseline hält je äusserem Typ, Dienst und Anzahl
+sechs Ollama-Clients, sechs KB-Kontexte, vier Embedding-Dienste und drei KB-Manager
+fest. Ein zusätzlicher Aufruf im selben Typ fällt auf; nach Entfernen einer
+Altstelle muss die Baseline kleiner werden.
+
+Eine Testklasse belegt mit einem und zwei echten Konstruktoraufrufen, dass der
+Wächter auch den zusätzlichen Aufruf in einer Lambda zählt. C#-Schreibweise,
+Kommentare und Stringliterale beeinflussen diese IL-Prüfung nicht. Sie erkennt
+direkte Konstruktoraufrufe dieser vier Typen; Erzeugung über Reflection oder
+andere Fabriken gehört nicht zu diesem Verbot. Programmlogik, Registrierung
+und gespeicherte Daten bleiben unverändert.
 
 ## Gemeinsame Player-Integration (03.10.2026)
 
