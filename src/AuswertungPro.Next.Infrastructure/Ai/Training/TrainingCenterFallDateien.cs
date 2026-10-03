@@ -37,6 +37,22 @@ internal sealed class TrainingCenterFallDateien
 
     public bool IstVideo(string pfad) => _videoEndungen.Contains(Path.GetExtension(pfad).ToLowerInvariant());
 
+    /// <summary>Laesst sich der Pfad als Dateipfad verarbeiten (keine ungueltigen Zeichen, nicht zu lang)?</summary>
+    private static bool IstGueltigerPfad(string pfad)
+    {
+        if (pfad.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+            return false;
+        try
+        {
+            Path.GetFullPath(pfad);
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>Eintrag im Fallordner ist keine Verknuepfung und pruefbar; sonst Hinweis und <c>false</c>.</summary>
     public bool IstUnverknuepft(string datei, Art art, ICollection<string>? hinweise)
     {
@@ -101,7 +117,9 @@ internal sealed class TrainingCenterFallDateien
             }
 
             var ziel = zeilen.Length == 1 ? zeilen[0] : null;
-            if (ziel is null || !Path.IsPathFullyQualified(ziel) || !IstVideo(ziel))
+            // Review PR #85: Ein syntaktisch ungueltiger Pfad (z. B. NUL-Zeichen) liess die Kettenpruefung
+            // werfen und verwarf den ganzen Fall; er gilt wie jedes andere ungueltige Ziel nur fuer diesen Verweis.
+            if (ziel is null || !Path.IsPathFullyQualified(ziel) || !IstGueltigerPfad(ziel) || !IstVideo(ziel))
             {
                 Melde(hinweise, $"Videoverweis «{verweis}» zeigt auf kein vorhandenes Video; Fall ohne Video geladen.", null);
                 continue;

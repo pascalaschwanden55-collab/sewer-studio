@@ -68,6 +68,23 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         Assert.Contains(verweis, hinweis, StringComparison.Ordinal);
     }
 
+    // Review PR #85: Ein syntaktisch ungueltiger, aber voll qualifizierter Zielpfad (NUL-Zeichen) darf
+    // nicht den ganzen Fall verwerfen; nur der Verweis wird abgelehnt, das Protokoll laedt ohne Video.
+    [Fact]
+    public async Task Verweis_mit_ungueltigem_zielpfad_laedt_den_fall_ohne_video()
+    {
+        var fallordner = Fallordner("23021-22369");
+        var verweis = Path.Combine(fallordner, "H_23021-22369.mpg.link");
+        File.WriteAllText(verweis, Path.Combine(_root, "Vid\0eo", "H_23021-22369.mpg"));
+        var hinweise = new List<string>();
+
+        var fall = Assert.Single(await new TrainingCenterImportService().ScanAsync(
+            ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal("", fall.VideoPath);
+        Assert.Contains(hinweise, hinweis => hinweis.Contains(verweis, StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task Verweis_auf_eine_nicht_videodatei_wird_nicht_uebernommen()
     {
