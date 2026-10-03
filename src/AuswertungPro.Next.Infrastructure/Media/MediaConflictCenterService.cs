@@ -110,19 +110,13 @@ public sealed class MediaConflictCenterService
         if (!Directory.Exists(holdingsRoot))
             return new ScanResult(Array.Empty<MediaConflictCase>(), null);
 
-        var infoFiles = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(holdingsRoot, "*_VIDEO_*.txt", recursive: true)
-            .Where(path =>
-                path.EndsWith("_VIDEO_MISSING.txt", StringComparison.OrdinalIgnoreCase)
-                || path.EndsWith("_VIDEO_AMBIGUOUS.txt", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        var (list, unlesbar) = MediaKonfliktdateienLeser.LeseAlle(infoFiles, ParseConflictInfo);
+        var (list, hinweis) = MediaKonfliktdateienLeser.LeseAlle(holdingsRoot, ParseConflictInfo);
         var cases = list
             .OrderByDescending(x => x.DateStamp ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.HoldingFolderName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.InfoPath, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        return new ScanResult(cases, null, MediaKonfliktdateienLeser.Hinweis(unlesbar));
+        return new ScanResult(cases, null, hinweis);
     }
 
     public int GetMappingCount(Project project)

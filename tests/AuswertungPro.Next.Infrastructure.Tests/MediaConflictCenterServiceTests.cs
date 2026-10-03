@@ -84,6 +84,36 @@ public sealed class MediaConflictCenterServiceTests
         }
     }
 
+    [JunctionFact]
+    public void ScanWithResult_nennt_uebersprungenen_Haltungsunterordner_im_Hinweis()
+    {
+        // PR #85 (Codex-Hinweis P2): Ein als Verknuepfung ausgelassener Unterordner fiel still heraus.
+        var root = TempRoot();
+        var projectRoot = Path.Combine(root, "Projekt");
+        var holdings = Path.Combine(projectRoot, "Haltungen");
+        var external = Path.Combine(root, "Fremd");
+        var holdingLink = Path.Combine(holdings, "H-2");
+        Directory.CreateDirectory(Path.Combine(holdings, "H-1"));
+        File.WriteAllText(Path.Combine(holdings, "H-1", "20260821_H-1_VIDEO_MISSING.txt"), "Haltung: H-1");
+        Directory.CreateDirectory(external);
+        File.WriteAllText(Path.Combine(external, "20260821_H-2_VIDEO_MISSING.txt"), "Haltung: H-2");
+        JunctionTestSupport.CreateDirectoryLink(holdingLink, external);
+
+        try
+        {
+            var result = new MediaConflictCenterService().ScanWithResult(projectRoot);
+
+            Assert.True(result.Success);
+            Assert.Single(result.Cases);
+            Assert.NotNull(result.Hinweis);
+            Assert.Contains($"Ordner «{holdingLink}» übersprungen", result.Hinweis, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteLinkAndRoot(holdingLink, root);
+        }
+    }
+
     [Fact]
     public void ScanWithResult_ohne_unlesbare_Konfliktdatei_hat_keinen_Hinweis()
     {
