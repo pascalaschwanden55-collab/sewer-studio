@@ -68,6 +68,28 @@ public sealed class TrainingCenterImportServiceVerknuepfungTests : IDisposable
     }
 
     [JunctionFact]
+    public async Task DistributeByHaltungAsync_verknuepfung_oberhalb_des_ausgabeordners_wird_ohne_schreiben_abgelehnt()
+    {
+        // PR #85 (Codex-Hinweis P1): Das PDF liegt unter einer Verknuepfung; der abgeleitete
+        // Ausgabeordner <Eltern des PDF-Ordners>\<PDF-Name>_Training laege damit im Verknuepfungsziel.
+        var echt = Path.Combine(_root, "Echt");
+        Directory.CreateDirectory(Path.Combine(echt, "PDFs"));
+        var kundenLink = Path.Combine(_root, "KundenLink");
+        Verknuepfe(kundenLink, echt);
+        var ausgabe = Path.Combine(kundenLink, "Sammel_Training");
+
+        var ergebnis = await Dienst().DistributeByHaltungAsync(
+            Path.Combine(kundenLink, "PDFs", "Sammel.pdf"), _root, ausgabe, CancellationToken.None);
+
+        Assert.Equal(0, ergebnis.Distributed);
+        Assert.Equal(["PDFs"], Directory.EnumerateFileSystemEntries(echt).Select(Path.GetFileName));
+        Assert.Contains(ergebnis.Messages, meldung =>
+            meldung.Contains("wird nicht beschrieben", StringComparison.Ordinal)
+            && meldung.Contains(kundenLink, StringComparison.OrdinalIgnoreCase)
+            && meldung.Contains("Verknüpfung", StringComparison.Ordinal));
+    }
+
+    [JunctionFact]
     public async Task DistributeByHaltungAsync_verknuepfter_haltungsordner_wird_nicht_beschrieben()
     {
         var fremd = Path.Combine(_root, "Fremd");

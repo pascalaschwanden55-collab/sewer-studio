@@ -1563,7 +1563,9 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   Ausgabeordner als Wurzel: Ausgabeordner, Haltungsordner, Protokoll-JSON und `.link`-Datei.
   Ein verknuepfter Ausgabeordner wird ohne Schreiben abgelehnt («Ausgabeordner … wird nicht
   beschrieben: Er ist eine Verknüpfung …»), ein verknuepfter Haltungsordner wird uebersprungen
-  und benannt.
+  und benannt. Weil der Waechter nur ab dem Ausgabeordner abwaerts prueft, prueft die Verteilung
+  vorher den ganzen Pfad bis zum Laufwerk (`VerknuepfungsSchutz.PruefePfadAbLaufwerk`, Regel
+  `GanzerPfad`); liegt das PDF unter einer Verknuepfung, wird nichts geschrieben (PR #85).
 - **Kein Symlink:** `File.CreateSymbolicLink` ist gestrichen. Der Videoverweis steht immer in
   `<Video>.link` (Pfad des Originalvideos); ein aus frueheren Laeufen vorhandenes Ziel bleibt
   unberuehrt. `VideosMatched` und «, Video: …» gelten nur fuer einen geschriebenen Verweis oder ein

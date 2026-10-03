@@ -526,6 +526,19 @@ public sealed class TrainingCenterImportService
 
         // Deepscan R6: Der Ausgabeordner liegt neben der Kundenablage. Vor jedem Schreiben gilt der
         // gemeinsame Verteil-Pfadwaechter; ein verknuepfter Ausgabeordner wird ohne Schreiben abgelehnt.
+        // PR #85: Der Waechter prueft nur ab dem Ausgabeordner abwaerts. Liegt das PDF unter einer
+        // Verknuepfung, laege auch der abgeleitete Ausgabeordner darin; deshalb zuerst der ganze Pfad
+        // bis zum Laufwerk (gemeinsamer VerknuepfungsSchutz, fehlender Rest erlaubt, Lesefehler sperren).
+        var pfadBefund = VerknuepfungsSchutz.PruefePfadAbLaufwerk(outputFolder, VerknuepfungsRegel.GanzerPfad);
+        if (!pfadBefund.IstSicher)
+        {
+            messages.Add($"Ausgabeordner «{outputFolder}» wird nicht beschrieben: «{pfadBefund.Pfad}» im Pfad ist "
+                         + (pfadBefund.Befund == VerknuepfungsBefund.Verknuepfung
+                             ? "eine Verknüpfung (Junction)."
+                             : "nicht sicher prüfbar (keine Verknüpfung nachweisbar)."));
+            return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
+        }
+
         DistributionWritePathGuard writePaths;
         try
         {
