@@ -142,6 +142,23 @@ public sealed class TrainingCenterDistributionWorkflowTests
         Assert.Contains("Fehler: kaputt", state.Logs);
     }
 
+    [Fact]
+    public async Task RunAsync_abbruch_meldet_abgebrochen_statt_fehler()
+    {
+        var state = new WorkflowState();
+        var request = CreateRequest(
+            state: state,
+            log: message => state.Logs.Add(message),
+            distributeAsync: (_, _, _) => throw new OperationCanceledException());
+
+        await TrainingCenterDistributionWorkflow.RunAsync(request);
+
+        Assert.False(state.IsBusy);
+        Assert.Equal("Verteilung abgebrochen.", state.StatusText);
+        Assert.Contains("Verteilung abgebrochen.", state.Logs);
+        Assert.DoesNotContain(state.Logs, line => line.StartsWith("Fehler:", StringComparison.Ordinal));
+    }
+
     private static TrainingCenterDistributionWorkflowRequest CreateRequest(
         WorkflowState? state = null,
         IList<string>? rootFolders = null,

@@ -66,6 +66,12 @@ public static class TrainingCenterDistributionWorkflow
                 request.Log("Output-Ordner als Trainings-Ordner hinzugefügt. Klicke 'Scannen' zum Laden.");
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Deepscan R6: «Abbrechen» ist kein Fehler; bereits angelegte Haltungsordner bleiben.
+            request.Log("Verteilung abgebrochen.");
+            request.SetStatusText("Verteilung abgebrochen.");
+        }
         catch (Exception ex)
         {
             request.Log($"Fehler: {ex.Message}");

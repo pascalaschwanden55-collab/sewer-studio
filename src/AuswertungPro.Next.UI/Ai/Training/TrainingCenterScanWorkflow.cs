@@ -5,11 +5,12 @@ public sealed record TrainingCenterScanWorkflowRequest(
     Action<bool> SetIsBusy,
     IReadOnlyCollection<string> RootFolders,
     Func<string, bool> DirectoryExists,
-    Func<string, Task<IReadOnlyList<TrainingCase>>> ScanFolderAsync,
+    Func<string, CancellationToken, Task<IReadOnlyList<TrainingCase>>> ScanFolderAsync,
     Action<IReadOnlyList<TrainingCase>> ReplaceCases,
     Action<IReadOnlyList<TrainingCase>> AppendCases,
     Action<string> SetStatusText,
-    Func<Task> SaveStateAsync);
+    Func<Task> SaveStateAsync,
+    Func<CancellationToken> ResetCancellation);
 
 public static class TrainingCenterScanWorkflow
 {
@@ -31,6 +32,8 @@ public static class TrainingCenterScanWorkflow
             request.SetIsBusy(true);
             request.SetStatusText("Scanne Ordner...");
             request.ReplaceCases(Array.Empty<TrainingCase>());
+            // Deepscan R6: «Abbrechen» wirkt auch auf den Scan; der Dienst prueft je Ordner.
+            var cancellationToken = request.ResetCancellation();
 
             var allFound = new List<TrainingCase>();
             foreach (var folder in request.RootFolders)
@@ -38,7 +41,7 @@ public static class TrainingCenterScanWorkflow
                 if (!request.DirectoryExists(folder))
                     continue;
 
-                var found = await request.ScanFolderAsync(folder);
+                var found = await request.ScanFolderAsync(folder, cancellationToken);
                 allFound.AddRange(found);
                 request.AppendCases(found);
             }
@@ -52,6 +55,11 @@ public static class TrainingCenterScanWorkflow
                 pdfOnly));
 
             await request.SaveStateAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // Bereits gefundene Faelle bleiben sichtbar; gespeichert wird ein abgebrochener Scan nicht.
+            request.SetStatusText("Scan abgebrochen.");
         }
         finally
         {

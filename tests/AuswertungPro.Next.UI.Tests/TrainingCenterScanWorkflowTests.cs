@@ -13,7 +13,7 @@ public sealed class TrainingCenterScanWorkflowTests
             CreateRequest(
                 getIsBusy: () => true,
                 setStatusText: value => calls.Add($"status:{value}"),
-                scanFolderAsync: _ =>
+                scanFolderAsync: (_, _) =>
                 {
                     calls.Add("scan");
                     return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
@@ -52,7 +52,7 @@ public sealed class TrainingCenterScanWorkflowTests
                 state: state,
                 rootFolders: ["missing", "root-a"],
                 directoryExists: folder => folder == "root-a",
-                scanFolderAsync: folder =>
+                scanFolderAsync: (folder, _) =>
                 {
                     scanned.Add(folder);
                     return Task.FromResult<IReadOnlyList<TrainingCase>>(
@@ -93,9 +93,44 @@ public sealed class TrainingCenterScanWorkflowTests
                 CreateRequest(
                     state: state,
                     rootFolders: ["root-a"],
-                    scanFolderAsync: _ => throw new InvalidOperationException("kaputt"))));
+                    scanFolderAsync: (_, _) => throw new InvalidOperationException("kaputt"))));
 
         Assert.False(state.IsBusy);
+    }
+
+    [Fact]
+    public async Task RunAsync_reicht_das_abbruchtoken_an_jeden_ordner_weiter()
+    {
+        using var abbruch = new CancellationTokenSource();
+        var tokens = new List<CancellationToken>();
+
+        await TrainingCenterScanWorkflow.RunAsync(
+            CreateRequest(
+                rootFolders: ["root-a", "root-b"],
+                resetCancellation: () => abbruch.Token,
+                scanFolderAsync: (_, token) =>
+                {
+                    tokens.Add(token);
+                    return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
+                }));
+
+        Assert.Equal([abbruch.Token, abbruch.Token], tokens);
+    }
+
+    [Fact]
+    public async Task RunAsync_abbruch_meldet_abgebrochen_und_speichert_nicht()
+    {
+        var state = new WorkflowState();
+
+        await TrainingCenterScanWorkflow.RunAsync(
+            CreateRequest(
+                state: state,
+                rootFolders: ["root-a"],
+                scanFolderAsync: (_, _) => throw new OperationCanceledException()));
+
+        Assert.False(state.IsBusy);
+        Assert.Equal("Scan abgebrochen.", state.StatusText);
+        Assert.Equal(0, state.SaveCalls);
     }
 
     private static TrainingCenterScanWorkflowRequest CreateRequest(
@@ -104,11 +139,12 @@ public sealed class TrainingCenterScanWorkflowTests
         Func<bool>? getIsBusy = null,
         Action<bool>? setIsBusy = null,
         Func<string, bool>? directoryExists = null,
-        Func<string, Task<IReadOnlyList<TrainingCase>>>? scanFolderAsync = null,
+        Func<string, CancellationToken, Task<IReadOnlyList<TrainingCase>>>? scanFolderAsync = null,
         Action<IReadOnlyList<TrainingCase>>? replaceCases = null,
         Action<IReadOnlyList<TrainingCase>>? appendCases = null,
         Action<string>? setStatusText = null,
-        Func<Task>? saveStateAsync = null)
+        Func<Task>? saveStateAsync = null,
+        Func<CancellationToken>? resetCancellation = null)
     {
         state ??= new WorkflowState();
         return new TrainingCenterScanWorkflowRequest(
@@ -116,7 +152,7 @@ public sealed class TrainingCenterScanWorkflowTests
             SetIsBusy: setIsBusy ?? (value => state.IsBusy = value),
             RootFolders: rootFolders ?? ["root-a"],
             DirectoryExists: directoryExists ?? (_ => true),
-            ScanFolderAsync: scanFolderAsync ?? (_ => Task.FromResult<IReadOnlyList<TrainingCase>>([])),
+            ScanFolderAsync: scanFolderAsync ?? ((_, _) => Task.FromResult<IReadOnlyList<TrainingCase>>([])),
             ReplaceCases: replaceCases ?? (items => state.ReplaceCalls.Add(items.ToList())),
             AppendCases: appendCases ?? (items => state.AppendCalls.Add(items.ToList())),
             SetStatusText: setStatusText ?? (value => state.StatusText = value),
@@ -124,7 +160,8 @@ public sealed class TrainingCenterScanWorkflowTests
             {
                 state.SaveCalls++;
                 return Task.CompletedTask;
-            }));
+            }),
+            ResetCancellation: resetCancellation ?? (() => CancellationToken.None));
     }
 
     private sealed class WorkflowState

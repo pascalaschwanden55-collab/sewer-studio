@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Common;
@@ -17,10 +18,45 @@ public sealed class TrainingCenterImportService
     private static readonly string[] VideoExts = [..AuswertungPro.Next.Infrastructure.Media.MediaFileTypes.VideoExtensions, ".ts", ".m4v"];
     private static readonly string[] ProtocolExts = [".json", ".xml", ".pdf"];
 
+    private readonly Func<string, PdfTextExtraction> _pdfSeitenLesen;
+    private readonly Func<string, IEnumerable<string>> _dateienImOrdner;
+    private readonly Action<string>? _nachHaltungsordner;
+
+    public TrainingCenterImportService()
+        : this(null, null, null)
+    {
+    }
+
+    /// <summary>
+    /// Testnaht: PDF-Leser, Dateiliste je Ordner und ein Haken nach jedem fertig angelegten
+    /// Haltungsordner der Verteilung. Ohne Angabe gelten die echten Dateizugriffe.
+    /// </summary>
+    internal TrainingCenterImportService(
+        Func<string, PdfTextExtraction>? pdfSeitenLesen,
+        Func<string, IEnumerable<string>>? dateienImOrdner,
+        Action<string>? nachHaltungsordner)
+    {
+        _pdfSeitenLesen = pdfSeitenLesen ?? (pfad => PdfTextExtractor.ExtractPages(pfad));
+        _dateienImOrdner = dateienImOrdner
+                           ?? (ordner => Directory.EnumerateFiles(ordner, "*.*", SearchOption.TopDirectoryOnly));
+        _nachHaltungsordner = nachHaltungsordner;
+    }
+
     public Task<List<TrainingCaseInput>> ScanAsync(string rootFolder)
+        => ScanAsync(rootFolder, CancellationToken.None);
+
+    /// <summary>
+    /// Sucht Trainingsfaelle unter <paramref name="rootFolder"/>. Laeuft ausserhalb des
+    /// aufrufenden Threads (Deepscan R6: das Training Center fror beim Scan grosser Ablagen ein);
+    /// der Abbruch wird vor jedem Ordner geprueft.
+    /// </summary>
+    public Task<List<TrainingCaseInput>> ScanAsync(string rootFolder, CancellationToken cancellationToken)
+        => Task.Run(() => Scan(rootFolder, cancellationToken), cancellationToken);
+
+    private List<TrainingCaseInput> Scan(string rootFolder, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(rootFolder) || !Directory.Exists(rootFolder))
-            return Task.FromResult(new List<TrainingCaseInput>());
+            return new List<TrainingCaseInput>();
 
         var folders = EnumerateFolders(rootFolder);
 
@@ -28,9 +64,11 @@ public sealed class TrainingCenterImportService
 
         foreach (var folder in folders)
         {
+            // Ausserhalb des try: der Fang fuer Ordnerfehler darf den Abbruch nicht verschlucken.
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var files = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly).ToList();
+                var files = _dateienImOrdner(folder).ToList();
                 if (files.Count == 0)
                     continue;
 
@@ -59,8 +97,7 @@ public sealed class TrainingCenterImportService
         }
 
         // Stable ordering for UI
-        cases = cases.OrderBy(c => c.CaseId, StringComparer.OrdinalIgnoreCase).ToList();
-        return Task.FromResult(cases);
+        return cases.OrderBy(c => c.CaseId, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     /// <summary>
@@ -383,28 +420,35 @@ public sealed class TrainingCenterImportService
     /// <summary>
     /// Verteilt ein Multi-Haltungs-PDF + Video-Ordner in einzelne Unterordner.
     /// Pro Haltung wird ein Ordner mit JSON-Protokoll und Video-Verweis erstellt.
+    /// Laeuft ausserhalb des aufrufenden Threads (Deepscan R6); der Abbruch wird vor dem
+    /// PDF-Lesen und vor jeder Haltung geprueft und wirft <see cref="OperationCanceledException"/>.
     /// </summary>
     public Task<DistributeResult> DistributeByHaltungAsync(
-        string pdfPath, string videoFolder, string outputFolder)
+        string pdfPath, string videoFolder, string outputFolder, CancellationToken cancellationToken = default)
+        => Task.Run(() => DistributeByHaltung(pdfPath, videoFolder, outputFolder, cancellationToken), cancellationToken);
+
+    private DistributeResult DistributeByHaltung(
+        string pdfPath, string videoFolder, string outputFolder, CancellationToken cancellationToken)
     {
         var messages = new List<string>();
+        cancellationToken.ThrowIfCancellationRequested();
 
         // 1. Text aus PDF extrahieren (seitenweise)
         PdfTextExtraction extraction;
         try
         {
-            extraction = PdfTextExtractor.ExtractPages(pdfPath);
+            extraction = _pdfSeitenLesen(pdfPath);
         }
         catch (Exception ex)
         {
             messages.Add($"PDF-Text konnte nicht extrahiert werden: {ex.Message}");
-            return Task.FromResult(new DistributeResult(0, 0, 0, 0, outputFolder, messages));
+            return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
         }
 
         if (extraction.Pages.Count == 0)
         {
             messages.Add("Kein Text im PDF gefunden.");
-            return Task.FromResult(new DistributeResult(0, 0, 0, 0, outputFolder, messages));
+            return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
         }
 
         // 2. PDF nach Haltungen aufteilen
@@ -414,7 +458,7 @@ public sealed class TrainingCenterImportService
         if (chunks.Count == 0)
         {
             messages.Add("Keine Haltungen im PDF erkannt.");
-            return Task.FromResult(new DistributeResult(0, 0, 0, 0, outputFolder, messages));
+            return new DistributeResult(0, 0, 0, 0, outputFolder, messages);
         }
 
         // 3. Video-Index aufbauen: Haltungs-ID → Videodatei
@@ -428,6 +472,7 @@ public sealed class TrainingCenterImportService
 
         foreach (var chunk in chunks)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(chunk.DetectedId) || chunk.IsUncertain)
             {
                 uncertain++;
@@ -477,10 +522,11 @@ public sealed class TrainingCenterImportService
             messages.Add($"Haltung {haltungId}: Seiten {chunk.PageRange}, "
                 + $"{entries.Count} Beobachtungen"
                 + (videoPath is not null ? $", Video: {Path.GetFileName(videoPath)}" : ""));
+            _nachHaltungsordner?.Invoke(caseDir);
         }
 
-        return Task.FromResult(new DistributeResult(
-            chunks.Count, distributed, videosMatched, uncertain, outputFolder, messages));
+        return new DistributeResult(
+            chunks.Count, distributed, videosMatched, uncertain, outputFolder, messages);
     }
 
     /// <summary>

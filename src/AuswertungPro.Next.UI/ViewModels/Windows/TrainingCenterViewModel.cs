@@ -334,8 +334,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 new TrainingCenterDistributionDefaultRequestFactoryRequest(
                     GetIsBusy: () => IsBusy,
                     SetIsBusy: value => IsBusy = value,
-                    DistributeAsync: (pdfPath, videoFolder, outputFolder) =>
-                        _import.DistributeByHaltungAsync(pdfPath, videoFolder, outputFolder),
+                    DistributeAsync: (pdfPath, videoFolder, outputFolder) => _import.DistributeByHaltungAsync(
+                        pdfPath, videoFolder, outputFolder, ResetGenerationCancellation()),
                     RootFolders: _rootFolders,
                     UpdateRootFolderDisplay: UpdateRootFolderDisplay,
                     SetLogText: value => LogText = value,
@@ -355,7 +355,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 ReplaceCases: ReplaceScannedCases,
                 AppendCases: AppendScannedCases,
                 SetStatusText: value => StatusText = value,
-                SaveStateAsync: AutoSaveStateAsync)));
+                SaveStateAsync: AutoSaveStateAsync,
+                ResetCancellation: ResetGenerationCancellation)));
     }
 
     private void ReplaceScannedCases(IReadOnlyList<TrainingCase> items)
@@ -374,10 +375,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 Cases: Cases,
                 RootFolders: _rootFolders,
                 SaveStateAsync: _store.SaveAsync,
-                SetStatusText: SetSaveStatusText)));
+                SetStatusText: value => StatusText = value)));
     }
-
-    private void SetSaveStatusText(string value) => StatusText = value;
 
     private bool HasSelection() => SelectedCase is not null;
 

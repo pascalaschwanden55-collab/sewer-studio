@@ -7,22 +7,24 @@ public sealed record TrainingCenterScanRequestFactoryRequest(
     Action<bool> SetIsBusy,
     IReadOnlyCollection<string> RootFolders,
     Func<string, bool> DirectoryExists,
-    Func<string, Task<List<TrainingCaseInput>>> ScanInputsAsync,
+    Func<string, CancellationToken, Task<List<TrainingCaseInput>>> ScanInputsAsync,
     Func<TrainingCaseInput, TrainingCase> ToTrainingCase,
     Action<IReadOnlyList<TrainingCase>> ReplaceCases,
     Action<IReadOnlyList<TrainingCase>> AppendCases,
     Action<string> SetStatusText,
-    Func<Task> SaveStateAsync);
+    Func<Task> SaveStateAsync,
+    Func<CancellationToken> ResetCancellation);
 
 public sealed record TrainingCenterScanDefaultRequestFactoryRequest(
     Func<bool> GetIsBusy,
     Action<bool> SetIsBusy,
     IReadOnlyCollection<string> RootFolders,
-    Func<string, Task<List<TrainingCaseInput>>> ScanInputsAsync,
+    Func<string, CancellationToken, Task<List<TrainingCaseInput>>> ScanInputsAsync,
     Action<IReadOnlyList<TrainingCase>> ReplaceCases,
     Action<IReadOnlyList<TrainingCase>> AppendCases,
     Action<string> SetStatusText,
-    Func<Task> SaveStateAsync);
+    Func<Task> SaveStateAsync,
+    Func<CancellationToken> ResetCancellation);
 
 public static class TrainingCenterScanRequestFactory
 {
@@ -41,7 +43,8 @@ public static class TrainingCenterScanRequestFactory
             request.ReplaceCases,
             request.AppendCases,
             request.SetStatusText,
-            request.SaveStateAsync));
+            request.SaveStateAsync,
+            request.ResetCancellation));
     }
 
     public static TrainingCenterScanWorkflowRequest Create(
@@ -58,20 +61,22 @@ public static class TrainingCenterScanRequestFactory
         ArgumentNullException.ThrowIfNull(request.AppendCases);
         ArgumentNullException.ThrowIfNull(request.SetStatusText);
         ArgumentNullException.ThrowIfNull(request.SaveStateAsync);
+        ArgumentNullException.ThrowIfNull(request.ResetCancellation);
 
         return new TrainingCenterScanWorkflowRequest(
             request.GetIsBusy,
             request.SetIsBusy,
             request.RootFolders,
             request.DirectoryExists,
-            async folder =>
+            async (folder, cancellationToken) =>
             {
-                var inputs = await request.ScanInputsAsync(folder).ConfigureAwait(false);
+                var inputs = await request.ScanInputsAsync(folder, cancellationToken).ConfigureAwait(false);
                 return inputs.Select(request.ToTrainingCase).ToList();
             },
             request.ReplaceCases,
             request.AppendCases,
             request.SetStatusText,
-            request.SaveStateAsync);
+            request.SaveStateAsync,
+            request.ResetCancellation);
     }
 }
