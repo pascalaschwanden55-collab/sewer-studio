@@ -2372,7 +2372,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.Contains("Directory.Exists", factorySource, StringComparison.Ordinal);
         Assert.Contains("new TrainingCenterScanWorkflowRequest(", factorySource, StringComparison.Ordinal);
         Assert.Contains("TrainingCaseInputMapper.ToTrainingCase", factorySource, StringComparison.Ordinal);
-        Assert.Contains("request.ScanInputsAsync(folder)", factorySource, StringComparison.Ordinal);
+        Assert.Contains("request.ScanInputsAsync(folder, uebersprungeneOrdner, hinweise, cancellationToken)", factorySource, StringComparison.Ordinal);
         Assert.Contains("Select(request.ToTrainingCase)", factorySource, StringComparison.Ordinal);
         Assert.Contains("request.ReplaceCases(Array.Empty<TrainingCase>())", workflowSource, StringComparison.Ordinal);
         Assert.Contains("request.AppendCases(found)", workflowSource, StringComparison.Ordinal);

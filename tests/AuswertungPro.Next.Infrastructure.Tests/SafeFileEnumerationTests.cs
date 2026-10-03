@@ -19,6 +19,20 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 [SupportedOSPlatform("windows")]
 public sealed class SafeFileEnumerationTests
 {
+    // Review PR #85: Der optionale Sammler fuer ausgelassene Dateien darf die bisherige vierstellige
+    // Signatur nicht ersetzen; bereits kompilierte Aufrufer erhielten sonst eine MissingMethodException.
+    [Theory]
+    [InlineData(typeof(SafeFileEnumeration))]
+    [InlineData(typeof(AuswertungPro.Next.Application.Common.SafeFileEnumeration))]
+    public void Bisherige_vierstellige_Signatur_bleibt_erhalten(Type fassade)
+    {
+        var methode = fassade.GetMethod(
+            nameof(SafeFileEnumeration.EnumerateFilesSafe),
+            [typeof(string), typeof(string), typeof(bool), typeof(ICollection<string>)]);
+
+        Assert.NotNull(methode);
+    }
+
     [JunctionFact]
     public void EnumerateFilesSafe_BetrittKeineVerzeichnisVerknuepfung_UndMeldetSieAlsUebersprungen()
     {
@@ -133,6 +147,45 @@ public sealed class SafeFileEnumerationTests
     {
         var missing = Path.Combine(Path.GetTempPath(), "sfe_missing_" + Guid.NewGuid().ToString("N"));
         Assert.Empty(SafeFileEnumeration.EnumerateFilesSafe(missing, "*", recursive: true).ToList());
+    }
+
+    [JunctionFact]
+    public void EnumerateFilesSafe_MeldetAusgelasseneDateiVerknuepfungImOptionalenSammler()
+    {
+        // PR #85: Datei-Verknuepfungen wurden still ausgelassen. Der optionale Sammler nennt sie;
+        // bestehende Aufrufer ohne Sammler bleiben unveraendert.
+        var testRoot = Path.Combine(Path.GetTempPath(), "sfe_filelink_" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(testRoot, "root");
+        var fremd = Path.Combine(testRoot, "fremd.txt");
+        var fileLink = Path.Combine(root, "b-link.txt");
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.WriteAllText(Path.Combine(root, "a-normal.txt"), "normal");
+            File.WriteAllText(fremd, "fremd");
+            File.CreateSymbolicLink(fileLink, fremd);
+            var dateien = new List<string>();
+
+            var files = SafeFileEnumeration
+                .EnumerateFilesSafe(root, "*.txt", recursive: true, skippedFiles: dateien)
+                .Select(Path.GetFileName)
+                .ToList();
+
+            Assert.Equal(["a-normal.txt"], files);
+            Assert.Equal([fileLink], dateien);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(testRoot))
+                    Directory.Delete(testRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+                // Test-Aufraeumen darf das Ergebnis nicht verdecken.
+            }
+        }
     }
 
     [Fact]

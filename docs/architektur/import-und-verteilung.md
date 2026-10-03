@@ -10,6 +10,7 @@
 ## Inhalt
 
 - Übersprungene Ordner erscheinen im Ergebnis (02.10.2026)
+- Importbericht und Konfliktdateien: keine stillen Verluste (03.10.2026)
 - AP07: Ein-Knopf-Import und Medienverteilung (28.09.2026)
 - Auditkorrektur: Portabilitaet ordnet keine fremden PDFs zusammen (18.09.2026)
 - Dichtheitsverteilung: Zielordner, Seitenfehler, Behaelter (18.09.2026)
@@ -41,11 +42,37 @@ Verknüpfungen bewusst aus, meldete das aber nur, wenn der Aufrufer eine Liste m
 - **Bewusst nicht angeschlossen:** Suchen im eigenen Projektordner (Staging-Lesesicht,
   `InspectionProtocolFileLocator`), weil dort kein Kundenoriginal fehlt und die Suche nur
   «gefunden/nicht gefunden» liefert. Training Center (`TrainingCenterImportService`) hat
-  keinen Berichtsweg; das gehört zu R6/R8. Archivierung (`ImportSourceArchiveService`) und
+  keinen Berichtsweg; das gehört zu R6/R8 (seit 03.10.2026 im Scan-Protokoll, siehe
+  `training-und-modelle.md`). Archivierung (`ImportSourceArchiveService`) und
   Medienverteilung (`MediaDistributionService`) folgen nach dem Umbau durch Codex.
 - Tests: `UebersprungeneOrdnerImportTests`, `UebersprungeneOrdnerVerteilungTests`
   (Verknüpfung als Unterordner, `JunctionFact`) und
   `ImportPostProcessingControllerTests.RunAsync_meldet_einen_uebersprungenen_Unterordner_als_Fehler`.
+
+## Importbericht und Konfliktdateien: keine stillen Verluste (03.10.2026)
+
+Deepscan 02.10.2026, Befund R8 (a, b).
+
+- **Importbericht (R8a):** Scheitert `ImportRunWorkflowActions.ExportReport`, bricht das den
+  Import weiter nicht. `ImportRunWorkflowController` haengt aber die Zeile «Importbericht konnte
+  nicht geschrieben werden: …» an die Details. Der Text kommt aus `UserError.DescribeAndReport`
+  (kein Rohtext, kein Pfad); die volle Ausnahme steht im Programmlog.
+- **Konfliktdateien (R8b):** Eine unlesbare `_VIDEO_MISSING.txt`/`_VIDEO_AMBIGUOUS.txt` fehlt
+  weiter in der Konfliktliste, wird aber gezaehlt (`MediaKonfliktdateienLeser`).
+  `MediaConflictCenterService.ScanResult` traegt dafuer das optionale Feld `Hinweis`
+  («1 Konfliktdatei nicht lesbar.»); es wertet den Scan nicht als Fehler (`Success` bleibt wahr).
+  Die Medienkonflikt-Seite haengt den Hinweis an ihre Ergebniszeile. Seit PR #85 nennt derselbe
+  Hinweis auch Unterordner von «Haltungen», die die sichere Dateisuche ausgelassen hat (unlesbar
+  oder Verknuepfung), mit der Zeile aus `UebersprungeneOrdner`. Die Seite haengt den Hinweis auch an
+  die Ergebniszeilen von «Gelernte Zuordnungen übernehmen» und «… löschen» an, statt ihn zu
+  ueberschreiben. Auch Konfliktdateien, die selbst eine Verknuepfung oder nicht attributlesbar sind,
+  stehen im Hinweis; dafuer hat `SafeFileEnumeration.EnumerateFilesSafe` den optionalen Sammler
+  `skippedFiles` (bestehende Aufrufer unveraendert). Der Fehlertext bei unsicherem Konfliktordner
+  laeuft ueber `UserError`.
+- Tests: `ImportRunWorkflowControllerTests.RunAsync_bericht_fehler_steht_verstaendlich_in_den_details`,
+  `MediaConflictCenterServiceTests.ScanWithResult_zaehlt_unlesbare_Konfliktdateien_im_Hinweis`,
+  `MediaConflictsPageViewModelDependencyTests.Unlesbare_Konfliktdatei_wird_im_Ergebnis_genannt`
+  (Datei exklusiv gesperrt).
 
 ## AP07: Ein-Knopf-Import und Medienverteilung (28.09.2026)
 

@@ -39,6 +39,36 @@ public sealed class ImportRunWorkflowControllerTests
     }
 
     [Fact]
+    public async Task RunAsync_bericht_fehler_steht_verstaendlich_in_den_details()
+    {
+        // Deepscan R8a: Scheiterte ExportReport, gab es weder Bericht noch Hinweis.
+        var project = new Project();
+        var calls = new List<string>();
+        var state = new UiState();
+        var request = new ImportRunWorkflowRequest<string>(
+            "PDF",
+            "source",
+            (_, _, _) => Result<ImportStats>.Success(
+                new ImportStats(0, 0, 0, 0, 0, Array.Empty<string>())));
+
+        await ImportRunWorkflowController.RunAsync(
+            request,
+            Actions(
+                project,
+                state,
+                calls,
+                exportReport: (_, _) => throw new IOException(@"Zugriff auf C:\Geheim\bericht.txt verweigert")),
+            CancellationToken.None);
+
+        Assert.Equal("PDF importiert", state.Statuses[^1]);
+        Assert.Contains(
+            "Importbericht konnte nicht geschrieben werden: Eine Datei oder ein Ordner ist momentan nicht verfügbar.",
+            state.Details);
+        Assert.DoesNotContain("Geheim", state.Details);
+        Assert.Equal("", state.LastReportPath);
+    }
+
+    [Fact]
     public async Task RunAsync_commit_success_runs_post_processing_save_and_report()
     {
         var project = new Project();
@@ -906,7 +936,8 @@ public sealed class ImportRunWorkflowControllerTests
         Func<string?>? getReportDir = null,
         Func<Project, string>? computeSignature = null,
         IImportTransactionJournal? journal = null,
-        Func<Project, string?>? deduplicate = null)
+        Func<Project, string?>? deduplicate = null,
+        Func<ImportRunLog, string, string>? exportReport = null)
         => new(
             GetProject: getProject ?? (() => project),
             GetProjectPath: getProjectPath ?? (() => @"C:\Projekte\Test\projekt.json"),
@@ -918,13 +949,13 @@ public sealed class ImportRunWorkflowControllerTests
             },
             CreateRestorePoint: label => calls.Add($"restore:{label}"),
             GetReportDir: getReportDir ?? (() => "reports"),
-            ExportReport: (log, reportDir) =>
+            ExportReport: exportReport ?? ((log, reportDir) =>
             {
                 state.LastExportReportDirectory = reportDir;
                 state.LastExportLog = log;
                 calls.Add($"report:{log.ImportType}:{log.WasDryRun}");
                 return log.WasDryRun ? "preview-report.txt" : "import-report.txt";
-            },
+            }),
             ShowPreview: showPreview ?? ((_, _) => false),
             ValidatePlausibility: validatePlausibility ?? (_ => Array.Empty<string>()),
             DeduplicateAllPrimaryDamages: p =>

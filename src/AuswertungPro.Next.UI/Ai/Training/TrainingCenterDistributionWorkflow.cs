@@ -66,10 +66,19 @@ public static class TrainingCenterDistributionWorkflow
                 request.Log("Output-Ordner als Trainings-Ordner hinzugefügt. Klicke 'Scannen' zum Laden.");
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Deepscan R6: «Abbrechen» ist kein Fehler; bereits angelegte Haltungsordner bleiben.
+            request.Log("Verteilung abgebrochen.");
+            request.SetStatusText("Verteilung abgebrochen.");
+        }
         catch (Exception ex)
         {
-            request.Log($"Fehler: {ex.Message}");
-            request.SetStatusText($"Fehler bei Verteilung: {UserError.Describe(ex)}");
+            // PR #85: auch das sichtbare Protokoll zeigt nur den verstaendlichen Text; die volle
+            // Ausnahme geht ins Programmlog.
+            var meldung = UserError.DescribeAndReport(ex, "Training Center Verteilung");
+            request.Log($"Fehler: {meldung}");
+            request.SetStatusText($"Fehler bei Verteilung: {meldung}");
         }
         finally
         {

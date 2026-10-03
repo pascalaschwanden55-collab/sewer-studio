@@ -7,6 +7,31 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 public sealed class MediaConflictCenterServiceTests
 {
+    // Review PR #85: Erweiterte oeffentliche Signaturen behalten ihre bisherige Form (binaer kompatibel).
+    [Fact]
+    public void Bisherige_oeffentliche_Signaturen_bleiben_erhalten()
+    {
+        var scan = typeof(MediaConflictCenterService.ScanResult);
+        var faelle = typeof(IReadOnlyList<MediaConflictCenterService.MediaConflictCase>);
+        Assert.NotNull(scan.GetConstructor([faelle, typeof(string)]));
+        Assert.NotNull(scan.GetMethod("Deconstruct", [faelle.MakeByRefType(), typeof(string).MakeByRefType()]));
+
+        var verteilen = typeof(AuswertungPro.Next.Infrastructure.Ai.Training.TrainingCenterImportService).GetMethod(
+            "DistributeByHaltungAsync", [typeof(string), typeof(string), typeof(string)]);
+        Assert.NotNull(verteilen);
+    }
+
+    // Review PR #85: Eine aufgelistete Konfliktdatei, die vor dem Lesen verschwindet (Leser liefert null),
+    // fehlte weder als Fall noch als unlesbar – die Oberflaeche warnte dann nicht.
+    [Fact]
+    public void Konfliktdatei_ohne_Leseergebnis_zaehlt_als_unlesbar()
+    {
+        var (faelle, unlesbar) = MediaKonfliktdateienLeser.LeseAlle(["verschwunden_VIDEO_MISSING.txt"], _ => null);
+
+        Assert.Empty(faelle);
+        Assert.Equal(1, unlesbar);
+    }
+
     [JunctionFact]
     public void Scan_BetrittKeinenVerknuepftenHaltungsroot()
     {
@@ -57,6 +82,132 @@ public sealed class MediaConflictCenterServiceTests
         {
             DeleteLinkAndRoot(holdingsLink, root);
         }
+    }
+
+    [Fact]
+    public void ScanWithResult_zaehlt_unlesbare_Konfliktdateien_im_Hinweis()
+    {
+        // Deepscan R8b: Eine unlesbare Konfliktdatei fehlte still, das Video blieb ohne Hinweis unzugeordnet.
+        var root = TempRoot();
+        var holding = Path.Combine(root, "Projekt", "Haltungen", "H-1");
+        Directory.CreateDirectory(holding);
+        var gesperrt = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+        File.WriteAllText(gesperrt, "Haltung: H-1");
+        File.WriteAllText(Path.Combine(holding, "20260821_H-2_VIDEO_AMBIGUOUS.txt"), "Haltung: H-2");
+
+        try
+        {
+            ScanResultMitSperre(gesperrt, Path.Combine(root, "Projekt"), out var result);
+
+            Assert.True(result.Success);
+            Assert.Single(result.Cases);
+            Assert.Equal("1 Konfliktdatei nicht lesbar.", result.Hinweis);
+        }
+        finally
+        {
+            TryDeleteRoot(root);
+        }
+    }
+
+    [Fact]
+    public void ScanWithResult_zeigt_bei_fremder_Ausnahme_keinen_Rohtext()
+    {
+        // PR #85: Der Fehlertext haengte ex.Message an; eine fremde Ausnahme (hier aus Path.GetFullPath)
+        // erschien roh in der Oberflaeche. Jetzt laeuft er ueber UserError.
+        var result = new MediaConflictCenterService().ScanWithResult("C:\\Projekt\0Name");
+
+        Assert.False(result.Success);
+        Assert.StartsWith("Der Medien-Konfliktordner konnte nicht sicher geprüft werden", result.Error, StringComparison.Ordinal);
+        Assert.EndsWith("Technische Details stehen im Programmlog.", result.Error, StringComparison.Ordinal);
+    }
+
+    [JunctionFact]
+    public void ScanWithResult_nennt_verknuepfte_Konfliktdatei_im_Hinweis()
+    {
+        // PR #85: Eine Konfliktdatei, die selbst eine Verknuepfung ist, fiel still aus der Suche.
+        var root = TempRoot();
+        var projectRoot = Path.Combine(root, "Projekt");
+        var holding = Path.Combine(projectRoot, "Haltungen", "H-1");
+        Directory.CreateDirectory(holding);
+        var fremd = Path.Combine(root, "fremd.txt");
+        File.WriteAllText(fremd, "Haltung: H-1");
+        var dateiLink = Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt");
+        File.CreateSymbolicLink(dateiLink, fremd);
+
+        try
+        {
+            var result = new MediaConflictCenterService().ScanWithResult(projectRoot);
+
+            Assert.True(result.Success);
+            Assert.Empty(result.Cases);
+            Assert.NotNull(result.Hinweis);
+            Assert.Contains($"Konfliktdatei «{dateiLink}» übersprungen", result.Hinweis, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteRoot(root);
+        }
+    }
+
+    [JunctionFact]
+    public void ScanWithResult_nennt_uebersprungenen_Haltungsunterordner_im_Hinweis()
+    {
+        // PR #85 (Codex-Hinweis P2): Ein als Verknuepfung ausgelassener Unterordner fiel still heraus.
+        var root = TempRoot();
+        var projectRoot = Path.Combine(root, "Projekt");
+        var holdings = Path.Combine(projectRoot, "Haltungen");
+        var external = Path.Combine(root, "Fremd");
+        var holdingLink = Path.Combine(holdings, "H-2");
+        Directory.CreateDirectory(Path.Combine(holdings, "H-1"));
+        File.WriteAllText(Path.Combine(holdings, "H-1", "20260821_H-1_VIDEO_MISSING.txt"), "Haltung: H-1");
+        Directory.CreateDirectory(external);
+        File.WriteAllText(Path.Combine(external, "20260821_H-2_VIDEO_MISSING.txt"), "Haltung: H-2");
+        JunctionTestSupport.CreateDirectoryLink(holdingLink, external);
+
+        try
+        {
+            var result = new MediaConflictCenterService().ScanWithResult(projectRoot);
+
+            Assert.True(result.Success);
+            Assert.Single(result.Cases);
+            Assert.NotNull(result.Hinweis);
+            Assert.Contains($"Ordner «{holdingLink}» übersprungen", result.Hinweis, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteLinkAndRoot(holdingLink, root);
+        }
+    }
+
+    [Fact]
+    public void ScanWithResult_ohne_unlesbare_Konfliktdatei_hat_keinen_Hinweis()
+    {
+        var root = TempRoot();
+        var holding = Path.Combine(root, "Projekt", "Haltungen", "H-1");
+        Directory.CreateDirectory(holding);
+        File.WriteAllText(Path.Combine(holding, "20260821_H-1_VIDEO_MISSING.txt"), "Haltung: H-1");
+
+        try
+        {
+            var result = new MediaConflictCenterService().ScanWithResult(Path.Combine(root, "Projekt"));
+
+            Assert.Single(result.Cases);
+            Assert.Null(result.Hinweis);
+        }
+        finally
+        {
+            TryDeleteRoot(root);
+        }
+    }
+
+    private static void ScanResultMitSperre(
+        string gesperrteDatei,
+        string projectRoot,
+        out MediaConflictCenterService.ScanResult result)
+    {
+        // Exklusiv geoeffnet: Die Datei existiert, ist fuer den Dienst aber nicht lesbar.
+        using var sperre = new FileStream(gesperrteDatei, FileMode.Open, FileAccess.Read, FileShare.None);
+        result = new MediaConflictCenterService().ScanWithResult(projectRoot);
     }
 
     [JunctionFact]

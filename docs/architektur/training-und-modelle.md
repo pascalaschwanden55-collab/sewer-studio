@@ -18,6 +18,7 @@
 - Schutz persistenter KI-Dateien
 - Eval-Schutz: eine Regel an allen Lesewegen (2026-10-02)
 - Ereignisbasierte Eval-Messung (AP 0.4a, technische Grundlage)
+- Training Center: Verteilung und Scan (03.10.2026, Deepscan R6/R8c)
 
 ## Geplant / nicht implementiert (nicht als Ist-Zustand behandeln)
 - `ByteTrack` / `OC-SORT`: kein Tracking im aktuellen HEAD.
@@ -1548,3 +1549,72 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
 ### Tests der Gold-Schreibskripte (02.10.2026)
 
 `import_gold_labels.py`, `remove_eval_contaminated_from_register.py` und `repair_inbox_gold_holding_ids.py` haben Tests unter `training/scripts/tests/` (synthetische Daten im Temp-Ordner, laufen in der CI). Sie halten fest: Standardlauf bzw. Vorschau schreibfrei, Sicherung vor dem Schreiben, Eval-Haltung (beide Richtungen) und Eval-Bild-Hash werden nicht ins Training uebernommen, harte Sperren bei laufendem Programm, paralleler Aenderung und Kollisionen (`import_gold_labels.py` haelt den gelesenen Stand der `training_samples.json` fest und schreibt nicht, wenn sie sich bis dahin geaendert hat; fehlende Datei wird als GESPERRT gemeldet), Rueckrollen bei Schreibfehlern. Wer eine dieser Schutzzeilen aendert, muss einen roten Test begruenden.
+
+## Training Center: Verteilung und Scan (03.10.2026, Deepscan R6/R8c)
+
+- **Ausserhalb des UI-Threads, mit Abbruch:** `TrainingCenterImportService.DistributeByHaltungAsync`
+  und `ScanAsync` laufen per `Task.Run` und nehmen ein Abbruch-Token an. Geprueft wird vor dem
+  PDF-Lesen und vor jeder Haltung bzw. vor jedem Ordner. Das Fenster reicht das Token des
+  vorhandenen «Abbrechen»-Knopfs durch (`ResetGenerationCancellation`, erst nach der
+  Busy-Pruefung). Ein Abbruch meldet «Verteilung abgebrochen.» bzw. «Scan abgebrochen.», kein
+  Fehler; ein abgebrochener Scan wird nicht gespeichert.
+- **Pfadwaechter:** Die Verteilung schreibt nach `<Eltern des PDF-Ordners>\<PDF-Name>_Training`,
+  also neben die Kundenablage. Vor jedem Schreiben gilt `DistributionWritePathGuard` mit dem
+  Ausgabeordner als Wurzel: Ausgabeordner, Haltungsordner, Protokoll-JSON und `.link`-Datei.
+  Ein verknuepfter Ausgabeordner wird ohne Schreiben abgelehnt («Ausgabeordner … wird nicht
+  beschrieben: Er ist eine Verknüpfung …»), ein verknuepfter Haltungsordner wird uebersprungen
+  und benannt. Weil der Waechter nur ab dem Ausgabeordner abwaerts prueft, prueft die Verteilung
+  vorher den ganzen Pfad bis zum Laufwerk (`VerknuepfungsSchutz.PruefePfadAbLaufwerk`, Regel
+  `GanzerPfad`); liegt das PDF unter einer Verknuepfung, wird nichts geschrieben (PR #85).
+- **Kein Symlink:** `File.CreateSymbolicLink` ist gestrichen. Der Videoverweis steht immer in
+  `<Video>.link` (Pfad des Originalvideos); ein aus frueheren Laeufen vorhandenes Ziel bleibt
+  unberuehrt. `VideosMatched` und «, Video: …» gelten nur fuer einen geschriebenen Verweis oder ein
+  vorhandenes Video (PR #85).
+- **Videoverweis im Scan (PR #85):** `ScanAsync` loest `<name>.<videoendung>.link` nur lesend zum
+  Originalvideo auf (eine Zeile, absoluter Pfad, Videoendung, Datei vorhanden); ein echtes Video im
+  Ordner hat Vorrang. Ungueltige oder unlesbare Verweise laden den Fall ohne Video und stehen in der
+  Hinweisliste (`ScanAsync(root, uebersprungeneOrdner, hinweise, token)`); das Training Center nennt
+  sie im Protokoll und als «n Videoverweis(e) ungültig». Batch-Import und Selbsttraining profitieren
+  ueber `ScanAsync(root)` mit, ohne Hinweisliste. Vor dem Lesen prueft `VerknuepfungsSchutz.PruefeEintrag`
+  (Regel `Streng`) den Verweis selbst: Ist er eine Verknuepfung oder nicht pruefbar, wird er nicht
+  gelesen, sondern als ungueltig gemeldet. Dieselbe Pruefung gilt fuer das gelesene Ziel: ist das
+  Originalvideo selbst eine Verknuepfung, bleibt der Fall ohne Video. Tests: `TrainingCenterVideoverweisTests`.
+- **Alte Video-Symlinks (PR #85):** Fruehere Laeufe legten im Haltungsordner symbolische Links auf
+  das Video an. Der Scan uebernimmt eine Videodatei, die eine Verknuepfung oder nicht pruefbar ist
+  (`VerknuepfungsSchutz.PruefeEintrag`, Regel `Streng`), nicht als Video, sondern meldet sie und nutzt
+  einen gueltigen `.link`-Verweis im selben Ordner. Die Verteilung zaehlt einen solchen alten Link
+  nicht als vorhandenes Video, laesst ihn unberuehrt und schreibt den `.link`-Verweis. Fuer Ordner
+  aus alten Laeufen: die Verteilung einmal neu ausfuehren.
+- **Ordnerliste waehrend eines Laufs gesperrt (PR #85):** «Ordner wählen…» und «Ordnerauswahl
+  zurücksetzen» sind bei `IsBusy` nicht ausfuehrbar (`KannOrdnerAendern`, neu ausgewertet bei jedem
+  `IsBusy`-Wechsel). So speichert der Scan nie eine inzwischen geaenderte Ordnerliste zu Faellen der
+  alten; die Momentaufnahme im Scan-Workflow bleibt als zweite Sicherung.
+- **Fallordner-Dateien (PR #85, Eigenpruefung):** `TrainingCenterFallDateien` buendelt die Regeln.
+  Videos und Protokolle im Fallordner: Eintrag selbst keine Verknuepfung (Regel `Streng`); die Ordner
+  darueber bis zur Scan-Wurzel betritt `SafeFileEnumeration` nur ohne Verknuepfung (Beleg:
+  `Scan_betritt_keinen_verknuepften_fallordner_und_nennt_ihn`), die Scan-Wurzel selbst ist wie bei
+  allen Importquellen Nutzerwahl. Verweisziele und das Video der Verteilung liegen ausserhalb des
+  Baums: ganzer Pfad bis zum Laufwerk (`PruefePfadAbLaufwerk`, Regel `GanzerPfad`) vor `File.Exists`.
+  Wird kein verwendbares Direktvideo ausgewaehlt (keines, nur ausgeschlossene, mehrdeutig), gelten die
+  `.link`-Verweise als Rueckfall. Die Verteilung nennt ausgelassene Unterordner und Videodateien des
+  Videoordners, prueft den Abbruch auch waehrend der Videosuche und zeigt Fehler nur ueber `UserError`.
+- **Weitere Review-Runden PR #85:** Ausschlussmuster (Grafikvideo `*_g.mpg`, Uebersicht) gelten auch
+  fuer ein EINZELNES Direktvideo (`PickBestVideo` filtert vor dem Einzelfall); dann gilt der
+  `.link`-Verweis. Ein Dateifehler einer Haltung (Ordner, Protokoll, Verweis, Bereinigung, auch die
+  `AggregateException` des Schreibbausteins) wird fuer diese Haltung gemeldet, die Verteilung faehrt
+  fort. Ein seit dem Videoindex verschwundenes Quellvideo ergibt keinen Verweis und keinen Treffer.
+  Ein Verweis mit syntaktisch ungueltigem Zielpfad verwirft nur sich selbst, nicht den Fall.
+- **Erneut verteilen (PR #85):** Nach dem Schreiben des neuen Verweises entfernt die Verteilung andere
+  Videoverweise (`*.<videoendung>.link`) im selben Fallordner ueber den Pfadwaechter; Videos werden nie
+  geloescht, ein verknuepfter oder nicht loeschbarer Verweis wird gemeldet. Liegen im Scan mehrere
+  gueltige Verweise, wird keiner verwendet (Hinweis «bitte die Verteilung erneut ausführen»). Der
+  Scan-Status nennt alle Datei-Hinweise allgemein als «n Dateihinweise (siehe Protokoll)».
+- **Unlesbare Ordner (R8c):** `ScanAsync(root, uebersprungeneOrdner, token)` sammelt Ordner, deren
+  Dateiliste scheitert, und die von `SafeFileEnumeration` ausgelassenen (gesperrt, Verknuepfung).
+  `TrainingCenterScanWorkflow` schreibt je Ordner die Zeile von `UebersprungeneOrdner.Meldung` ins
+  Protokoll und haengt «n Ordner übersprungen (siehe Protokoll)» an die Zusammenfassung.
+  `ScanAsync(root)` (Batch-Import, Selbsttraining, Werkzeuge) bleibt ohne Liste und ohne Abbruch.
+- Tests: `TrainingCenterImportServiceVerteilungTests` (Rueckkehr vor Ende der Arbeit, Abbruch
+  vor dem zweiten Chunk -> ein Ordner, Abbruch im Scan, unlesbarer Ordner),
+  `TrainingCenterImportServiceVerknuepfungTests` (zwei `JunctionFact`, keine Symlink-Datei),
+  `TrainingCenterScanWorkflowTests`, `TrainingCenterDistributionWorkflowTests`.

@@ -139,7 +139,28 @@ public sealed class TrainingCenterDistributionWorkflowTests
         Assert.Equal(
             "Fehler bei Verteilung: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
             state.StatusText);
-        Assert.Contains("Fehler: kaputt", state.Logs);
+        // PR #85: auch das Protokoll zeigt den verstaendlichen Text, nicht den Rohtext der Ausnahme.
+        Assert.Contains(
+            "Fehler: Der Vorgang konnte nicht abgeschlossen werden. Technische Details stehen im Programmlog.",
+            state.Logs);
+        Assert.DoesNotContain(state.Logs, line => line.Contains("kaputt", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RunAsync_abbruch_meldet_abgebrochen_statt_fehler()
+    {
+        var state = new WorkflowState();
+        var request = CreateRequest(
+            state: state,
+            log: message => state.Logs.Add(message),
+            distributeAsync: (_, _, _) => throw new OperationCanceledException());
+
+        await TrainingCenterDistributionWorkflow.RunAsync(request);
+
+        Assert.False(state.IsBusy);
+        Assert.Equal("Verteilung abgebrochen.", state.StatusText);
+        Assert.Contains("Verteilung abgebrochen.", state.Logs);
+        Assert.DoesNotContain(state.Logs, line => line.StartsWith("Fehler:", StringComparison.Ordinal));
     }
 
     private static TrainingCenterDistributionWorkflowRequest CreateRequest(

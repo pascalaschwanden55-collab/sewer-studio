@@ -53,7 +53,10 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private TrainingSample? _selectedSample;
     [ObservableProperty] private string _rootFolder = "";
     [ObservableProperty] private string _statusText = "";
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(BrowseRootFolderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ClearRootFoldersCommand))]
+    private bool _isBusy;
     [ObservableProperty] private string _logText = "";
     [ObservableProperty] private int _progressValue;
     [ObservableProperty] private int _progressMax = 1;
@@ -304,7 +307,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             value => MismatchPercent = value,
             value => NoFindingsPercent = value);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(KannOrdnerAendern))]
     private void BrowseRootFolder()
     {
         TrainingCenterRootFolderWorkflow.ApplySelected(
@@ -313,17 +316,12 @@ public partial class TrainingCenterViewModel : ObservableObject
             UpdateRootFolderDisplay);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(KannOrdnerAendern))]
     private void ClearRootFolders()
     {
         TrainingCenterRootFolderWorkflow.Clear(
             _rootFolders,
             UpdateRootFolderDisplay);
-    }
-
-    private void UpdateRootFolderDisplay()
-    {
-        RootFolder = TrainingCenterDisplayFormatter.FormatRootFolders(_rootFolders);
     }
 
     [RelayCommand]
@@ -334,8 +332,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 new TrainingCenterDistributionDefaultRequestFactoryRequest(
                     GetIsBusy: () => IsBusy,
                     SetIsBusy: value => IsBusy = value,
-                    DistributeAsync: (pdfPath, videoFolder, outputFolder) =>
-                        _import.DistributeByHaltungAsync(pdfPath, videoFolder, outputFolder),
+                    DistributeAsync: (pdfPath, videoFolder, outputFolder) => _import.DistributeByHaltungAsync(
+                        pdfPath, videoFolder, outputFolder, ResetGenerationCancellation()),
                     RootFolders: _rootFolders,
                     UpdateRootFolderDisplay: UpdateRootFolderDisplay,
                     SetLogText: value => LogText = value,
@@ -355,7 +353,9 @@ public partial class TrainingCenterViewModel : ObservableObject
                 ReplaceCases: ReplaceScannedCases,
                 AppendCases: AppendScannedCases,
                 SetStatusText: value => StatusText = value,
-                SaveStateAsync: AutoSaveStateAsync)));
+                SaveStateAsync: AutoSaveStateAsync,
+                ResetCancellation: ResetGenerationCancellation,
+                Log: Log)));
     }
 
     private void ReplaceScannedCases(IReadOnlyList<TrainingCase> items)
@@ -374,10 +374,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 Cases: Cases,
                 RootFolders: _rootFolders,
                 SaveStateAsync: _store.SaveAsync,
-                SetStatusText: SetSaveStatusText)));
+                SetStatusText: value => StatusText = value)));
     }
-
-    private void SetSaveStatusText(string value) => StatusText = value;
 
     private bool HasSelection() => SelectedCase is not null;
 
@@ -388,7 +386,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             TrainingCaseCommandRequestFactory.Create(new TrainingCaseCommandRequestFactoryRequest(
                 SelectedCase,
                 TrainingCaseDecision.Approve,
-                SetCaseCommandStatusText)));
+                value => StatusText = value)));
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
@@ -398,7 +396,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             TrainingCaseCommandRequestFactory.Create(new TrainingCaseCommandRequestFactoryRequest(
                 SelectedCase,
                 TrainingCaseDecision.Reject,
-                SetCaseCommandStatusText)));
+                value => StatusText = value)));
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
@@ -408,10 +406,8 @@ public partial class TrainingCenterViewModel : ObservableObject
             TrainingCaseCommandRequestFactory.Create(new TrainingCaseCommandRequestFactoryRequest(
                 SelectedCase,
                 TrainingCaseDecision.SetNew,
-                SetCaseCommandStatusText)));
+                value => StatusText = value)));
     }
-
-    private void SetCaseCommandStatusText(string value) => StatusText = value;
 
     partial void OnSelectedCaseChanged(TrainingCase? value)
     {

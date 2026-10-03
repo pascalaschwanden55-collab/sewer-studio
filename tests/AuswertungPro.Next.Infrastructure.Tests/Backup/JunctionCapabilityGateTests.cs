@@ -11,15 +11,22 @@ public sealed class JunctionCapabilityGateTests
     [Fact]
     public void Alle_Verknuepfungsschutztests_sind_registriert_und_ausfuehrbar()
     {
-        const int expectedJunctionFacts = 127; // Zusaetzlich sieben Schutzfaelle der Haltungsumbenennung;
+        const int expectedJunctionFacts = 141; // Zusaetzlich sieben Schutzfaelle der Haltungsumbenennung;
                                               // zwei fuer «Ordner wird zur Verknuepfung» (Audit A01, 23.09.2026);
                                               // einer fuer die WebGIS-Berichtsablage (C3, 24.09.2026);
                                               // einer fuer den Papierkorb des Verteilabgleichs (GA02, 28.09.2026);
                                               // elf fuer gemeldete uebersprungene Ordner (R1, 02.10.2026);
                                               // einer fuer den Eval-Schutzordner (Deepscan A1/R2, 02.10.2026);
                                               // einer fuer die gemeinsame Verknuepfungspruefung (Deepscan A5, 02.10.2026);
-                                              // zwei fuer den Gold-Speicher, je einer fuer Trainingsablage, Goldpruefung, Gold-Eingang, Projekt-Schreibgrenze, Sicherungsziel, PDF-Pruefablage und Gold-Altarchiv auf dem gemeinsamen Baustein (A5).
-                                              // neun fuer die Schreibstellen der Dossiers, des Verteilberichts, der SchachtPro-QR-Ablage und des Projektdateipruefers (Testnetz T5, 03.10.2026).
+                                              // zwei fuer den Gold-Speicher, je einer fuer Trainingsablage, Goldpruefung, Gold-Eingang, Projekt-Schreibgrenze, Sicherungsziel, PDF-Pruefablage und Gold-Altarchiv auf dem gemeinsamen Baustein (A5);
+                                              // neun fuer die Schreibstellen der Dossiers, des Verteilberichts, der SchachtPro-QR-Ablage und des Projektdateipruefers (Testnetz T5, 03.10.2026);
+                                              // zwei fuer die Haltungsverteilung des Training Centers (Deepscan R6, 03.10.2026);
+                                              // einer fuer den abgelehnten Videoverweis der Training-Center-Verteilung (PR #85, 03.10.2026);
+                                              // je einer fuer die Verknuepfung oberhalb des Ausgabeordners und den uebersprungenen Konflikt-Unterordner (PR #85, 03.10.2026);
+                                              // einer fuer den Videoverweis als Datei-Symlink (PR #85, 03.10.2026);
+                                              // zwei fuer Video-Symlinks aelterer Verteillaeufe in Scan und Verteilung (PR #85, 03.10.2026);
+                                              // sechs aus der Eigenpruefung PR #85: Verweisziel unter Verknuepfung, verknuepfter Fallordner,
+                                              // Videoordner (Unterordner, Datei), Datei-Sammler der sicheren Suche, verknuepfte Konfliktdatei.
 
         var actualJunctionFacts = typeof(JunctionCapabilityGateTests).Assembly
             .GetTypes()

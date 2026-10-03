@@ -60,10 +60,12 @@ public sealed class MediaConflictCenterService
         int Unresolved,
         IReadOnlyList<string> Messages);
 
-    public sealed record ScanResult(
-        IReadOnlyList<MediaConflictCase> Cases,
-        string? Error)
+    // Hinweis: nennt z.B. unlesbare Konfliktdateien, ohne den Scan als Fehler zu werten (Deepscan R8b).
+    // Zweistelliger Konstruktor und Deconstruct bleiben binaer kompatibel zur Fassung vor PR #85.
+    public sealed record ScanResult(IReadOnlyList<MediaConflictCase> Cases, string? Error, string? Hinweis = null)
     {
+        public ScanResult(IReadOnlyList<MediaConflictCase> Cases, string? Error) : this(Cases, Error, null) { }
+        public void Deconstruct(out IReadOnlyList<MediaConflictCase> Cases, out string? Error) => (Cases, Error) = (this.Cases, this.Error);
         public bool Success => string.IsNullOrWhiteSpace(Error);
     }
 
@@ -94,47 +96,27 @@ public sealed class MediaConflictCenterService
         string holdingsRoot;
         try
         {
-            var guard = new ProjectWritePathGuard(projectFolder);
-            holdingsRoot = guard.EnsureSafeDirectoryTarget(
-                Path.Combine(projectFolder, "Haltungen"));
+            holdingsRoot = new ProjectWritePathGuard(projectFolder)
+                .EnsureSafeDirectoryTarget(Path.Combine(projectFolder, "Haltungen"));
         }
         catch (Exception ex)
         {
             return new ScanResult(
                 Array.Empty<MediaConflictCase>(),
-                "Der Medien-Konfliktordner konnte nicht sicher geprüft werden: " + ex.Message);
+                "Der Medien-Konfliktordner konnte nicht sicher geprüft werden (Verknüpfung oder fehlende Berechtigung): "
+                + UserError.DescribeAndReport(ex, "Medienkonflikte prüfen"));
         }
 
         if (!Directory.Exists(holdingsRoot))
             return new ScanResult(Array.Empty<MediaConflictCase>(), null);
 
-        var infoFiles = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(holdingsRoot, "*_VIDEO_*.txt", recursive: true)
-            .Where(path =>
-                path.EndsWith("_VIDEO_MISSING.txt", StringComparison.OrdinalIgnoreCase)
-                || path.EndsWith("_VIDEO_AMBIGUOUS.txt", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        var list = new List<MediaConflictCase>();
-        foreach (var infoPath in infoFiles)
-        {
-            try
-            {
-                var parsed = ParseConflictInfo(infoPath);
-                if (parsed is not null)
-                    list.Add(parsed);
-            }
-            catch
-            {
-                // Skip malformed conflict files.
-            }
-        }
-
+        var (list, hinweis) = MediaKonfliktdateienLeser.LeseAlle(holdingsRoot, ParseConflictInfo);
         var cases = list
             .OrderByDescending(x => x.DateStamp ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.HoldingFolderName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x.InfoPath, StringComparer.OrdinalIgnoreCase)
             .ToList();
-        return new ScanResult(cases, null);
+        return new ScanResult(cases, null, hinweis);
     }
 
     public int GetMappingCount(Project project)
