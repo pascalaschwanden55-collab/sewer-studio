@@ -17,6 +17,8 @@ public static class SafeFileEnumeration
         string root,
         string searchPattern = "*",
         bool recursive = true,
-        ICollection<string>? skippedDirectories = null)
-        => AuswertungPro.Next.Application.Common.SafeFileEnumeration.EnumerateFilesSafe(root, searchPattern, recursive, skippedDirectories);
+        ICollection<string>? skippedDirectories = null,
+        ICollection<string>? skippedFiles = null)
+        => AuswertungPro.Next.Application.Common.SafeFileEnumeration.EnumerateFilesSafe(
+            root, searchPattern, recursive, skippedDirectories, skippedFiles);
 }

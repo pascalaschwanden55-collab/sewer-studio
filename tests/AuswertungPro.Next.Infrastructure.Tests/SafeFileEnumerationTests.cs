@@ -135,6 +135,45 @@ public sealed class SafeFileEnumerationTests
         Assert.Empty(SafeFileEnumeration.EnumerateFilesSafe(missing, "*", recursive: true).ToList());
     }
 
+    [JunctionFact]
+    public void EnumerateFilesSafe_MeldetAusgelasseneDateiVerknuepfungImOptionalenSammler()
+    {
+        // PR #85: Datei-Verknuepfungen wurden still ausgelassen. Der optionale Sammler nennt sie;
+        // bestehende Aufrufer ohne Sammler bleiben unveraendert.
+        var testRoot = Path.Combine(Path.GetTempPath(), "sfe_filelink_" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(testRoot, "root");
+        var fremd = Path.Combine(testRoot, "fremd.txt");
+        var fileLink = Path.Combine(root, "b-link.txt");
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.WriteAllText(Path.Combine(root, "a-normal.txt"), "normal");
+            File.WriteAllText(fremd, "fremd");
+            File.CreateSymbolicLink(fileLink, fremd);
+            var dateien = new List<string>();
+
+            var files = SafeFileEnumeration
+                .EnumerateFilesSafe(root, "*.txt", recursive: true, skippedFiles: dateien)
+                .Select(Path.GetFileName)
+                .ToList();
+
+            Assert.Equal(["a-normal.txt"], files);
+            Assert.Equal([fileLink], dateien);
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(testRoot))
+                    Directory.Delete(testRoot, recursive: true);
+            }
+            catch (IOException)
+            {
+                // Test-Aufraeumen darf das Ergebnis nicht verdecken.
+            }
+        }
+    }
+
     [Fact]
     public void EnumerateFilesSafe_Rekursiv_FindetDateienInUnterordnern()
     {

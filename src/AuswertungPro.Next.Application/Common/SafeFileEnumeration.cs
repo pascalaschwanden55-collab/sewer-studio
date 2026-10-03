@@ -75,11 +75,16 @@ public static class SafeFileEnumeration
         }
     }
 
+    /// <param name="skippedFiles">
+    /// Optionaler Sammler (PR #85): Dateien, die als Verknuepfung oder mit nicht lesbaren Attributen
+    /// ausgelassen werden. Ohne Sammler bleibt das Verhalten unveraendert.
+    /// </param>
     public static IEnumerable<string> EnumerateFilesSafe(
         string root,
         string searchPattern = "*",
         bool recursive = true,
-        ICollection<string>? skippedDirectories = null)
+        ICollection<string>? skippedDirectories = null,
+        ICollection<string>? skippedFiles = null)
     {
         if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
             yield break;
@@ -117,6 +122,8 @@ public static class SafeFileEnumeration
             {
                 if (CanReadFileWithoutFollowingLink(file))
                     yield return file;
+                else
+                    skippedFiles?.Add(file);
             }
         }
     }
