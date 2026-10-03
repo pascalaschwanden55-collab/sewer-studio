@@ -130,6 +130,26 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
     }
 
     [Fact]
+    public async Task Verweisziel_das_eine_verknuepfung_ist_wird_nicht_uebernommen()
+    {
+        // PR #85: Ist das Originalvideo inzwischen selbst ein Datei-Symlink, ginge der verknuepfte Pfad an FFmpeg.
+        var fallordner = Fallordner("23021-22369");
+        var original = Path.Combine(_root, "H_23021-22369.mpg");
+        File.WriteAllText(original, "steht fuer einen Symlink");
+        var verweis = Path.Combine(fallordner, "H_23021-22369.mpg.link");
+        File.WriteAllText(verweis, original);
+        var hinweise = new List<string>();
+
+        var fall = Assert.Single(await DienstMitVerknuepfung(original).ScanAsync(
+            ScanWurzel, null, hinweise, CancellationToken.None));
+
+        Assert.Equal("", fall.VideoPath);
+        var hinweis = Assert.Single(hinweise);
+        Assert.Contains(verweis, hinweis, StringComparison.Ordinal);
+        Assert.Contains(original, hinweis, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Nicht_pruefbarer_verweis_wird_abgelehnt()
     {
         var fallordner = Fallordner("23021-22369");

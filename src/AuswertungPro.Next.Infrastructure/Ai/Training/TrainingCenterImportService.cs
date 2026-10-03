@@ -191,6 +191,18 @@ public sealed class TrainingCenterImportService
                 continue;
             }
 
+            // PR #85: Auch das Ziel selbst darf keine Verknuepfung sein (sonst ginge ein fremder Pfad an FFmpeg).
+            var zielBefund = VerknuepfungsSchutz.PruefeEintrag(ziel, VerknuepfungsRegel.Streng, _leseAttribute);
+            if (!zielBefund.IstSicher)
+            {
+                MeldeVideoverweis(
+                    hinweise,
+                    $"Videoverweis «{verweis}» zeigt auf «{ziel}», das eine Verknüpfung oder nicht sicher prüfbar ist; "
+                    + "Fall ohne Video geladen.",
+                    zielBefund.Fehler);
+                continue;
+            }
+
             videos.Add(ziel);
         }
 
