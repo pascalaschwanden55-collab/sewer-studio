@@ -40,8 +40,11 @@ public static class TrainingCenterScanWorkflow
             var uebersprungeneOrdner = new List<string>();
             var hinweise = new List<string>();
 
+            // Momentaufnahme: Waehrend des await kann der Nutzer die Ordnerliste aendern
+            // (Ordner wählen/zurücksetzen); gescannt wird die Liste vom Start (Review PR #85).
+            var ordner = request.RootFolders.ToArray();
             var allFound = new List<TrainingCase>();
-            foreach (var folder in request.RootFolders)
+            foreach (var folder in ordner)
             {
                 if (!request.DirectoryExists(folder))
                     continue;

@@ -177,6 +177,32 @@ public sealed class TrainingCenterScanWorkflowTests
         Assert.Equal("Gefunden: 0 Fälle · 1 Videoverweis ungültig (siehe Protokoll)", state.StatusText);
     }
 
+    // Review PR #85: Seit der Scan im Hintergrund laeuft, kann der Nutzer waehrend des await die
+    // Ordnerliste aendern («Ordner wählen…», «zurücksetzen»). Der Scan arbeitet die Liste ab, die
+    // beim Start galt, statt mit einer InvalidOperationException mittendrin abzubrechen.
+    [Fact]
+    public async Task RunAsync_scannt_die_ordnerliste_vom_start_auch_wenn_sie_sich_waehrenddessen_aendert()
+    {
+        var state = new WorkflowState();
+        var ordner = new List<string> { "root-a", "root-b" };
+        var scanned = new List<string>();
+
+        await TrainingCenterScanWorkflow.RunAsync(
+            CreateRequest(
+                state: state,
+                rootFolders: ordner,
+                scanFolderAsync: (folder, _, _, _) =>
+                {
+                    scanned.Add(folder);
+                    ordner.Clear(); // wie «Ordnerauswahl zurücksetzen» waehrend des Scans
+                    return Task.FromResult<IReadOnlyList<TrainingCase>>([]);
+                }));
+
+        Assert.Equal(new[] { "root-a", "root-b" }, scanned);
+        Assert.Equal(1, state.SaveCalls);
+        Assert.False(state.IsBusy);
+    }
+
     private static TrainingCenterScanWorkflowRequest CreateRequest(
         WorkflowState? state = null,
         IReadOnlyCollection<string>? rootFolders = null,
