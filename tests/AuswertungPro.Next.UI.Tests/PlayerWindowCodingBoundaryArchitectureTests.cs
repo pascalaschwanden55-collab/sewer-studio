@@ -6,6 +6,48 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowCodingBoundaryArchitectureTests
 {
     [Fact]
+    public void PlayerWindow_Kontexte_binden_dieselben_Besitzer_und_spaeten_Aktionen()
+    {
+        var windowRoot = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs"));
+        var hostStart = windowRoot.IndexOf("_codingSessionHost = codingSessionRuntime.SessionHost", StringComparison.Ordinal);
+        var factoryStart = windowRoot.IndexOf("var codingContexts = PlayerWindowCodingContextFactory.Create(", StringComparison.Ordinal);
+        var findingStart = windowRoot.IndexOf("_codingFindingContext = codingContexts.Finding;", StringComparison.Ordinal);
+        var analysisStart = windowRoot.IndexOf("_codingAnalysisContext = codingContexts.Analysis;", StringComparison.Ordinal);
+        var boundaryStart = windowRoot.IndexOf("_codingBoundaryContext = codingContexts.Boundary;", StringComparison.Ordinal);
+        var componentStart = windowRoot.IndexOf("InitializeComponent();", StringComparison.Ordinal);
+
+        Assert.True(hostStart >= 0 && factoryStart > hostStart && findingStart > factoryStart && analysisStart > findingStart
+            && boundaryStart > analysisStart && componentStart > boundaryStart,
+            "Sitzungshost und alle drei Kontexte müssen vor den Fenstersteuerelementen aufgebaut werden.");
+
+        var connections = windowRoot[factoryStart..findingStart];
+        Assert.Contains("new PlayerWindowCodingContextDependencies(", connections);
+        Assert.Contains("SessionHost: _codingSessionHost", connections);
+        Assert.Contains("ResolveSessionService: () => _codingSessionRuntimeOwner.Service", connections);
+        Assert.Contains("ImportEvents: () => _codingImportReferenceEvents.Events", connections);
+        Assert.Contains("Calibration: () => _codingOverlayToolHost.Calibration", connections);
+        Assert.Contains("VideoAspect: () => _codingOverlayRenderState.VideoAspect", connections);
+        Assert.Contains("TakeSnapshot: path => TakeSnapshotSafe(path)", connections);
+        Assert.Contains("FirstCleanFrameSeconds: () => _codingFrameReadinessController.FirstCleanFrameSeconds", connections);
+        Assert.Contains("OsdMeter: () => _codingOsdMeterController.LastMeter", connections);
+        Assert.Contains("FallbackVideoTime: () => _playerTimelineHost.CurrentTimeOrZero", connections);
+
+        var actionsStart = connections.IndexOf("new CodingBoundaryEventWorkflowActions(", StringComparison.Ordinal);
+        Assert.True(actionsStart >= 0, "Die Grenzaktionen müssen dieselben Fensteranschlüsse erhalten.");
+        var actions = string.Concat(connections[actionsStart..].Where(c => !char.IsWhiteSpace(c)));
+        Assert.Contains(
+            "newCodingBoundaryEventWorkflowActions(VsaCodeResolver.LookupLabel,"
+            + "message=>PlayerTrace.WriteLine(message),TryExtractFrameAtSecondsAsync,"
+            + "(entry,frameBytes)=>AttachBoundaryAnalyzedFramePhoto(entry,frameBytes),"
+            + "()=>TryAutoCalibrationFromCurrentFrame().SafeFireAndForget(\"TryAutoCalibration\"),"
+            + "RefreshCodingEventsList)", actions);
+        Assert.DoesNotContain("CodingFindingContext.CreateDefault", windowRoot);
+        Assert.DoesNotContain("CodingAnalysisContext.CreateDefault", windowRoot);
+        Assert.DoesNotContain("new CodingBoundaryContext(", windowRoot);
+    }
+
+    [Fact]
     public void PlayerWindow_boundary_presence_lives_in_policy()
     {
         var boundariesPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
@@ -25,6 +67,9 @@ public sealed class PlayerWindowCodingBoundaryArchitectureTests
         var boundaries = File.ReadAllText(contextPath);
         var state = File.ReadAllText(statePath);
         var playerRoot = File.ReadAllText(playerRootPath);
+        var contextFactory = File.ReadAllText(RepoFile(
+            "src", "AuswertungPro.Next.UI", "Player", "PlayerWindowCodingContextFactory.cs"));
+        var compactFactory = string.Concat(contextFactory.Where(c => !char.IsWhiteSpace(c)));
         var playerWindowPartials = string.Join(
             Environment.NewLine,
             Directory.EnumerateFiles(Path.GetDirectoryName(playerRootPath)!, "PlayerWindow*.cs")
@@ -43,8 +88,27 @@ public sealed class PlayerWindowCodingBoundaryArchitectureTests
         Assert.Contains("CodingBoundaryPresencePolicy.CountExisting", workflow);
         Assert.Contains("CodingBoundaryPresencePolicy.ExistsInView", workflow);
         Assert.Contains("private readonly Ai.Coding.CodingBoundaryContext _codingBoundaryContext", state);
-        Assert.Contains("_codingBoundaryContext = new CodingBoundaryContext", playerRoot);
-        Assert.Contains("_codingSessionHost", playerRoot);
+        Assert.Contains("PlayerWindowCodingContextFactory.Create(", playerRoot);
+        Assert.Contains("_codingBoundaryContext = codingContexts.Boundary;", playerRoot);
+        Assert.Contains(
+            "newCodingBoundaryContext(newCodingBoundaryContextSources("
+            + "HasCodingViewModel:()=>dependencies.SessionHost.HasViewModel,"
+            + "ViewEvents:()=>dependencies.SessionHost.EventCollection,"
+            + "SessionEvents:()=>SessionEvents()??[],"
+            + "ImportEvents:dependencies.ImportEvents,"
+            + "CodingSessionService:dependencies.ResolveSessionService,"
+            + "FirstCleanFrameSeconds:dependencies.FirstCleanFrameSeconds,"
+            + "OsdMeter:dependencies.OsdMeter,"
+            + "ViewModelEndMeter:()=>dependencies.SessionHost.EndMeter,"
+            + "FallbackVideoTime:dependencies.FallbackVideoTime),boundaryActions)",
+            compactFactory);
+        Assert.Contains("=>dependencies.ResolveSessionService()?.ActiveSession?.Events;", compactFactory);
+        var findingStart = contextFactory.IndexOf("var finding = CodingFindingContext.CreateDefault(", StringComparison.Ordinal);
+        var analysisStart = contextFactory.IndexOf("var analysis = CodingAnalysisContext.CreateDefault(", StringComparison.Ordinal);
+        var boundaryStart = contextFactory.IndexOf("var boundary = new CodingBoundaryContext(", StringComparison.Ordinal);
+        var resultStart = contextFactory.IndexOf("return new PlayerWindowCodingContexts(finding, analysis, boundary)", StringComparison.Ordinal);
+        Assert.True(findingStart >= 0 && analysisStart > findingStart && boundaryStart > analysisStart
+            && resultStart > boundaryStart, "Die Factory muss dieselben Kontexte in derselben Reihenfolge verbinden.");
         Assert.DoesNotContain("EnsureRohranfangExistsAsync", playerWindowPartials);
         Assert.DoesNotContain("private void EnsureRohrendeExists", playerWindowPartials);
         Assert.Contains("public static CodingBoundaryPresence CountExisting", policy);

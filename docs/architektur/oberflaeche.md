@@ -9,6 +9,7 @@
 
 ## Inhalt
 
+- Player-Tastatur: dünne Fensteranschlüsse (03.10.2026)
 - Haltungs- und Schachtseite: gemeinsame Ablaeufe (02.10.2026)
 - Optik und Bedienung professionell (28.09.2026)
 - Startanimation 5.0: Kugel, deutlich neu (14.09.2026)
@@ -16,6 +17,34 @@
 - Aufklapplisten: Reihenfolge (09.09.2026)
 - Nova-Abschluss: Video-Kopienregel (2026-09-06)
 - Nova-Nachpruefung abgeschlossen (2026-09-06)
+
+## Player-Tastatur: dünne Fensteranschlüsse (03.10.2026)
+
+`UI/Player/PlayerKeyboardPresenter` verbindet den bestehenden Fokuswächter,
+`PlayerShortcutOverlayController`, `PlayerKeyboardActionControllerOwner`, die
+Tastenregel und den Eingabeablauf. `PlayerWindow` reicht nur noch Tastendruck sowie
+Öffnen/Schliessen der Hilfe weiter. Dieselben Controller aus `PlayerWindowControllerSet`
+werden verwendet; die zwei danach verwaisten privaten Fensterfassaden sind entfernt.
+
+Texteingaben werden vor der Tastenhilfe geschützt. Nur F1 ist dort erlaubt;
+Fragezeichen und Escape bleiben beim Eingabefeld. Sichtbare Hilfe sperrt Wiedergabe-
+tasten, Escape schliesst zuerst die Hilfe. Die bestehenden fachlichen Codiertasten-
+abläufe für Escape, Erkennung und Markierwerkzeug bleiben am Fenster angeschlossen.
+
+Der Presenter liest beim Aufbau keine Quelle und führt keine Aktion aus. Je
+durchgelassener Taste liest er zuerst die neun aktuellen Aktionsbindungen, dann die
+aktuelle Abbruchfähigkeit. Der vorhandene Owner behält seine erste Controllerbindung,
+auch wenn eine unbekannte Taste ihn zuerst erzeugt. Der Tastendruck wird erst nach
+erfolgreicher Aktion als behandelt markiert; eine geworfene Aktion wird unverändert
+weitergegeben. Beim Öffnen/Schliessen der Hilfe erfolgt die Markierung vor der
+Sichtbarkeitsänderung. Der Standardfokuswächter bleibt aktiv.
+
+Der Fensteraufbau erfolgt nach Wiedergabecontroller und vor Steuerinitialisierung
+und `WireKeyboardEvents`. Die neun ursprünglichen Aktionen und `HasOverlayService`
+bleiben späte Rückrufe. Keine neue Laufzeit, Registrierung, öffentliche Schnittstelle
+oder Formatänderung. Neun Verhaltenserwartungen wurden zuerst mit dem ursprünglichen
+Ablauf charakterisiert und danach unverändert mit dem echten Presenter geprüft.
+Zusätzliche Anschlussprüfungen schützen Besitzer, Argumente und Reihenfolge.
 
 ## Haltungs- und Schachtseite: gemeinsame Ablaeufe (02.10.2026)
 
