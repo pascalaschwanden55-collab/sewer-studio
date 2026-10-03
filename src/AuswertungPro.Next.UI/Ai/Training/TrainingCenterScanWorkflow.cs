@@ -67,12 +67,12 @@ public static class TrainingCenterScanWorkflow
             foreach (var meldung in uebersprungen.Concat(hinweise))
                 request.Log(meldung);
 
-            // PR #85: ungueltige Videoverweise laden den Fall ohne Video und werden ebenso genannt.
+            // PR #85: Dateihinweise (ungueltige Videoverweise, verknuepfte Videos/Protokolle) stehen im Protokoll.
             var teile = new List<string>();
             if (uebersprungen.Count > 0)
                 teile.Add($"{uebersprungen.Count} Ordner übersprungen");
             if (hinweise.Count > 0)
-                teile.Add(hinweise.Count == 1 ? "1 Videoverweis ungültig" : $"{hinweise.Count} Videoverweise ungültig");
+                teile.Add(hinweise.Count == 1 ? "1 Dateihinweis" : $"{hinweise.Count} Dateihinweise");
             request.SetStatusText(teile.Count == 0
                 ? summary
                 : $"{summary} · {string.Join(" · ", teile)} (siehe Protokoll)");

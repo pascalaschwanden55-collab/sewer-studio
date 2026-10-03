@@ -174,7 +174,8 @@ public sealed class TrainingCenterScanWorkflowTests
         Assert.Equal(
             ["Videoverweis «x.mpg.link» zeigt auf kein vorhandenes Video; Fall ohne Video geladen."],
             state.Logs);
-        Assert.Equal("Gefunden: 0 Fälle · 1 Videoverweis ungültig (siehe Protokoll)", state.StatusText);
+        // PR #85: Die Hinweisliste enthaelt auch verknuepfte Videos und Protokolle -> allgemeine Bezeichnung.
+        Assert.Equal("Gefunden: 0 Fälle · 1 Dateihinweis (siehe Protokoll)", state.StatusText);
     }
 
     // Review PR #85: Seit der Scan im Hintergrund laeuft, kann der Nutzer waehrend des await die
