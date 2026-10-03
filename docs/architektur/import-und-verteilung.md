@@ -69,6 +69,12 @@ Deepscan 02.10.2026, Befund R8 (a, b).
   stehen im Hinweis; dafuer hat `SafeFileEnumeration.EnumerateFilesSafe` den optionalen Sammler
   `skippedFiles` (bestehende Aufrufer unveraendert). Der Fehlertext bei unsicherem Konfliktordner
   laeuft ueber `UserError`.
+- **Konflikt-Scan im Hintergrund (Folgepaket nach PR #85, 03.10.2026):** Die Medienkonflikt-Seite scannt
+  und sucht gelernte Quellen per `Task.Run` (nur eine Kopie der gelernten Zuordnungen, nie das lebende
+  Projekt) und uebernimmt das Ergebnis im UI-Thread. Waehrend `IsRefreshing` sind Aufloesen und die
+  Sammelaktionen gesperrt; «Aktualisieren» verwirft den alten Lauf, Schliessen (`Dispose`) bricht ab.
+  «Gelernte Zuordnungen übernehmen» aendert das Projekt und bleibt im UI-Thread. Tests warten auf
+  `AktualisierungTask`.
 - Tests: `ImportRunWorkflowControllerTests.RunAsync_bericht_fehler_steht_verstaendlich_in_den_details`,
   `MediaConflictCenterServiceTests.ScanWithResult_zaehlt_unlesbare_Konfliktdateien_im_Hinweis`,
   `MediaConflictsPageViewModelDependencyTests.Unlesbare_Konfliktdatei_wird_im_Ergebnis_genannt`
