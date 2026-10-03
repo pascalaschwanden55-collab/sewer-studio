@@ -1589,6 +1589,15 @@ CSV-/JSON-Ausgaben, inklusive Kopfzeilen und Escaping.
   zurücksetzen» sind bei `IsBusy` nicht ausfuehrbar (`KannOrdnerAendern`, neu ausgewertet bei jedem
   `IsBusy`-Wechsel). So speichert der Scan nie eine inzwischen geaenderte Ordnerliste zu Faellen der
   alten; die Momentaufnahme im Scan-Workflow bleibt als zweite Sicherung.
+- **Fallordner-Dateien (PR #85, Eigenpruefung):** `TrainingCenterFallDateien` buendelt die Regeln.
+  Videos und Protokolle im Fallordner: Eintrag selbst keine Verknuepfung (Regel `Streng`); die Ordner
+  darueber bis zur Scan-Wurzel betritt `SafeFileEnumeration` nur ohne Verknuepfung (Beleg:
+  `Scan_betritt_keinen_verknuepften_fallordner_und_nennt_ihn`), die Scan-Wurzel selbst ist wie bei
+  allen Importquellen Nutzerwahl. Verweisziele und das Video der Verteilung liegen ausserhalb des
+  Baums: ganzer Pfad bis zum Laufwerk (`PruefePfadAbLaufwerk`, Regel `GanzerPfad`) vor `File.Exists`.
+  Wird kein verwendbares Direktvideo ausgewaehlt (keines, nur ausgeschlossene, mehrdeutig), gelten die
+  `.link`-Verweise als Rueckfall. Die Verteilung nennt ausgelassene Unterordner und Videodateien des
+  Videoordners, prueft den Abbruch auch waehrend der Videosuche und zeigt Fehler nur ueber `UserError`.
 - **Unlesbare Ordner (R8c):** `ScanAsync(root, uebersprungeneOrdner, token)` sammelt Ordner, deren
   Dateiliste scheitert, und die von `SafeFileEnumeration` ausgelassenen (gesperrt, Verknuepfung).
   `TrainingCenterScanWorkflow` schreibt je Ordner die Zeile von `UebersprungeneOrdner.Meldung` ins

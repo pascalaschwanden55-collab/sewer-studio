@@ -65,7 +65,10 @@ Deepscan 02.10.2026, Befund R8 (a, b).
   Hinweis auch Unterordner von «Haltungen», die die sichere Dateisuche ausgelassen hat (unlesbar
   oder Verknuepfung), mit der Zeile aus `UebersprungeneOrdner`. Die Seite haengt den Hinweis auch an
   die Ergebniszeilen von «Gelernte Zuordnungen übernehmen» und «… löschen» an, statt ihn zu
-  ueberschreiben.
+  ueberschreiben. Auch Konfliktdateien, die selbst eine Verknuepfung oder nicht attributlesbar sind,
+  stehen im Hinweis; dafuer hat `SafeFileEnumeration.EnumerateFilesSafe` den optionalen Sammler
+  `skippedFiles` (bestehende Aufrufer unveraendert). Der Fehlertext bei unsicherem Konfliktordner
+  laeuft ueber `UserError`.
 - Tests: `ImportRunWorkflowControllerTests.RunAsync_bericht_fehler_steht_verstaendlich_in_den_details`,
   `MediaConflictCenterServiceTests.ScanWithResult_zaehlt_unlesbare_Konfliktdateien_im_Hinweis`,
   `MediaConflictsPageViewModelDependencyTests.Unlesbare_Konfliktdatei_wird_im_Ergebnis_genannt`
