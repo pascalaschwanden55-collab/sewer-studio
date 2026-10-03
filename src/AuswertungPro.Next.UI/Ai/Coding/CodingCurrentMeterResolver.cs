@@ -27,22 +27,6 @@ public static class CodingCurrentMeterResolver
         long playerTimeMs,
         long playerLengthMs,
         double endMeter,
-        double sessionCurrentMeter)
-        => ResolveManualEntry(
-            osdMeter,
-            cachedOsdMeter,
-            playerTimeMs,
-            playerLengthMs,
-            endMeter,
-            sessionCurrentMeter,
-            cachedOsdTimestampSeconds: null);
-
-    public static double ResolveManualEntry(
-        double? osdMeter,
-        double? cachedOsdMeter,
-        long playerTimeMs,
-        long playerLengthMs,
-        double endMeter,
         double sessionCurrentMeter,
         double? cachedOsdTimestampSeconds)
     {

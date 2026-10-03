@@ -6,6 +6,19 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingCurrentMeterResolverTests
 {
     [Fact]
+    public void ResolveManualEntry_requires_an_explicit_cache_timestamp_argument()
+    {
+        var method = Assert.Single(typeof(CodingCurrentMeterResolver).GetMethods()
+            .Where(method => method.Name == nameof(CodingCurrentMeterResolver.ResolveManualEntry)));
+        var parameters = method.GetParameters();
+
+        Assert.Equal(7, parameters.Length);
+        Assert.Equal("cachedOsdTimestampSeconds", parameters[6].Name);
+        Assert.Equal(typeof(double?), parameters[6].ParameterType);
+        Assert.False(parameters[6].IsOptional);
+    }
+
+    [Fact]
     public void Resolve_prefers_osd_meter()
     {
         var meter = CodingCurrentMeterResolver.Resolve(
@@ -58,7 +71,8 @@ public sealed class CodingCurrentMeterResolverTests
             playerTimeMs: 500,
             playerLengthMs: 1000,
             endMeter: 50,
-            sessionCurrentMeter: 4);
+            sessionCurrentMeter: 4,
+            cachedOsdTimestampSeconds: null);
 
         Assert.Equal(12.35, meter);
     }
@@ -87,7 +101,8 @@ public sealed class CodingCurrentMeterResolverTests
             playerTimeMs: 90000,
             playerLengthMs: 100000,
             endMeter: 80,
-            sessionCurrentMeter: 4);
+            sessionCurrentMeter: 4,
+            cachedOsdTimestampSeconds: null);
 
         var meter = CodingCurrentMeterResolver.ResolveManualEntry(
             osdMeter: null,
@@ -95,7 +110,8 @@ public sealed class CodingCurrentMeterResolverTests
             playerTimeMs: 5000,
             playerLengthMs: 100000,
             endMeter: 80,
-            sessionCurrentMeter: 4);
+            sessionCurrentMeter: 4,
+            cachedOsdTimestampSeconds: null);
 
         Assert.Equal(4, meter);
     }
@@ -109,7 +125,8 @@ public sealed class CodingCurrentMeterResolverTests
             playerTimeMs: 5000,
             playerLengthMs: 0,
             endMeter: 80,
-            sessionCurrentMeter: 4.567);
+            sessionCurrentMeter: 4.567,
+            cachedOsdTimestampSeconds: null);
 
         Assert.Equal(4.57, meter);
     }
@@ -123,7 +140,8 @@ public sealed class CodingCurrentMeterResolverTests
             playerTimeMs: 333,
             playerLengthMs: 1000,
             endMeter: 80,
-            sessionCurrentMeter: 4);
+            sessionCurrentMeter: 4,
+            cachedOsdTimestampSeconds: null);
 
         Assert.Equal(26.64, meter);
     }
@@ -137,7 +155,8 @@ public sealed class CodingCurrentMeterResolverTests
             playerTimeMs: 333,
             playerLengthMs: 1000,
             endMeter: 80,
-            sessionCurrentMeter: 4);
+            sessionCurrentMeter: 4,
+            cachedOsdTimestampSeconds: null);
 
         Assert.Equal(0, meter);
     }
@@ -236,7 +255,8 @@ public sealed class CodingCurrentMeterResolverTests
             playerTimeMs: 1250,
             playerLengthMs: 1000,
             endMeter: 80,
-            sessionCurrentMeter: 4);
+            sessionCurrentMeter: 4,
+            cachedOsdTimestampSeconds: null);
 
         Assert.Equal(100, meter);
     }

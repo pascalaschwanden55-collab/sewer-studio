@@ -12,9 +12,10 @@ unverändert. 0–500 m und absoluter Zeitabstand höchstens 1,5 s; Vorwärts-/R
 gleich behandelt. Unbekannte/nicht endliche Cachezeit ignoriert. Keine neue negative
 Zeitprüfung; bestehende relative Altersregel unverändert.
 
-Die alte öffentliche sechsstellige Fassade bleibt exakt erhalten und delegiert mit null
-Cachezeit an eine neue siebenstellige Überladung. Ihr Verhalten bei unbelegtem Cache
-wird bewusst korrigiert. Frischer OSD, Rundung, Untergrenze und unbeschränkte bisherige
+In der ursprünglichen Lieferung blieb die sechsstellige Fassade erhalten. Nach dem
+Reviewhinweis zu PR 87 wird sie auf ausdrücklichen Wunsch entfernt: Jeder Aufrufer
+muss den nicht optionalen siebten Zeitparameter übergeben. Bei unbekannter Zeit wird
+null ausdrücklich angegeben; unbelegte Cachewerte werden bewusst ignoriert. Frischer OSD, Rundung, Untergrenze und unbeschränkte bisherige
 UI-Videorechnung bleiben erhalten. Das Fenster reicht nur eine zusätzliche Zeitquelle
 weiter. Keine neuen UI/Ai-Typen, Pakete, Dienste, Registrierung oder Datenformate.
 
@@ -82,3 +83,26 @@ Kein echter Video-/OCR-/KI-Lauf. Tests prüfen Berechnungen und den tatsächlich
 Fensteranschluss. Kein Merge nach master, keine Änderung des alten Hauptarbeitsstands
 oder der Originaldatensicherung. Negative Zeitregeln und ursprüngliche frische
 OSD-Behandlung werden nicht nebenbei verändert.
+
+## Reviewrevision: Zeitparameter verpflichtend (03.10.2026)
+
+Der noch ungelieferte CodingEventActionsPresenter im Hauptordner ruft die alte
+sechsstellige Variante auf. Sie würde auch frische Cachewerte ignorieren. Die alte
+Überladung ist deshalb entfernt; der Build verlangt bei jeder späteren Portierung den
+Zeitparameter. Der Hauptordner wird in dieser Revision nicht verändert. Der Presenter
+muss beim Übernehmen LastTimestampSeconds seines vorhandenen OsdMeterController
+übergeben. Der produktive Fensteraufruf auf diesem PR tut das bereits.
+
+Der API-Wächter war vor der Entfernung rot (zwei öffentliche Überladungen statt einer).
+Sieben bestehende Testaufrufe bekommen ausdrücklich null; sämtliche bestehenden
+Erwartungen und der siebenstellige Berechnungskörper bleiben unverändert. Die erste
+Lieferung samt ihren Prüfzahlen oben bleibt als historischer Nachweis erhalten.
+Neue Release-, Hook- und Liefernachweise werden getrennt erfasst.
+
+Abschluss dieser Revision: unabhängige Gegenprüfung ohne Befund. Vollständiger
+Release-Build null Warnungen/Fehler, Endfokus 84 bestanden/0 übersprungen/0 Fehler.
+Infrastruktur 8.256/6, Pipeline 3.048/3, Oberfläche 7.929/49, Modernizer 62/0
+(bestanden/übersprungen); insgesamt 19.295 bestanden, 58 übersprungen, null Fehler.
+Alle sechs eingefrorenen Quell-/Testhashes nach dem Gesamtlauf identisch. Architekturkarte
+mit Code abgeglichen und validiert. Push und GitHub-Stand gehören in die getrennten
+Revisionsnachweise. Die Fenstergröße bleibt gegenüber der ersten Lieferung unverändert.

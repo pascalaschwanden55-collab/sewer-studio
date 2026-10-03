@@ -35,9 +35,12 @@ als benannten letzten Parameter weiter.
 - Fehlender oder nicht endlicher Cachezeitbeleg liefert keinen Cachemeter. Die bestehende
   relative Zeitregel wird erhalten; eine zusätzliche Prüfung negativer Zeitpunkte gehört
   nicht zu diesem Paket.
-- Die öffentliche sechsstellige UI-Signatur bleibt erhalten. Sie delegiert mit unbekannter
-  Cachezeit an die neue siebenstellige Überladung; unbelegte Cachewerte werden bewusst
-  nicht mehr verwendet. Der neue Zeitparameter ist nicht optional.
+- Nach dem Reviewhinweis zu PR 87 wurde die sechsstellige UI-Signatur auf ausdrücklichen
+  Wunsch entfernt. Jeder Aufrufer muss den siebten, nicht optionalen Zeitparameter
+  übergeben. Unbekannte Zeit wird ausdrücklich als null übergeben; der Cache entfällt dann.
+  Ein API-Wächter schützt diese Pflicht. Beim späteren Übernehmen des noch ungelieferten
+  CodingEventActionsPresenter muss LastTimestampSeconds aus seinem OsdMeterController
+  übergeben werden; ein alter Aufruf ohne Zeitparameter scheitert bereits beim Build.
 - Ein frisch gelesener OSD-Wert behält Vorrang und bisherige Behandlung. Rundung auf zwei
   Stellen, Untergrenze null, lineare Videorückfallrechnung und Sitzungsrückfall bleiben
   erhalten. Die bestehende UI-Rechnung wird nicht auf die Videodauer begrenzt.
