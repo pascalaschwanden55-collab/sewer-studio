@@ -766,7 +766,7 @@ public sealed class TrainingCenterImportService
     /// <summary>
     /// Erstellt einen Index: normalisierte Haltungs-ID → Videodatei-Pfad
     /// </summary>
-    private static Dictionary<string, string> BuildVideoIndex(
+    internal static Dictionary<string, string> BuildVideoIndex(
         string videoFolder,
         List<string> messages,
         CancellationToken cancellationToken)
@@ -783,11 +783,22 @@ public sealed class TrainingCenterImportService
         // PR #85: ausgelassene Unterordner und Videodateien (Verknuepfung, nicht lesbar) werden genannt.
         var uebersprungeneOrdner = new List<string>();
         var uebersprungeneDateien = new List<string>();
-        foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(
-                     videoFolder, "*.*", recursive: true, uebersprungeneOrdner, uebersprungeneDateien))
+        // Review PR #85: Ordner fuer Ordner, damit der Abbruch auch in einem Baum ohne passende Dateien
+        // (leere Ordner, langsames Netzlaufwerk) wirkt; die Ordnersuche betritt keine Verknuepfungen.
+        var dateien = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+            .EnumerateDirectoriesSafe(videoFolder, uebersprungeneOrdner)
+            .SelectMany(ordner =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(
+                    ordner, "*.*", recursive: false, uebersprungeneOrdner, uebersprungeneDateien);
+            });
+        foreach (var file in dateien)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!videoExts.Contains(Path.GetExtension(file)))
+            // Ausgeschlossene Videos (Grafik, Uebersicht) sind keine Inspektionsvideos; der Scan verwirft sie
+            // ohnehin, die Verteilung darf sie deshalb auch nicht als Treffer zaehlen (Review PR #85).
+            if (!videoExts.Contains(Path.GetExtension(file)) || IstAusgeschlossenesVideo(file))
                 continue;
 
             var name = Path.GetFileNameWithoutExtension(file);

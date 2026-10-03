@@ -463,6 +463,38 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         Assert.Contains(ergebnis.Messages, meldung => meldung.Contains("nicht mehr vorhanden", StringComparison.Ordinal));
     }
 
+    // Review PR #85: Ein ausgeschlossenes Quellvideo (Grafik *_g.mpg) ist schon beim Verteilen kein Treffer;
+    // sonst meldete die Verteilung ein Video, das der Scan danach verwirft.
+    [Fact]
+    public async Task Grafikvideo_wird_beim_verteilen_nicht_zugeordnet()
+    {
+        var videos = Path.Combine(_root, "Videos");
+        Directory.CreateDirectory(videos);
+        File.WriteAllText(Path.Combine(videos, "H_23021-22369_g.mpg"), "grafikvideo");
+        var ausgabe = Path.Combine(_root, "Sammel_Training");
+
+        var ergebnis = await Verteiler().DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), videos, ausgabe, CancellationToken.None);
+
+        Assert.Equal(0, ergebnis.VideosMatched);
+        Assert.Empty(Directory.GetFiles(Path.Combine(ausgabe, "23021-22369"), "*.link"));
+    }
+
+    // Review PR #85: Der Abbruch wirkt auch in einem Videobaum ohne passende Dateien (leere Ordner,
+    // langsames Netzlaufwerk), nicht erst bei einem Dateitreffer.
+    [Fact]
+    public void Videoindex_prueft_den_abbruch_je_ordner()
+    {
+        var videos = Path.Combine(_root, "Videos");
+        Directory.CreateDirectory(Path.Combine(videos, "leer1"));
+        Directory.CreateDirectory(Path.Combine(videos, "leer2"));
+        using var abbruch = new CancellationTokenSource();
+        abbruch.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            TrainingCenterImportService.BuildVideoIndex(videos, [], abbruch.Token));
+    }
+
     private async Task<(string Videos, string Ausgabe, string Fallordner, string AltVideo)> ErsteVerteilungMitMpgAsync()
     {
         var videos = Path.Combine(_root, "Videos");
