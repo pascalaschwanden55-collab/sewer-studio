@@ -610,8 +610,11 @@ public sealed class TrainingCenterImportService
                 else if (IstSicheresZiel(writePaths, linkPath))
                 {
                     AtomicTextFileWriter.WriteAllText(linkPath, matchedVideo);
-                    videoPath = matchedVideo; // Original-Pfad verwenden
-                    EntferneAndereVideoverweise(writePaths, caseDir, linkPath, haltungId, messages);
+                    // Nur bei eindeutiger Bereinigung gilt das Video als zugeordnet (Review PR #85).
+                    if (EntferneAndereVideoverweise(writePaths, caseDir, linkPath, haltungId, messages))
+                        videoPath = matchedVideo; // Original-Pfad verwenden
+                    else
+                        messages.Add($"Haltung {haltungId}: Videozuordnung nicht eindeutig – bitte die Verteilung erneut ausführen.");
                 }
                 else
                 {
@@ -659,15 +662,33 @@ public sealed class TrainingCenterImportService
     /// veraltete Video koppeln. Entfernt werden nur andere Videoverweise der Verteilung im selben Fallordner,
     /// nie Videos; jedes Ziel ueber den Pfadwaechter. Eine Verknuepfung wird gemeldet und nicht angefasst,
     /// ein Loeschfehler gemeldet (der Scan waehlt dann bei mehreren Verweisen keinen).
+    /// Rueckgabe: true, wenn danach nur noch der neue Verweis gilt. Eine verknuepfte Altdatei zaehlt nicht
+    /// dagegen, weil der Scan sie ohnehin ablehnt. Bleibt ein gueltiger alter Verweis liegen oder laesst sich
+    /// der Fallordner nicht auflisten, laedt der Scan den Fall ohne Video; dann darf die Verteilung keinen
+    /// Videotreffer melden (Review PR #85).
     /// </summary>
-    private void EntferneAndereVideoverweise(
+    private bool EntferneAndereVideoverweise(
         DistributionWritePathGuard writePaths,
         string caseDir,
         string behalten,
         string haltungId,
         List<string> messages)
     {
-        foreach (var alt in Directory.EnumerateFiles(caseDir, "*.link"))
+        List<string> dateien;
+        try
+        {
+            // Dieselbe Dateiliste wie der Scan; ein Auflistungsfehler bricht nicht die ganze Verteilung ab.
+            dateien = _dateienImOrdner(caseDir).ToList();
+        }
+        catch (Exception ex) when (IstPfadwaechterAblehnung(ex))
+        {
+            messages.Add($"Haltung {haltungId}: alte Videoverweise konnten nicht geprüft werden: "
+                         + UserError.DescribeAndReport(ex, "Training Center Videoverweise auflisten"));
+            return false;
+        }
+
+        var eindeutig = true;
+        foreach (var alt in dateien)
         {
             if (!_fallDateien.IstVideoverweis(alt) || string.Equals(alt, behalten, StringComparison.OrdinalIgnoreCase))
                 continue;
@@ -686,10 +707,13 @@ public sealed class TrainingCenterImportService
             }
             catch (Exception ex) when (IstPfadwaechterAblehnung(ex))
             {
+                eindeutig = false;
                 messages.Add($"Haltung {haltungId}: alter Videoverweis «{alt}» konnte nicht entfernt werden: "
                              + UserError.DescribeAndReport(ex, "Training Center Videoverweis entfernen"));
             }
         }
+
+        return eindeutig;
     }
 
     private static bool IstPfadwaechterAblehnung(Exception ex)

@@ -321,6 +321,10 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
             Assert.True(File.Exists(alterVerweis));
             Assert.Contains(ergebnis.Messages, meldung =>
                 meldung.Contains($"«{alterVerweis}» konnte nicht entfernt werden", StringComparison.Ordinal));
+            // Review PR #85: Bleibt ein alter Verweis liegen, laedt der Scan den Fall ohne Video – dann darf
+            // die Verteilung auch keinen Videotreffer melden.
+            Assert.Equal(0, ergebnis.VideosMatched);
+            Assert.DoesNotContain(ergebnis.Messages, meldung => meldung.Contains(", Video:", StringComparison.Ordinal));
             var hinweise = new List<string>();
             var fall = Assert.Single(await Verteiler().ScanAsync(ausgabe, null, hinweise, CancellationToken.None));
             Assert.Equal("", fall.VideoPath);
@@ -366,6 +370,27 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         var hinweis = Assert.Single(hinweise);
         Assert.Contains("mehrere Videoverweise", hinweis, StringComparison.Ordinal);
         Assert.Contains("bitte die Verteilung erneut ausführen", hinweis, StringComparison.Ordinal);
+    }
+
+    // Review PR #85: Ein Fallordner, der sich beim Bereinigen nicht auflisten laesst, darf die Verteilung
+    // nicht abbrechen; der Fehler wird gemeldet, und ohne eindeutige Bereinigung zaehlt kein Videotreffer.
+    [Fact]
+    public async Task Fallordner_nicht_auflistbar_bricht_die_verteilung_nicht_ab()
+    {
+        var (videos, ausgabe, fallordner, _) = await ErsteVerteilungMitMpgAsync();
+        File.WriteAllText(Path.Combine(videos, "H_23021-22369.mp4"), "neues video");
+        var dienst = Verteiler(dateienImOrdner: ordner =>
+            string.Equals(ordner, fallordner, StringComparison.OrdinalIgnoreCase)
+                ? throw new UnauthorizedAccessException("Zugriff verweigert")
+                : Directory.EnumerateFiles(ordner, "*.*", SearchOption.TopDirectoryOnly));
+
+        var ergebnis = await dienst.DistributeByHaltungAsync(
+            Path.Combine(_root, "Sammel.pdf"), videos, ausgabe, CancellationToken.None);
+
+        Assert.Equal(1, ergebnis.Distributed);
+        Assert.Equal(0, ergebnis.VideosMatched);
+        Assert.Contains(ergebnis.Messages, meldung =>
+            meldung.Contains("alte Videoverweise konnten nicht geprüft werden", StringComparison.Ordinal));
     }
 
     private async Task<(string Videos, string Ausgabe, string Fallordner, string AltVideo)> ErsteVerteilungMitMpgAsync()
@@ -535,7 +560,9 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
         return ordner;
     }
 
-    private static TrainingCenterImportService Verteiler(Func<string, FileAttributes?>? leseAttribute = null)
+    private static TrainingCenterImportService Verteiler(
+        Func<string, FileAttributes?>? leseAttribute = null,
+        Func<string, IEnumerable<string>>? dateienImOrdner = null)
         => new(
             pdfSeitenLesen: _ => new PdfTextExtraction(
                 [string.Join("\n",
@@ -545,7 +572,7 @@ public sealed class TrainingCenterVideoverweisTests : IDisposable
                     " 23021-22369                22.04.2014          schoen_trocken           Manuel Joschko"
                 ])],
                 ""),
-            dateienImOrdner: null,
+            dateienImOrdner: dateienImOrdner,
             nachHaltungsordner: null,
             leseAttribute: leseAttribute);
 }
